@@ -18272,7 +18272,7 @@ function (_EventEmitter) {
             break;
 
           case JsSIP_C.NOTIFY:
-            if (this._status === C.STATUS_CONFIRMED) {
+            if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
               this._receiveNotify(request);
             } else {
               request.reply(403, 'Wrong Status');
@@ -18565,25 +18565,24 @@ function (_EventEmitter) {
 
 
         return new Promise(function (resolve) {
-          var finished = false;
-          var listener;
+          // let finished = false;
+          var _listener;
 
-          var ready = function ready() {
-            connection.removeEventListener('icecandidate', listener);
-            finished = true;
-            _this13._rtcReady = true;
-            var e = {
-              originator: 'local',
-              type: type,
-              sdp: connection.localDescription.sdp
-            };
-            debug('emit "sdp"');
+          connection.addEventListener('icecandidate', _listener = function listener(event) {
+            var that = _this13;
+            setTimeout(function () {
+              if (connection.iceGatheringState === 'complete') {
+                return;
+              }
 
-            _this13.emit('sdp', e);
-
-            resolve(e.sdp);
-          };
-
+              debug('ICE Timeout reached!');
+              connection.removeEventListener('icecandidate', _listener);
+              that._rtcReady = true;
+              var e = {
+                originator: 'local',
+                type: type,
+                sdp: connection.localDescription.sdp
+              };
               debug('emit "sdp"');
               that.emit('sdp', e);
               resolve(e.sdp);
@@ -18593,10 +18592,15 @@ function (_EventEmitter) {
             if (!candidate) {
               connection.removeEventListener('icecandidate', _listener);
               _this13._rtcReady = true;
-              var _e = { originator: 'local', type: type, sdp: connection.localDescription.sdp };
-
+              var _e = {
+                originator: 'local',
+                type: type,
+                sdp: connection.localDescription.sdp
+              };
               debug('emit "sdp"');
+
               _this13.emit('sdp', _e);
+
               resolve(_e.sdp);
             }
           });
@@ -19050,6 +19054,18 @@ function (_EventEmitter) {
             break;
           }
 
+        case 'talk':
+          {
+            request.reply(200);
+            break;
+          }
+
+        case 'hold':
+          {
+            request.reply(200);
+            break;
+          }
+
         default:
           {
             request.reply(489);
@@ -19305,7 +19321,7 @@ function (_EventEmitter) {
               break;
             }
 
-            var _e = {
+            var _e2 = {
               originator: 'remote',
               type: 'answer',
               sdp: response.body
@@ -19315,7 +19331,7 @@ function (_EventEmitter) {
 
             var _answer = new RTCSessionDescription({
               type: 'answer',
-              sdp: _e.sdp
+              sdp: _e2.sdp
             });
 
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
@@ -24267,7 +24283,12 @@ function (_EventEmitter) {
       this._configuration.no_answer_timeout *= 1000; // Via Host.
 
       if (this._configuration.contact_uri) {
-        this._configuration.via_host = this._configuration.contact_uri.host;
+        // this._configuration.via_host = this._configuration.contact_uri.host;
+        // TODO: for user in Contact by zhaolei
+        this._configuration.via_host = "".concat(Utils.createRandomToken(12), ".invalid");
+        this._configuration.contact_uri = new URI('sip', this._configuration.contact_uri.user, this._configuration.via_host, null, {
+          transport: 'ws'
+        }); // end
       } // Contact URI.
       else {
           this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
@@ -24400,9 +24421,10 @@ function onTransportConnect(data) {
 function onTransportDisconnect(data) {
   // Run _onTransportError_ callback on every client transaction using _transport_.
   var client_transactions = ['nict', 'ict', 'nist', 'ist'];
+  var _arr = client_transactions;
 
-  for (var _i = 0; _i < client_transactions.length; _i++) {
-    var type = client_transactions[_i];
+  for (var _i = 0; _i < _arr.length; _i++) {
+    var type = _arr[_i];
 
     for (var id in this._transactions[type]) {
       if (Object.prototype.hasOwnProperty.call(this._transactions[type], id)) {
@@ -24788,8 +24810,10 @@ exports.hasMethods = function (obj) {
     methodNames[_key - 1] = arguments[_key];
   }
 
-  for (var _i = 0; _i < methodNames.length; _i++) {
-    var methodName = methodNames[_i];
+  var _arr = methodNames;
+
+  for (var _i = 0; _i < _arr.length; _i++) {
+    var methodName = _arr[_i];
 
     if (isFunction(obj[methodName])) {
       return false;
@@ -25498,9 +25522,10 @@ module.exports = function (m, u, t) {
   message = m;
   ua = u;
   transport = t;
+  var _arr = all;
 
-  for (var _i = 0; _i < all.length; _i++) {
-    var _check2 = all[_i];
+  for (var _i = 0; _i < _arr.length; _i++) {
+    var _check2 = _arr[_i];
 
     if (_check2() === false) {
       return false;
@@ -25508,16 +25533,20 @@ module.exports = function (m, u, t) {
   }
 
   if (message instanceof SIPMessage.IncomingRequest) {
-    for (var _i2 = 0; _i2 < requests.length; _i2++) {
-      var check = requests[_i2];
+    var _arr2 = requests;
+
+    for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
+      var check = _arr2[_i2];
 
       if (check() === false) {
         return false;
       }
     }
   } else if (message instanceof SIPMessage.IncomingResponse) {
-    for (var _i3 = 0; _i3 < responses.length; _i3++) {
-      var _check = responses[_i3];
+    var _arr3 = responses;
+
+    for (var _i3 = 0; _i3 < _arr3.length; _i3++) {
+      var _check = _arr3[_i3];
 
       if (_check() === false) {
         return false;
@@ -25647,9 +25676,10 @@ function rfc3261_18_3_response() {
 
 function minimumHeaders() {
   var mandatoryHeaders = ['from', 'to', 'call_id', 'cseq', 'via'];
+  var _arr4 = mandatoryHeaders;
 
-  for (var _i4 = 0; _i4 < mandatoryHeaders.length; _i4++) {
-    var header = mandatoryHeaders[_i4];
+  for (var _i4 = 0; _i4 < _arr4.length; _i4++) {
+    var header = _arr4[_i4];
 
     if (!message.hasHeader(header)) {
       debug("missing mandatory header field : ".concat(header, ", dropping the response"));
