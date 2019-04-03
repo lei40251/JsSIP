@@ -290,7 +290,7 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":20,"./URI":25,"./Utils":26}],2:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":21,"./URI":26,"./Utils":27}],2:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -459,7 +459,7 @@ module.exports = {
   SESSION_EXPIRES: 90,
   MIN_SESSION_EXPIRES: 60
 };
-},{"../package.json":38}],3:[function(require,module,exports){
+},{"../package.json":39}],3:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -739,7 +739,7 @@ function () {
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":19,"./Transactions":22,"./Utils":26,"debug":30}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":20,"./Transactions":23,"./Utils":27,"debug":32}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -864,7 +864,7 @@ function () {
 
   return DialogRequestSender;
 }();
-},{"../Constants":2,"../RTCSession":12,"../RequestSender":18,"../Transactions":22}],5:[function(require,module,exports){
+},{"../Constants":2,"../RTCSession":12,"../RequestSender":19,"../Transactions":23}],5:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1076,7 +1076,7 @@ function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":26,"debug":30}],6:[function(require,module,exports){
+},{"./Utils":27,"debug":32}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16043,7 +16043,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":10,"./URI":25}],8:[function(require,module,exports){
+},{"./NameAddrHeader":10,"./URI":26}],8:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -16092,7 +16092,7 @@ module.exports = {
   }
 
 };
-},{"../package.json":38,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"debug":30}],9:[function(require,module,exports){
+},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":28,"debug":32}],9:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16394,7 +16394,7 @@ function (_EventEmitter) {
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30,"events":29}],10:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":32,"events":30}],10:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16525,7 +16525,7 @@ function () {
 
   return NameAddrHeader;
 }();
-},{"./Grammar":7,"./URI":25}],11:[function(require,module,exports){
+},{"./Grammar":7,"./URI":26}],11:[function(require,module,exports){
 "use strict";
 
 var Grammar = require('./Grammar');
@@ -16871,7 +16871,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":19,"debug":30}],12:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":20,"debug":32}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16916,6 +16916,8 @@ var RequestSender = require('./RequestSender');
 var RTCSession_DTMF = require('./RTCSession/DTMF');
 
 var RTCSession_Info = require('./RTCSession/Info');
+
+var RTCSession_Notify = require('./RTCSession/Notify');
 
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 
@@ -18273,7 +18275,15 @@ function (_EventEmitter) {
 
           case JsSIP_C.NOTIFY:
             if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
-              this._receiveNotify(request);
+              // this._receiveNotify(request);
+              var _contentType = request.getHeader('content-type'); // TODO: why？
+
+
+              if (_contentType == undefined) {
+                new RTCSession_Notify(this).init_incoming(request);
+              } else {
+                request.reply(415);
+              }
             } else {
               request.reply(403, 'Wrong Status');
             }
@@ -18341,6 +18351,13 @@ function (_EventEmitter) {
     value: function newInfo(data) {
       debug('newInfo()');
       this.emit('newInfo', data);
+    } // Called from Notify handler.
+
+  }, {
+    key: "newNotify",
+    value: function newNotify(data) {
+      debug('newNotify()');
+      this.emit('newNotify', data);
     }
     /**
      * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
@@ -20181,7 +20198,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./Utils":26,"debug":30,"events":29,"sdp-transform":35}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./Utils":27,"debug":32,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20380,7 +20397,7 @@ function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":29}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":32,"events":30}],14:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20516,7 +20533,83 @@ function (_EventEmitter) {
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":29}],15:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":32,"events":30}],15:[function(require,module,exports){
+"use strict";
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var EventEmitter = require('events').EventEmitter;
+
+var debugerror = require('debug')('JsSIP:ERROR:RTCSession:Notify');
+
+debugerror.log = console.warn.bind(console); // const JsSIP_C = require('../Constants');
+// const Exceptions = require('../Exceptions');
+// const Utils = require('../Utils');
+
+module.exports =
+/*#__PURE__*/
+function (_EventEmitter) {
+  _inherits(Notify, _EventEmitter);
+
+  function Notify(session) {
+    var _this;
+
+    _classCallCheck(this, Notify);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(Notify).call(this));
+    _this._session = session;
+    _this._direction = null;
+    _this._contentType = null;
+    _this._body = null;
+    return _this;
+  }
+
+  _createClass(Notify, [{
+    key: "init_incoming",
+    value: function init_incoming(request) {
+      this._direction = 'incoming';
+      this.request = request;
+      request.reply(200);
+      this._contentType = request.getHeader('content-type');
+      this._body = request.body;
+
+      this._session.newNotify({
+        originator: 'remote',
+        notify: this,
+        request: request
+      });
+    }
+  }, {
+    key: "contentType",
+    get: function get() {
+      return this._contentType;
+    }
+  }, {
+    key: "body",
+    get: function get() {
+      return this._body;
+    }
+  }]);
+
+  return Notify;
+}(EventEmitter);
+},{"debug":32,"events":30}],16:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -20583,7 +20676,7 @@ function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":30}],16:[function(require,module,exports){
+},{"../Constants":2,"debug":32}],17:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20758,7 +20851,7 @@ function (_EventEmitter) {
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":26,"debug":30,"events":29}],17:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":27,"debug":32,"events":30}],18:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21119,7 +21212,7 @@ function () {
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30}],18:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":32}],19:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21291,7 +21384,7 @@ function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":22,"debug":30}],19:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":23,"debug":32}],20:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22136,6 +22229,8 @@ function (_IncomingMessage) {
       }
 
       response += "Supported: ".concat(supported, "\r\n");
+      var allow_events = ['talk', 'hold', 'conference', 'refer', 'check-sync'];
+      response += "Allow-Events: ".concat(allow_events, "\r\n");
 
       if (body) {
         var length = Utils.str_utf8_length(body);
@@ -22239,7 +22334,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":26,"debug":30,"sdp-transform":35}],20:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":27,"debug":32,"sdp-transform":36}],21:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -22313,7 +22408,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":26,"debug":30}],21:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":27,"debug":32}],22:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -22335,7 +22430,7 @@ module.exports = {
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 
 };
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23159,7 +23254,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":19,"./Timers":21,"debug":30,"events":29}],23:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Timers":22,"debug":32,"events":30}],24:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -23484,7 +23579,7 @@ function () {
 
   return Transport;
 }();
-},{"./Socket":20,"debug":30}],24:[function(require,module,exports){
+},{"./Socket":21,"debug":32}],25:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24421,10 +24516,9 @@ function onTransportConnect(data) {
 function onTransportDisconnect(data) {
   // Run _onTransportError_ callback on every client transaction using _transport_.
   var client_transactions = ['nict', 'ict', 'nist', 'ist'];
-  var _arr = client_transactions;
 
-  for (var _i = 0; _i < _arr.length; _i++) {
-    var type = _arr[_i];
+  for (var _i = 0; _i < client_transactions.length; _i++) {
+    var type = client_transactions[_i];
 
     for (var id in this._transactions[type]) {
       if (Object.prototype.hasOwnProperty.call(this._transactions[type], id)) {
@@ -24497,7 +24591,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":28,"debug":30,"events":29}],25:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":32,"events":30}],26:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24765,7 +24859,7 @@ function () {
 
   return URI;
 }();
-},{"./Constants":2,"./Grammar":7,"./Utils":26}],26:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./Utils":27}],27:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24810,10 +24904,8 @@ exports.hasMethods = function (obj) {
     methodNames[_key - 1] = arguments[_key];
   }
 
-  var _arr = methodNames;
-
-  for (var _i = 0; _i < _arr.length; _i++) {
-    var methodName = _arr[_i];
+  for (var _i = 0; _i < methodNames.length; _i++) {
+    var methodName = methodNames[_i];
 
     if (isFunction(obj[methodName])) {
       return false;
@@ -25316,7 +25408,7 @@ exports.closeMediaStream = function (stream) {
 exports.cloneArray = function (array) {
   return array && array.slice() || [];
 };
-},{"./Constants":2,"./Grammar":7,"./URI":25}],27:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./URI":26}],28:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -25496,7 +25588,7 @@ function () {
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":30}],28:[function(require,module,exports){
+},{"./Grammar":7,"debug":32}],29:[function(require,module,exports){
 "use strict";
 
 var JsSIP_C = require('./Constants');
@@ -25522,10 +25614,9 @@ module.exports = function (m, u, t) {
   message = m;
   ua = u;
   transport = t;
-  var _arr = all;
 
-  for (var _i = 0; _i < _arr.length; _i++) {
-    var _check2 = _arr[_i];
+  for (var _i = 0; _i < all.length; _i++) {
+    var _check2 = all[_i];
 
     if (_check2() === false) {
       return false;
@@ -25533,20 +25624,16 @@ module.exports = function (m, u, t) {
   }
 
   if (message instanceof SIPMessage.IncomingRequest) {
-    var _arr2 = requests;
-
-    for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
-      var check = _arr2[_i2];
+    for (var _i2 = 0; _i2 < requests.length; _i2++) {
+      var check = requests[_i2];
 
       if (check() === false) {
         return false;
       }
     }
   } else if (message instanceof SIPMessage.IncomingResponse) {
-    var _arr3 = responses;
-
-    for (var _i3 = 0; _i3 < _arr3.length; _i3++) {
-      var _check = _arr3[_i3];
+    for (var _i3 = 0; _i3 < responses.length; _i3++) {
+      var _check = responses[_i3];
 
       if (_check() === false) {
         return false;
@@ -25676,10 +25763,9 @@ function rfc3261_18_3_response() {
 
 function minimumHeaders() {
   var mandatoryHeaders = ['from', 'to', 'call_id', 'cseq', 'via'];
-  var _arr4 = mandatoryHeaders;
 
-  for (var _i4 = 0; _i4 < _arr4.length; _i4++) {
-    var header = _arr4[_i4];
+  for (var _i4 = 0; _i4 < mandatoryHeaders.length; _i4++) {
+    var header = mandatoryHeaders[_i4];
 
     if (!message.hasHeader(header)) {
       debug("missing mandatory header field : ".concat(header, ", dropping the response"));
@@ -25730,7 +25816,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":19,"./Utils":26,"debug":30}],29:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Utils":27,"debug":32}],30:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -26255,7 +26341,171 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
+/**
+ * Helpers.
+ */
+
+var s = 1000;
+var m = s * 60;
+var h = m * 60;
+var d = h * 24;
+var w = d * 7;
+var y = d * 365.25;
+
+/**
+ * Parse or format the given `val`.
+ *
+ * Options:
+ *
+ *  - `long` verbose formatting [false]
+ *
+ * @param {String|Number} val
+ * @param {Object} [options]
+ * @throws {Error} throw an error if val is not a non-empty string or a number
+ * @return {String|Number}
+ * @api public
+ */
+
+module.exports = function(val, options) {
+  options = options || {};
+  var type = typeof val;
+  if (type === 'string' && val.length > 0) {
+    return parse(val);
+  } else if (type === 'number' && isNaN(val) === false) {
+    return options.long ? fmtLong(val) : fmtShort(val);
+  }
+  throw new Error(
+    'val is not a non-empty string or a valid number. val=' +
+      JSON.stringify(val)
+  );
+};
+
+/**
+ * Parse the given `str` and return milliseconds.
+ *
+ * @param {String} str
+ * @return {Number}
+ * @api private
+ */
+
+function parse(str) {
+  str = String(str);
+  if (str.length > 100) {
+    return;
+  }
+  var match = /^((?:\d+)?\-?\d?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
+    str
+  );
+  if (!match) {
+    return;
+  }
+  var n = parseFloat(match[1]);
+  var type = (match[2] || 'ms').toLowerCase();
+  switch (type) {
+    case 'years':
+    case 'year':
+    case 'yrs':
+    case 'yr':
+    case 'y':
+      return n * y;
+    case 'weeks':
+    case 'week':
+    case 'w':
+      return n * w;
+    case 'days':
+    case 'day':
+    case 'd':
+      return n * d;
+    case 'hours':
+    case 'hour':
+    case 'hrs':
+    case 'hr':
+    case 'h':
+      return n * h;
+    case 'minutes':
+    case 'minute':
+    case 'mins':
+    case 'min':
+    case 'm':
+      return n * m;
+    case 'seconds':
+    case 'second':
+    case 'secs':
+    case 'sec':
+    case 's':
+      return n * s;
+    case 'milliseconds':
+    case 'millisecond':
+    case 'msecs':
+    case 'msec':
+    case 'ms':
+      return n;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Short format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtShort(ms) {
+  var msAbs = Math.abs(ms);
+  if (msAbs >= d) {
+    return Math.round(ms / d) + 'd';
+  }
+  if (msAbs >= h) {
+    return Math.round(ms / h) + 'h';
+  }
+  if (msAbs >= m) {
+    return Math.round(ms / m) + 'm';
+  }
+  if (msAbs >= s) {
+    return Math.round(ms / s) + 's';
+  }
+  return ms + 'ms';
+}
+
+/**
+ * Long format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtLong(ms) {
+  var msAbs = Math.abs(ms);
+  if (msAbs >= d) {
+    return plural(ms, msAbs, d, 'day');
+  }
+  if (msAbs >= h) {
+    return plural(ms, msAbs, h, 'hour');
+  }
+  if (msAbs >= m) {
+    return plural(ms, msAbs, m, 'minute');
+  }
+  if (msAbs >= s) {
+    return plural(ms, msAbs, s, 'second');
+  }
+  return ms + ' ms';
+}
+
+/**
+ * Pluralization helper.
+ */
+
+function plural(ms, msAbs, n, name) {
+  var isPlural = msAbs >= n * 1.5;
+  return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
+}
+
+},{}],32:[function(require,module,exports){
 (function (process){
 /* eslint-env browser */
 
@@ -26523,7 +26773,7 @@ formatters.j = function (v) {
 };
 
 }).call(this,require('_process'))
-},{"./common":31,"_process":33}],31:[function(require,module,exports){
+},{"./common":33,"_process":34}],33:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -26791,171 +27041,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":32}],32:[function(require,module,exports){
-/**
- * Helpers.
- */
-
-var s = 1000;
-var m = s * 60;
-var h = m * 60;
-var d = h * 24;
-var w = d * 7;
-var y = d * 365.25;
-
-/**
- * Parse or format the given `val`.
- *
- * Options:
- *
- *  - `long` verbose formatting [false]
- *
- * @param {String|Number} val
- * @param {Object} [options]
- * @throws {Error} throw an error if val is not a non-empty string or a number
- * @return {String|Number}
- * @api public
- */
-
-module.exports = function(val, options) {
-  options = options || {};
-  var type = typeof val;
-  if (type === 'string' && val.length > 0) {
-    return parse(val);
-  } else if (type === 'number' && isNaN(val) === false) {
-    return options.long ? fmtLong(val) : fmtShort(val);
-  }
-  throw new Error(
-    'val is not a non-empty string or a valid number. val=' +
-      JSON.stringify(val)
-  );
-};
-
-/**
- * Parse the given `str` and return milliseconds.
- *
- * @param {String} str
- * @return {Number}
- * @api private
- */
-
-function parse(str) {
-  str = String(str);
-  if (str.length > 100) {
-    return;
-  }
-  var match = /^((?:\d+)?\-?\d?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-    str
-  );
-  if (!match) {
-    return;
-  }
-  var n = parseFloat(match[1]);
-  var type = (match[2] || 'ms').toLowerCase();
-  switch (type) {
-    case 'years':
-    case 'year':
-    case 'yrs':
-    case 'yr':
-    case 'y':
-      return n * y;
-    case 'weeks':
-    case 'week':
-    case 'w':
-      return n * w;
-    case 'days':
-    case 'day':
-    case 'd':
-      return n * d;
-    case 'hours':
-    case 'hour':
-    case 'hrs':
-    case 'hr':
-    case 'h':
-      return n * h;
-    case 'minutes':
-    case 'minute':
-    case 'mins':
-    case 'min':
-    case 'm':
-      return n * m;
-    case 'seconds':
-    case 'second':
-    case 'secs':
-    case 'sec':
-    case 's':
-      return n * s;
-    case 'milliseconds':
-    case 'millisecond':
-    case 'msecs':
-    case 'msec':
-    case 'ms':
-      return n;
-    default:
-      return undefined;
-  }
-}
-
-/**
- * Short format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function fmtShort(ms) {
-  var msAbs = Math.abs(ms);
-  if (msAbs >= d) {
-    return Math.round(ms / d) + 'd';
-  }
-  if (msAbs >= h) {
-    return Math.round(ms / h) + 'h';
-  }
-  if (msAbs >= m) {
-    return Math.round(ms / m) + 'm';
-  }
-  if (msAbs >= s) {
-    return Math.round(ms / s) + 's';
-  }
-  return ms + 'ms';
-}
-
-/**
- * Long format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function fmtLong(ms) {
-  var msAbs = Math.abs(ms);
-  if (msAbs >= d) {
-    return plural(ms, msAbs, d, 'day');
-  }
-  if (msAbs >= h) {
-    return plural(ms, msAbs, h, 'hour');
-  }
-  if (msAbs >= m) {
-    return plural(ms, msAbs, m, 'minute');
-  }
-  if (msAbs >= s) {
-    return plural(ms, msAbs, s, 'second');
-  }
-  return ms + ' ms';
-}
-
-/**
- * Pluralization helper.
- */
-
-function plural(ms, msAbs, n, name) {
-  var isPlural = msAbs >= n * 1.5;
-  return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
-}
-
-},{}],33:[function(require,module,exports){
+},{"ms":31}],34:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -27141,7 +27227,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -27513,7 +27599,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -27526,7 +27612,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":36,"./writer":37}],36:[function(require,module,exports){
+},{"./parser":37,"./writer":38}],37:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -27652,7 +27738,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":34}],37:[function(require,module,exports){
+},{"./grammar":35}],38:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -27768,7 +27854,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":34}],38:[function(require,module,exports){
+},{"./grammar":35}],39:[function(require,module,exports){
 module.exports={
   "name": "jssip",
   "title": "JsSIP",
