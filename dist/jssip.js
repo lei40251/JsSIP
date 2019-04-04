@@ -19807,6 +19807,8 @@ function (_EventEmitter) {
             }
           }
 
+      ;
+      console.log('sdp: ', sdp);
       return sdp_transform.write(sdp);
     }
   }, {
