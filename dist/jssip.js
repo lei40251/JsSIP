@@ -18535,9 +18535,41 @@ function (_EventEmitter) {
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
       this._rtcReady = false;
-      return Promise.resolve() // Create Offer or Answer.
-      .then(function () {
+      return Promise.resolve().then(function () {
         if (type === 'offer') {
+          _this13._localMediaStreamLocallyGenerated = true;
+          return navigator.mediaDevices.getUserMedia({
+            audio: constraints.offerToReceiveAudio,
+            video: constraints.offerToReceiveVideo
+          }).catch(function (error) {
+            if (_this13._status === C.STATUS_TERMINATED) {
+              throw new Error('terminated');
+            }
+
+            _this13._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+
+            debugerror('emit "getusermediafailed" [error:%o]', error);
+
+            _this13.emit('getusermediafailed', error);
+
+            throw error;
+          });
+        }
+      }) // Create Offer or Answer.
+      .then(function (stream) {
+        if (type === 'offer' && stream) {
+          _this13._localMediaStream = stream;
+          stream.getAudioTracks().forEach(function (track) {
+            var sender = null;
+            sender = connection.getSenders().find(function (s) {
+              return s.track.kind == track.kind;
+            });
+
+            if (sender) {// sender.replaceTrack(track);
+            } else {
+              connection.addTrack(track, stream);
+            }
+          });
           return connection.createOffer(constraints).catch(function (error) {
             debugerror('emit "peerconnection:createofferfailed" [error:%o]', error);
 
@@ -19807,8 +19839,6 @@ function (_EventEmitter) {
             }
           }
 
-      ;
-      console.log('sdp: ', sdp);
       return sdp_transform.write(sdp);
     }
   }, {
