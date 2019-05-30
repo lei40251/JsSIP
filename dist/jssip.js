@@ -17501,6 +17501,9 @@ function (_EventEmitter) {
       }) // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
         if (_this3._status === C.STATUS_TERMINATED) {
+          stream.getTracks().forEach(function (t) {
+            return t.stop();
+          });
           throw new Error('terminated');
         }
 
