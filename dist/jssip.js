@@ -53,7 +53,12 @@ exports.settings = {
    * Host address.
    * Value to be set in Via sent_by and host part of Contact FQDN.
   */
-  via_host: "".concat(Utils.createRandomToken(12), ".invalid")
+  via_host: "".concat(Utils.createRandomToken(12), ".invalid"),
+  // Extension settings by Lei
+  ice_checking_timeout: 2,
+  audio_payloads: ['opus', 'PCMU', 'PCMA', 'G722'],
+  video_payloads: ['VP8', 'H264', 'VP9'],
+  candidates_transport: 'udp'
 }; // Configuration checks.
 
 var checks = {
@@ -247,6 +252,86 @@ var checks = {
       if (typeof _use_preloaded_route === 'boolean') {
         return _use_preloaded_route;
       }
+    },
+    ice_checking_timeout: function ice_checking_timeout(_ice_checking_timeout) {
+      if (Utils.isDecimal(_ice_checking_timeout)) {
+        var value = Number(_ice_checking_timeout);
+
+        if (value > 0) {
+          return value;
+        }
+      }
+    },
+    candidates_transport: function candidates_transport(_candidates_transport) {
+      return String(_candidates_transport);
+    },
+    audio_payloads: function audio_payloads(_audio_payloads2) {
+      var _audio_payloads = [];
+
+      if (Array.isArray(_audio_payloads2) && _audio_payloads2.length) {
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = _audio_payloads2[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var payload = _step2.value;
+
+            _audio_payloads.push(String(payload));
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+      } else {
+        return;
+      }
+
+      return _audio_payloads;
+    },
+    video_payloads: function video_payloads(_video_payloads2) {
+      var _video_payloads = [];
+
+      if (Array.isArray(_video_payloads2) && _video_payloads2.length) {
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
+
+        try {
+          for (var _iterator3 = _video_payloads2[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var payload = _step3.value;
+
+            _video_payloads.push(String(payload));
+          }
+        } catch (err) {
+          _didIteratorError3 = true;
+          _iteratorError3 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+              _iterator3.return();
+            }
+          } finally {
+            if (_didIteratorError3) {
+              throw _iteratorError3;
+            }
+          }
+        }
+      } else {
+        return;
+      }
+
+      return _video_payloads;
     }
   }
 };
@@ -17529,6 +17614,11 @@ function (_EventEmitter) {
 
         _this3.emit('sdp', e);
 
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: _this3._ua.configuration.audio_payloads,
+          video: _this3._ua.configuration.video_payloads,
+          candidates: _this3._ua.configuration.candidates
+        }));
         var offer = new RTCSessionDescription({
           type: 'offer',
           sdp: e.sdp
@@ -18185,6 +18275,11 @@ function (_EventEmitter) {
               };
               debug('emit "sdp"');
               this.emit('sdp', e);
+              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+                audio: this._ua.configuration.audio_payloads,
+                video: this._ua.configuration.video_payloads,
+                candidates: this._ua.configuration.candidates
+              }));
               var answer = new RTCSessionDescription({
                 type: 'answer',
                 sdp: e.sdp
@@ -18539,6 +18634,7 @@ function (_EventEmitter) {
       var connection = this._connection;
       this._rtcReady = false;
       return Promise.resolve().then(function () {
+        // Request for user media access.
         if (type === 'offer') {
           _this13._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia({
@@ -18558,21 +18654,20 @@ function (_EventEmitter) {
             throw error;
           });
         }
-      }) // Create Offer or Answer.
-      .then(function (stream) {
-        if (type === 'offer' && stream) {
-          _this13._localMediaStream = stream;
-          stream.getAudioTracks().forEach(function (track) {
-            var sender = null;
-            sender = connection.getSenders().find(function (s) {
-              return s.track.kind == track.kind;
-            });
+      }).then(function (stream) {
+        if (_this13._status === C.STATUS_TERMINATED) {
+          throw new Error('terminated');
+        }
 
-            if (sender) {// sender.replaceTrack(track);
-            } else {
-              connection.addTrack(track, stream);
-            }
-          });
+        _this13._localMediaStream = stream;
+
+        if (stream) {
+          stream.getTracks().forEach(function (track) {
+            _this13._connection.addTrack(track, stream);
+          }); // TODO: should this be triggered here?
+
+          _this13._connecting(_this13._request);
+
           return connection.createOffer(constraints).catch(function (error) {
             debugerror('emit "peerconnection:createofferfailed" [error:%o]', error);
 
@@ -18612,6 +18707,11 @@ function (_EventEmitter) {
 
           _this13.emit('sdp', e);
 
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: _this13._ua.configuration.audio_payloads,
+            video: _this13._ua.configuration.video_payloads,
+            candidates: _this13._ua.configuration.candidates
+          }));
           return Promise.resolve(e.sdp);
         } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
 
@@ -18637,8 +18737,13 @@ function (_EventEmitter) {
               };
               debug('emit "sdp"');
               that.emit('sdp', e);
+              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+                audio: that._ua.configuration.audio_payloads,
+                video: that._ua.configuration.video_payloads,
+                candidates: that._ua.configuration.candidates
+              }));
               resolve(e.sdp);
-            }, 2000);
+            }, _this13._ua.configuration.ice_checking_timeout);
             var candidate = event.candidate;
 
             if (!candidate) {
@@ -18653,6 +18758,11 @@ function (_EventEmitter) {
 
               _this13.emit('sdp', _e);
 
+              _e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(_e.sdp), {
+                audio: _this13._ua.configuration.audio_payloads,
+                video: _this13._ua.configuration.video_payloads,
+                candidates: _this13._ua.configuration.candidates
+              }));
               resolve(_e.sdp);
             }
           });
@@ -18943,6 +19053,11 @@ function (_EventEmitter) {
       };
       debug('emit "sdp"');
       this.emit('sdp', e);
+      e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        audio: this._ua.configuration.audio_payloads,
+        video: this._ua.configuration.video_payloads,
+        candidates: this._ua.configuration.candidates
+      }));
       var offer = new RTCSessionDescription({
         type: 'offer',
         sdp: e.sdp
@@ -19198,37 +19313,40 @@ function (_EventEmitter) {
         if (mediaStream) {
           return mediaStream;
         } // Request for user media access.
-        else if (mediaConstraints.audio || mediaConstraints.video) {
-            _this21._localMediaStreamLocallyGenerated = true;
-            return navigator.mediaDevices.getUserMedia(mediaConstraints).catch(function (error) {
-              if (_this21._status === C.STATUS_TERMINATED) {
-                throw new Error('terminated');
-              }
+        // else if (mediaConstraints.audio || mediaConstraints.video)
+        // {
+        //   this._localMediaStreamLocallyGenerated = true;
+        //   return navigator.mediaDevices.getUserMedia(mediaConstraints)
+        //     .catch((error) =>
+        //     {
+        //       if (this._status === C.STATUS_TERMINATED)
+        //       {
+        //         throw new Error('terminated');
+        //       }
+        //       this._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+        //       debugerror('emit "getusermediafailed" [error:%o]', error);
+        //       this.emit('getusermediafailed', error);
+        //       throw error;
+        //     });
+        // }
+        // })
+        // .then((stream) =>
+        // {
+        //   if (this._status === C.STATUS_TERMINATED)
+        //   {
+        //     throw new Error('terminated');
+        //   }
+        //   this._localMediaStream = stream;
+        //   if (stream)
+        //   {
+        //     stream.getTracks().forEach((track) =>
+        //     {
+        //       this._connection.addTrack(track, stream);
+        //     });
+        //   }
+        //   // TODO: should this be triggered here?
+        //   this._connecting(this._request);
 
-              _this21._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
-
-              debugerror('emit "getusermediafailed" [error:%o]', error);
-
-              _this21.emit('getusermediafailed', error);
-
-              throw error;
-            });
-          }
-      }).then(function (stream) {
-        if (_this21._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
-
-        _this21._localMediaStream = stream;
-
-        if (stream) {
-          stream.getTracks().forEach(function (track) {
-            _this21._connection.addTrack(track, stream);
-          });
-        } // TODO: should this be triggered here?
-
-
-        _this21._connecting(_this21._request);
 
         return _this21._createLocalDescription('offer', rtcOfferConstraints).catch(function (error) {
           _this21._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
@@ -19342,6 +19460,11 @@ function (_EventEmitter) {
             };
             debug('emit "sdp"');
             this.emit('sdp', e);
+            e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+              audio: this._ua.configuration.audio_payloads,
+              video: this._ua.configuration.video_payloads,
+              candidates: this._ua.configuration.candidates
+            }));
             var answer = new RTCSessionDescription({
               type: 'answer',
               sdp: e.sdp
@@ -19380,6 +19503,11 @@ function (_EventEmitter) {
             };
             debug('emit "sdp"');
             this.emit('sdp', _e2);
+            _e2.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(_e2.sdp), {
+              audio: this._ua.configuration.audio_payloads,
+              video: this._ua.configuration.video_payloads,
+              candidates: this._ua.configuration.candidates
+            }));
 
             var _answer = new RTCSessionDescription({
               type: 'answer',
@@ -19464,6 +19592,12 @@ function (_EventEmitter) {
 
         _this23.emit('sdp', e);
 
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: _this23._ua.configuration.audio_payloads,
+          video: _this23._ua.configuration.video_payloads,
+          candidates: _this23._ua.configuration.candidates
+        }));
+
         _this23.sendRequest(JsSIP_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
@@ -19525,6 +19659,11 @@ function (_EventEmitter) {
         };
         debug('emit "sdp"');
         this.emit('sdp', e);
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: this._ua.configuration.audio_payloads,
+          video: this._ua.configuration.video_payloads,
+          candidates: this._ua.configuration.candidates
+        }));
         var answer = new RTCSessionDescription({
           type: 'answer',
           sdp: e.sdp
@@ -19585,6 +19724,12 @@ function (_EventEmitter) {
           debug('emit "sdp"');
 
           _this25.emit('sdp', e);
+
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: _this25._ua.configuration.audio_payloads,
+            video: _this25._ua.configuration.video_payloads,
+            candidates: _this25._ua.configuration.candidates
+          }));
 
           _this25.sendRequest(JsSIP_C.UPDATE, {
             extraHeaders: extraHeaders,
@@ -19673,6 +19818,11 @@ function (_EventEmitter) {
           };
           debug('emit "sdp"');
           this.emit('sdp', e);
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: this._ua.configuration.audio_payloads,
+            video: this._ua.configuration.video_payloads,
+            candidates: this._ua.configuration.candidates
+          }));
           var answer = new RTCSessionDescription({
             type: 'answer',
             sdp: e.sdp
@@ -20110,6 +20260,7 @@ function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+      Utils.closeMediaStream(this._localMediaStream);
     }
   }, {
     key: "_onhold",
@@ -24413,12 +24564,11 @@ function (_EventEmitter) {
       this._configuration.no_answer_timeout *= 1000; // Via Host.
 
       if (this._configuration.contact_uri) {
-        // this._configuration.via_host = this._configuration.contact_uri.host;
-        // TODO: for user in Contact by zhaolei
-        this._configuration.via_host = "".concat(Utils.createRandomToken(12), ".invalid");
-        this._configuration.contact_uri = new URI('sip', this._configuration.contact_uri.user, this._configuration.via_host, null, {
-          transport: 'ws'
-        }); // end
+        this._configuration.via_host = this._configuration.contact_uri.host; // TODO: for user in Contact by zhaolei
+        // this._configuration.via_host = `${Utils.createRandomToken(12)}.invalid`;
+        // eslint-disable-next-line max-len
+        // this._configuration.contact_uri = new URI('sip', this._configuration.contact_uri.user, this._configuration.via_host, null, { transport: 'ws' });
+        // end
       } // Contact URI.
       else {
           this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
@@ -25442,6 +25592,64 @@ exports.closeMediaStream = function (stream) {
 
 exports.cloneArray = function (array) {
   return array && array.slice() || [];
+}; // filter SDP
+
+
+exports.filterSdpMedia = function (sdpObj, filterCondition) {
+  var mediaArr = sdpObj.media;
+  var audioCondition = filterCondition.audio;
+  var videoCondition = filterCondition.video;
+  var candidateFilter = filterCondition.candidates;
+  mediaArr.forEach(function (media) {
+    var payloads = [];
+    var rtp = [];
+    var fmtp = [];
+    var rtcpFb = [];
+    var conditions = null;
+
+    if (media.type == 'audio') {
+      conditions = audioCondition;
+    } else if (media.type == 'video') {
+      conditions = videoCondition;
+    } // filter rtp
+
+
+    conditions.forEach(function (condition) {
+      media.rtp.forEach(function (item) {
+        if (condition == item.codec) {
+          payloads.push(item.payload);
+          rtp.push(item);
+        }
+      });
+    }); // filter fmtp
+
+    media.fmtp.forEach(function (item) {
+      payloads.forEach(function (payload) {
+        if (payload == item.payload) {
+          fmtp.push(item);
+        }
+      });
+    }); // filter rtcpFb
+
+    media.rtcpFb.forEach(function (item) {
+      payloads.forEach(function (payload) {
+        if (payload == item.payload) {
+          rtcpFb.push(item);
+        }
+      });
+    });
+    media.rtp = rtp;
+    media.fmtp = fmtp;
+    media.rtcpFb = rtcpFb;
+    media.payloads = payloads.join(' '); // filter candidate
+
+    if (candidateFilter) {
+      media.candidates = media.candidates.filter(function (candidate) {
+        return candidate.transport == candidateFilter;
+      });
+    }
+  });
+  return sdpObj;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":26}],28:[function(require,module,exports){
 "use strict";
