@@ -54,7 +54,7 @@ exports.settings = {
    * Value to be set in Via sent_by and host part of Contact FQDN.
   */
   via_host: "".concat(Utils.createRandomToken(12), ".invalid"),
-  // Extension settings by Lei
+  // Extension settings ( by Lei )
   ice_checking_timeout: 2,
   audio_payloads: ['opus', 'PCMU', 'PCMA', 'G722'],
   video_payloads: ['VP8', 'H264', 'VP9'],
@@ -18638,8 +18638,8 @@ function (_EventEmitter) {
         if (type === 'offer') {
           _this13._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia({
-            audio: constraints.offerToReceiveAudio,
-            video: constraints.offerToReceiveVideo
+            audio: constraints && constraints.offerToReceiveAudio ? constraints.offerToReceiveAudio : true,
+            video: constraints && constraints.offerToReceiveVideo ? constraints.offerToReceiveVideo : true
           }).catch(function (error) {
             if (_this13._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
@@ -22597,7 +22597,7 @@ exports.isSocket = function (socket) {
 },{"./Grammar":7,"./Utils":27,"debug":32}],22:[function(require,module,exports){
 "use strict";
 
-var T1 = 500,
+var T1 = 400,
     T2 = 4000,
     T4 = 5000;
 module.exports = {
