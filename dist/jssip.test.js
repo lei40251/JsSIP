@@ -1,5 +1,5 @@
 /*
- * JsSIP v3.3.5
+ * JsSIP v3.3.11
  * the Javascript SIP library
  * Copyright: 2012-2019 José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)
  * Homepage: https://jssip.net
@@ -46,8 +46,8 @@ exports.settings = {
   registrar_server: null,
   // Connection options.
   sockets: null,
-  connection_recovery_max_interval: null,
-  connection_recovery_min_interval: null,
+  connection_recovery_max_interval: JsSIP_C.CONNECTION_RECOVERY_MAX_INTERVAL,
+  connection_recovery_min_interval: JsSIP_C.CONNECTION_RECOVERY_MIN_INTERVAL,
 
   /*
    * Host address.
@@ -170,11 +170,7 @@ var checks = {
       }
     },
     display_name: function display_name(_display_name) {
-      if (Grammar.parse("\"".concat(_display_name, "\""), 'display_name') === -1) {
-        return;
-      } else {
-        return _display_name;
-      }
+      return _display_name;
     },
     instance_id: function instance_id(_instance_id) {
       if (/^uuid:/i.test(_instance_id)) {
@@ -538,11 +534,13 @@ module.exports = {
     604: 'Does Not Exist Anywhere',
     606: 'Not Acceptable'
   },
-  ALLOWED_METHODS: 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO',
+  ALLOWED_METHODS: 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
   MAX_FORWARDS: 69,
   SESSION_EXPIRES: 90,
-  MIN_SESSION_EXPIRES: 60
+  MIN_SESSION_EXPIRES: 60,
+  CONNECTION_RECOVERY_MAX_INTERVAL: 30,
+  CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
 },{"../package.json":39}],3:[function(require,module,exports){
 "use strict";
@@ -4541,7 +4539,9 @@ module.exports = function () {
 
         if (result0 !== null) {
           result0 = function (offset) {
-            return input.substring(pos - 1, offset + 1);
+            var trimmed = input.substring(pos, offset).trim();
+            return trimmed.substring(1, trimmed.length - 1) // remove outer quotes
+            .replace(/\\([\x00-\x09\x0b-\x0c\x0e-\x7f])/g, '$1');
           }(pos0);
         }
 
@@ -10996,18 +10996,20 @@ module.exports = function () {
         }
 
         if (result0 === null) {
-          result0 = parse_quoted_string();
+          result0 = parse_quoted_string_clean();
         }
 
         if (result0 !== null) {
           result0 = function (offset, display_name) {
-            display_name = input.substring(pos, offset).trim();
-
-            if (display_name[0] === '\"') {
-              display_name = display_name.substring(1, display_name.length - 1);
+            if (typeof display_name === 'string') {
+              // quoted_string_clean
+              data.display_name = display_name;
+            } else {
+              // token ( LWS token )*
+              data.display_name = display_name[1].reduce(function (acc, cur) {
+                return acc + cur[0] + cur[1];
+              }, display_name[0]);
             }
-
-            data.display_name = display_name;
           }(pos0, result0);
         }
 
@@ -16524,7 +16526,7 @@ function () {
 
     this._uri = uri;
     this._parameters = {};
-    this._display_name = display_name;
+    this.display_name = display_name;
 
     for (var param in parameters) {
       if (Object.prototype.hasOwnProperty.call(parameters, param)) {
@@ -16576,9 +16578,14 @@ function () {
       return new NameAddrHeader(this._uri.clone(), this._display_name, JSON.parse(JSON.stringify(this._parameters)));
     }
   }, {
+    key: "_quote",
+    value: function _quote(str) {
+      return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    }
+  }, {
     key: "toString",
     value: function toString() {
-      var body = this._display_name || this._display_name === 0 ? "\"".concat(this._display_name, "\" ") : '';
+      var body = this._display_name ? "\"".concat(this._quote(this._display_name), "\" ") : '';
       body += "<".concat(this._uri.toString(), ">");
 
       for (var parameter in this._parameters) {
@@ -17008,6 +17015,8 @@ var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 
+var URI = require('./URI');
+
 var debug = require('debug')('JsSIP:RTCSession');
 
 var debugerror = require('debug')('JsSIP:ERROR:RTCSession');
@@ -17258,7 +17267,7 @@ function (_EventEmitter) {
 
       if (anonymous) {
         requestParams.from_display_name = 'Anonymous';
-        requestParams.from_uri = 'sip:anonymous@anonymous.invalid';
+        requestParams.from_uri = new URI('sip', 'anonymous', 'anonymous.invalid');
         extraHeaders.push("P-Preferred-Identity: ".concat(this._ua.configuration.uri.toString()));
         extraHeaders.push('Privacy: id');
       }
@@ -18307,7 +18316,7 @@ function (_EventEmitter) {
             break;
 
           case JsSIP_C.BYE:
-            if (this._status === C.STATUS_CONFIRMED) {
+            if (this._status === C.STATUS_CONFIRMED || this._status === C.STATUS_WAITING_FOR_ACK) {
               request.reply(200);
 
               this._ended('remote', request, JsSIP_C.causes.BYE);
@@ -18717,15 +18726,21 @@ function (_EventEmitter) {
 
 
         return new Promise(function (resolve) {
-          // let finished = false;
-          var _listener;
+          var finished = false;
+          var iceCandidateListener;
+          var iceGatheringStateListener;
 
-          connection.addEventListener('icecandidate', _listener = function listener(event) {
-            var that = _this13;
-            setTimeout(function () {
-              if (connection.iceGatheringState === 'complete') {
-                return;
-              }
+          var ready = function ready() {
+            connection.removeEventListener('icecandidate', iceCandidateListener);
+            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
+            finished = true;
+            _this13._rtcReady = true;
+            var e = {
+              originator: 'local',
+              type: type,
+              sdp: connection.localDescription.sdp
+            };
+            debug('emit "sdp"');
 
               debug('ICE Timeout reached!');
               connection.removeEventListener('icecandidate', _listener);
@@ -18756,7 +18771,8 @@ function (_EventEmitter) {
               };
               debug('emit "sdp"');
 
-              _this13.emit('sdp', _e);
+          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
+            var candidate = event.candidate;
 
               _e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(_e.sdp), {
                 audio: _this13._ua.configuration.audio_payloads,
@@ -18764,6 +18780,11 @@ function (_EventEmitter) {
                 candidates: _this13._ua.configuration.candidates
               }));
               resolve(_e.sdp);
+            }
+          });
+          connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
+            if (connection.iceGatheringState === 'complete' && !finished) {
+              ready();
             }
           });
         });
@@ -20384,7 +20405,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./Utils":27,"debug":32,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"debug":30,"events":29,"sdp-transform":35}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20937,7 +20958,10 @@ function (_EventEmitter) {
 
 
       var referTo = "Refer-To: <".concat(target).concat(replaces ? "?Replaces=".concat(replaces) : '', ">");
-      extraHeaders.push(referTo);
+      extraHeaders.push(referTo); // Referred-By header field.
+
+      var referredBy = "Referred-By: <".concat(this._session._ua._configuration.uri._scheme, ":").concat(this._session._ua._configuration.uri._user, "@").concat(this._session._ua._configuration.uri._host, ">");
+      extraHeaders.push(referredBy);
       extraHeaders.push("Contact: ".concat(this._session.contact));
 
       var request = this._session.sendRequest(JsSIP_C.REFER, {
@@ -21646,26 +21670,30 @@ function () {
 
     this.setHeader('max-forwards', JsSIP_C.MAX_FORWARDS); // To
 
-    var to = params.to_display_name || params.to_display_name === 0 ? "\"".concat(params.to_display_name, "\" ") : '';
-    to += "<".concat(params.to_uri || ruri, ">");
-    to += params.to_tag ? ";tag=".concat(params.to_tag) : '';
-    this.to = NameAddrHeader.parse(to);
-    this.setHeader('to', to); // From.
+    var to_uri = params.to_uri || ruri;
+    var to_params = params.to_tag ? {
+      tag: params.to_tag
+    } : null;
+    var to_display_name = typeof params.to_display_name !== 'undefined' ? params.to_display_name : null;
+    this.to = new NameAddrHeader(to_uri, to_display_name, to_params);
+    this.setHeader('to', this.to.toString()); // From.
 
-    var from;
+    var from_uri = params.from_uri || ua.configuration.uri;
+    var from_params = {
+      tag: params.from_tag || Utils.newTag()
+    };
+    var display_name;
 
-    if (params.from_display_name || params.from_display_name === 0) {
-      from = "\"".concat(params.from_display_name, "\" ");
+    if (typeof params.from_display_name !== 'undefined') {
+      display_name = params.from_display_name;
     } else if (ua.configuration.display_name) {
-      from = "\"".concat(ua.configuration.display_name, "\" ");
+      display_name = ua.configuration.display_name;
     } else {
-      from = '';
+      display_name = null;
     }
 
-    from += "<".concat(params.from_uri || ua.configuration.uri, ">;tag=");
-    from += params.from_tag || Utils.newTag();
-    this.from = NameAddrHeader.parse(from);
-    this.setHeader('from', from); // Call-ID.
+    this.from = new NameAddrHeader(from_uri, display_name, from_params);
+    this.setHeader('from', this.from.toString()); // Call-ID.
 
     var call_id = params.call_id || ua.configuration.jssip_id + Utils.createRandomToken(15);
     this.call_id = call_id;
@@ -22631,11 +22659,11 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -22693,7 +22721,7 @@ function (_EventEmitter) {
 
     _this.request.setHeader('via', via);
 
-    _this.ua.newTransaction(_assertThisInitialized(_this));
+    _this.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this)));
 
     return _this;
   }
@@ -22807,13 +22835,13 @@ function (_EventEmitter2) {
     _this4.transport = transport;
     _this4.request = request;
     _this4.eventHandlers = eventHandlers;
-    request.transaction = _assertThisInitialized(_this4);
+    request.transaction = _assertThisInitialized(_assertThisInitialized(_this4));
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this4.id);
 
     _this4.request.setHeader('via', via);
 
-    _this4.ua.newTransaction(_assertThisInitialized(_this4));
+    _this4.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this4)));
 
     return _this4;
   }
@@ -23047,9 +23075,9 @@ function (_EventEmitter4) {
     _this9.transport = transport;
     _this9.request = request;
     _this9.last_response = '';
-    request.server_transaction = _assertThisInitialized(_this9);
+    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this9));
     _this9.state = C.STATUS_TRYING;
-    ua.newTransaction(_assertThisInitialized(_this9));
+    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this9)));
     return _this9;
   }
 
@@ -23167,9 +23195,9 @@ function (_EventEmitter5) {
     _this11.transport = transport;
     _this11.request = request;
     _this11.last_response = '';
-    request.server_transaction = _assertThisInitialized(_this11);
+    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this11));
     _this11.state = C.STATUS_PROCEEDING;
-    ua.newTransaction(_assertThisInitialized(_this11));
+    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this11)));
     _this11.resendProvisionalTimer = null;
     request.reply(100);
     return _this11;
@@ -23455,6 +23483,8 @@ var debug = require('debug')('JsSIP:Transport');
 
 var debugerror = require('debug')('JsSIP:ERROR:Transport');
 
+var JsSIP_C = require('./Constants');
+
 debugerror.log = console.warn.bind(console);
 /**
  * Constants
@@ -23470,10 +23500,10 @@ var C = {
   SOCKET_STATUS_ERROR: 1,
   // Recovery options.
   recovery_options: {
-    min_interval: 2,
-    // minimum interval in seconds between recover attempts
-    max_interval: 30 // maximum interval in seconds between recover attempts
-
+    // minimum interval in seconds between recover attempts.
+    min_interval: JsSIP_C.CONNECTION_RECOVERY_MIN_INTERVAL,
+    // maximum interval in seconds between recover attempts.
+    max_interval: JsSIP_C.CONNECTION_RECOVERY_MAX_INTERVAL
   }
 };
 /*
@@ -23765,7 +23795,7 @@ function () {
 
   return Transport;
 }();
-},{"./Socket":21,"debug":32}],25:[function(require,module,exports){
+},{"./Constants":2,"./Socket":20,"debug":30}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23776,8 +23806,6 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
@@ -23785,6 +23813,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -23805,8 +23835,6 @@ var Utils = require('./Utils');
 var Exceptions = require('./Exceptions');
 
 var URI = require('./URI');
-
-var Grammar = require('./Grammar');
 
 var Parser = require('./Parser');
 
@@ -23896,7 +23924,7 @@ function (_EventEmitter) {
     } // Initialize registrator.
 
 
-    _this._registrator = new Registrator(_assertThisInitialized(_this));
+    _this._registrator = new Registrator(_assertThisInitialized(_assertThisInitialized(_this)));
     return _this;
   }
 
@@ -24157,11 +24185,6 @@ function (_EventEmitter) {
 
         case 'display_name':
           {
-            if (Grammar.parse("\"".concat(value, "\""), 'display_name') === -1) {
-              debugerror('set() | wrong "display_name"');
-              return false;
-            }
-
             this._configuration.display_name = value;
             break;
           }
@@ -24776,7 +24799,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":32,"events":30}],26:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":28,"debug":30,"events":29}],25:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -27162,9 +27185,7 @@ function setup(env) {
 	}
 
 	function extend(namespace, delimiter) {
-		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
-		newDebug.log = this.log;
-		return newDebug;
+		return createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
 	}
 
 	/**
@@ -28102,7 +28123,7 @@ module.exports={
   "name": "jssip",
   "title": "JsSIP",
   "description": "the Javascript SIP library",
-  "version": "3.3.5",
+  "version": "3.3.11",
   "homepage": "https://jssip.net",
   "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
   "contributors": [
@@ -28131,11 +28152,11 @@ module.exports={
     "sdp-transform": "^2.7.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.3.4",
-    "@babel/preset-env": "^7.3.4",
-    "ansi-colors": "^3.2.3",
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "ansi-colors": "^3.2.4",
     "browserify": "^16.2.3",
-    "eslint": "^5.14.1",
+    "eslint": "^5.16.0",
     "fancy-log": "^1.3.3",
     "gulp": "^4.0.0",
     "gulp-babel": "^8.0.0",
