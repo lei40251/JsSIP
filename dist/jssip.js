@@ -18727,13 +18727,11 @@ function (_EventEmitter) {
 
         return new Promise(function (resolve) {
           var finished = false;
-
-          var _iceCandidateListener;
-
+          var iceCandidateListener;
           var iceGatheringStateListener;
 
           var ready = function ready() {
-            connection.removeEventListener('icecandidate', _iceCandidateListener);
+            connection.removeEventListener('icecandidate', iceCandidateListener);
             connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
             finished = true;
             _this13._rtcReady = true;
@@ -18749,30 +18747,7 @@ function (_EventEmitter) {
             resolve(e.sdp);
           };
 
-          connection.addEventListener('icecandidate', _iceCandidateListener = function iceCandidateListener(event) {
-            var that = _this13;
-            setTimeout(function () {
-              if (connection.iceGatheringState === 'complete') {
-                return;
-              }
-
-              debug('ICE Timeout reached!');
-              connection.removeEventListener('icecandidate', _iceCandidateListener);
-              that._rtcReady = true;
-              var e = {
-                originator: 'local',
-                type: type,
-                sdp: connection.localDescription.sdp
-              };
-              debug('emit "sdp"');
-              that.emit('sdp', e);
-              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-                audio: that._ua.configuration.audio_payloads,
-                video: that._ua.configuration.video_payloads,
-                candidates: that._ua.configuration.candidates
-              }));
-              resolve(e.sdp);
-            }, _this13._ua.configuration.ice_checking_timeout);
+          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
 
             if (!candidate) {
@@ -18793,6 +18768,11 @@ function (_EventEmitter) {
                 candidates: _this13._ua.configuration.candidates
               }));
               resolve(_e.sdp);
+            }
+          });
+          connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
+            if (connection.iceGatheringState === 'complete' && !finished) {
+              ready();
             }
           });
           connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
@@ -20418,7 +20398,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"debug":32,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"debug":30,"events":29,"sdp-transform":35}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22672,11 +22652,11 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -22734,7 +22714,7 @@ function (_EventEmitter) {
 
     _this.request.setHeader('via', via);
 
-    _this.ua.newTransaction(_assertThisInitialized(_this));
+    _this.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this)));
 
     return _this;
   }
@@ -22848,13 +22828,13 @@ function (_EventEmitter2) {
     _this4.transport = transport;
     _this4.request = request;
     _this4.eventHandlers = eventHandlers;
-    request.transaction = _assertThisInitialized(_this4);
+    request.transaction = _assertThisInitialized(_assertThisInitialized(_this4));
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this4.id);
 
     _this4.request.setHeader('via', via);
 
-    _this4.ua.newTransaction(_assertThisInitialized(_this4));
+    _this4.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this4)));
 
     return _this4;
   }
@@ -23088,9 +23068,9 @@ function (_EventEmitter4) {
     _this9.transport = transport;
     _this9.request = request;
     _this9.last_response = '';
-    request.server_transaction = _assertThisInitialized(_this9);
+    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this9));
     _this9.state = C.STATUS_TRYING;
-    ua.newTransaction(_assertThisInitialized(_this9));
+    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this9)));
     return _this9;
   }
 
@@ -23208,9 +23188,9 @@ function (_EventEmitter5) {
     _this11.transport = transport;
     _this11.request = request;
     _this11.last_response = '';
-    request.server_transaction = _assertThisInitialized(_this11);
+    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this11));
     _this11.state = C.STATUS_PROCEEDING;
-    ua.newTransaction(_assertThisInitialized(_this11));
+    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this11)));
     _this11.resendProvisionalTimer = null;
     request.reply(100);
     return _this11;
@@ -23808,7 +23788,7 @@ function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":21,"debug":32}],25:[function(require,module,exports){
+},{"./Constants":2,"./Socket":20,"debug":30}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23819,8 +23799,6 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
@@ -23828,6 +23806,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -23937,7 +23917,7 @@ function (_EventEmitter) {
     } // Initialize registrator.
 
 
-    _this._registrator = new Registrator(_assertThisInitialized(_this));
+    _this._registrator = new Registrator(_assertThisInitialized(_assertThisInitialized(_this)));
     return _this;
   }
 
@@ -24812,7 +24792,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":32,"events":30}],26:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":28,"debug":30,"events":29}],25:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -27198,9 +27178,7 @@ function setup(env) {
 	}
 
 	function extend(namespace, delimiter) {
-		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
-		newDebug.log = this.log;
-		return newDebug;
+		return createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
 	}
 
 	/**
