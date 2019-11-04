@@ -1,6 +1,42 @@
 CHANGELOG
 =========
 
+Version 3.3.11 (released in 2019-10-24)
+---------------------------------------
+
+* RTCSession: don't relay on 'icecandidate' event with null candidate (#598). Thanks @skanizaj.
+
+
+Version 3.3.10 (released in 2019-10-16)
+---------------------------------------
+
+* RTCSession: honor BYE while in WAITING_FOR_ACK state (#597). Thanks @Egorikhin.
+
+
+Version 3.3.9 (released in 2019-09-24)
+---------------------------------------
+
+* Added NOTIFY to allowed methods (#593). Credits to @ikq.
+
+
+Version 3.3.8 (released in 2019-09-24)
+---------------------------------------
+
+* Move connection recovery defaults to Constants (#593). Credits to @KraftyKraft.
+
+
+Version 3.3.7 (released in 2019-08-12)
+---------------------------------------
+
+* Add referred-by header to refer messages (#572). Credits to @swysor.
+
+
+Version 3.3.6 (released in 2019-04-12)
+---------------------------------------
+
+* Fix NameAddrHeader `display_name` handling (#573). Credits to @nicketson.
+
+
 Version 3.3.5 (released in 2019-02-26)
 ---------------------------------------
 
