@@ -1,6 +1,6 @@
 {
   "name": "flyinn-web",
-  "title": "FlyInn",
+  "title": "FlyInn-Web",
   "description": "the Javascript library base WebRTC and SIP",
   "version": "3.3.11",
   "homepage": "",
@@ -40,6 +40,7 @@
     "gulp-eslint": "^5.0.0",
     "gulp-expect-file": "^1.0.1",
     "gulp-header": "^2.0.7",
+    "gulp-javascript-obfuscator": "^1.1.6",
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",

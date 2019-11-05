@@ -1,10 +1,10 @@
 /*
- * FlyInn v3.3.11
+ * FlyInn-Web v3.3.11
  * the Javascript library base WebRTC and SIP
  * Copyright: 2012-2019
  */
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInn = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInnWeb = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -374,8 +374,9 @@ exports.load = function (dst, src) {
 
 var pkg = require('../package.json');
 
+var BROWSER_USER_AGENT = navigator.userAgent;
 module.exports = {
-  USER_AGENT: "".concat(pkg.title, " ").concat(pkg.version),
+  USER_AGENT: "".concat(pkg.title, "/").concat(pkg.version, " ").concat(BROWSER_USER_AGENT),
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -28158,7 +28159,7 @@ module.exports = function (session, opts) {
 },{"./grammar":35}],39:[function(require,module,exports){
 module.exports={
   "name": "flyinn-web",
-  "title": "FlyInn",
+  "title": "FlyInn-Web",
   "description": "the Javascript library base WebRTC and SIP",
   "version": "3.3.11",
   "homepage": "",
@@ -28198,6 +28199,7 @@ module.exports={
     "gulp-eslint": "^5.0.0",
     "gulp-expect-file": "^1.0.1",
     "gulp-header": "^2.0.7",
+    "gulp-javascript-obfuscator": "^1.1.6",
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
