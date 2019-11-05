@@ -1,12 +1,10 @@
 /*
- * JsSIP v3.3.11
- * the Javascript SIP library
- * Copyright: 2012-2019 José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)
- * Homepage: https://jssip.net
- * License: MIT
+ * FlyInn v3.3.11
+ * the Javascript library base WebRTC and SIP
+ * Copyright: 2012-2019
  */
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.JsSIP = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInn = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -520,7 +518,7 @@ module.exports = {
     493: 'Undecipherable',
     494: 'Security Agreement Required',
     // RFC 3329
-    500: 'JsSIP Internal Error',
+    500: 'FlyInn Internal Error',
     501: 'Not Implemented',
     502: 'Bad Gateway',
     503: 'Service Unavailable',
@@ -561,7 +559,7 @@ var Dialog_RequestSender = require('./Dialog/RequestSender');
 
 var Utils = require('./Utils');
 
-var debug = require('debug')('JsSIP:Dialog');
+var debug = require('debug')('FlyInn:Dialog');
 
 var C = {
   // Dialog states.
@@ -958,9 +956,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var Utils = require('./Utils');
 
-var debug = require('debug')('JsSIP:DigestAuthentication');
+var debug = require('debug')('FlyInn:DigestAuthentication');
 
-var debugerror = require('debug')('JsSIP:ERROR:DigestAuthentication');
+var debugerror = require('debug')('FlyInn:ERROR:DigestAuthentication');
 
 debugerror.log = console.warn.bind(console);
 
@@ -16151,14 +16149,14 @@ var Grammar = require('./Grammar');
 
 var WebSocketInterface = require('./WebSocketInterface');
 
-var debug = require('debug')('JsSIP');
+var debug = require('debug')('FlyInn');
 
 debug('version %s', pkg.version);
 /**
  * Expose the JsSIP module.
  */
 
-module.exports = {
+var JsSIP = {
   C: C,
   Exceptions: Exceptions,
   Utils: Utils,
@@ -16179,6 +16177,7 @@ module.exports = {
   }
 
 };
+module.exports = JsSIP;
 },{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":28,"debug":32}],9:[function(require,module,exports){
 "use strict";
 
@@ -16212,7 +16211,7 @@ var RequestSender = require('./RequestSender');
 
 var Exceptions = require('./Exceptions');
 
-var debug = require('debug')('JsSIP:Message');
+var debug = require('debug')('FlyInn:Message');
 
 module.exports =
 /*#__PURE__*/
@@ -16624,7 +16623,7 @@ var Grammar = require('./Grammar');
 
 var SIPMessage = require('./SIPMessage');
 
-var debugerror = require('debug')('JsSIP:ERROR:Parser');
+var debugerror = require('debug')('FlyInn:ERROR:Parser');
 
 debugerror.log = console.warn.bind(console);
 /**
@@ -17017,9 +17016,9 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 
 var URI = require('./URI');
 
-var debug = require('debug')('JsSIP:RTCSession');
+var debug = require('debug')('FlyInn:RTCSession');
 
-var debugerror = require('debug')('JsSIP:ERROR:RTCSession');
+var debugerror = require('debug')('FlyInn:ERROR:RTCSession');
 
 debugerror.log = console.warn.bind(console);
 var C = {
@@ -17934,6 +17933,29 @@ function (_EventEmitter) {
       info.send(contentType, body, options);
     }
     /**
+     * 切换摄像头 by lei
+     */
+
+  }, {
+    key: "switchVideoStream",
+    value: function switchVideoStream(videoStream) {
+      debug('switchVideoStream()');
+      var that = this; // Check Session Status.
+
+      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK) {
+        throw new Exceptions.InvalidStateError(this._status);
+      }
+
+      videoStream.getVideoTracks().forEach(function (track) {
+        that._connection.getSenders().find(function (s) {
+          if (s.track.kind == 'video') {
+            s.track.stop();
+            s.replaceTrack(track);
+          }
+        });
+      });
+    }
+    /**
      * Mute
      */
 
@@ -18727,11 +18749,13 @@ function (_EventEmitter) {
 
         return new Promise(function (resolve) {
           var finished = false;
-          var iceCandidateListener;
+
+          var _iceCandidateListener;
+
           var iceGatheringStateListener;
 
           var ready = function ready() {
-            connection.removeEventListener('icecandidate', iceCandidateListener);
+            connection.removeEventListener('icecandidate', _iceCandidateListener);
             connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
             finished = true;
             _this13._rtcReady = true;
@@ -18747,7 +18771,30 @@ function (_EventEmitter) {
             resolve(e.sdp);
           };
 
-          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
+          connection.addEventListener('icecandidate', _iceCandidateListener = function iceCandidateListener(event) {
+            var that = _this13;
+            setTimeout(function () {
+              if (connection.iceGatheringState === 'complete') {
+                return;
+              }
+
+              debug('ICE Timeout reached!');
+              connection.removeEventListener('icecandidate', _iceCandidateListener);
+              that._rtcReady = true;
+              var e = {
+                originator: 'local',
+                type: type,
+                sdp: connection.localDescription.sdp
+              };
+              debug('emit "sdp"');
+              that.emit('sdp', e);
+              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+                audio: that._ua.configuration.audio_payloads,
+                video: that._ua.configuration.video_payloads,
+                candidates: that._ua.configuration.candidates
+              }));
+              resolve(e.sdp);
+            }, _this13._ua.configuration.ice_checking_timeout);
             var candidate = event.candidate;
 
             if (!candidate) {
@@ -18768,11 +18815,6 @@ function (_EventEmitter) {
                 candidates: _this13._ua.configuration.candidates
               }));
               resolve(_e.sdp);
-            }
-          });
-          connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
-            if (connection.iceGatheringState === 'complete' && !finished) {
-              ready();
             }
           });
           connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
@@ -20398,7 +20440,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"debug":30,"events":29,"sdp-transform":35}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"debug":32,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20427,9 +20469,9 @@ var Exceptions = require('../Exceptions');
 
 var Utils = require('../Utils');
 
-var debug = require('debug')('JsSIP:RTCSession:DTMF');
+var debug = require('debug')('FlyInn:RTCSession:DTMF');
 
-var debugerror = require('debug')('JsSIP:ERROR:RTCSession:DTMF');
+var debugerror = require('debug')('FlyInn:ERROR:RTCSession:DTMF');
 
 debugerror.log = console.warn.bind(console);
 var C = {
@@ -20620,7 +20662,7 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 var EventEmitter = require('events').EventEmitter;
 
-var debugerror = require('debug')('JsSIP:ERROR:RTCSession:Info');
+var debugerror = require('debug')('FlyInn:ERROR:RTCSession:Info');
 
 debugerror.log = console.warn.bind(console);
 
@@ -20756,7 +20798,7 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 var EventEmitter = require('events').EventEmitter;
 
-var debugerror = require('debug')('JsSIP:ERROR:RTCSession:Notify');
+var debugerror = require('debug')('FlyInn:ERROR:RTCSession:Notify');
 
 debugerror.log = console.warn.bind(console); // const JsSIP_C = require('../Constants');
 // const Exceptions = require('../Exceptions');
@@ -20820,7 +20862,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var JsSIP_C = require('../Constants');
 
-var debug = require('debug')('JsSIP:RTCSession:ReferNotifier');
+var debug = require('debug')('FlyInn:RTCSession:ReferNotifier');
 
 var C = {
   event_type: 'refer',
@@ -20905,7 +20947,7 @@ var Grammar = require('../Grammar');
 
 var Utils = require('../Utils');
 
-var debug = require('debug')('JsSIP:RTCSession:ReferSubscriber');
+var debug = require('debug')('FlyInn:RTCSession:ReferSubscriber');
 
 module.exports =
 /*#__PURE__*/
@@ -21071,7 +21113,7 @@ var SIPMessage = require('./SIPMessage');
 
 var RequestSender = require('./RequestSender');
 
-var debug = require('debug')('JsSIP:Registrator');
+var debug = require('debug')('FlyInn:Registrator');
 
 var MIN_REGISTER_EXPIRES = 10; // In seconds.
 
@@ -21430,7 +21472,7 @@ var DigestAuthentication = require('./DigestAuthentication');
 
 var Transactions = require('./Transactions');
 
-var debug = require('debug')('JsSIP:RequestSender'); // Default event handlers.
+var debug = require('debug')('FlyInn:RequestSender'); // Default event handlers.
 
 
 var EventHandlers = {
@@ -21618,7 +21660,7 @@ var NameAddrHeader = require('./NameAddrHeader');
 
 var Grammar = require('./Grammar');
 
-var debug = require('debug')('JsSIP:SIPMessage');
+var debug = require('debug')('FlyInn:SIPMessage');
 /**
  * -param {String} method request method
  * -param {String} ruri request uri
@@ -21688,7 +21730,7 @@ function () {
     this.from = new NameAddrHeader(from_uri, display_name, from_params);
     this.setHeader('from', this.from.toString()); // Call-ID.
 
-    var call_id = params.call_id || ua.configuration.jssip_id + Utils.createRandomToken(15);
+    var call_id = params.call_id || ua.configuration.flyinn_id + Utils.createRandomToken(15);
     this.call_id = call_id;
     this.setHeader('call-id', call_id); // CSeq.
 
@@ -22548,7 +22590,7 @@ var Utils = require('./Utils');
 
 var Grammar = require('./Grammar');
 
-var debugerror = require('debug')('JsSIP:ERROR:Socket');
+var debugerror = require('debug')('FlyInn:ERROR:Socket');
 
 debugerror.log = console.warn.bind(console);
 /**
@@ -22577,24 +22619,24 @@ exports.isSocket = function (socket) {
   }
 
   if (typeof socket === 'undefined') {
-    debugerror('undefined JsSIP.Socket instance');
+    debugerror('undefined FlyInn.Socket instance');
     return false;
   } // Check Properties.
 
 
   try {
     if (!Utils.isString(socket.url)) {
-      debugerror('missing or invalid JsSIP.Socket url property');
+      debugerror('missing or invalid FlyInn.Socket url property');
       throw new Error();
     }
 
     if (!Utils.isString(socket.via_transport)) {
-      debugerror('missing or invalid JsSIP.Socket via_transport property');
+      debugerror('missing or invalid FlyInn.Socket via_transport property');
       throw new Error();
     }
 
     if (Grammar.parse(socket.sip_uri, 'SIP_URI') === -1) {
-      debugerror('missing or invalid JsSIP.Socket sip_uri property');
+      debugerror('missing or invalid FlyInn.Socket sip_uri property');
       throw new Error();
     }
   } catch (e) {
@@ -22605,7 +22647,7 @@ exports.isSocket = function (socket) {
   try {
     ['connect', 'disconnect', 'send'].forEach(function (method) {
       if (!Utils.isFunction(socket[method])) {
-        debugerror("missing or invalid JsSIP.Socket method: ".concat(method));
+        debugerror("missing or invalid FlyInn.Socket method: ".concat(method));
         throw new Error();
       }
     });
@@ -22652,11 +22694,11 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -22666,15 +22708,15 @@ var SIPMessage = require('./SIPMessage');
 
 var Timers = require('./Timers');
 
-var debugnict = require('debug')('JsSIP:NonInviteClientTransaction');
+var debugnict = require('debug')('FlyInn:NonInviteClientTransaction');
 
-var debugict = require('debug')('JsSIP:InviteClientTransaction');
+var debugict = require('debug')('FlyInn:InviteClientTransaction');
 
-var debugact = require('debug')('JsSIP:AckClientTransaction');
+var debugact = require('debug')('FlyInn:AckClientTransaction');
 
-var debugnist = require('debug')('JsSIP:NonInviteServerTransaction');
+var debugnist = require('debug')('FlyInn:NonInviteServerTransaction');
 
-var debugist = require('debug')('JsSIP:InviteServerTransaction');
+var debugist = require('debug')('FlyInn:InviteServerTransaction');
 
 var C = {
   // Transaction states.
@@ -22714,7 +22756,7 @@ function (_EventEmitter) {
 
     _this.request.setHeader('via', via);
 
-    _this.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this)));
+    _this.ua.newTransaction(_assertThisInitialized(_this));
 
     return _this;
   }
@@ -22828,13 +22870,13 @@ function (_EventEmitter2) {
     _this4.transport = transport;
     _this4.request = request;
     _this4.eventHandlers = eventHandlers;
-    request.transaction = _assertThisInitialized(_assertThisInitialized(_this4));
+    request.transaction = _assertThisInitialized(_this4);
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this4.id);
 
     _this4.request.setHeader('via', via);
 
-    _this4.ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this4)));
+    _this4.ua.newTransaction(_assertThisInitialized(_this4));
 
     return _this4;
   }
@@ -23068,9 +23110,9 @@ function (_EventEmitter4) {
     _this9.transport = transport;
     _this9.request = request;
     _this9.last_response = '';
-    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this9));
+    request.server_transaction = _assertThisInitialized(_this9);
     _this9.state = C.STATUS_TRYING;
-    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this9)));
+    ua.newTransaction(_assertThisInitialized(_this9));
     return _this9;
   }
 
@@ -23188,9 +23230,9 @@ function (_EventEmitter5) {
     _this11.transport = transport;
     _this11.request = request;
     _this11.last_response = '';
-    request.server_transaction = _assertThisInitialized(_assertThisInitialized(_this11));
+    request.server_transaction = _assertThisInitialized(_this11);
     _this11.state = C.STATUS_PROCEEDING;
-    ua.newTransaction(_assertThisInitialized(_assertThisInitialized(_this11)));
+    ua.newTransaction(_assertThisInitialized(_this11));
     _this11.resendProvisionalTimer = null;
     request.reply(100);
     return _this11;
@@ -23472,9 +23514,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var Socket = require('./Socket');
 
-var debug = require('debug')('JsSIP:Transport');
+var debug = require('debug')('FlyInn:Transport');
 
-var debugerror = require('debug')('JsSIP:ERROR:Transport');
+var debugerror = require('debug')('FlyInn:ERROR:Transport');
 
 var JsSIP_C = require('./Constants');
 
@@ -23500,10 +23542,10 @@ var C = {
   }
 };
 /*
- * Manages one or multiple JsSIP.Socket instances.
+ * Manages one or multiple FlyInn.Socket instances.
  * Is reponsible for transport recovery logic among all socket instances.
  *
- * @socket JsSIP::Socket instance
+ * @socket FlyInn::Socket instance
  */
 
 module.exports =
@@ -23535,7 +23577,7 @@ function () {
 
     sockets.forEach(function (socket) {
       if (!Socket.isSocket(socket.socket)) {
-        throw new TypeError('Invalid argument.' + ' invalid \'JsSIP.Socket\' instance');
+        throw new TypeError('Invalid argument.' + ' invalid \'FlyInn.Socket\' instance');
       }
 
       if (socket.weight && !Number(socket.weight)) {
@@ -23788,7 +23830,7 @@ function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":20,"debug":30}],24:[function(require,module,exports){
+},{"./Constants":2,"./Socket":21,"debug":32}],25:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23799,6 +23841,8 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
@@ -23806,8 +23850,6 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -23837,9 +23879,9 @@ var sanityCheck = require('./sanityCheck');
 
 var config = require('./Config');
 
-var debug = require('debug')('JsSIP:UA');
+var debug = require('debug')('FlyInn:UA');
 
-var debugerror = require('debug')('JsSIP:ERROR:UA');
+var debugerror = require('debug')('FlyInn:ERROR:UA');
 
 debugerror.log = console.warn.bind(console);
 var C = {
@@ -23917,7 +23959,7 @@ function (_EventEmitter) {
     } // Initialize registrator.
 
 
-    _this._registrator = new Registrator(_assertThisInitialized(_assertThisInitialized(_this)));
+    _this._registrator = new Registrator(_assertThisInitialized(_this));
     return _this;
   }
 
@@ -24531,10 +24573,10 @@ function (_EventEmitter) {
 
       if (!this._configuration.instance_id) {
         this._configuration.instance_id = Utils.newUUID();
-      } // Jssip_id instance parameter. Static random tag of length 5.
+      } // Flyinn_id instance parameter. Static random tag of length 5.
 
 
-      this._configuration.jssip_id = Utils.createRandomToken(5); // String containing this._configuration.uri without scheme and user.
+      this._configuration.flyinn_id = Utils.createRandomToken(5); // String containing this._configuration.uri without scheme and user.
 
       var hostport_params = this._configuration.uri.clone();
 
@@ -24792,7 +24834,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":28,"debug":30,"events":29}],25:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":32,"events":30}],26:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -25678,9 +25720,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 var Grammar = require('./Grammar');
 
-var debug = require('debug')('JsSIP:WebSocketInterface');
+var debug = require('debug')('FlyInn:WebSocketInterface');
 
-var debugerror = require('debug')('JsSIP:ERROR:WebSocketInterface');
+var debugerror = require('debug')('FlyInn:ERROR:WebSocketInterface');
 
 debugerror.log = console.warn.bind(console);
 
@@ -25856,7 +25898,7 @@ var SIPMessage = require('./SIPMessage');
 
 var Utils = require('./Utils');
 
-var debug = require('debug')('JsSIP:sanityCheck'); // Checks for requests and responses.
+var debug = require('debug')('FlyInn:sanityCheck'); // Checks for requests and responses.
 
 
 var all = [minimumHeaders]; // Checks for requests.
@@ -25909,7 +25951,7 @@ module.exports = function (m, u, t) {
  * Requests:
  *  - _rfc3261_8_2_2_1_ Receive a Request with a non supported URI scheme
  *  - _rfc3261_16_3_4_ Receive a Request already sent by us
- *   Does not look at via sent-by but at jssip_id, which is inserted as
+ *   Does not look at via sent-by but at flyinn_id, which is inserted as
  *   a prefix in all initial requests generated by the ua
  *  - _rfc3261_18_3_request_ Body Content-Length
  *  - _rfc3261_8_2_2_2_ Merged Requests
@@ -25933,7 +25975,7 @@ function rfc3261_8_2_2_1() {
 
 function rfc3261_16_3_4() {
   if (!message.to_tag) {
-    if (message.call_id.substr(0, 5) === ua.configuration.jssip_id) {
+    if (message.call_id.substr(0, 5) === ua.configuration.flyinn_id) {
       reply(482);
       return false;
     }
@@ -27178,7 +27220,9 @@ function setup(env) {
 	}
 
 	function extend(namespace, delimiter) {
-		return createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
+		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
+		newDebug.log = this.log;
+		return newDebug;
 	}
 
 	/**
@@ -28113,15 +28157,13 @@ module.exports = function (session, opts) {
 
 },{"./grammar":35}],39:[function(require,module,exports){
 module.exports={
-  "name": "jssip",
-  "title": "JsSIP",
-  "description": "the Javascript SIP library",
+  "name": "flyinn-web",
+  "title": "FlyInn",
+  "description": "the Javascript library base WebRTC and SIP",
   "version": "3.3.11",
-  "homepage": "https://jssip.net",
-  "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
-  "contributors": [
-    "Iñaki Baz Castillo <ibc@aliax.net> (https://github.com/ibc)"
-  ],
+  "homepage": "",
+  "author": "",
+  "contributors": [],
   "main": "lib-es5/JsSIP.js",
   "keywords": [
     "sip",
@@ -28133,11 +28175,11 @@ module.exports={
   ],
   "license": "MIT",
   "repository": {
-    "type": "git",
-    "url": "https://github.com/versatica/JsSIP.git"
+    "type": "",
+    "url": ""
   },
   "bugs": {
-    "url": "https://github.com/versatica/JsSIP/issues"
+    "url": ""
   },
   "dependencies": {
     "debug": "^4.1.1",

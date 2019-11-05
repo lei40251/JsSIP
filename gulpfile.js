@@ -79,20 +79,20 @@ gulp.task('browserify', function()
     .on('error', logError)
     .pipe(source(`${PKG.name}.js`))
     .pipe(buffer())
-    .pipe(rename(`${PKG.name}.js`))
+    .pipe(rename(`${PKG.name}-${PKG.version}.js`))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(gulp.dest('dist/'));
 });
 
 gulp.task('uglify', function()
 {
-  const src = `dist/${ PKG.name }.js`;
+  const src = `dist/${ PKG.name }-${PKG.version}.js`;
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
     .pipe(uglify())
     .pipe(header(BANNER, BANNER_OPTIONS))
-    .pipe(rename(`${PKG.name }.min.js`))
+    .pipe(rename(`${PKG.name }-${PKG.version}.min.js`))
     .pipe(gulp.dest('dist/'));
 });
 

@@ -1,13 +1,11 @@
 {
-  "name": "jssip",
-  "title": "JsSIP",
-  "description": "the Javascript SIP library",
+  "name": "flyinn-web",
+  "title": "FlyInn",
+  "description": "the Javascript library base WebRTC and SIP",
   "version": "3.3.11",
-  "homepage": "https://jssip.net",
-  "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
-  "contributors": [
-    "Iñaki Baz Castillo <ibc@aliax.net> (https://github.com/ibc)"
-  ],
+  "homepage": "",
+  "author": "",
+  "contributors": [],
   "main": "lib-es5/JsSIP.js",
   "keywords": [
     "sip",
@@ -19,11 +17,11 @@
   ],
   "license": "MIT",
   "repository": {
-    "type": "git",
-    "url": "https://github.com/versatica/JsSIP.git"
+    "type": "",
+    "url": ""
   },
   "bugs": {
-    "url": "https://github.com/versatica/JsSIP/issues"
+    "url": ""
   },
   "dependencies": {
     "debug": "^4.1.1",
