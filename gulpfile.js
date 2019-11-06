@@ -60,7 +60,7 @@ gulp.task('babel', function() {
 
 gulp.task('browserify', function() {
   return browserify({
-    entries: PKG.main,
+    entries: 'lib-es5/JsSIP.js',
     extensions: ['.js'],
     // Required for sourcemaps (must be false otherwise).
     debug: false,

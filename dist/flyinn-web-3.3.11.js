@@ -25673,7 +25673,7 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
     } // filter rtp
 
 
-    conditions.forEach(function (condition) {
+    conditions && conditions.forEach(function (condition) {
       media.rtp.forEach(function (item) {
         if (condition == item.codec) {
           payloads.push(item.payload);
@@ -25682,7 +25682,7 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
       });
     }); // filter fmtp
 
-    media.fmtp.forEach(function (item) {
+    media.fmtp && media.fmtp.forEach(function (item) {
       payloads.forEach(function (payload) {
         if (payload == item.payload) {
           fmtp.push(item);
@@ -25690,7 +25690,7 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
       });
     }); // filter rtcpFb
 
-    media.rtcpFb.forEach(function (item) {
+    media.rtcpFb && media.rtcpFb.forEach(function (item) {
       payloads.forEach(function (payload) {
         if (payload == item.payload) {
           rtcpFb.push(item);
@@ -25703,7 +25703,7 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
     media.payloads = payloads.join(' '); // filter candidate
 
     if (candidateFilter) {
-      media.candidates = media.candidates.filter(function (candidate) {
+      media.candidates = media.candidates && media.candidates.filter(function (candidate) {
         return candidate.transport == candidateFilter;
       });
     }
@@ -28165,7 +28165,6 @@ module.exports={
   "homepage": "",
   "author": "",
   "contributors": [],
-  "main": "lib-es5/JsSIP.js",
   "keywords": [
     "sip",
     "websocket",

@@ -6,7 +6,6 @@
   "homepage": "",
   "author": "",
   "contributors": [],
-  "main": "lib-es5/JsSIP.js",
   "keywords": [
     "sip",
     "websocket",
