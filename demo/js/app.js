@@ -3,23 +3,23 @@
 // FlyInnWeb.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-// FlyInnWeb.debug.disable("FlyInn:*");
+// FlyInnWeb.debug.disable('FlyInn:*');
 
 // 注册UA的用户名
 const account = parseInt(`90${Math.random() * 100}`);
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInnWeb.WebSocketInterface('wss://rtc.vsbc.com:5092/wss');
+const socket = new FlyInnWeb.WebSocketInterface('wss://pro.vsbc.com:60040/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
-  sockets : socket,
+  sockets: socket,
   // 与 UA 关联的 SIP URI
-  uri : `sip:${account}@rtc.vsbc.com`,
+  uri: `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
-  password : account
+  password: account
 };
 
 // FlyinnWeb 实例
@@ -38,20 +38,20 @@ function setStatus(text) {
 }
 
 // 新通话
-flyinnUA.on('newRTCSession', function(e) {
+flyinnUA.on('newRTCSession', function (e) {
   let curMuted = null;
 
-  document.querySelector('#answer').onclick = function() {
+  document.querySelector('#answer').onclick = function () {
     // 接听
     e.session.answer();
   };
 
-  document.querySelector('#cancel').onclick = function() {
+  document.querySelector('#cancel').onclick = function () {
     // 拒绝/挂机
     e.session.terminate();
   };
 
-  document.querySelector('#muteMic').onclick = function() {
+  document.querySelector('#muteMic').onclick = function () {
     // 获取视频和麦克风的关闭状态
     curMuted = e.session.isMuted();
     if (curMuted.audio) {
@@ -63,7 +63,7 @@ flyinnUA.on('newRTCSession', function(e) {
     }
   };
 
-  document.querySelector('#muteCam').onclick = function() {
+  document.querySelector('#muteCam').onclick = function () {
     // 获取视频和麦克风的关闭状态
     curMuted = e.session.isMuted();
     if (curMuted.video) {
@@ -75,12 +75,12 @@ flyinnUA.on('newRTCSession', function(e) {
     }
   };
 
-  document.querySelector('#sendInfo').onclick = function() {
+  document.querySelector('#sendInfo').onclick = function () {
     // 通话中发送消息  注意： contentType 必填
     e.session.sendInfo('text/plain', document.querySelector('#info').value);
   };
 
-  document.querySelector('#switchCam').onclick = function() {
+  document.querySelector('#switchCam').onclick = function () {
     // 切换摄像头
     const stream = e.session.switchVideoStream();
 
@@ -91,7 +91,7 @@ flyinnUA.on('newRTCSession', function(e) {
   };
 
   // 呼入振铃 & 呼出回铃音
-  e.session.on('progress', function(d) {
+  e.session.on('progress', function (d) {
     if (d.originator === 'local') {
       setStatus('收到新呼入振铃');
     } else {
@@ -100,25 +100,25 @@ flyinnUA.on('newRTCSession', function(e) {
   });
 
   // 呼叫失败处理
-  e.session.on('failed', function(d) {
+  e.session.on('failed', function (d) {
     setStatus(`呼叫失败: ${d.cause}`);
     location.reload();
   });
 
   // 呼叫结束
-  e.session.on('ended', function() {
+  e.session.on('ended', function () {
     setStatus('呼叫结束');
     location.reload();
   });
 
   // 呼叫已确认
-  e.session.on('confirmed', function() {
+  e.session.on('confirmed', function () {
     document.querySelector('#localVideo').srcObject = this.local_stream;
     document.querySelector('#remoteVideo').srcObject = this.remote_stream;
   });
 
   // 收到新消息
-  e.session.on('newInfo', function(d) {
+  e.session.on('newInfo', function (d) {
     if (d.originator === 'remote') {
       console.log('收到新消息：', d.info.body);
     } else if (d.originator === 'local') {
@@ -127,7 +127,7 @@ flyinnUA.on('newRTCSession', function(e) {
   });
 
   // 摄像头、麦克风已关闭
-  e.session.on('muted', function(d) {
+  e.session.on('muted', function (d) {
     if (d.audio) {
       document.querySelector('#muteMic').innerText = '开启麦克风';
     } else if (d.video) {
@@ -136,7 +136,7 @@ flyinnUA.on('newRTCSession', function(e) {
   });
 
   // 摄像头、麦克风已开启
-  e.session.on('unmuted', function(d) {
+  e.session.on('unmuted', function (d) {
     if (d.audio) {
       document.querySelector('#muteMic').innerText = '关闭麦克风';
     } else if (d.video) {
@@ -146,13 +146,12 @@ flyinnUA.on('newRTCSession', function(e) {
 });
 
 // 注册成功
-flyinnUA.on('registered', function() {
+flyinnUA.on('registered', function () {
   setStatus(`注册成功：${account}`);
 });
 
 // 注册成功
-flyinnUA.on('failed', function(d)
-{
+flyinnUA.on('failed', function (d) {
   console.log(d);
 });
 
@@ -160,20 +159,34 @@ flyinnUA.on('failed', function(d)
 flyinnUA.start();
 
 // 发起呼叫
-document.querySelector('#call').onclick = function()
-{
+document.querySelector('#call').onclick = function () {
   const linkman = document.querySelector('#linkman').value;
   const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
-    mediaConstraints : { audio: true, video: true }
+    mediaConstraints: { audio: true, video: true },
+    // pcConfig: {
+    //   iceServers: [
+    //     {
+    //       urls: 'turn:vctest.tp95589.com:10101',
+    //       username: 'user',
+    //       credential: 'Tp_19password'
+    //     },
+    //     {
+    //       urls: 'turn:vctest.tp95589.com:10103',
+    //       username: 'user',
+    //       credential: 'Tp_19password'
+    //     }
+    //   ],
+    //   iceTransportPolicy: 'relay'
+    // }
   });
 
-  document.querySelector('#cancel').onclick = function() {
+  document.querySelector('#cancel').onclick = function () {
     // 取消呼叫
     session.terminate();
     location.reload();
   };
 };
 
-window.onbeforeunload = function() {
+window.onbeforeunload = function () {
   flyinnUA.stop();
 };

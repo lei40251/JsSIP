@@ -49,7 +49,14 @@ exports.settings = {
    * Host address.
    * Value to be set in Via sent_by and host part of Contact FQDN.
   */
-  via_host: "".concat(Utils.createRandomToken(12), ".invalid")
+  via_host: "".concat(Utils.createRandomToken(12), ".invalid"),
+  // ice 检测超时时间，单位：秒
+  ice_gathering_timeout: 2,
+  // audio & video 编码默认值及优先顺序
+  audio_payloads: ['opus', 'PCMU', 'PCMA'],
+  video_payloads: ['VP8', 'H264', 'VP9'],
+  // candidate 使用的传输协议，默认udp
+  candidate_transport_protocol: 'udp'
 }; // Configuration checks.
 
 var checks = {
@@ -239,6 +246,86 @@ var checks = {
       if (typeof _use_preloaded_route === 'boolean') {
         return _use_preloaded_route;
       }
+    },
+    ice_gathering_timeout: function ice_gathering_timeout(_ice_gathering_timeout) {
+      if (Utils.isDecimal(_ice_gathering_timeout)) {
+        var value = Number(_ice_gathering_timeout);
+
+        if (value > 0) {
+          return value;
+        }
+      }
+    },
+    audio_payloads: function audio_payloads(_audio_payloads2) {
+      var _audio_payloads = [];
+
+      if (Array.isArray(_audio_payloads2) && _audio_payloads2.length) {
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = _audio_payloads2[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var payload = _step2.value;
+
+            _audio_payloads.push(String(payload));
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+              _iterator2["return"]();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+      } else {
+        return;
+      }
+
+      return _audio_payloads;
+    },
+    video_payloads: function video_payloads(_video_payloads2) {
+      var _video_payloads = [];
+
+      if (Array.isArray(_video_payloads2) && _video_payloads2.length) {
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
+
+        try {
+          for (var _iterator3 = _video_payloads2[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var payload = _step3.value;
+
+            _video_payloads.push(String(payload));
+          }
+        } catch (err) {
+          _didIteratorError3 = true;
+          _iteratorError3 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion3 && _iterator3["return"] != null) {
+              _iterator3["return"]();
+            }
+          } finally {
+            if (_didIteratorError3) {
+              throw _iteratorError3;
+            }
+          }
+        }
+      } else {
+        return;
+      }
+
+      return _video_payloads;
+    },
+    candidates_transport_protocol: function candidates_transport_protocol(candidates_transport) {
+      return String(candidates_transport);
     }
   }
 };
@@ -300,6 +387,7 @@ module.exports = {
     REQUEST_TIMEOUT: 'Request Timeout',
     SIP_FAILURE_CODE: 'SIP Failure Code',
     INTERNAL_ERROR: 'Internal Error',
+    CAMERA_MUTED: 'Camera Muted',
     // SIP error causes.
     BUSY: 'Busy',
     REJECTED: 'Rejected',
@@ -444,7 +532,11 @@ module.exports = {
     600: 'Busy Everywhere',
     603: 'Decline',
     604: 'Does Not Exist Anywhere',
-    606: 'Not Acceptable'
+    606: 'Not Acceptable',
+    607: 'Unwanted',
+    // RFC 8197
+    608: 'Rejected' // RFC-ietf-sipcore-rejected-09
+
   },
   ALLOWED_METHODS: 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
@@ -17527,6 +17619,11 @@ function (_EventEmitter) {
           type: 'offer',
           sdp: request.body
         };
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: _this3._ua.configuration.audio_payloads,
+          video: _this3._ua.configuration.video_payloads,
+          candidates: _this3._ua.configuration.candidates_transport_protocol
+        }));
         debug('emit "sdp"');
 
         _this3.emit('sdp', e);
@@ -18185,6 +18282,11 @@ function (_EventEmitter) {
                 type: 'answer',
                 sdp: request.body
               };
+              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+                audio: this._ua.configuration.audio_payloads,
+                video: this._ua.configuration.video_payloads,
+                candidates: this._ua.configuration.candidates_transport_protocol
+              }));
               debug('emit "sdp"');
               this.emit('sdp', e);
               var answer = new RTCSessionDescription({
@@ -18563,6 +18665,11 @@ function (_EventEmitter) {
             type: type,
             sdp: connection.localDescription.sdp
           };
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: _this13._ua.configuration.audio_payloads,
+            video: _this13._ua.configuration.video_payloads,
+            candidates: _this13._ua.configuration.candidates_transport_protocol
+          }));
           debug('emit "sdp"');
 
           _this13.emit('sdp', e);
@@ -18575,10 +18682,15 @@ function (_EventEmitter) {
           var finished = false;
           var iceCandidateListener;
           var iceGatheringStateListener;
+          var iceGatheringDuration = 0;
+          var iceGatheringTimer;
+          var iceGatherFlag = true;
 
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
-            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
+            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener); // 清理 ice 收集超时定时器
+
+            clearInterval(iceGatheringTimer);
             finished = true;
             _this13._rtcReady = true;
             var e = {
@@ -18586,6 +18698,11 @@ function (_EventEmitter) {
               type: type,
               sdp: connection.localDescription.sdp
             };
+            e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+              audio: _this13._ua.configuration.audio_payloads,
+              video: _this13._ua.configuration.video_payloads,
+              candidates: _this13._ua.configuration.candidates_transport_protocol
+            }));
             debug('emit "sdp"');
 
             _this13.emit('sdp', e);
@@ -18594,7 +18711,20 @@ function (_EventEmitter) {
           };
 
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
-            var candidate = event.candidate;
+            var candidate = event.candidate; // 添加 ice 收集超时控制
+
+            iceGatheringDuration += _this13._ua.configuration.ice_gathering_timeout * 1000;
+
+            if (iceGatherFlag) {
+              iceGatherFlag = false;
+              iceGatheringTimer = setInterval(function () {
+                iceGatheringDuration -= 100;
+
+                if (iceGatheringDuration <= 0) {
+                  ready();
+                }
+              }, 100);
+            }
 
             if (candidate) {
               _this13.emit('icecandidate', {
@@ -18895,6 +19025,11 @@ function (_EventEmitter) {
         type: 'offer',
         sdp: request.body
       };
+      e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        audio: this._ua.configuration.audio_payloads,
+        video: this._ua.configuration.video_payloads,
+        candidates: this._ua.configuration.candidates_transport_protocol
+      }));
       debug('emit "sdp"');
       this.emit('sdp', e);
       var offer = new RTCSessionDescription({
@@ -19282,6 +19417,11 @@ function (_EventEmitter) {
               type: 'answer',
               sdp: response.body
             };
+            e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+              audio: this._ua.configuration.audio_payloads,
+              video: this._ua.configuration.video_payloads,
+              candidates: this._ua.configuration.candidates_transport_protocol
+            }));
             debug('emit "sdp"');
             this.emit('sdp', e);
             var answer = new RTCSessionDescription({
@@ -19320,6 +19460,11 @@ function (_EventEmitter) {
               type: 'answer',
               sdp: response.body
             };
+            _e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(_e.sdp), {
+              audio: this._ua.configuration.audio_payloads,
+              video: this._ua.configuration.video_payloads,
+              candidates: this._ua.configuration.candidates_transport_protocol
+            }));
             debug('emit "sdp"');
             this.emit('sdp', _e);
 
@@ -19402,6 +19547,11 @@ function (_EventEmitter) {
           type: 'offer',
           sdp: sdp
         };
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: _this23._ua.configuration.audio_payloads,
+          video: _this23._ua.configuration.video_payloads,
+          candidates: _this23._ua.configuration.candidates_transport_protocol
+        }));
         debug('emit "sdp"');
 
         _this23.emit('sdp', e);
@@ -19465,6 +19615,11 @@ function (_EventEmitter) {
           type: 'answer',
           sdp: response.body
         };
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: this._ua.configuration.audio_payloads,
+          video: this._ua.configuration.video_payloads,
+          candidates: this._ua.configuration.candidates_transport_protocol
+        }));
         debug('emit "sdp"');
         this.emit('sdp', e);
         var answer = new RTCSessionDescription({
@@ -19524,6 +19679,11 @@ function (_EventEmitter) {
             type: 'offer',
             sdp: sdp
           };
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: _this25._ua.configuration.audio_payloads,
+            video: _this25._ua.configuration.video_payloads,
+            candidates: _this25._ua.configuration.candidates_transport_protocol
+          }));
           debug('emit "sdp"');
 
           _this25.emit('sdp', e);
@@ -19613,6 +19773,11 @@ function (_EventEmitter) {
             type: 'answer',
             sdp: response.body
           };
+          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            audio: this._ua.configuration.audio_payloads,
+            video: this._ua.configuration.video_payloads,
+            candidates: this._ua.configuration.candidates_transport_protocol
+          }));
           debug('emit "sdp"');
           this.emit('sdp', e);
           var answer = new RTCSessionDescription({
@@ -20127,6 +20292,28 @@ function (_EventEmitter) {
     key: "connection",
     get: function get() {
       return this._connection;
+    } // 当前连接的本地媒体流
+
+  }, {
+    key: "local_stream",
+    get: function get() {
+      var localStream = new MediaStream();
+      var peerConnection = this._connection;
+      peerConnection.getSenders().forEach(function (sender) {
+        localStream.addTrack(sender.track);
+      });
+      return localStream;
+    } // 当前连接的远端媒体流
+
+  }, {
+    key: "remote_stream",
+    get: function get() {
+      var remoteStream = new MediaStream();
+      var peerConnection = this._connection;
+      peerConnection.getReceivers().forEach(function (receiver) {
+        remoteStream.addTrack(receiver.track);
+      });
+      return remoteStream;
     }
   }, {
     key: "contact",
@@ -24282,6 +24469,7 @@ function (_EventEmitter) {
         this._configuration.via_host = this._configuration.contact_uri.host;
       } // Contact URI.
       else {
+          // 修改 Header 里面的 Contact 显示用户名
           this._configuration.contact_uri = new URI('sip', this._configuration.uri.user, this._configuration.via_host, null, {
             transport: 'ws'
           }); // this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8),
@@ -25304,6 +25492,64 @@ exports.closeMediaStream = function (stream) {
 
 exports.cloneArray = function (array) {
   return array && array.slice() || [];
+}; // 过滤 SDP 内容
+
+
+exports.filterSdpMedia = function (sdpObj, filterCondition) {
+  var mediaArr = sdpObj.media;
+  var audioCondition = filterCondition.audio;
+  var videoCondition = filterCondition.video;
+  var candidateFilter = filterCondition.candidates;
+  mediaArr.forEach(function (media) {
+    var payloads = [];
+    var rtp = [];
+    var fmtp = [];
+    var rtcpFb = [];
+    var conditions = null;
+
+    if (media.type == 'audio') {
+      conditions = audioCondition;
+    } else if (media.type == 'video') {
+      conditions = videoCondition;
+    } // filter rtp
+
+
+    conditions && conditions.forEach(function (condition) {
+      media.rtp.forEach(function (item) {
+        if (condition.toLowerCase() == item.codec.toLowerCase()) {
+          payloads.push(item.payload);
+          rtp.push(item);
+        }
+      });
+    }); // filter fmtp
+
+    media.fmtp && media.fmtp.forEach(function (item) {
+      payloads.forEach(function (payload) {
+        if (payload == item.payload) {
+          fmtp.push(item);
+        }
+      });
+    }); // filter rtcpFb
+
+    media.rtcpFb && media.rtcpFb.forEach(function (item) {
+      payloads.forEach(function (payload) {
+        if (payload == item.payload) {
+          rtcpFb.push(item);
+        }
+      });
+    });
+    media.rtp = rtp;
+    media.fmtp = fmtp;
+    media.rtcpFb = rtcpFb;
+    media.payloads = payloads.join(' '); // filter candidate
+
+    if (candidateFilter) {
+      media.candidates = media.candidates && media.candidates.filter(function (candidate) {
+        return candidate.transport == candidateFilter;
+      });
+    }
+  });
+  return sdpObj;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":25}],27:[function(require,module,exports){
 "use strict";
