@@ -17475,7 +17475,7 @@ function (_EventEmitter) {
               peerOffersFullVideo = true;
             }
           }
-        } // Remove audio from mediaStream if suggested by mediaConstraints.
+        } // 提示音视频模式
 
       } catch (err) {
         _didIteratorError = true;
@@ -17491,6 +17491,13 @@ function (_EventEmitter) {
           }
         }
       }
+
+      if (peerHasVideoLine) {
+        this._displayMode = 'video';
+      } else {
+        this._displayMode = 'audio';
+      } // Remove audio from mediaStream if suggested by mediaConstraints.
+
 
       if (mediaStream && mediaConstraints.audio === false) {
         tracks = mediaStream.getAudioTracks();
@@ -17617,7 +17624,8 @@ function (_EventEmitter) {
         var e = {
           originator: 'remote',
           type: 'offer',
-          sdp: request.body
+          sdp: request.body,
+          display_mode: _this3._displayMode
         };
         e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
           audio: _this3._ua.configuration.audio_payloads,
@@ -18638,7 +18646,9 @@ function (_EventEmitter) {
             return Promise.reject(error);
           });
         } else {
-          return connection.createAnswer(constraints)["catch"](function (error) {
+          // return connection.createAnswer(constraints)
+          // TODO:
+          return connection.createAnswer()["catch"](function (error) {
             debugerror('emit "peerconnection:createanswerfailed" [error:%o]', error);
 
             _this13.emit('peerconnection:createanswerfailed', error);
@@ -18891,6 +18901,8 @@ function (_EventEmitter) {
           _this15._setInvite2xxTimer(request, desc);
 
           _this15._setACKTimer();
+
+          _this15._accepted('local');
         }); // If callback is given execute it.
 
         if (typeof data.callback === 'function') {
@@ -18982,7 +18994,15 @@ function (_EventEmitter) {
 
       debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
+      var mediaConstraints = {
+        audio: true,
+        video: true
+      };
       var hold = false;
+      var peerHasAudioLine = false;
+      var peerHasVideoLine = false;
+      var peerOffersFullAudio = false;
+      var peerOffersFullVideo = false;
       var _iteratorNormalCompletion4 = true;
       var _didIteratorError4 = false;
       var _iteratorError4 = undefined;
@@ -19004,7 +19024,8 @@ function (_EventEmitter) {
               hold = false;
               break;
             }
-        }
+        } // Make sure sdp.media is an array, not the case if there is only one media.
+
       } catch (err) {
         _didIteratorError4 = true;
         _iteratorError4 = err;
@@ -19018,6 +19039,58 @@ function (_EventEmitter) {
             throw _iteratorError4;
           }
         }
+      }
+
+      if (!Array.isArray(sdp.media)) {
+        sdp.media = [sdp.media];
+      } // Go through all medias in SDP to find offered capabilities to answer with.
+
+
+      var _iteratorNormalCompletion5 = true;
+      var _didIteratorError5 = false;
+      var _iteratorError5 = undefined;
+
+      try {
+        for (var _iterator5 = sdp.media[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+          var _m = _step5.value;
+
+          if (_m.type === 'audio') {
+            peerHasAudioLine = true;
+
+            if (!_m.direction || _m.direction === 'sendrecv') {
+              peerOffersFullAudio = true;
+            }
+          }
+
+          if (_m.type === 'video') {
+            peerHasVideoLine = true;
+
+            if (!_m.direction || _m.direction === 'sendrecv') {
+              peerOffersFullVideo = true;
+            }
+          }
+        }
+      } catch (err) {
+        _didIteratorError5 = true;
+        _iteratorError5 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
+            _iterator5["return"]();
+          }
+        } finally {
+          if (_didIteratorError5) {
+            throw _iteratorError5;
+          }
+        }
+      }
+
+      if (!peerHasAudioLine || !peerOffersFullAudio) {
+        mediaConstraints.audio = false;
+      }
+
+      if (!peerHasVideoLine || !peerOffersFullVideo) {
+        mediaConstraints.video = false;
       }
 
       var e = {
@@ -19036,7 +19109,68 @@ function (_EventEmitter) {
         type: 'offer',
         sdp: e.sdp
       });
-      this._connectionPromiseQueue = this._connectionPromiseQueue // Set remote description.
+      this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
+        // Audio and/or video requested, prompt getUserMedia.
+        if (mediaConstraints.audio || mediaConstraints.video) {
+          _this17._localMediaStreamLocallyGenerated = true;
+          return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+            if (_this17._status === C.STATUS_TERMINATED) {
+              throw new Error('terminated');
+            }
+
+            request.reply(480);
+
+            _this17._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+
+            debugerror('emit "getusermediafailed" [error:%o]', error);
+
+            _this17.emit('getusermediafailed', error);
+
+            throw new Error('getUserMedia() failed');
+          });
+        }
+      }) // Attach MediaStream to RTCPeerconnection.
+      .then(function (stream) {
+        if (_this17._status === C.STATUS_TERMINATED) {
+          throw new Error('terminated');
+        }
+
+        var tracks = _this17._localMediaStream.getVideoTracks();
+
+        var _iteratorNormalCompletion6 = true;
+        var _didIteratorError6 = false;
+        var _iteratorError6 = undefined;
+
+        try {
+          for (var _iterator6 = tracks[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var track = _step6.value;
+            track.stop();
+
+            _this17._localMediaStream.removeTrack(track);
+          }
+        } catch (err) {
+          _didIteratorError6 = true;
+          _iteratorError6 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+              _iterator6["return"]();
+            }
+          } finally {
+            if (_didIteratorError6) {
+              throw _iteratorError6;
+            }
+          }
+        }
+
+        _this17._localMediaStream = stream;
+
+        if (stream) {
+          stream.getTracks().forEach(function (track) {
+            _this17._connection.addTrack(track, stream);
+          });
+        }
+      }) // Set remote description.
       .then(function () {
         if (_this17._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -19845,13 +19979,13 @@ function (_EventEmitter) {
 
       if (this._localHold && !this._remoteHold) {
         debug('mangleOffer() | me on hold, mangling offer');
-        var _iteratorNormalCompletion5 = true;
-        var _didIteratorError5 = false;
-        var _iteratorError5 = undefined;
+        var _iteratorNormalCompletion7 = true;
+        var _didIteratorError7 = false;
+        var _iteratorError7 = undefined;
 
         try {
-          for (var _iterator5 = sdp.media[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-            var m = _step5.value;
+          for (var _iterator7 = sdp.media[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+            var m = _step7.value;
 
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
@@ -19866,84 +20000,84 @@ function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _didIteratorError5 = true;
-          _iteratorError5 = err;
+          _didIteratorError7 = true;
+          _iteratorError7 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion5 && _iterator5["return"] != null) {
-              _iterator5["return"]();
+            if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
+              _iterator7["return"]();
             }
           } finally {
-            if (_didIteratorError5) {
-              throw _iteratorError5;
+            if (_didIteratorError7) {
+              throw _iteratorError7;
             }
           }
         }
       } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
           debug('mangleOffer() | both on hold, mangling offer');
-          var _iteratorNormalCompletion6 = true;
-          var _didIteratorError6 = false;
-          var _iteratorError6 = undefined;
+          var _iteratorNormalCompletion8 = true;
+          var _didIteratorError8 = false;
+          var _iteratorError8 = undefined;
 
           try {
-            for (var _iterator6 = sdp.media[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-              var _m = _step6.value;
+            for (var _iterator8 = sdp.media[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+              var _m2 = _step8.value;
 
-              if (holdMediaTypes.indexOf(_m.type) === -1) {
+              if (holdMediaTypes.indexOf(_m2.type) === -1) {
                 continue;
               }
 
-              _m.direction = 'inactive';
+              _m2.direction = 'inactive';
             }
           } catch (err) {
-            _didIteratorError6 = true;
-            _iteratorError6 = err;
+            _didIteratorError8 = true;
+            _iteratorError8 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-                _iterator6["return"]();
+              if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
+                _iterator8["return"]();
               }
             } finally {
-              if (_didIteratorError6) {
-                throw _iteratorError6;
+              if (_didIteratorError8) {
+                throw _iteratorError8;
               }
             }
           }
         } // Remote hold.
         else if (this._remoteHold) {
             debug('mangleOffer() | remote on hold, mangling offer');
-            var _iteratorNormalCompletion7 = true;
-            var _didIteratorError7 = false;
-            var _iteratorError7 = undefined;
+            var _iteratorNormalCompletion9 = true;
+            var _didIteratorError9 = false;
+            var _iteratorError9 = undefined;
 
             try {
-              for (var _iterator7 = sdp.media[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                var _m2 = _step7.value;
+              for (var _iterator9 = sdp.media[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                var _m3 = _step9.value;
 
-                if (holdMediaTypes.indexOf(_m2.type) === -1) {
+                if (holdMediaTypes.indexOf(_m3.type) === -1) {
                   continue;
                 }
 
-                if (!_m2.direction) {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'sendrecv') {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'recvonly') {
-                  _m2.direction = 'inactive';
+                if (!_m3.direction) {
+                  _m3.direction = 'recvonly';
+                } else if (_m3.direction === 'sendrecv') {
+                  _m3.direction = 'recvonly';
+                } else if (_m3.direction === 'recvonly') {
+                  _m3.direction = 'inactive';
                 }
               }
             } catch (err) {
-              _didIteratorError7 = true;
-              _iteratorError7 = err;
+              _didIteratorError9 = true;
+              _iteratorError9 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
-                  _iterator7["return"]();
+                if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
+                  _iterator9["return"]();
                 }
               } finally {
-                if (_didIteratorError7) {
-                  throw _iteratorError7;
+                if (_didIteratorError9) {
+                  throw _iteratorError9;
                 }
               }
             }
@@ -20075,26 +20209,26 @@ function (_EventEmitter) {
         return sender.track && sender.track.kind === 'audio';
       });
 
-      var _iteratorNormalCompletion8 = true;
-      var _didIteratorError8 = false;
-      var _iteratorError8 = undefined;
+      var _iteratorNormalCompletion10 = true;
+      var _didIteratorError10 = false;
+      var _iteratorError10 = undefined;
 
       try {
-        for (var _iterator8 = senders[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-          var sender = _step8.value;
+        for (var _iterator10 = senders[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+          var sender = _step10.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _didIteratorError8 = true;
-        _iteratorError8 = err;
+        _didIteratorError10 = true;
+        _iteratorError10 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
-            _iterator8["return"]();
+          if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
+            _iterator10["return"]();
           }
         } finally {
-          if (_didIteratorError8) {
-            throw _iteratorError8;
+          if (_didIteratorError10) {
+            throw _iteratorError10;
           }
         }
       }
@@ -20106,26 +20240,26 @@ function (_EventEmitter) {
         return sender.track && sender.track.kind === 'video';
       });
 
-      var _iteratorNormalCompletion9 = true;
-      var _didIteratorError9 = false;
-      var _iteratorError9 = undefined;
+      var _iteratorNormalCompletion11 = true;
+      var _didIteratorError11 = false;
+      var _iteratorError11 = undefined;
 
       try {
-        for (var _iterator9 = senders[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-          var sender = _step9.value;
+        for (var _iterator11 = senders[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+          var sender = _step11.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _didIteratorError9 = true;
-        _iteratorError9 = err;
+        _didIteratorError11 = true;
+        _iteratorError11 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
-            _iterator9["return"]();
+          if (!_iteratorNormalCompletion11 && _iterator11["return"] != null) {
+            _iterator11["return"]();
           }
         } finally {
-          if (_didIteratorError9) {
-            throw _iteratorError9;
+          if (_didIteratorError11) {
+            throw _iteratorError11;
           }
         }
       }
