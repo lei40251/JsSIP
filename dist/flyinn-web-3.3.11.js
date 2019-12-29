@@ -17477,7 +17477,7 @@ function (_EventEmitter) {
               peerOffersFullVideo = true;
             }
           }
-        } // Remove audio from mediaStream if suggested by mediaConstraints.
+        } // 提示音视频模式
 
       } catch (err) {
         _didIteratorError = true;
@@ -17493,6 +17493,13 @@ function (_EventEmitter) {
           }
         }
       }
+
+      if (peerHasVideoLine) {
+        this._displayMode = 'video';
+      } else {
+        this._displayMode = 'audio';
+      } // Remove audio from mediaStream if suggested by mediaConstraints.
+
 
       if (mediaStream && mediaConstraints.audio === false) {
         tracks = mediaStream.getAudioTracks();
@@ -17627,7 +17634,8 @@ function (_EventEmitter) {
         var e = {
           originator: 'remote',
           type: 'offer',
-          sdp: request.body
+          sdp: request.body,
+          display_mode: _this3._displayMode
         };
         e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
           audio: _this3._ua.configuration.audio_payloads,
@@ -19009,6 +19017,7 @@ function (_EventEmitter) {
       debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
       var hold = false;
+      var peerHasVideoLine = false;
       var _iteratorNormalCompletion4 = true;
       var _didIteratorError4 = false;
       var _iteratorError4 = undefined;
@@ -19030,7 +19039,12 @@ function (_EventEmitter) {
               hold = false;
               break;
             }
-        }
+
+          if (m.type === 'video') {
+            peerHasVideoLine = true;
+          }
+        } // 提示音视频模式
+
       } catch (err) {
         _didIteratorError4 = true;
         _iteratorError4 = err;
@@ -19046,10 +19060,17 @@ function (_EventEmitter) {
         }
       }
 
+      if (peerHasVideoLine) {
+        this._displayMode = 'video';
+      } else {
+        this._displayMode = 'audio';
+      }
+
       var e = {
         originator: 'remote',
         type: 'offer',
-        sdp: request.body
+        sdp: request.body,
+        display_mode: this._displayMode
       };
       e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
         audio: this._ua.configuration.audio_payloads,
