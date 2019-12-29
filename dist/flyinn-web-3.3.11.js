@@ -369,7 +369,7 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":20,"./URI":25,"./Utils":26}],2:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":21,"./URI":26,"./Utils":27}],2:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -546,7 +546,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":38}],3:[function(require,module,exports){
+},{"../package.json":39}],3:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -826,7 +826,7 @@ function () {
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":19,"./Transactions":22,"./Utils":26,"debug":30}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":20,"./Transactions":23,"./Utils":27,"debug":31}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -951,7 +951,7 @@ function () {
 
   return DialogRequestSender;
 }();
-},{"../Constants":2,"../RTCSession":12,"../RequestSender":18,"../Transactions":22}],5:[function(require,module,exports){
+},{"../Constants":2,"../RTCSession":12,"../RequestSender":19,"../Transactions":23}],5:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1163,7 +1163,7 @@ function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":26,"debug":30}],6:[function(require,module,exports){
+},{"./Utils":27,"debug":31}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16134,7 +16134,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":10,"./URI":25}],8:[function(require,module,exports){
+},{"./NameAddrHeader":10,"./URI":26}],8:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -16184,7 +16184,7 @@ var JsSIP = {
 
 };
 module.exports = JsSIP;
-},{"../package.json":38,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":27,"debug":30}],9:[function(require,module,exports){
+},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":28,"debug":31}],9:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16486,7 +16486,7 @@ function (_EventEmitter) {
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30,"events":29}],10:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":31,"events":30}],10:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16622,7 +16622,7 @@ function () {
 
   return NameAddrHeader;
 }();
-},{"./Grammar":7,"./URI":25}],11:[function(require,module,exports){
+},{"./Grammar":7,"./URI":26}],11:[function(require,module,exports){
 "use strict";
 
 var Grammar = require('./Grammar');
@@ -16968,7 +16968,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":19,"debug":30}],12:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":20,"debug":31}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -17013,6 +17013,8 @@ var RequestSender = require('./RequestSender');
 var RTCSession_DTMF = require('./RTCSession/DTMF');
 
 var RTCSession_Info = require('./RTCSession/Info');
+
+var RTCSession_Notify = require('./RTCSession/Notify');
 
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 
@@ -17559,12 +17561,20 @@ function (_EventEmitter) {
 
 
       if (!mediaStream && !peerHasAudioLine) {
-        mediaConstraints.audio = false;
+        if (this._rtcAnswerConstraints && this._rtcAnswerConstraints.audio) {
+          mediaConstraints.audio = true;
+        } else {
+          mediaConstraints.audio = false;
+        }
       } // Don't ask for video if the incoming offer has no video section.
 
 
       if (!mediaStream && !peerHasVideoLine) {
-        mediaConstraints.video = false;
+        if (this._rtcAnswerConstraints && this._rtcAnswerConstraints.video) {
+          mediaConstraints.video = true;
+        } else {
+          mediaConstraints.video = false;
+        }
       } // Create a new RTCPeerConnection instance.
       // TODO: This may throw an error, should react.
 
@@ -18381,8 +18391,16 @@ function (_EventEmitter) {
             break;
 
           case JsSIP_C.NOTIFY:
-            if (this._status === C.STATUS_CONFIRMED) {
-              this._receiveNotify(request);
+            if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
+              // this._receiveNotify(request);
+              var _contentType = request.getHeader('content-type'); // TODO: why？
+
+
+              if (_contentType == undefined) {
+                new RTCSession_Notify(this).init_incoming(request);
+              } else {
+                request.reply(415);
+              }
             } else {
               request.reply(403, 'Wrong Status');
             }
@@ -18450,6 +18468,13 @@ function (_EventEmitter) {
     value: function newInfo(data) {
       debug('newInfo()');
       this.emit('newInfo', data);
+    } // Called from Notify handler.
+
+  }, {
+    key: "newNotify",
+    value: function newNotify(data) {
+      debug('newNotify()');
+      this.emit('newNotify', data);
     }
     /**
      * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
@@ -18638,7 +18663,8 @@ function (_EventEmitter) {
             return Promise.reject(error);
           });
         } else {
-          return connection.createAnswer(constraints)["catch"](function (error) {
+          // return connection.createAnswer(constraints)
+          return connection.createAnswer()["catch"](function (error) {
             debugerror('emit "peerconnection:createanswerfailed" [error:%o]', error);
 
             _this13.emit('peerconnection:createanswerfailed', error);
@@ -19191,6 +19217,18 @@ function (_EventEmitter) {
             }
 
             referSubscriber.receiveNotify(request);
+            request.reply(200);
+            break;
+          }
+
+        case 'talk':
+          {
+            request.reply(200);
+            break;
+          }
+
+        case 'hold':
+          {
             request.reply(200);
             break;
           }
@@ -20362,7 +20400,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"debug":30,"events":29,"sdp-transform":35}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"debug":31,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20561,7 +20599,7 @@ function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":29}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":30}],14:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20697,7 +20735,83 @@ function (_EventEmitter) {
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":29}],15:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":30}],15:[function(require,module,exports){
+"use strict";
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var EventEmitter = require('events').EventEmitter;
+
+var debugerror = require('debug')('JsSIP:ERROR:RTCSession:Notify');
+
+debugerror.log = console.warn.bind(console); // const JsSIP_C = require('../Constants');
+// const Exceptions = require('../Exceptions');
+// const Utils = require('../Utils');
+
+module.exports =
+/*#__PURE__*/
+function (_EventEmitter) {
+  _inherits(Notify, _EventEmitter);
+
+  function Notify(session) {
+    var _this;
+
+    _classCallCheck(this, Notify);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(Notify).call(this));
+    _this._session = session;
+    _this._direction = null;
+    _this._contentType = null;
+    _this._body = null;
+    return _this;
+  }
+
+  _createClass(Notify, [{
+    key: "init_incoming",
+    value: function init_incoming(request) {
+      this._direction = 'incoming';
+      this.request = request;
+      request.reply(200);
+      this._contentType = request.getHeader('content-type');
+      this._body = request.body;
+
+      this._session.newNotify({
+        originator: 'remote',
+        notify: this,
+        request: request
+      });
+    }
+  }, {
+    key: "contentType",
+    get: function get() {
+      return this._contentType;
+    }
+  }, {
+    key: "body",
+    get: function get() {
+      return this._body;
+    }
+  }]);
+
+  return Notify;
+}(EventEmitter);
+},{"debug":31,"events":30}],16:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -20764,7 +20878,7 @@ function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":30}],16:[function(require,module,exports){
+},{"../Constants":2,"debug":31}],17:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20942,7 +21056,7 @@ function (_EventEmitter) {
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":26,"debug":30,"events":29}],17:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":27,"debug":31,"events":30}],18:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21303,7 +21417,7 @@ function () {
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30}],18:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":31}],19:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21475,7 +21589,7 @@ function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":22,"debug":30}],19:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":23,"debug":31}],20:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22323,7 +22437,10 @@ function (_IncomingMessage) {
         response += "Accept: ".concat(JsSIP_C.ACCEPTED_BODY_TYPES, "\r\n");
       }
 
-      response += "Supported: ".concat(supported, "\r\n");
+      response += "Supported: ".concat(supported, "\r\n"); // for 3PCC notify event
+
+      var allow_events = ['talk', 'hold', 'conference', 'refer', 'check-sync'];
+      response += "Allow-Events: ".concat(allow_events, "\r\n");
 
       if (body) {
         var length = Utils.str_utf8_length(body);
@@ -22427,7 +22544,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":26,"debug":30,"sdp-transform":35}],20:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":27,"debug":31,"sdp-transform":36}],21:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -22501,7 +22618,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":26,"debug":30}],21:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":27,"debug":31}],22:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -22523,7 +22640,7 @@ module.exports = {
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 
 };
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23347,7 +23464,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":19,"./Timers":21,"debug":30,"events":29}],23:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Timers":22,"debug":31,"events":30}],24:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -23674,7 +23791,7 @@ function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":20,"debug":30}],24:[function(require,module,exports){
+},{"./Constants":2,"./Socket":21,"debug":31}],25:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24676,7 +24793,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":28,"debug":30,"events":29}],25:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":31,"events":30}],26:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24944,7 +25061,7 @@ function () {
 
   return URI;
 }();
-},{"./Constants":2,"./Grammar":7,"./Utils":26}],26:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./Utils":27}],27:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -25551,7 +25668,7 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
   });
   return sdpObj;
 };
-},{"./Constants":2,"./Grammar":7,"./URI":25}],27:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./URI":26}],28:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -25731,7 +25848,7 @@ function () {
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":30}],28:[function(require,module,exports){
+},{"./Grammar":7,"debug":31}],29:[function(require,module,exports){
 "use strict";
 
 var JsSIP_C = require('./Constants');
@@ -26015,7 +26132,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":19,"./Utils":26,"debug":30}],29:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Utils":27,"debug":31}],30:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -26540,7 +26657,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 (function (process){
 /* eslint-env browser */
 
@@ -26808,7 +26925,7 @@ formatters.j = function (v) {
 };
 
 }).call(this,require('_process'))
-},{"./common":31,"_process":33}],31:[function(require,module,exports){
+},{"./common":32,"_process":34}],32:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -27076,7 +27193,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":32}],32:[function(require,module,exports){
+},{"ms":33}],33:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -27240,7 +27357,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -27426,7 +27543,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -27922,7 +28039,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -27935,7 +28052,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":36,"./writer":37}],36:[function(require,module,exports){
+},{"./parser":37,"./writer":38}],37:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -28061,7 +28178,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":34}],37:[function(require,module,exports){
+},{"./grammar":35}],38:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -28177,7 +28294,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":34}],38:[function(require,module,exports){
+},{"./grammar":35}],39:[function(require,module,exports){
 module.exports={
   "name": "flyinn-web",
   "title": "FlyInn-Web",
