@@ -18181,13 +18181,15 @@ function (_EventEmitter) {
           sdpOffer: true,
           eventHandlers: eventHandlers,
           rtcOfferConstraints: rtcOfferConstraints,
-          extraHeaders: options.extraHeaders
+          extraHeaders: options.extraHeaders,
+          toAudio: options.toAudio
         });
       } else {
         this._sendReinvite({
           eventHandlers: eventHandlers,
           rtcOfferConstraints: rtcOfferConstraints,
-          extraHeaders: options.extraHeaders
+          extraHeaders: options.extraHeaders,
+          toAudio: options.toAudio
         });
       }
 
@@ -18917,8 +18919,67 @@ function (_EventEmitter) {
 
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
+        } // Determine incoming media from incoming SDP offer (if any).
+
+
+        var sdp_m = sdp_transform.parse(desc);
+        var peerHasVideoLine = false; // Make sure sdp.media is an array, not the case if there is only one media.
+
+        if (!Array.isArray(sdp_m.media)) {
+          sdp_m.media = [sdp_m.media];
+        } // Go through all medias in SDP to find offered capabilities to answer with.
+
+
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
+
+        try {
+          for (var _iterator4 = sdp_m.media[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var m = _step4.value;
+
+            if (holdMediaTypes.indexOf(m.type) === -1) {
+              continue;
+            }
+
+            if (m.type && m.type === 'video' && m.port !== 0) {
+              peerHasVideoLine = true;
+            }
+          } // 提示音视频模式
+
+        } catch (err) {
+          _didIteratorError4 = true;
+          _iteratorError4 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
+              _iterator4["return"]();
+            }
+          } finally {
+            if (_didIteratorError4) {
+              throw _iteratorError4;
+            }
+          }
         }
 
+        if (peerHasVideoLine) {
+          this._displayMode = 'video';
+        } else {
+          this._displayMode = 'audio';
+        }
+
+        var e = {
+          originator: 'local',
+          sdp: desc,
+          display_mode: this._displayMode
+        };
+        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          audio: this._ua.configuration.audio_payloads,
+          video: this._ua.configuration.video_payloads,
+          candidates: this._ua.configuration.candidates_transport_protocol
+        }));
+        debug('emit "sdp"');
+        this.emit('sdp', e);
         request.reply(200, null, extraHeaders, desc, function () {
           _this15._status = C.STATUS_WAITING_FOR_ACK;
 
@@ -19019,26 +19080,30 @@ function (_EventEmitter) {
       debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
       var mediaConstraints = {
-        audio: true,
+        audio: false,
         video: true
       };
       var hold = false;
+      var reqHasVideo = false;
+      var senderHasVideo = false;
       var peerHasVideoLine = false;
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
+      var rejectVideo = false;
+      var _iteratorNormalCompletion5 = true;
+      var _didIteratorError5 = false;
+      var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator4 = sdp.media[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-          var m = _step4.value;
+        for (var _iterator5 = sdp.media[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+          var m = _step5.value;
 
           if (holdMediaTypes.indexOf(m.type) === -1) {
             continue;
           }
 
           var direction = m.direction || sdp.direction || 'sendrecv';
+          var ip = m.connection && m.connection.ip || sdp.connection && sdp.connection.ip || false;
 
-          if (direction === 'sendonly' || direction === 'inactive') {
+          if (direction === 'sendonly' || direction === 'inactive' || ip === '0.0.0.0') {
             hold = true;
           } // If at least one of the streams is active don't emit 'hold'.
           else {
@@ -19046,38 +19111,6 @@ function (_EventEmitter) {
               break;
             }
         }
-      } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
-            _iterator4["return"]();
-          }
-        } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
-          }
-        }
-      }
-
-      var _iteratorNormalCompletion5 = true;
-      var _didIteratorError5 = false;
-      var _iteratorError5 = undefined;
-
-      try {
-        for (var _iterator5 = sdp.media[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-          var _m = _step5.value;
-
-          if (holdMediaTypes.indexOf(_m.type) === -1) {
-            continue;
-          }
-
-          if (_m.type === 'video' && _m.type === 'video' && _m.port !== 0) {
-            peerHasVideoLine = true;
-          }
-        } // 提示音视频模式
-
       } catch (err) {
         _didIteratorError5 = true;
         _iteratorError5 = err;
@@ -19093,10 +19126,109 @@ function (_EventEmitter) {
         }
       }
 
+      var _iteratorNormalCompletion6 = true;
+      var _didIteratorError6 = false;
+      var _iteratorError6 = undefined;
+
+      try {
+        for (var _iterator6 = sdp.media[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+          var _m = _step6.value;
+
+          if (_m.type === 'video') {
+            if (_m.direction && _m.direction === 'sendrecv' && _m.port != 0) {
+              reqHasVideo = true;
+            }
+          }
+
+          var _direction = _m.direction || sdp.direction || 'sendrecv';
+
+          var _ip = _m.connection && _m.connection.ip || sdp.connection && sdp.connection.ip || false;
+
+          if (_m.type && _m.type === 'video' && _m.port !== 0) {
+            if (_direction !== 'sendonly' && _direction !== 'inactive' && _ip !== '0.0.0.0') {
+              peerHasVideoLine = true;
+            }
+          }
+        }
+      } catch (err) {
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
+            _iterator6["return"]();
+          }
+        } finally {
+          if (_didIteratorError6) {
+            throw _iteratorError6;
+          }
+        }
+      }
+
       if (peerHasVideoLine) {
         this._displayMode = 'video';
       } else {
         this._displayMode = 'audio';
+      }
+
+      var senders = this._connection.getSenders();
+
+      var _iteratorNormalCompletion7 = true;
+      var _didIteratorError7 = false;
+      var _iteratorError7 = undefined;
+
+      try {
+        for (var _iterator7 = senders[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+          var _sender = _step7.value;
+
+          if (_sender.track && _sender.track.kind === 'video' && _sender.track.readyState !== 'ended') {
+            senderHasVideo = true;
+          }
+        }
+      } catch (err) {
+        _didIteratorError7 = true;
+        _iteratorError7 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
+            _iterator7["return"]();
+          }
+        } finally {
+          if (_didIteratorError7) {
+            throw _iteratorError7;
+          }
+        }
+      }
+
+      if (!reqHasVideo && senderHasVideo) {
+        // this._toggleMuteVideo(true);
+        var videoSenders = this._connection.getSenders().filter(function (sender) {
+          return sender.track && sender.track.kind === 'video';
+        });
+
+        var _iteratorNormalCompletion8 = true;
+        var _didIteratorError8 = false;
+        var _iteratorError8 = undefined;
+
+        try {
+          for (var _iterator8 = videoSenders[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+            var sender = _step8.value;
+            sender.track.stop();
+          }
+        } catch (err) {
+          _didIteratorError8 = true;
+          _iteratorError8 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
+              _iterator8["return"]();
+            }
+          } finally {
+            if (_didIteratorError8) {
+              throw _iteratorError8;
+            }
+          }
+        }
       }
 
       var e = {
@@ -19117,8 +19249,14 @@ function (_EventEmitter) {
         sdp: e.sdp
       });
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        // Audio and/or video requested, prompt getUserMedia.
-        if (mediaConstraints.audio || mediaConstraints.video) {
+        if (reqHasVideo && !senderHasVideo) {
+          var allowVideo = !!confirm('是否接受视频请求？');
+
+          if (!allowVideo) {
+            rejectVideo = true;
+            return false;
+          }
+
           _this17._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this17._status === C.STATUS_TERMINATED) {
@@ -19142,39 +19280,44 @@ function (_EventEmitter) {
           throw new Error('terminated');
         }
 
-        var tracks = _this17._localMediaStream.getVideoTracks();
-
-        var _iteratorNormalCompletion6 = true;
-        var _didIteratorError6 = false;
-        var _iteratorError6 = undefined;
-
-        try {
-          for (var _iterator6 = tracks[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-            var track = _step6.value;
-            track.stop();
-
-            _this17._localMediaStream.removeTrack(track);
-          }
-        } catch (err) {
-          _didIteratorError6 = true;
-          _iteratorError6 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion6 && _iterator6["return"] != null) {
-              _iterator6["return"]();
-            }
-          } finally {
-            if (_didIteratorError6) {
-              throw _iteratorError6;
-            }
-          }
-        }
-
-        _this17._localMediaStream = stream;
-
         if (stream) {
+          var tracks = _this17._localMediaStream.getVideoTracks();
+
+          var _iteratorNormalCompletion9 = true;
+          var _didIteratorError9 = false;
+          var _iteratorError9 = undefined;
+
+          try {
+            for (var _iterator9 = tracks[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+              var track = _step9.value;
+              track.stop();
+
+              _this17._localMediaStream.removeTrack(track);
+            }
+          } catch (err) {
+            _didIteratorError9 = true;
+            _iteratorError9 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
+                _iterator9["return"]();
+              }
+            } finally {
+              if (_didIteratorError9) {
+                throw _iteratorError9;
+              }
+            }
+          }
+
+          _this17._localMediaStream = stream;
           stream.getTracks().forEach(function (track) {
             _this17._connection.addTrack(track, stream);
+          });
+        } else {
+          _this17._connection.getSenders().forEach(function (sender) {
+            if (sender.track && sender.track.kind == 'video') {
+              sender.track.stop();
+            }
           });
         }
       }) // Set remote description.
@@ -19215,6 +19358,41 @@ function (_EventEmitter) {
           request.reply(500);
           throw new Error('_createLocalDescription() failed');
         });
+      }).then(function (desc) {
+        if (rejectVideo) {
+          rejectVideo = false;
+          desc = sdp_transform.parse(desc);
+          var _iteratorNormalCompletion10 = true;
+          var _didIteratorError10 = false;
+          var _iteratorError10 = undefined;
+
+          try {
+            for (var _iterator10 = desc.media[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+              var m = _step10.value;
+
+              if (m.type === 'video') {
+                m.port = 0;
+              }
+            }
+          } catch (err) {
+            _didIteratorError10 = true;
+            _iteratorError10 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
+                _iterator10["return"]();
+              }
+            } finally {
+              if (_didIteratorError10) {
+                throw _iteratorError10;
+              }
+            }
+          }
+
+          return sdp_transform.write(desc);
+        }
+
+        return desc;
       });
       return this._connectionPromiseQueue;
     }
@@ -19683,7 +19861,9 @@ function (_EventEmitter) {
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = options.eventHandlers || {};
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
+      var toAudio = options.toAudio || false;
       var succeeded = false;
+      var peerHasVideoLine = false;
       extraHeaders.push("Contact: ".concat(this._contact));
       extraHeaders.push('Content-Type: application/sdp'); // Session Timers.
 
@@ -19694,11 +19874,90 @@ function (_EventEmitter) {
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
         return _this23._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this23._mangleOffer(sdp);
+        if (toAudio) {
+          sdp = sdp_transform.parse(sdp);
+          var _iteratorNormalCompletion11 = true;
+          var _didIteratorError11 = false;
+          var _iteratorError11 = undefined;
+
+          try {
+            for (var _iterator11 = sdp.media[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+              var m = _step11.value;
+
+              if (m.type === 'video' && toAudio) {
+                m.port = 0;
+              }
+            }
+          } catch (err) {
+            _didIteratorError11 = true;
+            _iteratorError11 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion11 && _iterator11["return"] != null) {
+                _iterator11["return"]();
+              }
+            } finally {
+              if (_didIteratorError11) {
+                throw _iteratorError11;
+              }
+            }
+          }
+
+          sdp = sdp_transform.write(sdp);
+        }
+
+        sdp = _this23._mangleOffer(sdp); // Determine incoming media from incoming SDP offer (if any).
+
+        var sdp_m = sdp_transform.parse(sdp); // Make sure sdp.media is an array, not the case if there is only one media.
+
+        if (!Array.isArray(sdp_m.media)) {
+          sdp_m.media = [sdp_m.media];
+        } // Go through all medias in SDP to find offered capabilities to answer with.
+
+
+        var _iteratorNormalCompletion12 = true;
+        var _didIteratorError12 = false;
+        var _iteratorError12 = undefined;
+
+        try {
+          for (var _iterator12 = sdp_m.media[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+            var _m2 = _step12.value;
+
+            if (holdMediaTypes.indexOf(_m2.type) === -1) {
+              continue;
+            }
+
+            if (_m2.type && _m2.type === 'video' && _m2.port !== 0) {
+              peerHasVideoLine = true;
+            }
+          } // 提示音视频模式
+
+        } catch (err) {
+          _didIteratorError12 = true;
+          _iteratorError12 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion12 && _iterator12["return"] != null) {
+              _iterator12["return"]();
+            }
+          } finally {
+            if (_didIteratorError12) {
+              throw _iteratorError12;
+            }
+          }
+        }
+
+        if (peerHasVideoLine) {
+          _this23._displayMode = 'video';
+        } else {
+          _this23._displayMode = 'audio';
+        }
+
         var e = {
           originator: 'local',
           type: 'offer',
-          sdp: sdp
+          sdp: sdp,
+          display_mode: _this23._displayMode
         };
         e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
           audio: _this23._ua.configuration.audio_payloads,
@@ -19745,6 +20004,8 @@ function (_EventEmitter) {
           return;
         }
 
+        this._accepted('remote', response);
+
         this.sendRequest(JsSIP_C.ACK); // If it is a 2XX retransmission exit now.
 
         if (succeeded) {
@@ -19763,10 +20024,73 @@ function (_EventEmitter) {
           return;
         }
 
+        var sdp = response.parseSDP();
+        var _iteratorNormalCompletion13 = true;
+        var _didIteratorError13 = false;
+        var _iteratorError13 = undefined;
+
+        try {
+          for (var _iterator13 = sdp.media[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+            var m = _step13.value;
+
+            if (m.type === 'video' && m.port == 0) {
+              var tracks = this._localMediaStream.getVideoTracks();
+
+              var _iteratorNormalCompletion14 = true;
+              var _didIteratorError14 = false;
+              var _iteratorError14 = undefined;
+
+              try {
+                for (var _iterator14 = tracks[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                  var track = _step14.value;
+                  track.stop();
+
+                  this._localMediaStream.removeTrack(track);
+                }
+              } catch (err) {
+                _didIteratorError14 = true;
+                _iteratorError14 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion14 && _iterator14["return"] != null) {
+                    _iterator14["return"]();
+                  }
+                } finally {
+                  if (_didIteratorError14) {
+                    throw _iteratorError14;
+                  }
+                }
+              }
+
+              this._connection.getSenders().forEach(function (sender) {
+                if (sender.track && sender.track.kind == 'video') {
+                  sender.track.stop();
+                }
+              });
+
+              this._displayMode = 'audio';
+            }
+          }
+        } catch (err) {
+          _didIteratorError13 = true;
+          _iteratorError13 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion13 && _iterator13["return"] != null) {
+              _iterator13["return"]();
+            }
+          } finally {
+            if (_didIteratorError13) {
+              throw _iteratorError13;
+            }
+          }
+        }
+
         var e = {
           originator: 'remote',
           type: 'answer',
-          sdp: response.body
+          sdp: response.body,
+          display_mode: this._displayMode
         };
         e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
           audio: this._ua.configuration.audio_payloads,
@@ -19998,13 +20322,13 @@ function (_EventEmitter) {
 
       if (this._localHold && !this._remoteHold) {
         debug('mangleOffer() | me on hold, mangling offer');
-        var _iteratorNormalCompletion7 = true;
-        var _didIteratorError7 = false;
-        var _iteratorError7 = undefined;
+        var _iteratorNormalCompletion15 = true;
+        var _didIteratorError15 = false;
+        var _iteratorError15 = undefined;
 
         try {
-          for (var _iterator7 = sdp.media[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-            var m = _step7.value;
+          for (var _iterator15 = sdp.media[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+            var m = _step15.value;
 
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
@@ -20019,84 +20343,84 @@ function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _didIteratorError7 = true;
-          _iteratorError7 = err;
+          _didIteratorError15 = true;
+          _iteratorError15 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion7 && _iterator7["return"] != null) {
-              _iterator7["return"]();
+            if (!_iteratorNormalCompletion15 && _iterator15["return"] != null) {
+              _iterator15["return"]();
             }
           } finally {
-            if (_didIteratorError7) {
-              throw _iteratorError7;
+            if (_didIteratorError15) {
+              throw _iteratorError15;
             }
           }
         }
       } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
           debug('mangleOffer() | both on hold, mangling offer');
-          var _iteratorNormalCompletion8 = true;
-          var _didIteratorError8 = false;
-          var _iteratorError8 = undefined;
+          var _iteratorNormalCompletion16 = true;
+          var _didIteratorError16 = false;
+          var _iteratorError16 = undefined;
 
           try {
-            for (var _iterator8 = sdp.media[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-              var _m2 = _step8.value;
+            for (var _iterator16 = sdp.media[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+              var _m3 = _step16.value;
 
-              if (holdMediaTypes.indexOf(_m2.type) === -1) {
+              if (holdMediaTypes.indexOf(_m3.type) === -1) {
                 continue;
               }
 
-              _m2.direction = 'inactive';
+              _m3.direction = 'inactive';
             }
           } catch (err) {
-            _didIteratorError8 = true;
-            _iteratorError8 = err;
+            _didIteratorError16 = true;
+            _iteratorError16 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion8 && _iterator8["return"] != null) {
-                _iterator8["return"]();
+              if (!_iteratorNormalCompletion16 && _iterator16["return"] != null) {
+                _iterator16["return"]();
               }
             } finally {
-              if (_didIteratorError8) {
-                throw _iteratorError8;
+              if (_didIteratorError16) {
+                throw _iteratorError16;
               }
             }
           }
         } // Remote hold.
         else if (this._remoteHold) {
             debug('mangleOffer() | remote on hold, mangling offer');
-            var _iteratorNormalCompletion9 = true;
-            var _didIteratorError9 = false;
-            var _iteratorError9 = undefined;
+            var _iteratorNormalCompletion17 = true;
+            var _didIteratorError17 = false;
+            var _iteratorError17 = undefined;
 
             try {
-              for (var _iterator9 = sdp.media[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                var _m3 = _step9.value;
+              for (var _iterator17 = sdp.media[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                var _m4 = _step17.value;
 
-                if (holdMediaTypes.indexOf(_m3.type) === -1) {
+                if (holdMediaTypes.indexOf(_m4.type) === -1) {
                   continue;
                 }
 
-                if (!_m3.direction) {
-                  _m3.direction = 'recvonly';
-                } else if (_m3.direction === 'sendrecv') {
-                  _m3.direction = 'recvonly';
-                } else if (_m3.direction === 'recvonly') {
-                  _m3.direction = 'inactive';
+                if (!_m4.direction) {
+                  _m4.direction = 'recvonly';
+                } else if (_m4.direction === 'sendrecv') {
+                  _m4.direction = 'recvonly';
+                } else if (_m4.direction === 'recvonly') {
+                  _m4.direction = 'inactive';
                 }
               }
             } catch (err) {
-              _didIteratorError9 = true;
-              _iteratorError9 = err;
+              _didIteratorError17 = true;
+              _iteratorError17 = err;
             } finally {
               try {
-                if (!_iteratorNormalCompletion9 && _iterator9["return"] != null) {
-                  _iterator9["return"]();
+                if (!_iteratorNormalCompletion17 && _iterator17["return"] != null) {
+                  _iterator17["return"]();
                 }
               } finally {
-                if (_didIteratorError9) {
-                  throw _iteratorError9;
+                if (_didIteratorError17) {
+                  throw _iteratorError17;
                 }
               }
             }
@@ -20228,26 +20552,26 @@ function (_EventEmitter) {
         return sender.track && sender.track.kind === 'audio';
       });
 
-      var _iteratorNormalCompletion10 = true;
-      var _didIteratorError10 = false;
-      var _iteratorError10 = undefined;
+      var _iteratorNormalCompletion18 = true;
+      var _didIteratorError18 = false;
+      var _iteratorError18 = undefined;
 
       try {
-        for (var _iterator10 = senders[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-          var sender = _step10.value;
+        for (var _iterator18 = senders[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+          var sender = _step18.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _didIteratorError10 = true;
-        _iteratorError10 = err;
+        _didIteratorError18 = true;
+        _iteratorError18 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion10 && _iterator10["return"] != null) {
-            _iterator10["return"]();
+          if (!_iteratorNormalCompletion18 && _iterator18["return"] != null) {
+            _iterator18["return"]();
           }
         } finally {
-          if (_didIteratorError10) {
-            throw _iteratorError10;
+          if (_didIteratorError18) {
+            throw _iteratorError18;
           }
         }
       }
@@ -20259,26 +20583,26 @@ function (_EventEmitter) {
         return sender.track && sender.track.kind === 'video';
       });
 
-      var _iteratorNormalCompletion11 = true;
-      var _didIteratorError11 = false;
-      var _iteratorError11 = undefined;
+      var _iteratorNormalCompletion19 = true;
+      var _didIteratorError19 = false;
+      var _iteratorError19 = undefined;
 
       try {
-        for (var _iterator11 = senders[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-          var sender = _step11.value;
+        for (var _iterator19 = senders[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+          var sender = _step19.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _didIteratorError11 = true;
-        _iteratorError11 = err;
+        _didIteratorError19 = true;
+        _iteratorError19 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion11 && _iterator11["return"] != null) {
-            _iterator11["return"]();
+          if (!_iteratorNormalCompletion19 && _iterator19["return"] != null) {
+            _iterator19["return"]();
           }
         } finally {
-          if (_didIteratorError11) {
-            throw _iteratorError11;
+          if (_didIteratorError19) {
+            throw _iteratorError19;
           }
         }
       }
