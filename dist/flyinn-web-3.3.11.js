@@ -546,7 +546,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":39}],3:[function(require,module,exports){
+},{"../package.json":40}],3:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -826,7 +826,7 @@ function () {
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":20,"./Transactions":23,"./Utils":27,"debug":31}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":20,"./Transactions":23,"./Utils":27,"debug":32}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1163,7 +1163,7 @@ function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":27,"debug":31}],6:[function(require,module,exports){
+},{"./Utils":27,"debug":32}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16184,7 +16184,7 @@ var JsSIP = {
 
 };
 module.exports = JsSIP;
-},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":28,"debug":31}],9:[function(require,module,exports){
+},{"../package.json":40,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":29,"debug":32}],9:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16486,7 +16486,7 @@ function (_EventEmitter) {
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":31,"events":30}],10:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":32,"events":31}],10:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16968,7 +16968,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":20,"debug":31}],12:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":20,"debug":32}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16977,9 +16977,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
 
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
@@ -17019,6 +17019,8 @@ var RTCSession_Notify = require('./RTCSession/Notify');
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
+
+var WebRTC_SwitchCam = require('./WebRTC/SwitchCam');
 
 var URI = require('./URI');
 
@@ -17131,7 +17133,9 @@ function (_EventEmitter) {
 
     _this._referSubscribers = {}; // Custom session empty object for high level use.
 
-    _this._data = {};
+    _this._data = {}; // 切换视频流
+
+    _this._SwitchCam = new WebRTC_SwitchCam(_assertThisInitialized(_this));
     return _this;
   }
   /**
@@ -17950,6 +17954,24 @@ function (_EventEmitter) {
 
       var info = new RTCSession_Info(this);
       info.send(contentType, body, options);
+    }
+    /**
+     * 切换摄像头（视频流）
+     *
+     * @param {*} videoStream 需要切换为的视频流
+     * @returns 新的本地视频流的 Promise 对象
+     */
+
+  }, {
+    key: "switchVideoStream",
+    value: function switchVideoStream(videoStream) {
+      debug('switchVideoStream()'); // Check Session Status.
+
+      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK) {
+        throw new Exceptions.InvalidStateError(this._status);
+      }
+
+      return this._SwitchCam.switchVideoStream(videoStream);
     }
     /**
      * Mute
@@ -20839,7 +20861,7 @@ function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"debug":31,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/Notify":15,"./RTCSession/ReferNotifier":16,"./RTCSession/ReferSubscriber":17,"./RequestSender":19,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"./WebRTC/SwitchCam":28,"debug":32,"events":31,"sdp-transform":37}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21038,7 +21060,7 @@ function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":30}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":32,"events":31}],14:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21174,7 +21196,7 @@ function (_EventEmitter) {
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":30}],15:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":32,"events":31}],15:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21250,7 +21272,7 @@ function (_EventEmitter) {
 
   return Notify;
 }(EventEmitter);
-},{"debug":31,"events":30}],16:[function(require,module,exports){
+},{"debug":32,"events":31}],16:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21317,7 +21339,7 @@ function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":31}],17:[function(require,module,exports){
+},{"../Constants":2,"debug":32}],17:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21495,7 +21517,7 @@ function (_EventEmitter) {
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":27,"debug":31,"events":30}],18:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":27,"debug":32,"events":31}],18:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21856,7 +21878,7 @@ function () {
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":31}],19:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":19,"./SIPMessage":20,"./Utils":27,"debug":32}],19:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -22028,7 +22050,7 @@ function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":23,"debug":31}],20:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":23,"debug":32}],20:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22983,7 +23005,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":27,"debug":31,"sdp-transform":36}],21:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":27,"debug":32,"sdp-transform":37}],21:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -23057,7 +23079,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":27,"debug":31}],22:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":27,"debug":32}],22:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -23903,7 +23925,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":20,"./Timers":22,"debug":31,"events":30}],24:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Timers":22,"debug":32,"events":31}],24:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24230,7 +24252,7 @@ function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":21,"debug":31}],25:[function(require,module,exports){
+},{"./Constants":2,"./Socket":21,"debug":32}],25:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -25232,7 +25254,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":29,"debug":31,"events":30}],26:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":18,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":30,"debug":32,"events":31}],26:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -26110,6 +26132,190 @@ exports.filterSdpMedia = function (sdpObj, filterCondition) {
 },{"./Constants":2,"./Grammar":7,"./URI":26}],28:[function(require,module,exports){
 "use strict";
 
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+var EventEmitter = require('events').EventEmitter;
+
+var debug = require('debug')('FlyInn:RTCSession');
+
+var debugerror = require('debug')('FlyInn:ERROR:WebRTC:SwitchCam');
+
+debugerror.log = console.warn.bind(console);
+
+var Exceptions = require('../Exceptions');
+
+module.exports =
+/*#__PURE__*/
+function (_EventEmitter) {
+  _inherits(SwitchCam, _EventEmitter);
+
+  function SwitchCam(session) {
+    var _this;
+
+    _classCallCheck(this, SwitchCam);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(SwitchCam).call(this));
+    _this._session = session;
+    _this._mediaConstraints = {
+      audio: false,
+      video: true
+    };
+    _this._cams = [];
+    _this._camIdx = 0;
+    _this._shouldFaceUser = true;
+
+    _this._initDevices();
+
+    return _this;
+  }
+
+  _createClass(SwitchCam, [{
+    key: "switchVideoStream",
+
+    /**
+     * 切换视频流
+     *
+     * @param {*} videoStream 要切换的新视频流
+     * @returns 新的本地流
+     */
+    value: function switchVideoStream(videoStream) {
+      var _this2 = this;
+
+      debug('switchVideoStream()'); // Check Session Status.
+
+      if (this._session.status !== this._session.C.STATUS_CONFIRMED && this._session.status !== this._session.C.STATUS_WAITING_FOR_ACK) {
+        throw new Exceptions.InvalidStateError(this._status);
+      }
+
+      if (videoStream) {
+        this._switchStream(videoStream);
+      } else {
+        this._shouldFaceUser = !this._shouldFaceUser;
+
+        if (this._getSupportedConstraints('facingMode') === true) {
+          this._mediaConstraints.video = {
+            facingMode: this._shouldFaceUser ? 'user' : 'environment'
+          };
+        } else if (this._cams.length < 2) {
+          this._mediaConstraints.video = true;
+          return;
+        } else if (this._cams.length === 2) {
+          this._mediaConstraints.video = {
+            deviceId: {
+              exact: this._shouldFaceUser ? this._cams[0] : this._cams[1]
+            }
+          };
+        } else if (this._cams.length > 2) {
+          if (this._camIdx + 1 < this._cams.length) {
+            this._camIdx += 1;
+          } else {
+            this._camIdx = 0;
+          }
+
+          this._mediaConstraints.video = {
+            deviceId: {
+              exact: this._cams[this._camIdx]
+            }
+          };
+        }
+
+        return Promise.resolve().then(function () {
+          return navigator.mediaDevices.getUserMedia(_this2._mediaConstraints)["catch"](function (error) {
+            debugerror('emit "getusermediafailed" [error:%o]', error);
+
+            _this2.emit('getusermediafailed', error);
+
+            throw new Error('getUserMedia() failed');
+          });
+        }).then(function (mediaStream) {
+          _this2._switchStream(mediaStream);
+
+          return mediaStream;
+        });
+      }
+    } // 停止原视频轨道，替换为新的视频轨道
+
+  }, {
+    key: "_switchStream",
+    value: function _switchStream(videoStream) {
+      var _this3 = this;
+
+      videoStream.getVideoTracks().forEach(function (track) {
+        _this3._session._connection.getSenders().find(function (s) {
+          if (s.track.kind == 'video') {
+            s.track.stop();
+            s.replaceTrack(track);
+          }
+        });
+      });
+    } // 约束支持情况
+
+  }, {
+    key: "_getSupportedConstraints",
+    value: function _getSupportedConstraints(constraint) {
+      var supportedConstraints = navigator.mediaDevices.getSupportedConstraints(); // return true or false.
+
+      return supportedConstraints.hasOwnProperty(constraint);
+    } // 获取设备列表
+
+  }, {
+    key: "_initDevices",
+    value: function _initDevices() {
+      var _this4 = this;
+
+      return Promise.resolve() // Handle local MediaStream.
+      .then(function () {
+        return navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true
+        })["catch"](function (error) {
+          debugerror('emit "getusermediafailed" [error:%o]', error);
+
+          _this4.emit('getusermediafailed', error);
+
+          throw new Error('getUserMedia() failed');
+        });
+      }).then(function (mediaStream) {
+        mediaStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        return navigator.mediaDevices.enumerateDevices();
+      }).then(function (mediaDevices) {
+        mediaDevices.forEach(function (mediaDevice) {
+          if (mediaDevice.kind === 'videoinput') {
+            _this4._cams.push(mediaDevice.deviceId);
+          }
+        });
+      });
+    }
+  }, {
+    key: "cams",
+    get: function get() {
+      return this._cams;
+    }
+  }]);
+
+  return SwitchCam;
+}(EventEmitter);
+},{"../Exceptions":6,"debug":32,"events":31}],29:[function(require,module,exports){
+"use strict";
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -26287,7 +26493,7 @@ function () {
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":31}],29:[function(require,module,exports){
+},{"./Grammar":7,"debug":32}],30:[function(require,module,exports){
 "use strict";
 
 var JsSIP_C = require('./Constants');
@@ -26571,7 +26777,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":20,"./Utils":27,"debug":31}],30:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Utils":27,"debug":32}],31:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -27096,7 +27302,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 (function (process){
 /* eslint-env browser */
 
@@ -27364,7 +27570,7 @@ formatters.j = function (v) {
 };
 
 }).call(this,require('_process'))
-},{"./common":32,"_process":34}],32:[function(require,module,exports){
+},{"./common":33,"_process":35}],33:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -27632,7 +27838,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":33}],33:[function(require,module,exports){
+},{"ms":34}],34:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -27796,7 +28002,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -27982,7 +28188,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -28478,7 +28684,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -28491,7 +28697,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":37,"./writer":38}],37:[function(require,module,exports){
+},{"./parser":38,"./writer":39}],38:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -28617,7 +28823,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":35}],38:[function(require,module,exports){
+},{"./grammar":36}],39:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -28733,7 +28939,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":35}],39:[function(require,module,exports){
+},{"./grammar":36}],40:[function(require,module,exports){
 module.exports={
   "name": "flyinn-web",
   "title": "FlyInn-Web",
