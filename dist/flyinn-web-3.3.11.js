@@ -1,5 +1,5 @@
 /*
- * Copyright: 2012-2019 
+ * Copyright: 2012-2020 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInnWeb = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
@@ -19272,13 +19272,12 @@ function (_EventEmitter) {
       });
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
         if (reqHasVideo && !senderHasVideo) {
-          var allowVideo = !!confirm('是否接受视频请求？');
-
-          if (!allowVideo) {
-            rejectVideo = true;
-            return false;
-          }
-
+          // const allowVideo = !!confirm('是否接受视频请求？');
+          // if (!allowVideo)
+          // {
+          //   rejectVideo = true;
+          //   return false;
+          // }
           _this17._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this17._status === C.STATUS_TERMINATED) {
