@@ -26315,6 +26315,12 @@ function (_EventEmitter) {
         }
 
         return Promise.resolve().then(function () {
+          _this2._session._connection.getSenders().find(function (s) {
+            if (s.track.kind == 'video') {
+              s.track.stop();
+            }
+          });
+
           return navigator.mediaDevices.getUserMedia(_this2._mediaConstraints)["catch"](function (error) {
             debugerror('emit "getusermediafailed" [error:%o]', error);
 
