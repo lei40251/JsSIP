@@ -19188,7 +19188,6 @@ function (_EventEmitter) {
       var hold = false;
       var reqHasVideo = false;
       var senderHasVideo = false;
-      var peerHasVideoLine = false;
       var _iteratorNormalCompletion7 = true;
       var _didIteratorError7 = false;
       var _iteratorError7 = undefined;
@@ -19240,16 +19239,6 @@ function (_EventEmitter) {
               reqHasVideo = true;
             }
           }
-
-          var _direction = _m.direction || sdp.direction || 'sendrecv';
-
-          var _ip = _m.connection && _m.connection.ip || sdp.connection && sdp.connection.ip || false;
-
-          if (_m.type && _m.type === 'video' && _m.port !== 0) {
-            if (_direction !== 'sendonly' && _direction !== 'inactive' && _ip !== '0.0.0.0') {
-              peerHasVideoLine = true;
-            }
-          }
         }
       } catch (err) {
         _didIteratorError8 = true;
@@ -19266,7 +19255,7 @@ function (_EventEmitter) {
         }
       }
 
-      if (peerHasVideoLine && rejectVideo != 'reject') {
+      if (reqHasVideo && !rejectVideo) {
         this._displayMode = 'video';
       } else {
         this._displayMode = 'audio';
@@ -19350,7 +19339,11 @@ function (_EventEmitter) {
         sdp: e.sdp
       });
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        if (!rejectVideo && reqHasVideo && !senderHasVideo) {
+        if (rejectVideo) {
+          return false;
+        }
+
+        if (reqHasVideo && !senderHasVideo) {
           _this18._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this18._status === C.STATUS_TERMINATED) {
@@ -19407,7 +19400,7 @@ function (_EventEmitter) {
           mediaStream.getTracks().forEach(function (track) {
             _this18._connection.addTrack(track, mediaStream);
           });
-        } else if (!reqHasVideo && senderHasVideo) {
+        } else if (rejectVideo || !reqHasVideo && senderHasVideo) {
           _this18._connection.getSenders().forEach(function (sender) {
             if (sender.track && sender.track.kind == 'video') {
               sender.track.stop();
