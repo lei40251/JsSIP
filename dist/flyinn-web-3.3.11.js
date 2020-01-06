@@ -17640,12 +17640,13 @@ function (_EventEmitter) {
           type: 'offer',
           sdp: request.body,
           display_mode: _this3._displayMode
-        };
-        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          audio: _this3._ua.configuration.audio_payloads,
-          video: _this3._ua.configuration.video_payloads,
-          candidates: _this3._ua.configuration.candidates_transport_protocol
-        }));
+        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        //   audio      : this._ua.configuration.audio_payloads,
+        //   video      : this._ua.configuration.video_payloads,
+        //   candidates : this._ua.configuration.candidates_transport_protocol
+        // }));
+
+        e.sdp = _this3._filterSDP(e.sdp);
         debug('emit "sdp"');
 
         _this3.emit('sdp', e);
@@ -18323,12 +18324,13 @@ function (_EventEmitter) {
                 originator: 'remote',
                 type: 'answer',
                 sdp: request.body
-              };
-              e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-                audio: this._ua.configuration.audio_payloads,
-                video: this._ua.configuration.video_payloads,
-                candidates: this._ua.configuration.candidates_transport_protocol
-              }));
+              }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+              //   audio      : this._ua.configuration.audio_payloads,
+              //   video      : this._ua.configuration.video_payloads,
+              //   candidates : this._ua.configuration.candidates_transport_protocol
+              // }));
+
+              e.sdp = this._filterSDP(e.sdp);
               debug('emit "sdp"');
               this.emit('sdp', e);
               var answer = new RTCSessionDescription({
@@ -18722,12 +18724,13 @@ function (_EventEmitter) {
             originator: 'local',
             type: type,
             sdp: connection.localDescription.sdp
-          };
-          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            audio: _this13._ua.configuration.audio_payloads,
-            video: _this13._ua.configuration.video_payloads,
-            candidates: _this13._ua.configuration.candidates_transport_protocol
-          }));
+          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          //   audio      : this._ua.configuration.audio_payloads,
+          //   video      : this._ua.configuration.video_payloads,
+          //   candidates : this._ua.configuration.candidates_transport_protocol
+          // }));
+
+          e.sdp = _this13._filterSDP(e.sdp);
           debug('emit "sdp"');
 
           _this13.emit('sdp', e);
@@ -18755,12 +18758,13 @@ function (_EventEmitter) {
               originator: 'local',
               type: type,
               sdp: connection.localDescription.sdp
-            };
-            e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-              audio: _this13._ua.configuration.audio_payloads,
-              video: _this13._ua.configuration.video_payloads,
-              candidates: _this13._ua.configuration.candidates_transport_protocol
-            }));
+            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            //   audio      : this._ua.configuration.audio_payloads,
+            //   video      : this._ua.configuration.video_payloads,
+            //   candidates : this._ua.configuration.candidates_transport_protocol
+            // }));
+
+            e.sdp = _this13._filterSDP(e.sdp);
             debug('emit "sdp"');
 
             _this13.emit('sdp', e);
@@ -19326,12 +19330,13 @@ function (_EventEmitter) {
         type: 'offer',
         sdp: request.body,
         display_mode: this._displayMode
-      };
-      e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-        audio: this._ua.configuration.audio_payloads,
-        video: this._ua.configuration.video_payloads,
-        candidates: this._ua.configuration.candidates_transport_protocol
-      }));
+      }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+      //   audio      : this._ua.configuration.audio_payloads,
+      //   video      : this._ua.configuration.video_payloads,
+      //   candidates : this._ua.configuration.candidates_transport_protocol
+      // }));
+
+      e.sdp = this._filterSDP(e.sdp);
       debug('emit "sdp"');
       this.emit('sdp', e);
       var offer = new RTCSessionDescription({
@@ -19833,12 +19838,13 @@ function (_EventEmitter) {
               originator: 'remote',
               type: 'answer',
               sdp: response.body
-            };
-            e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-              audio: this._ua.configuration.audio_payloads,
-              video: this._ua.configuration.video_payloads,
-              candidates: this._ua.configuration.candidates_transport_protocol
-            }));
+            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            //   audio      : this._ua.configuration.audio_payloads,
+            //   video      : this._ua.configuration.video_payloads,
+            //   candidates : this._ua.configuration.candidates_transport_protocol
+            // }));
+
+            e.sdp = this._filterSDP(e.sdp);
             debug('emit "sdp"');
             this.emit('sdp', e);
             var answer = new RTCSessionDescription({
@@ -19876,12 +19882,13 @@ function (_EventEmitter) {
               originator: 'remote',
               type: 'answer',
               sdp: response.body
-            };
-            _e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(_e.sdp), {
-              audio: this._ua.configuration.audio_payloads,
-              video: this._ua.configuration.video_payloads,
-              candidates: this._ua.configuration.candidates_transport_protocol
-            }));
+            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+            //   audio      : this._ua.configuration.audio_payloads,
+            //   video      : this._ua.configuration.video_payloads,
+            //   candidates : this._ua.configuration.candidates_transport_protocol
+            // }));
+
+            _e.sdp = this._filterSDP(_e.sdp);
             debug('emit "sdp"');
             this.emit('sdp', _e);
 
@@ -20044,12 +20051,13 @@ function (_EventEmitter) {
           type: 'offer',
           sdp: sdp,
           display_mode: _this24._displayMode
-        };
-        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          audio: _this24._ua.configuration.audio_payloads,
-          video: _this24._ua.configuration.video_payloads,
-          candidates: _this24._ua.configuration.candidates_transport_protocol
-        }));
+        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        //   audio      : this._ua.configuration.audio_payloads,
+        //   video      : this._ua.configuration.video_payloads,
+        //   candidates : this._ua.configuration.candidates_transport_protocol
+        // }));
+
+        e.sdp = _this24._filterSDP(e.sdp);
         debug('emit "sdp"');
 
         _this24.emit('sdp', e);
@@ -20177,12 +20185,13 @@ function (_EventEmitter) {
           type: 'answer',
           sdp: response.body,
           display_mode: this._displayMode
-        };
-        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          audio: this._ua.configuration.audio_payloads,
-          video: this._ua.configuration.video_payloads,
-          candidates: this._ua.configuration.candidates_transport_protocol
-        }));
+        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        //   audio      : this._ua.configuration.audio_payloads,
+        //   video      : this._ua.configuration.video_payloads,
+        //   candidates : this._ua.configuration.candidates_transport_protocol
+        // }));
+
+        e.sdp = this._filterSDP(e.sdp);
         debug('emit "sdp"');
         this.emit('sdp', e);
         var answer = new RTCSessionDescription({
@@ -20241,12 +20250,13 @@ function (_EventEmitter) {
             originator: 'local',
             type: 'offer',
             sdp: sdp
-          };
-          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            audio: _this26._ua.configuration.audio_payloads,
-            video: _this26._ua.configuration.video_payloads,
-            candidates: _this26._ua.configuration.candidates_transport_protocol
-          }));
+          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          //   audio      : this._ua.configuration.audio_payloads,
+          //   video      : this._ua.configuration.video_payloads,
+          //   candidates : this._ua.configuration.candidates_transport_protocol
+          // }));
+
+          e.sdp = _this26._filterSDP(e.sdp);
           debug('emit "sdp"');
 
           _this26.emit('sdp', e);
@@ -20335,12 +20345,13 @@ function (_EventEmitter) {
             originator: 'remote',
             type: 'answer',
             sdp: response.body
-          };
-          e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            audio: this._ua.configuration.audio_payloads,
-            video: this._ua.configuration.video_payloads,
-            candidates: this._ua.configuration.candidates_transport_protocol
-          }));
+          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+          //   audio      : this._ua.configuration.audio_payloads,
+          //   video      : this._ua.configuration.video_payloads,
+          //   candidates : this._ua.configuration.candidates_transport_protocol
+          // }));
+
+          e.sdp = this._filterSDP(e.sdp);
           debug('emit "sdp"');
           this.emit('sdp', e);
           var answer = new RTCSessionDescription({
@@ -20392,6 +20403,19 @@ function (_EventEmitter) {
 
 
       this._status = C.STATUS_TERMINATED;
+    }
+    /**
+     * 根据参数过滤SDP媒体列表，并排序
+     */
+
+  }, {
+    key: "_filterSDP",
+    value: function _filterSDP(sdp) {
+      return sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(sdp), {
+        audio: this._ua.configuration.audio_payloads,
+        video: this._ua.configuration.video_payloads,
+        candidates: this._ua.configuration.candidates_transport_protocol
+      }));
     }
     /**
      * Correctly set the SDP direction attributes if the call is on local hold
