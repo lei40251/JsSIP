@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="icon" href="data:image/ico;base64,aWNv">
+  <title>FlyInn Web</title>
+</head>
+
+<body style="margin: 0;font-size: 4vw;">
+  <p style="width: 94vw;padding: 5vw 3vw; font-size: 5vw; margin: 0; background-color: #eee;" id="status"></p>
+  <div>
+      <audio autoplay muted id="localAudio" src=""></audio>
+      <audio autoplay id="remoteAudio" src=""></audio>
+  </div>
+  <div style="margin: 5vw;background-color: #efefef;">
+    <p>
+      <input type="text" id="linkman">
+      <button id="call">呼叫</button>
+    </p>
+    <p>
+      <button id="answer">接听</button>
+      <button id="cancel">取消呼叫/拒绝接听/挂机</button>
+      <button id="muteMic">关闭麦克风</button>
+    </p>
+  </div>
+
+  <script src="../../dist/flyinn-web-3.3.11.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+
+</html>

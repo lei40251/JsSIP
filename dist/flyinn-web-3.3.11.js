@@ -56,7 +56,7 @@ exports.settings = {
   audio_payloads: ['opus', 'PCMU', 'PCMA'],
   video_payloads: ['VP8', 'H264', 'VP9'],
   // candidate 使用的传输协议，默认udp
-  candidate_transport_protocol: 'udp'
+  candidates_transport_protocol: ''
 }; // Configuration checks.
 
 var checks = {
@@ -324,8 +324,8 @@ var checks = {
 
       return _video_payloads;
     },
-    candidates_transport_protocol: function candidates_transport_protocol(candidates_transport) {
-      return String(candidates_transport);
+    candidates_transport_protocol: function candidates_transport_protocol(_candidates_transport_protocol) {
+      return String(_candidates_transport_protocol);
     }
   }
 };
@@ -17208,11 +17208,13 @@ function (_EventEmitter) {
       debug('connect()');
       var originalTarget = target;
       var eventHandlers = options.eventHandlers || {};
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var mediaConstraints = options.mediaConstraints || {
+      var extraHeaders = Utils.cloneArray(options.extraHeaders); // audio only
+
+      var mediaConstraints = {
         audio: true,
-        video: true
-      };
+        video: false
+      }; // const mediaConstraints = options.mediaConstraints || { audio: true, video: true };
+
       var mediaStream = options.mediaStream || null;
       var pcConfig = options.pcConfig || {
         iceServers: []
@@ -26337,7 +26339,7 @@ function (_EventEmitter) {
       .then(function () {
         return navigator.mediaDevices.getUserMedia({
           audio: true,
-          video: true
+          video: false
         })["catch"](function (error) {
           debugerror('emit "getusermediafailed" [error:%o]', error);
 
