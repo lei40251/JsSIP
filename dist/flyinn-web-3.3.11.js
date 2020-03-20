@@ -16585,7 +16585,7 @@ function () {
   }, {
     key: "_quote",
     value: function _quote(str) {
-      return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     }
   }, {
     key: "toString",
@@ -17419,6 +17419,11 @@ function (_EventEmitter) {
       var peerHasVideoLine = false;
       var peerOffersFullAudio = false;
       var peerOffersFullVideo = false;
+
+      if (rtcAnswerConstraints) {
+        rtcAnswerConstraints.video = false;
+      }
+
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
       this._data = options.data || this._data; // Check Session Direction and Status.
@@ -17634,12 +17639,7 @@ function (_EventEmitter) {
           originator: 'remote',
           type: 'offer',
           sdp: request.body
-        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-        //   audio      : this._ua.configuration.audio_payloads,
-        //   video      : this._ua.configuration.video_payloads,
-        //   candidates : this._ua.configuration.candidates_transport_protocol
-        // }));
-
+        };
         e.sdp = _this3._filterSDP(e.sdp);
         debug('emit "sdp"');
 
@@ -18319,12 +18319,7 @@ function (_EventEmitter) {
                 type: 'answer',
                 sdp: request.body,
                 display_mode: this._viewMode(request.body)
-              }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-              //   audio      : this._ua.configuration.audio_payloads,
-              //   video      : this._ua.configuration.video_payloads,
-              //   candidates : this._ua.configuration.candidates_transport_protocol
-              // }));
-
+              };
               e.sdp = this._filterSDP(e.sdp);
               debug('emit "sdp"');
               this.emit('sdp', e);
@@ -18720,12 +18715,7 @@ function (_EventEmitter) {
             type: type,
             sdp: connection.localDescription.sdp,
             display_mode: _this13._viewMode(connection.localDescription.sdp)
-          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          //   audio      : this._ua.configuration.audio_payloads,
-          //   video      : this._ua.configuration.video_payloads,
-          //   candidates : this._ua.configuration.candidates_transport_protocol
-          // }));
-
+          };
           e.sdp = _this13._filterSDP(e.sdp);
           debug('emit "sdp"');
 
@@ -18755,12 +18745,7 @@ function (_EventEmitter) {
               type: type,
               sdp: connection.localDescription.sdp,
               display_mode: _this13._viewMode(connection.localDescription.sdp)
-            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            //   audio      : this._ua.configuration.audio_payloads,
-            //   video      : this._ua.configuration.video_payloads,
-            //   candidates : this._ua.configuration.candidates_transport_protocol
-            // }));
-
+            };
             e.sdp = _this13._filterSDP(e.sdp);
             debug('emit "sdp"');
 
@@ -19028,11 +19013,12 @@ function (_EventEmitter) {
           sdp: desc,
           display_mode: this._viewMode(desc)
         };
-        e.sdp = sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          audio: this._ua.configuration.audio_payloads,
-          video: this._ua.configuration.video_payloads,
-          candidates: this._ua.configuration.candidates_transport_protocol
-        }));
+        e.sdp = this._filterSDP(e.sdp); // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
+        //   audio      : this._ua.configuration.audio_payloads,
+        //   video      : this._ua.configuration.video_payloads,
+        //   candidates : this._ua.configuration.candidates_transport_protocol
+        // }));
+
         debug('emit "sdp"');
         this.emit('sdp', e);
         request.reply(200, null, extraHeaders, desc, function () {
@@ -19273,12 +19259,7 @@ function (_EventEmitter) {
         originator: 'remote',
         type: 'offer',
         sdp: request.body
-      }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-      //   audio      : this._ua.configuration.audio_payloads,
-      //   video      : this._ua.configuration.video_payloads,
-      //   candidates : this._ua.configuration.candidates_transport_protocol
-      // }));
-
+      };
       e.sdp = this._filterSDP(e.sdp);
       debug('emit "sdp"');
       this.emit('sdp', e);
@@ -19782,12 +19763,7 @@ function (_EventEmitter) {
               type: 'answer',
               sdp: response.body,
               display_mode: this._viewMode(response.body)
-            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            //   audio      : this._ua.configuration.audio_payloads,
-            //   video      : this._ua.configuration.video_payloads,
-            //   candidates : this._ua.configuration.candidates_transport_protocol
-            // }));
-
+            };
             e.sdp = this._filterSDP(e.sdp);
             debug('emit "sdp"');
             this.emit('sdp', e);
@@ -19827,12 +19803,7 @@ function (_EventEmitter) {
               type: 'answer',
               sdp: response.body,
               display_mode: this._viewMode(response.body)
-            }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-            //   audio      : this._ua.configuration.audio_payloads,
-            //   video      : this._ua.configuration.video_payloads,
-            //   candidates : this._ua.configuration.candidates_transport_protocol
-            // }));
-
+            };
             _e.sdp = this._filterSDP(_e.sdp);
             debug('emit "sdp"');
             this.emit('sdp', _e);
@@ -19948,12 +19919,7 @@ function (_EventEmitter) {
           originator: 'local',
           type: 'offer',
           sdp: sdp
-        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-        //   audio      : this._ua.configuration.audio_payloads,
-        //   video      : this._ua.configuration.video_payloads,
-        //   candidates : this._ua.configuration.candidates_transport_protocol
-        // }));
-
+        };
         e.sdp = _this24._filterSDP(e.sdp);
         debug('emit "sdp"');
 
@@ -20080,12 +20046,7 @@ function (_EventEmitter) {
           type: 'answer',
           sdp: response.body,
           display_mode: this._viewMode(response.body)
-        }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-        //   audio      : this._ua.configuration.audio_payloads,
-        //   video      : this._ua.configuration.video_payloads,
-        //   candidates : this._ua.configuration.candidates_transport_protocol
-        // }));
-
+        };
         e.sdp = this._filterSDP(e.sdp);
         debug('emit "sdp"');
         this.emit('sdp', e);
@@ -20145,12 +20106,7 @@ function (_EventEmitter) {
             originator: 'local',
             type: 'offer',
             sdp: sdp
-          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          //   audio      : this._ua.configuration.audio_payloads,
-          //   video      : this._ua.configuration.video_payloads,
-          //   candidates : this._ua.configuration.candidates_transport_protocol
-          // }));
-
+          };
           e.sdp = _this26._filterSDP(e.sdp);
           debug('emit "sdp"');
 
@@ -20241,12 +20197,7 @@ function (_EventEmitter) {
             type: 'answer',
             sdp: response.body,
             display_mode: this._viewMode(response.body)
-          }; // e.sdp=sdp_transform.write(Utils.filterSdpMedia(sdp_transform.parse(e.sdp), {
-          //   audio      : this._ua.configuration.audio_payloads,
-          //   video      : this._ua.configuration.video_payloads,
-          //   candidates : this._ua.configuration.candidates_transport_protocol
-          // }));
-
+          };
           e.sdp = this._filterSDP(e.sdp);
           debug('emit "sdp"');
           this.emit('sdp', e);

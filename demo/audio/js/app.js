@@ -6,18 +6,19 @@
 // FlyInnWeb.debug.disable('FlyInn:*');
 
 // 注册UA的用户名
-const account = parseInt(`90${Math.random() * 1000}`);
+// const account = parseInt(`90${Math.random() * 1000}`);
+const account = parseInt(`8000${Math.random() * 10}`);
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInnWeb.WebSocketInterface('wss://cwboan.vsbc.com:5443/wss');
+const socket = new FlyInnWeb.WebSocketInterface('wss://elong.vsbc.com:9060/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets: socket,
   // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@cwboan.vsbc.com`,
+  uri: `sip:${account}@elong.vsbc.com`,
   // SIP身份验证密码
   password: account
 };
@@ -76,6 +77,28 @@ flyinnUA.on('newRTCSession', function (e) {
   e.session.on('failed', function (d) {
     setStatus(`呼叫失败: ${d.cause}`);
     location.reload();
+  });
+
+  // 3PCC
+  e.session.on('newNotify', function (d) {
+    const self = this;
+
+    if (d.originator === 'remote') {
+      if (d.request.event.event == 'talk') {
+
+        if (self.isEstablished()) {
+          if (self.isOnHold()) {
+            self.unhold();
+          }
+        } else {
+          self.answer({
+            rtcAnswerConstraints: { audio: true }
+          });
+        }
+      } else if (e.request.event.event == 'hold') {
+        self.hold();
+      }
+    }
   });
 
   // 呼叫结束
