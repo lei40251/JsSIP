@@ -7,20 +7,23 @@
 
 // 注册UA的用户名
 // const account = parseInt(`90${Math.random() * 1000}`);
-const account = parseInt(`8000${Math.random() * 10}`);
-
+const account = '5000';
+// const account = parseInt(`900${Math.random() * 10}`);
+// var domain = 'pajf.vsbc.com';
+// var wss = 'wss://pajf.vsbc.com:5092/wss';
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInnWeb.WebSocketInterface('wss://elong.vsbc.com:9060/wss');
+const socket = new FlyInnWeb.WebSocketInterface('wss://pro.vsbc.com:10800/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets: socket,
   // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@elong.vsbc.com`,
+  uri: `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
-  password: account
+  password: '5000'
+  // password: account
 };
 
 // FlyinnWeb 实例
@@ -41,6 +44,17 @@ function setStatus(text) {
 // 新通话
 flyinnUA.on('newRTCSession', function (e) {
   let curMuted = null;
+
+  const dtmf = document.querySelectorAll('.dtmf');
+
+  for (let i = 0; i < dtmf.length; ++i) {
+    (function (n) {
+      dtmf[n].onclick = function (ev) {
+        e.session.sendDTMF(ev.target.innerText, { type: 'RFC2833' });
+      };
+    })(i);
+  }
+
 
   document.querySelector('#answer').onclick = function () {
     // 接听
@@ -146,7 +160,7 @@ flyinnUA.start();
 // 发起呼叫
 document.querySelector('#call').onclick = function () {
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@cwboan.vsbc.com`);
+  const session = flyinnUA.call(`${linkman}@pro.vsbc.com`);
 
   document.querySelector('#cancel').onclick = function () {
     // 取消呼叫

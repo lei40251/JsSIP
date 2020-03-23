@@ -53,7 +53,7 @@ exports.settings = {
   // ice 检测超时时间，单位：秒
   ice_gathering_timeout: 2,
   // audio & video 编码默认值及优先顺序
-  audio_payloads: ['opus', 'PCMU', 'PCMA'],
+  audio_payloads: ['opus', 'PCMU', 'PCMA', 'telephone-event'],
   video_payloads: ['VP8', 'H264', 'VP9'],
   // candidate 使用的传输协议，默认udp
   candidates_transport_protocol: ''
@@ -17848,6 +17848,7 @@ function (_EventEmitter) {
       var position = 0;
       var duration = options.duration || null;
       var interToneGap = options.interToneGap || null;
+      var type = options.type || null;
 
       if (tones === undefined) {
         throw new TypeError('Not enough arguments');
@@ -17923,14 +17924,31 @@ function (_EventEmitter) {
         if (tone === ',') {
           timeout = 2000;
         } else {
-          var dtmf = new RTCSession_DTMF(this);
-          options.eventHandlers = {
-            onFailed: function onFailed() {
-              _this5._tones = null;
-            }
-          };
-          dtmf.send(tone, options);
-          timeout = duration + interToneGap;
+          // const dtmf = new RTCSession_DTMF(this);
+          switch (type) {
+            case 'RFC2833':
+              {
+                var sender = this._getDTMFRTPSender();
+
+                if (sender) {
+                  sender.insertDTMF(tone, duration, interToneGap);
+                }
+
+                break;
+              }
+
+            default:
+              {
+                var dtmf = new RTCSession_DTMF(this);
+                options.eventHandlers = {
+                  onFailed: function onFailed() {
+                    _this5._tones = null;
+                  }
+                };
+                dtmf.send(tone, options);
+                timeout = duration + interToneGap;
+              }
+          }
         } // Set timeout for the next tone.
 
 
@@ -20756,6 +20774,17 @@ function (_EventEmitter) {
         audio: audio,
         video: video
       });
+    }
+  }, {
+    key: "_getDTMFRTPSender",
+    value: function _getDTMFRTPSender() {
+      var dtmfSender = this._connection.getSenders().find(function (sender) {
+        return sender.track && sender.track.kind === 'audio';
+      });
+
+      if (dtmfSender && dtmfSender.dtmf && dtmfSender.dtmf.canInsertDTMF) {
+        return dtmfSender.dtmf;
+      }
     }
   }, {
     key: "C",
