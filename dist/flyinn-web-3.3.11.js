@@ -26323,15 +26323,26 @@ function (_EventEmitter) {
   }, {
     key: "_getSupportedConstraints",
     value: function _getSupportedConstraints(constraint) {
-      var supportedConstraints = navigator.mediaDevices.getSupportedConstraints(); // return true or false.
+      var _this4 = this;
 
-      return supportedConstraints.hasOwnProperty(constraint);
+      // return true or false.
+      return Promise.resolve().then(function () {
+        return navigator.mediaDevices.getSupportedConstraints()["catch"](function (error) {
+          debugerror('emit "getSupportedConstraints" [error:%o]', error);
+
+          _this4.emit('getSupportedConstraints', error);
+
+          throw new Error('getSupportedConstraints() failed');
+        });
+      }).then(function (supportedConstraints) {
+        return supportedConstraints.hasOwnProperty(constraint);
+      });
     } // 获取设备列表
 
   }, {
     key: "_initDevices",
     value: function _initDevices() {
-      var _this4 = this;
+      var _this5 = this;
 
       return Promise.resolve() // Handle local MediaStream.
       .then(function () {
@@ -26341,7 +26352,7 @@ function (_EventEmitter) {
         })["catch"](function (error) {
           debugerror('emit "getusermediafailed" [error:%o]', error);
 
-          _this4.emit('getusermediafailed', error);
+          _this5.emit('getusermediafailed', error);
 
           throw new Error('getUserMedia() failed');
         });
@@ -26349,11 +26360,17 @@ function (_EventEmitter) {
         mediaStream.getTracks().forEach(function (track) {
           track.stop();
         });
-        return navigator.mediaDevices.enumerateDevices();
+        return navigator.mediaDevices.enumerateDevices()["catch"](function (error) {
+          debugerror('emit "enumerateDevices" [error:%o]', error);
+
+          _this5.emit('enumerateDevices', error);
+
+          throw new Error('enumerateDevices() failed');
+        });
       }).then(function (mediaDevices) {
         mediaDevices.forEach(function (mediaDevice) {
           if (mediaDevice.kind === 'videoinput') {
-            _this4._cams.push(mediaDevice.deviceId);
+            _this5._cams.push(mediaDevice.deviceId);
           }
         });
       });
