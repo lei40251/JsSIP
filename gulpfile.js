@@ -19,6 +19,7 @@ const eslint = require('gulp-eslint');
 const plumber = require('gulp-plumber');
 const log = require('fancy-log');
 const colors = require('ansi-colors');
+const obfuscate = require('gulp-javascript-obfuscator');
 
 const PKG = require('./package.json');
 
@@ -63,7 +64,7 @@ gulp.task('browserify', function()
 {
   return browserify(
     {
-      entries      : PKG.main,
+      entries      : 'lib-es5/JsSIP.js',
       extensions   : [ '.js' ],
       // Required for sourcemaps (must be false otherwise).
       debug        : false,
@@ -90,6 +91,7 @@ gulp.task('uglify', function()
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
+    .pipe(obfuscate({ compact: true }))
     .pipe(uglify())
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.name }.min.js`))
