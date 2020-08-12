@@ -18604,7 +18604,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             return Promise.reject(error);
           });
         } else {
-          return connection.createAnswer()["catch"](function (error) {
+          return connection.createAnswer(constraints)["catch"](function (error) {
             debugerror('emit "peerconnection:createanswerfailed" [error:%o]', error);
 
             _this13.emit('peerconnection:createanswerfailed', error);
