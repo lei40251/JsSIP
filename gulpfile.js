@@ -95,6 +95,8 @@ gulp.task('uglify', function()
     .pipe(uglify())
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.name }.min.js`))
+    .pipe(gulp.dest('dist/'))
+    .pipe(rename(`${PKG.name }.demo.js`))
     .pipe(gulp.dest('dist/'));
 });
 

@@ -55,7 +55,9 @@ exports.settings = {
    * Host address.
    * Value to be set in Via sent_by and host part of Contact FQDN.
   */
-  via_host: "".concat(Utils.createRandomToken(12), ".invalid")
+  via_host: "".concat(Utils.createRandomToken(12), ".invalid"),
+  // ICE收集检测超时时间，单位：秒
+  ice_gathering_timeout: 2
 }; // Configuration checks.
 
 var checks = {
@@ -240,6 +242,15 @@ var checks = {
       if (typeof _use_preloaded_route === 'boolean') {
         return _use_preloaded_route;
       }
+    },
+    ice_gathering_timeout: function ice_gathering_timeout(_ice_gathering_timeout) {
+      if (Utils.isDecimal(_ice_gathering_timeout)) {
+        var value = Number(_ice_gathering_timeout);
+
+        if (value > 0) {
+          return value;
+        }
+      }
     }
   }
 };
@@ -301,6 +312,7 @@ module.exports = {
     REQUEST_TIMEOUT: 'Request Timeout',
     SIP_FAILURE_CODE: 'SIP Failure Code',
     INTERNAL_ERROR: 'Internal Error',
+    CAMERA_MUTED: 'Camera Muted',
     // SIP error causes.
     BUSY: 'Busy',
     REJECTED: 'Rejected',
@@ -450,7 +462,11 @@ module.exports = {
     600: 'Busy Everywhere',
     603: 'Decline',
     604: 'Does Not Exist Anywhere',
-    606: 'Not Acceptable'
+    606: 'Not Acceptable',
+    607: 'Unwanted',
+    // RFC 8197
+    608: 'Rejected' // RFC-ietf-sipcore-rejected-09
+
   },
   ALLOWED_METHODS: 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
@@ -18616,10 +18632,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var finished = false;
           var iceCandidateListener;
           var iceGatheringStateListener;
+          var iceGatheringDuration = 0;
+          var iceGatheringTimer;
+          var iceGatherFlag = true;
 
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
-            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
+            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener); // 清理 ICE 收集超时定时器
+
+            clearInterval(iceGatheringTimer);
             finished = true;
             _this13._rtcReady = true;
             var e = {
@@ -18635,7 +18656,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
 
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
-            var candidate = event.candidate;
+            var candidate = event.candidate; // 添加 ice 收集超时控制
+
+            iceGatheringDuration += _this13._ua.configuration.ice_gathering_timeout * 1000;
+
+            if (iceGatherFlag) {
+              iceGatherFlag = false;
+              iceGatheringTimer = setInterval(function () {
+                iceGatheringDuration -= 100;
+
+                if (iceGatheringDuration <= 0) {
+                  ready();
+                }
+              }, 100);
+            }
 
             if (candidate) {
               _this13.emit('icecandidate', {
@@ -24222,7 +24256,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._configuration.via_host = this._configuration.contact_uri.host;
       } // Contact URI.
       else {
-          this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
+          this._configuration.contact_uri = new URI('sip', this._configuration.uri.user, this._configuration.via_host, null, {
             transport: 'ws'
           });
         }
