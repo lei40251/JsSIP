@@ -1,4 +1,0 @@
-/*
- * Copyright: 2012-<%= currentYear %> <%= pkg.author %>
- */
-

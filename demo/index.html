@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="icon" href="data:image/ico;base64,aWNv">
+  <title>FlyInn</title>
+</head>
+
+<body style="margin: 0;font-size: 4vw;">
+  <p style="width: 94vw;padding: 5vw 3vw; font-size: 5vw; margin: 0; background-color: #eee;" id="status"></p>
+  <div style="width: 100vw; display: flex;padding: 3vw 0;">
+    <div style="background-color: #eee;">
+      <p style="width: 100%; text-align: center;margin: 5px 0;">本地视频</p>
+      <video autoplay muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+        style="width: 47.5vw;margin:1vw;" id="localVideo" src=""></video>
+    </div>
+    <div style="background-color: #eee;">
+      <p style="width: 100%; text-align: center;margin: 5px 0;">远端视频</p>
+      <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+        style="width: 47.5vw;margin:1vw;" id="remoteVideo" src=""></video>
+    </div>
+  </div>
+  <div style="margin: 5vw;background-color: #efefef;">
+    <p>
+      <input type="text" id="linkman">
+      <button id="call">视频呼叫</button>
+    </p>
+    <p>
+      <button id="answer">接听</button>
+      <button id="cancel">取消呼叫/拒绝接听/挂机</button>
+    </p>
+    <p>
+      <button id="muteMic">关闭麦克风</button>
+      <button id="muteCam">关闭摄像头</button>
+      <button id="switchCam">切换摄像头</button>
+      <button id="switchSpeaker">关闭扬声器</button>
+      <button id="screenShare">分享桌面</button>
+    </p>
+    <p style="display:none;">
+      <input type="text" id="info">
+      <button id="sendInfo">发送消息</button>
+    </p>
+  </div>
+
+  <script src="../dist/flyinn.min.js"></script>
+  <script src="./js/app.js?ver=1.9"></script>
+</body>
+
+</html>
