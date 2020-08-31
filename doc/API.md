@@ -1,22 +1,22 @@
-# FlyInnWeb JSSDK 简要说明
+# FlyInn JSSDK 简要说明
 
 ### 注意：浏览器权限限制，仅支持https访问获取媒体设备
 
 ## 查看 SDK 版本
 
-`FlyInnWeb.version`
+`FlyInn.version`
 
 ## 调试
 
 可以将调试日志输出到浏览器控制台
 
-`FlyInnWeb.debug.enable('FlyInnWeb:*') // 开启调试输出`
+`FlyInn.debug.enable('FlyInn:*') // 开启调试输出`
 
-`FlyInnWeb.debug.disable('FlyInnWeb:*') // 关闭调试输出`
+`FlyInn.debug.disable('FlyInn:*') // 关闭调试输出`
 
 ## Class
 
-### FlyInnWeb.UA
+### FlyInn.UA
 
 #### 实例方法
 
@@ -59,16 +59,16 @@ options
 |字段名|说明|
 |-|-|
 |originator|"remote" 新会话由远端生成|
-|session|会话的 FlyInnWeb.RTCSession 实例|
+|session|会话的 FlyInn.RTCSession 实例|
 |request|收到的 INVITE 请求的实例|
 呼出时
 |字段名|说明|
 |-|-|
 |originator|"local" 新会话由本地生成|
-|session|会话的 FlyInnWeb.RTCSession 实例|
+|session|会话的 FlyInn.RTCSession 实例|
 |request|传出 INVITE 请求的实例|
 
-### FlyInnWeb.RTCSession
+### FlyInn.RTCSession
 
 #### 实例属性
 

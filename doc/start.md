@@ -16,11 +16,11 @@
 
 *开启debug模式查看控制台输出调试信息*
 ```
-FlyInnWeb.debug.enable('FlyInn:*')
+FlyInn.debug.enable('FlyInn:*')
 ```
 *关闭调试*
 ```
-FlyInnWeb.debug.disable('FlyInn:*')
+FlyInn.debug.disable('FlyInn:*')
 ```
 ### 初始化
 
@@ -30,7 +30,7 @@ FlyInnWeb.debug.disable('FlyInn:*')
 ```
 2. UA 参数配置
 ```
-var socket = new FlyInnWeb.WebSocketInterface('你的 WSS 信令地址');
+var socket = new FlyInn.WebSocketInterface('你的 WSS 信令地址');
 var configuration = {
   sockets  : socket,
   uri      : 'sip:account@domain',
@@ -40,7 +40,7 @@ var configuration = {
 3. UA 实例化
 
 ```
-var flyinnUA = new FlyInnWeb.UA(configuration);
+var flyinnUA = new FlyInn.UA(configuration);
 ```
 
 4. 启动 UA
