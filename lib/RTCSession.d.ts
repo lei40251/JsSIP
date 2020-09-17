@@ -284,7 +284,7 @@ export class RTCSession extends EventEmitter {
 
   isOnHold(): OnHoldResult;
 
-  switchCam(videoConstraints?: MediaStreamConstraints): Promise<MediaStream>;
+  switchCam(videoConstraints?: MediaTrackConstraints): Promise<MediaStream>;
 
   mute(options?: MediaConstraints): void;
 
