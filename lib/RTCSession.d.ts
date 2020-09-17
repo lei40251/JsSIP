@@ -284,6 +284,8 @@ export class RTCSession extends EventEmitter {
 
   isOnHold(): OnHoldResult;
 
+  switchVideoStream(videoStream: MediaStream): MediaStream;
+
   mute(options?: MediaConstraints): void;
 
   unmute(options?: MediaConstraints): void;
