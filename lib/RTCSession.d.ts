@@ -286,6 +286,10 @@ export class RTCSession extends EventEmitter {
 
   switchCam(videoConstraints?: MediaTrackConstraints): Promise<MediaStream>;
 
+  displayShare():void;
+
+  unDisplayShare():void;
+
   mute(options?: MediaConstraints): void;
 
   unmute(options?: MediaConstraints): void;
