@@ -218,6 +218,7 @@ export interface RTCSessionEventMap {
   'replaces': ReferListener;
   'sdp': SDPListener;
   'callmode': CallModeListener;
+  'inviteToVideo': AnyListener;
   'icecandidate': IceCandidateListener;
   'getusermediafailed': AnyListener;
   'peerconnection:createofferfailed': AnyListener;
