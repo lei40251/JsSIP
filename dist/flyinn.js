@@ -18492,8 +18492,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
 
           case JsSIP_C.NOTIFY:
-            if (this._status === C.STATUS_CONFIRMED) {
+            if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
               this._receiveNotify(request);
+
+              this.newNotify({
+                request: request
+              });
             } else {
               request.reply(403, 'Wrong Status');
             }
@@ -18561,6 +18565,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function newInfo(data) {
       debug('newInfo()');
       this.emit('newInfo', data);
+    } // Called from Notify handler.
+
+  }, {
+    key: "newNotify",
+    value: function newNotify(data) {
+      debug('newNotify()');
+      this.emit('newNotify', data);
     }
     /**
      * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
@@ -19292,6 +19303,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             referSubscriber.receiveNotify(request);
+            request.reply(200);
+            break;
+          }
+
+        case 'talk':
+          {
+            request.reply(200);
+            break;
+          }
+
+        case 'hold':
+          {
             request.reply(200);
             break;
           }
@@ -22325,7 +22348,10 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
         response += "Accept: ".concat(JsSIP_C.ACCEPTED_BODY_TYPES, "\r\n");
       }
 
-      response += "Supported: ".concat(supported, "\r\n");
+      response += "Supported: ".concat(supported, "\r\n"); // for 3PCC notify event
+
+      var allow_events = ['talk', 'hold', 'conference', 'refer', 'check-sync'];
+      response += "Allow-Events: ".concat(allow_events, "\r\n");
 
       if (body) {
         var length = Utils.str_utf8_length(body);
