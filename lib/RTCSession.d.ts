@@ -5,6 +5,7 @@ import {IncomingRequest, IncomingResponse, OutgoingRequest} from './SIPMessage'
 import {NameAddrHeader} from './NameAddrHeader'
 import {URI} from './URI'
 import {causes, DTMF_TRANSPORT} from './Constants'
+import { CallOptions } from './UA'
 
 interface RTCPeerConnectionDeprecated extends RTCPeerConnection {
   /**
@@ -292,9 +293,9 @@ export class RTCSession extends EventEmitter {
 
   isOnHold(): OnHoldResult;
 
-  toAudio(options?:{}, done?:VoidFunction): void;
+  toAudio(options?:CallOptions, done?:VoidFunction): void;
 
-  toVideo(options?:{}, done?:VoidFunction): void;
+  toVideo(options?:CallOptions, done?:VoidFunction): void;
 
   mute(options?: MediaConstraints): void;
 
