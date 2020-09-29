@@ -17125,7 +17125,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     } // Custom session empty object for high level use.
 
 
-    _this._data = {};
+    _this._data = {}; // RTPSender for V2A2V
+
+    _this._callmode = null;
     return _this;
   }
   /**
@@ -17371,7 +17373,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } // Fire 'newRTCSession' event.
 
 
-      this._newRTCSession('remote', request); // The user may have rejected the call in the 'newRTCSession' event.
+      this._newRTCSession('remote', request); // 呼入通话时触发 UA 的 callmode 事件
+
+
+      this._callMode('remote', request); // The user may have rejected the call in the 'newRTCSession' event.
 
 
       if (this._status === C.STATUS_TERMINATED) {
@@ -17638,8 +17643,48 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
 
-        _this3._handleSessionTimersInIncomingRequest(request, extraHeaders);
+        _this3._handleSessionTimersInIncomingRequest(request, extraHeaders); // 判断通话模式
 
+
+        var callmode = null;
+
+        if (mediaConstraints.video) {
+          callmode = 'video';
+        } else {
+          callmode = 'audio';
+        }
+
+        if (_this3._callmode !== callmode) {
+          _this3._callmode = callmode;
+          debug('emit "callmode"');
+
+          _this3.emit('callmode', {
+            originator: 'local',
+            mode: _this3._callmode
+          });
+        } // 只有 video port = 0 判断为音频模式
+
+
+        desc = sdp_transform.parse(desc);
+
+        var _iterator4 = _createForOfIteratorHelper(desc.media),
+            _step4;
+
+        try {
+          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+            var m = _step4.value;
+
+            if (m.type === 'video' && _this3._callmode === 'audio') {
+              m.port = 0;
+            }
+          }
+        } catch (err) {
+          _iterator4.e(err);
+        } finally {
+          _iterator4.f();
+        }
+
+        desc = sdp_transform.write(desc);
         request.reply(200, null, extraHeaders, desc, function () {
           _this3._status = C.STATUS_WAITING_FOR_ACK;
 
@@ -18238,11 +18283,166 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       return true;
+    } // 切换到语音模式
+
+  }, {
+    key: "toAudio",
+    value: function toAudio() {
+      var _this11 = this;
+
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var done = arguments.length > 1 ? arguments[1] : undefined;
+      debug('toAudio()');
+      var hasVideoTrack = false;
+
+      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
+        return false;
+      }
+
+      if (!this._isReadyToReOffer()) {
+        return false;
+      }
+
+      if (this._callmode !== 'video') {
+        return false;
+      }
+
+      this._connection.getTransceivers().forEach(function (transeiver) {
+        if (transeiver.sender.track && transeiver.sender.track.kind === 'video' && transeiver.sender.track.readyState !== 'ended') {
+          if (!transeiver.stopped) {
+            transeiver.direction = 'inactive';
+          }
+
+          transeiver.sender.track.stop();
+          hasVideoTrack = true;
+        }
+      }); // console.warn('_tranc: ', this._connection)
+
+
+      if (!hasVideoTrack) {
+        return false;
+      }
+
+      var eventHandlers = {
+        succeeded: function succeeded() {
+          if (done) {
+            done();
+          }
+        },
+        failed: function failed() {
+          _this11.terminate({
+            cause: JsSIP_C.causes.WEBRTC_ERROR,
+            status_code: 500,
+            reason_phrase: 'toAudio Failed'
+          });
+        }
+      };
+      this._callmode = 'audio';
+      this.emit('callmode', {
+        originator: 'local',
+        mode: 'audio'
+      });
+
+      this._sendReinvite({
+        eventHandlers: eventHandlers,
+        extraHeaders: options.extraHeaders
+      });
+
+      return true;
+    } // 切换到视频模式
+
+  }, {
+    key: "toVideo",
+    value: function toVideo() {
+      var _this12 = this;
+
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
+        video: true,
+        audio: false
+      };
+      var done = arguments.length > 1 ? arguments[1] : undefined;
+      debug('toVideo()');
+      var mediaConstraints = options.mediaConstraints;
+      mediaConstraints.audio = false;
+
+      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
+        return false;
+      }
+
+      if (!this._isReadyToReOffer()) {
+        return false;
+      }
+
+      if (this._callmode !== 'audio') {
+        return false;
+      }
+
+      Promise.resolve().then(function () {
+        _this12._localMediaStreamLocallyGenerated = true;
+        return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+          if (_this12._status === C.STATUS_TERMINATED) {
+            throw new Error('terminated');
+          }
+
+          _this12._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+
+          debugerror('emit "getusermediafailed" [error:%o]', error);
+
+          _this12.emit('getusermediafailed', error);
+
+          throw error;
+        });
+      }).then(function (stream) {
+        if (_this12._status === C.STATUS_TERMINATED) {
+          throw new Error('terminated');
+        } // this._localMediaStream = stream;
+
+
+        if (stream) {
+          stream.getVideoTracks().forEach(function (track) {
+            _this12._localMediaStream.addTrack(track);
+
+            _this12._connection.addTrack(track, stream);
+          });
+        }
+
+        var eventHandlers = {
+          succeeded: function succeeded() {
+            if (done) {
+              done();
+            }
+          },
+          failed: function failed() {
+            _this12.terminate({
+              cause: JsSIP_C.causes.WEBRTC_ERROR,
+              status_code: 500,
+              reason_phrase: 'toVideo Failed'
+            });
+          }
+        };
+        _this12._callmode = 'video';
+
+        _this12.emit('callmode', {
+          originator: 'local',
+          mode: 'video'
+        });
+
+        _this12._sendReinvite({
+          eventHandlers: eventHandlers,
+          extraHeaders: options.extraHeaders
+        });
+      })["catch"](function (error) {
+        if (_this12._status === C.STATUS_TERMINATED) {
+          return;
+        }
+
+        debugerror(error);
+      });
     }
   }, {
     key: "renegotiate",
     value: function renegotiate() {
-      var _this11 = this;
+      var _this13 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
@@ -18264,7 +18464,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this11.terminate({
+          _this13.terminate({
             cause: JsSIP_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Media Renegotiation Failed'
@@ -18298,7 +18498,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "refer",
     value: function refer(target, options) {
-      var _this12 = this;
+      var _this14 = this;
 
       debug('refer()');
       var originalTarget = target;
@@ -18321,13 +18521,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._referSubscribers[id] = referSubscriber; // Listen for ending events so we can remove it from the map.
 
       referSubscriber.on('requestFailed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       referSubscriber.on('accepted', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       referSubscriber.on('failed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       return referSubscriber;
     }
@@ -18348,7 +18548,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
-      var _this13 = this;
+      var _this15 = this;
 
       debug('receiveRequest()');
 
@@ -18405,20 +18605,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sdp: e.sdp
               });
               this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-                return _this13._connection.setRemoteDescription(answer);
+                return _this15._connection.setRemoteDescription(answer);
               }).then(function () {
-                if (!_this13._is_confirmed) {
-                  _this13._confirmed('remote', request);
+                if (!_this15._is_confirmed) {
+                  _this15._confirmed('remote', request);
                 }
               })["catch"](function (error) {
-                _this13.terminate({
+                _this15.terminate({
                   cause: JsSIP_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
 
                 debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-                _this13.emit('peerconnection:setremotedescriptionfailed', error);
+                _this15.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
               this._confirmed('remote', request);
@@ -18710,31 +18910,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setACKTimer",
     value: function _setACKTimer() {
-      var _this14 = this;
+      var _this16 = this;
 
       this._timers.ackTimer = setTimeout(function () {
-        if (_this14._status === C.STATUS_WAITING_FOR_ACK) {
+        if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
           debug('no ACK received, terminating the session');
-          clearTimeout(_this14._timers.invite2xxTimer);
+          clearTimeout(_this16._timers.invite2xxTimer);
 
-          _this14.sendRequest(JsSIP_C.BYE);
+          _this16.sendRequest(JsSIP_C.BYE);
 
-          _this14._ended('remote', null, JsSIP_C.causes.NO_ACK);
+          _this16._ended('remote', null, JsSIP_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
     }
   }, {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
-      var _this15 = this;
+      var _this17 = this;
 
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
 
       this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this15._connection.iceConnectionState; // TODO: Do more with different states.
+        var state = _this17._connection.iceConnectionState; // TODO: Do more with different states.
 
         if (state === 'failed') {
-          _this15.terminate({
+          _this17.terminate({
             cause: JsSIP_C.causes.RTP_TIMEOUT,
             status_code: 408,
             reason_phrase: JsSIP_C.causes.RTP_TIMEOUT
@@ -18750,7 +18950,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_createLocalDescription",
     value: function _createLocalDescription(type, constraints) {
-      var _this16 = this;
+      var _this18 = this;
 
       debug('createLocalDescription()');
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
@@ -18762,7 +18962,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return connection.createOffer(constraints)["catch"](function (error) {
             debugerror('emit "peerconnection:createofferfailed" [error:%o]', error);
 
-            _this16.emit('peerconnection:createofferfailed', error);
+            _this18.emit('peerconnection:createofferfailed', error);
 
             return Promise.reject(error);
           });
@@ -18770,7 +18970,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return connection.createAnswer(constraints)["catch"](function (error) {
             debugerror('emit "peerconnection:createanswerfailed" [error:%o]', error);
 
-            _this16.emit('peerconnection:createanswerfailed', error);
+            _this18.emit('peerconnection:createanswerfailed', error);
 
             return Promise.reject(error);
           });
@@ -18778,17 +18978,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }) // Set local description.
       .then(function (desc) {
         return connection.setLocalDescription(desc)["catch"](function (error) {
-          _this16._rtcReady = true;
+          _this18._rtcReady = true;
           debugerror('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
 
-          _this16.emit('peerconnection:setlocaldescriptionfailed', error);
+          _this18.emit('peerconnection:setlocaldescriptionfailed', error);
 
           return Promise.reject(error);
         });
       }).then(function () {
         // Resolve right away if 'pc.iceGatheringState' is 'complete'.
         if (connection.iceGatheringState === 'complete' && (!constraints || !constraints.iceRestart)) {
-          _this16._rtcReady = true;
+          _this18._rtcReady = true;
           var e = {
             originator: 'local',
             type: type,
@@ -18796,7 +18996,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           debug('emit "sdp"');
 
-          _this16.emit('sdp', e);
+          _this18.emit('sdp', e);
 
           return Promise.resolve(e.sdp);
         } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
@@ -18816,7 +19016,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             clearInterval(iceGatheringTimer);
             finished = true;
-            _this16._rtcReady = true;
+            _this18._rtcReady = true;
             var e = {
               originator: 'local',
               type: type,
@@ -18824,7 +19024,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             debug('emit "sdp"');
 
-            _this16.emit('sdp', e);
+            _this18.emit('sdp', e);
 
             resolve(e.sdp);
           };
@@ -18832,7 +19032,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate; // 添加 ice 收集超时控制
 
-            iceGatheringDuration += _this16._ua.configuration.ice_gathering_timeout * 1000;
+            iceGatheringDuration += _this18._ua.configuration.ice_gathering_timeout * 1000;
 
             if (iceGatherFlag) {
               iceGatherFlag = false;
@@ -18846,7 +19046,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             if (candidate) {
-              _this16.emit('icecandidate', {
+              _this18.emit('icecandidate', {
                 candidate: candidate,
                 ready: ready
               });
@@ -18925,7 +19125,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReinvite",
     value: function _receiveReinvite(request) {
-      var _this17 = this;
+      var _this19 = this;
 
       debug('receiveReinvite()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
@@ -18973,9 +19173,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this17._createLocalDescription('offer', _this17._rtcOfferConstraints);
+          return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
-          sendAnswer.call(_this17, sdp);
+          sendAnswer.call(_this19, sdp);
         })["catch"](function () {
           request.reply(500);
         });
@@ -18989,19 +19189,65 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      this._processInDialogSdpOffer(request) // Send answer.
-      .then(function (desc) {
-        if (_this17._status === C.STATUS_TERMINATED) {
-          return;
-        }
+      function nextS(acceptVideo) {
+        var _this20 = this;
 
-        sendAnswer.call(_this17, desc);
-      })["catch"](function (error) {
-        debugerror(error);
-      });
+        // 用户主动拒绝视频
+        request['acceptVideo'] = acceptVideo;
+
+        this._processInDialogSdpOffer(request) // Send answer.
+        .then(function (desc) {
+          if (_this20._status === C.STATUS_TERMINATED) {
+            return;
+          }
+
+          sendAnswer.call(_this20, desc);
+        })["catch"](function (error) {
+          debugerror(error);
+        });
+      }
+
+      var callmode = 'audio';
+      var sdp = request.parseSDP();
+
+      var _iterator5 = _createForOfIteratorHelper(sdp.media),
+          _step5;
+
+      try {
+        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+          var m = _step5.value;
+
+          if (m.type !== 'video') {
+            continue;
+          }
+
+          if (m.port === 0) {
+            callmode = 'audio';
+          } else {
+            callmode = 'video';
+            break;
+          }
+        }
+      } catch (err) {
+        _iterator5.e(err);
+      } finally {
+        _iterator5.f();
+      }
+
+      if (callmode === 'video' && this._callmode === 'audio') {
+        if (this.listeners('inviteToVideo').length === 0) {
+          nextS.call(this);
+        } else {
+          this.emit('inviteToVideo', function (acceptVideo) {
+            nextS.call(_this19, acceptVideo);
+          });
+        }
+      } else {
+        nextS.call(this);
+      }
 
       function sendAnswer(desc) {
-        var _this18 = this;
+        var _this21 = this;
 
         var extraHeaders = ["Contact: ".concat(this._contact)];
 
@@ -19009,14 +19255,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
+        } // 只有 video port = 0 判断为音频模式
+
+
+        desc = sdp_transform.parse(desc);
+
+        var _iterator6 = _createForOfIteratorHelper(desc.media),
+            _step6;
+
+        try {
+          for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+            var m = _step6.value;
+
+            if (m.type === 'video' && this._callmode === 'audio') {
+              m.port = 0;
+            }
+          }
+        } catch (err) {
+          _iterator6.e(err);
+        } finally {
+          _iterator6.f();
         }
 
+        desc = sdp_transform.write(desc);
         request.reply(200, null, extraHeaders, desc, function () {
-          _this18._status = C.STATUS_WAITING_FOR_ACK;
+          _this21._status = C.STATUS_WAITING_FOR_ACK;
 
-          _this18._setInvite2xxTimer(request, desc);
+          _this21._setInvite2xxTimer(request, desc);
 
-          _this18._setACKTimer();
+          _this21._setACKTimer();
         }); // If callback is given execute it.
 
         if (typeof data.callback === 'function') {
@@ -19031,7 +19298,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
-      var _this19 = this;
+      var _this22 = this;
 
       debug('receiveUpdate()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
@@ -19080,11 +19347,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       this._processInDialogSdpOffer(request) // Send answer.
       .then(function (desc) {
-        if (_this19._status === C.STATUS_TERMINATED) {
+        if (_this22._status === C.STATUS_TERMINATED) {
           return;
         }
 
-        sendAnswer.call(_this19, desc);
+        sendAnswer.call(_this22, desc);
       })["catch"](function (error) {
         debugerror(error);
       });
@@ -19104,18 +19371,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
-      var _this20 = this;
+      var _this23 = this;
 
       debug('_processInDialogSdpOffer()');
+      var videoConstraints = {
+        video: true
+      };
       var sdp = request.parseSDP();
-      var hold = false;
+      var acceptVideo = request.acceptVideo;
 
-      var _iterator4 = _createForOfIteratorHelper(sdp.media),
-          _step4;
+      if (Utils.isString(acceptVideo)) {
+        request['acceptVideo'] = acceptVideo;
+      } else if (acceptVideo) {
+        videoConstraints = acceptVideo;
+      }
+
+      var hold = false;
+      var callmode = 'audio';
+
+      var _iterator7 = _createForOfIteratorHelper(sdp.media),
+          _step7;
 
       try {
-        for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
-          var m = _step4.value;
+        for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+          var m = _step7.value;
 
           if (holdMediaTypes.indexOf(m.type) === -1) {
             continue;
@@ -19132,9 +19411,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
         }
       } catch (err) {
-        _iterator4.e(err);
+        _iterator7.e(err);
       } finally {
-        _iterator4.f();
+        _iterator7.f();
+      }
+
+      var _iterator8 = _createForOfIteratorHelper(sdp.media),
+          _step8;
+
+      try {
+        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+          var _m = _step8.value;
+
+          if (_m.type !== 'video') {
+            continue;
+          }
+
+          if (_m.port === 0) {
+            this._connection.getTransceivers().forEach(function (transeiver) {
+              if (transeiver.sender.track && transeiver.sender.track.kind === 'video' && transeiver.sender.readyState !== 'ended') {
+                if (!transeiver.stopped) {
+                  transeiver.direction = 'inactive';
+                }
+
+                transeiver.sender.track.stop();
+                callmode = 'audio';
+              }
+            });
+          } else if (acceptVideo === 'no') {
+            callmode = 'audio';
+            break;
+          } else {
+            callmode = 'video';
+            break;
+          }
+        }
+      } catch (err) {
+        _iterator8.e(err);
+      } finally {
+        _iterator8.f();
       }
 
       var e = {
@@ -19148,41 +19463,76 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         type: 'offer',
         sdp: e.sdp
       });
-      this._connectionPromiseQueue = this._connectionPromiseQueue // Set remote description.
+      this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
+        if (_this23._callmode !== callmode && callmode === 'video') {
+          _this23._localMediaStreamLocallyGenerated = true;
+          return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
+            if (_this23._status === C.STATUS_TERMINATED) {
+              throw new Error('terminated');
+            }
+
+            _this23._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+
+            debugerror('emit "getusermediafailed" [error:%o]', error);
+
+            _this23.emit('getusermediafailed', error);
+
+            throw error;
+          });
+        }
+      }).then(function (stream) {
+        if (stream) {
+          stream.getVideoTracks().forEach(function (track) {
+            _this23._localMediaStream.addTrack(track);
+
+            _this23._connection.addTrack(track, stream);
+          });
+        }
+      }) // Set remote description.
       .then(function () {
-        if (_this20._status === C.STATUS_TERMINATED) {
+        if (_this23._callmode !== callmode) {
+          _this23._callmode = callmode;
+          debug('emit "callmode"');
+
+          _this23.emit('callmode', {
+            originator: 'local',
+            mode: _this23._callmode
+          });
+        }
+
+        if (_this23._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this20._connection.setRemoteDescription(offer)["catch"](function (error) {
+        return _this23._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this20.emit('peerconnection:setremotedescriptionfailed', error);
+          _this23.emit('peerconnection:setremotedescriptionfailed', error);
 
           throw new Error('peerconnection.setRemoteDescription() failed');
         });
       }).then(function () {
-        if (_this20._status === C.STATUS_TERMINATED) {
+        if (_this23._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        if (_this20._remoteHold === true && hold === false) {
-          _this20._remoteHold = false;
+        if (_this23._remoteHold === true && hold === false) {
+          _this23._remoteHold = false;
 
-          _this20._onunhold('remote');
-        } else if (_this20._remoteHold === false && hold === true) {
-          _this20._remoteHold = true;
+          _this23._onunhold('remote');
+        } else if (_this23._remoteHold === false && hold === true) {
+          _this23._remoteHold = true;
 
-          _this20._onhold('remote');
+          _this23._onhold('remote');
         }
       }) // Create local description.
       .then(function () {
-        if (_this20._status === C.STATUS_TERMINATED) {
+        if (_this23._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this20._createLocalDescription('answer', _this20._rtcAnswerConstraints)["catch"](function () {
+        return _this23._createLocalDescription('answer', _this23._rtcAnswerConstraints)["catch"](function () {
           request.reply(500);
           throw new Error('_createLocalDescription() failed');
         });
@@ -19196,7 +19546,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
-      var _this21 = this;
+      var _this24 = this;
 
       debug('receiveRefer()');
 
@@ -19220,10 +19570,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
-          _accept.call(_this21, initCallback, options);
+          _accept.call(_this24, initCallback, options);
         },
         reject: function reject() {
-          _reject.call(_this21);
+          _reject.call(_this24);
         }
       });
 
@@ -19332,12 +19682,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this23 = this;
+      var _this26 = this;
 
       debug('receiveReplaces()');
 
       function _accept2(initCallback) {
-        var _this22 = this;
+        var _this25 = this;
 
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
@@ -19346,7 +19696,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua); // Terminate the current session when the new one is confirmed.
 
         session.on('confirmed', function () {
-          _this22.terminate();
+          _this25.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -19360,10 +19710,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this23, initCallback);
+          _accept2.call(_this26, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this23);
+          _reject2.call(_this26);
         }
       });
     }
@@ -19374,21 +19724,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream, preferredAudioCodec, preferredVideoCodec) {
-      var _this24 = this;
+      var _this27 = this;
 
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this24.onRequestTimeout();
+          _this27.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this24.onTransportError();
+          _this27.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this24._request = request;
+          _this27._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this24._receiveInviteResponse(response);
+          _this27._receiveInviteResponse(response);
         }
       }); // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
@@ -19400,36 +19750,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         } // Request for user media access.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-            _this24._localMediaStreamLocallyGenerated = true;
+            // 判断呼叫模式
+            var callmode = null;
+
+            if (mediaConstraints.video) {
+              callmode = 'video';
+            } else {
+              callmode = 'audio';
+            }
+
+            if (_this27._callmode !== callmode) {
+              _this27._callmode = callmode;
+              debug('emit "callmode"');
+
+              _this27.emit('callmode', {
+                originator: 'local',
+                mode: _this27._callmode
+              });
+            }
+
+            _this27._localMediaStreamLocallyGenerated = true;
             return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-              if (_this24._status === C.STATUS_TERMINATED) {
+              if (_this27._status === C.STATUS_TERMINATED) {
                 throw new Error('terminated');
               }
 
-              _this24._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+              _this27._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
 
               debugerror('emit "getusermediafailed" [error:%o]', error);
 
-              _this24.emit('getusermediafailed', error);
+              _this27.emit('getusermediafailed', error);
 
               throw error;
             });
           }
       }).then(function (stream) {
-        if (_this24._status === C.STATUS_TERMINATED) {
+        if (_this27._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this24._localMediaStream = stream;
+        _this27._localMediaStream = stream;
 
         if (stream) {
           stream.getTracks().forEach(function (track) {
-            _this24._connection.addTrack(track, stream);
+            _this27._connection.addTrack(track, stream);
           });
         } // TODO: should this be triggered here?
 
 
-        _this24._connecting(_this24._request); // 发起呼叫前设置音频编码顺序
+        _this27._connecting(_this27._request); // 发起呼叫前设置音频编码顺序
 
 
         if (preferredAudioCodec) {
@@ -19452,7 +19821,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           codecs.slice(selectedCodecIndex, 1);
           codecs.unshift(selectedCodec);
 
-          var transceiver = _this24._connection.getTransceivers().find(function (t) {
+          var transceiver = _this27._connection.getTransceivers().find(function (t) {
             return t.sender && t.sender.track === stream.getAudioTracks()[0];
           });
 
@@ -19483,34 +19852,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _codecs.unshift(_selectedCodec);
 
-          var _transceiver = _this24._connection.getTransceivers().find(function (t) {
+          var _transceiver = _this27._connection.getTransceivers().find(function (t) {
             return t.sender && t.sender.track === stream.getVideoTracks()[0];
           });
 
           _transceiver.setCodecPreferences(_codecs);
         }
 
-        return _this24._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-          _this24._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
+        return _this27._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+          _this27._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
 
           throw error;
         });
       }).then(function (desc) {
-        if (_this24._is_canceled || _this24._status === C.STATUS_TERMINATED) {
+        if (_this27._is_canceled || _this27._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this24._request.body = desc;
-        _this24._status = C.STATUS_INVITE_SENT;
-        debug('emit "sending" [request:%o]', _this24._request); // Emit 'sending' so the app can mangle the body before the request is sent.
+        _this27._request.body = desc;
+        _this27._status = C.STATUS_INVITE_SENT;
+        debug('emit "sending" [request:%o]', _this27._request); // Emit 'sending' so the app can mangle the body before the request is sent.
 
-        _this24.emit('sending', {
-          request: _this24._request
+        _this27.emit('sending', {
+          request: _this27._request
         });
 
         request_sender.send();
       })["catch"](function (error) {
-        if (_this24._status === C.STATUS_TERMINATED) {
+        if (_this27._status === C.STATUS_TERMINATED) {
           return;
         }
 
@@ -19542,7 +19911,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this25 = this;
+      var _this28 = this;
 
       debug('receiveInviteResponse()'); // Handle 2XX retransmissions and responses from forked requests.
 
@@ -19625,11 +19994,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              return _this25._connection.setRemoteDescription(answer);
+              return _this28._connection.setRemoteDescription(answer);
             })["catch"](function (error) {
               debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-              _this25.emit('peerconnection:setremotedescriptionfailed', error);
+              _this28.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -19667,33 +20036,66 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this25._connection.signalingState === 'stable') {
-                return _this25._connection.createOffer(_this25._rtcOfferConstraints).then(function (offer) {
-                  return _this25._connection.setLocalDescription(offer);
+              if (_this28._connection.signalingState === 'stable') {
+                return _this28._connection.createOffer(_this28._rtcOfferConstraints).then(function (offer) {
+                  return _this28._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this25._acceptAndTerminate(response, 500, error.toString());
+                  _this28._acceptAndTerminate(response, 500, error.toString());
 
-                  _this25._failed('local', response, JsSIP_C.causes.WEBRTC_ERROR);
+                  _this28._failed('local', response, JsSIP_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
-              _this25._connection.setRemoteDescription(_answer).then(function () {
+              _this28._connection.setRemoteDescription(_answer).then(function () {
                 // Handle Session Timers.
-                _this25._handleSessionTimersInIncomingResponse(response);
+                _this28._handleSessionTimersInIncomingResponse(response);
 
-                _this25._accepted('remote', response);
+                _this28._accepted('remote', response);
 
-                _this25.sendRequest(JsSIP_C.ACK);
+                _this28.sendRequest(JsSIP_C.ACK);
 
-                _this25._confirmed('local', null);
+                _this28._confirmed('local', null);
+
+                var callmode = 'audio';
+                var sdp = response.parseSDP();
+
+                var _iterator9 = _createForOfIteratorHelper(sdp.media),
+                    _step9;
+
+                try {
+                  for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+                    var m = _step9.value;
+
+                    if (m.type === 'video' && m.port !== 0) {
+                      callmode = 'video';
+                    }
+                  }
+                } catch (err) {
+                  _iterator9.e(err);
+                } finally {
+                  _iterator9.f();
+                }
+
+                if (_this28._callmode !== callmode) {
+                  switch (callmode) {
+                    case 'audio':
+                      _this28.toAudio();
+
+                      break;
+
+                    default:
+                      // this.toVideo();
+                      break;
+                  }
+                }
               })["catch"](function (error) {
-                _this25._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this28._acceptAndTerminate(response, 488, 'Not Acceptable Here');
 
-                _this25._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this28._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
 
                 debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-                _this25.emit('peerconnection:setremotedescriptionfailed', error);
+                _this28.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -19714,7 +20116,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this26 = this;
+      var _this29 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('sendReinvite()');
@@ -19730,9 +20132,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this26._createLocalDescription('offer', rtcOfferConstraints);
+        return _this29._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this26._mangleOffer(sdp);
+        sdp = _this29._mangleOffer(sdp); // 只有 video port = 0 判断为音频模式
+
+        sdp = sdp_transform.parse(sdp);
+
+        var _iterator10 = _createForOfIteratorHelper(sdp.media),
+            _step10;
+
+        try {
+          for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+            var m = _step10.value;
+
+            if (m.type === 'video' && _this29._callmode === 'audio') {
+              m.port = 0;
+            }
+          }
+        } catch (err) {
+          _iterator10.e(err);
+        } finally {
+          _iterator10.f();
+        }
+
+        sdp = sdp_transform.write(sdp);
         var e = {
           originator: 'local',
           type: 'offer',
@@ -19740,29 +20163,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         debug('emit "sdp"');
 
-        _this26.emit('sdp', e);
+        _this29.emit('sdp', e);
 
-        _this26.sendRequest(JsSIP_C.INVITE, {
+        _this29.sendRequest(JsSIP_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this26, response);
+              onSucceeded.call(_this29, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this26, response);
+              onFailed.call(_this29, response);
             },
             onTransportError: function onTransportError() {
-              _this26.onTransportError(); // Do nothing because session ends.
+              _this29.onTransportError(); // Do nothing because session ends.
 
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this26.onRequestTimeout(); // Do nothing because session ends.
+              _this29.onRequestTimeout(); // Do nothing because session ends.
 
             },
             onDialogError: function onDialogError() {
-              _this26.onDialogError(); // Do nothing because session ends.
+              _this29.onDialogError(); // Do nothing because session ends.
 
             }
           }
@@ -19772,7 +20195,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
 
       function onSucceeded(response) {
-        var _this27 = this;
+        var _this30 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -19808,16 +20231,48 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this27._connection.setRemoteDescription(answer);
+          return _this30._connection.setRemoteDescription(answer);
+        }).then(function () {
+          var callmode = 'audio';
+          var sdp = response.parseSDP();
+
+          var _iterator11 = _createForOfIteratorHelper(sdp.media),
+              _step11;
+
+          try {
+            for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+              var m = _step11.value;
+
+              if (m.type === 'video' && m.port !== 0) {
+                callmode = 'video';
+              }
+            }
+          } catch (err) {
+            _iterator11.e(err);
+          } finally {
+            _iterator11.f();
+          }
+
+          if (_this30._callmode !== callmode) {
+            switch (callmode) {
+              case 'audio':
+                _this30.toAudio();
+
+                break;
+
+              default:
+                break;
+            }
+          }
         }).then(function () {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this27);
+          onFailed.call(_this30);
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this27.emit('peerconnection:setremotedescriptionfailed', error);
+          _this30.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
 
@@ -19834,7 +20289,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this28 = this;
+      var _this31 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('sendUpdate()');
@@ -19852,9 +20307,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this28._createLocalDescription('offer', rtcOfferConstraints);
+          return _this31._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this28._mangleOffer(sdp);
+          sdp = _this31._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
@@ -19862,35 +20317,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           debug('emit "sdp"');
 
-          _this28.emit('sdp', e);
+          _this31.emit('sdp', e);
 
-          _this28.sendRequest(JsSIP_C.UPDATE, {
+          _this31.sendRequest(JsSIP_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this28, response);
+                onSucceeded.call(_this31, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this28, response);
+                onFailed.call(_this31, response);
               },
               onTransportError: function onTransportError() {
-                _this28.onTransportError(); // Do nothing because session ends.
+                _this31.onTransportError(); // Do nothing because session ends.
 
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this28.onRequestTimeout(); // Do nothing because session ends.
+                _this31.onRequestTimeout(); // Do nothing because session ends.
 
               },
               onDialogError: function onDialogError() {
-                _this28.onDialogError(); // Do nothing because session ends.
+                _this31.onDialogError(); // Do nothing because session ends.
 
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this28);
+          onFailed.call(_this31);
         });
       } // No SDP.
       else {
@@ -19898,21 +20353,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             extraHeaders: extraHeaders,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this28, response);
+                onSucceeded.call(_this31, response);
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this28, response);
+                onFailed.call(_this31, response);
               },
               onTransportError: function onTransportError() {
-                _this28.onTransportError(); // Do nothing because session ends.
+                _this31.onTransportError(); // Do nothing because session ends.
 
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this28.onRequestTimeout(); // Do nothing because session ends.
+                _this31.onRequestTimeout(); // Do nothing because session ends.
 
               },
               onDialogError: function onDialogError() {
-                _this28.onDialogError(); // Do nothing because session ends.
+                _this31.onDialogError(); // Do nothing because session ends.
 
               }
             }
@@ -19920,7 +20375,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
       function onSucceeded(response) {
-        var _this29 = this;
+        var _this32 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -19956,16 +20411,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this29._connection.setRemoteDescription(answer);
+            return _this32._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this29);
+            onFailed.call(_this32);
             debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-            _this29.emit('peerconnection:setremotedescriptionfailed', error);
+            _this32.emit('peerconnection:setremotedescriptionfailed', error);
           });
         } // No SDP answer.
         else if (eventHandlers.succeeded) {
@@ -20017,12 +20472,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._localHold && !this._remoteHold) {
         debug('mangleOffer() | me on hold, mangling offer');
 
-        var _iterator5 = _createForOfIteratorHelper(sdp.media),
-            _step5;
+        var _iterator12 = _createForOfIteratorHelper(sdp.media),
+            _step12;
 
         try {
-          for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-            var m = _step5.value;
+          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+            var m = _step12.value;
 
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
@@ -20037,59 +20492,59 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator5.e(err);
+          _iterator12.e(err);
         } finally {
-          _iterator5.f();
+          _iterator12.f();
         }
       } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
           debug('mangleOffer() | both on hold, mangling offer');
 
-          var _iterator6 = _createForOfIteratorHelper(sdp.media),
-              _step6;
+          var _iterator13 = _createForOfIteratorHelper(sdp.media),
+              _step13;
 
           try {
-            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-              var _m = _step6.value;
+            for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+              var _m2 = _step13.value;
 
-              if (holdMediaTypes.indexOf(_m.type) === -1) {
+              if (holdMediaTypes.indexOf(_m2.type) === -1) {
                 continue;
               }
 
-              _m.direction = 'inactive';
+              _m2.direction = 'inactive';
             }
           } catch (err) {
-            _iterator6.e(err);
+            _iterator13.e(err);
           } finally {
-            _iterator6.f();
+            _iterator13.f();
           }
         } // Remote hold.
         else if (this._remoteHold) {
             debug('mangleOffer() | remote on hold, mangling offer');
 
-            var _iterator7 = _createForOfIteratorHelper(sdp.media),
-                _step7;
+            var _iterator14 = _createForOfIteratorHelper(sdp.media),
+                _step14;
 
             try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _m2 = _step7.value;
+              for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+                var _m3 = _step14.value;
 
-                if (holdMediaTypes.indexOf(_m2.type) === -1) {
+                if (holdMediaTypes.indexOf(_m3.type) === -1) {
                   continue;
                 }
 
-                if (!_m2.direction) {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'sendrecv') {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'recvonly') {
-                  _m2.direction = 'inactive';
+                if (!_m3.direction) {
+                  _m3.direction = 'recvonly';
+                } else if (_m3.direction === 'sendrecv') {
+                  _m3.direction = 'recvonly';
+                } else if (_m3.direction === 'recvonly') {
+                  _m3.direction = 'inactive';
                 }
               }
             } catch (err) {
-              _iterator7.e(err);
+              _iterator14.e(err);
             } finally {
-              _iterator7.f();
+              _iterator14.f();
             }
           }
 
@@ -20175,7 +20630,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this30 = this;
+      var _this33 = this;
 
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
@@ -20183,28 +20638,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this30._status === C.STATUS_TERMINATED) {
+          if (_this33._status === C.STATUS_TERMINATED) {
             return;
           }
 
           debug('runSessionTimer() | sending session refresh request');
 
-          if (_this30._sessionTimers.refreshMethod === JsSIP_C.UPDATE) {
-            _this30._sendUpdate();
+          if (_this33._sessionTimers.refreshMethod === JsSIP_C.UPDATE) {
+            _this33._sendUpdate();
           } else {
-            _this30._sendReinvite();
+            _this33._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       } // I'm not the refresher.
       else {
           this._sessionTimers.timer = setTimeout(function () {
-            if (_this30._status === C.STATUS_TERMINATED) {
+            if (_this33._status === C.STATUS_TERMINATED) {
               return;
             }
 
             debugerror('runSessionTimer() | timer expired, terminating the session');
 
-            _this30.terminate({
+            _this33.terminate({
               cause: JsSIP_C.causes.REQUEST_TIMEOUT,
               status_code: 408,
               reason_phrase: 'Session Timer Expired'
@@ -20219,18 +20674,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return sender.track && sender.track.kind === 'audio';
       });
 
-      var _iterator8 = _createForOfIteratorHelper(senders),
-          _step8;
+      var _iterator15 = _createForOfIteratorHelper(senders),
+          _step15;
 
       try {
-        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-          var sender = _step8.value;
+        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+          var sender = _step15.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator8.e(err);
+        _iterator15.e(err);
       } finally {
-        _iterator8.f();
+        _iterator15.f();
       }
     }
   }, {
@@ -20240,18 +20695,52 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return sender.track && sender.track.kind === 'video';
       });
 
-      var _iterator9 = _createForOfIteratorHelper(senders),
-          _step9;
+      var _iterator16 = _createForOfIteratorHelper(senders),
+          _step16;
 
       try {
-        for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-          var sender = _step9.value;
+        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+          var sender = _step16.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator9.e(err);
+        _iterator16.e(err);
       } finally {
-        _iterator9.f();
+        _iterator16.f();
+      }
+    }
+  }, {
+    key: "_callMode",
+    value: function _callMode(originator, request) {
+      debug('callMode()');
+      var callmode = 'audio';
+      var sdp = request.parseSDP();
+
+      var _iterator17 = _createForOfIteratorHelper(sdp.media),
+          _step17;
+
+      try {
+        for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+          var m = _step17.value;
+
+          if (m.type === 'video' && m.port !== 0) {
+            callmode = 'video';
+          }
+        }
+      } catch (err) {
+        _iterator17.e(err);
+      } finally {
+        _iterator17.f();
+      }
+
+      if (this._callmode !== callmode) {
+        this._callmode = callmode;
+        debug('emit "callmode"');
+
+        this._ua.callMode(this, {
+          originator: originator,
+          mode: this._callmode
+        });
       }
     }
   }, {
@@ -24183,6 +24672,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function newRTCSession(session, data) {
       this._sessions[session.id] = session;
       this.emit('newRTCSession', data);
+    }
+    /**
+     * new RTCSession
+     */
+
+  }, {
+    key: "callMode",
+    value: function callMode(session, data) {
+      this._sessions[session.id] = session;
+      this.emit('callmode', data);
     }
     /**
      * RTCSession destroyed.

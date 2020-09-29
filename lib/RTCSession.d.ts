@@ -5,6 +5,7 @@ import {IncomingRequest, IncomingResponse, OutgoingRequest} from './SIPMessage'
 import {NameAddrHeader} from './NameAddrHeader'
 import {URI} from './URI'
 import {causes, DTMF_TRANSPORT} from './Constants'
+import { CallOptions } from './UA'
 
 interface RTCPeerConnectionDeprecated extends RTCPeerConnection {
   /**
@@ -158,6 +159,11 @@ export interface SDPEvent {
   sdp: string;
 }
 
+export interface CallModeEvent {
+  originator: Originator;
+  mode: string
+}
+
 export interface IceCandidateEvent {
   candidate: RTCIceCandidate;
   ready: VoidFunction;
@@ -189,6 +195,7 @@ export type ReInviteListener = (event: ReInviteEvent) => void;
 export type UpdateListener = ReInviteListener;
 export type ReferListener = (event: ReferEvent) => void;
 export type SDPListener = (event: SDPEvent) => void;
+export type CallModeListener = (event: CallModeEvent) => void;
 export type IceCandidateListener = (event: IceCandidateEvent) => void;
 
 export interface RTCSessionEventMap {
@@ -211,6 +218,8 @@ export interface RTCSessionEventMap {
   'refer': ReferListener;
   'replaces': ReferListener;
   'sdp': SDPListener;
+  'callmode': CallModeListener;
+  'inviteToVideo': AnyListener;
   'icecandidate': IceCandidateListener;
   'getusermediafailed': AnyListener;
   'peerconnection:createofferfailed': AnyListener;
@@ -289,6 +298,10 @@ export class RTCSession extends EventEmitter {
   displayShare(type?: string):void;
 
   unDisplayShare(type?: string):void;
+
+  toAudio(options?:object, done?:VoidFunction): void;
+
+  toVideo(options?:object, done?:VoidFunction): void;
 
   mute(options?: MediaConstraints): void;
 

@@ -86,6 +86,11 @@ export interface OutgoingMessageEvent {
   request: OutgoingRequest;
 }
 
+export interface CallModeEvent {
+  originator: Originator.LOCAL;
+  mode: string;
+}
+
 export type UAConnectingListener = (event: UAConnectingEvent) => void;
 export type ConnectedListener = (event: ConnectedEvent) => void;
 export type DisconnectedListener = (event: DisconnectEvent) => void;
@@ -97,6 +102,7 @@ export type OutgoingRTCSessionListener = (event: OutgoingRTCSessionEvent) => voi
 export type RTCSessionListener = IncomingRTCSessionListener | OutgoingRTCSessionListener;
 export type IncomingMessageListener = (event: IncomingMessageEvent) => void;
 export type OutgoingMessageListener = (event: OutgoingMessageEvent) => void;
+export type CallModeListener = (event: CallModeEvent) => void;
 export type MessageListener = IncomingMessageListener | OutgoingMessageListener;
 export type SipEventListener = <T = any>(event: { event: T; request: IncomingRequest; }) => void
 
@@ -109,6 +115,7 @@ export interface UAEventMap {
   registrationFailed: RegistrationFailedListener;
   registrationExpiring: AnyListener;
   newRTCSession: RTCSessionListener;
+  callMode: CallModeListener;
   newMessage: MessageListener;
   sipEvent: SipEventListener;
 }
