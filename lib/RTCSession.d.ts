@@ -293,9 +293,9 @@ export class RTCSession extends EventEmitter {
 
   isOnHold(): OnHoldResult;
 
-  toAudio(options?:CallOptions, done?:VoidFunction): void;
+  toAudio(options?:object, done?:VoidFunction): void;
 
-  toVideo(options?:CallOptions, done?:VoidFunction): void;
+  toVideo(options?:object, done?:VoidFunction): void;
 
   mute(options?: MediaConstraints): void;
 
