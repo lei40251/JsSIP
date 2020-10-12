@@ -18025,7 +18025,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (type === 'replace') {
               _this7._localMediaStream.getVideoTracks().forEach(function (track) {
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video';
+                  if (s.track) {
+                    return s.track.kind == 'video' && (s.track.label.indexOf('window') !== -1 || s.track.label.indexOf('web-') !== -1 || s.track.label.indexOf('screen') !== -1);
+                  }
                 });
 
                 sender.replaceTrack(track);
@@ -18044,7 +18046,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (type == 'replace') {
           stream.getVideoTracks().forEach(function (track) {
             var sender = _this7._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video';
+              if (s.track) {
+                return s.track.kind == 'video' && s.track.readyState !== 'ended';
+              }
             });
 
             sender.replaceTrack(track);
@@ -26117,7 +26121,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         return Promise.resolve().then(function () {
           _this2._session._connection.getSenders().find(function (s) {
-            if (s.track.kind == 'video') {
+            if (s.track && s.track.kind == 'video') {
               s.track.stop();
             }
           });
@@ -26145,7 +26149,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       videoStream.getVideoTracks().forEach(function (track) {
         _this3._session._connection.getSenders().find(function (s) {
-          if (s.track.kind == 'video') {
+          if (s.track && s.track.kind == 'video') {
             s.track.stop();
             s.replaceTrack(track);
           }
