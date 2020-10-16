@@ -36,6 +36,7 @@
 | options | 带有附加参数的**可选对象**（请参见下文） |
 
 options
+
 |参数名|说明|
 |-|-|
 |mediaConstraints|具有两个有效参数（音频和视频）的对象，该参数指示会话是否打算使用音频和/或视频以及要使用的约束默认值是音频和视频均设置为 true|
@@ -54,12 +55,15 @@ options
 > 标注 1：data 参数说明
 
 呼入时
+
 |参数名|说明|
 |-|-|
 |originator|"remote" 新会话由远端生成|
 |session|会话的 FlyInn.RTCSession 实例|
 |request|收到的 INVITE 请求的实例|
+
 呼出时
+
 |参数名|说明|
 |-|-|
 |originator|"local" 新会话由本地生成|
@@ -80,7 +84,7 @@ options
 | switchCam(mediaConstraints=null)<sup>6</sup>                          | 当设备有多个摄像头时用于切换摄像头，该方法切换后本地视频流的 **Promise** 对象 |
 |  displayShare(type=null)<sup>7</sup>                          | 分享桌面，type 默认为空启用双视频流模式，为‘replace’为替换流模式（建议采用替换流模式） |
 
->
+
 
 #### 事件
 
@@ -98,18 +102,21 @@ options
 ## 标注
 
 标注 1:
+
 | 参数名 | 说明 |
 | ----------- | ----------------------------------------------- |
 | contentType | 表示 SIP INFO 消息的 ContentType 参数值的字符串 |
 | body | 表示 SIP INFO 消息正文的可选字符串 |
 
 标注 2：
+
 | 参数名 | 说明 |
 | ------ | ------------------------- |
 | audio | 布尔值,是否将本地音频静音 |
 | video | 布尔值,是否将本地视频关闭 |
 
 标注 3：
+
 | 参数名 | 说明 |
 | ------ | ---------------------------- |
 | audio | 布尔值，是否取消本地音频静音 |
@@ -117,12 +124,14 @@ options
 
 标注 4：
 data 参数
+
 |参数名|说明|
 |-|-|
 |originator|呼入为"local" <br/> 呼出为"remote"|
 
 标注 5：
 data 参数
+
 |参数名|说明|
 |-|-|
 |originator|接收为"local" <br/> 发送为"remote"|
@@ -130,6 +139,7 @@ data 参数
 
 标注 6：
 mediaConstraints 参数
+
 |参数名|说明|
 |-|-|
 |mediaConstraints|具有两个有效参数（音频和视频）的对象，该参数指示会话是否打算使用音频和/或视频以及要使用的约束默认值是音频和视频均设置为 true|

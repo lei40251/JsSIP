@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 // 调试信息输出
-// FlyInnWeb.debug.enable('FlyInn:*');
+// FlyInn.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-// FlyInnWeb.debug.disable("FlyInn:*");
+// FlyInn.debug.disable("FlyInn:*");
 
 function registerSip(user) {
   // 注册UA的用户名
@@ -12,48 +12,48 @@ function registerSip(user) {
 
   // websocket 实例
   // eslint-disable-next-line no-undef
-  const socket = new FlyInnWeb.WebSocketInterface('wss://pro.vsbc.com:60040/wss');
+  const socket = new FlyInn.WebSocketInterface("wss://pro.vsbc.com:60040/wss");
 
   // UA 配置项
   const configuration = {
-    // FlyInnWeb.Socket 实例
+    // FlyInn.Socket 实例
     sockets: socket,
     // 与 UA 关联的 SIP URI
     uri: `sip:${account}@pro.vsbc.com`,
     // SIP身份验证密码
-    password: account
+    password: account,
   };
 
-  // FlyinnWeb 实例
+  // Flyinn 实例
   // eslint-disable-next-line no-undef
-  const flyinnUA = new FlyInnWeb.UA(configuration);
+  const flyinnUA = new FlyInn.UA(configuration);
 
   /**
    * 输出显示状态
    * @param {String} text
    */
   function setStatus(text) {
-    const statusDom = document.querySelector('#status');
+    const statusDom = document.querySelector("#status");
 
     statusDom.innerText = text;
     console.log(text);
   }
 
   // 新通话
-  flyinnUA.on('newRTCSession', function(e) {
+  flyinnUA.on("newRTCSession", function (e) {
     let curMuted = null;
 
-    document.querySelector('#answer').onclick = function() {
+    document.querySelector("#answer").onclick = function () {
       // 接听
       e.session.answer();
     };
 
-    document.querySelector('#cancel').onclick = function() {
+    document.querySelector("#cancel").onclick = function () {
       // 拒绝/挂机
       e.session.terminate();
     };
 
-    document.querySelector('#muteMic').onclick = function() {
+    document.querySelector("#muteMic").onclick = function () {
       // 获取视频和麦克风的关闭状态
       curMuted = e.session.isMuted();
       if (curMuted.audio) {
@@ -65,7 +65,7 @@ function registerSip(user) {
       }
     };
 
-    document.querySelector('#muteCam').onclick = function() {
+    document.querySelector("#muteCam").onclick = function () {
       // 获取视频和麦克风的关闭状态
       curMuted = e.session.isMuted();
       if (curMuted.video) {
@@ -77,81 +77,81 @@ function registerSip(user) {
       }
     };
 
-    document.querySelector('#sendInfo').onclick = function() {
+    document.querySelector("#sendInfo").onclick = function () {
       // 通话中发送消息  注意： contentType 必填
-      e.session.sendInfo('text/plain', document.querySelector('#info').value);
+      e.session.sendInfo("text/plain", document.querySelector("#info").value);
     };
 
-    document.querySelector('#switchCam').onclick = function() {
+    document.querySelector("#switchCam").onclick = function () {
       // 切换摄像头
       const stream = e.session.switchVideoStream();
 
       stream &&
         stream.then((s) => {
-          document.querySelector('#localVideo').srcObject = s;
+          document.querySelector("#localVideo").srcObject = s;
         });
     };
 
     // 呼入振铃 & 呼出回铃音
-    e.session.on('progress', function(d) {
-      if (d.originator === 'local') {
-        setStatus('收到新呼入振铃');
-        if (sessionStorage.getItem('autoAnswer') === 'on') {
+    e.session.on("progress", function (d) {
+      if (d.originator === "local") {
+        setStatus("收到新呼入振铃");
+        if (sessionStorage.getItem("autoAnswer") === "on") {
           this.answer();
         }
       } else {
-        setStatus('播放回铃音');
+        setStatus("播放回铃音");
       }
     });
 
     // 呼叫失败处理
-    e.session.on('failed', function(d) {
+    e.session.on("failed", function (d) {
       setStatus(`呼叫失败: ${d.cause}`);
       location.reload();
     });
 
     // 呼叫结束
-    e.session.on('ended', function() {
-      setStatus('呼叫结束');
+    e.session.on("ended", function () {
+      setStatus("呼叫结束");
       location.reload();
     });
 
     // 呼叫已确认
-    e.session.on('confirmed', function() {
-      document.querySelector('#localVideo').srcObject = this.local_stream;
-      document.querySelector('#remoteVideo').srcObject = this.remote_stream;
+    e.session.on("confirmed", function () {
+      document.querySelector("#localVideo").srcObject = this.local_stream;
+      document.querySelector("#remoteVideo").srcObject = this.remote_stream;
     });
 
     // 收到新消息
-    e.session.on('newInfo', function(d) {
-      if (d.originator === 'remote') {
-        console.log('收到新消息：', d.info.body);
-      } else if (d.originator === 'local') {
-        console.log('发出消息：', d.info.body);
+    e.session.on("newInfo", function (d) {
+      if (d.originator === "remote") {
+        console.log("收到新消息：", d.info.body);
+      } else if (d.originator === "local") {
+        console.log("发出消息：", d.info.body);
       }
     });
 
     // 摄像头、麦克风已关闭
-    e.session.on('muted', function(d) {
+    e.session.on("muted", function (d) {
       if (d.audio) {
-        document.querySelector('#muteMic').innerText = '开启麦克风';
+        document.querySelector("#muteMic").innerText = "开启麦克风";
       } else if (d.video) {
-        document.querySelector('#muteCam').innerText = '开启摄像头';
+        document.querySelector("#muteCam").innerText = "开启摄像头";
       }
     });
 
     // 摄像头、麦克风已开启
-    e.session.on('unmuted', function(d) {
+    e.session.on("unmuted", function (d) {
       if (d.audio) {
-        document.querySelector('#muteMic').innerText = '关闭麦克风';
+        document.querySelector("#muteMic").innerText = "关闭麦克风";
       } else if (d.video) {
-        document.querySelector('#muteCam').innerText = '关闭摄像头';
+        document.querySelector("#muteCam").innerText = "关闭摄像头";
       }
     });
   });
 
   // 注册成功
-  flyinnUA.on('registered', function() {
+  flyinnUA.on("registered", function () {
     setStatus(`注册成功：${account}`);
 
     // if (document.querySelector('#linkman').value) {
@@ -161,16 +161,16 @@ function registerSip(user) {
     // }
   });
 
-  flyinnUA.on('connecting', function() {
-    setStatus('connecting');
+  flyinnUA.on("connecting", function () {
+    setStatus("connecting");
   });
 
-  flyinnUA.on('connected', function() {
-    setStatus('connected');
+  flyinnUA.on("connected", function () {
+    setStatus("connected");
   });
 
   // 注册成功
-  flyinnUA.on('failed', function(d) {
+  flyinnUA.on("failed", function (d) {
     console.log(d);
   });
 
@@ -178,20 +178,20 @@ function registerSip(user) {
   flyinnUA.start();
 
   // 发起呼叫
-  document.querySelector('#call').onclick = function() {
-    const linkman = document.querySelector('#linkman').value;
+  document.querySelector("#call").onclick = function () {
+    const linkman = document.querySelector("#linkman").value;
     const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
-      mediaConstraints: { audio: true, video: true }
+      mediaConstraints: { audio: true, video: true },
     });
 
-    document.querySelector('#cancel').onclick = function() {
+    document.querySelector("#cancel").onclick = function () {
       // 取消呼叫
       session.terminate();
       location.reload();
     };
   };
 
-  window.onbeforeunload = function() {
+  window.onbeforeunload = function () {
     flyinnUA.stop();
   };
 }
@@ -217,40 +217,40 @@ function regStart(second, count) {
 
     return;
   }
-  regStop = function() {
+  regStop = function () {
     i = maxCount;
   };
 
   return;
 }
 
-document.querySelector('.regStart').onclick = function() {
-  const count = document.querySelector('.count').value;
-  const tSecond = document.querySelector('.tSecond').value;
+document.querySelector(".regStart").onclick = function () {
+  const count = document.querySelector(".count").value;
+  const tSecond = document.querySelector(".tSecond").value;
 
-  console.log('regStart:(' + tSecond + ',' + count + ')');
+  console.log("regStart:(" + tSecond + "," + count + ")");
 
   regStart(tSecond, count);
 };
 
-document.querySelector('.regStop').onclick = function() {
+document.querySelector(".regStop").onclick = function () {
   regStop();
 };
 
 function setAutoAnswerStatus() {
-  if (sessionStorage.getItem('autoAnswer') === 'on') {
-    document.querySelector('.autoAnswer').innerText = '取消自动接听';
+  if (sessionStorage.getItem("autoAnswer") === "on") {
+    document.querySelector(".autoAnswer").innerText = "取消自动接听";
   } else {
-    document.querySelector('.autoAnswer').innerText = '开启自动接听';
+    document.querySelector(".autoAnswer").innerText = "开启自动接听";
   }
 }
 
 setAutoAnswerStatus();
 
-document.querySelector('.autoAnswer').onclick = function() {
+document.querySelector(".autoAnswer").onclick = function () {
   sessionStorage.setItem(
-    'autoAnswer',
-    sessionStorage.getItem('autoAnswer') === 'on' ? 'off' : 'on'
+    "autoAnswer",
+    sessionStorage.getItem("autoAnswer") === "on" ? "off" : "on"
   );
   setAutoAnswerStatus();
 };

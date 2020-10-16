@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // 调试信息输出
-FlyInn.debug.enable('FlyInn:*');
+// FlyInn.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
 // FlyInn.debug.disable("FlyInn:*");
@@ -10,19 +10,19 @@ const account = parseInt(`90${Math.random() * 100}`);
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInn.WebSocketInterface('wss://pro.vsbc.com:60040/wss');
+const socket = new FlyInn.WebSocketInterface('wss://rtc.vsbc.com:5092/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets  : socket,
   // 与 UA 关联的 SIP URI
-  uri      : `sip:${account}@pro.vsbc.com`,
+  uri      : `sip:${account}@rtc.vsbc.com`,
   // SIP身份验证密码
   password : account
 };
 
-// FlyinnWeb 实例
+// Flyinn 实例
 // eslint-disable-next-line no-undef
 const flyinnUA = new FlyInn.UA(configuration);
 
@@ -167,7 +167,6 @@ flyinnUA.on('newRTCSession', function(e)
     {
       if (
         receiver.track &&
-        receiver.track.kind === 'video' &&
         receiver.track.readyState === 'live'
       )
       {
@@ -237,7 +236,7 @@ flyinnUA.start();
 document.querySelector('#call').onclick = function()
 {
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
+  const session = flyinnUA.call(`${linkman}@rtc.vsbc.com`, {
     mediaConstraints : { audio: true, video: true }
   });
 
