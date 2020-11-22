@@ -110,6 +110,64 @@ flyinnUA.on('newRTCSession', function(e)
     e.session.displayShare('replace');
   };
 
+  const c_f = document.querySelector('#cav_s');
+  // const c_f = document.createElement('canvas');
+  const ctx_f = c_f.getContext('2d');
+
+  let isRecordingStarted = false;
+  let isStoppedRecording = false;
+
+  (function looper() {
+    const r_f = document.querySelector('#form_s');
+
+    c_f.width = r_f.clientWidth;
+    c_f.height = r_f.clientHeight;
+
+    if (!isRecordingStarted)
+    {
+      return setTimeout(looper, 500);
+    }
+    html2canvas(r_f).then(function(canvas)
+    {
+      ctx_f.clearRect(0, 0, c_f.width, c_f.height);
+      ctx_f.drawImage(canvas, 0, 0, c_f.width, c_f.height);
+      if (isStoppedRecording)
+      {
+        return;
+      }
+      requestAnimationFrame(looper);
+    });
+  })();
+
+  document.querySelector('#formShare').onclick = function()
+  {
+    isRecordingStarted = true;
+    e.session.videoShare(c_f.captureStream(15));
+  };
+
+  document.querySelector('#picShare').onclick = function()
+  {
+    const c = document.createElement('canvas');
+    const ctx = c.getContext('2d');
+    const pic = document.querySelector('#pic_s');
+
+    ctx.drawImage(pic, 0, 0, 320, 240);
+
+    e.session.videoShare(c.captureStream());
+  };
+
+  document.querySelector('#videoShare').onclick = function()
+  {
+    e.session.videoShare(document.querySelector('#video_s').captureStream());
+  };
+
+  document.querySelector('#stopShare').onclick = function()
+  {
+    e.session.unVideoShare();
+
+    isStoppedRecording = false;
+  };
+
   // 呼入振铃 & 呼出回铃音
   e.session.on('progress', function(d)
   {

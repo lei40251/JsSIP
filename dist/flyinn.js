@@ -761,7 +761,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":19,"./Transactions":22,"./Utils":26,"debug":31}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":19,"./Transactions":22,"./Utils":26,"debug":30}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1094,7 +1094,7 @@ module.exports = /*#__PURE__*/function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":26,"debug":31}],6:[function(require,module,exports){
+},{"./Utils":26,"debug":30}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16161,7 +16161,7 @@ var JsSIP = {
 
 };
 module.exports = JsSIP;
-},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":28,"debug":31}],9:[function(require,module,exports){
+},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":28,"debug":30}],9:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16467,7 +16467,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":31,"events":30}],10:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30,"events":32}],10:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16933,7 +16933,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":19,"debug":31}],12:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":19,"debug":30}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -17082,7 +17082,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     _this._displayRTPSender = null;
     _this._displayMediaStream = null;
-    _this._displayMediaStreamLocallyGenerated = false; // Flag to indicate PeerConnection ready for new actions.
+    _this._displayMediaStreamLocallyGenerated = false; // 分享视频流
+
+    _this._videoShareStream = null;
+    _this._videoStremLocallyGenerated = false; // Flag to indicate PeerConnection ready for new actions.
 
     _this._rtcReady = true; // SIP Timers.
 
@@ -17195,6 +17198,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "connect",
     value: function connect(target) {
+      var _this2 = this;
+
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var initCallback = arguments.length > 2 ? arguments[2] : undefined;
       debug('connect()');
@@ -17213,6 +17218,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var preferredAudioCodec = options.preferredAudioCodec || null;
       var preferredVideoCodec = options.preferredVideoCodec || null;
+      var inviteWithoutSdp = options.inviteWithoutSdp || false;
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       this._data = options.data || this._data; // Check target.
@@ -17298,12 +17304,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       this._newRTCSession('local', this._request);
 
-      this._sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream, preferredAudioCodec, preferredVideoCodec);
+      if (inviteWithoutSdp) {
+        var request_sender = new RequestSender(this._ua, this._request, {
+          onRequestTimeout: function onRequestTimeout() {
+            _this2.onRequestTimeout();
+          },
+          onTransportError: function onTransportError() {
+            _this2.onTransportError();
+          },
+          // Update the request on authentication.
+          onAuthenticated: function onAuthenticated(request) {
+            _this2._request = request;
+          },
+          onReceiveResponse: function onReceiveResponse(response) {
+            _this2._receiveInviteResponse(response);
+          }
+        });
+        Promise.resolve().then(function () {
+          request_sender.send();
+          _this2._status = C.STATUS_INVITE_SENT;
+          debug('emit "sending" [request:%o]', _this2._request); // Emit 'sending' so the app can mangle the body before the request is sent.
+
+          _this2.emit('sending', {
+            request: _this2._request
+          });
+
+          request_sender.send();
+        })["catch"](function (error) {
+          if (_this2._status === C.STATUS_TERMINATED) {
+            return;
+          }
+
+          debugerror(error);
+        });
+      } else {
+        this._sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream, preferredAudioCodec, preferredVideoCodec);
+      }
     }
   }, {
     key: "init_incoming",
     value: function init_incoming(request, initCallback) {
-      var _this2 = this;
+      var _this3 = this;
 
       debug('init_incoming()');
       var expires;
@@ -17347,7 +17388,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._timers.userNoAnswerTimer = setTimeout(function () {
         request.reply(408);
 
-        _this2._failed('local', null, JsSIP_C.causes.NO_ANSWER);
+        _this3._failed('local', null, JsSIP_C.causes.NO_ANSWER);
       }, this._ua.configuration.no_answer_timeout);
       /* Set expiresTimer
        * RFC3261 13.3.1
@@ -17355,10 +17396,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (expires) {
         this._timers.expiresTimer = setTimeout(function () {
-          if (_this2._status === C.STATUS_WAITING_FOR_ANSWER) {
+          if (_this3._status === C.STATUS_WAITING_FOR_ANSWER) {
             request.reply(487);
 
-            _this2._failed('system', null, JsSIP_C.causes.EXPIRES);
+            _this3._failed('system', null, JsSIP_C.causes.EXPIRES);
           }
         }, expires);
       } // Set internal properties.
@@ -17396,7 +17437,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "answer",
     value: function answer() {
-      var _this3 = this;
+      var _this4 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('answer()');
@@ -17554,39 +17595,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         } // Audio and/or video requested, prompt getUserMedia.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-            _this3._localMediaStreamLocallyGenerated = true;
+            _this4._localMediaStreamLocallyGenerated = true;
             return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-              if (_this3._status === C.STATUS_TERMINATED) {
+              if (_this4._status === C.STATUS_TERMINATED) {
                 throw new Error('terminated');
               }
 
               request.reply(480);
 
-              _this3._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+              _this4._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
 
               debugerror('emit "getusermediafailed" [error:%o]', error);
 
-              _this3.emit('getusermediafailed', error);
+              _this4.emit('getusermediafailed', error);
 
               throw new Error('getUserMedia() failed');
             });
           }
       }) // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
-        if (_this3._status === C.STATUS_TERMINATED) {
+        if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this3._localMediaStream = stream;
+        _this4._localMediaStream = stream;
 
         if (stream) {
           stream.getTracks().forEach(function (track) {
-            _this3._connection.addTrack(track, stream);
+            _this4._connection.addTrack(track, stream);
           });
         }
       }) // Set remote description.
       .then(function () {
-        if (_this3._late_sdp) {
+        if (_this4._late_sdp) {
           return;
         }
 
@@ -17597,53 +17638,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         debug('emit "sdp"');
 
-        _this3.emit('sdp', e);
+        _this4.emit('sdp', e);
 
         var offer = new RTCSessionDescription({
           type: 'offer',
           sdp: e.sdp
         });
-        _this3._connectionPromiseQueue = _this3._connectionPromiseQueue.then(function () {
-          return _this3._connection.setRemoteDescription(offer);
+        _this4._connectionPromiseQueue = _this4._connectionPromiseQueue.then(function () {
+          return _this4._connection.setRemoteDescription(offer);
         })["catch"](function (error) {
           request.reply(488);
 
-          _this3._failed('system', null, JsSIP_C.causes.WEBRTC_ERROR);
+          _this4._failed('system', null, JsSIP_C.causes.WEBRTC_ERROR);
 
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this3.emit('peerconnection:setremotedescriptionfailed', error);
+          _this4.emit('peerconnection:setremotedescriptionfailed', error);
 
           throw new Error('peerconnection.setRemoteDescription() failed');
         });
-        return _this3._connectionPromiseQueue;
+        return _this4._connectionPromiseQueue;
       }) // Create local description.
       .then(function () {
-        if (_this3._status === C.STATUS_TERMINATED) {
+        if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         } // TODO: Is this event already useful?
 
 
-        _this3._connecting(request);
+        _this4._connecting(request);
 
-        if (!_this3._late_sdp) {
-          return _this3._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function () {
+        if (!_this4._late_sdp) {
+          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function () {
             request.reply(500);
             throw new Error('_createLocalDescription() failed');
           });
         } else {
-          return _this3._createLocalDescription('offer', _this3._rtcOfferConstraints)["catch"](function () {
+          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function () {
             request.reply(500);
             throw new Error('_createLocalDescription() failed');
           });
         }
       }) // Send reply.
       .then(function (desc) {
-        if (_this3._status === C.STATUS_TERMINATED) {
+        if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this3._handleSessionTimersInIncomingRequest(request, extraHeaders); // 判断通话模式
+        _this4._handleSessionTimersInIncomingRequest(request, extraHeaders); // 判断通话模式
 
 
         var callmode = null;
@@ -17654,13 +17695,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           callmode = 'audio';
         }
 
-        if (_this3._callmode !== callmode) {
-          _this3._callmode = callmode;
+        if (_this4._callmode !== callmode) {
+          _this4._callmode = callmode;
           debug('emit "callmode"');
 
-          _this3.emit('callmode', {
+          _this4.emit('callmode', {
             originator: 'local',
-            mode: _this3._callmode
+            mode: _this4._callmode
           });
         } // 只有 video port = 0 判断为音频模式
 
@@ -17674,7 +17715,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
             var m = _step4.value;
 
-            if (m.type === 'video' && _this3._callmode === 'audio') {
+            if (m.type === 'video' && (_this4._callmode === 'audio' || m.direction === 'inactive')) {
               m.port = 0;
             }
           }
@@ -17686,18 +17727,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         desc = sdp_transform.write(desc);
         request.reply(200, null, extraHeaders, desc, function () {
-          _this3._status = C.STATUS_WAITING_FOR_ACK;
+          _this4._status = C.STATUS_WAITING_FOR_ACK;
 
-          _this3._setInvite2xxTimer(request, desc);
+          _this4._setInvite2xxTimer(request, desc);
 
-          _this3._setACKTimer();
+          _this4._setACKTimer();
 
-          _this3._accepted('local');
+          _this4._accepted('local');
         }, function () {
-          _this3._failed('system', null, JsSIP_C.causes.CONNECTION_ERROR);
+          _this4._failed('system', null, JsSIP_C.causes.CONNECTION_ERROR);
         });
       })["catch"](function (error) {
-        if (_this3._status === C.STATUS_TERMINATED) {
+        if (_this4._status === C.STATUS_TERMINATED) {
           return;
         }
 
@@ -17711,7 +17752,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "terminate",
     value: function terminate() {
-      var _this4 = this;
+      var _this5 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('terminate()');
@@ -17796,7 +17837,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var method = _ref.method;
 
               if (method === JsSIP_C.ACK) {
-                _this4.sendRequest(JsSIP_C.BYE, {
+                _this5.sendRequest(JsSIP_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
@@ -17807,8 +17848,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
             this._request.server_transaction.on('stateChanged', function () {
-              if (_this4._request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
-                _this4.sendRequest(JsSIP_C.BYE, {
+              if (_this5._request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
+                _this5.sendRequest(JsSIP_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
@@ -17902,7 +17943,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       _sendDTMF.call(this);
 
       function _sendDTMF() {
-        var _this5 = this;
+        var _this6 = this;
 
         var timeout;
 
@@ -17942,7 +17983,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 var dtmf = new RTCSession_DTMF(this);
                 options.eventHandlers = {
                   onFailed: function onFailed() {
-                    _this5._tones = null;
+                    _this6._tones = null;
                   }
                 };
                 dtmf.send(tone, options);
@@ -17978,7 +18019,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchCam",
     value: function switchCam(videoConstraints) {
-      var _this6 = this;
+      var _this7 = this;
 
       debug('switchVideoStream()');
 
@@ -17993,7 +18034,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       return this._switchCam.switchVideoStream(null, videoConstraints).then(function (stream) {
         stream.getVideoTracks().forEach(function (track) {
-          _this6._localMediaStream.addTrack(track);
+          _this7._localMediaStream.addTrack(track);
         });
         return stream;
       });
@@ -18005,7 +18046,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "displayShare",
     value: function displayShare(type) {
-      var _this7 = this;
+      var _this8 = this;
+
+      debug('displayShare() | Display Shared');
 
       if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
         debugerror('getDisplayMedia is not supported');
@@ -18018,13 +18061,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           frameRate: 10
         }
       }).then(function (stream) {
-        _this7._displayRTPSender = null;
-        _this7._displayMediaStream = stream;
+        _this8._displayRTPSender = null;
+        _this8._displayMediaStream = stream;
         stream.addEventListener('inactive', function () {
-          if (_this7._displayMediaStream && _this7._displayMediaStreamLocallyGenerated) {
+          if (_this8._displayMediaStream && _this8._displayMediaStreamLocallyGenerated) {
             if (type === 'replace') {
-              _this7._localMediaStream.getVideoTracks().forEach(function (track) {
-                var sender = _this7._connection.getSenders().find(function (s) {
+              _this8._localMediaStream.getVideoTracks().forEach(function (track) {
+                var sender = _this8._connection.getSenders().find(function (s) {
                   if (s.track) {
                     return s.track.kind == 'video' && (s.track.label.indexOf('window') !== -1 || s.track.label.indexOf('web-') !== -1 || s.track.label.indexOf('screen') !== -1);
                   }
@@ -18033,19 +18076,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sender.replaceTrack(track);
               });
             } else {
-              _this7._displayMediaStream = null;
-              _this7._displayMediaStreamLocallyGenerated = false;
+              _this8._connection.getTransceivers().forEach(function (transeiver) {
+                if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
+                  if (transeiver.sender.track.id === stream.getTracks()[0].id) {
+                    if (!transeiver.stopped) {
+                      transeiver.direction = 'inactive';
+                    }
 
-              _this7._connection.removeTrack(_this7._displayRTPSender);
+                    transeiver.sender.track.stop();
+                  }
+                }
+              });
 
-              _this7.renegotiate();
+              _this8._displayMediaStream = null;
+              _this8._displayMediaStreamLocallyGenerated = false;
+
+              _this8._connection.removeTrack(_this8._displayRTPSender);
+
+              _this8.renegotiate();
             }
           }
         });
 
         if (type == 'replace') {
           stream.getVideoTracks().forEach(function (track) {
-            var sender = _this7._connection.getSenders().find(function (s) {
+            var sender = _this8._connection.getSenders().find(function (s) {
               if (s.track) {
                 return s.track.kind == 'video' && s.track.readyState !== 'ended';
               }
@@ -18055,15 +18110,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         } else {
           stream.getVideoTracks().forEach(function (track) {
-            _this7._displayRTPSender = _this7._connection.addTrack(track, stream);
+            _this8._displayRTPSender = _this8._connection.addTrack(track, stream);
 
-            _this7.renegotiate();
+            _this8.renegotiate();
           });
         }
       })["catch"](function (error) {
         debugerror('emit "getdisplaymediafailed" [error:%o]', error);
 
-        _this7.emit('getdisplaymediafailed', error);
+        _this8.emit('getdisplaymediafailed', error);
 
         throw new Error('getDisplayMedia() failed');
       });
@@ -18075,7 +18130,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "unDisplayShare",
     value: function unDisplayShare(type) {
-      var _this8 = this;
+      var _this9 = this;
 
       debug('unDisplayShare() | closing display MediaStream');
 
@@ -18085,7 +18140,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         if (type === 'replace') {
           this._localMediaStream.getVideoTracks().forEach(function (track) {
-            var sender = _this8._connection.getSenders().find(function (s) {
+            var sender = _this9._connection.getSenders().find(function (s) {
               return s.track.kind == 'video';
             });
 
@@ -18097,6 +18152,56 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this.renegotiate();
         }
       }
+    } // 替换视频流
+
+  }, {
+    key: "videoShare",
+    value: function videoShare(videoStream) {
+      var _this10 = this;
+
+      debug('videoShare() | Video Share');
+
+      if (!videoStream) {
+        return false;
+      }
+
+      this._videoShareStream = videoStream;
+      this._videoStremLocallyGenerated = true;
+      videoStream.getVideoTracks().forEach(function (track) {
+        var sender = _this10._connection.getSenders().find(function (s) {
+          if (s.track) {
+            return s.track.kind == 'video' && s.track.readyState !== 'ended';
+          }
+        });
+
+        sender.replaceTrack(track);
+      });
+    } // 取消替换视频流
+
+  }, {
+    key: "unVideoShare",
+    value: function unVideoShare() {
+      var _this11 = this;
+
+      debug('unVideoShare() | closing video share MediaStream');
+
+      if (!this._videoStremLocallyGenerated && !this._videoShareStream) {
+        return false;
+      }
+
+      this._localMediaStream.getVideoTracks().forEach(function (track) {
+        var sender = _this11._connection.getSenders().find(function (s) {
+          console.log(s.track);
+
+          if (s.track) {
+            return s.track.kind == 'video';
+          }
+        });
+
+        sender.replaceTrack(track);
+        _this11._videoStremLocallyGenerated = false;
+        Utils.closeMediaStream(_this11._videoShareStream);
+      });
     }
     /**
      * Mute
@@ -18181,7 +18286,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "hold",
     value: function hold() {
-      var _this9 = this;
+      var _this12 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
@@ -18210,7 +18315,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this9.terminate({
+          _this12.terminate({
             cause: JsSIP_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Hold Failed'
@@ -18236,7 +18341,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "unhold",
     value: function unhold() {
-      var _this10 = this;
+      var _this13 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
@@ -18265,7 +18370,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this10.terminate({
+          _this13.terminate({
             cause: JsSIP_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Unhold Failed'
@@ -18292,7 +18397,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "toAudio",
     value: function toAudio() {
-      var _this11 = this;
+      var _this14 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
@@ -18311,6 +18416,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return false;
       }
 
+      this._callmode = 'audio';
+      this.emit('callmode', {
+        originator: 'local',
+        mode: 'audio'
+      });
+
       this._connection.getTransceivers().forEach(function (transeiver) {
         if (transeiver.sender.track && transeiver.sender.track.kind === 'video' && transeiver.sender.track.readyState !== 'ended') {
           if (!transeiver.stopped) {
@@ -18320,8 +18431,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           transeiver.sender.track.stop();
           hasVideoTrack = true;
         }
-      }); // console.warn('_tranc: ', this._connection)
-
+      });
 
       if (!hasVideoTrack) {
         return false;
@@ -18334,18 +18444,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this11.terminate({
+          _this14.terminate({
             cause: JsSIP_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'toAudio Failed'
           });
         }
       };
-      this._callmode = 'audio';
-      this.emit('callmode', {
-        originator: 'local',
-        mode: 'audio'
-      });
 
       this._sendReinvite({
         eventHandlers: eventHandlers,
@@ -18358,7 +18463,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "toVideo",
     value: function toVideo() {
-      var _this12 = this;
+      var _this15 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
         video: true,
@@ -18382,31 +18487,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       Promise.resolve().then(function () {
-        _this12._localMediaStreamLocallyGenerated = true;
+        _this15._localMediaStreamLocallyGenerated = true;
         return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-          if (_this12._status === C.STATUS_TERMINATED) {
+          if (_this15._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
 
-          _this12._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+          _this15._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
 
           debugerror('emit "getusermediafailed" [error:%o]', error);
 
-          _this12.emit('getusermediafailed', error);
+          _this15.emit('getusermediafailed', error);
 
           throw error;
         });
       }).then(function (stream) {
-        if (_this12._status === C.STATUS_TERMINATED) {
+        if (_this15._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         } // this._localMediaStream = stream;
 
 
         if (stream) {
           stream.getVideoTracks().forEach(function (track) {
-            _this12._localMediaStream.addTrack(track);
+            _this15._localMediaStream.addTrack(track);
 
-            _this12._connection.addTrack(track, stream);
+            _this15._connection.addTrack(track, stream);
           });
         }
 
@@ -18417,26 +18522,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           },
           failed: function failed() {
-            _this12.terminate({
+            _this15.terminate({
               cause: JsSIP_C.causes.WEBRTC_ERROR,
               status_code: 500,
               reason_phrase: 'toVideo Failed'
             });
           }
         };
-        _this12._callmode = 'video';
+        _this15._callmode = 'video';
 
-        _this12.emit('callmode', {
+        _this15.emit('callmode', {
           originator: 'local',
           mode: 'video'
         });
 
-        _this12._sendReinvite({
+        _this15._sendReinvite({
           eventHandlers: eventHandlers,
           extraHeaders: options.extraHeaders
         });
       })["catch"](function (error) {
-        if (_this12._status === C.STATUS_TERMINATED) {
+        if (_this15._status === C.STATUS_TERMINATED) {
           return;
         }
 
@@ -18446,7 +18551,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "renegotiate",
     value: function renegotiate() {
-      var _this13 = this;
+      var _this16 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
@@ -18468,7 +18573,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this13.terminate({
+          _this16.terminate({
             cause: JsSIP_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Media Renegotiation Failed'
@@ -18502,7 +18607,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "refer",
     value: function refer(target, options) {
-      var _this14 = this;
+      var _this17 = this;
 
       debug('refer()');
       var originalTarget = target;
@@ -18525,13 +18630,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._referSubscribers[id] = referSubscriber; // Listen for ending events so we can remove it from the map.
 
       referSubscriber.on('requestFailed', function () {
-        delete _this14._referSubscribers[id];
+        delete _this17._referSubscribers[id];
       });
       referSubscriber.on('accepted', function () {
-        delete _this14._referSubscribers[id];
+        delete _this17._referSubscribers[id];
       });
       referSubscriber.on('failed', function () {
-        delete _this14._referSubscribers[id];
+        delete _this17._referSubscribers[id];
       });
       return referSubscriber;
     }
@@ -18552,7 +18657,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
-      var _this15 = this;
+      var _this18 = this;
 
       debug('receiveRequest()');
 
@@ -18609,20 +18714,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sdp: e.sdp
               });
               this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-                return _this15._connection.setRemoteDescription(answer);
+                return _this18._connection.setRemoteDescription(answer);
               }).then(function () {
-                if (!_this15._is_confirmed) {
-                  _this15._confirmed('remote', request);
+                if (!_this18._is_confirmed) {
+                  _this18._confirmed('remote', request);
                 }
               })["catch"](function (error) {
-                _this15.terminate({
+                _this18.terminate({
                   cause: JsSIP_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
 
                 debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-                _this15.emit('peerconnection:setremotedescriptionfailed', error);
+                _this18.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
               this._confirmed('remote', request);
@@ -18914,31 +19019,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setACKTimer",
     value: function _setACKTimer() {
-      var _this16 = this;
+      var _this19 = this;
 
       this._timers.ackTimer = setTimeout(function () {
-        if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
+        if (_this19._status === C.STATUS_WAITING_FOR_ACK) {
           debug('no ACK received, terminating the session');
-          clearTimeout(_this16._timers.invite2xxTimer);
+          clearTimeout(_this19._timers.invite2xxTimer);
 
-          _this16.sendRequest(JsSIP_C.BYE);
+          _this19.sendRequest(JsSIP_C.BYE);
 
-          _this16._ended('remote', null, JsSIP_C.causes.NO_ACK);
+          _this19._ended('remote', null, JsSIP_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
     }
   }, {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
-      var _this17 = this;
+      var _this20 = this;
 
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
 
       this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this17._connection.iceConnectionState; // TODO: Do more with different states.
+        var state = _this20._connection.iceConnectionState; // TODO: Do more with different states.
 
         if (state === 'failed') {
-          _this17.terminate({
+          _this20.terminate({
             cause: JsSIP_C.causes.RTP_TIMEOUT,
             status_code: 408,
             reason_phrase: JsSIP_C.causes.RTP_TIMEOUT
@@ -18954,7 +19059,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_createLocalDescription",
     value: function _createLocalDescription(type, constraints) {
-      var _this18 = this;
+      var _this21 = this;
 
       debug('createLocalDescription()');
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
@@ -18966,7 +19071,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return connection.createOffer(constraints)["catch"](function (error) {
             debugerror('emit "peerconnection:createofferfailed" [error:%o]', error);
 
-            _this18.emit('peerconnection:createofferfailed', error);
+            _this21.emit('peerconnection:createofferfailed', error);
 
             return Promise.reject(error);
           });
@@ -18974,7 +19079,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return connection.createAnswer(constraints)["catch"](function (error) {
             debugerror('emit "peerconnection:createanswerfailed" [error:%o]', error);
 
-            _this18.emit('peerconnection:createanswerfailed', error);
+            _this21.emit('peerconnection:createanswerfailed', error);
 
             return Promise.reject(error);
           });
@@ -18982,17 +19087,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }) // Set local description.
       .then(function (desc) {
         return connection.setLocalDescription(desc)["catch"](function (error) {
-          _this18._rtcReady = true;
+          _this21._rtcReady = true;
           debugerror('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
 
-          _this18.emit('peerconnection:setlocaldescriptionfailed', error);
+          _this21.emit('peerconnection:setlocaldescriptionfailed', error);
 
           return Promise.reject(error);
         });
       }).then(function () {
         // Resolve right away if 'pc.iceGatheringState' is 'complete'.
         if (connection.iceGatheringState === 'complete' && (!constraints || !constraints.iceRestart)) {
-          _this18._rtcReady = true;
+          _this21._rtcReady = true;
           var e = {
             originator: 'local',
             type: type,
@@ -19000,7 +19105,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           debug('emit "sdp"');
 
-          _this18.emit('sdp', e);
+          _this21.emit('sdp', e);
 
           return Promise.resolve(e.sdp);
         } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
@@ -19020,7 +19125,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             clearInterval(iceGatheringTimer);
             finished = true;
-            _this18._rtcReady = true;
+            _this21._rtcReady = true;
             var e = {
               originator: 'local',
               type: type,
@@ -19028,7 +19133,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             debug('emit "sdp"');
 
-            _this18.emit('sdp', e);
+            _this21.emit('sdp', e);
 
             resolve(e.sdp);
           };
@@ -19036,7 +19141,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate; // 添加 ice 收集超时控制
 
-            iceGatheringDuration += _this18._ua.configuration.ice_gathering_timeout * 1000;
+            iceGatheringDuration += _this21._ua.configuration.ice_gathering_timeout * 1000;
 
             if (iceGatherFlag) {
               iceGatherFlag = false;
@@ -19050,7 +19155,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             if (candidate) {
-              _this18.emit('icecandidate', {
+              _this21.emit('icecandidate', {
                 candidate: candidate,
                 ready: ready
               });
@@ -19129,7 +19234,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReinvite",
     value: function _receiveReinvite(request) {
-      var _this19 = this;
+      var _this22 = this;
 
       debug('receiveReinvite()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
@@ -19177,9 +19282,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
+          return _this22._createLocalDescription('offer', _this22._rtcOfferConstraints);
         }).then(function (sdp) {
-          sendAnswer.call(_this19, sdp);
+          sendAnswer.call(_this22, sdp);
         })["catch"](function () {
           request.reply(500);
         });
@@ -19194,18 +19299,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       function nextS(acceptVideo) {
-        var _this20 = this;
+        var _this23 = this;
 
         // 用户主动拒绝视频
         request['acceptVideo'] = acceptVideo;
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
-          if (_this20._status === C.STATUS_TERMINATED) {
+          if (_this23._status === C.STATUS_TERMINATED) {
             return;
           }
 
-          sendAnswer.call(_this20, desc);
+          sendAnswer.call(_this23, desc);
         })["catch"](function (error) {
           debugerror(error);
         });
@@ -19243,7 +19348,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           nextS.call(this);
         } else {
           this.emit('inviteToVideo', function (acceptVideo) {
-            nextS.call(_this19, acceptVideo);
+            nextS.call(_this22, acceptVideo);
           });
         }
       } else {
@@ -19251,7 +19356,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       function sendAnswer(desc) {
-        var _this21 = this;
+        var _this24 = this;
 
         var extraHeaders = ["Contact: ".concat(this._contact)];
 
@@ -19271,7 +19376,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
             var m = _step6.value;
 
-            if (m.type === 'video' && this._callmode === 'audio') {
+            if (m.type === 'video' && (this._callmode === 'audio' || m.direction === 'inactive')) {
               m.port = 0;
             }
           }
@@ -19283,11 +19388,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         desc = sdp_transform.write(desc);
         request.reply(200, null, extraHeaders, desc, function () {
-          _this21._status = C.STATUS_WAITING_FOR_ACK;
+          _this24._status = C.STATUS_WAITING_FOR_ACK;
 
-          _this21._setInvite2xxTimer(request, desc);
+          _this24._setInvite2xxTimer(request, desc);
 
-          _this21._setACKTimer();
+          _this24._setACKTimer();
         }); // If callback is given execute it.
 
         if (typeof data.callback === 'function') {
@@ -19302,7 +19407,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
-      var _this22 = this;
+      var _this25 = this;
 
       debug('receiveUpdate()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
@@ -19351,11 +19456,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       this._processInDialogSdpOffer(request) // Send answer.
       .then(function (desc) {
-        if (_this22._status === C.STATUS_TERMINATED) {
+        if (_this25._status === C.STATUS_TERMINATED) {
           return;
         }
 
-        sendAnswer.call(_this22, desc);
+        sendAnswer.call(_this25, desc);
       })["catch"](function (error) {
         debugerror(error);
       });
@@ -19375,7 +19480,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
-      var _this23 = this;
+      var _this26 = this;
 
       debug('_processInDialogSdpOffer()');
       var videoConstraints = {
@@ -19468,18 +19573,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         sdp: e.sdp
       });
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        if (_this23._callmode !== callmode && callmode === 'video') {
-          _this23._localMediaStreamLocallyGenerated = true;
+        if (_this26._callmode !== callmode && callmode === 'video') {
+          _this26._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
-            if (_this23._status === C.STATUS_TERMINATED) {
+            if (_this26._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
 
-            _this23._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+            _this26._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
 
             debugerror('emit "getusermediafailed" [error:%o]', error);
 
-            _this23.emit('getusermediafailed', error);
+            _this26.emit('getusermediafailed', error);
 
             throw error;
           });
@@ -19487,56 +19592,56 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (stream) {
         if (stream) {
           stream.getVideoTracks().forEach(function (track) {
-            _this23._localMediaStream.addTrack(track);
+            _this26._localMediaStream.addTrack(track);
 
-            _this23._connection.addTrack(track, stream);
+            _this26._connection.addTrack(track, stream);
           });
         }
       }) // Set remote description.
       .then(function () {
-        if (_this23._callmode !== callmode) {
-          _this23._callmode = callmode;
+        if (_this26._callmode !== callmode) {
+          _this26._callmode = callmode;
           debug('emit "callmode"');
 
-          _this23.emit('callmode', {
+          _this26.emit('callmode', {
             originator: 'local',
-            mode: _this23._callmode
+            mode: _this26._callmode
           });
         }
 
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this26._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this23._connection.setRemoteDescription(offer)["catch"](function (error) {
+        return _this26._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this23.emit('peerconnection:setremotedescriptionfailed', error);
+          _this26.emit('peerconnection:setremotedescriptionfailed', error);
 
           throw new Error('peerconnection.setRemoteDescription() failed');
         });
       }).then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this26._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        if (_this23._remoteHold === true && hold === false) {
-          _this23._remoteHold = false;
+        if (_this26._remoteHold === true && hold === false) {
+          _this26._remoteHold = false;
 
-          _this23._onunhold('remote');
-        } else if (_this23._remoteHold === false && hold === true) {
-          _this23._remoteHold = true;
+          _this26._onunhold('remote');
+        } else if (_this26._remoteHold === false && hold === true) {
+          _this26._remoteHold = true;
 
-          _this23._onhold('remote');
+          _this26._onhold('remote');
         }
       }) // Create local description.
       .then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this26._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this23._createLocalDescription('answer', _this23._rtcAnswerConstraints)["catch"](function () {
+        return _this26._createLocalDescription('answer', _this26._rtcAnswerConstraints)["catch"](function () {
           request.reply(500);
           throw new Error('_createLocalDescription() failed');
         });
@@ -19550,7 +19655,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
-      var _this24 = this;
+      var _this27 = this;
 
       debug('receiveRefer()');
 
@@ -19574,10 +19679,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
-          _accept.call(_this24, initCallback, options);
+          _accept.call(_this27, initCallback, options);
         },
         reject: function reject() {
-          _reject.call(_this24);
+          _reject.call(_this27);
         }
       });
 
@@ -19686,12 +19791,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this26 = this;
+      var _this29 = this;
 
       debug('receiveReplaces()');
 
       function _accept2(initCallback) {
-        var _this25 = this;
+        var _this28 = this;
 
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
@@ -19700,7 +19805,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua); // Terminate the current session when the new one is confirmed.
 
         session.on('confirmed', function () {
-          _this25.terminate();
+          _this28.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -19714,10 +19819,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this26, initCallback);
+          _accept2.call(_this29, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this26);
+          _reject2.call(_this29);
         }
       });
     }
@@ -19728,21 +19833,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream, preferredAudioCodec, preferredVideoCodec) {
-      var _this27 = this;
+      var _this30 = this;
 
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this27.onRequestTimeout();
+          _this30.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this27.onTransportError();
+          _this30.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this27._request = request;
+          _this30._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this27._receiveInviteResponse(response);
+          _this30._receiveInviteResponse(response);
         }
       }); // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
@@ -19763,46 +19868,46 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               callmode = 'audio';
             }
 
-            if (_this27._callmode !== callmode) {
-              _this27._callmode = callmode;
+            if (_this30._callmode !== callmode) {
+              _this30._callmode = callmode;
               debug('emit "callmode"');
 
-              _this27.emit('callmode', {
+              _this30.emit('callmode', {
                 originator: 'local',
-                mode: _this27._callmode
+                mode: _this30._callmode
               });
             }
 
-            _this27._localMediaStreamLocallyGenerated = true;
+            _this30._localMediaStreamLocallyGenerated = true;
             return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-              if (_this27._status === C.STATUS_TERMINATED) {
+              if (_this30._status === C.STATUS_TERMINATED) {
                 throw new Error('terminated');
               }
 
-              _this27._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+              _this30._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
 
               debugerror('emit "getusermediafailed" [error:%o]', error);
 
-              _this27.emit('getusermediafailed', error);
+              _this30.emit('getusermediafailed', error);
 
               throw error;
             });
           }
       }).then(function (stream) {
-        if (_this27._status === C.STATUS_TERMINATED) {
+        if (_this30._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this27._localMediaStream = stream;
+        _this30._localMediaStream = stream;
 
         if (stream) {
           stream.getTracks().forEach(function (track) {
-            _this27._connection.addTrack(track, stream);
+            _this30._connection.addTrack(track, stream);
           });
         } // TODO: should this be triggered here?
 
 
-        _this27._connecting(_this27._request); // 发起呼叫前设置音频编码顺序
+        _this30._connecting(_this30._request); // 发起呼叫前设置音频编码顺序
 
 
         if (preferredAudioCodec) {
@@ -19825,7 +19930,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           codecs.slice(selectedCodecIndex, 1);
           codecs.unshift(selectedCodec);
 
-          var transceiver = _this27._connection.getTransceivers().find(function (t) {
+          var transceiver = _this30._connection.getTransceivers().find(function (t) {
             return t.sender && t.sender.track === stream.getAudioTracks()[0];
           });
 
@@ -19856,34 +19961,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _codecs.unshift(_selectedCodec);
 
-          var _transceiver = _this27._connection.getTransceivers().find(function (t) {
+          var _transceiver = _this30._connection.getTransceivers().find(function (t) {
             return t.sender && t.sender.track === stream.getVideoTracks()[0];
           });
 
           _transceiver.setCodecPreferences(_codecs);
         }
 
-        return _this27._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-          _this27._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
+        return _this30._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+          _this30._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
 
           throw error;
         });
       }).then(function (desc) {
-        if (_this27._is_canceled || _this27._status === C.STATUS_TERMINATED) {
+        if (_this30._is_canceled || _this30._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this27._request.body = desc;
-        _this27._status = C.STATUS_INVITE_SENT;
-        debug('emit "sending" [request:%o]', _this27._request); // Emit 'sending' so the app can mangle the body before the request is sent.
+        _this30._request.body = desc;
+        _this30._status = C.STATUS_INVITE_SENT;
+        debug('emit "sending" [request:%o]', _this30._request); // Emit 'sending' so the app can mangle the body before the request is sent.
 
-        _this27.emit('sending', {
-          request: _this27._request
+        _this30.emit('sending', {
+          request: _this30._request
         });
 
         request_sender.send();
       })["catch"](function (error) {
-        if (_this27._status === C.STATUS_TERMINATED) {
+        if (_this30._status === C.STATUS_TERMINATED) {
           return;
         }
 
@@ -19915,7 +20020,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this28 = this;
+      var _this31 = this;
 
       debug('receiveInviteResponse()'); // Handle 2XX retransmissions and responses from forked requests.
 
@@ -19998,11 +20103,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              return _this28._connection.setRemoteDescription(answer);
+              return _this31._connection.setRemoteDescription(answer);
             })["catch"](function (error) {
               debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-              _this28.emit('peerconnection:setremotedescriptionfailed', error);
+              _this31.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -20040,25 +20145,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this28._connection.signalingState === 'stable') {
-                return _this28._connection.createOffer(_this28._rtcOfferConstraints).then(function (offer) {
-                  return _this28._connection.setLocalDescription(offer);
+              if (_this31._connection.signalingState === 'stable') {
+                return _this31._connection.createOffer(_this31._rtcOfferConstraints).then(function (offer) {
+                  return _this31._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this28._acceptAndTerminate(response, 500, error.toString());
+                  _this31._acceptAndTerminate(response, 500, error.toString());
 
-                  _this28._failed('local', response, JsSIP_C.causes.WEBRTC_ERROR);
+                  _this31._failed('local', response, JsSIP_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
-              _this28._connection.setRemoteDescription(_answer).then(function () {
+              _this31._connection.setRemoteDescription(_answer).then(function () {
                 // Handle Session Timers.
-                _this28._handleSessionTimersInIncomingResponse(response);
+                _this31._handleSessionTimersInIncomingResponse(response);
 
-                _this28._accepted('remote', response);
+                _this31._accepted('remote', response);
 
-                _this28.sendRequest(JsSIP_C.ACK);
+                _this31.sendRequest(JsSIP_C.ACK);
 
-                _this28._confirmed('local', null);
+                _this31._confirmed('local', null);
 
                 var callmode = 'audio';
                 var sdp = response.parseSDP();
@@ -20080,10 +20185,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _iterator9.f();
                 }
 
-                if (_this28._callmode !== callmode) {
+                if (_this31._callmode !== callmode) {
                   switch (callmode) {
                     case 'audio':
-                      _this28.toAudio();
+                      _this31.toAudio();
 
                       break;
 
@@ -20093,13 +20198,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 }
               })["catch"](function (error) {
-                _this28._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this31._acceptAndTerminate(response, 488, 'Not Acceptable Here');
 
-                _this28._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this31._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
 
                 debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-                _this28.emit('peerconnection:setremotedescriptionfailed', error);
+                _this31.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -20120,7 +20225,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this29 = this;
+      var _this32 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('sendReinvite()');
@@ -20136,9 +20241,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this29._createLocalDescription('offer', rtcOfferConstraints);
+        return _this32._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this29._mangleOffer(sdp); // 只有 video port = 0 判断为音频模式
+        sdp = _this32._mangleOffer(sdp); // 只有 video port = 0 判断为音频模式
 
         sdp = sdp_transform.parse(sdp);
 
@@ -20149,7 +20254,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
             var m = _step10.value;
 
-            if (m.type === 'video' && _this29._callmode === 'audio') {
+            if (m.type === 'video' && (_this32._callmode === 'audio' || m.direction === 'inactive')) {
               m.port = 0;
             }
           }
@@ -20167,29 +20272,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         debug('emit "sdp"');
 
-        _this29.emit('sdp', e);
+        _this32.emit('sdp', e);
 
-        _this29.sendRequest(JsSIP_C.INVITE, {
+        _this32.sendRequest(JsSIP_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this29, response);
+              onSucceeded.call(_this32, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this29, response);
+              onFailed.call(_this32, response);
             },
             onTransportError: function onTransportError() {
-              _this29.onTransportError(); // Do nothing because session ends.
+              _this32.onTransportError(); // Do nothing because session ends.
 
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this29.onRequestTimeout(); // Do nothing because session ends.
+              _this32.onRequestTimeout(); // Do nothing because session ends.
 
             },
             onDialogError: function onDialogError() {
-              _this29.onDialogError(); // Do nothing because session ends.
+              _this32.onDialogError(); // Do nothing because session ends.
 
             }
           }
@@ -20199,7 +20304,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
 
       function onSucceeded(response) {
-        var _this30 = this;
+        var _this33 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -20235,7 +20340,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this30._connection.setRemoteDescription(answer);
+          return _this33._connection.setRemoteDescription(answer);
         }).then(function () {
           var callmode = 'audio';
           var sdp = response.parseSDP();
@@ -20257,10 +20362,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _iterator11.f();
           }
 
-          if (_this30._callmode !== callmode) {
+          if (_this33._callmode !== callmode) {
             switch (callmode) {
               case 'audio':
-                _this30.toAudio();
+                _this33.toAudio();
 
                 break;
 
@@ -20273,10 +20378,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this30);
+          onFailed.call(_this33);
           debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this30.emit('peerconnection:setremotedescriptionfailed', error);
+          _this33.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
 
@@ -20293,7 +20398,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this31 = this;
+      var _this34 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       debug('sendUpdate()');
@@ -20311,9 +20416,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this31._createLocalDescription('offer', rtcOfferConstraints);
+          return _this34._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this31._mangleOffer(sdp);
+          sdp = _this34._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
@@ -20321,35 +20426,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           debug('emit "sdp"');
 
-          _this31.emit('sdp', e);
+          _this34.emit('sdp', e);
 
-          _this31.sendRequest(JsSIP_C.UPDATE, {
+          _this34.sendRequest(JsSIP_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this31, response);
+                onSucceeded.call(_this34, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this31, response);
+                onFailed.call(_this34, response);
               },
               onTransportError: function onTransportError() {
-                _this31.onTransportError(); // Do nothing because session ends.
+                _this34.onTransportError(); // Do nothing because session ends.
 
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this31.onRequestTimeout(); // Do nothing because session ends.
+                _this34.onRequestTimeout(); // Do nothing because session ends.
 
               },
               onDialogError: function onDialogError() {
-                _this31.onDialogError(); // Do nothing because session ends.
+                _this34.onDialogError(); // Do nothing because session ends.
 
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this31);
+          onFailed.call(_this34);
         });
       } // No SDP.
       else {
@@ -20357,21 +20462,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             extraHeaders: extraHeaders,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this31, response);
+                onSucceeded.call(_this34, response);
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this31, response);
+                onFailed.call(_this34, response);
               },
               onTransportError: function onTransportError() {
-                _this31.onTransportError(); // Do nothing because session ends.
+                _this34.onTransportError(); // Do nothing because session ends.
 
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this31.onRequestTimeout(); // Do nothing because session ends.
+                _this34.onRequestTimeout(); // Do nothing because session ends.
 
               },
               onDialogError: function onDialogError() {
-                _this31.onDialogError(); // Do nothing because session ends.
+                _this34.onDialogError(); // Do nothing because session ends.
 
               }
             }
@@ -20379,7 +20484,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
       function onSucceeded(response) {
-        var _this32 = this;
+        var _this35 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -20415,16 +20520,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this32._connection.setRemoteDescription(answer);
+            return _this35._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this32);
+            onFailed.call(_this35);
             debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-            _this32.emit('peerconnection:setremotedescriptionfailed', error);
+            _this35.emit('peerconnection:setremotedescriptionfailed', error);
           });
         } // No SDP answer.
         else if (eventHandlers.succeeded) {
@@ -20634,7 +20739,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this33 = this;
+      var _this36 = this;
 
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
@@ -20642,28 +20747,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this33._status === C.STATUS_TERMINATED) {
+          if (_this36._status === C.STATUS_TERMINATED) {
             return;
           }
 
           debug('runSessionTimer() | sending session refresh request');
 
-          if (_this33._sessionTimers.refreshMethod === JsSIP_C.UPDATE) {
-            _this33._sendUpdate();
+          if (_this36._sessionTimers.refreshMethod === JsSIP_C.UPDATE) {
+            _this36._sendUpdate();
           } else {
-            _this33._sendReinvite();
+            _this36._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       } // I'm not the refresher.
       else {
           this._sessionTimers.timer = setTimeout(function () {
-            if (_this33._status === C.STATUS_TERMINATED) {
+            if (_this36._status === C.STATUS_TERMINATED) {
               return;
             }
 
             debugerror('runSessionTimer() | timer expired, terminating the session');
 
-            _this33.terminate({
+            _this36.terminate({
               cause: JsSIP_C.causes.REQUEST_TIMEOUT,
               status_code: 408,
               reason_phrase: 'Session Timer Expired'
@@ -20957,7 +21062,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"./WebRTC/SwitchCam":27,"debug":31,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"./WebRTC/SwitchCam":27,"debug":30,"events":32,"sdp-transform":36}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21160,7 +21265,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":31,"events":30}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":32}],14:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21300,7 +21405,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":31,"events":30}],15:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":30,"events":32}],15:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21365,7 +21470,7 @@ module.exports = /*#__PURE__*/function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":31}],16:[function(require,module,exports){
+},{"../Constants":2,"debug":30}],16:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21547,7 +21652,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":26,"debug":31,"events":30}],17:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":26,"debug":30,"events":32}],17:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21906,7 +22011,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":31}],18:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":30}],18:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -22081,7 +22186,7 @@ module.exports = /*#__PURE__*/function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":22,"debug":31}],19:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":22,"debug":30}],19:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22939,7 +23044,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":26,"debug":31,"sdp-transform":36}],20:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":26,"debug":30,"sdp-transform":36}],20:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -23013,7 +23118,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":26,"debug":31}],21:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":26,"debug":30}],21:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -23864,7 +23969,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":19,"./Timers":21,"debug":31,"events":30}],23:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":19,"./Timers":21,"debug":30,"events":32}],23:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24189,7 +24294,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":20,"debug":31}],24:[function(require,module,exports){
+},{"./Constants":2,"./Socket":20,"debug":30}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -25212,7 +25317,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":29,"debug":31,"events":30}],25:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":29,"debug":30,"events":32}],25:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -26096,27 +26201,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (videoStream) {
         this._switchStream(videoStream);
       } else {
-        this._shouldFaceUser = !this._shouldFaceUser;
+        if (this._mediaConstraints.video.deviceId) {
+          this._mediaConstraints.facingMode && delete this._mediaConstraints.facingMode;
+        } else {
+          this._shouldFaceUser = !this._shouldFaceUser;
 
-        if (this._getSupportedConstraints('facingMode') === true) {
-          this._mediaConstraints.video['facingMode'] = this._shouldFaceUser ? 'user' : 'environment';
-        } else if (this._cams.length < 2) {
-          // this._mediaConstraints.video = true;
-          return;
-        } else if (this._cams.length === 2) {
-          this._mediaConstraints.video['deviceId'] = {
-            exact: this._shouldFaceUser ? this._cams[0] : this._cams[1]
-          };
-        } else if (this._cams.length > 2) {
-          if (this._camIdx + 1 < this._cams.length) {
-            this._camIdx += 1;
-          } else {
-            this._camIdx = 0;
+          if (this._getSupportedConstraints('facingMode') === true) {
+            this._mediaConstraints.video['facingMode'] = this._shouldFaceUser ? 'user' : 'environment';
+          } else if (this._cams.length < 2) {
+            // this._mediaConstraints.video = true;
+            return;
+          } else if (this._cams.length === 2) {
+            this._mediaConstraints.video['deviceId'] = {
+              exact: this._shouldFaceUser ? this._cams[0] : this._cams[1]
+            };
+          } else if (this._cams.length > 2) {
+            if (this._camIdx + 1 < this._cams.length) {
+              this._camIdx += 1;
+            } else {
+              this._camIdx = 0;
+            }
+
+            this._mediaConstraints.video['deviceId'] = {
+              exact: this._cams[this._camIdx]
+            };
           }
-
-          this._mediaConstraints.video['deviceId'] = {
-            exact: this._cams[this._camIdx]
-          };
         }
 
         return Promise.resolve().then(function () {
@@ -26233,7 +26342,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return SwitchCam;
 }(EventEmitter);
-},{"../Exceptions":6,"debug":31,"events":30}],28:[function(require,module,exports){
+},{"../Exceptions":6,"debug":30,"events":32}],28:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -26411,7 +26520,7 @@ module.exports = /*#__PURE__*/function () {
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":31}],29:[function(require,module,exports){
+},{"./Grammar":7,"debug":30}],29:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -26663,7 +26772,543 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":19,"./Utils":26,"debug":31}],30:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":19,"./Utils":26,"debug":30}],30:[function(require,module,exports){
+(function (process){(function (){
+/* eslint-env browser */
+
+/**
+ * This is the web browser implementation of `debug()`.
+ */
+
+exports.formatArgs = formatArgs;
+exports.save = save;
+exports.load = load;
+exports.useColors = useColors;
+exports.storage = localstorage();
+exports.destroy = (() => {
+	let warned = false;
+
+	return () => {
+		if (!warned) {
+			warned = true;
+			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+		}
+	};
+})();
+
+/**
+ * Colors.
+ */
+
+exports.colors = [
+	'#0000CC',
+	'#0000FF',
+	'#0033CC',
+	'#0033FF',
+	'#0066CC',
+	'#0066FF',
+	'#0099CC',
+	'#0099FF',
+	'#00CC00',
+	'#00CC33',
+	'#00CC66',
+	'#00CC99',
+	'#00CCCC',
+	'#00CCFF',
+	'#3300CC',
+	'#3300FF',
+	'#3333CC',
+	'#3333FF',
+	'#3366CC',
+	'#3366FF',
+	'#3399CC',
+	'#3399FF',
+	'#33CC00',
+	'#33CC33',
+	'#33CC66',
+	'#33CC99',
+	'#33CCCC',
+	'#33CCFF',
+	'#6600CC',
+	'#6600FF',
+	'#6633CC',
+	'#6633FF',
+	'#66CC00',
+	'#66CC33',
+	'#9900CC',
+	'#9900FF',
+	'#9933CC',
+	'#9933FF',
+	'#99CC00',
+	'#99CC33',
+	'#CC0000',
+	'#CC0033',
+	'#CC0066',
+	'#CC0099',
+	'#CC00CC',
+	'#CC00FF',
+	'#CC3300',
+	'#CC3333',
+	'#CC3366',
+	'#CC3399',
+	'#CC33CC',
+	'#CC33FF',
+	'#CC6600',
+	'#CC6633',
+	'#CC9900',
+	'#CC9933',
+	'#CCCC00',
+	'#CCCC33',
+	'#FF0000',
+	'#FF0033',
+	'#FF0066',
+	'#FF0099',
+	'#FF00CC',
+	'#FF00FF',
+	'#FF3300',
+	'#FF3333',
+	'#FF3366',
+	'#FF3399',
+	'#FF33CC',
+	'#FF33FF',
+	'#FF6600',
+	'#FF6633',
+	'#FF9900',
+	'#FF9933',
+	'#FFCC00',
+	'#FFCC33'
+];
+
+/**
+ * Currently only WebKit-based Web Inspectors, Firefox >= v31,
+ * and the Firebug extension (any Firefox version) are known
+ * to support "%c" CSS customizations.
+ *
+ * TODO: add a `localStorage` variable to explicitly enable/disable colors
+ */
+
+// eslint-disable-next-line complexity
+function useColors() {
+	// NB: In an Electron preload script, document will be defined but not fully
+	// initialized. Since we know we're in Chrome, we'll just detect this case
+	// explicitly
+	if (typeof window !== 'undefined' && window.process && (window.process.type === 'renderer' || window.process.__nwjs)) {
+		return true;
+	}
+
+	// Internet Explorer and Edge do not support colors.
+	if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
+		return false;
+	}
+
+	// Is webkit? http://stackoverflow.com/a/16459606/376773
+	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
+	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
+		// Is firebug? http://stackoverflow.com/a/398120/376773
+		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
+		// Is firefox >= v31?
+		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
+		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+		// Double check webkit in userAgent just in case we are in a worker
+		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
+}
+
+/**
+ * Colorize log arguments if enabled.
+ *
+ * @api public
+ */
+
+function formatArgs(args) {
+	args[0] = (this.useColors ? '%c' : '') +
+		this.namespace +
+		(this.useColors ? ' %c' : ' ') +
+		args[0] +
+		(this.useColors ? '%c ' : ' ') +
+		'+' + module.exports.humanize(this.diff);
+
+	if (!this.useColors) {
+		return;
+	}
+
+	const c = 'color: ' + this.color;
+	args.splice(1, 0, c, 'color: inherit');
+
+	// The final "%c" is somewhat tricky, because there could be other
+	// arguments passed either before or after the %c, so we need to
+	// figure out the correct index to insert the CSS into
+	let index = 0;
+	let lastC = 0;
+	args[0].replace(/%[a-zA-Z%]/g, match => {
+		if (match === '%%') {
+			return;
+		}
+		index++;
+		if (match === '%c') {
+			// We only are interested in the *last* %c
+			// (the user may have provided their own)
+			lastC = index;
+		}
+	});
+
+	args.splice(lastC, 0, c);
+}
+
+/**
+ * Invokes `console.debug()` when available.
+ * No-op when `console.debug` is not a "function".
+ * If `console.debug` is not available, falls back
+ * to `console.log`.
+ *
+ * @api public
+ */
+exports.log = console.debug || console.log || (() => {});
+
+/**
+ * Save `namespaces`.
+ *
+ * @param {String} namespaces
+ * @api private
+ */
+function save(namespaces) {
+	try {
+		if (namespaces) {
+			exports.storage.setItem('debug', namespaces);
+		} else {
+			exports.storage.removeItem('debug');
+		}
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+}
+
+/**
+ * Load `namespaces`.
+ *
+ * @return {String} returns the previously persisted debug modes
+ * @api private
+ */
+function load() {
+	let r;
+	try {
+		r = exports.storage.getItem('debug');
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+
+	// If debug isn't set in LS, and we're in Electron, try to load $DEBUG
+	if (!r && typeof process !== 'undefined' && 'env' in process) {
+		r = process.env.DEBUG;
+	}
+
+	return r;
+}
+
+/**
+ * Localstorage attempts to return the localstorage.
+ *
+ * This is necessary because safari throws
+ * when a user disables cookies/localstorage
+ * and you attempt to access it.
+ *
+ * @return {LocalStorage}
+ * @api private
+ */
+
+function localstorage() {
+	try {
+		// TVMLKit (Apple TV JS Runtime) does not have a window object, just localStorage in the global context
+		// The Browser also has localStorage in the global context.
+		return localStorage;
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+}
+
+module.exports = require('./common')(exports);
+
+const {formatters} = module.exports;
+
+/**
+ * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
+ */
+
+formatters.j = function (v) {
+	try {
+		return JSON.stringify(v);
+	} catch (error) {
+		return '[UnexpectedJSONParseError]: ' + error.message;
+	}
+};
+
+}).call(this)}).call(this,require('_process'))
+},{"./common":31,"_process":34}],31:[function(require,module,exports){
+
+/**
+ * This is the common logic for both the Node.js and web browser
+ * implementations of `debug()`.
+ */
+
+function setup(env) {
+	createDebug.debug = createDebug;
+	createDebug.default = createDebug;
+	createDebug.coerce = coerce;
+	createDebug.disable = disable;
+	createDebug.enable = enable;
+	createDebug.enabled = enabled;
+	createDebug.humanize = require('ms');
+	createDebug.destroy = destroy;
+
+	Object.keys(env).forEach(key => {
+		createDebug[key] = env[key];
+	});
+
+	/**
+	* The currently active debug mode names, and names to skip.
+	*/
+
+	createDebug.names = [];
+	createDebug.skips = [];
+
+	/**
+	* Map of special "%n" handling functions, for the debug "format" argument.
+	*
+	* Valid key names are a single, lower or upper-case letter, i.e. "n" and "N".
+	*/
+	createDebug.formatters = {};
+
+	/**
+	* Selects a color for a debug namespace
+	* @param {String} namespace The namespace string for the for the debug instance to be colored
+	* @return {Number|String} An ANSI color code for the given namespace
+	* @api private
+	*/
+	function selectColor(namespace) {
+		let hash = 0;
+
+		for (let i = 0; i < namespace.length; i++) {
+			hash = ((hash << 5) - hash) + namespace.charCodeAt(i);
+			hash |= 0; // Convert to 32bit integer
+		}
+
+		return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+	}
+	createDebug.selectColor = selectColor;
+
+	/**
+	* Create a debugger with the given `namespace`.
+	*
+	* @param {String} namespace
+	* @return {Function}
+	* @api public
+	*/
+	function createDebug(namespace) {
+		let prevTime;
+		let enableOverride = null;
+
+		function debug(...args) {
+			// Disabled?
+			if (!debug.enabled) {
+				return;
+			}
+
+			const self = debug;
+
+			// Set `diff` timestamp
+			const curr = Number(new Date());
+			const ms = curr - (prevTime || curr);
+			self.diff = ms;
+			self.prev = prevTime;
+			self.curr = curr;
+			prevTime = curr;
+
+			args[0] = createDebug.coerce(args[0]);
+
+			if (typeof args[0] !== 'string') {
+				// Anything else let's inspect with %O
+				args.unshift('%O');
+			}
+
+			// Apply any `formatters` transformations
+			let index = 0;
+			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+				// If we encounter an escaped % then don't increase the array index
+				if (match === '%%') {
+					return '%';
+				}
+				index++;
+				const formatter = createDebug.formatters[format];
+				if (typeof formatter === 'function') {
+					const val = args[index];
+					match = formatter.call(self, val);
+
+					// Now we need to remove `args[index]` since it's inlined in the `format`
+					args.splice(index, 1);
+					index--;
+				}
+				return match;
+			});
+
+			// Apply env-specific formatting (colors, etc.)
+			createDebug.formatArgs.call(self, args);
+
+			const logFn = self.log || createDebug.log;
+			logFn.apply(self, args);
+		}
+
+		debug.namespace = namespace;
+		debug.useColors = createDebug.useColors();
+		debug.color = createDebug.selectColor(namespace);
+		debug.extend = extend;
+		debug.destroy = createDebug.destroy; // XXX Temporary. Will be removed in the next major release.
+
+		Object.defineProperty(debug, 'enabled', {
+			enumerable: true,
+			configurable: false,
+			get: () => enableOverride === null ? createDebug.enabled(namespace) : enableOverride,
+			set: v => {
+				enableOverride = v;
+			}
+		});
+
+		// Env-specific initialization logic for debug instances
+		if (typeof createDebug.init === 'function') {
+			createDebug.init(debug);
+		}
+
+		return debug;
+	}
+
+	function extend(namespace, delimiter) {
+		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
+		newDebug.log = this.log;
+		return newDebug;
+	}
+
+	/**
+	* Enables a debug mode by namespaces. This can include modes
+	* separated by a colon and wildcards.
+	*
+	* @param {String} namespaces
+	* @api public
+	*/
+	function enable(namespaces) {
+		createDebug.save(namespaces);
+
+		createDebug.names = [];
+		createDebug.skips = [];
+
+		let i;
+		const split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
+		const len = split.length;
+
+		for (i = 0; i < len; i++) {
+			if (!split[i]) {
+				// ignore empty strings
+				continue;
+			}
+
+			namespaces = split[i].replace(/\*/g, '.*?');
+
+			if (namespaces[0] === '-') {
+				createDebug.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
+			} else {
+				createDebug.names.push(new RegExp('^' + namespaces + '$'));
+			}
+		}
+	}
+
+	/**
+	* Disable debug output.
+	*
+	* @return {String} namespaces
+	* @api public
+	*/
+	function disable() {
+		const namespaces = [
+			...createDebug.names.map(toNamespace),
+			...createDebug.skips.map(toNamespace).map(namespace => '-' + namespace)
+		].join(',');
+		createDebug.enable('');
+		return namespaces;
+	}
+
+	/**
+	* Returns true if the given mode name is enabled, false otherwise.
+	*
+	* @param {String} name
+	* @return {Boolean}
+	* @api public
+	*/
+	function enabled(name) {
+		if (name[name.length - 1] === '*') {
+			return true;
+		}
+
+		let i;
+		let len;
+
+		for (i = 0, len = createDebug.skips.length; i < len; i++) {
+			if (createDebug.skips[i].test(name)) {
+				return false;
+			}
+		}
+
+		for (i = 0, len = createDebug.names.length; i < len; i++) {
+			if (createDebug.names[i].test(name)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	* Convert regexp to namespace
+	*
+	* @param {RegExp} regxep
+	* @return {String} namespace
+	* @api private
+	*/
+	function toNamespace(regexp) {
+		return regexp.toString()
+			.substring(2, regexp.toString().length - 2)
+			.replace(/\.\*\?$/, '*');
+	}
+
+	/**
+	* Coerce `val`.
+	*
+	* @param {Mixed} val
+	* @return {Mixed}
+	* @api private
+	*/
+	function coerce(val) {
+		if (val instanceof Error) {
+			return val.stack || val.message;
+		}
+		return val;
+	}
+
+	/**
+	* XXX DO NOT USE. This is a temporary stub function.
+	* XXX It WILL be removed in the next major release.
+	*/
+	function destroy() {
+		console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+	}
+
+	createDebug.enable(createDebug.load());
+
+	return createDebug;
+}
+
+module.exports = setup;
+
+},{"ms":33}],32:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -27188,543 +27833,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],31:[function(require,module,exports){
-(function (process){
-/* eslint-env browser */
-
-/**
- * This is the web browser implementation of `debug()`.
- */
-
-exports.log = log;
-exports.formatArgs = formatArgs;
-exports.save = save;
-exports.load = load;
-exports.useColors = useColors;
-exports.storage = localstorage();
-
-/**
- * Colors.
- */
-
-exports.colors = [
-	'#0000CC',
-	'#0000FF',
-	'#0033CC',
-	'#0033FF',
-	'#0066CC',
-	'#0066FF',
-	'#0099CC',
-	'#0099FF',
-	'#00CC00',
-	'#00CC33',
-	'#00CC66',
-	'#00CC99',
-	'#00CCCC',
-	'#00CCFF',
-	'#3300CC',
-	'#3300FF',
-	'#3333CC',
-	'#3333FF',
-	'#3366CC',
-	'#3366FF',
-	'#3399CC',
-	'#3399FF',
-	'#33CC00',
-	'#33CC33',
-	'#33CC66',
-	'#33CC99',
-	'#33CCCC',
-	'#33CCFF',
-	'#6600CC',
-	'#6600FF',
-	'#6633CC',
-	'#6633FF',
-	'#66CC00',
-	'#66CC33',
-	'#9900CC',
-	'#9900FF',
-	'#9933CC',
-	'#9933FF',
-	'#99CC00',
-	'#99CC33',
-	'#CC0000',
-	'#CC0033',
-	'#CC0066',
-	'#CC0099',
-	'#CC00CC',
-	'#CC00FF',
-	'#CC3300',
-	'#CC3333',
-	'#CC3366',
-	'#CC3399',
-	'#CC33CC',
-	'#CC33FF',
-	'#CC6600',
-	'#CC6633',
-	'#CC9900',
-	'#CC9933',
-	'#CCCC00',
-	'#CCCC33',
-	'#FF0000',
-	'#FF0033',
-	'#FF0066',
-	'#FF0099',
-	'#FF00CC',
-	'#FF00FF',
-	'#FF3300',
-	'#FF3333',
-	'#FF3366',
-	'#FF3399',
-	'#FF33CC',
-	'#FF33FF',
-	'#FF6600',
-	'#FF6633',
-	'#FF9900',
-	'#FF9933',
-	'#FFCC00',
-	'#FFCC33'
-];
-
-/**
- * Currently only WebKit-based Web Inspectors, Firefox >= v31,
- * and the Firebug extension (any Firefox version) are known
- * to support "%c" CSS customizations.
- *
- * TODO: add a `localStorage` variable to explicitly enable/disable colors
- */
-
-// eslint-disable-next-line complexity
-function useColors() {
-	// NB: In an Electron preload script, document will be defined but not fully
-	// initialized. Since we know we're in Chrome, we'll just detect this case
-	// explicitly
-	if (typeof window !== 'undefined' && window.process && (window.process.type === 'renderer' || window.process.__nwjs)) {
-		return true;
-	}
-
-	// Internet Explorer and Edge do not support colors.
-	if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
-		return false;
-	}
-
-	// Is webkit? http://stackoverflow.com/a/16459606/376773
-	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
-	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
-		// Is firebug? http://stackoverflow.com/a/398120/376773
-		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
-		// Is firefox >= v31?
-		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
-		// Double check webkit in userAgent just in case we are in a worker
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
-}
-
-/**
- * Colorize log arguments if enabled.
- *
- * @api public
- */
-
-function formatArgs(args) {
-	args[0] = (this.useColors ? '%c' : '') +
-		this.namespace +
-		(this.useColors ? ' %c' : ' ') +
-		args[0] +
-		(this.useColors ? '%c ' : ' ') +
-		'+' + module.exports.humanize(this.diff);
-
-	if (!this.useColors) {
-		return;
-	}
-
-	const c = 'color: ' + this.color;
-	args.splice(1, 0, c, 'color: inherit');
-
-	// The final "%c" is somewhat tricky, because there could be other
-	// arguments passed either before or after the %c, so we need to
-	// figure out the correct index to insert the CSS into
-	let index = 0;
-	let lastC = 0;
-	args[0].replace(/%[a-zA-Z%]/g, match => {
-		if (match === '%%') {
-			return;
-		}
-		index++;
-		if (match === '%c') {
-			// We only are interested in the *last* %c
-			// (the user may have provided their own)
-			lastC = index;
-		}
-	});
-
-	args.splice(lastC, 0, c);
-}
-
-/**
- * Invokes `console.log()` when available.
- * No-op when `console.log` is not a "function".
- *
- * @api public
- */
-function log(...args) {
-	// This hackery is required for IE8/9, where
-	// the `console.log` function doesn't have 'apply'
-	return typeof console === 'object' &&
-		console.log &&
-		console.log(...args);
-}
-
-/**
- * Save `namespaces`.
- *
- * @param {String} namespaces
- * @api private
- */
-function save(namespaces) {
-	try {
-		if (namespaces) {
-			exports.storage.setItem('debug', namespaces);
-		} else {
-			exports.storage.removeItem('debug');
-		}
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-/**
- * Load `namespaces`.
- *
- * @return {String} returns the previously persisted debug modes
- * @api private
- */
-function load() {
-	let r;
-	try {
-		r = exports.storage.getItem('debug');
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-
-	// If debug isn't set in LS, and we're in Electron, try to load $DEBUG
-	if (!r && typeof process !== 'undefined' && 'env' in process) {
-		r = process.env.DEBUG;
-	}
-
-	return r;
-}
-
-/**
- * Localstorage attempts to return the localstorage.
- *
- * This is necessary because safari throws
- * when a user disables cookies/localstorage
- * and you attempt to access it.
- *
- * @return {LocalStorage}
- * @api private
- */
-
-function localstorage() {
-	try {
-		// TVMLKit (Apple TV JS Runtime) does not have a window object, just localStorage in the global context
-		// The Browser also has localStorage in the global context.
-		return localStorage;
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-module.exports = require('./common')(exports);
-
-const {formatters} = module.exports;
-
-/**
- * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
- */
-
-formatters.j = function (v) {
-	try {
-		return JSON.stringify(v);
-	} catch (error) {
-		return '[UnexpectedJSONParseError]: ' + error.message;
-	}
-};
-
-}).call(this,require('_process'))
-},{"./common":32,"_process":34}],32:[function(require,module,exports){
-
-/**
- * This is the common logic for both the Node.js and web browser
- * implementations of `debug()`.
- */
-
-function setup(env) {
-	createDebug.debug = createDebug;
-	createDebug.default = createDebug;
-	createDebug.coerce = coerce;
-	createDebug.disable = disable;
-	createDebug.enable = enable;
-	createDebug.enabled = enabled;
-	createDebug.humanize = require('ms');
-
-	Object.keys(env).forEach(key => {
-		createDebug[key] = env[key];
-	});
-
-	/**
-	* Active `debug` instances.
-	*/
-	createDebug.instances = [];
-
-	/**
-	* The currently active debug mode names, and names to skip.
-	*/
-
-	createDebug.names = [];
-	createDebug.skips = [];
-
-	/**
-	* Map of special "%n" handling functions, for the debug "format" argument.
-	*
-	* Valid key names are a single, lower or upper-case letter, i.e. "n" and "N".
-	*/
-	createDebug.formatters = {};
-
-	/**
-	* Selects a color for a debug namespace
-	* @param {String} namespace The namespace string for the for the debug instance to be colored
-	* @return {Number|String} An ANSI color code for the given namespace
-	* @api private
-	*/
-	function selectColor(namespace) {
-		let hash = 0;
-
-		for (let i = 0; i < namespace.length; i++) {
-			hash = ((hash << 5) - hash) + namespace.charCodeAt(i);
-			hash |= 0; // Convert to 32bit integer
-		}
-
-		return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
-	}
-	createDebug.selectColor = selectColor;
-
-	/**
-	* Create a debugger with the given `namespace`.
-	*
-	* @param {String} namespace
-	* @return {Function}
-	* @api public
-	*/
-	function createDebug(namespace) {
-		let prevTime;
-
-		function debug(...args) {
-			// Disabled?
-			if (!debug.enabled) {
-				return;
-			}
-
-			const self = debug;
-
-			// Set `diff` timestamp
-			const curr = Number(new Date());
-			const ms = curr - (prevTime || curr);
-			self.diff = ms;
-			self.prev = prevTime;
-			self.curr = curr;
-			prevTime = curr;
-
-			args[0] = createDebug.coerce(args[0]);
-
-			if (typeof args[0] !== 'string') {
-				// Anything else let's inspect with %O
-				args.unshift('%O');
-			}
-
-			// Apply any `formatters` transformations
-			let index = 0;
-			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
-				// If we encounter an escaped % then don't increase the array index
-				if (match === '%%') {
-					return match;
-				}
-				index++;
-				const formatter = createDebug.formatters[format];
-				if (typeof formatter === 'function') {
-					const val = args[index];
-					match = formatter.call(self, val);
-
-					// Now we need to remove `args[index]` since it's inlined in the `format`
-					args.splice(index, 1);
-					index--;
-				}
-				return match;
-			});
-
-			// Apply env-specific formatting (colors, etc.)
-			createDebug.formatArgs.call(self, args);
-
-			const logFn = self.log || createDebug.log;
-			logFn.apply(self, args);
-		}
-
-		debug.namespace = namespace;
-		debug.enabled = createDebug.enabled(namespace);
-		debug.useColors = createDebug.useColors();
-		debug.color = selectColor(namespace);
-		debug.destroy = destroy;
-		debug.extend = extend;
-		// Debug.formatArgs = formatArgs;
-		// debug.rawLog = rawLog;
-
-		// env-specific initialization logic for debug instances
-		if (typeof createDebug.init === 'function') {
-			createDebug.init(debug);
-		}
-
-		createDebug.instances.push(debug);
-
-		return debug;
-	}
-
-	function destroy() {
-		const index = createDebug.instances.indexOf(this);
-		if (index !== -1) {
-			createDebug.instances.splice(index, 1);
-			return true;
-		}
-		return false;
-	}
-
-	function extend(namespace, delimiter) {
-		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
-		newDebug.log = this.log;
-		return newDebug;
-	}
-
-	/**
-	* Enables a debug mode by namespaces. This can include modes
-	* separated by a colon and wildcards.
-	*
-	* @param {String} namespaces
-	* @api public
-	*/
-	function enable(namespaces) {
-		createDebug.save(namespaces);
-
-		createDebug.names = [];
-		createDebug.skips = [];
-
-		let i;
-		const split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
-		const len = split.length;
-
-		for (i = 0; i < len; i++) {
-			if (!split[i]) {
-				// ignore empty strings
-				continue;
-			}
-
-			namespaces = split[i].replace(/\*/g, '.*?');
-
-			if (namespaces[0] === '-') {
-				createDebug.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
-			} else {
-				createDebug.names.push(new RegExp('^' + namespaces + '$'));
-			}
-		}
-
-		for (i = 0; i < createDebug.instances.length; i++) {
-			const instance = createDebug.instances[i];
-			instance.enabled = createDebug.enabled(instance.namespace);
-		}
-	}
-
-	/**
-	* Disable debug output.
-	*
-	* @return {String} namespaces
-	* @api public
-	*/
-	function disable() {
-		const namespaces = [
-			...createDebug.names.map(toNamespace),
-			...createDebug.skips.map(toNamespace).map(namespace => '-' + namespace)
-		].join(',');
-		createDebug.enable('');
-		return namespaces;
-	}
-
-	/**
-	* Returns true if the given mode name is enabled, false otherwise.
-	*
-	* @param {String} name
-	* @return {Boolean}
-	* @api public
-	*/
-	function enabled(name) {
-		if (name[name.length - 1] === '*') {
-			return true;
-		}
-
-		let i;
-		let len;
-
-		for (i = 0, len = createDebug.skips.length; i < len; i++) {
-			if (createDebug.skips[i].test(name)) {
-				return false;
-			}
-		}
-
-		for (i = 0, len = createDebug.names.length; i < len; i++) {
-			if (createDebug.names[i].test(name)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	* Convert regexp to namespace
-	*
-	* @param {RegExp} regxep
-	* @return {String} namespace
-	* @api private
-	*/
-	function toNamespace(regexp) {
-		return regexp.toString()
-			.substring(2, regexp.toString().length - 2)
-			.replace(/\.\*\?$/, '*');
-	}
-
-	/**
-	* Coerce `val`.
-	*
-	* @param {Mixed} val
-	* @return {Mixed}
-	* @api private
-	*/
-	function coerce(val) {
-		if (val instanceof Error) {
-			return val.stack || val.message;
-		}
-		return val;
-	}
-
-	createDebug.enable(createDebug.load());
-
-	return createDebug;
-}
-
-module.exports = setup;
-
-},{"ms":33}],33:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /**
  * Helpers.
  */

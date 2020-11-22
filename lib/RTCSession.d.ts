@@ -299,6 +299,10 @@ export class RTCSession extends EventEmitter {
 
   unDisplayShare(type?: string):void;
 
+  videoShare(videoStream:MediaStream):void;
+
+  unVideoShare():void;
+
   toAudio(options?:object, done?:VoidFunction): void;
 
   toVideo(options?:object, done?:VoidFunction): void;
