@@ -5,19 +5,30 @@
 // 关闭调试信息输出
 // FlyInn.debug.disable("FlyInn:*");
 
+function handleGetQuery(name)
+{
+  const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
+
+  const r = window.location.search.substr(1).match(reg);
+
+  if (r != null) return unescape(r[2]);
+
+  return null;
+}
+
 // 注册UA的用户名
-const account = parseInt(`90${Math.random() * 100}`);
+const account = handleGetQuery('linkman')?handleGetQuery('linkman'):parseInt(`90${Math.random() * 100}`);
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInn.WebSocketInterface('wss://rtc.vsbc.com:5092/wss');
+const socket = new FlyInn.WebSocketInterface('wss://pro.vsbc.com:60040/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets  : socket,
   // 与 UA 关联的 SIP URI
-  uri      : `sip:${account}@rtc.vsbc.com`,
+  uri      : `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
   password : account
 };
@@ -294,7 +305,7 @@ flyinnUA.start();
 document.querySelector('#call').onclick = function()
 {
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@rtc.vsbc.com`, {
+  const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
     mediaConstraints : { audio: true, video: true }
   });
 
