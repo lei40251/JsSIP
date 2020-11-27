@@ -321,3 +321,22 @@ window.onbeforeunload = function()
 {
   flyinnUA.stop();
 };
+
+document.querySelector('#outboundCall').onclick = function()
+{
+  const linkman = document.querySelector('#linkman').value;
+
+  const settings =
+  {
+    'url'     : `http://47.102.102.64:8089/cloudunicomm/sendSyncApiCommand?command=originate&arg=${linkman}`,
+    'method'  : 'POST',
+    'timeout' : 0
+  };
+
+  $.ajax(settings).done(function(response)
+  {
+    console.log(response);
+    setStatus(`预测外呼：${response}`);
+  });
+  setStatus(`正在预测外呼：${linkman}`);
+};
