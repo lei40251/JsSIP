@@ -159,6 +159,10 @@ flyinnUA.on('newRTCSession', function(e)
   document.querySelector('#picShare').onclick = function()
   {
     const c = document.createElement('canvas');
+
+    c.width = 320;
+    c.height = 240;
+
     const ctx = c.getContext('2d');
     const pic = document.querySelector('#pic_s');
 
