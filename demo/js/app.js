@@ -16,6 +16,8 @@ function handleGetQuery(name)
   return null;
 }
 
+let uuid = FlyInn.Utils.newUUID();
+
 // 注册UA的用户名
 const account = handleGetQuery('linkman')?handleGetQuery('linkman'):parseInt(`90${Math.random() * 100}`);
 
@@ -332,8 +334,8 @@ document.querySelector('#outboundCall').onclick = function()
 
   const settings =
   {
-    'url'     : `http://47.102.102.64:8089/cloudunicomm/sendSyncApiCommand?command=originate&arg=${linkman}`,
-    'method'  : 'POST',
+    'url'     : `https://47.102.108.163:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}`,
+    'method'  : 'GET',
     'timeout' : 0
   };
 
@@ -344,3 +346,45 @@ document.querySelector('#outboundCall').onclick = function()
   });
   setStatus(`正在预测外呼：${linkman}`);
 };
+
+document.querySelector('#cancelOutboundCall').onclick = function()
+{
+  const settings =
+  {
+    'url'     : `https://47.102.108.163:8089/cu/hangupoutbound?uuid=${uuid}`,
+    'method'  : 'GET',
+    'timeout' : 0
+  };
+
+  $.ajax(settings).done(function(response)
+  {
+    console.log(response);
+  });
+};
+
+document.querySelector('#capture').onclick = function()
+{
+  const canvas = document.getElementById('captureView');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = $('#remoteVideo')[0].clientWidth;
+  canvas.height = $('#remoteVideo')[0].clientHeight;
+
+  ctx.drawImage($('#remoteVideo')[0], 0, 0, $('#remoteVideo')[0].clientWidth, $('#remoteVideo')[0].clientHeight);
+};
+
+document.querySelector('#uploadVideo').onclick = function()
+{
+  const settings = {
+    'url'         : 'https://47.102.102.64:8089/cu/upload',
+    'method'      : 'POST',
+    'processData' : false,
+    'contentType' : false,
+    'timeout'     : 0,
+    'data'        : document.querySelector("#file").files[0]
+  };
+
+  $.ajax(settings).done(function (response) {
+    console.log(response);
+  });
+}
