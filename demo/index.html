@@ -72,7 +72,7 @@
     </div>
   </div>
   <div style="margin: 5vw; height: 240px; background-color: #efefef; display: flex; justify-content: space-between">
-    <div style="width: 320px;height: 240px;overflow-x: hidden;overflow-y: auto;">
+    <div style="width: 320px;height: 240px;overflow-x: hidden;overflow-y: auto;" class="hide">
       <div id="form_s" style="background-color: #ccc;">
         <input type=" text" />
         <p>测试内容区域</p>
@@ -91,7 +91,7 @@
   <div style="margin: 5vw; background-color: #efefef">
     <p>
       <input type="text" id="linkman" />
-      <button id="call">呼叫</button>
+      <button id="call" class="hide">呼叫</button>
       <button id="outboundCall">预测外呼</button>
       <button id="cancelOutboundCall">取消外呼</button>
       <button id="capture">截图</button>
@@ -111,12 +111,12 @@
       <button id="screenShare">分享桌面</button>
     </p>
     <p>
-      <button id="formShare">分享表单</button>
+      <button id="formShare" class="hide">分享表单</button>
       <button id="picShare">分享图片</button>
       <button id="videoShare">分享视频</button>
       <button id="stopShare">停止分享</button>
     </p>
-    <p>
+    <p class="hide">
       <input type="text" id="info" />
       <button id="sendInfo">推送消息</button>
     </p>
