@@ -333,7 +333,7 @@ document.querySelector('#outboundCall').onclick = function()
   const linkman = document.querySelector('#linkman').value;
 
   const settings = {
-    url     : `https://47.102.108.163:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}`,
+    url     : `https://47.102.108.163:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}&extensionNumber=${account}`,
     method  : 'GET',
     timeout : 0
   };
