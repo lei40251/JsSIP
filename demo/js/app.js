@@ -392,7 +392,7 @@ document.querySelector('#uploadVideo').onclick = function()
   form.append('file', document.querySelector('#file').files[0]);
 
   const settings = {
-    url         : 'https://47.102.108.163:8089/cu/upload',
+    url         : 'https://47.102.108.163:8089/cu/upload?filename=xcpvideo',
     method      : 'POST',
     timeout     : 0,
     processData : false,
