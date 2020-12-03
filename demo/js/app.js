@@ -161,8 +161,14 @@ flyinnUA.on('newRTCSession', function(e)
     e.session.videoShare(c_f.captureStream(15));
   };
 
+  let timer;
+
   document.querySelector('#picShare').onclick = function()
   {
+    if (timer)
+    {
+      clearInterval(timer);
+    }
     const c = document.createElement('canvas');
 
     c.width = 320;
@@ -171,7 +177,9 @@ flyinnUA.on('newRTCSession', function(e)
     const ctx = c.getContext('2d');
     const pic = document.querySelector('#pic_s');
 
-    ctx.drawImage(pic, 0, 0, 320, 240);
+    timer = setInterval(() => {
+      ctx.drawImage(pic, 0, 0, 320, 240);
+    }, 1000);
 
     e.session.videoShare(c.captureStream());
   };
@@ -194,6 +202,11 @@ flyinnUA.on('newRTCSession', function(e)
     if (d.originator === 'local')
     {
       setStatus('收到新呼入振铃');
+
+      setTimeout(() =>
+      {
+        e.session.answer();
+      }, 200);
     }
     else
     {
@@ -333,7 +346,7 @@ document.querySelector('#outboundCall').onclick = function()
   const linkman = document.querySelector('#linkman').value;
 
   const settings = {
-    url     : `https://47.102.108.163:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}`,
+    url     : `https://47.102.108.163:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}&extensionNumber=${account}`,
     method  : 'GET',
     timeout : 0
   };
