@@ -50,6 +50,7 @@ exports.settings = {
   sockets: null,
   connection_recovery_max_interval: JsSIP_C.CONNECTION_RECOVERY_MAX_INTERVAL,
   connection_recovery_min_interval: JsSIP_C.CONNECTION_RECOVERY_MIN_INTERVAL,
+  secret_key: null,
 
   /*
    * Host address.
@@ -136,6 +137,11 @@ var checks = {
     user_agent: function user_agent(_user_agent) {
       if (typeof _user_agent === 'string') {
         return _user_agent;
+      }
+    },
+    secret_key: function secret_key(_secret_key) {
+      if (typeof _secret_key === 'string') {
+        return _secret_key;
       }
     },
     connection_recovery_max_interval: function connection_recovery_max_interval(_connection_recovery_max_interval) {
@@ -23949,6 +23955,10 @@ var debugerror = require('debug')('FlyInn:ERROR:Transport');
 
 var JsSIP_C = require('./Constants');
 
+var Utils = require('./Utils');
+
+var Pkg = require('../package.json');
+
 debugerror.log = console.warn.bind(console);
 /**
  * Constants
@@ -24166,7 +24176,21 @@ module.exports = /*#__PURE__*/function () {
       }
 
       var idx = Math.floor(Math.random() * candidates.length);
-      this.socket = candidates[idx].socket;
+      var socketSign = Utils.calculateMD5("".concat(candidates[idx].socket.url.match(/(\w+\.)+((\w+))+((?=\/\w*$)|(?=:)|\w+)/g)[0]).concat(Pkg.version, "FlyInn"));
+
+      if (socketSign === this.recovery_options.secret_key) {
+        this.socket = candidates[idx].socket;
+      } else {
+        // eslint-disable-next-line no-console
+        this.socket = {
+          connect: function connect() {
+            console.log('域名未授权');
+          },
+          disconnect: function disconnect() {}
+        }; // eslint-disable-next-line no-console
+
+        console.log('域名未授权');
+      }
     }
     /**
      * Socket Event Handlers
@@ -24257,7 +24281,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":20,"debug":31}],24:[function(require,module,exports){
+},{"../package.json":39,"./Constants":2,"./Socket":20,"./Utils":26,"debug":31}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24498,8 +24522,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function call(target, options) {
       debug('call()');
       var session = new RTCSession(this);
-      session.connect(target, options);
-      return session;
+      var socketSign = Utils.calculateMD5(target.match(/(\w+\.)+((\w+))+((?=\/\w*$)|(?=:)|\w+)/g)[0]);
+
+      if (socketSign === this._configuration.sign) {
+        session.connect(target, options);
+        return session;
+      } else {
+        // eslint-disable-next-line no-console
+        console.log('域名未授权');
+      }
     }
     /**
      * Send a message.
@@ -25037,7 +25068,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._transport = new Transport(this._configuration.sockets, {
           // Recovery options.
           max_interval: this._configuration.connection_recovery_max_interval,
-          min_interval: this._configuration.connection_recovery_min_interval
+          min_interval: this._configuration.connection_recovery_min_interval,
+          secret_key: this._configuration.secret_key
         }); // Transport event callbacks.
 
         this._transport.onconnecting = onTransportConnecting.bind(this);

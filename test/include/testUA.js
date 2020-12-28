@@ -1,8 +1,8 @@
 module.exports = {
   SOCKET_DESCRIPTION : {
     'via_transport' : 'WS',
-    'sip_uri'       : 'sip:localhost:12345;transport=ws',
-    'url'           : 'ws://localhost:12345'
+    'sip_uri'       : 'sip:example.com:12345;transport=ws',
+    'url'           : 'ws://example.com:12345'
   },
 
   UA_CONFIGURATION : {
@@ -18,7 +18,8 @@ module.exports = {
     connection_recovery_max_interval : 30,
     use_preloaded_route              : true,
     no_answer_timeout                : 60000,
-    session_timers                   : true
+    session_timers                   : true,
+    secret_key                       : '88b8dcbcefc1b0e689dfe7301f1e3009'
   },
 
   UA_CONFIGURATION_AFTER_START : {
@@ -32,21 +33,23 @@ module.exports = {
     register            : false,
     use_preloaded_route : true,
     no_answer_timeout   : 60000 * 1000, // Internally converted to miliseconds.
-    session_timers      : true
+    session_timers      : true,
+    secret_key          : '88b8dcbcefc1b0e689dfe7301f1e3009'
   },
 
   UA_TRANSPORT_AFTER_START : {
     'sockets' : [ {
       'socket' : {
         'via_transport' : 'WS',
-        'sip_uri'       : 'sip:localhost:12345;transport=ws',
-        'url'           : 'ws://localhost:12345'
+        'sip_uri'       : 'sip:example.com:12345;transport=ws',
+        'url'           : 'ws://example.com:12345'
       },
       'weight' : 0
     } ],
     'recovery_options' : {
       'min_interval' : 2,
-      'max_interval' : 30
+      'max_interval' : 30,
+      'secret_key'   : '88b8dcbcefc1b0e689dfe7301f1e3009'
     }
   }
 };
