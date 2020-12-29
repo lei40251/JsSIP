@@ -17222,6 +17222,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var preferredAudioCodec = options.preferredAudioCodec || null;
       var preferredVideoCodec = options.preferredVideoCodec || null;
       var inviteWithoutSdp = options.inviteWithoutSdp || false;
+      delete mediaConstraints.video;
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       this._data = options.data || this._data; // Check target.
@@ -17454,6 +17455,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
+      delete mediaConstraints.video;
       var tracks;
       var peerHasAudioLine = false;
       var peerHasVideoLine = false;
@@ -24338,6 +24340,8 @@ var debug = require('debug')('FlyInn:UA');
 
 var debugerror = require('debug')('FlyInn:ERROR:UA');
 
+var Pkg = require('../package.json');
+
 debugerror.log = console.warn.bind(console);
 var C = {
   // UA status codes.
@@ -24522,9 +24526,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function call(target, options) {
       debug('call()');
       var session = new RTCSession(this);
-      var socketSign = Utils.calculateMD5(target.match(/(\w+\.)+((\w+))+((?=\/\w*$)|(?=:)|\w+)/g)[0]);
+      var socketSign = Utils.calculateMD5("".concat(target.match(/(\w+\.)+((\w+))+((?=\/\w*$)|(?=:)|\w+)/g)[0]).concat(Pkg.version, "FlyInn"));
 
-      if (socketSign === this._configuration.sign) {
+      if (socketSign === this._configuration.secret_key) {
         session.connect(target, options);
         return session;
       } else {
@@ -25312,7 +25316,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":29,"debug":31,"events":30}],25:[function(require,module,exports){
+},{"../package.json":39,"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":29,"debug":31,"events":30}],25:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
