@@ -1,5 +1,5 @@
 /*
- * Copyright: 2012-2020 
+ * Copyright: 2012-2021 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInn = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
@@ -27261,19 +27261,28 @@ function functionBindPolyfill(context) {
 }
 
 },{}],31:[function(require,module,exports){
-(function (process){
+(function (process){(function (){
 /* eslint-env browser */
 
 /**
  * This is the web browser implementation of `debug()`.
  */
 
-exports.log = log;
 exports.formatArgs = formatArgs;
 exports.save = save;
 exports.load = load;
 exports.useColors = useColors;
 exports.storage = localstorage();
+exports.destroy = (() => {
+	let warned = false;
+
+	return () => {
+		if (!warned) {
+			warned = true;
+			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+		}
+	};
+})();
 
 /**
  * Colors.
@@ -27434,18 +27443,14 @@ function formatArgs(args) {
 }
 
 /**
- * Invokes `console.log()` when available.
- * No-op when `console.log` is not a "function".
+ * Invokes `console.debug()` when available.
+ * No-op when `console.debug` is not a "function".
+ * If `console.debug` is not available, falls back
+ * to `console.log`.
  *
  * @api public
  */
-function log(...args) {
-	// This hackery is required for IE8/9, where
-	// the `console.log` function doesn't have 'apply'
-	return typeof console === 'object' &&
-		console.log &&
-		console.log(...args);
-}
+exports.log = console.debug || console.log || (() => {});
 
 /**
  * Save `namespaces`.
@@ -27527,7 +27532,7 @@ formatters.j = function (v) {
 	}
 };
 
-}).call(this,require('_process'))
+}).call(this)}).call(this,require('_process'))
 },{"./common":32,"_process":34}],32:[function(require,module,exports){
 
 /**
@@ -27543,15 +27548,11 @@ function setup(env) {
 	createDebug.enable = enable;
 	createDebug.enabled = enabled;
 	createDebug.humanize = require('ms');
+	createDebug.destroy = destroy;
 
 	Object.keys(env).forEach(key => {
 		createDebug[key] = env[key];
 	});
-
-	/**
-	* Active `debug` instances.
-	*/
-	createDebug.instances = [];
 
 	/**
 	* The currently active debug mode names, and names to skip.
@@ -27594,6 +27595,7 @@ function setup(env) {
 	*/
 	function createDebug(namespace) {
 		let prevTime;
+		let enableOverride = null;
 
 		function debug(...args) {
 			// Disabled?
@@ -27623,7 +27625,7 @@ function setup(env) {
 			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
 				// If we encounter an escaped % then don't increase the array index
 				if (match === '%%') {
-					return match;
+					return '%';
 				}
 				index++;
 				const formatter = createDebug.formatters[format];
@@ -27646,31 +27648,26 @@ function setup(env) {
 		}
 
 		debug.namespace = namespace;
-		debug.enabled = createDebug.enabled(namespace);
 		debug.useColors = createDebug.useColors();
-		debug.color = selectColor(namespace);
-		debug.destroy = destroy;
+		debug.color = createDebug.selectColor(namespace);
 		debug.extend = extend;
-		// Debug.formatArgs = formatArgs;
-		// debug.rawLog = rawLog;
+		debug.destroy = createDebug.destroy; // XXX Temporary. Will be removed in the next major release.
 
-		// env-specific initialization logic for debug instances
+		Object.defineProperty(debug, 'enabled', {
+			enumerable: true,
+			configurable: false,
+			get: () => enableOverride === null ? createDebug.enabled(namespace) : enableOverride,
+			set: v => {
+				enableOverride = v;
+			}
+		});
+
+		// Env-specific initialization logic for debug instances
 		if (typeof createDebug.init === 'function') {
 			createDebug.init(debug);
 		}
 
-		createDebug.instances.push(debug);
-
 		return debug;
-	}
-
-	function destroy() {
-		const index = createDebug.instances.indexOf(this);
-		if (index !== -1) {
-			createDebug.instances.splice(index, 1);
-			return true;
-		}
-		return false;
 	}
 
 	function extend(namespace, delimiter) {
@@ -27709,11 +27706,6 @@ function setup(env) {
 			} else {
 				createDebug.names.push(new RegExp('^' + namespaces + '$'));
 			}
-		}
-
-		for (i = 0; i < createDebug.instances.length; i++) {
-			const instance = createDebug.instances[i];
-			instance.enabled = createDebug.enabled(instance.namespace);
 		}
 	}
 
@@ -27787,6 +27779,14 @@ function setup(env) {
 			return val.stack || val.message;
 		}
 		return val;
+	}
+
+	/**
+	* XXX DO NOT USE. This is a temporary stub function.
+	* XXX It WILL be removed in the next major release.
+	*/
+	function destroy() {
+		console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
 	}
 
 	createDebug.enable(createDebug.load());
@@ -28242,7 +28242,7 @@ var grammar = module.exports = {
       push: 'rtcpFbTrrInt',
       reg: /^rtcp-fb:(\*|\d*) trr-int (\d*)/,
       names: ['payload', 'value'],
-      format: 'rtcp-fb:%d trr-int %d'
+      format: 'rtcp-fb:%s trr-int %d'
     },
     {
       // a=rtcp-fb:98 nack rpsi

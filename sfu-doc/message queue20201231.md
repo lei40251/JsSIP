@@ -51,7 +51,6 @@
         // create ：SFU
         "roomid": roomid,
 
-
         // description:时间戳,
         // rules:统一成到毫秒，
         // create:获取服务器时间（服务器心跳或者接口）
