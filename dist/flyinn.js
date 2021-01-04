@@ -26207,6 +26207,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             throw new Error('getUserMedia() failed');
           });
         }).then(function (mediaStream) {
+          if (!mediaStream) {
+            return;
+          }
+
           _this2._switchStream(mediaStream);
 
           return mediaStream;
@@ -26267,7 +26271,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       .then(function () {
         try {
           return navigator.mediaDevices.getUserMedia({
-            audio: true,
+            audio: false,
             video: true
           });
         } catch (error) {
