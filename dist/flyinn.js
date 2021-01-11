@@ -28347,6 +28347,12 @@ var grammar = module.exports = {
       format: 'ice-pwd:%s'
     },
     {
+      // a=ice-pwd:x9cml/YzichV2+XlhiMu8g
+      name: 'xSfuCname',
+      reg: /^x-sfu-cname:(\S*)/,
+      format: 'x-sfu-cname:%s'
+    },
+    {
       // a=fingerprint:SHA-1 00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33
       name: 'fingerprint',
       reg: /^fingerprint:(\S*) (\S*)/,
@@ -28921,7 +28927,7 @@ module.exports={
     "@types/node": "^14.0.6",
     "debug": "^4.1.1",
     "events": "^3.1.0",
-    "sdp-transform": "^2.14.0"
+    "sdp-transform": "git+https://github.com/lei40251/sdp-transform.git#dev"
   },
   "devDependencies": {
     "@babel/core": "^7.9.6",
