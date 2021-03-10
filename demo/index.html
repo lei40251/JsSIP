@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0" /> -->
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .main {
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .left {
+      width: 40%;
+    }
+
+    .right {
+      width: 60%;
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    .cav {
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+
+    #rvs {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    #rvs div {
+      width: 33%;
+      flex-grow: 1;
+      max-width: 50%;
+      position: relative;
+    }
+
+    #rvs video {
+      width: 100%;
+      display: block;
+    }
+
+    #rvs p {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      background: rgba(255, 255, 255, .3);
+      margin: 0;
+      padding: 5px 5%;
+      width: 90%;
+    }
+
+    .action {
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      background-color: #efefef;
+    }
+
+    @media screen and (max-width: 480px) {
+      .action {
+        flex-direction: column;
+      }
+
+      .action div {
+        width: 100% !important;
+        margin: 10px 0;
+      }
+
+      .left {
+        width: 30%;
+      }
+
+      .right {
+        width: 70%;
+      }
+
+      #captureView {
+        width: 100% !important;
+      }
+    }
+
+    #mq {
+      width: 230px;
+      height: 200px;
+      overflow-y: auto;
+      background-color: rgba(255, 255, 255, 0.2);
+      position: absolute;
+      top: 0;
+      z-index: 2;
+      font-size: 12px;
+      padding: 0 0 0 30px;
+    }
+  </style>
+  <title>SFU Demo</title>
+</head>
+
+<body style="margin: 0">
+  <div class="main">
+    <p style="padding: 10px 20px; margin: 0; background-color: rgba(255, 255, 255, 0.5); position: absolute; left: 0; top: 0; z-index: 2"
+      id="status" class="hide">
+      Status:
+    </p>
+    <audio id="remoteAudio" autoplay style="visibility: hidden" src=""></audio>
+    <div class="container">
+      <div class="left">
+        <ol id="mq">
+        </ol>
+        <div style="background-color: #eee; position: relative">
+          <div style="
+                position: absolute;
+                top: 30px;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                color: rgba(0, 0, 0, 0.3);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              "></div>
+          <p style="width: 100%; text-align: center; margin: 5px 0">自己</p>
+          <video autoplay muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+            style="width: 100%" id="localVideo" src=""></video>
+        </div>
+        <div style="width: 100%; background-color: rgba(0, 0, 0, 0.3)">
+          <p>截屏展示(请通话中点击远端图像截屏)</p>
+          <canvas id="captureView" style="width: 40%"></canvas>
+        </div>
+      </div>
+      <div class="right">
+        <div style="width: 100%; background-color: #eee; position: relative" id="video_area">
+          <div style="position: absolute; top: 30px; bottom: 0; left: 0; right: 0; color: rgba(0, 0, 0, 0.3)"></div>
+          <p style="width: 100%; text-align: center; margin: 5px 0">远端视频</p>
+          <div id="rvs"></div>
+        </div>
+      </div>
+    </div>
+    <div class="action">
+      <div style="width: 15%; display: flex; justify-content: center">
+        <button id="invite_conf">发起会议</button>
+      </div>
+      <div style="width: 30%; display: flex; justify-content: center">
+        <input type="text" placeholder="会议号" id="linkman" />
+        <button id="join_conf">加入会议</button>
+        <button mat-button id="test_join" class="hide">无消息队列加会</button>
+      </div>
+      <div style="width: 15%; display: flex; justify-content: center">
+        <button id="cancel">离开会议</button>
+      </div>
+      <div style="width: 40%; display: flex; justify-content: space-around">
+        <button id="muteMic">关闭麦克风</button>
+        <button id="muteCam">停止发送图像</button>
+        <select id="camSelect"><option value="">选择摄像头</option></select>
+        <button id="switchCam">切换摄像头</button>
+        <button id="screenShare" class="hide">分享桌面</button>
+      </div>
+    </div>
+  </div>
+  <script src="./js/adapter.js"></script>
+  <script src="./js/jquery-3.3.1.min.js"></script>
+  <script src="./js/base64.js"></script>
+  <script src="../dist/flyinn.demo.js"></script>
+  <script src="./js/crypto-js-4.0.0/crypto-js.js"></script>
+  <script src="./js/app.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
+</body>
+
+</html>

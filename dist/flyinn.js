@@ -301,7 +301,7 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":20,"./URI":25,"./Utils":26}],2:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":21,"./URI":26,"./Utils":27}],2:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -483,7 +483,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":39}],3:[function(require,module,exports){
+},{"../package.json":40}],3:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -511,14 +511,6 @@ var C = {
 }; // RFC 3261 12.1.
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(Dialog, null, [{
-    key: "C",
-    // Expose C object.
-    get: function get() {
-      return C;
-    }
-  }]);
-
   function Dialog(owner, message, type) {
     var state = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : C.STATUS_CONFIRMED;
 
@@ -582,6 +574,37 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(Dialog, [{
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
+    key: "local_seqnum",
+    get: function get() {
+      return this._local_seqnum;
+    },
+    set: function set(num) {
+      this._local_seqnum = num;
+    }
+  }, {
+    key: "owner",
+    get: function get() {
+      return this._owner;
+    }
+  }, {
+    key: "uac_pending_reply",
+    get: function get() {
+      return this._uac_pending_reply;
+    },
+    set: function set(pending) {
+      this._uac_pending_reply = pending;
+    }
+  }, {
+    key: "uas_pending_reply",
+    get: function get() {
+      return this._uas_pending_reply;
+    }
+  }, {
     key: "update",
     value: function update(message, type) {
       this._state = C.STATUS_CONFIRMED;
@@ -726,42 +749,17 @@ module.exports = /*#__PURE__*/function () {
 
       return true;
     }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
-  }, {
-    key: "local_seqnum",
-    get: function get() {
-      return this._local_seqnum;
-    },
-    set: function set(num) {
-      this._local_seqnum = num;
-    }
-  }, {
-    key: "owner",
-    get: function get() {
-      return this._owner;
-    }
-  }, {
-    key: "uac_pending_reply",
-    get: function get() {
-      return this._uac_pending_reply;
-    },
-    set: function set(pending) {
-      this._uac_pending_reply = pending;
-    }
-  }, {
-    key: "uas_pending_reply",
-    get: function get() {
-      return this._uas_pending_reply;
+  }], [{
+    key: "C",
+    get: // Expose C object.
+    function get() {
+      return C;
     }
   }]);
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":19,"./Transactions":22,"./Utils":26,"debug":31}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":20,"./Transactions":23,"./Utils":27,"debug":31}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -810,6 +808,11 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(DialogRequestSender, [{
+    key: "request",
+    get: function get() {
+      return this._request;
+    }
+  }, {
     key: "send",
     value: function send() {
       var _this = this;
@@ -875,16 +878,11 @@ module.exports = /*#__PURE__*/function () {
         this._eventHandlers.onErrorResponse(response);
       }
     }
-  }, {
-    key: "request",
-    get: function get() {
-      return this._request;
-    }
   }]);
 
   return DialogRequestSender;
 }();
-},{"../Constants":2,"../RTCSession":12,"../RequestSender":18,"../Transactions":22}],5:[function(require,module,exports){
+},{"../Constants":2,"../RTCSession":11,"../RequestSender":17,"../Transactions":23}],5:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1094,7 +1092,7 @@ module.exports = /*#__PURE__*/function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":26,"debug":31}],6:[function(require,module,exports){
+},{"./Utils":27,"debug":31}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16111,57 +16109,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":10,"./URI":25}],8:[function(require,module,exports){
-"use strict";
-
-var pkg = require('../package.json');
-
-var C = require('./Constants');
-
-var Exceptions = require('./Exceptions');
-
-var Utils = require('./Utils');
-
-var UA = require('./UA');
-
-var URI = require('./URI');
-
-var NameAddrHeader = require('./NameAddrHeader');
-
-var Grammar = require('./Grammar');
-
-var WebSocketInterface = require('./WebSocketInterface');
-
-var debug = require('debug')('FlyInn');
-
-debug('version %s', pkg.version);
-/**
- * Expose the JsSIP module.
- */
-
-var JsSIP = {
-  C: C,
-  Exceptions: Exceptions,
-  Utils: Utils,
-  UA: UA,
-  URI: URI,
-  NameAddrHeader: NameAddrHeader,
-  WebSocketInterface: WebSocketInterface,
-  Grammar: Grammar,
-  // Expose the debug module.
-  debug: require('debug'),
-
-  get name() {
-    return pkg.title;
-  },
-
-  get version() {
-    return pkg.version;
-  }
-
-};
-module.exports = JsSIP;
-},{"../package.json":39,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":10,"./UA":24,"./URI":25,"./Utils":26,"./WebSocketInterface":28,"debug":31}],9:[function(require,module,exports){
+},{"./NameAddrHeader":9,"./URI":26}],8:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16225,6 +16173,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(Message, [{
+    key: "direction",
+    get: function get() {
+      return this._direction;
+    }
+  }, {
+    key: "local_identity",
+    get: function get() {
+      return this._local_identity;
+    }
+  }, {
+    key: "remote_identity",
+    get: function get() {
+      return this._remote_identity;
+    }
+  }, {
     key: "send",
     value: function send(target, body) {
       var _this2 = this;
@@ -16448,26 +16411,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         response: response
       });
     }
-  }, {
-    key: "direction",
-    get: function get() {
-      return this._direction;
-    }
-  }, {
-    key: "local_identity",
-    get: function get() {
-      return this._local_identity;
-    }
-  }, {
-    key: "remote_identity",
-    get: function get() {
-      return this._remote_identity;
-    }
   }]);
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":31,"events":30}],10:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":17,"./SIPMessage":20,"./Utils":27,"debug":31,"events":33}],9:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16481,24 +16429,6 @@ var URI = require('./URI');
 var Grammar = require('./Grammar');
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(NameAddrHeader, null, [{
-    key: "parse",
-
-    /**
-     * Parse the given string and returns a NameAddrHeader instance or undefined if
-     * it is an invalid NameAddrHeader.
-     */
-    value: function parse(name_addr_header) {
-      name_addr_header = Grammar.parse(name_addr_header, 'Name_Addr_Header');
-
-      if (name_addr_header !== -1) {
-        return name_addr_header;
-      } else {
-        return undefined;
-      }
-    }
-  }]);
-
   function NameAddrHeader(uri, display_name, parameters) {
     _classCallCheck(this, NameAddrHeader);
 
@@ -16520,6 +16450,19 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(NameAddrHeader, [{
+    key: "uri",
+    get: function get() {
+      return this._uri;
+    }
+  }, {
+    key: "display_name",
+    get: function get() {
+      return this._display_name;
+    },
+    set: function set(value) {
+      this._display_name = value === 0 ? '0' : value;
+    }
+  }, {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
@@ -16584,24 +16527,27 @@ module.exports = /*#__PURE__*/function () {
 
       return body;
     }
-  }, {
-    key: "uri",
-    get: function get() {
-      return this._uri;
-    }
-  }, {
-    key: "display_name",
-    get: function get() {
-      return this._display_name;
-    },
-    set: function set(value) {
-      this._display_name = value === 0 ? '0' : value;
+  }], [{
+    key: "parse",
+    value:
+    /**
+     * Parse the given string and returns a NameAddrHeader instance or undefined if
+     * it is an invalid NameAddrHeader.
+     */
+    function parse(name_addr_header) {
+      name_addr_header = Grammar.parse(name_addr_header, 'Name_Addr_Header');
+
+      if (name_addr_header !== -1) {
+        return name_addr_header;
+      } else {
+        return undefined;
+      }
     }
   }]);
 
   return NameAddrHeader;
 }();
-},{"./Grammar":7,"./URI":25}],11:[function(require,module,exports){
+},{"./Grammar":7,"./URI":26}],10:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -16933,7 +16879,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":19,"debug":31}],12:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":20,"debug":31}],11:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -17034,17 +16980,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   var _super = _createSuper(RTCSession);
 
-  _createClass(RTCSession, null, [{
-    key: "C",
-
-    /**
-     * Expose C object.
-     */
-    get: function get() {
-      return C;
-    }
-  }]);
-
   function RTCSession(ua) {
     var _this;
 
@@ -17137,6 +17072,70 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
   _createClass(RTCSession, [{
+    key: "C",
+    get: function get() {
+      return C;
+    } // Expose session failed/ended causes as a property of the RTCSession instance.
+
+  }, {
+    key: "causes",
+    get: function get() {
+      return JsSIP_C.causes;
+    }
+  }, {
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
+    key: "connection",
+    get: function get() {
+      return this._connection;
+    }
+  }, {
+    key: "contact",
+    get: function get() {
+      return this._contact;
+    }
+  }, {
+    key: "direction",
+    get: function get() {
+      return this._direction;
+    }
+  }, {
+    key: "local_identity",
+    get: function get() {
+      return this._local_identity;
+    }
+  }, {
+    key: "remote_identity",
+    get: function get() {
+      return this._remote_identity;
+    }
+  }, {
+    key: "start_time",
+    get: function get() {
+      return this._start_time;
+    }
+  }, {
+    key: "end_time",
+    get: function get() {
+      return this._end_time;
+    }
+  }, {
+    key: "data",
+    get: function get() {
+      return this._data;
+    },
+    set: function set(_data) {
+      this._data = _data;
+    }
+  }, {
+    key: "status",
+    get: function get() {
+      return this._status;
+    }
+  }, {
     key: "isInProgress",
     value: function isInProgress() {
       switch (this._status) {
@@ -20957,75 +20956,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         video: video
       });
     }
-  }, {
+  }], [{
     key: "C",
-    get: function get() {
+    get:
+    /**
+     * Expose C object.
+     */
+    function get() {
       return C;
-    } // Expose session failed/ended causes as a property of the RTCSession instance.
-
-  }, {
-    key: "causes",
-    get: function get() {
-      return JsSIP_C.causes;
-    }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
-  }, {
-    key: "connection",
-    get: function get() {
-      return this._connection;
-    }
-  }, {
-    key: "contact",
-    get: function get() {
-      return this._contact;
-    }
-  }, {
-    key: "direction",
-    get: function get() {
-      return this._direction;
-    }
-  }, {
-    key: "local_identity",
-    get: function get() {
-      return this._local_identity;
-    }
-  }, {
-    key: "remote_identity",
-    get: function get() {
-      return this._remote_identity;
-    }
-  }, {
-    key: "start_time",
-    get: function get() {
-      return this._start_time;
-    }
-  }, {
-    key: "end_time",
-    get: function get() {
-      return this._end_time;
-    }
-  }, {
-    key: "data",
-    get: function get() {
-      return this._data;
-    },
-    set: function set(_data) {
-      this._data = _data;
-    }
-  }, {
-    key: "status",
-    get: function get() {
-      return this._status;
     }
   }]);
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":13,"./RTCSession/Info":14,"./RTCSession/ReferNotifier":15,"./RTCSession/ReferSubscriber":16,"./RequestSender":18,"./SIPMessage":19,"./Timers":21,"./Transactions":22,"./URI":25,"./Utils":26,"./WebRTC/SwitchCam":27,"debug":31,"events":30,"sdp-transform":36}],13:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":12,"./RTCSession/Info":13,"./RTCSession/ReferNotifier":14,"./RTCSession/ReferSubscriber":15,"./RequestSender":17,"./SIPMessage":20,"./Timers":22,"./Transactions":23,"./URI":26,"./Utils":27,"./WebRTC/SwitchCam":28,"debug":31,"events":33,"sdp-transform":37}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21091,6 +21035,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(DTMF, [{
+    key: "tone",
+    get: function get() {
+      return this._tone;
+    }
+  }, {
+    key: "duration",
+    get: function get() {
+      return this._duration;
+    }
+  }, {
     key: "send",
     value: function send(tone) {
       var _this2 = this;
@@ -21208,16 +21162,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }
     }
-  }, {
-    key: "tone",
-    get: function get() {
-      return this._tone;
-    }
-  }, {
-    key: "duration",
-    get: function get() {
-      return this._duration;
-    }
   }]);
 
   return DTMF;
@@ -21228,7 +21172,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":31,"events":30}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":33}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21284,6 +21228,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(Info, [{
+    key: "contentType",
+    get: function get() {
+      return this._contentType;
+    }
+  }, {
+    key: "body",
+    get: function get() {
+      return this._body;
+    }
+  }, {
     key: "send",
     value: function send(contentType, body) {
       var _this2 = this;
@@ -21354,21 +21308,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         request: request
       });
     }
-  }, {
-    key: "contentType",
-    get: function get() {
-      return this._contentType;
-    }
-  }, {
-    key: "body",
-    get: function get() {
-      return this._body;
-    }
   }]);
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":26,"debug":31,"events":30}],15:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":27,"debug":31,"events":33}],14:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21433,7 +21377,7 @@ module.exports = /*#__PURE__*/function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":31}],16:[function(require,module,exports){
+},{"../Constants":2,"debug":31}],15:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21485,6 +21429,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(ReferSubscriber, [{
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
     key: "sendRefer",
     value: function sendRefer(target) {
       var _this2 = this;
@@ -21606,16 +21555,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         cause: cause
       });
     }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
   }]);
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":26,"debug":31,"events":30}],17:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":27,"debug":31,"events":33}],16:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21671,6 +21615,11 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(Registrator, [{
+    key: "registered",
+    get: function get() {
+      return this._registered;
+    }
+  }, {
     key: "setExtraHeaders",
     value: function setExtraHeaders(extraHeaders) {
       if (!Array.isArray(extraHeaders)) {
@@ -21965,16 +21914,11 @@ module.exports = /*#__PURE__*/function () {
         cause: cause || null
       });
     }
-  }, {
-    key: "registered",
-    get: function get() {
-      return this._registered;
-    }
   }]);
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":18,"./SIPMessage":19,"./Utils":26,"debug":31}],18:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":17,"./SIPMessage":20,"./Utils":27,"debug":31}],17:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -22149,7 +22093,174 @@ module.exports = /*#__PURE__*/function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":22,"debug":31}],19:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":23,"debug":31}],18:[function(require,module,exports){
+"use strict";
+
+var pkg = require('../package.json');
+
+var C = require('./Constants');
+
+var Exceptions = require('./Exceptions');
+
+var Utils = require('./Utils');
+
+var UA = require('./UA');
+
+var Client = require('./SFU/Client');
+
+var URI = require('./URI');
+
+var NameAddrHeader = require('./NameAddrHeader');
+
+var Grammar = require('./Grammar');
+
+var WebSocketInterface = require('./WebSocketInterface');
+
+var debug = require('debug')('FlyInn');
+
+debug('version %s', pkg.version);
+
+var createClient = function createClient(clientConfig) {
+  return new Client(clientConfig);
+};
+/**
+ * Expose the JsSIP module.
+ */
+
+
+var JsSIP = {
+  C: C,
+  Exceptions: Exceptions,
+  Utils: Utils,
+  UA: UA,
+  Client: Client,
+  URI: URI,
+  NameAddrHeader: NameAddrHeader,
+  WebSocketInterface: WebSocketInterface,
+  Grammar: Grammar,
+  createClient: createClient,
+  // Expose the debug module.
+  debug: require('debug'),
+
+  get name() {
+    return pkg.title;
+  },
+
+  get version() {
+    return pkg.version;
+  }
+
+};
+module.exports = JsSIP;
+},{"../package.json":40,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":9,"./SFU/Client":19,"./UA":25,"./URI":26,"./Utils":27,"./WebSocketInterface":29,"debug":31}],19:[function(require,module,exports){
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+// const JsSIP_C = require('./Constants');
+// const URI = require('./URI');
+// const Grammar = require('./Grammar');
+// const Utils = require('./Utils');
+var _require = require('events'),
+    EventEmitter = _require.EventEmitter;
+
+var UA = require('../UA');
+
+var WebSocketInterface = require('../WebSocketInterface');
+
+var debug = require('debug')('FlyInn:RTC');
+
+var debugerror = require('debug')('FlyInn:ERROR:RTC');
+
+debugerror.log = console.warn.bind(console);
+
+module.exports = /*#__PURE__*/function (_EventEmitter) {
+  _inherits(Client, _EventEmitter);
+
+  var _super = _createSuper(Client);
+
+  function Client(clientConfig) {
+    var _this;
+
+    _classCallCheck(this, Client);
+
+    debug('new Client()');
+    _this = _super.call(this);
+    _this._domain = clientConfig.domain;
+    _this._userId = clientConfig.userId;
+    _this._wssUrl = clientConfig.wssUrl;
+    _this._userSig = clientConfig.userSig;
+    _this._sessionn = null;
+    _this._configuration = {
+      sockets: new WebSocketInterface(_this._wssUrl),
+      uri: "sip:".concat(_this._userId, "@").concat(_this._domain),
+      password: _this._userSig
+    };
+    _this._ua = new UA(_this._configuration);
+
+    _this._ua.on('sipEvent', function (data) {
+      _this.emit('sipEvent', {
+        data: data
+      });
+    });
+
+    _this._ua.on('registered', function (data) {
+      _this.emit('registered', data);
+    });
+
+    _this._ua.start(); // this.emit('transactionDestroyed', {
+    //   data : 'transaction'
+    // });
+
+
+    return _this;
+  }
+
+  _createClass(Client, [{
+    key: "join",
+    value: function join(roomId, options) {
+      var _this2 = this;
+
+      this._sessionn = this._ua.call(roomId, options);
+
+      this._sessionn.on('muted', function (data) {
+        _this2.emit('muted', {
+          data: data
+        });
+      });
+
+      return this._sessionn;
+    }
+  }, {
+    key: "leave",
+    value: function leave() {
+      this._sessionn.terminate();
+    }
+  }]);
+
+  return Client;
+}(EventEmitter);
+},{"../UA":25,"../WebSocketInterface":29,"debug":31,"events":33}],20:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23007,7 +23118,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":10,"./Utils":26,"debug":31,"sdp-transform":36}],20:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":9,"./Utils":27,"debug":31,"sdp-transform":37}],21:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -23081,7 +23192,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":26,"debug":31}],21:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":27,"debug":31}],22:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -23103,7 +23214,7 @@ module.exports = {
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 
 };
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -23190,6 +23301,11 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(NonInviteClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23271,11 +23387,6 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return NonInviteClientTransaction;
@@ -23310,6 +23421,11 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
   }
 
   _createClass(InviteClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23465,11 +23581,6 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return InviteClientTransaction;
@@ -23499,6 +23610,11 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
   }
 
   _createClass(AckClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "send",
     value: function send() {
       if (!this.transport.send(this.request)) {
@@ -23510,11 +23626,6 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
     value: function onTransportError() {
       debugact("transport error occurred for transaction ".concat(this.id));
       this.eventHandlers.onTransportError();
-    }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
     }
   }]);
 
@@ -23545,6 +23656,11 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
   }
 
   _createClass(NonInviteServerTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23631,11 +23747,6 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return NonInviteServerTransaction;
@@ -23667,6 +23778,11 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
   }
 
   _createClass(InviteServerTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23811,11 +23927,6 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return InviteServerTransaction;
@@ -23932,7 +24043,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":19,"./Timers":21,"debug":31,"events":30}],23:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Timers":22,"debug":31,"events":33}],24:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24026,6 +24137,21 @@ module.exports = /*#__PURE__*/function () {
 
 
   _createClass(Transport, [{
+    key: "via_transport",
+    get: function get() {
+      return this.socket.via_transport;
+    }
+  }, {
+    key: "url",
+    get: function get() {
+      return this.socket.url;
+    }
+  }, {
+    key: "sip_uri",
+    get: function get() {
+      return this.socket.sip_uri;
+    }
+  }, {
     key: "connect",
     value: function connect() {
       debug('connect()');
@@ -24238,26 +24364,11 @@ module.exports = /*#__PURE__*/function () {
         message: data
       });
     }
-  }, {
-    key: "via_transport",
-    get: function get() {
-      return this.socket.via_transport;
-    }
-  }, {
-    key: "url",
-    get: function get() {
-      return this.socket.url;
-    }
-  }, {
-    key: "sip_uri",
-    get: function get() {
-      return this.socket.sip_uri;
-    }
   }]);
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":20,"debug":31}],24:[function(require,module,exports){
+},{"./Constants":2,"./Socket":21,"debug":31}],25:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24338,14 +24449,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   var _super = _createSuper(UA);
 
-  _createClass(UA, null, [{
-    key: "C",
-    // Expose C object.
-    get: function get() {
-      return C;
-    }
-  }]);
-
   function UA(configuration) {
     var _this;
 
@@ -24395,8 +24498,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(UA, [{
-    key: "start",
-    // =================
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
+    key: "status",
+    get: function get() {
+      return this._status;
+    }
+  }, {
+    key: "contact",
+    get: function get() {
+      return this._contact;
+    }
+  }, {
+    key: "configuration",
+    get: function get() {
+      return this._configuration;
+    }
+  }, {
+    key: "transport",
+    get: function get() {
+      return this._transport;
+    } // =================
     //  High Level API
     // =================
 
@@ -24404,6 +24529,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * Connect to the server if status = STATUS_INIT.
      * Resume UA after being closed.
      */
+
+  }, {
+    key: "start",
     value: function start() {
       debug('start()');
 
@@ -25147,30 +25275,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       return;
     }
-  }, {
+  }], [{
     key: "C",
-    get: function get() {
+    get: // Expose C object.
+    function get() {
       return C;
-    }
-  }, {
-    key: "status",
-    get: function get() {
-      return this._status;
-    }
-  }, {
-    key: "contact",
-    get: function get() {
-      return this._contact;
-    }
-  }, {
-    key: "configuration",
-    get: function get() {
-      return this._configuration;
-    }
-  }, {
-    key: "transport",
-    get: function get() {
-      return this._transport;
     }
   }]);
 
@@ -25280,7 +25389,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":9,"./Parser":11,"./RTCSession":12,"./Registrator":17,"./SIPMessage":19,"./Transactions":22,"./Transport":23,"./URI":25,"./Utils":26,"./sanityCheck":29,"debug":31,"events":30}],25:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":20,"./Transactions":23,"./Transport":24,"./URI":26,"./Utils":27,"./sanityCheck":30,"debug":31,"events":33}],26:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -25312,24 +25421,6 @@ var Grammar = require('./Grammar');
 
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(URI, null, [{
-    key: "parse",
-
-    /**
-      * Parse the given string and returns a JsSIP.URI instance or undefined if
-      * it is an invalid URI.
-      */
-    value: function parse(uri) {
-      uri = Grammar.parse(uri, 'SIP_URI');
-
-      if (uri !== -1) {
-        return uri;
-      } else {
-        return undefined;
-      }
-    }
-  }]);
-
   function URI(scheme, user, host, port) {
     var parameters = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var headers = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
@@ -25363,6 +25454,38 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(URI, [{
+    key: "scheme",
+    get: function get() {
+      return this._scheme;
+    },
+    set: function set(value) {
+      this._scheme = value.toLowerCase();
+    }
+  }, {
+    key: "user",
+    get: function get() {
+      return this._user;
+    },
+    set: function set(value) {
+      this._user = value;
+    }
+  }, {
+    key: "host",
+    get: function get() {
+      return this._host;
+    },
+    set: function set(value) {
+      this._host = value.toLowerCase();
+    }
+  }, {
+    key: "port",
+    get: function get() {
+      return this._port;
+    },
+    set: function set(value) {
+      this._port = value === 0 ? value : parseInt(value, 10) || null;
+    }
+  }, {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
@@ -25506,43 +25629,27 @@ module.exports = /*#__PURE__*/function () {
 
       return aor;
     }
-  }, {
-    key: "scheme",
-    get: function get() {
-      return this._scheme;
-    },
-    set: function set(value) {
-      this._scheme = value.toLowerCase();
-    }
-  }, {
-    key: "user",
-    get: function get() {
-      return this._user;
-    },
-    set: function set(value) {
-      this._user = value;
-    }
-  }, {
-    key: "host",
-    get: function get() {
-      return this._host;
-    },
-    set: function set(value) {
-      this._host = value.toLowerCase();
-    }
-  }, {
-    key: "port",
-    get: function get() {
-      return this._port;
-    },
-    set: function set(value) {
-      this._port = value === 0 ? value : parseInt(value, 10) || null;
+  }], [{
+    key: "parse",
+    value:
+    /**
+      * Parse the given string and returns a JsSIP.URI instance or undefined if
+      * it is an invalid URI.
+      */
+    function parse(uri) {
+      uri = Grammar.parse(uri, 'SIP_URI');
+
+      if (uri !== -1) {
+        return uri;
+      } else {
+        return undefined;
+      }
     }
   }]);
 
   return URI;
 }();
-},{"./Constants":2,"./Grammar":7,"./Utils":26}],26:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./Utils":27}],27:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -26075,7 +26182,7 @@ exports.cloneObject = function (obj) {
   var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
   return obj && Object.assign({}, obj) || fallback;
 };
-},{"./Constants":2,"./Grammar":7,"./URI":25}],27:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./URI":26}],28:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -26133,14 +26240,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(SwitchCam, [{
-    key: "switchVideoStream",
-
+    key: "cams",
+    get: function get() {
+      return this._cams;
+    }
     /**
      * 切换视频流
      *
      * @param {*} videoStream 要切换的新视频流
      * @returns 新的本地流
      */
+
+  }, {
+    key: "switchVideoStream",
     value: function switchVideoStream(videoStream, videoConstraints) {
       var _this2 = this;
 
@@ -26296,16 +26408,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       });
     }
-  }, {
-    key: "cams",
-    get: function get() {
-      return this._cams;
-    }
   }]);
 
   return SwitchCam;
 }(EventEmitter);
-},{"../Exceptions":6,"debug":31,"events":30}],28:[function(require,module,exports){
+},{"../Exceptions":6,"debug":31,"events":33}],29:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -26346,6 +26453,24 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(WebSocketInterface, [{
+    key: "via_transport",
+    get: function get() {
+      return this._via_transport;
+    },
+    set: function set(value) {
+      this._via_transport = value.toUpperCase();
+    }
+  }, {
+    key: "sip_uri",
+    get: function get() {
+      return this._sip_uri;
+    }
+  }, {
+    key: "url",
+    get: function get() {
+      return this._url;
+    }
+  }, {
     key: "connect",
     value: function connect() {
       debug('connect()');
@@ -26461,29 +26586,11 @@ module.exports = /*#__PURE__*/function () {
     value: function _onError(e) {
       debugerror("WebSocket ".concat(this._url, " error: ").concat(e));
     }
-  }, {
-    key: "via_transport",
-    get: function get() {
-      return this._via_transport;
-    },
-    set: function set(value) {
-      this._via_transport = value.toUpperCase();
-    }
-  }, {
-    key: "sip_uri",
-    get: function get() {
-      return this._sip_uri;
-    }
-  }, {
-    key: "url",
-    get: function get() {
-      return this._url;
-    }
   }]);
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":31}],29:[function(require,module,exports){
+},{"./Grammar":7,"debug":31}],30:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -26735,7 +26842,543 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":19,"./Utils":26,"debug":31}],30:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":20,"./Utils":27,"debug":31}],31:[function(require,module,exports){
+(function (process){(function (){
+/* eslint-env browser */
+
+/**
+ * This is the web browser implementation of `debug()`.
+ */
+
+exports.formatArgs = formatArgs;
+exports.save = save;
+exports.load = load;
+exports.useColors = useColors;
+exports.storage = localstorage();
+exports.destroy = (() => {
+	let warned = false;
+
+	return () => {
+		if (!warned) {
+			warned = true;
+			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+		}
+	};
+})();
+
+/**
+ * Colors.
+ */
+
+exports.colors = [
+	'#0000CC',
+	'#0000FF',
+	'#0033CC',
+	'#0033FF',
+	'#0066CC',
+	'#0066FF',
+	'#0099CC',
+	'#0099FF',
+	'#00CC00',
+	'#00CC33',
+	'#00CC66',
+	'#00CC99',
+	'#00CCCC',
+	'#00CCFF',
+	'#3300CC',
+	'#3300FF',
+	'#3333CC',
+	'#3333FF',
+	'#3366CC',
+	'#3366FF',
+	'#3399CC',
+	'#3399FF',
+	'#33CC00',
+	'#33CC33',
+	'#33CC66',
+	'#33CC99',
+	'#33CCCC',
+	'#33CCFF',
+	'#6600CC',
+	'#6600FF',
+	'#6633CC',
+	'#6633FF',
+	'#66CC00',
+	'#66CC33',
+	'#9900CC',
+	'#9900FF',
+	'#9933CC',
+	'#9933FF',
+	'#99CC00',
+	'#99CC33',
+	'#CC0000',
+	'#CC0033',
+	'#CC0066',
+	'#CC0099',
+	'#CC00CC',
+	'#CC00FF',
+	'#CC3300',
+	'#CC3333',
+	'#CC3366',
+	'#CC3399',
+	'#CC33CC',
+	'#CC33FF',
+	'#CC6600',
+	'#CC6633',
+	'#CC9900',
+	'#CC9933',
+	'#CCCC00',
+	'#CCCC33',
+	'#FF0000',
+	'#FF0033',
+	'#FF0066',
+	'#FF0099',
+	'#FF00CC',
+	'#FF00FF',
+	'#FF3300',
+	'#FF3333',
+	'#FF3366',
+	'#FF3399',
+	'#FF33CC',
+	'#FF33FF',
+	'#FF6600',
+	'#FF6633',
+	'#FF9900',
+	'#FF9933',
+	'#FFCC00',
+	'#FFCC33'
+];
+
+/**
+ * Currently only WebKit-based Web Inspectors, Firefox >= v31,
+ * and the Firebug extension (any Firefox version) are known
+ * to support "%c" CSS customizations.
+ *
+ * TODO: add a `localStorage` variable to explicitly enable/disable colors
+ */
+
+// eslint-disable-next-line complexity
+function useColors() {
+	// NB: In an Electron preload script, document will be defined but not fully
+	// initialized. Since we know we're in Chrome, we'll just detect this case
+	// explicitly
+	if (typeof window !== 'undefined' && window.process && (window.process.type === 'renderer' || window.process.__nwjs)) {
+		return true;
+	}
+
+	// Internet Explorer and Edge do not support colors.
+	if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
+		return false;
+	}
+
+	// Is webkit? http://stackoverflow.com/a/16459606/376773
+	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
+	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
+		// Is firebug? http://stackoverflow.com/a/398120/376773
+		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
+		// Is firefox >= v31?
+		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
+		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+		// Double check webkit in userAgent just in case we are in a worker
+		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
+}
+
+/**
+ * Colorize log arguments if enabled.
+ *
+ * @api public
+ */
+
+function formatArgs(args) {
+	args[0] = (this.useColors ? '%c' : '') +
+		this.namespace +
+		(this.useColors ? ' %c' : ' ') +
+		args[0] +
+		(this.useColors ? '%c ' : ' ') +
+		'+' + module.exports.humanize(this.diff);
+
+	if (!this.useColors) {
+		return;
+	}
+
+	const c = 'color: ' + this.color;
+	args.splice(1, 0, c, 'color: inherit');
+
+	// The final "%c" is somewhat tricky, because there could be other
+	// arguments passed either before or after the %c, so we need to
+	// figure out the correct index to insert the CSS into
+	let index = 0;
+	let lastC = 0;
+	args[0].replace(/%[a-zA-Z%]/g, match => {
+		if (match === '%%') {
+			return;
+		}
+		index++;
+		if (match === '%c') {
+			// We only are interested in the *last* %c
+			// (the user may have provided their own)
+			lastC = index;
+		}
+	});
+
+	args.splice(lastC, 0, c);
+}
+
+/**
+ * Invokes `console.debug()` when available.
+ * No-op when `console.debug` is not a "function".
+ * If `console.debug` is not available, falls back
+ * to `console.log`.
+ *
+ * @api public
+ */
+exports.log = console.debug || console.log || (() => {});
+
+/**
+ * Save `namespaces`.
+ *
+ * @param {String} namespaces
+ * @api private
+ */
+function save(namespaces) {
+	try {
+		if (namespaces) {
+			exports.storage.setItem('debug', namespaces);
+		} else {
+			exports.storage.removeItem('debug');
+		}
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+}
+
+/**
+ * Load `namespaces`.
+ *
+ * @return {String} returns the previously persisted debug modes
+ * @api private
+ */
+function load() {
+	let r;
+	try {
+		r = exports.storage.getItem('debug');
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+
+	// If debug isn't set in LS, and we're in Electron, try to load $DEBUG
+	if (!r && typeof process !== 'undefined' && 'env' in process) {
+		r = process.env.DEBUG;
+	}
+
+	return r;
+}
+
+/**
+ * Localstorage attempts to return the localstorage.
+ *
+ * This is necessary because safari throws
+ * when a user disables cookies/localstorage
+ * and you attempt to access it.
+ *
+ * @return {LocalStorage}
+ * @api private
+ */
+
+function localstorage() {
+	try {
+		// TVMLKit (Apple TV JS Runtime) does not have a window object, just localStorage in the global context
+		// The Browser also has localStorage in the global context.
+		return localStorage;
+	} catch (error) {
+		// Swallow
+		// XXX (@Qix-) should we be logging these?
+	}
+}
+
+module.exports = require('./common')(exports);
+
+const {formatters} = module.exports;
+
+/**
+ * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
+ */
+
+formatters.j = function (v) {
+	try {
+		return JSON.stringify(v);
+	} catch (error) {
+		return '[UnexpectedJSONParseError]: ' + error.message;
+	}
+};
+
+}).call(this)}).call(this,require('_process'))
+},{"./common":32,"_process":35}],32:[function(require,module,exports){
+
+/**
+ * This is the common logic for both the Node.js and web browser
+ * implementations of `debug()`.
+ */
+
+function setup(env) {
+	createDebug.debug = createDebug;
+	createDebug.default = createDebug;
+	createDebug.coerce = coerce;
+	createDebug.disable = disable;
+	createDebug.enable = enable;
+	createDebug.enabled = enabled;
+	createDebug.humanize = require('ms');
+	createDebug.destroy = destroy;
+
+	Object.keys(env).forEach(key => {
+		createDebug[key] = env[key];
+	});
+
+	/**
+	* The currently active debug mode names, and names to skip.
+	*/
+
+	createDebug.names = [];
+	createDebug.skips = [];
+
+	/**
+	* Map of special "%n" handling functions, for the debug "format" argument.
+	*
+	* Valid key names are a single, lower or upper-case letter, i.e. "n" and "N".
+	*/
+	createDebug.formatters = {};
+
+	/**
+	* Selects a color for a debug namespace
+	* @param {String} namespace The namespace string for the for the debug instance to be colored
+	* @return {Number|String} An ANSI color code for the given namespace
+	* @api private
+	*/
+	function selectColor(namespace) {
+		let hash = 0;
+
+		for (let i = 0; i < namespace.length; i++) {
+			hash = ((hash << 5) - hash) + namespace.charCodeAt(i);
+			hash |= 0; // Convert to 32bit integer
+		}
+
+		return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+	}
+	createDebug.selectColor = selectColor;
+
+	/**
+	* Create a debugger with the given `namespace`.
+	*
+	* @param {String} namespace
+	* @return {Function}
+	* @api public
+	*/
+	function createDebug(namespace) {
+		let prevTime;
+		let enableOverride = null;
+
+		function debug(...args) {
+			// Disabled?
+			if (!debug.enabled) {
+				return;
+			}
+
+			const self = debug;
+
+			// Set `diff` timestamp
+			const curr = Number(new Date());
+			const ms = curr - (prevTime || curr);
+			self.diff = ms;
+			self.prev = prevTime;
+			self.curr = curr;
+			prevTime = curr;
+
+			args[0] = createDebug.coerce(args[0]);
+
+			if (typeof args[0] !== 'string') {
+				// Anything else let's inspect with %O
+				args.unshift('%O');
+			}
+
+			// Apply any `formatters` transformations
+			let index = 0;
+			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+				// If we encounter an escaped % then don't increase the array index
+				if (match === '%%') {
+					return '%';
+				}
+				index++;
+				const formatter = createDebug.formatters[format];
+				if (typeof formatter === 'function') {
+					const val = args[index];
+					match = formatter.call(self, val);
+
+					// Now we need to remove `args[index]` since it's inlined in the `format`
+					args.splice(index, 1);
+					index--;
+				}
+				return match;
+			});
+
+			// Apply env-specific formatting (colors, etc.)
+			createDebug.formatArgs.call(self, args);
+
+			const logFn = self.log || createDebug.log;
+			logFn.apply(self, args);
+		}
+
+		debug.namespace = namespace;
+		debug.useColors = createDebug.useColors();
+		debug.color = createDebug.selectColor(namespace);
+		debug.extend = extend;
+		debug.destroy = createDebug.destroy; // XXX Temporary. Will be removed in the next major release.
+
+		Object.defineProperty(debug, 'enabled', {
+			enumerable: true,
+			configurable: false,
+			get: () => enableOverride === null ? createDebug.enabled(namespace) : enableOverride,
+			set: v => {
+				enableOverride = v;
+			}
+		});
+
+		// Env-specific initialization logic for debug instances
+		if (typeof createDebug.init === 'function') {
+			createDebug.init(debug);
+		}
+
+		return debug;
+	}
+
+	function extend(namespace, delimiter) {
+		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
+		newDebug.log = this.log;
+		return newDebug;
+	}
+
+	/**
+	* Enables a debug mode by namespaces. This can include modes
+	* separated by a colon and wildcards.
+	*
+	* @param {String} namespaces
+	* @api public
+	*/
+	function enable(namespaces) {
+		createDebug.save(namespaces);
+
+		createDebug.names = [];
+		createDebug.skips = [];
+
+		let i;
+		const split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
+		const len = split.length;
+
+		for (i = 0; i < len; i++) {
+			if (!split[i]) {
+				// ignore empty strings
+				continue;
+			}
+
+			namespaces = split[i].replace(/\*/g, '.*?');
+
+			if (namespaces[0] === '-') {
+				createDebug.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
+			} else {
+				createDebug.names.push(new RegExp('^' + namespaces + '$'));
+			}
+		}
+	}
+
+	/**
+	* Disable debug output.
+	*
+	* @return {String} namespaces
+	* @api public
+	*/
+	function disable() {
+		const namespaces = [
+			...createDebug.names.map(toNamespace),
+			...createDebug.skips.map(toNamespace).map(namespace => '-' + namespace)
+		].join(',');
+		createDebug.enable('');
+		return namespaces;
+	}
+
+	/**
+	* Returns true if the given mode name is enabled, false otherwise.
+	*
+	* @param {String} name
+	* @return {Boolean}
+	* @api public
+	*/
+	function enabled(name) {
+		if (name[name.length - 1] === '*') {
+			return true;
+		}
+
+		let i;
+		let len;
+
+		for (i = 0, len = createDebug.skips.length; i < len; i++) {
+			if (createDebug.skips[i].test(name)) {
+				return false;
+			}
+		}
+
+		for (i = 0, len = createDebug.names.length; i < len; i++) {
+			if (createDebug.names[i].test(name)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	* Convert regexp to namespace
+	*
+	* @param {RegExp} regxep
+	* @return {String} namespace
+	* @api private
+	*/
+	function toNamespace(regexp) {
+		return regexp.toString()
+			.substring(2, regexp.toString().length - 2)
+			.replace(/\.\*\?$/, '*');
+	}
+
+	/**
+	* Coerce `val`.
+	*
+	* @param {Mixed} val
+	* @return {Mixed}
+	* @api private
+	*/
+	function coerce(val) {
+		if (val instanceof Error) {
+			return val.stack || val.message;
+		}
+		return val;
+	}
+
+	/**
+	* XXX DO NOT USE. This is a temporary stub function.
+	* XXX It WILL be removed in the next major release.
+	*/
+	function destroy() {
+		console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+	}
+
+	createDebug.enable(createDebug.load());
+
+	return createDebug;
+}
+
+module.exports = setup;
+
+},{"ms":34}],33:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -27260,543 +27903,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],31:[function(require,module,exports){
-(function (process){(function (){
-/* eslint-env browser */
-
-/**
- * This is the web browser implementation of `debug()`.
- */
-
-exports.formatArgs = formatArgs;
-exports.save = save;
-exports.load = load;
-exports.useColors = useColors;
-exports.storage = localstorage();
-exports.destroy = (() => {
-	let warned = false;
-
-	return () => {
-		if (!warned) {
-			warned = true;
-			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
-		}
-	};
-})();
-
-/**
- * Colors.
- */
-
-exports.colors = [
-	'#0000CC',
-	'#0000FF',
-	'#0033CC',
-	'#0033FF',
-	'#0066CC',
-	'#0066FF',
-	'#0099CC',
-	'#0099FF',
-	'#00CC00',
-	'#00CC33',
-	'#00CC66',
-	'#00CC99',
-	'#00CCCC',
-	'#00CCFF',
-	'#3300CC',
-	'#3300FF',
-	'#3333CC',
-	'#3333FF',
-	'#3366CC',
-	'#3366FF',
-	'#3399CC',
-	'#3399FF',
-	'#33CC00',
-	'#33CC33',
-	'#33CC66',
-	'#33CC99',
-	'#33CCCC',
-	'#33CCFF',
-	'#6600CC',
-	'#6600FF',
-	'#6633CC',
-	'#6633FF',
-	'#66CC00',
-	'#66CC33',
-	'#9900CC',
-	'#9900FF',
-	'#9933CC',
-	'#9933FF',
-	'#99CC00',
-	'#99CC33',
-	'#CC0000',
-	'#CC0033',
-	'#CC0066',
-	'#CC0099',
-	'#CC00CC',
-	'#CC00FF',
-	'#CC3300',
-	'#CC3333',
-	'#CC3366',
-	'#CC3399',
-	'#CC33CC',
-	'#CC33FF',
-	'#CC6600',
-	'#CC6633',
-	'#CC9900',
-	'#CC9933',
-	'#CCCC00',
-	'#CCCC33',
-	'#FF0000',
-	'#FF0033',
-	'#FF0066',
-	'#FF0099',
-	'#FF00CC',
-	'#FF00FF',
-	'#FF3300',
-	'#FF3333',
-	'#FF3366',
-	'#FF3399',
-	'#FF33CC',
-	'#FF33FF',
-	'#FF6600',
-	'#FF6633',
-	'#FF9900',
-	'#FF9933',
-	'#FFCC00',
-	'#FFCC33'
-];
-
-/**
- * Currently only WebKit-based Web Inspectors, Firefox >= v31,
- * and the Firebug extension (any Firefox version) are known
- * to support "%c" CSS customizations.
- *
- * TODO: add a `localStorage` variable to explicitly enable/disable colors
- */
-
-// eslint-disable-next-line complexity
-function useColors() {
-	// NB: In an Electron preload script, document will be defined but not fully
-	// initialized. Since we know we're in Chrome, we'll just detect this case
-	// explicitly
-	if (typeof window !== 'undefined' && window.process && (window.process.type === 'renderer' || window.process.__nwjs)) {
-		return true;
-	}
-
-	// Internet Explorer and Edge do not support colors.
-	if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
-		return false;
-	}
-
-	// Is webkit? http://stackoverflow.com/a/16459606/376773
-	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
-	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
-		// Is firebug? http://stackoverflow.com/a/398120/376773
-		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
-		// Is firefox >= v31?
-		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
-		// Double check webkit in userAgent just in case we are in a worker
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
-}
-
-/**
- * Colorize log arguments if enabled.
- *
- * @api public
- */
-
-function formatArgs(args) {
-	args[0] = (this.useColors ? '%c' : '') +
-		this.namespace +
-		(this.useColors ? ' %c' : ' ') +
-		args[0] +
-		(this.useColors ? '%c ' : ' ') +
-		'+' + module.exports.humanize(this.diff);
-
-	if (!this.useColors) {
-		return;
-	}
-
-	const c = 'color: ' + this.color;
-	args.splice(1, 0, c, 'color: inherit');
-
-	// The final "%c" is somewhat tricky, because there could be other
-	// arguments passed either before or after the %c, so we need to
-	// figure out the correct index to insert the CSS into
-	let index = 0;
-	let lastC = 0;
-	args[0].replace(/%[a-zA-Z%]/g, match => {
-		if (match === '%%') {
-			return;
-		}
-		index++;
-		if (match === '%c') {
-			// We only are interested in the *last* %c
-			// (the user may have provided their own)
-			lastC = index;
-		}
-	});
-
-	args.splice(lastC, 0, c);
-}
-
-/**
- * Invokes `console.debug()` when available.
- * No-op when `console.debug` is not a "function".
- * If `console.debug` is not available, falls back
- * to `console.log`.
- *
- * @api public
- */
-exports.log = console.debug || console.log || (() => {});
-
-/**
- * Save `namespaces`.
- *
- * @param {String} namespaces
- * @api private
- */
-function save(namespaces) {
-	try {
-		if (namespaces) {
-			exports.storage.setItem('debug', namespaces);
-		} else {
-			exports.storage.removeItem('debug');
-		}
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-/**
- * Load `namespaces`.
- *
- * @return {String} returns the previously persisted debug modes
- * @api private
- */
-function load() {
-	let r;
-	try {
-		r = exports.storage.getItem('debug');
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-
-	// If debug isn't set in LS, and we're in Electron, try to load $DEBUG
-	if (!r && typeof process !== 'undefined' && 'env' in process) {
-		r = process.env.DEBUG;
-	}
-
-	return r;
-}
-
-/**
- * Localstorage attempts to return the localstorage.
- *
- * This is necessary because safari throws
- * when a user disables cookies/localstorage
- * and you attempt to access it.
- *
- * @return {LocalStorage}
- * @api private
- */
-
-function localstorage() {
-	try {
-		// TVMLKit (Apple TV JS Runtime) does not have a window object, just localStorage in the global context
-		// The Browser also has localStorage in the global context.
-		return localStorage;
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-module.exports = require('./common')(exports);
-
-const {formatters} = module.exports;
-
-/**
- * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
- */
-
-formatters.j = function (v) {
-	try {
-		return JSON.stringify(v);
-	} catch (error) {
-		return '[UnexpectedJSONParseError]: ' + error.message;
-	}
-};
-
-}).call(this)}).call(this,require('_process'))
-},{"./common":32,"_process":34}],32:[function(require,module,exports){
-
-/**
- * This is the common logic for both the Node.js and web browser
- * implementations of `debug()`.
- */
-
-function setup(env) {
-	createDebug.debug = createDebug;
-	createDebug.default = createDebug;
-	createDebug.coerce = coerce;
-	createDebug.disable = disable;
-	createDebug.enable = enable;
-	createDebug.enabled = enabled;
-	createDebug.humanize = require('ms');
-	createDebug.destroy = destroy;
-
-	Object.keys(env).forEach(key => {
-		createDebug[key] = env[key];
-	});
-
-	/**
-	* The currently active debug mode names, and names to skip.
-	*/
-
-	createDebug.names = [];
-	createDebug.skips = [];
-
-	/**
-	* Map of special "%n" handling functions, for the debug "format" argument.
-	*
-	* Valid key names are a single, lower or upper-case letter, i.e. "n" and "N".
-	*/
-	createDebug.formatters = {};
-
-	/**
-	* Selects a color for a debug namespace
-	* @param {String} namespace The namespace string for the for the debug instance to be colored
-	* @return {Number|String} An ANSI color code for the given namespace
-	* @api private
-	*/
-	function selectColor(namespace) {
-		let hash = 0;
-
-		for (let i = 0; i < namespace.length; i++) {
-			hash = ((hash << 5) - hash) + namespace.charCodeAt(i);
-			hash |= 0; // Convert to 32bit integer
-		}
-
-		return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
-	}
-	createDebug.selectColor = selectColor;
-
-	/**
-	* Create a debugger with the given `namespace`.
-	*
-	* @param {String} namespace
-	* @return {Function}
-	* @api public
-	*/
-	function createDebug(namespace) {
-		let prevTime;
-		let enableOverride = null;
-
-		function debug(...args) {
-			// Disabled?
-			if (!debug.enabled) {
-				return;
-			}
-
-			const self = debug;
-
-			// Set `diff` timestamp
-			const curr = Number(new Date());
-			const ms = curr - (prevTime || curr);
-			self.diff = ms;
-			self.prev = prevTime;
-			self.curr = curr;
-			prevTime = curr;
-
-			args[0] = createDebug.coerce(args[0]);
-
-			if (typeof args[0] !== 'string') {
-				// Anything else let's inspect with %O
-				args.unshift('%O');
-			}
-
-			// Apply any `formatters` transformations
-			let index = 0;
-			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
-				// If we encounter an escaped % then don't increase the array index
-				if (match === '%%') {
-					return '%';
-				}
-				index++;
-				const formatter = createDebug.formatters[format];
-				if (typeof formatter === 'function') {
-					const val = args[index];
-					match = formatter.call(self, val);
-
-					// Now we need to remove `args[index]` since it's inlined in the `format`
-					args.splice(index, 1);
-					index--;
-				}
-				return match;
-			});
-
-			// Apply env-specific formatting (colors, etc.)
-			createDebug.formatArgs.call(self, args);
-
-			const logFn = self.log || createDebug.log;
-			logFn.apply(self, args);
-		}
-
-		debug.namespace = namespace;
-		debug.useColors = createDebug.useColors();
-		debug.color = createDebug.selectColor(namespace);
-		debug.extend = extend;
-		debug.destroy = createDebug.destroy; // XXX Temporary. Will be removed in the next major release.
-
-		Object.defineProperty(debug, 'enabled', {
-			enumerable: true,
-			configurable: false,
-			get: () => enableOverride === null ? createDebug.enabled(namespace) : enableOverride,
-			set: v => {
-				enableOverride = v;
-			}
-		});
-
-		// Env-specific initialization logic for debug instances
-		if (typeof createDebug.init === 'function') {
-			createDebug.init(debug);
-		}
-
-		return debug;
-	}
-
-	function extend(namespace, delimiter) {
-		const newDebug = createDebug(this.namespace + (typeof delimiter === 'undefined' ? ':' : delimiter) + namespace);
-		newDebug.log = this.log;
-		return newDebug;
-	}
-
-	/**
-	* Enables a debug mode by namespaces. This can include modes
-	* separated by a colon and wildcards.
-	*
-	* @param {String} namespaces
-	* @api public
-	*/
-	function enable(namespaces) {
-		createDebug.save(namespaces);
-
-		createDebug.names = [];
-		createDebug.skips = [];
-
-		let i;
-		const split = (typeof namespaces === 'string' ? namespaces : '').split(/[\s,]+/);
-		const len = split.length;
-
-		for (i = 0; i < len; i++) {
-			if (!split[i]) {
-				// ignore empty strings
-				continue;
-			}
-
-			namespaces = split[i].replace(/\*/g, '.*?');
-
-			if (namespaces[0] === '-') {
-				createDebug.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
-			} else {
-				createDebug.names.push(new RegExp('^' + namespaces + '$'));
-			}
-		}
-	}
-
-	/**
-	* Disable debug output.
-	*
-	* @return {String} namespaces
-	* @api public
-	*/
-	function disable() {
-		const namespaces = [
-			...createDebug.names.map(toNamespace),
-			...createDebug.skips.map(toNamespace).map(namespace => '-' + namespace)
-		].join(',');
-		createDebug.enable('');
-		return namespaces;
-	}
-
-	/**
-	* Returns true if the given mode name is enabled, false otherwise.
-	*
-	* @param {String} name
-	* @return {Boolean}
-	* @api public
-	*/
-	function enabled(name) {
-		if (name[name.length - 1] === '*') {
-			return true;
-		}
-
-		let i;
-		let len;
-
-		for (i = 0, len = createDebug.skips.length; i < len; i++) {
-			if (createDebug.skips[i].test(name)) {
-				return false;
-			}
-		}
-
-		for (i = 0, len = createDebug.names.length; i < len; i++) {
-			if (createDebug.names[i].test(name)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	* Convert regexp to namespace
-	*
-	* @param {RegExp} regxep
-	* @return {String} namespace
-	* @api private
-	*/
-	function toNamespace(regexp) {
-		return regexp.toString()
-			.substring(2, regexp.toString().length - 2)
-			.replace(/\.\*\?$/, '*');
-	}
-
-	/**
-	* Coerce `val`.
-	*
-	* @param {Mixed} val
-	* @return {Mixed}
-	* @api private
-	*/
-	function coerce(val) {
-		if (val instanceof Error) {
-			return val.stack || val.message;
-		}
-		return val;
-	}
-
-	/**
-	* XXX DO NOT USE. This is a temporary stub function.
-	* XXX It WILL be removed in the next major release.
-	*/
-	function destroy() {
-		console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
-	}
-
-	createDebug.enable(createDebug.load());
-
-	return createDebug;
-}
-
-module.exports = setup;
-
-},{"ms":33}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -27960,7 +28067,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -28146,7 +28253,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -28648,7 +28755,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],36:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -28661,7 +28768,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":37,"./writer":38}],37:[function(require,module,exports){
+},{"./parser":38,"./writer":39}],38:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -28787,7 +28894,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":35}],38:[function(require,module,exports){
+},{"./grammar":36}],39:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -28903,7 +29010,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":35}],39:[function(require,module,exports){
+},{"./grammar":36}],40:[function(require,module,exports){
 module.exports={
   "name": "flyinn",
   "title": "FlyInn",
@@ -28957,5 +29064,5 @@ module.exports={
   }
 }
 
-},{}]},{},[8])(8)
+},{}]},{},[18])(18)
 });

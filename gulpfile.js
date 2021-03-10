@@ -64,7 +64,7 @@ gulp.task('browserify', function()
 {
   return browserify(
     {
-      entries      : 'lib-es5/JsSIP.js',
+      entries      : 'lib-es5/SFU.js',
       extensions   : [ '.js' ],
       // Required for sourcemaps (must be false otherwise).
       debug        : false,
