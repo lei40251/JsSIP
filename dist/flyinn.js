@@ -22237,7 +22237,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     _this._session = null; // 会话 sip UA
 
-    _this._ua = null; // 初始化 ua
+    _this._ua = null; // 会议房间 ID
+
+    _this._roomId = null; // 呼叫参数
+
+    _this._options = {}; // 延迟发起呼叫，避免事务冲突
+
+    _this._timer = 50; // 初始化 ua
 
     initUA.call(_assertThisInitialized(_this));
     return _this;
@@ -22247,37 +22253,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   _createClass(Client, [{
     key: "join",
     value: function join(roomId) {
-      var _this2 = this;
-
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-      // 延迟发起呼叫，避免事务冲突
-      var timer = 50; // 如果入会参数包含媒体信息，则为用户自定义媒体流
+      this._roomId = roomId;
+      this._options = options; // 如果入会参数包含媒体信息，则为用户自定义媒体流
 
       if (options.mediaStream) {
         this._custom = true;
-      }
-
-      this._ua.start(); // 需要注册则注册成功后发起呼叫；否则连接成功发起呼叫
-
-
-      if (this._register) {
-        this._ua.on('registered', function () {
-          setTimeout(function () {
-            call.call(_this2, roomId, options);
-          }, timer);
-        });
       } else {
-        this._ua.on('connected', function () {
-          setTimeout(function () {
-            call.call(_this2, roomId, options);
-          }, timer);
-        });
+        this._custom = false;
       }
+
+      this._ua.start();
     }
   }, {
     key: "leave",
     value: function leave() {
       this._session.terminate();
+
+      this._ua.stop();
     }
   }]);
 
@@ -22285,7 +22278,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 }(EventEmitter);
 
 function initUA() {
-  var _this3 = this;
+  var _this2 = this;
 
   var configuration = {
     sockets: new WebSocketInterface(this._wssUrl),
@@ -22295,80 +22288,99 @@ function initUA() {
   this._ua = new UA(configuration); // 根据UA Event触发Client Event给用户
 
   this._ua.on('connecting', function () {
-    _this3.emit('connection-state-changed', 'CONNECTING');
+    _this2.emit('connection-state-changed', 'CONNECTING');
   });
 
   this._ua.on('connected', function () {
-    _this3.emit('connection-state-changed', 'CONNECTED');
+    _this2.emit('connection-state-changed', 'CONNECTED');
   });
 
   this._ua.on('disconnected', function () {
-    _this3.emit('connection-state-changed', 'DISCONNECTED');
+    _this2.emit('connection-state-changed', 'DISCONNECTED');
   });
 
   this._ua.on('registered', function (data) {
-    _this3.emit('registered', data);
+    _this2.emit('registered', data);
   });
 
   this._ua.on('registrationFailed', function () {
-    _this3.emit('error', 'REGISTRATIONFAILED');
+    _this2.emit('error', 'REGISTRATIONFAILED');
   }); // 避免415
 
 
   this._ua.on('newMessage', function (e) {
     // eslint-disable-next-line no-console
     console.log('new Message: ', JSON.parse(e.request.body));
+  }); // 需要注册则注册成功后发起呼叫；否则连接成功发起呼叫
+
+
+  this._ua.on('registered', function () {
+    if (_this2._register) {
+      setTimeout(function () {
+        call.call(_this2, _this2._roomId, _this2._options);
+      }, _this2._timer);
+    }
+  });
+
+  this._ua.on('connected', function () {
+    if (_this2._register) {
+      return;
+    }
+
+    setTimeout(function () {
+      call.call(_this2, _this2._roomId, _this2._options);
+    }, _this2._timer);
   });
 }
 
 function call(roomId, options) {
-  var _this4 = this;
+  var _this3 = this;
 
   this._session = this._ua.call(roomId, options); // x-sfu-cname
 
   this._session.on('sdp', function (d) {
     d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
-    d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(_this4._cname), "\r\n"));
+    d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(_this3._cname), "\r\n"));
   }); // 根据Session Event触发Client Event给用户
 
 
   this._session.on('getusermediafailed', function () {
-    _this4.emit('error;', 'GETUSERMEDIAFAILED');
+    _this3.emit('error;', 'GETUSERMEDIAFAILED');
   });
 
   this._session.on('peerconnection:createofferfailed', function () {
-    _this4.emit('error;', 'CREATEOFFERFAILED');
+    _this3.emit('error;', 'CREATEOFFERFAILED');
   });
 
   this._session.on('peerconnection:createanswerfailed', function () {
-    _this4.emit('error;', 'CREATEANSWERFAILED');
+    _this3.emit('error;', 'CREATEANSWERFAILED');
   });
 
   this._session.on('peerconnection:setlocaldescriptionfailed', function () {
-    _this4.emit('error;', 'SETLOCALDESCRIPTIONFAILED');
+    _this3.emit('error;', 'SETLOCALDESCRIPTIONFAILED');
   });
 
   this._session.on('peerconnection:setremotedescriptionfailed', function () {
-    _this4.emit('error;', 'SETREMOTEDESCRIPTIONFAILED');
+    _this3.emit('error;', 'SETREMOTEDESCRIPTIONFAILED');
   });
 
   this._session.on('confirmed', function () {
     var localTracks = [];
 
-    _this4._session.connection.getSenders().forEach(function (sender) {
+    _this3._session.connection.getSenders().forEach(function (sender) {
       if (sender.track && sender.track.readyState === 'live') {
         localTracks.push(sender.track);
       }
     });
 
     var localStream = new LocalStream({}, localTracks);
-    localStream.session = _this4._session;
-    localStream.custom = _this4._custom;
-    localTracks.length > 0 && _this4.emit('local-joined', localStream);
+    localStream.session = _this3._session;
+    localStream.custom = _this3._custom;
+    localTracks.length > 0 && _this3.emit('local-joined', localStream);
 
-    _this4._session.connection.getReceivers().forEach(function (receiver) {
+    _this3._session.connection.getReceivers().forEach(function (receiver) {
       if (receiver.track.kind === 'audio') {
-        _this4.emit('stream-added', new RemoteStream(receiver.track));
+        _this3.emit('stream-added', new RemoteStream(receiver.track));
       }
     });
   }); // 收到 reinvite 后触发 stream-added 事件
@@ -22378,7 +22390,7 @@ function call(roomId, options) {
     d.callback = function () {
       var transceiverMids = new Map();
 
-      var transceivers = _this4._session.connection.getTransceivers();
+      var transceivers = _this3._session.connection.getTransceivers();
 
       for (var i = 0; i < transceivers.length; ++i) {
         transceiverMids.set(transceivers[i].mid, transceivers[i].receiver.track.id);
@@ -22393,19 +22405,19 @@ function call(roomId, options) {
           xSfuCname = Base64.decode(medias[_i].xSfuCname);
         } catch (error) {}
 
-        if (_this4._remoteStreams.get(transceiverMids.get(String(_i)))) {
-          _this4._remoteStreams.get(transceiverMids.get(String(_i))).cname = xSfuCname;
+        if (_this3._remoteStreams.get(transceiverMids.get(String(_i)))) {
+          _this3._remoteStreams.get(transceiverMids.get(String(_i))).cname = xSfuCname;
 
-          _this4.emit('stream-added', _this4._remoteStreams.get(transceiverMids.get(String(_i))));
+          _this3.emit('stream-added', _this3._remoteStreams.get(transceiverMids.get(String(_i))));
 
-          _this4._remoteStreams["delete"](transceiverMids.get(String(_i)));
+          _this3._remoteStreams["delete"](transceiverMids.get(String(_i)));
         }
       }
     };
   });
 
   this._session.on('ended', function () {
-    _this4.emit('local-left');
+    _this3.emit('local-left');
   }); // 媒体变化, 触发媒体新增事件
 
 
@@ -22413,10 +22425,10 @@ function call(roomId, options) {
     if (trackEvent.track.kind === 'video' && trackEvent.track.enabled) {
       var remoteStream = new RemoteStream(trackEvent.track);
       remoteStream.on('stream-removed', function () {
-        _this4.emit('stream-removed', remoteStream);
+        _this3.emit('stream-removed', remoteStream);
       });
 
-      _this4._remoteStreams.set(trackEvent.track.id, remoteStream); // this.emit('stream-added', remoteStream);
+      _this3._remoteStreams.set(trackEvent.track.id, remoteStream); // this.emit('stream-added', remoteStream);
 
     }
   });
@@ -22494,6 +22506,11 @@ module.exports = /*#__PURE__*/function (_Stream) {
     key: "session",
     set: function set(value) {
       this._session = value;
+    }
+  }, {
+    key: "userId",
+    get: function get() {
+      return this._userId;
     }
   }, {
     key: "custom",

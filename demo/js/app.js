@@ -2,7 +2,7 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-// FlyInn.debug.enable('FlyInn:*');
+FlyInn.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
 // FlyInn.debug.disable('FlyInn:*');
@@ -17,15 +17,15 @@ let client = null;
 // MQ
 const device = navigator.userAgent;
 
-let mqSocket = null;
-let callid = null;
-let confid = null;
-let dn = null;
-let roomid = null;
-let sid = null;
-let uid = null;
-let audio_ssrc = null;
-let video_ssrc = null;
+const mqSocket = null;
+const callid = null;
+const confid = null;
+const dn = null;
+const roomid = null;
+const sid = null;
+const uid = null;
+const audio_ssrc = null;
+const video_ssrc = null;
 
 // CallRouter
 const host = 'pro.vsbc.com';
@@ -65,6 +65,23 @@ function getTemper(callback)
       callback();
     }
   });
+}
+
+// 会议结束重置参数
+function resetStatus()
+{
+  // new
+  localStream = null;
+  remoteAudioStream = null;
+
+  // 音视频禁用状态
+  localVideoMuted = false;
+  localAudioMuted = false;
+  remoteAudioMuted = false;
+
+  document.querySelector('#rvs').innerHTML = '';
+  document.querySelector('#local_stream').srcObject = null;
+
 }
 
 // 渲染远端媒体
@@ -201,6 +218,7 @@ function initSignalling()
 
   client.on('local-left', () =>
   {
+    resetStatus();
     console.log('您已离开会议');
   });
 
@@ -243,7 +261,14 @@ document.querySelector('#create_stream').onclick = () =>
 
 document.querySelector('#join_conf').onclick = () =>
 {
-  client.join(String(document.querySelector('#linkman').value));
+  if (localStream)
+  {
+    client.join(String(document.querySelector('#linkman').value), { mediaStream: localStream.stream });
+  }
+  else
+  {
+    client.join(String(document.querySelector('#linkman').value));
+  }
 };
 
 document.querySelector('#leave').onclick = () =>

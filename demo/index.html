@@ -169,19 +169,19 @@
         <!-- <button id="invite_conf">发起会议</button> -->
         <button id="create_stream">预览本地媒体</button>
       </div>
-      <div style="width: 30%; display: flex; justify-content: center">
+      <div style="width: 20%; display: flex; justify-content: center">
         <input type="text" style="width: 110px;" placeholder="会议号" id="linkman" />
         <button id="join_conf">加入会议</button>
-        <button mat-button id="test_join">无消息队列加会</button>
+        <button mat-button class="hide" id="test_join">无消息队列加会</button>
       </div>
-      <div style="width: 10%; display: flex; justify-content: center">
+      <div style="width: 15%; display: flex; justify-content: center">
         <button id="leave">离开会议</button>
       </div>
-      <div style="width: 45%; display: flex; justify-content: space-around">
+      <div style="width: 50%; display: flex; justify-content: space-around">
         <button id="handle_local_audio">禁用麦克风</button>
         <button id="handle_local_video">禁用本地视频</button>
         <button id="handle_remote_audio">禁用远端音频</button>
-        <select id="camSelect"><option value="">选择摄像头</option></select>
+        <select id="camSelect" class="hide"><option value="">选择摄像头</option></select>
         <button id="switch_device">切换摄像头</button>
         <button id="screenShare" class="hide">分享桌面</button>
       </div>
@@ -190,12 +190,10 @@
   <script src="./js/adapter.js"></script>
   <script src="./js/jquery-3.3.1.min.js"></script>
   <script src="./js/base64.js"></script>
-  <script src="../dist/flyinn.js"></script>
+  <script src="../dist/flyinn.demo.js"></script>
   <script src="./js/crypto-js-4.0.0/crypto-js.js"></script>
   <script src="./js/utils.js"></script>
   <script src="./js/app.js"></script>
-  <!-- <script src="//cdn.jsdelivr.net/npm/eruda"></script> -->
-  <!-- <script>eruda.init();</script> -->
 </body>
 
 </html>
