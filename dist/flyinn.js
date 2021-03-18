@@ -759,7 +759,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":23,"./Transactions":26,"./Utils":30,"debug":36}],4:[function(require,module,exports){
+},{"./Constants":2,"./Dialog/RequestSender":4,"./SIPMessage":23,"./Transactions":26,"./Utils":30,"debug":37}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1092,7 +1092,7 @@ module.exports = /*#__PURE__*/function () {
 
   return DigestAuthentication;
 }();
-},{"./Utils":30,"debug":36}],6:[function(require,module,exports){
+},{"./Utils":30,"debug":37}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -1111,7 +1111,7 @@ function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new 
 
 function _construct(Parent, args, Class) { if (_isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
 
@@ -16130,7 +16130,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -16415,7 +16415,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./RequestSender":17,"./SIPMessage":23,"./Utils":30,"debug":36,"events":38}],9:[function(require,module,exports){
+},{"./Constants":2,"./Exceptions":6,"./RequestSender":17,"./SIPMessage":23,"./Utils":30,"debug":37,"events":35}],9:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16879,7 +16879,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./SIPMessage":23,"debug":36}],11:[function(require,module,exports){
+},{"./Grammar":7,"./SIPMessage":23,"debug":37}],11:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -16914,7 +16914,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -20969,7 +20969,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":12,"./RTCSession/Info":13,"./RTCSession/ReferNotifier":14,"./RTCSession/ReferSubscriber":15,"./RequestSender":17,"./SIPMessage":23,"./Timers":25,"./Transactions":26,"./URI":29,"./Utils":30,"./WebRTC/SwitchCam":31,"debug":36,"events":38,"sdp-transform":43}],12:[function(require,module,exports){
+},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./RTCSession/DTMF":12,"./RTCSession/Info":13,"./RTCSession/ReferNotifier":14,"./RTCSession/ReferSubscriber":15,"./RequestSender":17,"./SIPMessage":23,"./Timers":25,"./Transactions":26,"./URI":29,"./Utils":30,"./WebRTC/SwitchCam":31,"debug":37,"events":35,"sdp-transform":44}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -20990,7 +20990,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -21172,7 +21172,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Utils":30,"debug":36,"events":38}],13:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":30,"debug":37,"events":35}],13:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21193,7 +21193,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -21312,7 +21312,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":30,"debug":36,"events":38}],14:[function(require,module,exports){
+},{"../Constants":2,"../Exceptions":6,"../Utils":30,"debug":37,"events":35}],14:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21377,7 +21377,7 @@ module.exports = /*#__PURE__*/function () {
 
   return ReferNotifier;
 }();
-},{"../Constants":2,"debug":36}],15:[function(require,module,exports){
+},{"../Constants":2,"debug":37}],15:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -21398,7 +21398,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -21559,7 +21559,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Utils":30,"debug":36,"events":38}],16:[function(require,module,exports){
+},{"../Constants":2,"../Grammar":7,"../Utils":30,"debug":37,"events":35}],16:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -21918,7 +21918,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Registrator;
 }();
-},{"./Constants":2,"./RequestSender":17,"./SIPMessage":23,"./Utils":30,"debug":36}],17:[function(require,module,exports){
+},{"./Constants":2,"./RequestSender":17,"./SIPMessage":23,"./Utils":30,"debug":37}],17:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -22093,7 +22093,7 @@ module.exports = /*#__PURE__*/function () {
 
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":26,"debug":36}],18:[function(require,module,exports){
+},{"./Constants":2,"./DigestAuthentication":5,"./Transactions":26,"debug":37}],18:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -22163,7 +22163,7 @@ var JsSIP = {
 
 };
 module.exports = JsSIP;
-},{"../package.json":47,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":9,"./SFU/Client":19,"./SFU/LocalStream":20,"./SFU/RemoteStream":21,"./UA":28,"./URI":29,"./Utils":30,"./WebSocketInterface":32,"debug":36}],19:[function(require,module,exports){
+},{"../package.json":47,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":9,"./SFU/Client":19,"./SFU/LocalStream":20,"./SFU/RemoteStream":21,"./UA":28,"./URI":29,"./Utils":30,"./WebSocketInterface":32,"debug":37}],19:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22184,7 +22184,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -22229,7 +22229,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._wssUrl = clientConfig.wss_url;
     _this._userSig = clientConfig.user_sig;
     _this._register = clientConfig.register || false;
-    _this._cname = clientConfig.display_name || _this._userId; // 远端视频Map，临时存储拥有cname
+    _this._dn = clientConfig.display_name; // 远端视频Map，临时存储拥有cname
 
     _this._remoteStreams = new Map(); // 是否用户自定义视频流
 
@@ -22339,8 +22339,12 @@ function call(roomId, options) {
   this._session = this._ua.call(roomId, options); // x-sfu-cname
 
   this._session.on('sdp', function (d) {
+    var cname = {
+      'userid': _this3._userId,
+      'dn': Base64.encode(_this3._dn)
+    };
     d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
-    d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(_this3._cname), "\r\n"));
+    d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(JSON.stringify(cname)), "\r\n"));
   }); // 根据Session Event触发Client Event给用户
 
 
@@ -22402,7 +22406,7 @@ function call(roomId, options) {
         var xSfuCname = '';
 
         try {
-          xSfuCname = Base64.decode(medias[_i].xSfuCname);
+          xSfuCname = JSON.parse(Base64.decode(medias[_i].xSfuCname));
         } catch (error) {}
 
         if (_this3._remoteStreams.get(transceiverMids.get(String(_i)))) {
@@ -22433,7 +22437,7 @@ function call(roomId, options) {
     }
   });
 }
-},{"../UA":28,"../WebSocketInterface":32,"./LocalStream":20,"./RemoteStream":21,"debug":36,"events":38,"js-base64":46}],20:[function(require,module,exports){
+},{"../UA":28,"../WebSocketInterface":32,"./LocalStream":20,"./RemoteStream":21,"debug":37,"events":35,"js-base64":40}],20:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22454,7 +22458,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -22555,7 +22559,7 @@ module.exports = /*#__PURE__*/function (_Stream) {
 
   return LocalStream;
 }(Stream);
-},{"./Stream":22,"debug":36}],21:[function(require,module,exports){
+},{"./Stream":22,"debug":37}],21:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22576,12 +22580,15 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 // const debug = require('debug')('FlyInn:LocalStream');
 // const debugerror = require('debug')('FlyInn:ERROR:LOCALSTREAM');
+var _require = require('js-base64'),
+    Base64 = _require.Base64;
+
 var Stream = require('./Stream');
 
 module.exports = /*#__PURE__*/function (_Stream) {
@@ -22620,10 +22627,17 @@ module.exports = /*#__PURE__*/function (_Stream) {
       return this._type;
     }
   }, {
-    key: "cname",
+    key: "userId",
     get: function get() {
-      return this._cname;
-    },
+      return this._cname.userid || '';
+    }
+  }, {
+    key: "dn",
+    get: function get() {
+      return this._cname.dn ? Base64.decode(this._cname.dn) : '';
+    }
+  }, {
+    key: "cname",
     set: function set(str) {
       this._cname = str;
     }
@@ -22631,7 +22645,7 @@ module.exports = /*#__PURE__*/function (_Stream) {
 
   return RemoteStream;
 }(Stream);
-},{"./Stream":22}],22:[function(require,module,exports){
+},{"./Stream":22,"js-base64":40}],22:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22652,7 +22666,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -22740,7 +22754,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Stream;
 }(EventEmitter);
-},{"events":38}],23:[function(require,module,exports){
+},{"events":35}],23:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -22755,7 +22769,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -23598,7 +23612,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":9,"./Utils":30,"debug":36,"sdp-transform":43}],24:[function(require,module,exports){
+},{"./Constants":2,"./Grammar":7,"./NameAddrHeader":9,"./Utils":30,"debug":37,"sdp-transform":44}],24:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -23672,7 +23686,7 @@ exports.isSocket = function (socket) {
 
   return true;
 };
-},{"./Grammar":7,"./Utils":30,"debug":36}],25:[function(require,module,exports){
+},{"./Grammar":7,"./Utils":30,"debug":37}],25:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -23715,7 +23729,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -24523,7 +24537,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./SIPMessage":23,"./Timers":25,"debug":36,"events":38}],27:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":23,"./Timers":25,"debug":37,"events":35}],27:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -24848,7 +24862,7 @@ module.exports = /*#__PURE__*/function () {
 
   return Transport;
 }();
-},{"./Constants":2,"./Socket":24,"debug":36}],28:[function(require,module,exports){
+},{"./Constants":2,"./Socket":24,"debug":37}],28:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -24869,7 +24883,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -25869,7 +25883,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":23,"./Transactions":26,"./Transport":27,"./URI":29,"./Utils":30,"./sanityCheck":33,"debug":36,"events":38}],29:[function(require,module,exports){
+},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Message":8,"./Parser":10,"./RTCSession":11,"./Registrator":16,"./SIPMessage":23,"./Transactions":26,"./Transport":27,"./URI":29,"./Utils":30,"./sanityCheck":33,"debug":37,"events":35}],29:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -26683,7 +26697,7 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -26892,7 +26906,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return SwitchCam;
 }(EventEmitter);
-},{"../Exceptions":6,"debug":36,"events":38}],32:[function(require,module,exports){
+},{"../Exceptions":6,"debug":37,"events":35}],32:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -27070,7 +27084,7 @@ module.exports = /*#__PURE__*/function () {
 
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"debug":36}],33:[function(require,module,exports){
+},{"./Grammar":7,"debug":37}],33:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -27322,7 +27336,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./SIPMessage":23,"./Utils":30,"debug":36}],34:[function(require,module,exports){
+},{"./Constants":2,"./SIPMessage":23,"./Utils":30,"debug":37}],34:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -27475,6 +27489,531 @@ function fromByteArray (uint8) {
 }
 
 },{}],35:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
+
+function EventEmitter() {
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
+      }
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
+    }
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],36:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -29255,7 +29794,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":34,"buffer":35,"ieee754":39}],36:[function(require,module,exports){
+},{"base64-js":34,"buffer":36,"ieee754":39}],37:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -29528,7 +30067,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":37,"_process":41}],37:[function(require,module,exports){
+},{"./common":38,"_process":42}],38:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -29791,532 +30330,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":40}],38:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var objectCreate = Object.create || objectCreatePolyfill
-var objectKeys = Object.keys || objectKeysPolyfill
-var bind = Function.prototype.bind || functionBindPolyfill
-
-function EventEmitter() {
-  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
-    this._events = objectCreate(null);
-    this._eventsCount = 0;
-  }
-
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-var defaultMaxListeners = 10;
-
-var hasDefineProperty;
-try {
-  var o = {};
-  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
-  hasDefineProperty = o.x === 0;
-} catch (err) { hasDefineProperty = false }
-if (hasDefineProperty) {
-  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
-    enumerable: true,
-    get: function() {
-      return defaultMaxListeners;
-    },
-    set: function(arg) {
-      // check whether the input is a positive number (whose value is zero or
-      // greater and not a NaN).
-      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
-        throw new TypeError('"defaultMaxListeners" must be a positive number');
-      defaultMaxListeners = arg;
-    }
-  });
-} else {
-  EventEmitter.defaultMaxListeners = defaultMaxListeners;
-}
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
-  if (typeof n !== 'number' || n < 0 || isNaN(n))
-    throw new TypeError('"n" argument must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-function $getMaxListeners(that) {
-  if (that._maxListeners === undefined)
-    return EventEmitter.defaultMaxListeners;
-  return that._maxListeners;
-}
-
-EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
-};
-
-// These standalone emit* functions are used to optimize calling of event
-// handlers for fast cases because emit() itself often has a variable number of
-// arguments and can be deoptimized because of that. These functions always have
-// the same number of arguments and thus do not get deoptimized, so the code
-// inside them can execute faster.
-function emitNone(handler, isFn, self) {
-  if (isFn)
-    handler.call(self);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self);
-  }
-}
-function emitOne(handler, isFn, self, arg1) {
-  if (isFn)
-    handler.call(self, arg1);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1);
-  }
-}
-function emitTwo(handler, isFn, self, arg1, arg2) {
-  if (isFn)
-    handler.call(self, arg1, arg2);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2);
-  }
-}
-function emitThree(handler, isFn, self, arg1, arg2, arg3) {
-  if (isFn)
-    handler.call(self, arg1, arg2, arg3);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2, arg3);
-  }
-}
-
-function emitMany(handler, isFn, self, args) {
-  if (isFn)
-    handler.apply(self, args);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].apply(self, args);
-  }
-}
-
-EventEmitter.prototype.emit = function emit(type) {
-  var er, handler, len, args, i, events;
-  var doError = (type === 'error');
-
-  events = this._events;
-  if (events)
-    doError = (doError && events.error == null);
-  else if (!doError)
-    return false;
-
-  // If there is no 'error' event listener then throw.
-  if (doError) {
-    if (arguments.length > 1)
-      er = arguments[1];
-    if (er instanceof Error) {
-      throw er; // Unhandled 'error' event
-    } else {
-      // At least give some kind of context to the user
-      var err = new Error('Unhandled "error" event. (' + er + ')');
-      err.context = er;
-      throw err;
-    }
-    return false;
-  }
-
-  handler = events[type];
-
-  if (!handler)
-    return false;
-
-  var isFn = typeof handler === 'function';
-  len = arguments.length;
-  switch (len) {
-      // fast cases
-    case 1:
-      emitNone(handler, isFn, this);
-      break;
-    case 2:
-      emitOne(handler, isFn, this, arguments[1]);
-      break;
-    case 3:
-      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
-      break;
-    case 4:
-      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
-      break;
-      // slower
-    default:
-      args = new Array(len - 1);
-      for (i = 1; i < len; i++)
-        args[i - 1] = arguments[i];
-      emitMany(handler, isFn, this, args);
-  }
-
-  return true;
-};
-
-function _addListener(target, type, listener, prepend) {
-  var m;
-  var events;
-  var existing;
-
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-
-  events = target._events;
-  if (!events) {
-    events = target._events = objectCreate(null);
-    target._eventsCount = 0;
-  } else {
-    // To avoid recursion in the case that type === "newListener"! Before
-    // adding it to the listeners, first emit "newListener".
-    if (events.newListener) {
-      target.emit('newListener', type,
-          listener.listener ? listener.listener : listener);
-
-      // Re-assign `events` because a newListener handler could have caused the
-      // this._events to be assigned to a new object
-      events = target._events;
-    }
-    existing = events[type];
-  }
-
-  if (!existing) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    existing = events[type] = listener;
-    ++target._eventsCount;
-  } else {
-    if (typeof existing === 'function') {
-      // Adding the second element, need to change to array.
-      existing = events[type] =
-          prepend ? [listener, existing] : [existing, listener];
-    } else {
-      // If we've already got an array, just append.
-      if (prepend) {
-        existing.unshift(listener);
-      } else {
-        existing.push(listener);
-      }
-    }
-
-    // Check for listener leak
-    if (!existing.warned) {
-      m = $getMaxListeners(target);
-      if (m && m > 0 && existing.length > m) {
-        existing.warned = true;
-        var w = new Error('Possible EventEmitter memory leak detected. ' +
-            existing.length + ' "' + String(type) + '" listeners ' +
-            'added. Use emitter.setMaxListeners() to ' +
-            'increase limit.');
-        w.name = 'MaxListenersExceededWarning';
-        w.emitter = target;
-        w.type = type;
-        w.count = existing.length;
-        if (typeof console === 'object' && console.warn) {
-          console.warn('%s: %s', w.name, w.message);
-        }
-      }
-    }
-  }
-
-  return target;
-}
-
-EventEmitter.prototype.addListener = function addListener(type, listener) {
-  return _addListener(this, type, listener, false);
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.prependListener =
-    function prependListener(type, listener) {
-      return _addListener(this, type, listener, true);
-    };
-
-function onceWrapper() {
-  if (!this.fired) {
-    this.target.removeListener(this.type, this.wrapFn);
-    this.fired = true;
-    switch (arguments.length) {
-      case 0:
-        return this.listener.call(this.target);
-      case 1:
-        return this.listener.call(this.target, arguments[0]);
-      case 2:
-        return this.listener.call(this.target, arguments[0], arguments[1]);
-      case 3:
-        return this.listener.call(this.target, arguments[0], arguments[1],
-            arguments[2]);
-      default:
-        var args = new Array(arguments.length);
-        for (var i = 0; i < args.length; ++i)
-          args[i] = arguments[i];
-        this.listener.apply(this.target, args);
-    }
-  }
-}
-
-function _onceWrap(target, type, listener) {
-  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
-  var wrapped = bind.call(onceWrapper, state);
-  wrapped.listener = listener;
-  state.wrapFn = wrapped;
-  return wrapped;
-}
-
-EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-  this.on(type, _onceWrap(this, type, listener));
-  return this;
-};
-
-EventEmitter.prototype.prependOnceListener =
-    function prependOnceListener(type, listener) {
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-      this.prependListener(type, _onceWrap(this, type, listener));
-      return this;
-    };
-
-// Emits a 'removeListener' event if and only if the listener was removed.
-EventEmitter.prototype.removeListener =
-    function removeListener(type, listener) {
-      var list, events, position, i, originalListener;
-
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      list = events[type];
-      if (!list)
-        return this;
-
-      if (list === listener || list.listener === listener) {
-        if (--this._eventsCount === 0)
-          this._events = objectCreate(null);
-        else {
-          delete events[type];
-          if (events.removeListener)
-            this.emit('removeListener', type, list.listener || listener);
-        }
-      } else if (typeof list !== 'function') {
-        position = -1;
-
-        for (i = list.length - 1; i >= 0; i--) {
-          if (list[i] === listener || list[i].listener === listener) {
-            originalListener = list[i].listener;
-            position = i;
-            break;
-          }
-        }
-
-        if (position < 0)
-          return this;
-
-        if (position === 0)
-          list.shift();
-        else
-          spliceOne(list, position);
-
-        if (list.length === 1)
-          events[type] = list[0];
-
-        if (events.removeListener)
-          this.emit('removeListener', type, originalListener || listener);
-      }
-
-      return this;
-    };
-
-EventEmitter.prototype.removeAllListeners =
-    function removeAllListeners(type) {
-      var listeners, events, i;
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      // not listening for removeListener, no need to emit
-      if (!events.removeListener) {
-        if (arguments.length === 0) {
-          this._events = objectCreate(null);
-          this._eventsCount = 0;
-        } else if (events[type]) {
-          if (--this._eventsCount === 0)
-            this._events = objectCreate(null);
-          else
-            delete events[type];
-        }
-        return this;
-      }
-
-      // emit removeListener for all listeners on all events
-      if (arguments.length === 0) {
-        var keys = objectKeys(events);
-        var key;
-        for (i = 0; i < keys.length; ++i) {
-          key = keys[i];
-          if (key === 'removeListener') continue;
-          this.removeAllListeners(key);
-        }
-        this.removeAllListeners('removeListener');
-        this._events = objectCreate(null);
-        this._eventsCount = 0;
-        return this;
-      }
-
-      listeners = events[type];
-
-      if (typeof listeners === 'function') {
-        this.removeListener(type, listeners);
-      } else if (listeners) {
-        // LIFO order
-        for (i = listeners.length - 1; i >= 0; i--) {
-          this.removeListener(type, listeners[i]);
-        }
-      }
-
-      return this;
-    };
-
-function _listeners(target, type, unwrap) {
-  var events = target._events;
-
-  if (!events)
-    return [];
-
-  var evlistener = events[type];
-  if (!evlistener)
-    return [];
-
-  if (typeof evlistener === 'function')
-    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
-
-  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
-}
-
-EventEmitter.prototype.listeners = function listeners(type) {
-  return _listeners(this, type, true);
-};
-
-EventEmitter.prototype.rawListeners = function rawListeners(type) {
-  return _listeners(this, type, false);
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  if (typeof emitter.listenerCount === 'function') {
-    return emitter.listenerCount(type);
-  } else {
-    return listenerCount.call(emitter, type);
-  }
-};
-
-EventEmitter.prototype.listenerCount = listenerCount;
-function listenerCount(type) {
-  var events = this._events;
-
-  if (events) {
-    var evlistener = events[type];
-
-    if (typeof evlistener === 'function') {
-      return 1;
-    } else if (evlistener) {
-      return evlistener.length;
-    }
-  }
-
-  return 0;
-}
-
-EventEmitter.prototype.eventNames = function eventNames() {
-  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
-};
-
-// About 1.5x faster than the two-arg version of Array#splice().
-function spliceOne(list, index) {
-  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
-    list[i] = list[k];
-  list.pop();
-}
-
-function arrayClone(arr, n) {
-  var copy = new Array(n);
-  for (var i = 0; i < n; ++i)
-    copy[i] = arr[i];
-  return copy;
-}
-
-function unwrapListeners(arr) {
-  var ret = new Array(arr.length);
-  for (var i = 0; i < ret.length; ++i) {
-    ret[i] = arr[i].listener || arr[i];
-  }
-  return ret;
-}
-
-function objectCreatePolyfill(proto) {
-  var F = function() {};
-  F.prototype = proto;
-  return new F;
-}
-function objectKeysPolyfill(obj) {
-  var keys = [];
-  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
-    keys.push(k);
-  }
-  return k;
-}
-function functionBindPolyfill(context) {
-  var fn = this;
-  return function () {
-    return fn.apply(context, arguments);
-  };
-}
-
-},{}],39:[function(require,module,exports){
+},{"ms":41}],39:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -30404,6 +30418,327 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 }
 
 },{}],40:[function(require,module,exports){
+(function (global,Buffer){(function (){
+
+
+//
+// THIS FILE IS AUTOMATICALLY GENERATED! DO NOT EDIT BY HAND!
+//
+;(function(global, factory) {
+    typeof exports === 'object' && typeof module !== 'undefined'
+        ? module.exports = factory()
+        : typeof define === 'function' && define.amd
+        ? define(factory) :
+        // cf. https://github.com/dankogai/js-base64/issues/119
+        (function() {
+            // existing version for noConflict()
+            const _Base64 = global.Base64;
+            const gBase64 = factory();
+            gBase64.noConflict = () => {
+                global.Base64 = _Base64;
+                return gBase64;
+            };
+            if (global.Meteor) { // Meteor.js
+                Base64 = gBase64;
+            }
+            global.Base64 = gBase64;
+        })();
+}((typeof self !== 'undefined' ? self
+        : typeof window !== 'undefined' ? window
+        : typeof global !== 'undefined' ? global
+        : this
+), function() {
+    'use strict';
+
+/**
+ *  base64.ts
+ *
+ *  Licensed under the BSD 3-Clause License.
+ *    http://opensource.org/licenses/BSD-3-Clause
+ *
+ *  References:
+ *    http://en.wikipedia.org/wiki/Base64
+ *
+ * @author Dan Kogai (https://github.com/dankogai)
+ */
+const version = '3.6.0';
+/**
+ * @deprecated use lowercase `version`.
+ */
+const VERSION = version;
+const _hasatob = typeof atob === 'function';
+const _hasbtoa = typeof btoa === 'function';
+const _hasBuffer = typeof Buffer === 'function';
+const _TD = typeof TextDecoder === 'function' ? new TextDecoder() : undefined;
+const _TE = typeof TextEncoder === 'function' ? new TextEncoder() : undefined;
+const b64ch = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+const b64chs = [...b64ch];
+const b64tab = ((a) => {
+    let tab = {};
+    a.forEach((c, i) => tab[c] = i);
+    return tab;
+})(b64chs);
+const b64re = /^(?:[A-Za-z\d+\/]{4})*?(?:[A-Za-z\d+\/]{2}(?:==)?|[A-Za-z\d+\/]{3}=?)?$/;
+const _fromCC = String.fromCharCode.bind(String);
+const _U8Afrom = typeof Uint8Array.from === 'function'
+    ? Uint8Array.from.bind(Uint8Array)
+    : (it, fn = (x) => x) => new Uint8Array(Array.prototype.slice.call(it, 0).map(fn));
+const _mkUriSafe = (src) => src
+    .replace(/[+\/]/g, (m0) => m0 == '+' ? '-' : '_')
+    .replace(/=+$/m, '');
+const _tidyB64 = (s) => s.replace(/[^A-Za-z0-9\+\/]/g, '');
+/**
+ * polyfill version of `btoa`
+ */
+const btoaPolyfill = (bin) => {
+    // console.log('polyfilled');
+    let u32, c0, c1, c2, asc = '';
+    const pad = bin.length % 3;
+    for (let i = 0; i < bin.length;) {
+        if ((c0 = bin.charCodeAt(i++)) > 255 ||
+            (c1 = bin.charCodeAt(i++)) > 255 ||
+            (c2 = bin.charCodeAt(i++)) > 255)
+            throw new TypeError('invalid character found');
+        u32 = (c0 << 16) | (c1 << 8) | c2;
+        asc += b64chs[u32 >> 18 & 63]
+            + b64chs[u32 >> 12 & 63]
+            + b64chs[u32 >> 6 & 63]
+            + b64chs[u32 & 63];
+    }
+    return pad ? asc.slice(0, pad - 3) + "===".substring(pad) : asc;
+};
+/**
+ * does what `window.btoa` of web browsers do.
+ * @param {String} bin binary string
+ * @returns {string} Base64-encoded string
+ */
+const _btoa = _hasbtoa ? (bin) => btoa(bin)
+    : _hasBuffer ? (bin) => Buffer.from(bin, 'binary').toString('base64')
+        : btoaPolyfill;
+const _fromUint8Array = _hasBuffer
+    ? (u8a) => Buffer.from(u8a).toString('base64')
+    : (u8a) => {
+        // cf. https://stackoverflow.com/questions/12710001/how-to-convert-uint8-array-to-base64-encoded-string/12713326#12713326
+        const maxargs = 0x1000;
+        let strs = [];
+        for (let i = 0, l = u8a.length; i < l; i += maxargs) {
+            strs.push(_fromCC.apply(null, u8a.subarray(i, i + maxargs)));
+        }
+        return _btoa(strs.join(''));
+    };
+/**
+ * converts a Uint8Array to a Base64 string.
+ * @param {boolean} [urlsafe] URL-and-filename-safe a la RFC4648 §5
+ * @returns {string} Base64 string
+ */
+const fromUint8Array = (u8a, urlsafe = false) => urlsafe ? _mkUriSafe(_fromUint8Array(u8a)) : _fromUint8Array(u8a);
+// This trick is found broken https://github.com/dankogai/js-base64/issues/130
+// const utob = (src: string) => unescape(encodeURIComponent(src));
+// reverting good old fationed regexp
+const cb_utob = (c) => {
+    if (c.length < 2) {
+        var cc = c.charCodeAt(0);
+        return cc < 0x80 ? c
+            : cc < 0x800 ? (_fromCC(0xc0 | (cc >>> 6))
+                + _fromCC(0x80 | (cc & 0x3f)))
+                : (_fromCC(0xe0 | ((cc >>> 12) & 0x0f))
+                    + _fromCC(0x80 | ((cc >>> 6) & 0x3f))
+                    + _fromCC(0x80 | (cc & 0x3f)));
+    }
+    else {
+        var cc = 0x10000
+            + (c.charCodeAt(0) - 0xD800) * 0x400
+            + (c.charCodeAt(1) - 0xDC00);
+        return (_fromCC(0xf0 | ((cc >>> 18) & 0x07))
+            + _fromCC(0x80 | ((cc >>> 12) & 0x3f))
+            + _fromCC(0x80 | ((cc >>> 6) & 0x3f))
+            + _fromCC(0x80 | (cc & 0x3f)));
+    }
+};
+const re_utob = /[\uD800-\uDBFF][\uDC00-\uDFFFF]|[^\x00-\x7F]/g;
+/**
+ * @deprecated should have been internal use only.
+ * @param {string} src UTF-8 string
+ * @returns {string} UTF-16 string
+ */
+const utob = (u) => u.replace(re_utob, cb_utob);
+//
+const _encode = _hasBuffer
+    ? (s) => Buffer.from(s, 'utf8').toString('base64')
+    : _TE
+        ? (s) => _fromUint8Array(_TE.encode(s))
+        : (s) => _btoa(utob(s));
+/**
+ * converts a UTF-8-encoded string to a Base64 string.
+ * @param {boolean} [urlsafe] if `true` make the result URL-safe
+ * @returns {string} Base64 string
+ */
+const encode = (src, urlsafe = false) => urlsafe
+    ? _mkUriSafe(_encode(src))
+    : _encode(src);
+/**
+ * converts a UTF-8-encoded string to URL-safe Base64 RFC4648 §5.
+ * @returns {string} Base64 string
+ */
+const encodeURI = (src) => encode(src, true);
+// This trick is found broken https://github.com/dankogai/js-base64/issues/130
+// const btou = (src: string) => decodeURIComponent(escape(src));
+// reverting good old fationed regexp
+const re_btou = /[\xC0-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF7][\x80-\xBF]{3}/g;
+const cb_btou = (cccc) => {
+    switch (cccc.length) {
+        case 4:
+            var cp = ((0x07 & cccc.charCodeAt(0)) << 18)
+                | ((0x3f & cccc.charCodeAt(1)) << 12)
+                | ((0x3f & cccc.charCodeAt(2)) << 6)
+                | (0x3f & cccc.charCodeAt(3)), offset = cp - 0x10000;
+            return (_fromCC((offset >>> 10) + 0xD800)
+                + _fromCC((offset & 0x3FF) + 0xDC00));
+        case 3:
+            return _fromCC(((0x0f & cccc.charCodeAt(0)) << 12)
+                | ((0x3f & cccc.charCodeAt(1)) << 6)
+                | (0x3f & cccc.charCodeAt(2)));
+        default:
+            return _fromCC(((0x1f & cccc.charCodeAt(0)) << 6)
+                | (0x3f & cccc.charCodeAt(1)));
+    }
+};
+/**
+ * @deprecated should have been internal use only.
+ * @param {string} src UTF-16 string
+ * @returns {string} UTF-8 string
+ */
+const btou = (b) => b.replace(re_btou, cb_btou);
+/**
+ * polyfill version of `atob`
+ */
+const atobPolyfill = (asc) => {
+    // console.log('polyfilled');
+    asc = asc.replace(/\s+/g, '');
+    if (!b64re.test(asc))
+        throw new TypeError('malformed base64.');
+    asc += '=='.slice(2 - (asc.length & 3));
+    let u24, bin = '', r1, r2;
+    for (let i = 0; i < asc.length;) {
+        u24 = b64tab[asc.charAt(i++)] << 18
+            | b64tab[asc.charAt(i++)] << 12
+            | (r1 = b64tab[asc.charAt(i++)]) << 6
+            | (r2 = b64tab[asc.charAt(i++)]);
+        bin += r1 === 64 ? _fromCC(u24 >> 16 & 255)
+            : r2 === 64 ? _fromCC(u24 >> 16 & 255, u24 >> 8 & 255)
+                : _fromCC(u24 >> 16 & 255, u24 >> 8 & 255, u24 & 255);
+    }
+    return bin;
+};
+/**
+ * does what `window.atob` of web browsers do.
+ * @param {String} asc Base64-encoded string
+ * @returns {string} binary string
+ */
+const _atob = _hasatob ? (asc) => atob(_tidyB64(asc))
+    : _hasBuffer ? (asc) => Buffer.from(asc, 'base64').toString('binary')
+        : atobPolyfill;
+//
+const _toUint8Array = _hasBuffer
+    ? (a) => _U8Afrom(Buffer.from(a, 'base64'))
+    : (a) => _U8Afrom(_atob(a), c => c.charCodeAt(0));
+/**
+ * converts a Base64 string to a Uint8Array.
+ */
+const toUint8Array = (a) => _toUint8Array(_unURI(a));
+//
+const _decode = _hasBuffer
+    ? (a) => Buffer.from(a, 'base64').toString('utf8')
+    : _TD
+        ? (a) => _TD.decode(_toUint8Array(a))
+        : (a) => btou(_atob(a));
+const _unURI = (a) => _tidyB64(a.replace(/[-_]/g, (m0) => m0 == '-' ? '+' : '/'));
+/**
+ * converts a Base64 string to a UTF-8 string.
+ * @param {String} src Base64 string.  Both normal and URL-safe are supported
+ * @returns {string} UTF-8 string
+ */
+const decode = (src) => _decode(_unURI(src));
+/**
+ * check if a value is a valid Base64 string
+ * @param {String} src a value to check
+  */
+const isValid = (src) => {
+    if (typeof src !== 'string')
+        return false;
+    const s = src.replace(/\s+/g, '').replace(/=+$/, '');
+    return !/[^\s0-9a-zA-Z\+/]/.test(s) || !/[^\s0-9a-zA-Z\-_]/.test(s);
+};
+//
+const _noEnum = (v) => {
+    return {
+        value: v, enumerable: false, writable: true, configurable: true
+    };
+};
+/**
+ * extend String.prototype with relevant methods
+ */
+const extendString = function () {
+    const _add = (name, body) => Object.defineProperty(String.prototype, name, _noEnum(body));
+    _add('fromBase64', function () { return decode(this); });
+    _add('toBase64', function (urlsafe) { return encode(this, urlsafe); });
+    _add('toBase64URI', function () { return encode(this, true); });
+    _add('toBase64URL', function () { return encode(this, true); });
+    _add('toUint8Array', function () { return toUint8Array(this); });
+};
+/**
+ * extend Uint8Array.prototype with relevant methods
+ */
+const extendUint8Array = function () {
+    const _add = (name, body) => Object.defineProperty(Uint8Array.prototype, name, _noEnum(body));
+    _add('toBase64', function (urlsafe) { return fromUint8Array(this, urlsafe); });
+    _add('toBase64URI', function () { return fromUint8Array(this, true); });
+    _add('toBase64URL', function () { return fromUint8Array(this, true); });
+};
+/**
+ * extend Builtin prototypes with relevant methods
+ */
+const extendBuiltins = () => {
+    extendString();
+    extendUint8Array();
+};
+const gBase64 = {
+    version: version,
+    VERSION: VERSION,
+    atob: _atob,
+    atobPolyfill: atobPolyfill,
+    btoa: _btoa,
+    btoaPolyfill: btoaPolyfill,
+    fromBase64: decode,
+    toBase64: encode,
+    encode: encode,
+    encodeURI: encodeURI,
+    encodeURL: encodeURI,
+    utob: utob,
+    btou: btou,
+    decode: decode,
+    isValid: isValid,
+    fromUint8Array: fromUint8Array,
+    toUint8Array: toUint8Array,
+    extendString: extendString,
+    extendUint8Array: extendUint8Array,
+    extendBuiltins: extendBuiltins,
+};
+
+    //
+    // export Base64 to the namespace
+    //
+    // ES5 is yet to have Object.assign() that may make transpilers unhappy.
+    // gBase64.Base64 = Object.assign({}, gBase64);
+    gBase64.Base64 = {};
+    Object.keys(gBase64).forEach(k => gBase64.Base64[k] = gBase64[k]);
+    return gBase64;
+}));
+
+
+
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
+},{"buffer":36}],41:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -30567,7 +30902,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -30753,7 +31088,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -31255,7 +31590,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -31268,7 +31603,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":44,"./writer":45}],44:[function(require,module,exports){
+},{"./parser":45,"./writer":46}],45:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -31394,7 +31729,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":42}],45:[function(require,module,exports){
+},{"./grammar":43}],46:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -31510,328 +31845,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":42}],46:[function(require,module,exports){
-(function (global,Buffer){(function (){
-
-
-//
-// THIS FILE IS AUTOMATICALLY GENERATED! DO NOT EDIT BY HAND!
-//
-;(function(global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined'
-        ? module.exports = factory()
-        : typeof define === 'function' && define.amd
-        ? define(factory) :
-        // cf. https://github.com/dankogai/js-base64/issues/119
-        (function() {
-            // existing version for noConflict()
-            const _Base64 = global.Base64;
-            const gBase64 = factory();
-            gBase64.noConflict = () => {
-                global.Base64 = _Base64;
-                return gBase64;
-            };
-            if (global.Meteor) { // Meteor.js
-                Base64 = gBase64;
-            }
-            global.Base64 = gBase64;
-        })();
-}((typeof self !== 'undefined' ? self
-        : typeof window !== 'undefined' ? window
-        : typeof global !== 'undefined' ? global
-        : this
-), function() {
-    'use strict';
-
-/**
- *  base64.ts
- *
- *  Licensed under the BSD 3-Clause License.
- *    http://opensource.org/licenses/BSD-3-Clause
- *
- *  References:
- *    http://en.wikipedia.org/wiki/Base64
- *
- * @author Dan Kogai (https://github.com/dankogai)
- */
-const version = '3.6.0';
-/**
- * @deprecated use lowercase `version`.
- */
-const VERSION = version;
-const _hasatob = typeof atob === 'function';
-const _hasbtoa = typeof btoa === 'function';
-const _hasBuffer = typeof Buffer === 'function';
-const _TD = typeof TextDecoder === 'function' ? new TextDecoder() : undefined;
-const _TE = typeof TextEncoder === 'function' ? new TextEncoder() : undefined;
-const b64ch = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-const b64chs = [...b64ch];
-const b64tab = ((a) => {
-    let tab = {};
-    a.forEach((c, i) => tab[c] = i);
-    return tab;
-})(b64chs);
-const b64re = /^(?:[A-Za-z\d+\/]{4})*?(?:[A-Za-z\d+\/]{2}(?:==)?|[A-Za-z\d+\/]{3}=?)?$/;
-const _fromCC = String.fromCharCode.bind(String);
-const _U8Afrom = typeof Uint8Array.from === 'function'
-    ? Uint8Array.from.bind(Uint8Array)
-    : (it, fn = (x) => x) => new Uint8Array(Array.prototype.slice.call(it, 0).map(fn));
-const _mkUriSafe = (src) => src
-    .replace(/[+\/]/g, (m0) => m0 == '+' ? '-' : '_')
-    .replace(/=+$/m, '');
-const _tidyB64 = (s) => s.replace(/[^A-Za-z0-9\+\/]/g, '');
-/**
- * polyfill version of `btoa`
- */
-const btoaPolyfill = (bin) => {
-    // console.log('polyfilled');
-    let u32, c0, c1, c2, asc = '';
-    const pad = bin.length % 3;
-    for (let i = 0; i < bin.length;) {
-        if ((c0 = bin.charCodeAt(i++)) > 255 ||
-            (c1 = bin.charCodeAt(i++)) > 255 ||
-            (c2 = bin.charCodeAt(i++)) > 255)
-            throw new TypeError('invalid character found');
-        u32 = (c0 << 16) | (c1 << 8) | c2;
-        asc += b64chs[u32 >> 18 & 63]
-            + b64chs[u32 >> 12 & 63]
-            + b64chs[u32 >> 6 & 63]
-            + b64chs[u32 & 63];
-    }
-    return pad ? asc.slice(0, pad - 3) + "===".substring(pad) : asc;
-};
-/**
- * does what `window.btoa` of web browsers do.
- * @param {String} bin binary string
- * @returns {string} Base64-encoded string
- */
-const _btoa = _hasbtoa ? (bin) => btoa(bin)
-    : _hasBuffer ? (bin) => Buffer.from(bin, 'binary').toString('base64')
-        : btoaPolyfill;
-const _fromUint8Array = _hasBuffer
-    ? (u8a) => Buffer.from(u8a).toString('base64')
-    : (u8a) => {
-        // cf. https://stackoverflow.com/questions/12710001/how-to-convert-uint8-array-to-base64-encoded-string/12713326#12713326
-        const maxargs = 0x1000;
-        let strs = [];
-        for (let i = 0, l = u8a.length; i < l; i += maxargs) {
-            strs.push(_fromCC.apply(null, u8a.subarray(i, i + maxargs)));
-        }
-        return _btoa(strs.join(''));
-    };
-/**
- * converts a Uint8Array to a Base64 string.
- * @param {boolean} [urlsafe] URL-and-filename-safe a la RFC4648 §5
- * @returns {string} Base64 string
- */
-const fromUint8Array = (u8a, urlsafe = false) => urlsafe ? _mkUriSafe(_fromUint8Array(u8a)) : _fromUint8Array(u8a);
-// This trick is found broken https://github.com/dankogai/js-base64/issues/130
-// const utob = (src: string) => unescape(encodeURIComponent(src));
-// reverting good old fationed regexp
-const cb_utob = (c) => {
-    if (c.length < 2) {
-        var cc = c.charCodeAt(0);
-        return cc < 0x80 ? c
-            : cc < 0x800 ? (_fromCC(0xc0 | (cc >>> 6))
-                + _fromCC(0x80 | (cc & 0x3f)))
-                : (_fromCC(0xe0 | ((cc >>> 12) & 0x0f))
-                    + _fromCC(0x80 | ((cc >>> 6) & 0x3f))
-                    + _fromCC(0x80 | (cc & 0x3f)));
-    }
-    else {
-        var cc = 0x10000
-            + (c.charCodeAt(0) - 0xD800) * 0x400
-            + (c.charCodeAt(1) - 0xDC00);
-        return (_fromCC(0xf0 | ((cc >>> 18) & 0x07))
-            + _fromCC(0x80 | ((cc >>> 12) & 0x3f))
-            + _fromCC(0x80 | ((cc >>> 6) & 0x3f))
-            + _fromCC(0x80 | (cc & 0x3f)));
-    }
-};
-const re_utob = /[\uD800-\uDBFF][\uDC00-\uDFFFF]|[^\x00-\x7F]/g;
-/**
- * @deprecated should have been internal use only.
- * @param {string} src UTF-8 string
- * @returns {string} UTF-16 string
- */
-const utob = (u) => u.replace(re_utob, cb_utob);
-//
-const _encode = _hasBuffer
-    ? (s) => Buffer.from(s, 'utf8').toString('base64')
-    : _TE
-        ? (s) => _fromUint8Array(_TE.encode(s))
-        : (s) => _btoa(utob(s));
-/**
- * converts a UTF-8-encoded string to a Base64 string.
- * @param {boolean} [urlsafe] if `true` make the result URL-safe
- * @returns {string} Base64 string
- */
-const encode = (src, urlsafe = false) => urlsafe
-    ? _mkUriSafe(_encode(src))
-    : _encode(src);
-/**
- * converts a UTF-8-encoded string to URL-safe Base64 RFC4648 §5.
- * @returns {string} Base64 string
- */
-const encodeURI = (src) => encode(src, true);
-// This trick is found broken https://github.com/dankogai/js-base64/issues/130
-// const btou = (src: string) => decodeURIComponent(escape(src));
-// reverting good old fationed regexp
-const re_btou = /[\xC0-\xDF][\x80-\xBF]|[\xE0-\xEF][\x80-\xBF]{2}|[\xF0-\xF7][\x80-\xBF]{3}/g;
-const cb_btou = (cccc) => {
-    switch (cccc.length) {
-        case 4:
-            var cp = ((0x07 & cccc.charCodeAt(0)) << 18)
-                | ((0x3f & cccc.charCodeAt(1)) << 12)
-                | ((0x3f & cccc.charCodeAt(2)) << 6)
-                | (0x3f & cccc.charCodeAt(3)), offset = cp - 0x10000;
-            return (_fromCC((offset >>> 10) + 0xD800)
-                + _fromCC((offset & 0x3FF) + 0xDC00));
-        case 3:
-            return _fromCC(((0x0f & cccc.charCodeAt(0)) << 12)
-                | ((0x3f & cccc.charCodeAt(1)) << 6)
-                | (0x3f & cccc.charCodeAt(2)));
-        default:
-            return _fromCC(((0x1f & cccc.charCodeAt(0)) << 6)
-                | (0x3f & cccc.charCodeAt(1)));
-    }
-};
-/**
- * @deprecated should have been internal use only.
- * @param {string} src UTF-16 string
- * @returns {string} UTF-8 string
- */
-const btou = (b) => b.replace(re_btou, cb_btou);
-/**
- * polyfill version of `atob`
- */
-const atobPolyfill = (asc) => {
-    // console.log('polyfilled');
-    asc = asc.replace(/\s+/g, '');
-    if (!b64re.test(asc))
-        throw new TypeError('malformed base64.');
-    asc += '=='.slice(2 - (asc.length & 3));
-    let u24, bin = '', r1, r2;
-    for (let i = 0; i < asc.length;) {
-        u24 = b64tab[asc.charAt(i++)] << 18
-            | b64tab[asc.charAt(i++)] << 12
-            | (r1 = b64tab[asc.charAt(i++)]) << 6
-            | (r2 = b64tab[asc.charAt(i++)]);
-        bin += r1 === 64 ? _fromCC(u24 >> 16 & 255)
-            : r2 === 64 ? _fromCC(u24 >> 16 & 255, u24 >> 8 & 255)
-                : _fromCC(u24 >> 16 & 255, u24 >> 8 & 255, u24 & 255);
-    }
-    return bin;
-};
-/**
- * does what `window.atob` of web browsers do.
- * @param {String} asc Base64-encoded string
- * @returns {string} binary string
- */
-const _atob = _hasatob ? (asc) => atob(_tidyB64(asc))
-    : _hasBuffer ? (asc) => Buffer.from(asc, 'base64').toString('binary')
-        : atobPolyfill;
-//
-const _toUint8Array = _hasBuffer
-    ? (a) => _U8Afrom(Buffer.from(a, 'base64'))
-    : (a) => _U8Afrom(_atob(a), c => c.charCodeAt(0));
-/**
- * converts a Base64 string to a Uint8Array.
- */
-const toUint8Array = (a) => _toUint8Array(_unURI(a));
-//
-const _decode = _hasBuffer
-    ? (a) => Buffer.from(a, 'base64').toString('utf8')
-    : _TD
-        ? (a) => _TD.decode(_toUint8Array(a))
-        : (a) => btou(_atob(a));
-const _unURI = (a) => _tidyB64(a.replace(/[-_]/g, (m0) => m0 == '-' ? '+' : '/'));
-/**
- * converts a Base64 string to a UTF-8 string.
- * @param {String} src Base64 string.  Both normal and URL-safe are supported
- * @returns {string} UTF-8 string
- */
-const decode = (src) => _decode(_unURI(src));
-/**
- * check if a value is a valid Base64 string
- * @param {String} src a value to check
-  */
-const isValid = (src) => {
-    if (typeof src !== 'string')
-        return false;
-    const s = src.replace(/\s+/g, '').replace(/=+$/, '');
-    return !/[^\s0-9a-zA-Z\+/]/.test(s) || !/[^\s0-9a-zA-Z\-_]/.test(s);
-};
-//
-const _noEnum = (v) => {
-    return {
-        value: v, enumerable: false, writable: true, configurable: true
-    };
-};
-/**
- * extend String.prototype with relevant methods
- */
-const extendString = function () {
-    const _add = (name, body) => Object.defineProperty(String.prototype, name, _noEnum(body));
-    _add('fromBase64', function () { return decode(this); });
-    _add('toBase64', function (urlsafe) { return encode(this, urlsafe); });
-    _add('toBase64URI', function () { return encode(this, true); });
-    _add('toBase64URL', function () { return encode(this, true); });
-    _add('toUint8Array', function () { return toUint8Array(this); });
-};
-/**
- * extend Uint8Array.prototype with relevant methods
- */
-const extendUint8Array = function () {
-    const _add = (name, body) => Object.defineProperty(Uint8Array.prototype, name, _noEnum(body));
-    _add('toBase64', function (urlsafe) { return fromUint8Array(this, urlsafe); });
-    _add('toBase64URI', function () { return fromUint8Array(this, true); });
-    _add('toBase64URL', function () { return fromUint8Array(this, true); });
-};
-/**
- * extend Builtin prototypes with relevant methods
- */
-const extendBuiltins = () => {
-    extendString();
-    extendUint8Array();
-};
-const gBase64 = {
-    version: version,
-    VERSION: VERSION,
-    atob: _atob,
-    atobPolyfill: atobPolyfill,
-    btoa: _btoa,
-    btoaPolyfill: btoaPolyfill,
-    fromBase64: decode,
-    toBase64: encode,
-    encode: encode,
-    encodeURI: encodeURI,
-    encodeURL: encodeURI,
-    utob: utob,
-    btou: btou,
-    decode: decode,
-    isValid: isValid,
-    fromUint8Array: fromUint8Array,
-    toUint8Array: toUint8Array,
-    extendString: extendString,
-    extendUint8Array: extendUint8Array,
-    extendBuiltins: extendBuiltins,
-};
-
-    //
-    // export Base64 to the namespace
-    //
-    // ES5 is yet to have Object.assign() that may make transpilers unhappy.
-    // gBase64.Base64 = Object.assign({}, gBase64);
-    gBase64.Base64 = {};
-    Object.keys(gBase64).forEach(k => gBase64.Base64[k] = gBase64[k]);
-    return gBase64;
-}));
-
-
-
-}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":35}],47:[function(require,module,exports){
+},{"./grammar":43}],47:[function(require,module,exports){
 module.exports={
   "name": "flyinn",
   "title": "FlyInn",
@@ -31863,7 +31877,7 @@ module.exports={
     "@babel/preset-env": "^7.9.6",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
-    "eslint": "^5.16.0",
+    "eslint": "^7.22.0",
     "fancy-log": "^1.3.3",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0",

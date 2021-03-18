@@ -124,7 +124,7 @@ function renderRemoteStream(stream)
     }
   };
 
-  p.innerText = stream.cname;
+  p.innerText = `${stream.userId}(${stream.dn})`;
 
   const video = $('<video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" ></video>')[0];
 
@@ -151,7 +151,7 @@ function initSignalling()
     user_sig       : xUid,
     register       : false,
     session_timers : false,
-    display_name   : 'Web 测试用户'
+    display_name   : 'Web用户'
   };
 
   // Client
