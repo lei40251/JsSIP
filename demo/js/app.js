@@ -50,7 +50,7 @@ function getTemper(callback)
   // 获取临时密钥
   $.ajax({
     url     : 'https://pro.vsbc.com/cu/d/p9sdfjddpoesdf9dkjdfjd',
-    success : (res) =>
+    success : function(res)
     {
       if (res.code != 1000)
       {
@@ -99,7 +99,7 @@ function renderRemoteStream(stream)
   btn.classList = 'handle_remote_stream';
   btn.innerText = '关闭视频';
   btn.dataset.muted = 0;
-  btn.onclick = (self) =>
+  btn.onclick = function(self)
   {
     if (self.target.dataset.muted == '1')
     {
@@ -129,7 +129,7 @@ function renderRemoteStream(stream)
   const video = $('<video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" ></video>')[0];
 
   video.srcObject = stream.stream;
-  video.onclick = () =>
+  video.onclick = function()
   {
     captureVideo(video);
   };
@@ -158,25 +158,25 @@ function initSignalling()
   client = FlyInn.createClient(configuration);
 
   // 信令连接成功建立
-  client.on('connection-state-changed', (data) =>
+  client.on('connection-state-changed', function(data)
   {
     console.log('connection-state-changed: ', data);
   });
 
   // 注册成功，在需要注册场景可用
-  client.on('registered', () =>
+  client.on('registered', function()
   {
     console.log('注册成功');
   });
 
   // 注册失败，在需要注册场景可用
-  client.on('registrationFailed', () =>
+  client.on('registrationFailed', function()
   {
     console.log('注册失败');
   });
 
   // 已添加远端流
-  client.on('stream-added', (remoteStream) =>
+  client.on('stream-added', function(remoteStream)
   {
     if (remoteStream.type === 'audio')
     {
@@ -193,13 +193,13 @@ function initSignalling()
   });
 
   // 已删除远端流
-  client.on('stream-removed', (remoteStream) =>
+  client.on('stream-removed', function(remoteStream)
   {
     console.log('removed: ', remoteStream);
 
     const remoteStreamDivs = document.querySelectorAll('.remote_stream');
 
-    remoteStreamDivs.forEach((div) =>
+    remoteStreamDivs.forEach(function(div)
     {
       if (div.dataset.stream_id === remoteStream.id)
       {
@@ -208,7 +208,7 @@ function initSignalling()
     });
   });
 
-  client.on('local-joined', (data) =>
+  client.on('local-joined', function(data)
   {
     console.log('您已加入会议');
     localStream = data;
@@ -216,13 +216,13 @@ function initSignalling()
     localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
   });
 
-  client.on('local-left', () =>
+  client.on('local-left', function()
   {
     resetStatus();
     console.log('您已离开会议');
   });
 
-  client.on('error', (data) =>
+  client.on('error', function(data)
   {
     console.log('error: ', data);
   });
@@ -232,15 +232,15 @@ function initSignalling()
 function start()
 {
   Promise.resolve()
-    .then(() =>
+    .then(function()
     {
       getTemper(initSignalling);
     })
-    .then(() =>
+    .then(function()
     {
 
     })
-    .catch((error) =>
+    .catch(function(error)
     {
       console.error(error);
     });
@@ -249,17 +249,18 @@ function start()
 start();
 
 // 预览本地媒体
-document.querySelector('#create_stream').onclick = () =>
+document.querySelector('#create_stream').onclick = function()
 {
   localStream = new FlyInn.LocalStream({});
 
-  localStream.initialize().then((stream) =>
+  localStream.initialize().then(function(stream)
   {
     document.querySelector('#local_stream').srcObject = stream;
   });
 };
 
-document.querySelector('#join_conf').onclick = () =>
+// 加入会议
+document.querySelector('#join_conf').onclick =function()
 {
   if (localStream)
   {
@@ -271,13 +272,13 @@ document.querySelector('#join_conf').onclick = () =>
   }
 };
 
-document.querySelector('#leave').onclick = () =>
+document.querySelector('#leave').onclick =function()
 {
   client.leave();
 };
 
 // 切换本地视频状态
-document.querySelector('#handle_local_video').onclick = (self) =>
+document.querySelector('#handle_local_video').onclick = function(self)
 {
   if (localVideoMuted)
   {
@@ -303,7 +304,7 @@ document.querySelector('#handle_local_video').onclick = (self) =>
 };
 
 // 切换本地音频状态
-document.querySelector('#handle_local_audio').onclick = (self) =>
+document.querySelector('#handle_local_audio').onclick = function(self)
 {
   if (localAudioMuted)
   {
@@ -329,7 +330,7 @@ document.querySelector('#handle_local_audio').onclick = (self) =>
 };
 
 // 切换远端音频状态
-document.querySelector('#handle_remote_audio').onclick = (self) =>
+document.querySelector('#handle_remote_audio').onclick = function(self)
 {
   if (remoteAudioMuted)
   {
@@ -355,9 +356,9 @@ document.querySelector('#handle_remote_audio').onclick = (self) =>
 };
 
 // 切换摄像头
-document.querySelector('#switch_device').onclick = () =>
+document.querySelector('#switch_device').onclick = function()
 {
-  localStream.switchDevice().then((s) =>
+  localStream.switchDevice().then(function(s)
   {
     document.querySelector('#local_stream').srcObject = s;
   });
