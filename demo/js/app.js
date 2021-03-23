@@ -2,12 +2,12 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-FlyInn.debug.enable('FlyInn:*');
+PRTC.debug.enable('PRTC:*');
 
 // 关闭调试信息输出
-// FlyInn.debug.disable('FlyInn:*');
+// PRTC.debug.disable('PRTC:*');
 
-const version = FlyInn.version;
+const version = PRTC.version;
 
 let client = null;
 
@@ -121,7 +121,7 @@ function initSignalling()
   };
 
   // Client
-  client = FlyInn.createClient(configuration);
+  client = PRTC.createClient(configuration);
 
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
@@ -217,7 +217,7 @@ start();
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
 {
-  localStream = new FlyInn.LocalStream({});
+  localStream = new PRTC.LocalStream({});
 
   localStream.initialize().then(function(stream)
   {

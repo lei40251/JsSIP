@@ -2,7 +2,7 @@
  * Copyright: 2012-2021 
  */
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.FlyInn = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.PRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -22184,15 +22184,10 @@ function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Re
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-// const JsSIP_C = require('./Constants');
-// const URI = require('./URI');
-// const Grammar = require('./Grammar');
-// const Utils = require('./Utils');
-var _require = require('events'),
-    EventEmitter = _require.EventEmitter;
+var EventEmitter = require('events');
 
-var _require2 = require('js-base64'),
-    Base64 = _require2.Base64;
+var _require = require('js-base64'),
+    Base64 = _require.Base64;
 
 var UA = require('../UA');
 
@@ -22389,12 +22384,6 @@ function call(roomId, options) {
       'userid': _this3._userId,
       'dn': Base64.encode(_this3._dn)
     };
-
-    if (d.originator === 'remote') {
-      // eslint-disable-next-line no-console
-      console.log('sdp: ', d.sdp);
-    }
-
     d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
     d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(JSON.stringify(cname)), "\r\n"));
   }); // 根据Session Event触发Client Event给用户
@@ -31986,8 +31975,8 @@ module.exports = function (session, opts) {
 
 },{"./grammar":44}],48:[function(require,module,exports){
 module.exports={
-  "name": "flyinn",
-  "title": "FlyInn",
+  "name": "prtc",
+  "title": "PRTC",
   "description": "the Javascript WebRTC and SIP library",
   "version": "3.5.5",
   "homepage": "",

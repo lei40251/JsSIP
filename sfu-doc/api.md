@@ -4,16 +4,33 @@
 
 ## NAMESPACES
 
-### Web SDK 版本
+## Members
 
-`TRTC.version`
+`version`
+
+Web SDK 版本
 
 <!-- ### 调试
 > 可以将调试日志输出到浏览器控制台
 
-`FlyInn.debug.enable('FlyInn:*') // 开启调试输出`
+`PRTC.debug.enable('FlyInn:*') // 开启调试输出`
 
-`FlyInn.debug.disable('FlyInn:*') // 关闭调试输出` -->
+`PRTC.debug.disable('FlyInn:*') // 关闭调试输出` -->
+
+`PRTC.isScreenShareSupported()`
+
+检测浏览器是否支持屏幕分享
+
+在创建屏幕分享流之前请调用该方法检查当前浏览器是否支持屏幕分享。
+
+Returns:
+
+Type boolean
+
+getDevices
+getCameras
+getMicrophones
+getSpeakers
 
 ---
 
@@ -27,9 +44,7 @@
 | domain   | string  |       | 是  | pro.vsbc.com |
 | dn       | string  |       | 否  | 张三 |
 | register | boolean | false | 否  | |
-| user_id  | string  |       | 是  | 2384574834 |
 | user_sig | string  |       | 是  | |
-| wss_url  | string  |       | 是  | wss://pro.vsbc.com:5092/wss |
 
 ---
 
@@ -51,7 +66,26 @@ Video:
 ## Class
 
 ### Client
+setTurnServer
+join
+leave
+on
 
 ### LocalStream
+initialize
+switchDevice
+muteAudio
+muteVideo
+unmuteAudio
+unmuteVideo
+getId
+getUserId
 
 ### RemoteStream
+getType
+muteAudio
+muteVideo
+unmuteAudio
+unmuteVideo
+getId
+getUserId
