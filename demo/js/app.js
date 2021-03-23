@@ -8,32 +8,10 @@ FlyInn.debug.enable('FlyInn:*');
 // FlyInn.debug.disable('FlyInn:*');
 
 const version = FlyInn.version;
-const uuid = FlyInn.Utils.newUUID();
-const domain = 'lccsp.zgpajf.com.cn';
-const signallingUrl = 'wss://lccsp.zgpajf.com.cn:5092/wss';
 
 let client = null;
 
-// MQ
-const device = navigator.userAgent;
-
-const mqSocket = null;
-const callid = null;
-const confid = null;
-const dn = null;
-const roomid = null;
-const sid = null;
-const uid = null;
-const audio_ssrc = null;
-const video_ssrc = null;
-
-// CallRouter
-const host = 'pro.vsbc.com';
-
-let xRights = null;
-let xSid = null;
-let xUid = null;
-let temper = null;
+const callRouterUrl = 'https://pro.vsbc.com/pa';
 
 // new
 let localStream = null;
@@ -43,29 +21,6 @@ let remoteAudioStream = null;
 let localVideoMuted = false;
 let localAudioMuted = false;
 let remoteAudioMuted = false;
-
-// 获取临时密钥及基本信息
-function getTemper(callback)
-{
-  // 获取临时密钥
-  $.ajax({
-    url     : 'https://pro.vsbc.com/cu/d/p9sdfjddpoesdf9dkjdfjd',
-    success : function(res)
-    {
-      if (res.code != 1000)
-      {
-        renderMq(res.msg);
-
-        return;
-      }
-      xRights = res.data['X-Rights'];
-      xSid = res.data['X-SID'];
-      xUid = res.data['X-UID'];
-      temper = res.data['temper'];
-      callback();
-    }
-  });
-}
 
 // 会议结束重置参数
 function resetStatus()
@@ -126,7 +81,20 @@ function renderRemoteStream(stream)
 
   p.innerText = `${stream.userId}(${stream.dn})`;
 
-  const video = $('<video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" ></video>')[0];
+  const video =document.createElement('video');
+
+  const x5VideoPlayerFullscreen = document.createAttribute('x5-video-player-fullscreen');
+
+  const x5VideoPlayerType = document.createAttribute('x5-video-player-type');
+
+  x5VideoPlayerFullscreen.value=true;
+  x5VideoPlayerType.value='h5';
+
+  video.setAttributeNode(x5VideoPlayerType);
+  video.setAttributeNode(x5VideoPlayerFullscreen);
+
+  video.autoplay=true;
+  video.playsInline =true;
 
   video.srcObject = stream.stream;
   video.onclick = function()
@@ -145,13 +113,11 @@ function initSignalling()
 {
   // clientConfig 配置项
   const configuration = {
-    domain         : domain,
-    wss_url        : signallingUrl,
-    user_id        : xUid,
-    user_sig       : xUid,
-    register       : false,
-    session_timers : false,
-    display_name   : 'Web用户'
+    call_router_url : callRouterUrl,
+    // wss_url      : signallingUrl,
+    sdk_app_id      : sdkAppId,
+    user_id         : userId,
+    user_sig        : userSig
   };
 
   // Client
@@ -248,7 +214,7 @@ function start()
 
 start();
 
-// 预览本地媒体
+// 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
 {
   localStream = new FlyInn.LocalStream({});
@@ -264,11 +230,11 @@ document.querySelector('#join_conf').onclick =function()
 {
   if (localStream)
   {
-    client.join(String(document.querySelector('#linkman').value), { mediaStream: localStream.stream });
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { mediaStream: localStream.stream });
   }
   else
   {
-    client.join(String(document.querySelector('#linkman').value));
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value);
   }
 };
 
@@ -277,14 +243,14 @@ document.querySelector('#leave').onclick =function()
   client.leave();
 };
 
-// 切换本地视频状态
+// 切换本端视频状态
 document.querySelector('#handle_local_video').onclick = function(self)
 {
   if (localVideoMuted)
   {
     if (localStream.unmuteVideo())
     {
-      self.target.innerHTML = '禁用本地视频';
+      self.target.innerHTML = '禁用本端视频';
       localVideoMuted = !localVideoMuted;
     }
     else
@@ -294,7 +260,7 @@ document.querySelector('#handle_local_video').onclick = function(self)
   }
   else if (localStream.muteVideo())
   {
-    self.target.innerHTML = '启用本地视频';
+    self.target.innerHTML = '启用本端视频';
     localVideoMuted = !localVideoMuted;
   }
   else
@@ -303,14 +269,14 @@ document.querySelector('#handle_local_video').onclick = function(self)
   }
 };
 
-// 切换本地音频状态
+// 切换本端音频状态
 document.querySelector('#handle_local_audio').onclick = function(self)
 {
   if (localAudioMuted)
   {
     if (localStream.unmuteAudio())
     {
-      self.target.innerHTML = '禁用麦克风';
+      self.target.innerHTML = '禁用本端音频';
       localAudioMuted = !localAudioMuted;
     }
     else
@@ -320,7 +286,7 @@ document.querySelector('#handle_local_audio').onclick = function(self)
   }
   else if (localStream.muteAudio())
   {
-    self.target.innerHTML = '启用麦克风';
+    self.target.innerHTML = '启用本端音频';
     localAudioMuted = !localAudioMuted;
   }
   else

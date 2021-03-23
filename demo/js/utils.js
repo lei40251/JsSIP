@@ -1,51 +1,27 @@
 
-// 摄像头列表
-function listCameras(session)
+
+let sdkAppId =null;
+let userId = null;
+let userSig = null;
+let roomId= null;
+
+// 获取临时密钥及基本信息
+function getTemper(callback)
 {
-  let options = '<option value="">请选择摄像头</option>';
-
-  navigator.mediaDevices.enumerateDevices().then((s) => {
-    let k = 1;
-
-    for (let i = 0; i < s.length; ++i)
+  get('https://pro.vsbc.com/pa/d/init', '', (res) =>
+  {
     {
-      if (s[i].kind === 'videoinput')
-      {
-        const label= s[i].label ? s[i].label : `Camera${k}`;
+      sdkAppId=res.data['sdkId'];
+      userId = res.data['userId'];
+      roomId = res.data['roomId'];
+      userSig = res.data['userSig'];
 
-        options += `<option value="${s[i].deviceId}">${label}</option>`;
-        k++;
-      }
+      document.querySelector('#user_id').value=userId;
+      document.querySelector('#display_name').value = 'web 测试';
+      document.querySelector('#roomId').value = roomId;
+
+      callback();
     }
-
-    // 添加到下拉列表
-    document.querySelector('#camSelect').innerHTML=options;
-
-    // 绑定下拉列表change事件
-    document.querySelector('#camSelect').onchange = function()
-    {
-      if ($(this).val() === '')
-      {
-        return;
-      }
-
-      session.switchCam(
-        {
-          deviceId : { exact: $(this).val() }
-        })
-        .then((stream) =>
-        {
-          const tracks = stream.getTracks();
-          const localStream = new MediaStream();
-
-          tracks.forEach((track) => {
-            if (track.kind == 'video' && track.readyState == 'live') {
-              localStream.addTrack(track);
-            }
-          });
-          document.querySelector('#localVideo').srcObject = localStream;
-        });
-    };
   });
 }
 
@@ -60,17 +36,6 @@ function setStatus(text)
   statusDom.innerText = text;
 }
 
-// 渲染消息队列消息
-function renderMq(message)
-{
-  const li = document.createElement('li');
-  const ele = document.querySelector('#mq');
-
-  li.innerHTML = message;
-  ele.appendChild(li);
-  ele.scrollTop = ele.scrollHeight;
-}
-
 // 截视频帧
 function captureVideo(video)
 {
@@ -83,120 +48,66 @@ function captureVideo(video)
   ctx.drawImage(video, 0, 0, video.clientWidth, video.clientHeight);
 }
 
-// 创建会议 or 加会
-function joinConf(room, noMq)
+/* Ajax请求 Get */
+function get(url, data, callback)
 {
-  if (noMq)
+  if (typeof data === 'function')
   {
-    client.join(room)
-
-    return;
+    callback = data;
   }
 
-  // 获取临时密钥
-  $.ajax({
-    url     : 'https://pro.vsbc.com/cu/d/p9sdfjddpoesdf9dkjdfjd',
-    success : (res) =>
-    {
-      if (res.code != 1000)
-      {
-        renderMq(res.msg);
+  if (typeof data === 'object')
+  {
+    url = data ? `${url }?${ urlCode(data)}` : url;
+  }
 
-        return;
-      }
-      xRights = res.data['X-Rights'];
-      xSid = res.data['X-SID'];
-      xUid = res.data['X-UID'];
-      temper = res.data['temper'];
+  const xhr = new XMLHttpRequest();
 
-      if (room)
-      {
-        // 加入会议
-        $.ajax({
-          type        : 'POST',
-          url         : 'https://pro.vsbc.com/cu/iapi/conf/join',
-          contentType : 'application/json',
-          data        : JSON.stringify({ roomId: room }),
-          beforeSend  : (request) =>
-          {
-            const xTimestamp = parseInt(new Date().getTime() / 1000);
-
-            request.setRequestHeader(
-              'Authorization',
-              createToken({ roomId: room }, xTimestamp)
-            );
-            request.setRequestHeader('X-Timestamp', xTimestamp);
-            request.setRequestHeader('X-SID', xSid);
-            request.setRequestHeader('X-UID', xUid);
-            request.setRequestHeader('X-Rights', xRights);
-            request.setRequestHeader('X-Version', version);
-          },
-          success : (result) =>
-          {
-            if (result.code === 1000)
-            {
-              roomid = result.data.roomId;
-              confid = result.data.confId;
-
-              // 建立消息队列
-              initMq(result.data.mqUrl);
-            }
-            else
-            {
-              renderMq(result.msg);
-            }
-          }
-        });
-      }
-      else
-      {
-        // 发起会议
-        $.ajax({
-          type        : 'POST',
-          url         : 'https://pro.vsbc.com/cu/iapi/conf/new',
-          contentType : 'application/json',
-          data        : JSON.stringify({}),
-          beforeSend  : (request) =>
-          {
-            const xTimestamp = parseInt(new Date().getTime() / 1000);
-
-            request.setRequestHeader(
-              'Authorization',
-              createToken({}, xTimestamp)
-            );
-            request.setRequestHeader('X-Timestamp', xTimestamp);
-            request.setRequestHeader('X-SID', xSid);
-            request.setRequestHeader('X-UID', xUid);
-            request.setRequestHeader('X-Rights', xRights);
-            request.setRequestHeader('X-Version', version);
-          },
-          success : (result) =>
-          {
-            if (result.code === 1000) {
-              roomid = result.data.roomId;
-              confid = result.data.confId;
-
-              // 建立消息队列
-              initMq(result.data.mqUrl);
-            }
-            else
-            {
-              renderMq(result.msg);
-            }
-          }
-        });
-      }
-    }
-  });
+  xhr.open('get', url);
+  xhr.onload = function()
+  {
+    callback(JSON.parse(xhr.responseText));
+  };
+  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+  xhr.send();
 }
 
-// 生成加会请求Token
-function createToken(obj, timestamp)
+/* Ajax请求 Pet */
+function post(url, data, callback)
 {
-  const headersSign = CryptoJS.HmacSHA256(
-    `content-type:application/json\r\nhost:${host}\r\nx-rights:${xRights}\r\nx-sid:${xSid}\r\nx-timestamp:${timestamp}\r\nx-uid:${xUid}\r\nx-version:${version}`,
-    temper
-  ).toString();
+  if (typeof data === 'function')
+  {
+    callback = data;
+    data = null;
+  }
+  const xhr = new XMLHttpRequest();
 
-  return CryptoJS.HmacSHA256(JSON.stringify(obj), headersSign);
+  xhr.open('post', url);
+  xhr.onload = function()
+  {
+    callback(JSON.parse(xhr.responseText));
+  };
+  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+  xhr.setRequestHeader('content-Type', 'application/x-www-form-urlencoded');
+  xhr.send(urlCode(data));
+}
+
+/* Ajax请求 编码 */
+function urlCode(data)
+{
+  let str = '';
+
+  if (!data)
+  {
+    return null;
+  }
+  for (const key in data)
+  {
+    if ({}.hasOwnProperty.call(data, key))
+    {
+      str += `key=${ encodeURIComponent(data[key])}`;
+    }
+  }
+
+  return str;
 }
