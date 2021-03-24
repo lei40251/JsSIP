@@ -2,10 +2,10 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-PRTC.debug.enable('PRTC:*');
+PRTC.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-// PRTC.debug.disable('PRTC:*');
+// PRTC.debug.disable('FlyInn:*');
 
 const version = PRTC.version;
 
@@ -179,6 +179,17 @@ function initSignalling()
     console.log('您已加入会议');
     localStream = data;
 
+    // document.querySelector('#local_stream').addEventListener('ended', () =>
+    // {
+    //   console.log('mmmmmmmmmm');
+    // });
+
+    localStream.stream.oninactive= () =>
+    {
+      console.log('Video stopped either because 1) it was over, ' +
+          'or 2) no further data is available.');
+    };
+
     localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
   });
 
@@ -214,10 +225,20 @@ function start()
 
 start();
 
+document.querySelector('#screenShare').onclick=function()
+{
+  client.displayShare();
+};
+
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
 {
   localStream = new PRTC.LocalStream({});
+
+  localStream.on('stop', () =>
+  {
+    console.log('localstream is stoped.');
+  });
 
   localStream.initialize().then(function(stream)
   {

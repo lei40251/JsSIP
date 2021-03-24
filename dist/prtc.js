@@ -18104,7 +18104,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         } else {
           stream.getVideoTracks().forEach(function (track) {
-            _this8._displayRTPSender = _this8._connection.addTrack(track, stream);
+            _this8._displayRTPSender = _this8._connection.addTrack(track, stream); // this._connection.addTransceiver(stream.getVideoTracks()[0], { direction: 'sendonly' });
+            // this._displayRTPSender = this._connection.getSenders()[0];
+            // this._connection.getTransceivers()[1].direction='sendonly';
 
             _this8.renegotiate();
           });
@@ -22146,6 +22148,7 @@ var JsSIP = {
   getCameras: require('./SFU/Utils').getCameras,
   getMicrophones: require('./SFU/Utils').getMicrophones,
   getSpeakers: require('./SFU/Utils').getSpeakers,
+  checkSystemRequirements: require('./SFU/Utils').checkSystemRequirements,
   // Expose the debug module.
   debug: require('debug'),
 
@@ -22271,10 +22274,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // initUA.call(this);
 
     return _this;
-  } // 加入房间
-
+  }
 
   _createClass(Client, [{
+    key: "displayShare",
+    value: function displayShare() {
+      this._session.displayShare();
+    } // 加入房间
+
+  }, {
     key: "join",
     value: function join(roomId, displayName) {
       var _this2 = this;
@@ -22384,7 +22392,7 @@ function call(roomId, options) {
       'userid': _this3._userId,
       'dn': Base64.encode(_this3._dn)
     };
-    d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
+    d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=ice-options.*(\n|(\r\n)))|(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
     d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(JSON.stringify(cname)), "\r\n"));
   }); // 根据Session Event触发Client Event给用户
 
@@ -22421,6 +22429,31 @@ function call(roomId, options) {
     var localStream = new LocalStream({}, localTracks);
     localStream.session = _this3._session;
     localStream.custom = _this3._custom;
+
+    if (localStream._videoBitrate) {
+      var senders = _this3._session.connection.getSenders();
+
+      senders.forEach(function (sender) {
+        if (sender.track.kind === 'video') {
+          var parameters = sender.getParameters();
+          parameters.encodings[0].maxBitrate = localStream._videoBitrate * 1024;
+          sender.setParameters(parameters);
+        }
+      });
+    }
+
+    if (localStream._audioBitrate) {
+      var _senders = _this3._session.connection.getSenders();
+
+      _senders.forEach(function (sender) {
+        if (sender.track.kind === 'audio') {
+          var parameters = sender.getParameters();
+          parameters.encodings[0].maxBitrate = localStream._audioBitrate * 1024;
+          sender.setParameters(parameters);
+        }
+      });
+    }
+
     localTracks.length > 0 && _this3.emit('local-joined', localStream);
 
     _this3._session.connection.getReceivers().forEach(function (receiver) {
@@ -22510,6 +22543,90 @@ var debugerror = require('debug')('FlyInn:ERROR:LOCALSTREAM');
 
 var Stream = require('./Stream');
 
+var videoProfile = {
+  '120p': {
+    width: {
+      ideal: 160
+    },
+    height: {
+      ideal: 120
+    },
+    frameRate: 15,
+    bitrate: 200
+  },
+  '180p': {
+    width: {
+      ideal: 320
+    },
+    height: {
+      ideal: 180
+    },
+    frameRate: 15,
+    bitrate: 350
+  },
+  '240p': {
+    width: {
+      ideal: 320
+    },
+    height: {
+      ideal: 240
+    },
+    frameRate: 15,
+    bitrate: 400
+  },
+  '360p': {
+    width: {
+      ideal: 640
+    },
+    height: {
+      ideal: 360
+    },
+    frameRate: 15,
+    bitrate: 800
+  },
+  '480p': {
+    width: {
+      ideal: 640
+    },
+    height: {
+      ideal: 480
+    },
+    frameRate: 15,
+    bitrate: 900
+  },
+  '720p': {
+    width: {
+      ideal: 1280
+    },
+    height: {
+      ideal: 720
+    },
+    frameRate: 15,
+    bitrate: 1500
+  },
+  '1280p': {
+    width: {
+      ideal: 1920
+    },
+    height: {
+      ideal: 1080
+    },
+    frameRate: 15,
+    bitrate: 2000
+  }
+};
+var audioProfile = {
+  standard: {
+    channelCount: 1,
+    bitrate: 40
+  },
+  high: {
+    channelCount: 1,
+    bitrate: 128
+  }
+};
+var hints = ['motion', 'detail', 'text'];
+
 module.exports = /*#__PURE__*/function (_Stream) {
   _inherits(LocalStream, _Stream);
 
@@ -22534,6 +22651,8 @@ module.exports = /*#__PURE__*/function (_Stream) {
     _this._mirror = streamConfig.mirror;
     _this._session = null;
     _this._custom = false;
+    _this._audioBitrate = null;
+    _this._videoBitrate = null;
     _this._id = _this._stream.id;
 
     if (tracks) {
@@ -22587,12 +22706,119 @@ module.exports = /*#__PURE__*/function (_Stream) {
       });
     }
   }, {
-    key: "switchDevice",
-    value: function switchDevice() {
+    key: "setAudioProfile",
+    value: function setAudioProfile(profile) {
+      if (typeof profile === 'string') {
+        if (this._session.connection) {
+          var senders = this._session.connection.getSenders();
+
+          senders.forEach(function (sender) {
+            if (sender.track && sender.track.kind === 'audio') {
+              var parameters = sender.getParameters();
+              parameters.encodings[0].maxBitrate = profile.bitrate * 1024;
+              sender.setParameters(parameters);
+            }
+          });
+        } else {
+          this._audioBitrate = audioProfile[profile].bitrate;
+        }
+
+        if (this.stream) {
+          return this.stream.getAudioTracks()[0].applyConstraints(audioProfile[profile]).then(function () {
+            return true;
+          })["catch"](function () {
+            return false;
+          });
+        }
+      }
+    }
+  }, {
+    key: "setVideoProfile",
+    value: function setVideoProfile(profile) {
+      if (_typeof(profile) === 'object') {
+        if (this._session.connection) {
+          var senders = this._session.connection.getSenders();
+
+          senders.forEach(function (sender) {
+            if (sender.track && sender.track.kind === 'video') {
+              var parameters = sender.getParameters();
+              parameters.encodings[0].maxBitrate = profile.bitrate * 1024;
+              sender.setParameters(parameters);
+            }
+          });
+        } else {
+          this._videoBitrate = profile.bitrate;
+        }
+
+        if (this.stream) {
+          return this.stream.getVideoTracks()[0].applyConstraints(profile).then(function () {
+            return true;
+          })["catch"](function () {
+            return false;
+          });
+        }
+      } else if (typeof profile === 'string') {
+        if (this._session.connection) {
+          var _senders = this._session.connection.getSenders();
+
+          _senders.forEach(function (sender) {
+            if (sender.track && sender.track.kind === 'video') {
+              var parameters = sender.getParameters();
+              parameters.encodings[0].maxBitrate = videoProfile[profile].bitrate * 1024;
+              sender.setParameters(parameters);
+            }
+          });
+        } else {
+          this._videoBitrate = videoProfile[profile].bitrate;
+        }
+
+        if (this.stream) {
+          return this.stream.getVideoTracks()[0].applyConstraints(videoProfile[profile]).then(function () {
+            return true;
+          })["catch"](function () {
+            return false;
+          });
+        }
+      }
+    }
+  }, {
+    key: "setVideoContentHint",
+    value: function setVideoContentHint(hint) {
+      if (hints.indexOf(hint)) {
+        var tracks = this._stream.getTracks();
+
+        tracks.forEach(function (track) {
+          if ('contentHint' in track) {
+            track.contentHint = hint;
+          } else {
+            return false;
+          }
+        });
+        return true;
+      }
+    }
+  }, {
+    key: "close",
+    value: function close() {
       var _this3 = this;
 
+      Promise.resolve().then(function () {
+        _this3.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }).then(function () {
+        _this3.emit('stop');
+      })["catch"](function (e) {
+        _this3.emit('error', e);
+      });
+    }
+  }, {
+    key: "switchDevice",
+    value: function switchDevice() {
+      var _this4 = this;
+
       return this._session.switchCam({}).then(function (s) {
-        _this3._stream = s;
+        _this4._stream = s;
         return s;
       });
     }
@@ -22802,12 +23028,63 @@ var Client = require('./Client');
 
 var LocalStream = require('./LocalStream');
 
+function webrtcSupportedCheck() {
+  return ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCIceGatherer'].filter(function (e) {
+    return e in window;
+  }).length > 0;
+}
+
+function mediaDevicesSupportedCheck() {
+  if (!navigator.mediaDevices) return !1;
+  var checks = ['getUserMedia', 'enumerateDevices'];
+  return checks.filter(function (e) {
+    return e in navigator.mediaDevices;
+  }).length === checks.length;
+}
+
+function videoEncodeSupportedCheck(value) {
+  var videoCodecs = new Map();
+  RTCRtpSender.getCapabilities('video').codecs.forEach(function (codec) {
+    videoCodecs.set(codec.mimeType.replace('video/', '').toLowerCase());
+  });
+  return videoCodecs.has(value);
+}
+
+function videoDecodeSupportedCheck(value) {
+  var videoCodecs = new Map();
+  RTCRtpSender.getCapabilities('video').codecs.forEach(function (codec) {
+    videoCodecs.set(codec.mimeType.replace('video/', '').toLowerCase());
+  });
+  return videoCodecs.has(value);
+}
+
 module.exports = {
   createClient: function createClient(clientConfig) {
     return new Client(clientConfig);
   },
   createStream: function createStream(streamConfig) {
     return new LocalStream(streamConfig);
+  },
+  checkSystemRequirements: function checkSystemRequirements() {
+    var isWebRTCSupported = webrtcSupportedCheck(),
+        isMediaDevicesSupported = mediaDevicesSupportedCheck(),
+        isH264EncodeSupported = videoEncodeSupportedCheck('h264'),
+        isH264DecodeSupported = videoDecodeSupportedCheck('h264'),
+        isVp8EncodeSupported = videoEncodeSupportedCheck('vp8'),
+        isVp8DecodeSupported = videoDecodeSupportedCheck('vp8');
+    var isSupported = isWebRTCSupported && isMediaDevicesSupported && isH264DecodeSupported && isH264EncodeSupported && isVp8DecodeSupported && isVp8EncodeSupported;
+    return {
+      result: isSupported,
+      detail: {
+        // isBrowserSupported      : true,
+        isWebRTCSupported: isWebRTCSupported,
+        isMediaDevicesSupported: isMediaDevicesSupported,
+        isH264EncodeSupported: isH264EncodeSupported,
+        isH264DecodeSupported: isH264DecodeSupported,
+        isVp8EncodeSupported: isVp8EncodeSupported,
+        isVp8DecodeSupported: isVp8DecodeSupported
+      }
+    };
   },
   isScreenShareSupported: function isScreenShareSupported() {
     return Boolean(navigator.mediaDevices.getDisplayMedia);
