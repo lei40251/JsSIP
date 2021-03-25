@@ -114,7 +114,6 @@ function initSignalling()
   // clientConfig 配置项
   const configuration = {
     call_router_url : callRouterUrl,
-    // wss_url      : signallingUrl,
     sdk_app_id      : sdkAppId,
     user_id         : userId,
     user_sig        : userSig
@@ -240,9 +239,9 @@ document.querySelector('#create_stream').onclick = function()
     console.log('localstream is stoped.');
   });
 
-  localStream.initialize().then(function(stream)
+  localStream.initialize().then(function()
   {
-    document.querySelector('#local_stream').srcObject = stream;
+    document.querySelector('#local_stream').srcObject = localStream.stream;
   });
 };
 

@@ -22149,16 +22149,14 @@ var JsSIP = {
   getMicrophones: require('./SFU/Utils').getMicrophones,
   getSpeakers: require('./SFU/Utils').getSpeakers,
   checkSystemRequirements: require('./SFU/Utils').checkSystemRequirements,
+  version: require('./SFU/Utils').version,
   // Expose the debug module.
   debug: require('debug'),
 
   get name() {
     return pkg.title;
-  },
+  } // get version() { return pkg.version; }
 
-  get version() {
-    return pkg.version;
-  }
 
 };
 module.exports = JsSIP;
@@ -22206,39 +22204,19 @@ var debugerror = require('debug')('FlyInn:ERROR:RTC');
 
 var callRouterPath = '/iapi/conf/join';
 debugerror.log = console.warn.bind(console);
-/* Ajax请求 Pet */
+/**
+ * 音视频通话客户对象，通过createClient创建
+ *
+ * @param {object} clientConfig
+ * @param {string} clientConfg.call_router_url - callRouter 地址 url
+ * @param {string} clientConfg.sdi_app_id - sdkAppID
+ * @param {string} clientConfg.user_id - 用户ID
+ * @param {string} clientConfg.user_sig - 签名
+ * @class Client
+ * @extends {EventEmitter}
+ */
 
-function post(url, data) {
-  var headers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-  var callback = arguments.length > 3 ? arguments[3] : undefined;
-  var errorHandle = arguments.length > 4 ? arguments[4] : undefined;
-
-  if (typeof data === 'function') {
-    callback = data;
-    data = null;
-  }
-
-  var xhr = new XMLHttpRequest();
-  xhr.addEventListener('error', function (e) {
-    errorHandle(e);
-  });
-  xhr.open('post', url);
-
-  xhr.onload = function () {
-    callback(JSON.parse(xhr.responseText));
-  };
-
-  for (var key in headers) {
-    if ({}.hasOwnProperty.call(headers, key)) {
-      xhr.setRequestHeader(key, headers[key]);
-    }
-  }
-
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.send(JSON.stringify(data));
-}
-
-module.exports = /*#__PURE__*/function (_EventEmitter) {
+var Client = /*#__PURE__*/function (_EventEmitter) {
   _inherits(Client, _EventEmitter);
 
   var _super = _createSuper(Client);
@@ -22275,19 +22253,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     return _this;
   }
+  /**
+   * 加入房间，房间不存在则创建
+   *
+   * @param {string} roomId - 房间号
+   * @param {string} displayName - 显示名（可以为中文）
+   * @param {object} [options={}]
+   * @param {MediaStream} [options.mediaStream] - 本地媒体流，则默认调用麦克风、摄像头获取
+   * @param {array} [options.pcConfig] - turn服务器设置 [{urls:'turn:example.com:666',username:'',credential:''}]
+   * @param {string} [options.iceTransportPolicy=all] - ICE协商策略, 'relay':强制使用TURN, 'all':任何类型
+   * @memberof Client
+   */
+
 
   _createClass(Client, [{
-    key: "displayShare",
-    value: function displayShare() {
-      this._session.displayShare();
-    } // 加入房间
-
-  }, {
     key: "join",
     value: function join(roomId, displayName) {
       var _this2 = this;
 
-      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {
+        iceTransportPolicy: 'all'
+      };
       this._roomId = roomId;
       this._options = options;
       this._dn = displayName;
@@ -22299,7 +22285,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         'X-UID': this._userId
       }, function (res) {
         if (res.code !== 1000) {
-          _this2.emit('JOIN_ROOM_FAILED', res.code);
+          /**
+           * 加入房间失败事件
+           *
+           * @event Client#JOIN-ROOM-FAILED
+           * @property {string} code - code 列表另附
+           */
+          _this2.emit('join-room-failed', res.code);
 
           return;
         }
@@ -22314,6 +22306,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this2._ua = new UA(configuration); // 根据UA Event触发Client Event给用户
 
         _this2._ua.on('connecting', function () {
+          /**
+           * WebSocket 信令通道连接状态变化事件
+           *
+           * @event Client#CONNECTION-STATE-CHANGED
+           * @property {string} data - CONNECTING 连接中，CONNECTED 已连接，DISCONNECTED 已断开
+           */
           _this2.emit('connection-state-changed', 'CONNECTING');
         });
 
@@ -22326,11 +22324,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
 
         _this2._ua.on('registered', function (data) {
+          /**
+           * 注册成功事件，注册后呼叫情况下使用
+           *
+           * @event Client#REGISTERED
+           * @property {object} data
+           */
           _this2.emit('registered', data);
         });
 
         _this2._ua.on('registrationFailed', function () {
-          _this2.emit('error', 'REGISTRATIONFAILED');
+          /**
+           * 注册失败事件，注册后呼叫情况下使用
+           *
+           * @event Client#REGISTRATIONFAILED
+           * @property {object} data
+           */
+          _this2.emit('registrationFailed', 'REGISTRATIONFAILED');
         }); // 避免415
 
 
@@ -22370,6 +22380,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this2.emit('JOIN_ROOM_FAILED', 'HTTP ERROR');
       });
     }
+    /**
+     * 离开房间
+     *
+     * @memberof Client
+     */
+
   }, {
     key: "leave",
     value: function leave() {
@@ -22381,6 +22397,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Client;
 }(EventEmitter);
+/* Ajax请求 Pet */
+
+
+function post(url, data) {
+  var headers = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+  var callback = arguments.length > 3 ? arguments[3] : undefined;
+  var errorHandle = arguments.length > 4 ? arguments[4] : undefined;
+
+  if (typeof data === 'function') {
+    callback = data;
+    data = null;
+  }
+
+  var xhr = new XMLHttpRequest();
+  xhr.addEventListener('error', function (e) {
+    errorHandle(e);
+  });
+  xhr.open('post', url);
+
+  xhr.onload = function () {
+    callback(JSON.parse(xhr.responseText));
+  };
+
+  for (var key in headers) {
+    if ({}.hasOwnProperty.call(headers, key)) {
+      xhr.setRequestHeader(key, headers[key]);
+    }
+  }
+
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.send(JSON.stringify(data));
+} // 发起呼叫
+
 
 function call(roomId, options) {
   var _this3 = this;
@@ -22398,6 +22447,12 @@ function call(roomId, options) {
 
 
   this._session.on('getusermediafailed', function () {
+    /**
+     * 错误事件
+     *
+     * @event Client#ERROR
+     * @property {string} data - 事件列表另附
+     */
     _this3.emit('error;', 'GETUSERMEDIAFAILED');
   });
 
@@ -22453,11 +22508,24 @@ function call(roomId, options) {
         }
       });
     }
+    /**
+     * 本地已加入会议事件
+     *
+     * @event Client#LOCAL-JOINED
+     * @property {object} data - 本地媒体流对象
+     */
+
 
     localTracks.length > 0 && _this3.emit('local-joined', localStream);
 
     _this3._session.connection.getReceivers().forEach(function (receiver) {
       if (receiver.track.kind === 'audio') {
+        /**
+         * 新用户媒体加入会议事件
+         *
+         * @event Client#STREAM-ADDED
+         * @property {object} data 远端媒体流对象
+         */
         _this3.emit('stream-added', new RemoteStream(receiver.track));
       }
     });
@@ -22495,6 +22563,11 @@ function call(roomId, options) {
   });
 
   this._session.on('ended', function () {
+    /**
+     * 本地已退出会议事件
+     *
+     * @event Client#LOCAL-LEFT
+     */
     _this3.emit('local-left');
   }); // 媒体变化, 触发媒体新增事件
 
@@ -22503,6 +22576,12 @@ function call(roomId, options) {
     if (trackEvent.track.kind === 'video' && trackEvent.track.enabled) {
       var remoteStream = new RemoteStream(trackEvent.track);
       remoteStream.on('stream-removed', function () {
+        /**
+         * 远端用户媒体流已经移除事件
+         *
+         * @event Client#STREAM-REMOVED
+         * @property {object} data 远端媒体对象
+         */
         _this3.emit('stream-removed', remoteStream);
       });
 
@@ -22511,6 +22590,8 @@ function call(roomId, options) {
     }
   });
 }
+
+module.exports = Client;
 },{"../UA":29,"../WebSocketInterface":33,"./LocalStream":20,"./RemoteStream":21,"debug":35,"events":39,"js-base64":42}],20:[function(require,module,exports){
 "use strict";
 
@@ -22536,7 +22617,6 @@ function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Re
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-// const JsSIP_C = require('./../Constants');
 var debug = require('debug')('FlyInn:LocalStream');
 
 var debugerror = require('debug')('FlyInn:ERROR:LOCALSTREAM');
@@ -22626,8 +22706,25 @@ var audioProfile = {
   }
 };
 var hints = ['motion', 'detail', 'text'];
+/**
+ * 本地媒体对象，可以通过createStream创建
+ *
+ * @param {object} streamConfig - 注意：本参数未启用
+ * @param {string} streamConfig.user_id - 用户ID
+ * @param {string} streamConfig.audio - 是否采集麦克风
+ * @param {string} streamConfig.video - 是否采集摄像头视频
+ * @param {string} streamConfig.microphone_id - 音频输入设备 deviceId，可通过 getMicrophones()获取
+ * @param {string} streamConfig.camera_id - 摄像头的 deviceId, 可通过 getCameras() 获取
+ * @param {string} streamConfig.facing_mode - 'user':前置摄像头，'environment':后置摄像头，请勿同时使用 camrea_id 和 facing_ode
+ * @param {string} streamConfig.screen - 是否采用屏幕分享
+ * @param {string} streamConfig.videoSource - 视频源
+ * @param {string} streamConfig.audioSource - 音频源
+ * @param {string} streamConfig.mirror - 视频是否镜像，不适用于屏幕分享
+ * @class LocalStream
+ * @extends {Stream}
+ */
 
-module.exports = /*#__PURE__*/function (_Stream) {
+var LocalStream = /*#__PURE__*/function (_Stream) {
   _inherits(LocalStream, _Stream);
 
   var _super = _createSuper(LocalStream);
@@ -22640,7 +22737,7 @@ module.exports = /*#__PURE__*/function (_Stream) {
     _this = _super.call(this);
     _this._userId = streamConfig.user_id;
     _this._audio = streamConfig.audio;
-    _this._microphoneId = streamConfig._microphone_id;
+    _this._microphoneId = streamConfig.microphone_id;
     _this._video = streamConfig.video;
     _this._cameraId = streamConfig.camera_id;
     _this._facingMode = streamConfig.facing_mode;
@@ -22671,6 +22768,11 @@ module.exports = /*#__PURE__*/function (_Stream) {
     set: function set(value) {
       this._session = value;
     }
+    /**
+     * @readonly
+     * @memberof LocalStream
+     */
+
   }, {
     key: "userId",
     get: function get() {
@@ -22684,6 +22786,13 @@ module.exports = /*#__PURE__*/function (_Stream) {
     set: function set(value) {
       this._custom = value;
     }
+    /**
+     * 初始化本地音视频对象
+     *
+     * @return {Promise}
+     * @memberof LocalStream
+     */
+
   }, {
     key: "initialize",
     value: function initialize() {
@@ -22698,16 +22807,23 @@ module.exports = /*#__PURE__*/function (_Stream) {
         return stream;
       })["catch"](function (error) {
         // this._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
-        debugerror('emit "getusermediafailed" [error:%o]', error);
-
-        _this2.emit('getusermediafailed', error);
+        debugerror('emit "getusermediafailed" [error:%o]', error); // this.emit('getusermediafailed', error);
 
         throw error;
       });
     }
+    /**
+     * 设置音频 Profile
+     *
+     * @param {string} [profile=standard] -  码率: 'standard':40kbps; 'high':128kbps
+     * @memberof LocalStream
+     */
+
   }, {
     key: "setAudioProfile",
-    value: function setAudioProfile(profile) {
+    value: function setAudioProfile() {
+      var profile = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'standard';
+
       if (typeof profile === 'string') {
         if (this._session.connection) {
           var senders = this._session.connection.getSenders();
@@ -22732,9 +22848,23 @@ module.exports = /*#__PURE__*/function (_Stream) {
         }
       }
     }
+    /**
+     * 设置视频 Profile
+     *
+     * @param {string|object} [profile=480p] - 详见profile对照表
+     * @param {string} profile.width - 视频宽度
+     * @param {string} profile.height - 视频高度
+     * @param {string} profile.frameRate - 帧率
+     * @param {string} profile.bitrate - 比特率 kbps
+     * @return {Promise}
+     * @memberof LocalStream
+     */
+
   }, {
     key: "setVideoProfile",
-    value: function setVideoProfile(profile) {
+    value: function setVideoProfile() {
+      var profile = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '480p';
+
       if (_typeof(profile) === 'object') {
         if (this._session.connection) {
           var senders = this._session.connection.getSenders();
@@ -22781,9 +22911,19 @@ module.exports = /*#__PURE__*/function (_Stream) {
         }
       }
     }
+    /**
+     * 设置视频内容提示
+     *
+     * @param {string} [hint=motion] - 'motion', 'detail', 'text'
+     * @return {boolean}
+     * @memberof LocalStream
+     */
+
   }, {
     key: "setVideoContentHint",
-    value: function setVideoContentHint(hint) {
+    value: function setVideoContentHint() {
+      var hint = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'motion';
+
       if (hints.indexOf(hint)) {
         var tracks = this._stream.getTracks();
 
@@ -22797,6 +22937,12 @@ module.exports = /*#__PURE__*/function (_Stream) {
         return true;
       }
     }
+    /**
+     * 关闭本地音视频流，释放麦克风和摄像头
+     *
+     * @memberof LocalStream
+     */
+
   }, {
     key: "close",
     value: function close() {
@@ -22807,9 +22953,20 @@ module.exports = /*#__PURE__*/function (_Stream) {
           track.stop();
         });
       }).then(function () {
-        _this3.emit('stop');
+        /**
+         * 本地媒体已关闭事件
+         *
+         * @event LocalStream#STOPED
+         */
+        _this3.emit('stoped');
       })["catch"](function (e) {
-        _this3.emit('error', e);
+        /**
+         * 错误事件
+         *
+         * @event LocalStream#CLOSE-FAILED
+         * @property {object} data
+         */
+        _this3.emit('close-failed', e);
       });
     }
   }, {
@@ -22826,6 +22983,8 @@ module.exports = /*#__PURE__*/function (_Stream) {
 
   return LocalStream;
 }(Stream);
+
+module.exports = LocalStream;
 },{"./Stream":22,"debug":35}],21:[function(require,module,exports){
 "use strict";
 
@@ -22857,8 +23016,15 @@ var _require = require('js-base64'),
     Base64 = _require.Base64;
 
 var Stream = require('./Stream');
+/**
+ * 远端媒体对象
+ *
+ * @class RemoteStream
+ * @extends {Stream}
+ */
 
-module.exports = /*#__PURE__*/function (_Stream) {
+
+var RemoteStream = /*#__PURE__*/function (_Stream) {
   _inherits(RemoteStream, _Stream);
 
   var _super = _createSuper(RemoteStream);
@@ -22887,19 +23053,40 @@ module.exports = /*#__PURE__*/function (_Stream) {
 
     return _this;
   }
+  /**
+   * 媒体类型
+   *
+   * @readonly
+   * @memberof RemoteStream
+   */
+
 
   _createClass(RemoteStream, [{
     key: "type",
     get: function get() {
       return this._type;
     }
+    /**
+     * 用户ID
+     *
+     * @readonly
+     * @memberof RemoteStream
+     */
+
   }, {
     key: "userId",
     get: function get() {
       return this._cname.userid || '';
     }
+    /**
+     * 用户显示名
+     *
+     * @readonly
+     * @memberof RemoteStream
+     */
+
   }, {
-    key: "dn",
+    key: "display_name",
     get: function get() {
       return this._cname.dn ? Base64.decode(this._cname.dn) : '';
     }
@@ -22912,6 +23099,8 @@ module.exports = /*#__PURE__*/function (_Stream) {
 
   return RemoteStream;
 }(Stream);
+
+module.exports = RemoteStream;
 },{"./Stream":22,"js-base64":42}],22:[function(require,module,exports){
 "use strict";
 
@@ -22941,8 +23130,15 @@ var _require = require('events'),
     EventEmitter = _require.EventEmitter; // const debug = require('debug')('FlyInn:Stream');
 // const debugerror = require('debug')('FlyInn:ERROR:STREAM');
 
+/**
+ * LocalStream 和 RemoteStream 的基类
+ *
+ * @class Stream
+ * @extends {EventEmitter}
+ */
 
-module.exports = /*#__PURE__*/function (_EventEmitter) {
+
+var Stream = /*#__PURE__*/function (_EventEmitter) {
   _inherits(Stream, _EventEmitter);
 
   var _super = _createSuper(Stream);
@@ -22958,17 +23154,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._type = null;
     return _this;
   }
+  /**
+   * Stream唯一标识ID
+   * @readonly
+   * @memberof Stream
+   */
+
 
   _createClass(Stream, [{
     key: "id",
     get: function get() {
       return this._id;
     }
+    /**
+     * 音视频流
+     *
+     * @readonly
+     * @memberof Stream
+     */
+
   }, {
     key: "stream",
     get: function get() {
       return this._stream;
     }
+    /**
+     * 禁用视频轨道
+     *
+     * @return {boolean}
+     * @memberof Stream
+     */
+
   }, {
     key: "muteVideo",
     value: function muteVideo() {
@@ -22981,6 +23197,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return false;
       }
     }
+    /**
+     * 启用视频轨道
+     *
+     * @return {boolean}
+     * @memberof Stream
+     */
+
   }, {
     key: "unmuteVideo",
     value: function unmuteVideo() {
@@ -22993,6 +23216,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return false;
       }
     }
+    /**
+     * 禁用音频轨道,远端音频混流仅支持禁用全部音频
+     *
+     * @return {boolean}
+     * @memberof Stream
+     */
+
   }, {
     key: "muteAudio",
     value: function muteAudio() {
@@ -23005,6 +23235,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return false;
       }
     }
+    /**
+     * 启用音频轨道,远端音频混流仅支持启用全部音频
+     *
+     * @return {boolean}
+     * @memberof Stream
+     */
+
   }, {
     key: "unmuteAudio",
     value: function unmuteAudio() {
@@ -23021,12 +23258,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   return Stream;
 }(EventEmitter);
+
+module.exports = Stream;
 },{"events":39}],23:[function(require,module,exports){
 "use strict";
 
 var Client = require('./Client');
 
 var LocalStream = require('./LocalStream');
+
+var pkg = require('../../package.json');
 
 function webrtcSupportedCheck() {
   return ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCIceGatherer'].filter(function (e) {
@@ -23057,14 +23298,31 @@ function videoDecodeSupportedCheck(value) {
   });
   return videoCodecs.has(value);
 }
+/**
+ * @module PRTC
+ */
+
 
 module.exports = {
-  createClient: function createClient(clientConfig) {
-    return new Client(clientConfig);
-  },
-  createStream: function createStream(streamConfig) {
-    return new LocalStream(streamConfig);
-  },
+  /**
+   * @type {string} - SDK 版本号
+   */
+  version: pkg.version,
+
+  /**
+  * 检测浏览器是否支持 WebRTC 相关属性、方法等
+  *
+  * @returns {object} data
+  * data.result - 检测结果
+  * data.detail - 检测详情
+  * data.detail.isWebRTCSupported - 当前浏览器是否支持 webRTC
+  * data.detail.isMediaDevicesSupported - 当前浏览器是否支持获取媒体设备及媒体流
+  * data.detail.isH264EncodeSupported - 当前浏览器上行是否支持 H264 编码
+  * data.detail.isH264DecodeSupported - 当前浏览器下行是否支持 H264 编码
+  * data.detail.isVp8EncodeSupported - 当前浏览器上行是否支持 VP8 编码
+  * data.detail.isVp8DecodeSupported - 当前浏览器下行是否支持 VP8 编码
+  *
+  */
   checkSystemRequirements: function checkSystemRequirements() {
     var isWebRTCSupported = webrtcSupportedCheck(),
         isMediaDevicesSupported = mediaDevicesSupportedCheck(),
@@ -23086,9 +23344,19 @@ module.exports = {
       }
     };
   },
+
+  /**
+  * 浏览器是否支持屏幕分享
+  * @return {boolean}.
+  */
   isScreenShareSupported: function isScreenShareSupported() {
     return Boolean(navigator.mediaDevices.getDisplayMedia);
   },
+
+  /**
+  * 获取全部媒体输入、输出设备
+  * @return {Promise.<Array.<MediaDeviceInfo>>}
+  */
   getDevices: function getDevices() {
     return Promise.resolve().then(function () {
       return navigator.mediaDevices.getUserMedia({
@@ -23104,6 +23372,11 @@ module.exports = {
       return e;
     });
   },
+
+  /**
+  * 获取全部摄像头列表
+  * @return {Promise.<Array.<MediaDeviceInfo>>}
+  */
   getCameras: function getCameras() {
     return Promise.resolve().then(function () {
       return navigator.mediaDevices.getUserMedia({
@@ -23122,6 +23395,11 @@ module.exports = {
       return e;
     });
   },
+
+  /**
+  * 获取全部麦克风
+  * @return {Promise.<Array.<MediaDeviceInfo>>}
+  */
   getMicrophones: function getMicrophones() {
     return Promise.resolve().then(function () {
       return navigator.mediaDevices.getUserMedia({
@@ -23140,6 +23418,11 @@ module.exports = {
       return e;
     });
   },
+
+  /**
+  * 获取全部扬声器列表
+  * @return {Promise.<Array.<MediaDeviceInfo>>}
+  */
   getSpeakers: function getSpeakers() {
     return Promise.resolve().then(function () {
       return navigator.mediaDevices.getUserMedia({
@@ -23157,9 +23440,27 @@ module.exports = {
     })["catch"](function (e) {
       return e;
     });
+  },
+
+  /**
+  * 创建 Client 客户端对象
+  * @param {object} clientConfig - 详细内容见 Client
+  * @return {Client} - 客户端对象.
+  */
+  createClient: function createClient(clientConfig) {
+    return new Client(clientConfig);
+  },
+
+  /**
+   * 创建本地流对象，可以通过 客户端对象的 join 方法使用本流入会
+   * @param {object} streamConfig - 详细内容见 LocalStream
+   * @return {LocalStream} - 客户端对象.
+   */
+  createStream: function createStream(streamConfig) {
+    return new LocalStream(streamConfig);
   }
 };
-},{"./Client":19,"./LocalStream":20}],24:[function(require,module,exports){
+},{"../../package.json":48,"./Client":19,"./LocalStream":20}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
