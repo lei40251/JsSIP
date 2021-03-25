@@ -48,6 +48,7 @@
   "scripts": {
     "lint": "gulp lint",
     "test": "gulp test",
-    "prepublishOnly": "gulp babel"
+    "prepublishOnly": "gulp babel",
+    "doc": "jsdoc2md ./lib/SFU/*.js > ./sfu-doc/PRTC_API.md"
   }
 }
