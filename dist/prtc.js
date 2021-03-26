@@ -22208,10 +22208,10 @@ debugerror.log = console.warn.bind(console);
  * 音视频通话客户对象，通过createClient创建
  *
  * @param {object} clientConfig
- * @param {string} clientConfg.call_router_url - callRouter 地址 url
- * @param {string} clientConfg.sdi_app_id - sdkAppID
- * @param {string} clientConfg.user_id - 用户ID
- * @param {string} clientConfg.user_sig - 签名
+ * @param {string} clientConfig.call_router_url - callRouter 地址 url
+ * @param {string} clientConfig.sdi_app_id - sdkAppID
+ * @param {string} clientConfig.user_id - 用户ID
+ * @param {string} clientConfig.user_sig - 签名
  * @class Client
  * @extends {EventEmitter}
  */
@@ -22299,7 +22299,7 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
         var configuration = {
           sockets: new WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss'),
           uri: "sip:".concat(_this2._userId, "@").concat(res.data.sfu.domain),
-          retister: _this2._register,
+          register: _this2._register,
           session_timers: _this2._session_timers,
           display_name: displayName
         };
@@ -22392,6 +22392,18 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
       this._session.terminate();
 
       this._ua.stop();
+    }
+    /**
+     * 解除事件绑定
+     *
+     * @param {string} eventName - 事件名称
+     * @memberof Client
+     */
+
+  }, {
+    key: "off",
+    value: function off(eventName, listener) {
+      this.removeListener(eventName, listener);
     }
   }]);
 
@@ -22553,6 +22565,17 @@ function call(roomId, options) {
 
         if (_this3._remoteStreams.get(transceiverMids.get(String(_i)))) {
           _this3._remoteStreams.get(transceiverMids.get(String(_i))).cname = xSfuCname;
+          /**
+           * 远端入会事件
+           *
+           * @event Client#PEER-JOIN
+           * @property {object} data
+           * @property {string} data.userId - 用户ID
+           */
+
+          _this3.emit('peer-join', {
+            userId: _this3._userId
+          });
 
           _this3.emit('stream-added', _this3._remoteStreams.get(transceiverMids.get(String(_i))));
 
@@ -22583,6 +22606,18 @@ function call(roomId, options) {
          * @property {object} data 远端媒体对象
          */
         _this3.emit('stream-removed', remoteStream);
+        /**
+         * 远端离会事件
+         *
+         * @event Client#PEER-JOIN
+         * @property {object} data
+         * @property {string} data.userId - 用户ID
+         */
+
+
+        _this3.emit('peer-leave', {
+          userId: _this3._userId
+        });
       });
 
       _this3._remoteStreams.set(trackEvent.track.id, remoteStream); // this.emit('stream-added', remoteStream);
@@ -22798,7 +22833,7 @@ var LocalStream = /*#__PURE__*/function (_Stream) {
     value: function initialize() {
       var _this2 = this;
 
-      debug('initalize()');
+      debug('initialize()');
       return navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true
@@ -22956,9 +22991,9 @@ var LocalStream = /*#__PURE__*/function (_Stream) {
         /**
          * 本地媒体已关闭事件
          *
-         * @event LocalStream#STOPED
+         * @event LocalStream#STOPPED
          */
-        _this3.emit('stoped');
+        _this3.emit('stopped');
       })["catch"](function (e) {
         /**
          * 错误事件
@@ -22969,12 +23004,23 @@ var LocalStream = /*#__PURE__*/function (_Stream) {
         _this3.emit('close-failed', e);
       });
     }
+    /**
+     * 切换视频输入设备
+     *
+     * @param {object} [options={}]
+     * @param {object|string} options.deviceId - 设备ID
+     * @param {string} options.deviceId.exact - 强制使用的设备ID
+     * @return {stream}
+     * @memberof LocalStream
+     */
+
   }, {
     key: "switchDevice",
     value: function switchDevice() {
       var _this4 = this;
 
-      return this._session.switchCam({}).then(function (s) {
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return this._session.switchCam(options).then(function (s) {
         _this4._stream = s;
         return s;
       });
@@ -23347,7 +23393,7 @@ module.exports = {
 
   /**
   * 浏览器是否支持屏幕分享
-  * @return {boolean}.
+  * @return {boolean}
   */
   isScreenShareSupported: function isScreenShareSupported() {
     return Boolean(navigator.mediaDevices.getDisplayMedia);
@@ -32602,7 +32648,8 @@ module.exports={
   "scripts": {
     "lint": "gulp lint",
     "test": "gulp test",
-    "prepublishOnly": "gulp babel"
+    "prepublishOnly": "gulp babel",
+    "doc": "jsdoc2md ./lib/SFU/*.js > ./sfu-doc/PRTC_API.md"
   }
 }
 

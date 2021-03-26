@@ -52,6 +52,7 @@
 浏览器是否支持屏幕分享
 
 **Kind**: static method of [<code>PRTC</code>](#module_PRTC)  
+**Returns**: <code>boolean</code> - .  
 <a name="module_PRTC.getDevices"></a>
 
 ### PRTC.getDevices() ⇒ <code>Promise.&lt;Array.&lt;MediaDeviceInfo&gt;&gt;</code>
@@ -110,7 +111,6 @@
     * [new Client(clientConfig)](#new_Client_new)
     * [.join(roomId, displayName, [options])](#Client+join)
     * [.leave()](#Client+leave)
-    * [.off(eventName)](#Client+off)
     * ["JOIN-ROOM-FAILED"](#Client+event_JOIN-ROOM-FAILED)
     * ["CONNECTION-STATE-CHANGED"](#Client+event_CONNECTION-STATE-CHANGED)
     * ["REGISTERED"](#Client+event_REGISTERED)
@@ -118,10 +118,8 @@
     * ["ERROR"](#Client+event_ERROR)
     * ["LOCAL-JOINED"](#Client+event_LOCAL-JOINED)
     * ["STREAM-ADDED"](#Client+event_STREAM-ADDED)
-    * ["PEER-JOIN"](#Client+event_PEER-JOIN)
     * ["LOCAL-LEFT"](#Client+event_LOCAL-LEFT)
     * ["STREAM-REMOVED"](#Client+event_STREAM-REMOVED)
-    * ["PEER-JOIN"](#Client+event_PEER-JOIN)
 
 <a name="new_Client_new"></a>
 
@@ -132,10 +130,10 @@
 | Param | Type | Description |
 | --- | --- | --- |
 | clientConfig | <code>object</code> |  |
-| clientConfig.call_router_url | <code>string</code> | callRouter 地址 url |
-| clientConfig.sdi_app_id | <code>string</code> | sdkAppID |
-| clientConfig.user_id | <code>string</code> | 用户ID |
-| clientConfig.user_sig | <code>string</code> | 签名 |
+| clientConfg.call_router_url | <code>string</code> | callRouter 地址 url |
+| clientConfg.sdi_app_id | <code>string</code> | sdkAppID |
+| clientConfg.user_id | <code>string</code> | 用户ID |
+| clientConfg.user_sig | <code>string</code> | 签名 |
 
 <a name="Client+join"></a>
 
@@ -159,17 +157,6 @@
 离开房间
 
 **Kind**: instance method of [<code>Client</code>](#Client)  
-<a name="Client+off"></a>
-
-### client.off(eventName)
-解除事件绑定
-
-**Kind**: instance method of [<code>Client</code>](#Client)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| eventName | <code>string</code> | 事件名称 |
-
 <a name="Client+event_JOIN-ROOM-FAILED"></a>
 
 ### "JOIN-ROOM-FAILED"
@@ -254,19 +241,6 @@ WebSocket 信令通道连接状态变化事件
 | --- | --- | --- |
 | data | <code>object</code> | 远端媒体流对象 |
 
-<a name="Client+event_PEER-JOIN"></a>
-
-### "PEER-JOIN"
-远端入会事件
-
-**Kind**: event emitted by [<code>Client</code>](#Client)  
-**Properties**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| data | <code>object</code> |  |
-| data.userId | <code>string</code> | 用户ID |
-
 <a name="Client+event_LOCAL-LEFT"></a>
 
 ### "LOCAL-LEFT"
@@ -285,19 +259,6 @@ WebSocket 信令通道连接状态变化事件
 | --- | --- | --- |
 | data | <code>object</code> | 远端媒体对象 |
 
-<a name="Client+event_PEER-JOIN"></a>
-
-### "PEER-JOIN"
-远端离会事件
-
-**Kind**: event emitted by [<code>Client</code>](#Client)  
-**Properties**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| data | <code>object</code> |  |
-| data.userId | <code>string</code> | 用户ID |
-
 <a name="LocalStream"></a>
 
 ## LocalStream ⇐ [<code>Stream</code>](#Stream)
@@ -314,12 +275,11 @@ WebSocket 信令通道连接状态变化事件
     * [.setVideoProfile([profile])](#LocalStream+setVideoProfile) ⇒ <code>Promise</code>
     * [.setVideoContentHint([hint])](#LocalStream+setVideoContentHint) ⇒ <code>boolean</code>
     * [.close()](#LocalStream+close)
-    * [.switchDevice([options])](#LocalStream+switchDevice) ⇒ <code>stream</code>
     * [.muteVideo()](#Stream+muteVideo) ⇒ <code>boolean</code>
     * [.unmuteVideo()](#Stream+unmuteVideo) ⇒ <code>boolean</code>
     * [.muteAudio()](#Stream+muteAudio) ⇒ <code>boolean</code>
     * [.unmuteAudio()](#Stream+unmuteAudio) ⇒ <code>boolean</code>
-    * ["STOPPED"](#LocalStream+event_STOPPED)
+    * ["STOPED"](#LocalStream+event_STOPED)
     * ["CLOSE-FAILED"](#LocalStream+event_CLOSE-FAILED)
 
 <a name="new_LocalStream_new"></a>
@@ -410,19 +370,6 @@ Stream唯一标识ID
 关闭本地音视频流，释放麦克风和摄像头
 
 **Kind**: instance method of [<code>LocalStream</code>](#LocalStream)  
-<a name="LocalStream+switchDevice"></a>
-
-### localStream.switchDevice([options]) ⇒ <code>stream</code>
-切换视频输入设备
-
-**Kind**: instance method of [<code>LocalStream</code>](#LocalStream)  
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| [options] | <code>object</code> | <code>{}</code> |  |
-| options.deviceId | <code>object</code> \| <code>string</code> |  | 设备ID |
-| options.deviceId.exact | <code>string</code> |  | 强制使用的设备ID |
-
 <a name="Stream+muteVideo"></a>
 
 ### localStream.muteVideo() ⇒ <code>boolean</code>
@@ -447,9 +394,9 @@ Stream唯一标识ID
 启用音频轨道,远端音频混流仅支持启用全部音频
 
 **Kind**: instance method of [<code>LocalStream</code>](#LocalStream)  
-<a name="LocalStream+event_STOPPED"></a>
+<a name="LocalStream+event_STOPED"></a>
 
-### "STOPPED"
+### "STOPED"
 本地媒体已关闭事件
 
 **Kind**: event emitted by [<code>LocalStream</code>](#LocalStream)  

@@ -2,12 +2,12 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-PRTC.debug.enable('FlyInn:*');
+// PRTC.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-// PRTC.debug.disable('FlyInn:*');
+PRTC.debug.disable('FlyInn:*');
 
-const version = PRTC.version;
+console.log(PRTC.version);
 
 let client = null;
 
@@ -79,7 +79,7 @@ function renderRemoteStream(stream)
     }
   };
 
-  p.innerText = `${stream.userId}(${stream.dn})`;
+  p.innerText = `${stream.userId}(${stream.display_name})`;
 
   const video =document.createElement('video');
 
@@ -108,6 +108,12 @@ function renderRemoteStream(stream)
   rvsEle.append(div);
 }
 
+// 离会回调
+function peerLeave(data)
+{
+  console.log('远端用户离开会议: ', data.userId);
+}
+
 // 客户端初始化
 function initSignalling()
 {
@@ -119,7 +125,7 @@ function initSignalling()
     user_sig        : userSig
   };
 
-  // Client
+  // 创建 client
   client = PRTC.createClient(configuration);
 
   // 信令连接成功建立
@@ -129,16 +135,13 @@ function initSignalling()
   });
 
   // 注册成功，在需要注册场景可用
-  client.on('registered', function()
+  client.on('peer-join', function(e)
   {
-    console.log('注册成功');
+    console.log('远端用户加入: ', e.userId);
   });
 
   // 注册失败，在需要注册场景可用
-  client.on('registrationFailed', function()
-  {
-    console.log('注册失败');
-  });
+  client.on('peer-leave', peerLeave);
 
   // 已添加远端流
   client.on('stream-added', function(remoteStream)
@@ -160,8 +163,6 @@ function initSignalling()
   // 已删除远端流
   client.on('stream-removed', function(remoteStream)
   {
-    console.log('removed: ', remoteStream);
-
     const remoteStreamDivs = document.querySelectorAll('.remote_stream');
 
     remoteStreamDivs.forEach(function(div)
@@ -177,11 +178,6 @@ function initSignalling()
   {
     console.log('您已加入会议');
     localStream = data;
-
-    // document.querySelector('#local_stream').addEventListener('ended', () =>
-    // {
-    //   console.log('mmmmmmmmmm');
-    // });
 
     localStream.stream.oninactive= () =>
     {
@@ -207,19 +203,7 @@ function initSignalling()
 // 启动
 function start()
 {
-  Promise.resolve()
-    .then(function()
-    {
-      getTemper(initSignalling);
-    })
-    .then(function()
-    {
-
-    })
-    .catch(function(error)
-    {
-      console.error(error);
-    });
+  getTemper(initSignalling);
 }
 
 start();
@@ -236,7 +220,7 @@ document.querySelector('#create_stream').onclick = function()
 
   localStream.on('stop', () =>
   {
-    console.log('localstream is stoped.');
+    console.log('localstream is stopped.');
   });
 
   localStream.initialize().then(function()
@@ -260,6 +244,7 @@ document.querySelector('#join_conf').onclick =function()
 
 document.querySelector('#leave').onclick =function()
 {
+  client.off('peer-leave', peerLeave);
   client.leave();
 };
 

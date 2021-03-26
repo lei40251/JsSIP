@@ -72,26 +72,6 @@ function get(url, data, callback)
   xhr.send();
 }
 
-/* Ajax请求 Pet */
-function post(url, data, callback)
-{
-  if (typeof data === 'function')
-  {
-    callback = data;
-    data = null;
-  }
-  const xhr = new XMLHttpRequest();
-
-  xhr.open('post', url);
-  xhr.onload = function()
-  {
-    callback(JSON.parse(xhr.responseText));
-  };
-  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-  xhr.setRequestHeader('content-Type', 'application/x-www-form-urlencoded');
-  xhr.send(urlCode(data));
-}
-
 /* Ajax请求 编码 */
 function urlCode(data)
 {
