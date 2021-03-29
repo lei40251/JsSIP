@@ -1,0 +1,45 @@
+{
+  "tags": {
+    "allowUnknownTags": true
+  },
+  "source": {
+    "include": ["./lib/SFU", "./README_SFU.md"],
+    "includePattern": "\\.js$",
+    "excludePattern": "(node_modules/|docs)"
+  },
+  "plugins": [
+    "plugins/markdown"
+  ],
+  "opts": {
+    "template": "node_modules/docdash",
+    "encoding": "utf8",
+    "destination": "sfu-docs/",
+    "recurse": true,
+    "verbose": true
+  },
+  "templates": {
+    "cleverLinks": false,
+    "monospaceLinks": false,
+    "default": {
+      "outputSourceFiles": false
+    }
+  },
+  "docdash": {
+    "static": true,
+    "sort": false,
+    "search": true,
+    "sectionOrder": [
+      "Namespaces",
+      "Classes",
+      "Modules",
+      "Externals",
+      "Events",
+      "Mixins",
+      "Tutorials",
+      "Interfaces"
+    ],
+    "private": false,
+    "typedefs": true,
+    "scripts": ["./styles/custom.css"]
+  }
+}

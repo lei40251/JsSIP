@@ -5,43 +5,46 @@
 // PRTC.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-PRTC.debug.disable('FlyInn:*');
+// PRTC.debug.disable('FlyInn:*');
 
+// 控制台输出SDK版本信息
 console.log(PRTC.version);
 
-let client = null;
-
+// 会话路由地址，创建&加入会议用
 const callRouterUrl = 'https://pro.vsbc.com/pa';
 
-// new
+// 客户端对象
+let client = null;
+// 本端媒体对象
 let localStream = null;
+// 远端音频流对象
 let remoteAudioStream = null;
 
-// 音视频禁用状态
+// 本端视频流禁用状态
 let localVideoMuted = false;
+// 本端音频流禁用状态
 let localAudioMuted = false;
+// 远端音频流禁用状态
 let remoteAudioMuted = false;
 
 // 会议结束重置参数
 function resetStatus()
 {
-  // new
   localStream = null;
   remoteAudioStream = null;
 
-  // 音视频禁用状态
   localVideoMuted = false;
   localAudioMuted = false;
   remoteAudioMuted = false;
 
   document.querySelector('#rvs').innerHTML = '';
   document.querySelector('#local_stream').srcObject = null;
-
 }
 
 // 渲染远端媒体
-function renderRemoteStream(stream)
+function renderRemoteStream(remoteStream)
 {
+  // 远端视频div容器
   const rvsEle = document.querySelector('#rvs');
 
   const div = document.createElement('div');
@@ -49,11 +52,12 @@ function renderRemoteStream(stream)
   const btn = document.createElement('button');
 
   div.classList = 'remote_stream';
-  div.dataset.stream_id = stream.id;
+  div.dataset.stream_id = remoteStream.id;
 
   btn.classList = 'handle_remote_stream';
   btn.innerText = '关闭视频';
   btn.dataset.muted = 0;
+  // 远端视频上按钮的操作
   btn.onclick = function(self)
   {
     if (self.target.dataset.muted == '1')
@@ -79,36 +83,37 @@ function renderRemoteStream(stream)
     }
   };
 
-  p.innerText = `${stream.userId}(${stream.display_name})`;
+  p.innerText = `${remoteStream.userId}(${remoteStream.display_name})`;
 
   const video =document.createElement('video');
-
+  // 安卓微信浏览器用
   const x5VideoPlayerFullscreen = document.createAttribute('x5-video-player-fullscreen');
-
   const x5VideoPlayerType = document.createAttribute('x5-video-player-type');
 
   x5VideoPlayerFullscreen.value=true;
   x5VideoPlayerType.value='h5';
 
+  // 设置video属性
   video.setAttributeNode(x5VideoPlayerType);
   video.setAttributeNode(x5VideoPlayerFullscreen);
-
   video.autoplay=true;
   video.playsInline =true;
 
-  video.srcObject = stream.stream;
+  // 媒体流
+  video.srcObject = remoteStream.stream;
   video.onclick = function()
   {
     captureVideo(video);
   };
 
+  // 将video等 插入页面
   div.append(video);
   div.append(p);
   div.append(btn);
   rvsEle.append(div);
 }
 
-// 离会回调
+// 离会回调，方便监听和取消监听用
 function peerLeave(data)
 {
   console.log('远端用户离开会议: ', data.userId);
@@ -146,6 +151,7 @@ function initSignalling()
   // 已添加远端流
   client.on('stream-added', function(remoteStream)
   {
+    // 远端音频混流，此处单独处理远端音频
     if (remoteStream.type === 'audio')
     {
       remoteAudioStream = remoteStream;
@@ -174,6 +180,7 @@ function initSignalling()
     });
   });
 
+  // 本端加入会议
   client.on('local-joined', function(data)
   {
     console.log('您已加入会议');
@@ -188,12 +195,14 @@ function initSignalling()
     localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
   });
 
+  // 本端离开会议
   client.on('local-left', function()
   {
     resetStatus();
     console.log('您已离开会议');
   });
 
+  // 客户端错误事件处理
   client.on('error', function(data)
   {
     console.log('error: ', data);
@@ -208,6 +217,7 @@ function start()
 
 start();
 
+// 分享桌面
 document.querySelector('#screenShare').onclick=function()
 {
   client.displayShare();
@@ -242,6 +252,7 @@ document.querySelector('#join_conf').onclick =function()
   }
 };
 
+// 离开会议
 document.querySelector('#leave').onclick =function()
 {
   client.off('peer-leave', peerLeave);

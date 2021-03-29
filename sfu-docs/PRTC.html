@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>PRTC - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="PRTC.html">PRTC</a><ul class='members'><li data-type='member'><a href="PRTC.html#.version">version</a></li></ul><ul class='methods'><li data-type='method'><a href="PRTC.html#.checkSystemRequirements">checkSystemRequirements</a></li><li data-type='method'><a href="PRTC.html#.isScreenShareSupported">isScreenShareSupported</a></li><li data-type='method'><a href="PRTC.html#.getDevices">getDevices</a></li><li data-type='method'><a href="PRTC.html#.getCameras">getCameras</a></li><li data-type='method'><a href="PRTC.html#.getMicrophones">getMicrophones</a></li><li data-type='method'><a href="PRTC.html#.getSpeakers">getSpeakers</a></li><li data-type='method'><a href="PRTC.html#.createClient">createClient</a></li><li data-type='method'><a href="PRTC.html#.createStream">createStream</a></li></ul></li></ul><h3>Classes</h3><ul><li><a href="Client.html">Client</a><ul class='methods'><li data-type='method'><a href="Client.html#join">join</a></li><li data-type='method'><a href="Client.html#leave">leave</a></li><li data-type='method'><a href="Client.html#on">on</a></li><li data-type='method'><a href="Client.html#off">off</a></li></ul></li><li><a href="LocalStream.html">LocalStream</a><ul class='members'><li data-type='member'><a href="LocalStream.html#.userId">userId</a></li></ul><ul class='methods'><li data-type='method'><a href="LocalStream.html#initialize">initialize</a></li><li data-type='method'><a href="LocalStream.html#setAudioProfile">setAudioProfile</a></li><li data-type='method'><a href="LocalStream.html#setVideoProfile">setVideoProfile</a></li><li data-type='method'><a href="LocalStream.html#setVideoContentHint">setVideoContentHint</a></li><li data-type='method'><a href="LocalStream.html#close">close</a></li><li data-type='method'><a href="LocalStream.html#switchDevice">switchDevice</a></li><li data-type='method'><a href="LocalStream.html#muteVideo">muteVideo</a></li><li data-type='method'><a href="LocalStream.html#unmuteVideo">unmuteVideo</a></li><li data-type='method'><a href="LocalStream.html#muteAudio">muteAudio</a></li><li data-type='method'><a href="LocalStream.html#unmuteAudio">unmuteAudio</a></li></ul></li><li><a href="RemoteStream.html">RemoteStream</a><ul class='members'><li data-type='member'><a href="RemoteStream.html#.type">type</a></li><li data-type='member'><a href="RemoteStream.html#.userId">userId</a></li><li data-type='member'><a href="RemoteStream.html#.display_name">display_name</a></li></ul><ul class='methods'><li data-type='method'><a href="RemoteStream.html#muteVideo">muteVideo</a></li><li data-type='method'><a href="RemoteStream.html#unmuteVideo">unmuteVideo</a></li><li data-type='method'><a href="RemoteStream.html#muteAudio">muteAudio</a></li><li data-type='method'><a href="RemoteStream.html#unmuteAudio">unmuteAudio</a></li></ul></li><li><a href="Stream.html">Stream</a><ul class='members'><li data-type='member'><a href="Stream.html#.id">id</a></li><li data-type='member'><a href="Stream.html#.stream">stream</a></li></ul><ul class='methods'><li data-type='method'><a href="Stream.html#muteVideo">muteVideo</a></li><li data-type='method'><a href="Stream.html#unmuteVideo">unmuteVideo</a></li><li data-type='method'><a href="Stream.html#muteAudio">muteAudio</a></li><li data-type='method'><a href="Stream.html#unmuteAudio">unmuteAudio</a></li></ul></li></ul><h3>Events</h3><ul><li><a href="Client.html#event:JOIN-ROOM-FAILED">JOIN-ROOM-FAILED</a></li><li><a href="Client.html#event:CONNECTION-STATE-CHANGED">CONNECTION-STATE-CHANGED</a></li><li><a href="Client.html#event:REGISTERED">REGISTERED</a></li><li><a href="Client.html#event:REGISTRATIONFAILED">REGISTRATIONFAILED</a></li><li><a href="Client.html#event:ERROR">ERROR</a></li><li><a href="Client.html#event:LOCAL-JOINED">LOCAL-JOINED</a></li><li><a href="Client.html#event:STREAM-ADDED">STREAM-ADDED</a></li><li><a href="Client.html#event:PEER-JOIN">PEER-JOIN</a></li><li><a href="Client.html#event:LOCAL-LEFT">LOCAL-LEFT</a></li><li><a href="Client.html#event:STREAM-REMOVED">STREAM-REMOVED</a></li><li></li><li><a href="LocalStream.html#event:STOPPED">STOPPED</a></li><li><a href="LocalStream.html#event:CLOSE-FAILED">CLOSE-FAILED</a></li></ul><h3>Global</h3><ul><li><a href="global.html#CheckResult">CheckResult</a></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">PRTC</h1>
+    
+
+    
+
+
+
+
+<section>
+
+<header>
+    
+        <h2>
+        PRTC
+        </h2>
+        
+    
+</header>
+
+<article>
+    
+        <div class="container-overview">
+        
+            
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+            
+
+            
+        
+        </div>
+    
+
+    
+
+    
+
+    
+    
+    
+
+     
+
+    
+
+    
+        <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id=".version"><span class="type-signature">(static) </span>version<span class="type-signature"> :string</span></h4>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>SDK 版本号</p>
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">string</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+
+        
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id=".checkSystemRequirements"><span class="type-signature">(static) </span>checkSystemRequirements<span class="signature">()</span><span class="type-signature"> &rarr; {<a href="global.html#CheckResult">CheckResult</a>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>检测浏览器是否支持 WebRTC 相关属性、方法等</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>data - 返回的检测结果</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="global.html#CheckResult">CheckResult</a></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".isScreenShareSupported"><span class="type-signature">(static) </span>isScreenShareSupported<span class="signature">()</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>浏览器是否支持屏幕分享</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">boolean</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".getDevices"><span class="type-signature">(static) </span>getDevices<span class="signature">()</span><span class="type-signature"> &rarr; {Promise.&lt;Array.&lt;MediaDeviceInfo>>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>获取全部媒体输入、输出设备</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Array.&lt;MediaDeviceInfo>></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".getCameras"><span class="type-signature">(static) </span>getCameras<span class="signature">()</span><span class="type-signature"> &rarr; {Promise.&lt;Array.&lt;MediaDeviceInfo>>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>获取全部摄像头列表</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Array.&lt;MediaDeviceInfo>></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".getMicrophones"><span class="type-signature">(static) </span>getMicrophones<span class="signature">()</span><span class="type-signature"> &rarr; {Promise.&lt;Array.&lt;MediaDeviceInfo>>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>获取全部麦克风</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Array.&lt;MediaDeviceInfo>></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".getSpeakers"><span class="type-signature">(static) </span>getSpeakers<span class="signature">()</span><span class="type-signature"> &rarr; {Promise.&lt;Array.&lt;MediaDeviceInfo>>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>获取全部扬声器列表</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Array.&lt;MediaDeviceInfo>></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".createClient"><span class="type-signature">(static) </span>createClient<span class="signature">(clientConfig)</span><span class="type-signature"> &rarr; {<a href="Client.html">Client</a>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>创建 Client 客户端对象</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>clientConfig</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>详细内容见 Client</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <ul>
+<li>客户端对象.</li>
+</ul>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="Client.html">Client</a></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".createStream"><span class="type-signature">(static) </span>createStream<span class="signature">(streamConfig)</span><span class="type-signature"> &rarr; {<a href="LocalStream.html">LocalStream</a>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description usertext">
+    <p>创建本地流对象，可以通过 客户端对象的 join 方法使用本流入会</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>streamConfig</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>详细内容见 LocalStream</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <ul>
+<li>客户端对象.</li>
+</ul>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type"><a href="LocalStream.html">LocalStream</a></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Mon Mar 29 2021 13:41:08 GMT+0800 (中国标准时间) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+    <link type="text/css" rel="stylesheet" href="./styles/custom.css">
+    
+</body>
+</html>
