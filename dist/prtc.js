@@ -22205,14 +22205,13 @@ var debugerror = require('debug')('FlyInn:ERROR:RTC');
 var callRouterPath = '/iapi/conf/join';
 debugerror.log = console.warn.bind(console);
 /**
- * 音视频通话客户对象，通过createClient创建
- *
  * @param {object} clientConfig
  * @param {string} clientConfig.call_router_url - callRouter 地址 url
- * @param {string} clientConfig.sdi_app_id - sdkAppID
+ * @param {string} clientConfig.sdk_app_id - sdkAppID
  * @param {string} clientConfig.user_id - 用户ID
- * @param {string} clientConfig.user_sig - 签名
- * @class Client
+ * @param {string} clientConfig.user_sig - 签名信息
+ * @class
+ * @classdesc 音视频通话客户对象，可以通过createClient创建
  * @extends {EventEmitter}
  */
 
@@ -22262,6 +22261,7 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
    * @param {MediaStream} [options.mediaStream] - 本地媒体流，则默认调用麦克风、摄像头获取
    * @param {array} [options.pcConfig] - turn服务器设置 [{urls:'turn:example.com:666',username:'',credential:''}]
    * @param {string} [options.iceTransportPolicy=all] - ICE协商策略, 'relay':强制使用TURN, 'all':任何类型
+   * @param {string} [options.preferredVideoCodec] - 首选的视频编码 vp8 h264
    * @memberof Client
    */
 
@@ -22290,6 +22290,7 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
            *
            * @event Client#JOIN-ROOM-FAILED
            * @property {string} code - code 列表另附
+           * @memberof Client
            */
           _this2.emit('join-room-failed', res.code);
 
@@ -22394,16 +22395,30 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
       this._ua.stop();
     }
     /**
+     * 监听客户端对象事件
+     *
+     * @param {string} eventName - 事件名称
+     * @param {function} handler - 事件处理方法
+     * @memberof Client
+     */
+
+  }, {
+    key: "on",
+    value: function on(eventName, handler) {
+      this.on(eventName, handler);
+    }
+    /**
      * 解除事件绑定
      *
      * @param {string} eventName - 事件名称
+     * @param {function} handler - 事件处理方法
      * @memberof Client
      */
 
   }, {
     key: "off",
-    value: function off(eventName, listener) {
-      this.removeListener(eventName, listener);
+    value: function off(eventName, handler) {
+      this.removeListener(eventName, handler);
     }
   }]);
 
@@ -22742,20 +22757,19 @@ var audioProfile = {
 };
 var hints = ['motion', 'detail', 'text'];
 /**
- * 本地媒体对象，可以通过createStream创建
- *
  * @param {object} streamConfig - 注意：本参数未启用
  * @param {string} streamConfig.user_id - 用户ID
- * @param {string} streamConfig.audio - 是否采集麦克风
- * @param {string} streamConfig.video - 是否采集摄像头视频
+ * @param {boolean} streamConfig.audio - 是否采集麦克风
+ * @param {boolean} streamConfig.video - 是否采集摄像头视频
  * @param {string} streamConfig.microphone_id - 音频输入设备 deviceId，可通过 getMicrophones()获取
  * @param {string} streamConfig.camera_id - 摄像头的 deviceId, 可通过 getCameras() 获取
  * @param {string} streamConfig.facing_mode - 'user':前置摄像头，'environment':后置摄像头，请勿同时使用 camrea_id 和 facing_ode
- * @param {string} streamConfig.screen - 是否采用屏幕分享
+ * @param {boolean} streamConfig.screen - 是否采用屏幕分享
  * @param {string} streamConfig.videoSource - 视频源
  * @param {string} streamConfig.audioSource - 音频源
- * @param {string} streamConfig.mirror - 视频是否镜像，不适用于屏幕分享
- * @class LocalStream
+ * @param {boolean} streamConfig.mirror - 视频是否镜像，不适用于屏幕分享
+ * @class
+ * @classdesc 本地媒体对象，可以通过createStream创建
  * @extends {Stream}
  */
 
@@ -22804,6 +22818,7 @@ var LocalStream = /*#__PURE__*/function (_Stream) {
       this._session = value;
     }
     /**
+     * @member {string} userId - 用户ID
      * @readonly
      * @memberof LocalStream
      */
@@ -23063,9 +23078,8 @@ var _require = require('js-base64'),
 
 var Stream = require('./Stream');
 /**
- * 远端媒体对象
- *
- * @class RemoteStream
+ * @class
+ * @classdesc 远端媒体对象,包括音频对象和视频对象
  * @extends {Stream}
  */
 
@@ -23100,8 +23114,7 @@ var RemoteStream = /*#__PURE__*/function (_Stream) {
     return _this;
   }
   /**
-   * 媒体类型
-   *
+   * @member {string} type - 媒体类型
    * @readonly
    * @memberof RemoteStream
    */
@@ -23113,7 +23126,7 @@ var RemoteStream = /*#__PURE__*/function (_Stream) {
       return this._type;
     }
     /**
-     * 用户ID
+     * @member {string} userId - 用户ID
      *
      * @readonly
      * @memberof RemoteStream
@@ -23125,7 +23138,7 @@ var RemoteStream = /*#__PURE__*/function (_Stream) {
       return this._cname.userid || '';
     }
     /**
-     * 用户显示名
+     * @member {string} display_name - 用户显示名
      *
      * @readonly
      * @memberof RemoteStream
@@ -23201,7 +23214,7 @@ var Stream = /*#__PURE__*/function (_EventEmitter) {
     return _this;
   }
   /**
-   * Stream唯一标识ID
+   * @member {string} id - Stream唯一标识ID
    * @readonly
    * @memberof Stream
    */
@@ -23213,8 +23226,7 @@ var Stream = /*#__PURE__*/function (_EventEmitter) {
       return this._id;
     }
     /**
-     * 音视频流
-     *
+     * @member {MediaStream} stream - 音视频流
      * @readonly
      * @memberof Stream
      */
@@ -23345,29 +23357,33 @@ function videoDecodeSupportedCheck(value) {
   return videoCodecs.has(value);
 }
 /**
- * @module PRTC
+ * @namespace PRTC
  */
 
 
 module.exports = {
   /**
-   * @type {string} - SDK 版本号
+   * @var {string} - SDK 版本号
+   * @memberof PRTC
    */
   version: pkg.version,
 
   /**
+   * @typedef {object} CheckResult
+   * @property {boolean} data.result - 检测结果
+   * @property {object} data.detail - 检测详情
+   * @property {boolean} data.detail.isWebRTCSupported - 当前浏览器是否支持 webRTC
+   * @property {boolean} data.detail.isMediaDevicesSupported - 当前浏览器是否支持获取媒体设备及媒体流
+   * @property {boolean} data.detail.isH264EncodeSupported - 当前浏览器上行是否支持 H264 编码
+   * @property {boolean} data.detail.isH264DecodeSupported - 当前浏览器下行是否支持 H264 编码
+   * @property {boolean} data.detail.isVp8EncodeSupported - 当前浏览器上行是否支持 VP8 编码
+   */
+
+  /**
   * 检测浏览器是否支持 WebRTC 相关属性、方法等
   *
-  * @returns {object} data
-  * data.result - 检测结果
-  * data.detail - 检测详情
-  * data.detail.isWebRTCSupported - 当前浏览器是否支持 webRTC
-  * data.detail.isMediaDevicesSupported - 当前浏览器是否支持获取媒体设备及媒体流
-  * data.detail.isH264EncodeSupported - 当前浏览器上行是否支持 H264 编码
-  * data.detail.isH264DecodeSupported - 当前浏览器下行是否支持 H264 编码
-  * data.detail.isVp8EncodeSupported - 当前浏览器上行是否支持 VP8 编码
-  * data.detail.isVp8DecodeSupported - 当前浏览器下行是否支持 VP8 编码
-  *
+  * @returns {CheckResult} data - 返回的检测结果
+  * @memberof PRTC
   */
   checkSystemRequirements: function checkSystemRequirements() {
     var isWebRTCSupported = webrtcSupportedCheck(),
@@ -23394,6 +23410,7 @@ module.exports = {
   /**
   * 浏览器是否支持屏幕分享
   * @return {boolean}
+  * @memberof PRTC
   */
   isScreenShareSupported: function isScreenShareSupported() {
     return Boolean(navigator.mediaDevices.getDisplayMedia);
@@ -23402,6 +23419,7 @@ module.exports = {
   /**
   * 获取全部媒体输入、输出设备
   * @return {Promise.<Array.<MediaDeviceInfo>>}
+  * @memberof PRTC
   */
   getDevices: function getDevices() {
     return Promise.resolve().then(function () {
@@ -23422,6 +23440,7 @@ module.exports = {
   /**
   * 获取全部摄像头列表
   * @return {Promise.<Array.<MediaDeviceInfo>>}
+  * @memberof PRTC
   */
   getCameras: function getCameras() {
     return Promise.resolve().then(function () {
@@ -23445,6 +23464,7 @@ module.exports = {
   /**
   * 获取全部麦克风
   * @return {Promise.<Array.<MediaDeviceInfo>>}
+  * @memberof PRTC
   */
   getMicrophones: function getMicrophones() {
     return Promise.resolve().then(function () {
@@ -23468,6 +23488,7 @@ module.exports = {
   /**
   * 获取全部扬声器列表
   * @return {Promise.<Array.<MediaDeviceInfo>>}
+  * @memberof PRTC
   */
   getSpeakers: function getSpeakers() {
     return Promise.resolve().then(function () {
@@ -23492,6 +23513,7 @@ module.exports = {
   * 创建 Client 客户端对象
   * @param {object} clientConfig - 详细内容见 Client
   * @return {Client} - 客户端对象.
+  * @memberof PRTC
   */
   createClient: function createClient(clientConfig) {
     return new Client(clientConfig);
@@ -23501,6 +23523,7 @@ module.exports = {
    * 创建本地流对象，可以通过 客户端对象的 join 方法使用本流入会
    * @param {object} streamConfig - 详细内容见 LocalStream
    * @return {LocalStream} - 客户端对象.
+   * @memberof PRTC
    */
   createStream: function createStream(streamConfig) {
     return new LocalStream(streamConfig);
@@ -32620,6 +32643,7 @@ module.exports={
     "@types/debug": "^4.1.5",
     "@types/node": "^14.0.6",
     "debug": "^4.1.1",
+    "docdash": "^1.2.0",
     "events": "^3.1.0",
     "js-base64": "^3.6.0",
     "sdp-transform": "git+https://github.com/lei40251/sdp-transform.git#dev"
@@ -32649,7 +32673,7 @@ module.exports={
     "lint": "gulp lint",
     "test": "gulp test",
     "prepublishOnly": "gulp babel",
-    "doc": "jsdoc2md ./lib/SFU/*.js > ./sfu-doc/PRTC_API.md"
+    "doc": "jsdoc -c ./jsdoc.json"
   }
 }
 
