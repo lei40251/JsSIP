@@ -22405,7 +22405,7 @@ var Client = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "on",
     value: function on(eventName, handler) {
-      this.on(eventName, handler);
+      this.addListener(eventName, handler);
     }
     /**
      * 解除事件绑定

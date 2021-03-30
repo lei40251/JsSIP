@@ -217,12 +217,6 @@ function start()
 
 start();
 
-// 分享桌面
-document.querySelector('#screenShare').onclick=function()
-{
-  client.displayShare();
-};
-
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
 {
