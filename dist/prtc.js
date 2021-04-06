@@ -22468,7 +22468,7 @@ function call(roomId, options) {
       'userid': _this3._userId,
       'dn': Base64.encode(_this3._dn)
     };
-    d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=ice-options.*(\n|(\r\n)))|(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
+    d.sdp = d.sdp.replace(/network-id [^1][^\d*].*$/gm, '@').replace(/(a=cand.*9 typ.*(\n|(\r\n)))|(a=cand.*@(\n|(\r\n)))|(a=.*generation [^0].*(\n|(\r\n)))|(a=mid:.*(\n|(\r\n)))|(a=group:BUNDLE.*(\n|(\r\n)))/g, '');
     d.sdp = d.sdp.replace(/(?=a=ice-ufra)/g, "a=x-sfu-cname:".concat(Base64.encode(JSON.stringify(cname)), "\r\n"));
   }); // 根据Session Event触发Client Event给用户
 
@@ -22480,23 +22480,27 @@ function call(roomId, options) {
      * @event Client#ERROR
      * @property {string} data - 事件列表另附
      */
-    _this3.emit('error;', 'GETUSERMEDIAFAILED');
+    _this3.emit('error', 'GETUSERMEDIAFAILED');
+  });
+
+  this._session.on('failed', function (data) {
+    _this3.emit('error', data.message.reason_phrase ? data.message.reason_phrase : data.cause ? data.cause : 'failed');
   });
 
   this._session.on('peerconnection:createofferfailed', function () {
-    _this3.emit('error;', 'CREATEOFFERFAILED');
+    _this3.emit('error', 'CREATEOFFERFAILED');
   });
 
   this._session.on('peerconnection:createanswerfailed', function () {
-    _this3.emit('error;', 'CREATEANSWERFAILED');
+    _this3.emit('error', 'CREATEANSWERFAILED');
   });
 
   this._session.on('peerconnection:setlocaldescriptionfailed', function () {
-    _this3.emit('error;', 'SETLOCALDESCRIPTIONFAILED');
+    _this3.emit('error', 'SETLOCALDESCRIPTIONFAILED');
   });
 
   this._session.on('peerconnection:setremotedescriptionfailed', function () {
-    _this3.emit('error;', 'SETREMOTEDESCRIPTIONFAILED');
+    _this3.emit('error', 'SETREMOTEDESCRIPTIONFAILED');
   });
 
   this._session.on('confirmed', function () {
@@ -22561,41 +22565,46 @@ function call(roomId, options) {
 
   this._session.on('reinvite', function (d) {
     d.callback = function () {
-      var transceiverMids = new Map();
-
-      var transceivers = _this3._session.connection.getTransceivers();
-
-      for (var i = 0; i < transceivers.length; ++i) {
-        transceiverMids.set(transceivers[i].mid, transceivers[i].receiver.track.id);
-      }
-
       var medias = d.request['sdp'] ? d.request['sdp'].media : [];
 
-      for (var _i = 0; _i < medias.length; ++_i) {
+      var _loop = function _loop(i) {
+        var ssrcs = medias[i].ssrcs || [];
         var xSfuCname = '';
 
         try {
-          xSfuCname = JSON.parse(Base64.decode(medias[_i].xSfuCname));
+          xSfuCname = JSON.parse(Base64.decode(medias[i].xSfuCname));
         } catch (error) {}
 
-        if (_this3._remoteStreams.get(transceiverMids.get(String(_i)))) {
-          _this3._remoteStreams.get(transceiverMids.get(String(_i))).cname = xSfuCname;
-          /**
-           * 远端入会事件
-           *
-           * @event Client#PEER-JOIN
-           * @property {object} data
-           * @property {string} data.userId - 用户ID
-           */
+        ssrcs.forEach(function (ssrc) {
+          var trackId;
 
-          _this3.emit('peer-join', {
-            userId: _this3._userId
-          });
+          if (ssrc.attribute === 'msid') {
+            trackId = ssrc.value.split(' ')[1];
 
-          _this3.emit('stream-added', _this3._remoteStreams.get(transceiverMids.get(String(_i))));
+            if (_this3._remoteStreams.get(trackId)) {
+              _this3._remoteStreams.get(trackId).cname = xSfuCname;
+              /**
+              * 远端入会事件
+              *
+              * @event Client#PEER-JOIN
+              * @property {object} data
+              * @property {string} data.userId - 用户ID
+              */
 
-          _this3._remoteStreams["delete"](transceiverMids.get(String(_i)));
-        }
+              _this3.emit('peer-join', {
+                userId: _this3._userId
+              });
+
+              _this3.emit('stream-added', _this3._remoteStreams.get(trackId));
+
+              _this3._remoteStreams["delete"](trackId);
+            }
+          }
+        });
+      };
+
+      for (var i = 0; i < medias.length; ++i) {
+        _loop(i);
       }
     };
   });
