@@ -183,6 +183,7 @@ function initSignalling()
   // 本端加入会议
   client.on('local-joined', function(data)
   {
+    document.querySelector('#join_conf').setAttribute('disabled', true);
     console.log('您已加入会议');
     localStream = data;
 
@@ -199,6 +200,7 @@ function initSignalling()
   client.on('local-left', function()
   {
     resetStatus();
+    document.querySelector('#join_conf').removeAttribute('disabled');
     console.log('您已离开会议');
   });
 

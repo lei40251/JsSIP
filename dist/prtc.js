@@ -23036,7 +23036,18 @@ var LocalStream = /*#__PURE__*/function (_Stream) {
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       return this._session.switchCam(options).then(function (s) {
-        _this4._stream = s;
+        var newAudioTrack = _this4._stream.getAudioTracks()[0];
+
+        var oldVideoTracks = _this4._stream.getVideoTracks();
+
+        var newVideoTrack = s.getVideoTracks()[0];
+        var newStream = new MediaStream();
+        newStream.addTrack(newAudioTrack);
+        newStream.addTrack(newVideoTrack);
+        _this4._stream = newStream;
+        oldVideoTracks.forEach(function (track) {
+          track.stop();
+        });
         return s;
       });
     }
