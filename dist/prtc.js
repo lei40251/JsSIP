@@ -18070,6 +18070,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sender.replaceTrack(track);
               });
             } else {
+              // chrome 69 以上支持 getTransceivers
               _this8._connection.getTransceivers().forEach(function (transeiver) {
                 if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
                   if (transeiver.sender.track.id === stream.getTracks()[0].id) {
@@ -18366,7 +18367,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('callmode', {
         originator: 'local',
         mode: 'audio'
-      });
+      }); // chrome 69 以上支持 getTransceivers
 
       this._connection.getTransceivers().forEach(function (transeiver) {
         if (transeiver.sender.track && transeiver.sender.track.kind === 'video' && transeiver.sender.track.readyState !== 'ended') {
@@ -19483,6 +19484,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
 
           if (_m.port === 0) {
+            // chrome 69 以上支持 getTransceivers
             this._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video' && transeiver.sender.readyState !== 'ended') {
                 if (!transeiver.stopped) {
@@ -19881,8 +19883,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           codecs.slice(selectedCodecIndex, 1);
           codecs.unshift(selectedCodec);
 
-          var transceiver = _this28._connection.getTransceivers().find(function (t) {
-            return t.sender && t.sender.track === stream.getAudioTracks()[0];
+          var transceiver = _this28._connection.getSenders().find(function (sender) {
+            return sender && sender.track === stream.getAudioTracks()[0];
           });
 
           try {
@@ -19921,8 +19923,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _codecs.unshift(_selectedCodec);
 
-          var _transceiver = _this28._connection.getTransceivers().find(function (t) {
-            return t.sender && t.sender.track === stream.getVideoTracks()[0];
+          var _transceiver = _this28._connection.getSenders().find(function (sender) {
+            return sender && sender.track === stream.getVideoTracks()[0];
           });
 
           try {
@@ -22478,7 +22480,12 @@ function call(roomId, options) {
      * 错误事件
      *
      * @event Client#ERROR
-     * @property {string} data - 事件列表另附
+     * @property {string} GETUSERMEDIAFAILED - 获取媒体设备失败
+     * @property {string} CREATEOFFERFAILED - 呼叫失败
+     * @property {string} CREATEANSWERFAILED - 应答失败
+     * @property {string} SETLOCALDESCRIPTIONFAILED - 设置本端描述失败
+     * @property {string} SETREMOTEDESCRIPTIONFAILED - 设备远端描述失败
+     * @property {string} - 其他
      */
     _this3.emit('error', 'GETUSERMEDIAFAILED');
   });
@@ -22549,6 +22556,15 @@ function call(roomId, options) {
 
     localTracks.length > 0 && _this3.emit('local-joined', localStream);
 
+    _this3._session.on('ended', function () {
+      /**
+       * 本地已退出会议事件
+       *
+       * @event Client#LOCAL-LEAVE
+       */
+      _this3.emit('local-leave');
+    });
+
     _this3._session.connection.getReceivers().forEach(function (receiver) {
       if (receiver.track.kind === 'audio') {
         /**
@@ -22584,12 +22600,12 @@ function call(roomId, options) {
             if (_this3._remoteStreams.get(trackId)) {
               _this3._remoteStreams.get(trackId).cname = xSfuCname;
               /**
-              * 远端入会事件
-              *
-              * @event Client#PEER-JOIN
-              * @property {object} data
-              * @property {string} data.userId - 用户ID
-              */
+               * 远端入会事件
+               *
+               * @event Client#PEER-JOIN
+               * @property {object} data
+               * @property {string} data.userId - 用户ID
+               */
 
               _this3.emit('peer-join', {
                 userId: _this3._userId
@@ -22607,15 +22623,6 @@ function call(roomId, options) {
         _loop(i);
       }
     };
-  });
-
-  this._session.on('ended', function () {
-    /**
-     * 本地已退出会议事件
-     *
-     * @event Client#LOCAL-LEFT
-     */
-    _this3.emit('local-left');
   }); // 媒体变化, 触发媒体新增事件
 
 
@@ -22633,7 +22640,7 @@ function call(roomId, options) {
         /**
          * 远端离会事件
          *
-         * @event Client#PEER-JOIN
+         * @event Client#PEER-LEAVE
          * @property {object} data
          * @property {string} data.userId - 用户ID
          */
