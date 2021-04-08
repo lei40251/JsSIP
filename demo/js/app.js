@@ -62,7 +62,7 @@ function renderRemoteStream(remoteStream)
   {
     if (self.target.dataset.muted == '1')
     {
-      if (stream.unmuteVideo() == '1')
+      if (remoteStream.unmuteVideo() == '1')
       {
         self.target.innerHTML = '关闭视频';
         self.target.dataset.muted = '0';
@@ -72,7 +72,7 @@ function renderRemoteStream(remoteStream)
         console.warn('开启失败');
       }
     }
-    else if (stream.muteVideo())
+    else if (remoteStream.muteVideo())
     {
       self.target.innerHTML = '开启视频';
       self.target.dataset.muted = '1';
@@ -197,7 +197,7 @@ function initSignalling()
   });
 
   // 本端离开会议
-  client.on('local-left', function()
+  client.on('local-leave', function()
   {
     resetStatus();
     document.querySelector('#join_conf').removeAttribute('disabled');

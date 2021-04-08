@@ -22626,9 +22626,11 @@ function call(roomId, options) {
   }); // 媒体变化, 触发媒体新增事件
 
 
-  this._session.connection.addEventListener('track', function (trackEvent) {
-    if (trackEvent.track.kind === 'video' && trackEvent.track.enabled) {
-      var remoteStream = new RemoteStream(trackEvent.track);
+  this._session.connection.addEventListener('track', function (_ref) {
+    var track = _ref.track;
+
+    if (track.kind === 'video' && track.enabled) {
+      var remoteStream = new RemoteStream(track);
       remoteStream.on('stream-removed', function () {
         /**
          * 远端用户媒体流已经移除事件
@@ -22651,7 +22653,7 @@ function call(roomId, options) {
         });
       });
 
-      _this3._remoteStreams.set(trackEvent.track.id, remoteStream); // this.emit('stream-added', remoteStream);
+      _this3._remoteStreams.set(track.id, remoteStream); // this.emit('stream-added', remoteStream);
 
     }
   });
