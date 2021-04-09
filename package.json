@@ -58,13 +58,13 @@
     "commit": "git-cz",
     "gendoc": "jsdoc -c ./jsdoc.json",
     "genlog": "conventional-changelog -p custom-config -i SFU_CHANGELOG.md -s -r 0",
-    "build:major": "npm version major && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:pre:major": "npm version premajor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:minor": "npm version minor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:pre:minor": "npm version preminor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:patch": "npm version patch && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:pre:patch": "npm version prepatch && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
-    "build:pre": "npm version prerelease && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp"
+    "build:major": "npm version major && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:pre:major": "npm version premajor && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:minor": "npm version minor && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:pre:minor": "npm version preminor && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:patch": "npm version patch && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:pre:patch": "npm version prepatch && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp",
+    "build:pre": "npm version prerelease && npm run genlog && npm run gendoc && git add . && git commit -m 'Log & Doc' && git push && gulp"
   },
   "config": {
     "commitizen": {
