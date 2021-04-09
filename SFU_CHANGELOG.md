@@ -1,4 +1,9 @@
-# [1.2.0](https://github.com/lei40251/JsSIP/compare/3.2.11...1.2.0) (2021-04-09)
+## [1.2.1-0](https://github.com/lei40251/JsSIP/compare/3.2.11...v1.2.1-0) (2021-04-09)
+
+
+### ✨ Features
+
+* 版本号修改未SFU专用 ([18de8f7](https://github.com/lei40251/JsSIP/commit/18de8f7))
 
 
 
