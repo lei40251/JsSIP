@@ -2,7 +2,8 @@
   "name": "prtc",
   "title": "PRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "3.5.5",
+  "version": "1.2.0",
+  "flyinn": "3.5.5",
   "homepage": "",
   "author": "",
   "contributors": [],
@@ -19,6 +20,7 @@
   "dependencies": {
     "@types/debug": "^4.1.5",
     "@types/node": "^14.0.6",
+    "conventional-changelog-cli": "^2.1.1",
     "debug": "^4.1.1",
     "docdash": "^1.2.0",
     "events": "^3.1.0",
@@ -30,6 +32,9 @@
     "@babel/preset-env": "^7.9.6",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
+    "commitizen": "^4.2.3",
+    "conventional-changelog-custom-config": "^0.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^7.22.0",
     "fancy-log": "^1.3.3",
     "gulp": "^4.0.2",
@@ -50,6 +55,23 @@
     "lint": "gulp lint",
     "test": "gulp test",
     "prepublishOnly": "gulp babel",
-    "doc": "jsdoc -c ./jsdoc.json"
+    "commit": "git-cz",
+    "gendoc": "jsdoc -c ./jsdoc.json",
+    "genlog": "conventional-changelog -p custom-config -i SFU_CHANGELOG.md -s -r 0",
+    "build:major": "npm version major && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:pre:major": "npm version premajor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:minor": "npm version minor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:pre:minor": "npm version preminor && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:patch": "npm version patch && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:pre:patch": "npm version prepatch && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp",
+    "build:pre": "npm version prerelease && npm run genlog && npm run gendoc && git add . && npm run commit && git push && gulp"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "changelog": {
+    "emojis": true
   }
 }
