@@ -8,8 +8,7 @@
   // const sdpTransform = require('sdp-transform');
   // console.log(sdpTransform);
   // 调试信息输出
-  // PRTC.debug.enable('FlyInn:*');
-  // 关闭调试信息输出
+  PRTC.debug.enable('FlyInn:*'); // 关闭调试信息输出
   // PRTC.debug.disable('FlyInn:*');
   // test start
   // const pcRecvVideo = new RTCPeerConnection();
@@ -20,6 +19,7 @@
   //   });
   // test end
   // 控制台输出SDK版本信息
+
   console.log(PRTC.version); // 会话路由地址，创建&加入会议用
 
   var callRouterUrl = 'https://pro.vsbc.com/pa'; // 客户端对象
@@ -34,7 +34,8 @@
 
   var localAudioMuted = false; // 远端音频流禁用状态
 
-  var remoteAudioMuted = false; // 会议结束重置参数
+  var remoteAudioMuted = false;
+  var nPC; // 会议结束重置参数
 
   function resetStatus() {
     localStream = null;
@@ -116,7 +117,10 @@
       user_sig: userSig
     }; // 创建 client
 
-    client = PRTC.createClient(configuration); // 信令连接成功建立
+    client = PRTC.createClient(configuration);
+    client.on('pc', function (pc) {
+      nPC = pc;
+    }); // 信令连接成功建立
 
     client.on('connection-state-changed', function (data) {
       console.log('connection-state-changed: ', data);
@@ -177,7 +181,25 @@
     getTemper(initSignalling);
   }
 
-  start(); // 预览本端媒体
+  start();
+
+  document.querySelector('#show_remote_video').onclick = function () {
+    var vs = new MediaStream();
+    var nc = nPC.getReceivers()[0].track; // nc.onunmute = () =>
+    // {
+    // don't set srcObject again if it is already set.
+    // if (remoteView.srcObject) return;
+    // remoteView.srcObject = streams[0];
+
+    vs.addTrack(nc);
+    var vd = document.createElement('video');
+    vd.srcObject = vs;
+    vd.play();
+    document.querySelector('#rvs').append(vd); // renderRemoteStream(vs);
+    // console.log('nc: ', nc);
+    // };
+  }; // 预览本端媒体
+
 
   document.querySelector('#create_stream').onclick = function () {
     localStream = new PRTC.LocalStream({});

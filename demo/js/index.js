@@ -5,7 +5,7 @@
 
 // console.log(sdpTransform);
 // 调试信息输出
-// PRTC.debug.enable('FlyInn:*');
+PRTC.debug.enable('FlyInn:*');
 // 关闭调试信息输出
 // PRTC.debug.disable('FlyInn:*');
 
@@ -41,6 +41,8 @@ let localVideoMuted = false;
 let localAudioMuted = false;
 // 远端音频流禁用状态
 let remoteAudioMuted = false;
+
+let nPC;
 
 // 会议结束重置参数
 function resetStatus()
@@ -148,6 +150,11 @@ function initSignalling()
   // 创建 client
   client = PRTC.createClient(configuration);
 
+  client.on('pc', (pc) =>
+  {
+    nPC=pc;
+  });
+
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
   {
@@ -233,6 +240,28 @@ function start()
 }
 
 start();
+
+document.querySelector('#show_remote_video').onclick=function()
+{
+  const vs = new MediaStream();
+  const nc = nPC.getReceivers()[0].track;
+
+  // nc.onunmute = () =>
+  // {
+  // don't set srcObject again if it is already set.
+  // if (remoteView.srcObject) return;
+  // remoteView.srcObject = streams[0];
+  vs.addTrack(nc);
+
+  const vd = document.createElement('video');
+
+  vd.srcObject= vs;
+  vd.play();
+  document.querySelector('#rvs').append(vd);
+  // renderRemoteStream(vs);
+  // console.log('nc: ', nc);
+  // };
+};
 
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
