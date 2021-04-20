@@ -1,0 +1,7 @@
+1、candidate 是否可以去掉全部host的
+2、媒体编码：音频保留:opus,pcmu,pcma,g722 ?
+           视频保留:VP8,VP9,H264(42001f)
+3、重写 PT 值 ？
+4、是否使用rtx red ulpfec ？
+5、ssrc cname 可以在初始化修改，后面不可修改
+6、fb
