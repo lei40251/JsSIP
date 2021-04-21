@@ -1,3 +1,12 @@
+## [1.2.2-0](https://github.com/lei40251/JsSIP/compare/v1.2.1-2...v1.2.2-0) (2021-04-21)
+
+
+### 🐛 Bug Fixes
+
+* **client:** 媒体设备占用状态error事件触发问题 ([2fd27a4](https://github.com/lei40251/JsSIP/commit/2fd27a4))
+
+
+
 ## [1.2.1-2](https://github.com/lei40251/JsSIP/compare/3.2.11...v1.2.1-2) (2021-04-09)
 
 
