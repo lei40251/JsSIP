@@ -1,3 +1,12 @@
+## [1.2.2-1](https://github.com/lei40251/JsSIP/compare/v1.2.2-0...v1.2.2-1) (2021-04-22)
+
+
+### ✨ Features
+
+* 1、启用relay、wslb；2、同一个会话限制二次入会 ([a002b9e](https://github.com/lei40251/JsSIP/commit/a002b9e))
+
+
+
 ## [1.2.2-0](https://github.com/lei40251/JsSIP/compare/v1.2.1-2...v1.2.2-0) (2021-04-21)
 
 
