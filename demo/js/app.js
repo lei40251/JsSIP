@@ -2,10 +2,10 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-// PRTC.debug.enable('FlyInn:*');
+PRTC.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-PRTC.debug.disable('FlyInn:*');
+// PRTC.debug.disable('FlyInn:*');
 
 // 控制台输出SDK版本信息
 console.log(PRTC.version);
