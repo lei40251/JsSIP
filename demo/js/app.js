@@ -5,13 +5,13 @@
 PRTC.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-// PRTC.debug.disable('FlyInn:*');
+PRTC.debug.disable('FlyInn:*');
 
 // 控制台输出SDK版本信息
 console.log(PRTC.version);
 
 // 会话路由地址，创建&加入会议用
-const callRouterUrl = 'https://pro.vsbc.com/pa';
+const callRouterUrl = 'https://pro.vsbc.com/cu';
 
 // 客户端对象
 let client = null;
