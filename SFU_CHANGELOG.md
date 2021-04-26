@@ -1,3 +1,12 @@
+## [1.2.4-0](https://github.com/lei40251/JsSIP/compare/v1.2.3-0...v1.2.4-0) (2021-04-26)
+
+
+### ✨ Features
+
+* **client:** 启用新wslb地址及鉴权方式 ([b649d80](https://github.com/lei40251/JsSIP/commit/b649d80))
+
+
+
 ## [1.2.3-0](https://github.com/lei40251/JsSIP/compare/v1.2.2-1...v1.2.3-0) (2021-04-26)
 
 
