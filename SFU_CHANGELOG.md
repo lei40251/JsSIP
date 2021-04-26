@@ -1,3 +1,12 @@
+## [1.2.3-0](https://github.com/lei40251/JsSIP/compare/v1.2.2-1...v1.2.3-0) (2021-04-26)
+
+
+### 🐛 Bug Fixes
+
+* **getdevices\getcameras\getmicrophones\getspeakers:** 部分安卓手机重复获取输入输出媒体设备报错问题 ([788d71d](https://github.com/lei40251/JsSIP/commit/788d71d))
+
+
+
 ## [1.2.2-1](https://github.com/lei40251/JsSIP/compare/v1.2.2-0...v1.2.2-1) (2021-04-22)
 
 
