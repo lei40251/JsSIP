@@ -1,3 +1,12 @@
+## [1.2.4-1](https://github.com/lei40251/JsSIP/compare/v1.2.4-0...v1.2.4-1) (2021-04-28)
+
+
+### 🐛 Bug Fixes
+
+* **client:** 入会时媒体设备占用事件触发 ([de1743f](https://github.com/lei40251/JsSIP/commit/de1743f))
+
+
+
 ## [1.2.4-0](https://github.com/lei40251/JsSIP/compare/v1.2.3-0...v1.2.4-0) (2021-04-26)
 
 
