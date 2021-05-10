@@ -1,3 +1,12 @@
+## [1.2.4-2](https://github.com/lei40251/JsSIP/compare/v1.2.4-1...v1.2.4-2) (2021-05-10)
+
+
+### ✨ Features
+
+* **client:** dEMO 增加关闭及刷新浏览器时退出会议 ([fe3c270](https://github.com/lei40251/JsSIP/commit/fe3c270))
+
+
+
 ## [1.2.4-1](https://github.com/lei40251/JsSIP/compare/v1.2.4-0...v1.2.4-1) (2021-04-28)
 
 
