@@ -341,3 +341,9 @@ document.querySelector('#switch_device').onclick = function()
     document.querySelector('#local_stream').srcObject = s;
   });
 };
+
+window.onbeforeunload=function()
+{
+  client.off('peer-leave', peerLeave);
+  client.leave();
+};
