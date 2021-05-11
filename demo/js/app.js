@@ -185,7 +185,7 @@ function initSignalling()
   // 本端加入会议
   client.on('local-joined', function(data)
   {
-    document.querySelector('#join_conf').setAttribute('disabled', true);
+    // document.querySelector('#join_conf').setAttribute('disabled', true);
     console.log('您已加入会议');
     localStream = data;
 
@@ -202,7 +202,7 @@ function initSignalling()
   client.on('local-leave', function()
   {
     resetStatus();
-    document.querySelector('#join_conf').removeAttribute('disabled');
+    // document.querySelector('#join_conf').removeAttribute('disabled');
     console.log('您已离开会议');
   });
 
@@ -238,12 +238,48 @@ document.querySelector('#create_stream').onclick = function()
 };
 
 // 加入会议
+// 不用relay
+
+document.querySelector('#join_conf_no_relay').onclick =function()
+{
+  if (localStream)
+  {
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { mediaStream: localStream.stream });
+  }
+  else
+  {
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value);
+  }
+};
+
+// 启用 relay
 document.querySelector('#join_conf').onclick =function()
 {
   if (localStream)
   {
     client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { mediaStream : localStream.stream,
-      pcConfig    : [
+      pcConfig    : {
+        iceTransportPolicy : 'relay',
+        iceServers         : [
+          {
+            'urls' : [
+              'turn:124.127.118.146:6084?transport=udp',
+              'turn:124.127.118.146:6085?transport=udp',
+              'turn:124.127.118.146:6084?transport=tcp',
+              'turn:124.127.118.146:6085?transport=tcp'
+            ],
+            'username'   : '1620806320|414429',
+            'credential' : '8Riq9+7TPYXD5ZEkYpn94W6fd+Y='
+          }
+        ]
+      }
+    });
+  }
+  else
+  {
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { pcConfig : {
+      iceTransportPolicy : 'relay',
+      iceServers         : [
         {
           'urls' : [
             'turn:124.127.118.146:6084?transport=udp',
@@ -254,24 +290,11 @@ document.querySelector('#join_conf').onclick =function()
           'username'   : '1620806320|414429',
           'credential' : '8Riq9+7TPYXD5ZEkYpn94W6fd+Y='
         }
-      ] });
-  }
-  else
-  {
-    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { pcConfig : [
-      {
-        'urls' : [
-          'turn:124.127.118.146:6084?transport=udp',
-          'turn:124.127.118.146:6085?transport=udp',
-          'turn:124.127.118.146:6084?transport=tcp',
-          'turn:124.127.118.146:6085?transport=tcp'
-        ],
-        'username'   : '1620806320|414429',
-        'credential' : '8Riq9+7TPYXD5ZEkYpn94W6fd+Y='
-      }
-    ] });
+      ]
+    } });
   }
 };
+
 
 // 离开会议
 document.querySelector('#leave').onclick =function()
