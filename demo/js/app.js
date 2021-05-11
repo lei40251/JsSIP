@@ -127,7 +127,9 @@ function initSignalling()
     call_router_url : callRouterUrl,
     sdk_app_id      : sdkAppId,
     user_id         : userId,
-    user_sig        : userSig
+    user_sig        : userSig,
+    sockets         : 'wss://pro.vsbc.com:7777/ws?st=UzOVDb6ZkWyxdFjHqT0RscNTuys&ts=1620719320&e=2592000&dest=192.168.1.213:6083',
+    uri             : 'pro.vsbc.com'
   };
 
   // 创建 client
@@ -240,11 +242,34 @@ document.querySelector('#join_conf').onclick =function()
 {
   if (localStream)
   {
-    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { mediaStream: localStream.stream });
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { mediaStream : localStream.stream,
+      pcConfig    : [
+        {
+          'urls' : [
+            'turn:124.127.118.146:6084?transport=udp',
+            'turn:124.127.118.146:6085?transport=udp',
+            'turn:124.127.118.146:6084?transport=tcp',
+            'turn:124.127.118.146:6085?transport=tcp'
+          ],
+          'username'   : '1620806320|414429',
+          'credential' : '8Riq9+7TPYXD5ZEkYpn94W6fd+Y='
+        }
+      ] });
   }
   else
   {
-    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value);
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, { pcConfig : [
+      {
+        'urls' : [
+          'turn:124.127.118.146:6084?transport=udp',
+          'turn:124.127.118.146:6085?transport=udp',
+          'turn:124.127.118.146:6084?transport=tcp',
+          'turn:124.127.118.146:6085?transport=tcp'
+        ],
+        'username'   : '1620806320|414429',
+        'credential' : '8Riq9+7TPYXD5ZEkYpn94W6fd+Y='
+      }
+    ] });
   }
 };
 
