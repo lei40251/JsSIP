@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>DigestAuthentication.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="OutgoingRequest.html">OutgoingRequest</a><ul class='methods'><li data-type='method'><a href="OutgoingRequest.html#setHeader">setHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#getHeader">getHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#getHeaders">getHeaders</a></li><li data-type='method'><a href="OutgoingRequest.html#hasHeader">hasHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#parseSDP">parseSDP</a></li></ul></li><li><a href="JsSIP.UA.html">UA</a></li><li><a href="module.html#.exports">exports</a><ul class='methods'><li data-type='method'><a href="module.exports.html#authenticate">authenticate</a></li><li data-type='method'><a href="module.exports.html#toString">toString</a></li><li data-type='method'><a href="module.html#.exports#accept">accept</a></li><li data-type='method'><a href="module.html#.exports#reject">reject</a></li><li data-type='method'><a href="module.html#.exports#_newMessage">_newMessage</a></li><li data-type='method'><a href="module.html#.exports#parse">parse</a></li><li data-type='method'><a href="module.html#.exports#send">send</a></li><li data-type='method'><a href="module.html#.exports#_receiveResponse">_receiveResponse</a></li><li data-type='method'><a href="module.html#.exports#answer">answer</a></li><li data-type='method'><a href="module.html#.exports#terminate">terminate</a></li><li data-type='method'><a href="module.html#.exports#mute">mute</a></li><li data-type='method'><a href="module.html#.exports#unmute">unmute</a></li><li data-type='method'><a href="module.html#.exports#hold">hold</a></li><li data-type='method'><a href="module.html#.exports#refer">refer</a></li><li data-type='method'><a href="module.html#.exports#sendRequest">sendRequest</a></li><li data-type='method'><a href="module.html#.exports#receiveRequest">receiveRequest</a></li><li data-type='method'><a href="module.html#.exports#onTransportError">onTransportError</a></li><li data-type='method'><a href="module.html#.exports#_isReadyToReOffer">_isReadyToReOffer</a></li><li data-type='method'><a href="module.html#.exports#_setInvite2xxTimer">_setInvite2xxTimer</a></li><li data-type='method'><a href="module.html#.exports#_setACKTimer">_setACKTimer</a></li><li data-type='method'><a href="module.html#.exports#_createDialog">_createDialog</a></li><li data-type='method'><a href="module.html#.exports#_receiveReinvite">_receiveReinvite</a></li><li data-type='method'><a href="module.html#.exports#_receiveUpdate">_receiveUpdate</a></li><li data-type='method'><a href="module.html#.exports#_receiveRefer">_receiveRefer</a></li><li data-type='method'><a href="module.html#.exports#_receiveNotify">_receiveNotify</a></li><li data-type='method'><a href="module.html#.exports#_receiveReplaces">_receiveReplaces</a></li><li data-type='method'><a href="module.html#.exports#_sendInitialRequest">_sendInitialRequest</a></li><li data-type='method'><a href="module.html#.exports#_getDTMFRTPSender">_getDTMFRTPSender</a></li><li data-type='method'><a href="module.html#.exports#_receiveInviteResponse">_receiveInviteResponse</a></li><li data-type='method'><a href="module.html#.exports#_sendReinvite">_sendReinvite</a></li><li data-type='method'><a href="module.html#.exports#_sendUpdate">_sendUpdate</a></li><li data-type='method'><a href="module.html#.exports#_mangleOffer">_mangleOffer</a></li><li data-type='method'><a href="module.html#.exports#_handleSessionTimersInIncomingRequest">_handleSessionTimersInIncomingRequest</a></li><li data-type='method'><a href="module.html#.exports#_handleSessionTimersInIncomingResponse">_handleSessionTimersInIncomingResponse</a></li><li data-type='method'><a href="module.html#.exports#_reconnect">_reconnect</a></li><li data-type='method'><a href="module.html#.exports#_getSocket">_getSocket</a></li><li data-type='method'><a href="module.html#.exports#_onConnect">_onConnect</a></li><li data-type='method'><a href="module.html#.exports#start">start</a></li><li data-type='method'><a href="module.html#.exports#register">register</a></li><li data-type='method'><a href="module.html#.exports#unregister">unregister</a></li><li data-type='method'><a href="module.html#.exports#registrator">registrator</a></li><li data-type='method'><a href="module.html#.exports#isRegistered">isRegistered</a></li><li data-type='method'><a href="module.html#.exports#isConnected">isConnected</a></li><li data-type='method'><a href="module.html#.exports#call">call</a></li><li data-type='method'><a href="module.html#.exports#sendMessage">sendMessage</a></li><li data-type='method'><a href="module.html#.exports#terminateSessions">terminateSessions</a></li><li data-type='method'><a href="module.html#.exports#stop">stop</a></li><li data-type='method'><a href="module.html#.exports#normalizeTarget">normalizeTarget</a></li><li data-type='method'><a href="module.html#.exports#get">get</a></li><li data-type='method'><a href="module.html#.exports#set">set</a></li><li data-type='method'><a href="module.html#.exports#newTransaction">newTransaction</a></li><li data-type='method'><a href="module.html#.exports#destroyTransaction">destroyTransaction</a></li><li data-type='method'><a href="module.html#.exports#newDialog">newDialog</a></li><li data-type='method'><a href="module.html#.exports#destroyDialog">destroyDialog</a></li><li data-type='method'><a href="module.html#.exports#newMessage">newMessage</a></li><li data-type='method'><a href="module.html#.exports#destroyMessage">destroyMessage</a></li><li data-type='method'><a href="module.html#.exports#newRTCSession">newRTCSession</a></li><li data-type='method'><a href="module.html#.exports#destroyRTCSession">destroyRTCSession</a></li><li data-type='method'><a href="module.html#.exports#registered">registered</a></li><li data-type='method'><a href="module.html#.exports#unregistered">unregistered</a></li><li data-type='method'><a href="module.html#.exports#registrationFailed">registrationFailed</a></li><li data-type='method'><a href="module.html#.exports#receiveRequest">receiveRequest</a></li><li data-type='method'><a href="module.html#.exports#_findSession">_findSession</a></li><li data-type='method'><a href="module.html#.exports#_findDialog">_findDialog</a></li><li data-type='method'><a href="module.html#.exports#parse">parse</a></li></ul></li><li><a href="WebSocketInterface.html">WebSocketInterface</a><ul class='members'><li data-type='member'><a href="WebSocketInterface.html#.via_transport">via_transport</a></li><li data-type='member'><a href="WebSocketInterface.html#.sip_uri">sip_uri</a></li><li data-type='member'><a href="WebSocketInterface.html#.url">url</a></li></ul><ul class='methods'><li data-type='method'><a href="WebSocketInterface.html#connect">connect</a></li><li data-type='method'><a href="WebSocketInterface.html#disconnect">disconnect</a></li><li data-type='method'><a href="WebSocketInterface.html#send">send</a></li><li data-type='method'><a href="WebSocketInterface.html#isConnected">isConnected</a></li><li data-type='method'><a href="WebSocketInterface.html#isConnecting">isConnecting</a></li></ul></li></ul><h3>Modules</h3><ul><li><a href="module-Utils.html">Utils</a><ul class='methods'><li data-type='method'><a href="module-Utils.html#.str_utf8_length">str_utf8_length</a></li><li data-type='method'><a href="module-Utils.html#.isFunction">isFunction</a></li><li data-type='method'><a href="module-Utils.html#.isString">isString</a></li><li data-type='method'><a href="module-Utils.html#.isDecimal">isDecimal</a></li><li data-type='method'><a href="module-Utils.html#.isEmpty">isEmpty</a></li><li data-type='method'><a href="module-Utils.html#.hasMethods">hasMethods</a></li><li data-type='method'><a href="module-Utils.html#.createRandomToken">createRandomToken</a></li><li data-type='method'><a href="module-Utils.html#.newUUID">newUUID</a></li><li data-type='method'><a href="module-Utils.html#.hostType">hostType</a></li><li data-type='method'><a href="module-Utils.html#.normalizeTarget">normalizeTarget</a></li><li data-type='method'><a href="module-Utils.html#.getRandomTestNetIP">getRandomTestNetIP</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#parseMessage">parseMessage</a></li><li><a href="global.html#getHeader">getHeader</a></li><li><a href="global.html#C">C</a></li><li><a href="global.html#holdMediaTypes">holdMediaTypes</a></li><li><a href="global.html#isSocket">isSocket</a></li><li><a href="global.html#checkTransaction">checkTransaction</a></li><li><a href="global.html#onTransportConnecting">onTransportConnecting</a></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">DigestAuthentication.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const Utils = require('./Utils');
+const debug = require('debug')('JsSIP:DigestAuthentication');
+const debugerror = require('debug')('JsSIP:ERROR:DigestAuthentication');
+
+debugerror.log = console.warn.bind(console);
+
+module.exports = class DigestAuthentication
+{
+  constructor(credentials)
+  {
+    this._credentials = credentials;
+    this._cnonce = null;
+    this._nc = 0;
+    this._ncHex = '00000000';
+    this._algorithm = null;
+    this._realm = null;
+    this._nonce = null;
+    this._opaque = null;
+    this._stale = null;
+    this._qop = null;
+    this._method = null;
+    this._uri = null;
+    this._ha1 = null;
+    this._response = null;
+  }
+
+  get(parameter)
+  {
+    switch (parameter)
+    {
+      case 'realm':
+        return this._realm;
+
+      case 'ha1':
+        return this._ha1;
+
+      default:
+        debugerror('get() | cannot get "%s" parameter', parameter);
+
+        return undefined;
+    }
+  }
+
+  /**
+  * Performs Digest authentication given a SIP request and the challenge
+  * received in a response to that request.
+  * Returns true if auth was successfully generated, false otherwise.
+  */
+  authenticate({ method, ruri, body }, challenge, cnonce = null /* test interface */)
+  {
+    this._algorithm = challenge.algorithm;
+    this._realm = challenge.realm;
+    this._nonce = challenge.nonce;
+    this._opaque = challenge.opaque;
+    this._stale = challenge.stale;
+
+    if (this._algorithm)
+    {
+      if (this._algorithm !== 'MD5')
+      {
+        debugerror('authenticate() | challenge with Digest algorithm different than "MD5", authentication aborted');
+
+        return false;
+      }
+    }
+    else
+    {
+      this._algorithm = 'MD5';
+    }
+
+    if (!this._nonce)
+    {
+      debugerror('authenticate() | challenge without Digest nonce, authentication aborted');
+
+      return false;
+    }
+
+    if (!this._realm)
+    {
+      debugerror('authenticate() | challenge without Digest realm, authentication aborted');
+
+      return false;
+    }
+
+    // If no plain SIP password is provided.
+    if (!this._credentials.password)
+    {
+      // If ha1 is not provided we cannot authenticate.
+      if (!this._credentials.ha1)
+      {
+        debugerror('authenticate() | no plain SIP password nor ha1 provided, authentication aborted');
+
+        return false;
+      }
+
+      // If the realm does not match the stored realm we cannot authenticate.
+      if (this._credentials.realm !== this._realm)
+      {
+        debugerror('authenticate() | no plain SIP password, and stored `realm` does not match the given `realm`, cannot authenticate [stored:"%s", given:"%s"]', this._credentials.realm, this._realm);
+
+        return false;
+      }
+    }
+
+    // 'qop' can contain a list of values (Array). Let's choose just one.
+    if (challenge.qop)
+    {
+      if (challenge.qop.indexOf('auth-int') > -1)
+      {
+        this._qop = 'auth-int';
+      }
+      else if (challenge.qop.indexOf('auth') > -1)
+      {
+        this._qop = 'auth';
+      }
+      else
+      {
+        // Otherwise 'qop' is present but does not contain 'auth' or 'auth-int', so abort here.
+        debugerror('authenticate() | challenge without Digest qop different than "auth" or "auth-int", authentication aborted');
+
+        return false;
+      }
+    }
+    else
+    {
+      this._qop = null;
+    }
+
+    // Fill other attributes.
+
+    this._method = method;
+    this._uri = ruri;
+    this._cnonce = cnonce || Utils.createRandomToken(12);
+    this._nc += 1;
+    const hex = Number(this._nc).toString(16);
+
+    this._ncHex = '00000000'.substr(0, 8-hex.length) + hex;
+
+    // Nc-value = 8LHEX. Max value = 'FFFFFFFF'.
+    if (this._nc === 4294967296)
+    {
+      this._nc = 1;
+      this._ncHex = '00000001';
+    }
+
+    // Calculate the Digest "response" value.
+
+    // If we have plain SIP password then regenerate ha1.
+    if (this._credentials.password)
+    {
+      // HA1 = MD5(A1) = MD5(username:realm:password).
+      this._ha1 = Utils.calculateMD5(`${this._credentials.username}:${this._realm}:${this._credentials.password}`);
+    }
+    // Otherwise reuse the stored ha1.
+    else
+    {
+      this._ha1 = this._credentials.ha1;
+    }
+
+    let a2;
+    let ha2;
+
+    if (this._qop === 'auth')
+    {
+      // HA2 = MD5(A2) = MD5(method:digestURI).
+      a2 = `${this._method}:${this._uri}`;
+      ha2 = Utils.calculateMD5(a2);
+
+      debug('authenticate() | using qop=auth [a2:"%s"]', a2);
+
+      // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
+      this._response = Utils.calculateMD5(`${this._ha1}:${this._nonce}:${this._ncHex}:${this._cnonce}:auth:${ha2}`);
+
+    }
+    else if (this._qop === 'auth-int')
+    {
+      // HA2 = MD5(A2) = MD5(method:digestURI:MD5(entityBody)).
+      a2 = `${this._method}:${this._uri}:${Utils.calculateMD5(body ? body : '')}`;
+      ha2 = Utils.calculateMD5(a2);
+
+      debug('authenticate() | using qop=auth-int [a2:"%s"]', a2);
+
+      // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
+      this._response = Utils.calculateMD5(`${this._ha1}:${this._nonce}:${this._ncHex}:${this._cnonce}:auth-int:${ha2}`);
+
+    }
+    else if (this._qop === null)
+    {
+      // HA2 = MD5(A2) = MD5(method:digestURI).
+      a2 = `${this._method}:${this._uri}`;
+      ha2 = Utils.calculateMD5(a2);
+
+      debug('authenticate() | using qop=null [a2:"%s"]', a2);
+
+      // Response = MD5(HA1:nonce:HA2).
+      this._response = Utils.calculateMD5(`${this._ha1}:${this._nonce}:${ha2}`);
+    }
+
+    debug('authenticate() | response generated');
+
+    return true;
+  }
+
+  /**
+  * Return the Proxy-Authorization or WWW-Authorization header value.
+  */
+  toString()
+  {
+    const auth_params = [];
+
+    if (!this._response)
+    {
+      throw new Error('response field does not exist, cannot generate Authorization header');
+    }
+
+    auth_params.push(`algorithm=${this._algorithm}`);
+    auth_params.push(`username="${this._credentials.username}"`);
+    auth_params.push(`realm="${this._realm}"`);
+    auth_params.push(`nonce="${this._nonce}"`);
+    auth_params.push(`uri="${this._uri}"`);
+    auth_params.push(`response="${this._response}"`);
+    if (this._opaque)
+    {
+      auth_params.push(`opaque="${this._opaque}"`);
+    }
+    if (this._qop)
+    {
+      auth_params.push(`qop=${this._qop}`);
+      auth_params.push(`cnonce="${this._cnonce}"`);
+      auth_params.push(`nc=${this._ncHex}`);
+    }
+
+    return `Digest ${auth_params.join(', ')}`;
+  }
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Wed May 19 2021 17:36:38 GMT+0800 (中国标准时间) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+    <link type="text/css" rel="stylesheet" href="./styles/custom.css">
+    
+</body>
+</html>

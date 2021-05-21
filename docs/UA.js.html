@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>UA.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="OutgoingRequest.html">OutgoingRequest</a><ul class='methods'><li data-type='method'><a href="OutgoingRequest.html#setHeader">setHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#getHeader">getHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#getHeaders">getHeaders</a></li><li data-type='method'><a href="OutgoingRequest.html#hasHeader">hasHeader</a></li><li data-type='method'><a href="OutgoingRequest.html#parseSDP">parseSDP</a></li></ul></li><li><a href="JsSIP.UA.html">UA</a></li><li><a href="module.html#.exports">exports</a><ul class='methods'><li data-type='method'><a href="module.exports.html#authenticate">authenticate</a></li><li data-type='method'><a href="module.exports.html#toString">toString</a></li><li data-type='method'><a href="module.html#.exports#accept">accept</a></li><li data-type='method'><a href="module.html#.exports#reject">reject</a></li><li data-type='method'><a href="module.html#.exports#_newMessage">_newMessage</a></li><li data-type='method'><a href="module.html#.exports#parse">parse</a></li><li data-type='method'><a href="module.html#.exports#send">send</a></li><li data-type='method'><a href="module.html#.exports#_receiveResponse">_receiveResponse</a></li><li data-type='method'><a href="module.html#.exports#answer">answer</a></li><li data-type='method'><a href="module.html#.exports#terminate">terminate</a></li><li data-type='method'><a href="module.html#.exports#mute">mute</a></li><li data-type='method'><a href="module.html#.exports#unmute">unmute</a></li><li data-type='method'><a href="module.html#.exports#hold">hold</a></li><li data-type='method'><a href="module.html#.exports#refer">refer</a></li><li data-type='method'><a href="module.html#.exports#sendRequest">sendRequest</a></li><li data-type='method'><a href="module.html#.exports#receiveRequest">receiveRequest</a></li><li data-type='method'><a href="module.html#.exports#onTransportError">onTransportError</a></li><li data-type='method'><a href="module.html#.exports#_isReadyToReOffer">_isReadyToReOffer</a></li><li data-type='method'><a href="module.html#.exports#_setInvite2xxTimer">_setInvite2xxTimer</a></li><li data-type='method'><a href="module.html#.exports#_setACKTimer">_setACKTimer</a></li><li data-type='method'><a href="module.html#.exports#_createDialog">_createDialog</a></li><li data-type='method'><a href="module.html#.exports#_receiveReinvite">_receiveReinvite</a></li><li data-type='method'><a href="module.html#.exports#_receiveUpdate">_receiveUpdate</a></li><li data-type='method'><a href="module.html#.exports#_receiveRefer">_receiveRefer</a></li><li data-type='method'><a href="module.html#.exports#_receiveNotify">_receiveNotify</a></li><li data-type='method'><a href="module.html#.exports#_receiveReplaces">_receiveReplaces</a></li><li data-type='method'><a href="module.html#.exports#_sendInitialRequest">_sendInitialRequest</a></li><li data-type='method'><a href="module.html#.exports#_getDTMFRTPSender">_getDTMFRTPSender</a></li><li data-type='method'><a href="module.html#.exports#_receiveInviteResponse">_receiveInviteResponse</a></li><li data-type='method'><a href="module.html#.exports#_sendReinvite">_sendReinvite</a></li><li data-type='method'><a href="module.html#.exports#_sendUpdate">_sendUpdate</a></li><li data-type='method'><a href="module.html#.exports#_mangleOffer">_mangleOffer</a></li><li data-type='method'><a href="module.html#.exports#_handleSessionTimersInIncomingRequest">_handleSessionTimersInIncomingRequest</a></li><li data-type='method'><a href="module.html#.exports#_handleSessionTimersInIncomingResponse">_handleSessionTimersInIncomingResponse</a></li><li data-type='method'><a href="module.html#.exports#_reconnect">_reconnect</a></li><li data-type='method'><a href="module.html#.exports#_getSocket">_getSocket</a></li><li data-type='method'><a href="module.html#.exports#_onConnect">_onConnect</a></li><li data-type='method'><a href="module.html#.exports#start">start</a></li><li data-type='method'><a href="module.html#.exports#register">register</a></li><li data-type='method'><a href="module.html#.exports#unregister">unregister</a></li><li data-type='method'><a href="module.html#.exports#registrator">registrator</a></li><li data-type='method'><a href="module.html#.exports#isRegistered">isRegistered</a></li><li data-type='method'><a href="module.html#.exports#isConnected">isConnected</a></li><li data-type='method'><a href="module.html#.exports#call">call</a></li><li data-type='method'><a href="module.html#.exports#sendMessage">sendMessage</a></li><li data-type='method'><a href="module.html#.exports#terminateSessions">terminateSessions</a></li><li data-type='method'><a href="module.html#.exports#stop">stop</a></li><li data-type='method'><a href="module.html#.exports#normalizeTarget">normalizeTarget</a></li><li data-type='method'><a href="module.html#.exports#get">get</a></li><li data-type='method'><a href="module.html#.exports#set">set</a></li><li data-type='method'><a href="module.html#.exports#newTransaction">newTransaction</a></li><li data-type='method'><a href="module.html#.exports#destroyTransaction">destroyTransaction</a></li><li data-type='method'><a href="module.html#.exports#newDialog">newDialog</a></li><li data-type='method'><a href="module.html#.exports#destroyDialog">destroyDialog</a></li><li data-type='method'><a href="module.html#.exports#newMessage">newMessage</a></li><li data-type='method'><a href="module.html#.exports#destroyMessage">destroyMessage</a></li><li data-type='method'><a href="module.html#.exports#newRTCSession">newRTCSession</a></li><li data-type='method'><a href="module.html#.exports#destroyRTCSession">destroyRTCSession</a></li><li data-type='method'><a href="module.html#.exports#registered">registered</a></li><li data-type='method'><a href="module.html#.exports#unregistered">unregistered</a></li><li data-type='method'><a href="module.html#.exports#registrationFailed">registrationFailed</a></li><li data-type='method'><a href="module.html#.exports#receiveRequest">receiveRequest</a></li><li data-type='method'><a href="module.html#.exports#_findSession">_findSession</a></li><li data-type='method'><a href="module.html#.exports#_findDialog">_findDialog</a></li><li data-type='method'><a href="module.html#.exports#parse">parse</a></li></ul></li><li><a href="WebSocketInterface.html">WebSocketInterface</a><ul class='members'><li data-type='member'><a href="WebSocketInterface.html#.via_transport">via_transport</a></li><li data-type='member'><a href="WebSocketInterface.html#.sip_uri">sip_uri</a></li><li data-type='member'><a href="WebSocketInterface.html#.url">url</a></li></ul><ul class='methods'><li data-type='method'><a href="WebSocketInterface.html#connect">connect</a></li><li data-type='method'><a href="WebSocketInterface.html#disconnect">disconnect</a></li><li data-type='method'><a href="WebSocketInterface.html#send">send</a></li><li data-type='method'><a href="WebSocketInterface.html#isConnected">isConnected</a></li><li data-type='method'><a href="WebSocketInterface.html#isConnecting">isConnecting</a></li></ul></li></ul><h3>Modules</h3><ul><li><a href="module-Utils.html">Utils</a><ul class='methods'><li data-type='method'><a href="module-Utils.html#.str_utf8_length">str_utf8_length</a></li><li data-type='method'><a href="module-Utils.html#.isFunction">isFunction</a></li><li data-type='method'><a href="module-Utils.html#.isString">isString</a></li><li data-type='method'><a href="module-Utils.html#.isDecimal">isDecimal</a></li><li data-type='method'><a href="module-Utils.html#.isEmpty">isEmpty</a></li><li data-type='method'><a href="module-Utils.html#.hasMethods">hasMethods</a></li><li data-type='method'><a href="module-Utils.html#.createRandomToken">createRandomToken</a></li><li data-type='method'><a href="module-Utils.html#.newUUID">newUUID</a></li><li data-type='method'><a href="module-Utils.html#.hostType">hostType</a></li><li data-type='method'><a href="module-Utils.html#.normalizeTarget">normalizeTarget</a></li><li data-type='method'><a href="module-Utils.html#.getRandomTestNetIP">getRandomTestNetIP</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#parseMessage">parseMessage</a></li><li><a href="global.html#getHeader">getHeader</a></li><li><a href="global.html#C">C</a></li><li><a href="global.html#holdMediaTypes">holdMediaTypes</a></li><li><a href="global.html#isSocket">isSocket</a></li><li><a href="global.html#checkTransaction">checkTransaction</a></li><li><a href="global.html#onTransportConnecting">onTransportConnecting</a></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">UA.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const EventEmitter = require('events').EventEmitter;
+const JsSIP_C = require('./Constants');
+const Registrator = require('./Registrator');
+const RTCSession = require('./RTCSession');
+const Message = require('./Message');
+const Transactions = require('./Transactions');
+const Transport = require('./Transport');
+const Utils = require('./Utils');
+const Exceptions = require('./Exceptions');
+const URI = require('./URI');
+const Parser = require('./Parser');
+const SIPMessage = require('./SIPMessage');
+const sanityCheck = require('./sanityCheck');
+const config = require('./Config');
+const debug = require('debug')('JsSIP:UA');
+const debugerror = require('debug')('JsSIP:ERROR:UA');
+
+debugerror.log = console.warn.bind(console);
+
+const C = {
+  // UA status codes.
+  STATUS_INIT        : 0,
+  STATUS_READY       : 1,
+  STATUS_USER_CLOSED : 2,
+  STATUS_NOT_READY   : 3,
+
+  // UA error codes.
+  CONFIGURATION_ERROR : 1,
+  NETWORK_ERROR       : 2
+};
+
+/**
+ * The User-Agent class.
+ * @class JsSIP.UA
+ * @param {Object} configuration Configuration parameters.
+ * @throws {JsSIP.Exceptions.ConfigurationError} If a configuration parameter is invalid.
+ * @throws {TypeError} If no configuration is given.
+ */
+module.exports = class UA extends EventEmitter
+{
+  // Expose C object.
+  static get C()
+  {
+    return C;
+  }
+
+  constructor(configuration)
+  {
+    debug('new() [configuration:%o]', configuration);
+
+    super();
+
+    this._cache = {
+      credentials : {}
+    };
+
+    this._configuration = Object.assign({}, config.settings);
+    this._dynConfiguration = {};
+    this._dialogs = {};
+
+    // User actions outside any session/dialog (MESSAGE).
+    this._applicants = {};
+
+    this._sessions = {};
+    this._transport = null;
+    this._contact = null;
+    this._status = C.STATUS_INIT;
+    this._error = null;
+    this._transactions = {
+      nist : {},
+      nict : {},
+      ist  : {},
+      ict  : {}
+    };
+
+    // Custom UA empty object for high level use.
+    this._data = {};
+
+    this._closeTimer = null;
+
+    // Check configuration argument.
+    if (configuration === undefined)
+    {
+      throw new TypeError('Not enough arguments');
+    }
+
+    // Load configuration.
+    try
+    {
+      this._loadConfig(configuration);
+    }
+    catch (e)
+    {
+      this._status = C.STATUS_NOT_READY;
+      this._error = C.CONFIGURATION_ERROR;
+      throw e;
+    }
+
+    // Initialize registrator.
+    this._registrator = new Registrator(this);
+  }
+
+  get C()
+  {
+    return C;
+  }
+
+  get status()
+  {
+    return this._status;
+  }
+
+  get contact()
+  {
+    return this._contact;
+  }
+
+  get configuration()
+  {
+    return this._configuration;
+  }
+
+  get transport()
+  {
+    return this._transport;
+  }
+
+  // =================
+  //  High Level API
+  // =================
+
+  /**
+   * Connect to the server if status = STATUS_INIT.
+   * Resume UA after being closed.
+   */
+  start()
+  {
+    debug('start()');
+
+    if (this._status === C.STATUS_INIT)
+    {
+      this._transport.connect();
+    }
+    else if (this._status === C.STATUS_USER_CLOSED)
+    {
+      debug('restarting UA');
+
+      // Disconnect.
+      if (this._closeTimer !== null)
+      {
+        clearTimeout(this._closeTimer);
+        this._closeTimer = null;
+        this._transport.disconnect();
+      }
+
+      // Reconnect.
+      this._status = C.STATUS_INIT;
+      this._transport.connect();
+    }
+    else if (this._status === C.STATUS_READY)
+    {
+      debug('UA is in READY status, not restarted');
+    }
+    else
+    {
+      debug('ERROR: connection is down, Auto-Recovery system is trying to reconnect');
+    }
+
+    // Set dynamic configuration.
+    this._dynConfiguration.register = this._configuration.register;
+  }
+
+  /**
+   * Register.
+   */
+  register()
+  {
+    debug('register()');
+
+    this._dynConfiguration.register = true;
+    this._registrator.register();
+  }
+
+  /**
+   * Unregister.
+   */
+  unregister(options)
+  {
+    debug('unregister()');
+
+    this._dynConfiguration.register = false;
+    this._registrator.unregister(options);
+  }
+
+  /**
+   * Get the Registrator instance.
+   */
+  registrator()
+  {
+    return this._registrator;
+  }
+
+  /**
+   * Registration state.
+   */
+  isRegistered()
+  {
+    return this._registrator.registered;
+  }
+
+  /**
+   * Connection state.
+   */
+  isConnected()
+  {
+    return this._transport.isConnected();
+  }
+
+  /**
+   * Make an outgoing call.
+   *
+   * -param {String} target
+   * -param {Object} [options]
+   *
+   * -throws {TypeError}
+   *
+   */
+  call(target, options)
+  {
+    debug('call()');
+
+    const session = new RTCSession(this);
+
+    session.connect(target, options);
+
+    return session;
+  }
+
+  /**
+   * Send a message.
+   *
+   * -param {String} target
+   * -param {String} body
+   * -param {Object} [options]
+   *
+   * -throws {TypeError}
+   *
+   */
+  sendMessage(target, body, options)
+  {
+    debug('sendMessage()');
+
+    const message = new Message(this);
+
+    message.send(target, body, options);
+
+    return message;
+  }
+
+  /**
+   * Terminate ongoing sessions.
+   */
+  terminateSessions(options)
+  {
+    debug('terminateSessions()');
+
+    for (const idx in this._sessions)
+    {
+      if (!this._sessions[idx].isEnded())
+      {
+        this._sessions[idx].terminate(options);
+      }
+    }
+  }
+
+  /**
+   * Gracefully close.
+   *
+   */
+  stop()
+  {
+    debug('stop()');
+
+    // Remove dynamic settings.
+    this._dynConfiguration = {};
+
+    if (this._status === C.STATUS_USER_CLOSED)
+    {
+      debug('UA already closed');
+
+      return;
+    }
+
+    // Close registrator.
+    this._registrator.close();
+
+    // If there are session wait a bit so CANCEL/BYE can be sent and their responses received.
+    const num_sessions = Object.keys(this._sessions).length;
+
+    // Run  _terminate_ on every Session.
+    for (const session in this._sessions)
+    {
+      if (Object.prototype.hasOwnProperty.call(this._sessions, session))
+      {
+        debug(`closing session ${session}`);
+        try { this._sessions[session].terminate(); }
+        catch (error) {}
+      }
+    }
+
+    // Run  _close_ on every applicant.
+    for (const applicant in this._applicants)
+    {
+      if (Object.prototype.hasOwnProperty.call(this._applicants, applicant))
+        try { this._applicants[applicant].close(); }
+        catch (error) {}
+    }
+
+    this._status = C.STATUS_USER_CLOSED;
+
+    const num_transactions =
+      Object.keys(this._transactions.nict).length +
+      Object.keys(this._transactions.nist).length +
+      Object.keys(this._transactions.ict).length +
+      Object.keys(this._transactions.ist).length;
+
+    if (num_transactions === 0 &amp;&amp; num_sessions === 0)
+    {
+      this._transport.disconnect();
+    }
+    else
+    {
+      this._closeTimer = setTimeout(() =>
+      {
+        this._closeTimer = null;
+        this._transport.disconnect();
+      }, 2000);
+    }
+  }
+
+  /**
+   * Normalice a string into a valid SIP request URI
+   * -param {String} target
+   * -returns {JsSIP.URI|undefined}
+   */
+  normalizeTarget(target)
+  {
+    return Utils.normalizeTarget(target, this._configuration.hostport_params);
+  }
+
+  /**
+   * Allow retrieving configuration and autogenerated fields in runtime.
+   */
+  get(parameter)
+  {
+    switch (parameter)
+    {
+      case 'authorization_user':
+        return this._configuration.authorization_user;
+
+      case 'realm':
+        return this._configuration.realm;
+
+      case 'ha1':
+        return this._configuration.ha1;
+
+      default:
+        debugerror('get() | cannot get "%s" parameter in runtime', parameter);
+
+        return undefined;
+    }
+  }
+
+  /**
+   * Allow configuration changes in runtime.
+   * Returns true if the parameter could be set.
+   */
+  set(parameter, value)
+  {
+    switch (parameter)
+    {
+      case 'authorization_user': {
+        this._configuration.authorization_user = String(value);
+        break;
+      }
+
+      case 'password': {
+        this._configuration.password = String(value);
+        break;
+      }
+
+      case 'realm': {
+        this._configuration.realm = String(value);
+        break;
+      }
+
+      case 'ha1': {
+        this._configuration.ha1 = String(value);
+        // Delete the plain SIP password.
+        this._configuration.password = null;
+        break;
+      }
+
+      case 'display_name': {
+        this._configuration.display_name = value;
+        break;
+      }
+
+      default:
+        debugerror('set() | cannot set "%s" parameter in runtime', parameter);
+
+        return false;
+    }
+
+    return true;
+  }
+
+  // ==========================
+  // Event Handlers.
+  // ==========================
+
+  /**
+   * new Transaction
+   */
+  newTransaction(transaction)
+  {
+    this._transactions[transaction.type][transaction.id] = transaction;
+    this.emit('newTransaction', {
+      transaction
+    });
+  }
+
+  /**
+   * Transaction destroyed.
+   */
+  destroyTransaction(transaction)
+  {
+    delete this._transactions[transaction.type][transaction.id];
+    this.emit('transactionDestroyed', {
+      transaction
+    });
+  }
+
+  /**
+   * new Dialog
+   */
+  newDialog(dialog)
+  {
+    this._dialogs[dialog.id] = dialog;
+  }
+
+  /**
+   * Dialog destroyed.
+   */
+  destroyDialog(dialog)
+  {
+    delete this._dialogs[dialog.id];
+  }
+
+  /**
+   *  new Message
+   */
+  newMessage(message, data)
+  {
+    this._applicants[message] = message;
+    this.emit('newMessage', data);
+  }
+
+  /**
+   *  Message destroyed.
+   */
+  destroyMessage(message)
+  {
+    delete this._applicants[message];
+  }
+
+  /**
+   * new RTCSession
+   */
+  newRTCSession(session, data)
+  {
+    this._sessions[session.id] = session;
+    this.emit('newRTCSession', data);
+  }
+
+  /**
+   * RTCSession destroyed.
+   */
+  destroyRTCSession(session)
+  {
+    delete this._sessions[session.id];
+  }
+
+  /**
+   * Registered
+   */
+  registered(data)
+  {
+    this.emit('registered', data);
+  }
+
+  /**
+   * Unregistered
+   */
+  unregistered(data)
+  {
+    this.emit('unregistered', data);
+  }
+
+  /**
+   * Registration Failed
+   */
+  registrationFailed(data)
+  {
+    this.emit('registrationFailed', data);
+  }
+
+  // =========================
+  // ReceiveRequest.
+  // =========================
+
+  /**
+   * Request reception
+   */
+  receiveRequest(request)
+  {
+    const method = request.method;
+
+    // Check that request URI points to us.
+    if (request.ruri.user !== this._configuration.uri.user &amp;&amp;
+        request.ruri.user !== this._contact.uri.user)
+    {
+      debug('Request-URI does not point to us');
+      if (request.method !== JsSIP_C.ACK)
+      {
+        request.reply_sl(404);
+      }
+
+      return;
+    }
+
+    // Check request URI scheme.
+    if (request.ruri.scheme === JsSIP_C.SIPS)
+    {
+      request.reply_sl(416);
+
+      return;
+    }
+
+    // Check transaction.
+    if (Transactions.checkTransaction(this, request))
+    {
+      return;
+    }
+
+    // Create the server transaction.
+    if (method === JsSIP_C.INVITE)
+    {
+      /* eslint-disable no-new */
+      new Transactions.InviteServerTransaction(this, this._transport, request);
+      /* eslint-enable no-new */
+    }
+    else if (method !== JsSIP_C.ACK &amp;&amp; method !== JsSIP_C.CANCEL)
+    {
+      /* eslint-disable no-new */
+      new Transactions.NonInviteServerTransaction(this, this._transport, request);
+      /* eslint-enable no-new */
+    }
+
+    /* RFC3261 12.2.2
+     * Requests that do not change in any way the state of a dialog may be
+     * received within a dialog (for example, an OPTIONS request).
+     * They are processed as if they had been received outside the dialog.
+     */
+    if (method === JsSIP_C.OPTIONS)
+    {
+      request.reply(200);
+    }
+    else if (method === JsSIP_C.MESSAGE)
+    {
+      if (this.listeners('newMessage').length === 0)
+      {
+        request.reply(405);
+
+        return;
+      }
+      const message = new Message(this);
+
+      message.init_incoming(request);
+    }
+    else if (method === JsSIP_C.INVITE)
+    {
+      // Initial INVITE.
+      if (!request.to_tag &amp;&amp; this.listeners('newRTCSession').length === 0)
+      {
+        request.reply(405);
+
+        return;
+      }
+    }
+
+    let dialog;
+    let session;
+
+    // Initial Request.
+    if (!request.to_tag)
+    {
+      switch (method)
+      {
+        case JsSIP_C.INVITE:
+          if (window.RTCPeerConnection)
+          { // TODO
+            if (request.hasHeader('replaces'))
+            {
+              const replaces = request.replaces;
+
+              dialog = this._findDialog(
+                replaces.call_id, replaces.from_tag, replaces.to_tag);
+              if (dialog)
+              {
+                session = dialog.owner;
+                if (!session.isEnded())
+                {
+                  session.receiveRequest(request);
+                }
+                else
+                {
+                  request.reply(603);
+                }
+              }
+              else
+              {
+                request.reply(481);
+              }
+            }
+            else
+            {
+              session = new RTCSession(this);
+              session.init_incoming(request);
+            }
+          }
+          else
+          {
+            debugerror('INVITE received but WebRTC is not supported');
+            request.reply(488);
+          }
+          break;
+        case JsSIP_C.BYE:
+          // Out of dialog BYE received.
+          request.reply(481);
+          break;
+        case JsSIP_C.CANCEL:
+          session = this._findSession(request);
+          if (session)
+          {
+            session.receiveRequest(request);
+          }
+          else
+          {
+            debug('received CANCEL request for a non existent session');
+          }
+          break;
+        case JsSIP_C.ACK:
+          /* Absorb it.
+           * ACK request without a corresponding Invite Transaction
+           * and without To tag.
+           */
+          break;
+        case JsSIP_C.NOTIFY:
+          // Receive new sip event.
+          this.emit('sipEvent', {
+            event : request.event,
+            request
+          });
+          request.reply(200);
+          break;
+        default:
+          request.reply(405);
+          break;
+      }
+    }
+    // In-dialog request.
+    else
+    {
+      dialog = this._findDialog(request.call_id, request.from_tag, request.to_tag);
+
+      if (dialog)
+      {
+        dialog.receiveRequest(request);
+      }
+      else if (method === JsSIP_C.NOTIFY)
+      {
+        session = this._findSession(request);
+        if (session)
+        {
+          session.receiveRequest(request);
+        }
+        else
+        {
+          debug('received NOTIFY request for a non existent subscription');
+          request.reply(481, 'Subscription does not exist');
+        }
+      }
+
+      /* RFC3261 12.2.2
+       * Request with to tag, but no matching dialog found.
+       * Exception: ACK for an Invite request for which a dialog has not
+       * been created.
+       */
+      else
+      if (method !== JsSIP_C.ACK)
+      {
+        request.reply(481);
+      }
+    }
+  }
+
+  // =================
+  // Utils.
+  // =================
+
+  /**
+   * Get the session to which the request belongs to, if any.
+   */
+  _findSession({ call_id, from_tag, to_tag })
+  {
+    const sessionIDa = call_id + from_tag;
+    const sessionA = this._sessions[sessionIDa];
+    const sessionIDb = call_id + to_tag;
+    const sessionB = this._sessions[sessionIDb];
+
+    if (sessionA)
+    {
+      return sessionA;
+    }
+    else if (sessionB)
+    {
+      return sessionB;
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /**
+   * Get the dialog to which the request belongs to, if any.
+   */
+  _findDialog(call_id, from_tag, to_tag)
+  {
+    let id = call_id + from_tag + to_tag;
+    let dialog = this._dialogs[id];
+
+    if (dialog)
+    {
+      return dialog;
+    }
+    else
+    {
+      id = call_id + to_tag + from_tag;
+      dialog = this._dialogs[id];
+      if (dialog)
+      {
+        return dialog;
+      }
+      else
+      {
+        return null;
+      }
+    }
+  }
+
+  _loadConfig(configuration)
+  {
+    // Check and load the given configuration.
+    try
+    {
+      config.load(this._configuration, configuration);
+    }
+    catch (e)
+    {
+      throw e;
+    }
+
+    // Post Configuration Process.
+
+    // Allow passing 0 number as display_name.
+    if (this._configuration.display_name === 0)
+    {
+      this._configuration.display_name = '0';
+    }
+
+    // Instance-id for GRUU.
+    if (!this._configuration.instance_id)
+    {
+      this._configuration.instance_id = Utils.newUUID();
+    }
+
+    // Jssip_id instance parameter. Static random tag of length 5.
+    this._configuration.jssip_id = Utils.createRandomToken(5);
+
+    // String containing this._configuration.uri without scheme and user.
+    const hostport_params = this._configuration.uri.clone();
+
+    hostport_params.user = null;
+    this._configuration.hostport_params = hostport_params.toString().replace(/^sip:/i, '');
+
+    // Transport.
+    try
+    {
+      this._transport = new Transport(this._configuration.sockets, {
+        // Recovery options.
+        max_interval : this._configuration.connection_recovery_max_interval,
+        min_interval : this._configuration.connection_recovery_min_interval
+      });
+
+      // Transport event callbacks.
+      this._transport.onconnecting = onTransportConnecting.bind(this);
+      this._transport.onconnect = onTransportConnect.bind(this);
+      this._transport.ondisconnect = onTransportDisconnect.bind(this);
+      this._transport.ondata = onTransportData.bind(this);
+    }
+    catch (e)
+    {
+      debugerror(e);
+      throw new Exceptions.ConfigurationError('sockets', this._configuration.sockets);
+    }
+
+    // Remove sockets instance from configuration object.
+    delete this._configuration.sockets;
+
+    // Check whether authorization_user is explicitly defined.
+    // Take 'this._configuration.uri.user' value if not.
+    if (!this._configuration.authorization_user)
+    {
+      this._configuration.authorization_user = this._configuration.uri.user;
+    }
+
+    // If no 'registrar_server' is set use the 'uri' value without user portion and
+    // without URI params/headers.
+    if (!this._configuration.registrar_server)
+    {
+      const registrar_server = this._configuration.uri.clone();
+
+      registrar_server.user = null;
+      registrar_server.clearParams();
+      registrar_server.clearHeaders();
+      this._configuration.registrar_server = registrar_server;
+    }
+
+    // User no_answer_timeout.
+    this._configuration.no_answer_timeout *= 1000;
+
+    // Via Host.
+    if (this._configuration.contact_uri)
+    {
+      this._configuration.via_host = this._configuration.contact_uri.host;
+    }
+
+    // Contact URI.
+    else
+    {
+      this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, { transport: 'ws' });
+    }
+
+    this._contact = {
+      pub_gruu  : null,
+      temp_gruu : null,
+      uri       : this._configuration.contact_uri,
+      toString(options = {})
+      {
+        const anonymous = options.anonymous || null;
+        const outbound = options.outbound || null;
+        let contact = '&lt;';
+
+        if (anonymous)
+        {
+          contact += this.temp_gruu || 'sip:anonymous@anonymous.invalid;transport=ws';
+        }
+        else
+        {
+          contact += this.pub_gruu || this.uri.toString();
+        }
+
+        if (outbound &amp;&amp; (anonymous ? !this.temp_gruu : !this.pub_gruu))
+        {
+          contact += ';ob';
+        }
+
+        contact += '>';
+
+        return contact;
+      }
+    };
+
+    // Seal the configuration.
+    const writable_parameters = [
+      'authorization_user', 'password', 'realm', 'ha1', 'display_name', 'register'
+    ];
+
+    for (const parameter in this._configuration)
+    {
+      if (Object.prototype.hasOwnProperty.call(this._configuration, parameter))
+      {
+        if (writable_parameters.indexOf(parameter) !== -1)
+        {
+          Object.defineProperty(this._configuration, parameter, {
+            writable     : true,
+            configurable : false
+          });
+        }
+        else
+        {
+          Object.defineProperty(this._configuration, parameter, {
+            writable     : false,
+            configurable : false
+          });
+        }
+      }
+    }
+
+    debug('configuration parameters after validation:');
+    for (const parameter in this._configuration)
+    {
+      // Only show the user user configurable parameters.
+      if (Object.prototype.hasOwnProperty.call(config.settings, parameter))
+      {
+        switch (parameter)
+        {
+          case 'uri':
+          case 'registrar_server':
+            debug(`- ${parameter}: ${this._configuration[parameter]}`);
+            break;
+          case 'password':
+          case 'ha1':
+            debug(`- ${parameter}: NOT SHOWN`);
+            break;
+          default:
+            debug(`- ${parameter}: ${JSON.stringify(this._configuration[parameter])}`);
+        }
+      }
+    }
+
+    return;
+  }
+};
+
+/**
+ * Transport event handlers
+ */
+
+// Transport connecting event.
+function onTransportConnecting(data)
+{
+  this.emit('connecting', data);
+}
+
+// Transport connected event.
+function onTransportConnect(data)
+{
+  if (this._status === C.STATUS_USER_CLOSED)
+  {
+    return;
+  }
+
+  this._status = C.STATUS_READY;
+  this._error = null;
+
+  this.emit('connected', data);
+
+  if (this._dynConfiguration.register)
+  {
+    this._registrator.register();
+  }
+}
+
+// Transport disconnected event.
+function onTransportDisconnect(data)
+{
+  // Run _onTransportError_ callback on every client transaction using _transport_.
+  const client_transactions = [ 'nict', 'ict', 'nist', 'ist' ];
+
+  for (const type of client_transactions)
+  {
+    for (const id in this._transactions[type])
+    {
+      if (Object.prototype.hasOwnProperty.call(this._transactions[type], id))
+      {
+        this._transactions[type][id].onTransportError();
+      }
+    }
+  }
+
+  this.emit('disconnected', data);
+
+  // Call registrator _onTransportClosed_.
+  this._registrator.onTransportClosed();
+
+  if (this._status !== C.STATUS_USER_CLOSED)
+  {
+    this._status = C.STATUS_NOT_READY;
+    this._error = C.NETWORK_ERROR;
+  }
+}
+
+// Transport data event.
+function onTransportData(data)
+{
+  const transport = data.transport;
+  let message = data.message;
+
+  message = Parser.parseMessage(message, this);
+
+  if (! message)
+  {
+    return;
+  }
+
+  if (this._status === C.STATUS_USER_CLOSED &amp;&amp;
+      message instanceof SIPMessage.IncomingRequest)
+  {
+    return;
+  }
+
+  // Do some sanity check.
+  if (! sanityCheck(message, this, transport))
+  {
+    return;
+  }
+
+  if (message instanceof SIPMessage.IncomingRequest)
+  {
+    message.transport = transport;
+    this.receiveRequest(message);
+  }
+  else if (message instanceof SIPMessage.IncomingResponse)
+  {
+    /* Unike stated in 18.1.2, if a response does not match
+    * any transaction, it is discarded here and no passed to the core
+    * in order to be discarded there.
+    */
+
+    let transaction;
+
+    switch (message.method)
+    {
+      case JsSIP_C.INVITE:
+        transaction = this._transactions.ict[message.via_branch];
+        if (transaction)
+        {
+          transaction.receiveResponse(message);
+        }
+        break;
+      case JsSIP_C.ACK:
+        // Just in case ;-).
+        break;
+      default:
+        transaction = this._transactions.nict[message.via_branch];
+        if (transaction)
+        {
+          transaction.receiveResponse(message);
+        }
+        break;
+    }
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Wed May 19 2021 17:36:38 GMT+0800 (中国标准时间) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+    <link type="text/css" rel="stylesheet" href="./styles/custom.css">
+    
+</body>
+</html>

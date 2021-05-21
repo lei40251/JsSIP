@@ -38,6 +38,7 @@
     "@babel/preset-env": "^7.9.6",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
+    "docdash": "^1.2.0",
     "eslint": "^5.16.0",
     "fancy-log": "^1.3.3",
     "gulp": "^4.0.2",
@@ -56,6 +57,7 @@
   "scripts": {
     "lint": "gulp lint",
     "test": "gulp test",
-    "prepublishOnly": "gulp babel"
+    "prepublishOnly": "gulp babel",
+    "gendoc": "jsdoc -c ./jsdoc.json"
   }
 }
