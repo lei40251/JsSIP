@@ -11,7 +11,7 @@ PRTC.debug.disable('FlyInn:*');
 console.log(PRTC.version);
 
 // 会话路由地址，创建&加入会议用
-const callRouterUrl = 'https://pro.vsbc.com/cu';
+const callRouterUrl = 'https://lccsp.zgpajf.com.cn:6443';
 
 // 客户端对象
 let client = null;
@@ -218,6 +218,11 @@ function start()
 }
 
 start();
+
+document.querySelector('#changeUID').onclick = function()
+{
+  getTemper(initSignalling, document.querySelector('#user_id').value);
+};
 
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()

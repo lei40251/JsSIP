@@ -6,23 +6,44 @@ let userSig = null;
 let roomId= null;
 
 // 获取临时密钥及基本信息
-function getTemper(callback)
+function getTemper(callback, data)
 {
-  get('https://pro.vsbc.com/pa/d/init', '', (res) =>
+  if (data)
   {
+    get(`https://lccsp.zgpajf.com.cn:6443/d/init?userId=${data}`, '', (res) =>
     {
-      sdkAppId=res.data['sdkId'];
-      userId = res.data['userId'];
-      roomId = res.data['roomId'];
-      userSig = res.data['userSig'];
+      {
+        sdkAppId=res.data['sdkId'];
+        userId = res.data['userId'];
+        roomId = res.data['roomId'];
+        userSig = res.data['userSig'];
 
-      document.querySelector('#user_id').value=userId;
-      document.querySelector('#display_name').value = 'web 测试';
-      document.querySelector('#roomId').value = roomId;
+        document.querySelector('#user_id').value=userId;
+        document.querySelector('#display_name').value = 'web 测试';
+        document.querySelector('#roomId').value = roomId;
 
-      callback();
-    }
-  });
+        callback();
+      }
+    });
+  }
+  else
+  {
+    get('https://lccsp.zgpajf.com.cn:6443/d/init', '', (res) =>
+    {
+      {
+        sdkAppId=res.data['sdkId'];
+        userId = res.data['userId'];
+        roomId = res.data['roomId'];
+        userSig = res.data['userSig'];
+
+        document.querySelector('#user_id').value=userId;
+        document.querySelector('#display_name').value = 'web 测试';
+        document.querySelector('#roomId').value = roomId;
+
+        callback();
+      }
+    });
+  }
 }
 
 /**
