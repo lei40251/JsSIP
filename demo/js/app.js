@@ -11,7 +11,7 @@ PRTC.debug.disable('FlyInn:*');
 console.log(PRTC.version);
 
 // 会话路由地址，创建&加入会议用
-const callRouterUrl = 'https://pro.vsbc.com/cu';
+const callRouterUrl = 'https://pro.vsbc.com:6082';
 
 // 客户端对象
 let client = null;
@@ -132,6 +132,8 @@ function initSignalling()
 
   // 创建 client
   client = PRTC.createClient(configuration);
+
+  client.uploadDebug();
 
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
