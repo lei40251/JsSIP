@@ -133,7 +133,7 @@ function initSignalling()
   // 创建 client
   client = PRTC.createClient(configuration);
 
-  client.uploadDebug();
+  // client.uploadDebug();
 
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
