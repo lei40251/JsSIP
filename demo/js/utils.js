@@ -8,7 +8,7 @@ let roomId= null;
 // 获取临时密钥及基本信息
 function getTemper(callback)
 {
-  get('https://pro.vsbc.com/pa/d/init', '', (res) =>
+  get('https://pro.vsbc.com:6082/d/init', '', (res) =>
   {
     {
       sdkAppId=res.data['sdkId'];
