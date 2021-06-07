@@ -1,11 +1,10 @@
 /* eslint-disable no-console */
-/* eslint-disable no-undef */
 // import * as sdpTransform from 'sdp-transform';
 // const sdpTransform = require('sdp-transform');
 
 // console.log(sdpTransform);
 // 调试信息输出
-PRTC.debug.enable('FlyInn:*');
+// PRTC.debug.enable('FlyInn:*');
 // 关闭调试信息输出
 // PRTC.debug.disable('FlyInn:*');
 
@@ -17,7 +16,6 @@ PRTC.debug.enable('FlyInn:*');
 //   {
 //     console.log('desc: ', sdpTransform.parse(desc.sdp));
 //   });
-
 
 // test end
 
