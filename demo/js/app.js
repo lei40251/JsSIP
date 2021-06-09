@@ -171,6 +171,7 @@ function initSignalling()
   // 已添加远端流
   client.on('stream-added', function(remoteStream)
   {
+    console.log('remoteStream: ', remoteStream);
     // 远端音频混流，此处单独处理远端音频
     if (remoteStream.type === 'audio')
     {
