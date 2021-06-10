@@ -1,3 +1,12 @@
+## [1.2.5-4](https://github.com/lei40251/JsSIP/compare/v1.2.5-3...v1.2.5-4) (2021-06-10)
+
+
+### ✨ Features
+
+* 兼容低版本chrome 浏览器 ([0a31ff5](https://github.com/lei40251/JsSIP/commit/0a31ff5))
+
+
+
 ## [1.2.5-3](https://github.com/lei40251/JsSIP/compare/v1.2.5-2...v1.2.5-3) (2021-06-10)
 
 
