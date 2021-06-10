@@ -6,7 +6,7 @@
 // 调试信息输出
 // PRTC.debug.enable('FlyInn:*');
 // 关闭调试信息输出
-// PRTC.debug.disable('FlyInn:*');
+PRTC.debug.disable('FlyInn:*');
 
 // test start
 // const pcRecvVideo = new RTCPeerConnection();
@@ -131,7 +131,7 @@ function renderRemoteStream(remoteStream)
 // 离会回调，方便监听和取消监听用
 function peerLeave(data)
 {
-  console.log('远端用户离开会议: ', data.userId);
+  // console.log('远端用户离开会议: ', data.userId);
 }
 
 // 客户端初始化
@@ -156,13 +156,13 @@ function initSignalling()
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
   {
-    console.log('connection-state-changed: ', data);
+    // console.log('connection-state-changed: ', data);
   });
 
   // 注册成功，在需要注册场景可用
   client.on('peer-join', function(e)
   {
-    console.log('远端用户加入: ', e.userId);
+    // console.log('远端用户加入: ', e.userId);
   });
 
   // 注册失败，在需要注册场景可用
@@ -171,7 +171,6 @@ function initSignalling()
   // 已添加远端流
   client.on('stream-added', function(remoteStream)
   {
-    console.log('remoteStream: ', remoteStream);
     // 远端音频混流，此处单独处理远端音频
     if (remoteStream.type === 'audio')
     {
@@ -205,13 +204,13 @@ function initSignalling()
   client.on('local-joined', function(data)
   {
     document.querySelector('#join_conf').setAttribute('disabled', true);
-    console.log('您已加入会议');
+    // console.log('您已加入会议');
     localStream = data;
 
     localStream.stream.oninactive= () =>
     {
-      console.log('Video stopped either because 1) it was over, ' +
-          'or 2) no further data is available.');
+      // console.log('Video stopped either because 1) it was over, ' +
+      //     'or 2) no further data is available.');
     };
 
     localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
@@ -222,7 +221,7 @@ function initSignalling()
   {
     resetStatus();
     document.querySelector('#join_conf').removeAttribute('disabled');
-    console.log('您已离开会议');
+    // console.log('您已离开会议');
   });
 
   // 客户端错误事件处理
@@ -269,7 +268,7 @@ document.querySelector('#create_stream').onclick = function()
 
   localStream.on('stop', () =>
   {
-    console.log('localstream is stopped.');
+    // console.log('localstream is stopped.');
   });
 
   localStream.initialize().then(function()
