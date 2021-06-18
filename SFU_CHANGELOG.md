@@ -1,3 +1,12 @@
+## [1.2.5-5](https://github.com/lei40251/JsSIP/compare/v1.2.5-4...v1.2.5-5) (2021-06-18)
+
+
+### ✨ Features
+
+* 兼容低版本浏览器，并启用对应pc的relay，roomId 与 confId调整。 ([f5939f2](https://github.com/lei40251/JsSIP/commit/f5939f2))
+
+
+
 ## [1.2.5-4](https://github.com/lei40251/JsSIP/compare/v1.2.5-3...v1.2.5-4) (2021-06-10)
 
 
