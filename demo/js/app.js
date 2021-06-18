@@ -4,9 +4,9 @@
 
 // console.log(sdpTransform);
 // 调试信息输出
-// PRTC.debug.enable('FlyInn:*');
+PRTC.debug.enable('FlyInn:*');
 // 关闭调试信息输出
-PRTC.debug.disable('FlyInn:*');
+// PRTC.debug.disable('FlyInn:*');
 
 // test start
 // const pcRecvVideo = new RTCPeerConnection();
@@ -286,7 +286,18 @@ document.querySelector('#join_conf').onclick =function()
   }
   else
   {
-    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value);
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, {
+      iceTransportPolicy : 'relay',
+      iceServers         : [
+        {
+          'urls' : [
+            'turn:a.vsbc.com:6084?transport=udp'
+          ],
+          'username'   : 'user',
+          'credential' : 'password'
+        }
+      ]
+    });
   }
 };
 
