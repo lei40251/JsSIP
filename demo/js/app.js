@@ -1,11 +1,24 @@
 /* eslint-disable no-console */
-/* eslint-disable no-undef */
+// import * as sdpTransform from 'sdp-transform';
+// const sdpTransform = require('sdp-transform');
 
+// console.log(sdpTransform);
 // 调试信息输出
 PRTC.debug.enable('FlyInn:*');
-
 // 关闭调试信息输出
-PRTC.debug.disable('FlyInn:*');
+// PRTC.debug.disable('FlyInn:*');
+
+// test start
+// const pcRecvVideo = new RTCPeerConnection();
+
+// pcRecvVideo.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: true })
+//   .then((desc) =>
+//   {
+//     console.log('desc: ', sdpTransform.parse(desc.sdp));
+//   });
+
+// test end
+
 
 // 控制台输出SDK版本信息
 console.log(PRTC.version);
@@ -26,6 +39,8 @@ let localVideoMuted = false;
 let localAudioMuted = false;
 // 远端音频流禁用状态
 let remoteAudioMuted = false;
+
+let nPC;
 
 // 会议结束重置参数
 function resetStatus()
@@ -116,7 +131,7 @@ function renderRemoteStream(remoteStream)
 // 离会回调，方便监听和取消监听用
 function peerLeave(data)
 {
-  console.log('远端用户离开会议: ', data.userId);
+  // console.log('远端用户离开会议: ', data.userId);
 }
 
 // 客户端初始化
@@ -133,16 +148,21 @@ function initSignalling()
   // 创建 client
   client = PRTC.createClient(configuration);
 
+  client.on('pc', (pc) =>
+  {
+    nPC=pc;
+  });
+
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
   {
-    console.log('connection-state-changed: ', data);
+    // console.log('connection-state-changed: ', data);
   });
 
   // 注册成功，在需要注册场景可用
   client.on('peer-join', function(e)
   {
-    console.log('远端用户加入: ', e.userId);
+    // console.log('远端用户加入: ', e.userId);
   });
 
   // 注册失败，在需要注册场景可用
@@ -184,13 +204,13 @@ function initSignalling()
   client.on('local-joined', function(data)
   {
     document.querySelector('#join_conf').setAttribute('disabled', true);
-    console.log('您已加入会议');
+    // console.log('您已加入会议');
     localStream = data;
 
     localStream.stream.oninactive= () =>
     {
-      console.log('Video stopped either because 1) it was over, ' +
-          'or 2) no further data is available.');
+      // console.log('Video stopped either because 1) it was over, ' +
+      //     'or 2) no further data is available.');
     };
 
     localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
@@ -201,7 +221,7 @@ function initSignalling()
   {
     resetStatus();
     document.querySelector('#join_conf').removeAttribute('disabled');
-    console.log('您已离开会议');
+    // console.log('您已离开会议');
   });
 
   // 客户端错误事件处理
@@ -219,6 +239,28 @@ function start()
 
 start();
 
+document.querySelector('#show_remote_video').onclick=function()
+{
+  const vs = new MediaStream();
+  const nc = nPC.getReceivers()[0].track;
+
+  // nc.onunmute = () =>
+  // {
+  // don't set srcObject again if it is already set.
+  // if (remoteView.srcObject) return;
+  // remoteView.srcObject = streams[0];
+  vs.addTrack(nc);
+
+  const vd = document.createElement('video');
+
+  vd.srcObject= vs;
+  vd.play();
+  document.querySelector('#rvs').append(vd);
+  // renderRemoteStream(vs);
+  // console.log('nc: ', nc);
+  // };
+};
+
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
 {
@@ -226,7 +268,7 @@ document.querySelector('#create_stream').onclick = function()
 
   localStream.on('stop', () =>
   {
-    console.log('localstream is stopped.');
+    // console.log('localstream is stopped.');
   });
 
   localStream.initialize().then(function()
@@ -244,7 +286,18 @@ document.querySelector('#join_conf').onclick =function()
   }
   else
   {
-    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value);
+    client.join(document.querySelector('#roomId').value, document.querySelector('#display_name').value, {
+      iceTransportPolicy : 'relay',
+      iceServers         : [
+        {
+          'urls' : [
+            'turn:a.vsbc.com:6084?transport=udp'
+          ],
+          'username'   : 'user',
+          'credential' : 'password'
+        }
+      ]
+    });
   }
 };
 
