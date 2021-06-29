@@ -231,6 +231,14 @@ function initSignalling()
   });
 }
 
+function switchCam(deviceId)
+{
+  localStream.switchDevice({ deviceId: deviceId }).then((stream) =>
+  {
+    document.querySelector('#local_stream').srcObject=stream;
+  });
+}
+
 // 启动
 function start()
 {
@@ -389,9 +397,20 @@ document.querySelector('#handle_remote_audio').onclick = function(self)
 // 切换摄像头
 document.querySelector('#switch_device').onclick = function()
 {
-  localStream.switchDevice().then(function(s)
+  // localStream.switchDevice().then(function(s)
+  // {
+  //   document.querySelector('#local_stream').srcObject = s;
+  // });
+  PRTC.getCameras().then((cams) =>
   {
-    document.querySelector('#local_stream').srcObject = s;
+    let camsList='';
+
+    for (let i = 0; i<cams.length; ++i)
+    {
+      camsList+=`<button type="button" onclick="switchCam('${cams[i].deviceId}')">Cam ${i+1} ${cams[i].label}</button>`;
+    }
+
+    document.querySelector('#cams').innerHTML=camsList;
   });
 };
 
