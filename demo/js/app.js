@@ -116,6 +116,7 @@ function renderRemoteStream(remoteStream)
 
   // 媒体流
   video.srcObject = remoteStream.stream;
+  video.play();
   video.onclick = function()
   {
     captureVideo(video);
@@ -213,7 +214,11 @@ function initSignalling()
       //     'or 2) no further data is available.');
     };
 
-    localStream.custom || (document.querySelector('#local_stream').srcObject = localStream.stream);
+    if (!localStream.custom)
+    {
+      document.querySelector('#local_stream').srcObject = localStream.stream;
+      document.querySelector('#local_stream').play();
+    }
   });
 
   // 本端离开会议
@@ -236,6 +241,7 @@ function switchCam(deviceId)
   localStream.switchDevice({ deviceId: deviceId }).then((stream) =>
   {
     document.querySelector('#local_stream').srcObject=stream;
+    document.querySelector('#local_stream').play();
   });
 }
 
@@ -247,27 +253,27 @@ function start()
 
 start();
 
-document.querySelector('#show_remote_video').onclick=function()
-{
-  const vs = new MediaStream();
-  const nc = nPC.getReceivers()[0].track;
+// document.querySelector('#show_remote_video').onclick=function()
+// {
+//   const vs = new MediaStream();
+//   const nc = nPC.getReceivers()[0].track;
 
-  // nc.onunmute = () =>
-  // {
-  // don't set srcObject again if it is already set.
-  // if (remoteView.srcObject) return;
-  // remoteView.srcObject = streams[0];
-  vs.addTrack(nc);
+//   // nc.onunmute = () =>
+//   // {
+//   // don't set srcObject again if it is already set.
+//   // if (remoteView.srcObject) return;
+//   // remoteView.srcObject = streams[0];
+//   vs.addTrack(nc);
 
-  const vd = document.createElement('video');
+//   const vd = document.createElement('video');
 
-  vd.srcObject= vs;
-  vd.play();
-  document.querySelector('#rvs').append(vd);
-  // renderRemoteStream(vs);
-  // console.log('nc: ', nc);
-  // };
-};
+//   vd.srcObject= vs;
+//   vd.play();
+//   document.querySelector('#rvs').append(vd);
+//   // renderRemoteStream(vs);
+//   // console.log('nc: ', nc);
+//   // };
+// };
 
 // 预览本端媒体
 document.querySelector('#create_stream').onclick = function()
@@ -282,6 +288,7 @@ document.querySelector('#create_stream').onclick = function()
   localStream.initialize().then(function()
   {
     document.querySelector('#local_stream').srcObject = localStream.stream;
+    document.querySelector('#local_stream').play();
   });
 };
 
