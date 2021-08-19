@@ -130,6 +130,8 @@ function initSignalling()
     user_sig        : userSig
   };
 
+  PRTC.Logger.setLogLevel('error');
+
   // 创建 client
   client = PRTC.createClient(configuration);
 
