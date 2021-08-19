@@ -146,13 +146,19 @@ function initSignalling()
     user_sig        : userSig
   };
 
+  PRTC.Logger.setLogLevel('error');
+
   // 创建 client
   client = PRTC.createClient(configuration);
 
+<<<<<<< HEAD
   client.on('pc', (pc) =>
   {
     nPC=pc;
   });
+=======
+  // client.uploadDebug();
+>>>>>>> sfu-dev-loglevel
 
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)

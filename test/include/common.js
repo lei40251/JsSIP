@@ -14,6 +14,17 @@ global.WebSocket = function()
   this.close = function() {};
 };
 
+global.location = {
+  host : ''
+};
+
+// Define global.XMSHttpRequest
+global.XMLHttpRequest = function()
+{
+  this.open=function() {};
+  this.setRequestHeader=function() {};
+};
+
 // Define global.navigator for bowser module.
 global.navigator = {
   userAgent : ''
