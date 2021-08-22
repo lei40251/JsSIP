@@ -25,6 +25,7 @@ console.log(PRTC.version);
 
 // 会话路由地址，创建&加入会议用
 const callRouterUrl = 'https://pro.vsbc.com:6082';
+const logUrl = 'https://www.baiu.com';
 
 // 客户端对象
 let client = null;
@@ -143,10 +144,11 @@ function initSignalling()
     call_router_url : callRouterUrl,
     sdk_app_id      : sdkAppId,
     user_id         : userId,
-    user_sig        : userSig
+    user_sig        : userSig,
+    log_url         : logUrl
   };
 
-  PRTC.Logger.setLogLevel('error');
+  PRTC.Logger.setLogLevel('debug');
 
   // 创建 client
   client = PRTC.createClient(configuration);
