@@ -34,3 +34,6 @@ export function closeMediaStream(stream?: MediaStream): void;
 export function cloneArray<T = unknown>(arr: T[]): T[];
 
 export function cloneObject<T>(obj: T, fallback?: T): T;
+
+export function getHost(url: string): string;
+
