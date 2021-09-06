@@ -153,6 +153,12 @@ function initSignalling()
   // 创建 client
   client = PRTC.createClient(configuration);
 
+  client.on('network-quality', function(data)
+  {
+    console.log('data:');
+    console.table(data);
+  });
+
   // 信令连接成功建立
   client.on('connection-state-changed', function(data)
   {
