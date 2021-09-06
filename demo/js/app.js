@@ -153,10 +153,15 @@ function initSignalling()
   // 创建 client
   client = PRTC.createClient(configuration);
 
-  client.on('network-quality', function(data)
+  client.on('NETWORK_QUALITY', function(data)
   {
     console.log('data:');
     console.table(data);
+    document.querySelector('.audio_uplinkSpeed').innerHTML = data.audio.uplinkSpeed / 1000;
+    document.querySelector('.audio_downlinkLoss').innerHTML = `${data.audio.downlinkLoss * 100 }%`;
+    document.querySelector('.audio_downlinkSpeed').innerHTML = data.audio.downlinkSpeed / 1000;
+    document.querySelector('.video_uplinkSpeed').innerHTML = data.video.uplinkSpeed / 1000;
+    document.querySelector('.video_upRTT').innerHTML = data.video.upRTT;
   });
 
   // 信令连接成功建立
