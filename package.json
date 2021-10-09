@@ -2,7 +2,7 @@
   "name": "flyinn",
   "title": "FlyInn",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "3.5.5",
+  "version": "3.8.2",
   "homepage": "",
   "author": "",
   "contributors": [],
@@ -18,14 +18,14 @@
   "license": "MIT",
   "dependencies": {
     "@types/debug": "^4.1.5",
-    "@types/node": "^14.0.6",
-    "debug": "^4.1.1",
-    "events": "^3.1.0",
-    "sdp-transform": "^2.14.0"
+    "@types/node": "^14.14.34",
+    "debug": "^4.3.1",
+    "events": "^3.3.0",
+    "sdp-transform": "^2.14.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.9.6",
-    "@babel/preset-env": "^7.9.6",
+    "@babel/core": "^7.13.10",
+    "@babel/preset-env": "^7.13.10",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
     "eslint": "^5.16.0",
