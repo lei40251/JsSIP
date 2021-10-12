@@ -62,7 +62,15 @@ flyinnUA.on('newRTCSession', function(e)
   {
     // 接听
     e.session.answer({
-      mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
+      mediaConstraints :
+      {
+        audio : true,
+        video :
+        {
+          width  : { ideal: 480 },
+          height : { ideal: 640 }
+        }
+      }
     });
   };
 
@@ -163,26 +171,26 @@ flyinnUA.on('newRTCSession', function(e)
     e.session.videoShare(c_f.captureStream(15));
   };
 
-  let timer;
+  let timer;
 
-  document.querySelector('#picShare').onclick = function()
+  document.querySelector('#picShare').onclick = function()
   {
-    if (timer)
+    if (timer)
     {
       clearInterval(timer);
     }
-    const c = document.createElement('canvas');
+    const c = document.createElement('canvas');
 
-    c.width = 320;
-    c.height = 240;
+    c.width = 320;
+    c.height = 240;
 
-    const ctx = c.getContext('2d');
-    const pic = document.querySelector('#pic_s');
+    const ctx = c.getContext('2d');
+    const pic = document.querySelector('#pic_s');
 
-    timer = setInterval(() => 
+    timer = setInterval(() =>
     {
-      ctx.drawImage(pic, 0, 0, 320, 240);
-    }, 100);
+      ctx.drawImage(pic, 0, 0, 320, 240);
+    }, 100);
 
     e.session.videoShare(c.captureStream());
   };
@@ -208,7 +216,12 @@ flyinnUA.on('newRTCSession', function(e)
       setTimeout(() =>
       {
         e.session.answer({
-          mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
+          mediaConstraints :
+          {
+            audio : true,
+            video : { width: { ideal: 480 }, height: { ideal: 640 } }
+          }
+
         });
       }, 200);
     }
