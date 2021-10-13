@@ -1,10 +1,10 @@
 /// <reference types="node" />
-import {EventEmitter} from 'events'
+import { EventEmitter } from 'events'
 
-import {IncomingRequest, IncomingResponse, OutgoingRequest} from './SIPMessage'
-import {NameAddrHeader} from './NameAddrHeader'
-import {URI} from './URI'
-import {causes, DTMF_TRANSPORT} from './Constants'
+import { IncomingRequest, IncomingResponse, OutgoingRequest } from './SIPMessage'
+import { NameAddrHeader } from './NameAddrHeader'
+import { URI } from './URI'
+import { causes, DTMF_TRANSPORT } from './Constants'
 
 interface RTCPeerConnectionDeprecated extends RTCPeerConnection {
   /**
@@ -275,6 +275,10 @@ export class RTCSession extends EventEmitter {
   sendDTMF(tones: string | number, options?: DTFMOptions): void;
 
   sendInfo(contentType: string, body?: string, options?: ExtraHeaders): void;
+
+  displayShare(type?: string): void;
+
+  unDisplayShare(type?: string): void;
 
   hold(options?: HoldOptions, done?: VoidFunction): boolean;
 
