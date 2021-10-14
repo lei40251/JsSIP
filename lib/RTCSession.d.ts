@@ -276,6 +276,10 @@ export class RTCSession extends EventEmitter {
 
   sendInfo(contentType: string, body?: string, options?: ExtraHeaders): void;
 
+  videoShare(videoStream: MediaStream): void;
+
+  unVideoShare(): void;
+
   displayShare(type?: string): void;
 
   unDisplayShare(type?: string): void;
