@@ -220,6 +220,16 @@ flyinnUA.on('newRTCSession', function(e)
     }
   });
 
+  e.session.on('VoLTE:toVideo', function()
+  {
+    console.log('切换为视频模式');
+  });
+
+  e.session.on('VoLTE:toAudio', function()
+  {
+    console.log('切换为音频模式');
+  });
+
   // 呼叫失败处理
   e.session.on('failed', function(d)
   {
@@ -374,13 +384,13 @@ document.querySelector('#call').onclick = function()
       }
     });
 
-    localVideoStream.getVideoTracks().forEach((track) =>
-    {
-      track.addEventListener('ended', () =>
-      {
-        console.log('这里可以切换为音频界面');
-      });
-    });
+    // localVideoStream.getVideoTracks().forEach((track) =>
+    // {
+    //   track.addEventListener('ended', () =>
+    //   {
+    //     console.log('这里可以切换为音频界面');
+    //   });
+    // });
 
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
