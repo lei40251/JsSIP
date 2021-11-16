@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    .cav {
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+  </style>
+  <title>FlyInn Web</title>
+</head>
+
+<body style="margin: 0">
+  <canvas id="cav_s" class="cav"></canvas>
+  <p style="width: 94vw; padding: 20px; margin: 0; background-color: #eee" id="status"></p>
+  <div style="width: 100vw; display: flex; padding: 3vw 0" id="video_area">
+    <div style="background-color: #eee; position: relative; width:50vw; text-align:center;">
+      <div style="
+            position: absolute;
+            top: 30px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          ">
+        <p style="transform: rotate(-30deg)">水印测试</p>
+        <p style="transform: rotate(-30deg)">水印测试</p>
+        <p style="transform: rotate(-30deg)">水印测试</p>
+      </div>
+      <p style="width: 100%; text-align: center; margin: 5px 0">本端视频</p>
+      <video autoplay muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+        style="height:480px; margin: 1vw" id="localVideo" src=""></video>
+    </div>
+    <div style="background-color: #eee; position: relative; width:50vw; text-align:center;">
+      <div style="
+            position: absolute;
+            top: 30px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          ">
+        <p style="transform: rotate(-30deg)">水印测试</p>
+        <p style="transform: rotate(-30deg)">水印测试</p>
+        <p style="transform: rotate(-30deg)">水印测试</p>
+      </div>
+      <p style="width: 100%; text-align: center; margin: 5px 0">远端视频</p>
+      <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+        style="height: 480px; margin: 1vw" id="remoteVideo" src=""></video>
+    </div>
+  </div>
+  <div style="margin: 5vw; height: 240px; background-color: #efefef; display: flex; justify-content: space-between">
+    <div style="width: 320px; height: 240px; overflow-x: hidden; overflow-y: auto;" class="hide">
+      <div id="form_s" style="background-color: #ccc;">
+        <input type="text" value="请输入要分享的表单内容">
+      </div>
+    </div>
+    <div style="width: 320px; height: 240px; overflow: hidden">
+      <img id="pic_s" style="width: 100%" src="./6372081616257524357003003.jpg" alt="" />
+    </div>
+    <div style="width: 320px; height: 240px">
+      <video id="video_s" src="./video.mp4" loop muted autoplay style="width: 100%" control></video>
+    </div>
+    <div>
+      <canvas id="captureView" style="width: 100%;"></canvas>
+    </div>
+  </div>
+  <div style="margin: 5vw; background-color: #efefef">
+    <p>
+      <input id="file" type="file" accept="video/mp4">
+      <button id="uploadVideo">更换视频彩铃</button>
+    </p>
+    <p>
+      <input type="text" value="" title="请输入要呼叫的号码" id="linkman" />
+      <button id="outboundCall">预测外呼</button>
+      <button id="cancelOutboundCall">取消预测外呼</button>
+      <button id="answer" class="hide">接听</button>
+      <button id="call">直接外呼</button>
+      <button id="cancel">挂机</button>
+    </p>
+    <p>
+      <button id="muteMic">关闭麦克风</button>
+      <button id="muteCam">关闭摄像头</button>
+      <button id="switchCam">切换摄像头</button>
+      <button id="capture">对远端视频截图</button>
+    </p>
+    <p>
+      <button id="screenShare">分享桌面</button>
+      <button id="formShare" class="hide">分享表单</button>
+      <button id="picShare">分享图片</button>
+      <button id="videoShare">分享视频</button>
+      <button id="stopShare">停止分享</button>
+    </p>
+    <p class="hide">
+      <input type="text" id="info" />
+      <button id="sendInfo">推送消息</button>
+    </p>
+  </div>
+
+  <script src="./js/jquery-3.3.1.min.js"></script>
+  <script src="./js/html2canvas.min.js"></script>
+  <script src="../dist/flyinn.min.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+
+</html>

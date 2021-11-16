@@ -5,9 +5,6 @@ FlyInn.debug.enable('FlyInn:*');
 // 关闭调试信息输出
 FlyInn.debug.disable('FlyInn:*');
 
-let RTCRecord = false;
-const recordRTC = [];
-
 function handleGetQuery(name)
 {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
@@ -18,6 +15,8 @@ function handleGetQuery(name)
 
   return null;
 }
+
+const uuid = FlyInn.Utils.newUUID();
 
 // 注册UA的用户名
 const account = handleGetQuery('linkman')
@@ -62,17 +61,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     // 接听
     e.session.answer({
-      mediaConstraints : {
-        audio : true,
-        video : {
-          width : {
-            ideal : 480
-          },
-          height : {
-            ideal : 640
-          }
-        }
-      }
+      mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
     });
   };
 
@@ -114,27 +103,99 @@ flyinnUA.on('newRTCSession', function(e)
     }
   };
 
-  // document.querySelector('#switchCam').onclick = function()
-  // {
-  //   // 切换摄像头
-  //   const stream = e.session.switchCam({ frameRate: 15 });
+  document.querySelector('#sendInfo').onclick = function()
+  {
+    // 通话中发送消息  注意： contentType 必填
+    e.session.sendInfo('text/plain', document.querySelector('#info').value);
+  };
 
-  //   stream &&
-  //     stream.then((s) =>
-  //     {
-  //       document.querySelector('#localVideo').srcObject = s;
-  //     });
-  // };
+  document.querySelector('#switchCam').onclick = function()
+  {
+    // 切换摄像头
+    const stream = e.session.switchCam({ frameRate: 15 });
+
+    stream &&
+      stream.then((s) =>
+      {
+        document.querySelector('#localVideo').srcObject = s;
+      });
+  };
 
   document.querySelector('#screenShare').onclick = function()
   {
     e.session.displayShare('replace');
   };
 
+  const c_f = document.querySelector('#cav_s');
+  // const c_f = document.createElement('canvas');
+  const ctx_f = c_f.getContext('2d');
+
+  let isRecordingStarted = false;
+  let isStoppedRecording = false;
+
+  (function looper()
+  {
+    const r_f = document.querySelector('#form_s');
+
+    c_f.width = r_f.clientWidth;
+    c_f.height = r_f.clientHeight;
+
+    if (!isRecordingStarted)
+    {
+      return setTimeout(looper, 500);
+    }
+    html2canvas(r_f).then(function(canvas)
+    {
+      ctx_f.clearRect(0, 0, c_f.width, c_f.height);
+      ctx_f.drawImage(canvas, 0, 0, c_f.width, c_f.height);
+      if (isStoppedRecording)
+      {
+        return;
+      }
+      requestAnimationFrame(looper);
+    });
+  })();
+
+  document.querySelector('#formShare').onclick = function()
+  {
+    isRecordingStarted = true;
+    e.session.videoShare(c_f.captureStream(15));
+  };
+
+  let timer;
+
+  document.querySelector('#picShare').onclick = function()
+  {
+    if (timer)
+    {
+      clearInterval(timer);
+    }
+    const c = document.createElement('canvas');
+
+    c.width = 320;
+    c.height = 240;
+
+    const ctx = c.getContext('2d');
+    const pic = document.querySelector('#pic_s');
+
+    timer = setInterval(() =>
+    {
+      ctx.drawImage(pic, 0, 0, 320, 240);
+    }, 100);
+
+    e.session.videoShare(c.captureStream());
+  };
+
+  document.querySelector('#videoShare').onclick = function()
+  {
+    e.session.videoShare(document.querySelector('#video_s').captureStream());
+  };
 
   document.querySelector('#stopShare').onclick = function()
   {
-    e.session.unDisplayShare('replace');
+    e.session.unVideoShare();
+
+    isStoppedRecording = false;
   };
 
   // 呼入振铃 & 呼出回铃音
@@ -174,30 +235,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = 'hide';
     setStatus(`呼叫失败: ${d.cause}`);
-    // location.reload();
-
-
-    // 通话结束先上传录像文件
-    if (RTCRecord)
-    {
-      recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
-      {
-        RecordRTC.writeToDisk({
-          video : recordRTC[sessionStorage.getItem('sessionId')]
-        });
-        getSeekableBlob(
-          recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
-          function(seekableBlob)
-          {
-            // uploadVideoHandler(seekableBlob);
-            console.log('seek: ', seekableBlob);
-            document.querySelector('#record').src=URL.createObjectURL(seekableBlob);
-          }
-        );
-      });
-
-      RTCRecord = false;
-    }
+    location.reload();
   });
 
   // 呼叫结束
@@ -205,35 +243,54 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = 'hide';
     setStatus('呼叫结束');
-    // location.reload();
-
-    // 通话结束先上传录像文件
-    if (RTCRecord)
-    {
-      recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
-      {
-        RecordRTC.writeToDisk({
-          video : recordRTC[sessionStorage.getItem('sessionId')]
-        });
-
-        getSeekableBlob(
-          recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
-          function(seekableBlob)
-          {
-            console.log('seekss: ', seekableBlob);
-            // uploadVideoHandler(seekableBlob);
-            document.querySelector('#record').src=URL.createObjectURL(seekableBlob);
-          }
-        );
-      });
-      RTCRecord = false;
-    }
+    location.reload();
   });
 
   // 呼叫已确认
   e.session.on('confirmed', function()
   {
     document.querySelector('#video_area').classList = '';
+    // 本地视频
+    // const localVideoStream = new MediaStream();
+
+    // e.session.connection.getSenders().forEach((sender) =>
+    // {
+    //   if (
+    //     sender.track &&
+    //     sender.track.kind === 'video' &&
+    //     sender.track.readyState === 'live'
+    //   )
+    //   {
+    //     localVideoStream.addTrack(sender.track);
+    //   }
+    // });
+
+    // document.querySelector('#localVideo').srcObject = localVideoStream;
+
+    // 远端视频
+    // const remoteVideoStream = new MediaStream();
+
+    // e.session.connection.getReceivers().forEach((receiver) =>
+    // {
+    //   if (receiver.track && receiver.track.readyState === 'live')
+    //   {
+    //     remoteVideoStream.addTrack(receiver.track);
+    //   }
+    // });
+    // document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+  });
+
+  // 收到新消息
+  e.session.on('newInfo', function(d)
+  {
+    if (d.originator === 'remote')
+    {
+      console.log('收到新消息：', d.info.body);
+    }
+    else if (d.originator === 'local')
+    {
+      console.log('发出消息：', d.info.body);
+    }
   });
 
   // 取消bundle
@@ -303,6 +360,14 @@ document.querySelector('#call').onclick = function()
 
   session.connection.ontrack = function(event)
   {
+    // console.error('track: ', event);
+    // 远端视频
+    // const remoteVideoStream = new MediaStream();
+
+    // if (receiver.track && receiver.track.readyState === 'live')
+    // {
+    //   remoteVideoStream.addTrack(receiver.track);
+    // }
 
     // 本地视频
     const localVideoStream = new MediaStream();
@@ -319,34 +384,69 @@ document.querySelector('#call').onclick = function()
       }
     });
 
+    // localVideoStream.getVideoTracks().forEach((track) =>
+    // {
+    //   track.addEventListener('ended', () =>
+    //   {
+    //     console.log('这里可以切换为音频界面');
+    //   });
+    // });
+
+
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
     document.querySelector('#remoteVideo').srcObject = event.streams[0];
-
-    const arrayOfStreams = [ localVideoStream, event.streams[0] ];
-
-    recordRTC[sessionStorage.getItem('sessionId')] = RecordRTC(arrayOfStreams, {
-      type     : 'video',
-      mimeType : 'video/webm;codecs=vp8'
-      // numberOfAudioChannels: 1,
-      // recorderType: 'StereoAudioRecorder'
-    });
-
-    recordRTC[sessionStorage.getItem('sessionId')].startRecording();
-    RTCRecord = true;
   };
 
   document.querySelector('#cancel').onclick = function()
   {
     // 取消呼叫
     session.terminate();
-    // location.reload();
+    location.reload();
   };
 };
 
 window.onbeforeunload = function()
 {
   flyinnUA.stop();
+};
+
+document.querySelector('#outboundCall').onclick = function()
+{
+  const linkman = document.querySelector('#linkman').value;
+
+  const settings = {
+    url     : `https://lccsp.zgpajf.com.cn:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}&extensionNumber=${account}`,
+    method  : 'GET',
+    timeout : 0
+  };
+
+  $.ajax(settings).done(function(response)
+  {
+    setStatus(`预测外呼：${response}`);
+    if (response === 'hangup')
+    {
+      setTimeout(() =>
+      {
+        location.reload();
+      }, 1000);
+    }
+  });
+  setStatus(`正在预测外呼：${linkman}`);
+};
+
+document.querySelector('#cancelOutboundCall').onclick = function()
+{
+  const settings = {
+    url     : `https://lccsp.zgpajf.com.cn:8089/cu/hangupoutbound?uuid=${uuid}`,
+    method  : 'GET',
+    timeout : 0
+  };
+
+  $.ajax(settings).done(function(response)
+  {
+    console.log(response);
+  });
 };
 
 document.querySelector('#capture').onclick = function()
@@ -366,3 +466,24 @@ document.querySelector('#capture').onclick = function()
   );
 };
 
+document.querySelector('#uploadVideo').onclick = function()
+{
+  const form = new FormData();
+
+  form.append('file', document.querySelector('#file').files[0]);
+
+  const settings = {
+    url         : 'https://lccsp.zgpajf.com.cn:8089/cu/upload?filename=xcpvideo',
+    method      : 'POST',
+    timeout     : 0,
+    processData : false,
+    mimeType    : 'multipart/form-data',
+    contentType : false,
+    data        : form
+  };
+
+  $.ajax(settings).done(function(response)
+  {
+    console.log(response);
+  });
+};
