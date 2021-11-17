@@ -24,7 +24,8 @@ PRTC.debug.disable('FlyInn:*');
 console.log(PRTC.version);
 
 // 会话路由地址，创建&加入会议用
-const callRouterUrl = 'https://pro.vsbc.com:6082';
+// const callRouterUrl = 'https://pro.vsbc.com:6082';
+const callRouterUrl = 'https://prtc.zgpafs.com.cn';
 const logUrl = 'https://www.baiu.com';
 
 // 客户端对象
