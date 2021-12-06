@@ -3,20 +3,38 @@
 FlyInn.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-FlyInn.debug.disable('FlyInn:*');
+// FlyInn.debug.disable('FlyInn:*');
 
 let RTCRecord = false;
+let inCallSession = null;
 const recordRTC = [];
 
+
+/**
+ * 获取url参数
+ *
+ * @param {String} name 参数名
+ * @return {String|null}
+ */
 function handleGetQuery(name)
 {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-
   const r = window.location.search.substr(1).match(reg);
 
   if (r != null) return unescape(r[2]);
 
   return null;
+}
+
+/**
+ * 输出显示状态
+ * @param {String} text
+ */
+function setStatus(text)
+{
+  const statusDom = document.querySelector('#status');
+
+  statusDom.innerText = text;
 }
 
 // 注册UA的用户名
@@ -35,28 +53,22 @@ const configuration = {
   // 与 UA 关联的 SIP URI
   uri      : `sip:${account}@lccsp.zgpajf.com.cn`,
   // SIP身份验证密码
-  password : `yl_19${ account}`
+  password : `yl_19${account}`
 };
 
 // Flyinn 实例
 // eslint-disable-next-line no-undef
 const flyinnUA = new FlyInn.UA(configuration);
 
-/**
- * 输出显示状态
- * @param {String} text
- */
-function setStatus(text)
-{
-  const statusDom = document.querySelector('#status');
-
-  statusDom.innerText = text;
-}
-
 // 新通话
 flyinnUA.on('newRTCSession', function(e)
 {
   let curMuted = null;
+
+  if (e.originator == 'remote')
+  {
+    inCallSession = e.session;
+  }
 
   document.querySelector('#answer').onclick = function()
   {
@@ -78,7 +90,7 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#cancel').onclick = function()
   {
-    // 拒绝/挂机
+    // 拒绝|挂机|取消
     e.session.terminate();
   };
 
@@ -128,12 +140,14 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#screenShare').onclick = function()
   {
+    // 分享桌面
     e.session.displayShare('replace');
   };
 
 
   document.querySelector('#stopShare').onclick = function()
   {
+    // 取消分享桌面
     e.session.unDisplayShare('replace');
   };
 
@@ -142,7 +156,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     if (d.originator === 'local')
     {
-      setStatus('通话中');
+      setStatus('呼叫中');
       setTimeout(() =>
       {
         e.session.answer({
@@ -176,22 +190,18 @@ flyinnUA.on('newRTCSession', function(e)
     setStatus(`呼叫失败: ${d.cause}`);
     // location.reload();
 
-
-    // 通话结束先上传录像文件
+    // 呼叫失败上传录像文件
     if (RTCRecord)
     {
       recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
       {
-        RecordRTC.writeToDisk({
-          video : recordRTC[sessionStorage.getItem('sessionId')]
-        });
         getSeekableBlob(
           recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
           function(seekableBlob)
           {
             // uploadVideoHandler(seekableBlob);
             console.log('seek: ', seekableBlob);
-            document.querySelector('#record').src=URL.createObjectURL(seekableBlob);
+            document.querySelector('#record').src = URL.createObjectURL(seekableBlob);
           }
         );
       });
@@ -212,17 +222,13 @@ flyinnUA.on('newRTCSession', function(e)
     {
       recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
       {
-        RecordRTC.writeToDisk({
-          video : recordRTC[sessionStorage.getItem('sessionId')]
-        });
-
         getSeekableBlob(
           recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
           function(seekableBlob)
           {
             console.log('seekss: ', seekableBlob);
             // uploadVideoHandler(seekableBlob);
-            document.querySelector('#record').src=URL.createObjectURL(seekableBlob);
+            document.querySelector('#record').src = URL.createObjectURL(seekableBlob);
           }
         );
       });
@@ -234,6 +240,27 @@ flyinnUA.on('newRTCSession', function(e)
   e.session.on('confirmed', function()
   {
     document.querySelector('#video_area').classList = '';
+
+    // if (inCallSession)
+    // {
+    //   const localStream = new MediaStream();
+    //   const remoteStream = new MediaStream();
+
+    //   inCallSession.connection.getSenders().forEach(function(sender)
+    //   {
+    //     localStream.addTrack(sender.track);
+    //   });
+    //   inCallSession.connection.getReceivers().forEach(function(receiver)
+    //   {
+    //     remoteStream.addTrack(receiver.track);
+    //   });
+
+    //   document.querySelector('#localVideo').srcObject = localStream;
+
+    //   document.querySelector('#remoteVideo').srcObject = remoteStream;
+
+    // }
+
   });
 
   // 取消bundle
@@ -323,17 +350,17 @@ document.querySelector('#call').onclick = function()
 
     document.querySelector('#remoteVideo').srcObject = event.streams[0];
 
+    // 外呼端视频录制
     const arrayOfStreams = [ localVideoStream, event.streams[0] ];
 
     recordRTC[sessionStorage.getItem('sessionId')] = RecordRTC(arrayOfStreams, {
-      type     : 'video',
-      mimeType : 'video/webm;codecs=vp8'
-      // numberOfAudioChannels: 1,
-      // recorderType: 'StereoAudioRecorder'
+      type      : 'video',
+      mimeType  : 'video/webm;codecs=vp8',
+      watermark : '北京市, 北京市, 西城区, 前后井胡同, 8号'
     });
-
     recordRTC[sessionStorage.getItem('sessionId')].startRecording();
     RTCRecord = true;
+
   };
 
   document.querySelector('#cancel').onclick = function()
@@ -342,11 +369,6 @@ document.querySelector('#call').onclick = function()
     session.terminate();
     // location.reload();
   };
-};
-
-window.onbeforeunload = function()
-{
-  flyinnUA.stop();
 };
 
 document.querySelector('#capture').onclick = function()
@@ -366,3 +388,7 @@ document.querySelector('#capture').onclick = function()
   );
 };
 
+window.onbeforeunload = function()
+{
+  flyinnUA.stop();
+};
