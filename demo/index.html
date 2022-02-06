@@ -26,7 +26,9 @@
         style="height:240px; margin: 1vw" id="localVideo" src=""></video>
     </div>
     <div style="background-color: #eee; position: relative; width:50vw; text-align:center;">
-      <p style="width: 100%; text-align: center; margin: 5px 0">远端视频</p>
+      <p style="width: 100%; text-align: center; margin: 5px 0">远端视频
+        <button onclick="rotaVideo()">旋转90度</button>
+      </p>
       <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
         style="height: 240px; margin: 1vw" id="remoteVideo" src=""></video>
     </div>
@@ -41,7 +43,7 @@
   </div>
   <div style="padding: 1vw 3vw; margin: 1vw 0; background-color: #efefef; line-height: 2;">
     <p>
-      <input type="text" value="13831175769" title="请输入要呼叫的号码" id="linkman" />
+      <input type="text" value="" title="请输入要呼叫的号码" id="linkman" />
       <button id="call">外呼</button>
       <button id="answer">接听</button>
       <button id="cancel">挂机</button>

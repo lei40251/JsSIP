@@ -5,10 +5,21 @@ FlyInn.debug.enable('FlyInn:*');
 // 关闭调试信息输出
 // FlyInn.debug.disable('FlyInn:*');
 
+let deg=0;
 let RTCRecord = false;
 let inCallSession = null;
 const recordRTC = [];
 
+function rotaVideo()
+{
+  deg+=1;
+  $('#remoteVideo').css({ 'transform': `rotate(${90*deg}deg)` });
+}
+
+function resetVideo()
+{
+  $('#remoteVideo').css({ 'transform': 'rotate(0deg)' });
+}
 
 /**
  * 获取url参数
@@ -176,6 +187,39 @@ flyinnUA.on('newRTCSession', function(e)
   e.session.on('VoLTE:toVideo', function()
   {
     console.log('切换为视频模式');
+    
+    // 本地视频
+    const localVideoStream = new MediaStream();
+    const remoteVideoStream = new MediaStream();
+
+    e.session.connection.getSenders().forEach((sender) =>
+    {
+      if (
+        sender.track &&
+        sender.track.kind === 'video' &&
+        sender.track.readyState === 'live'
+      )
+      {
+        localVideoStream.addTrack(sender.track);
+      }
+    });
+
+    e.session.connection.getReceivers().forEach((receiver) =>
+    {
+      console.log('recv: ', receiver);
+      if (
+        receiver.track &&
+        receiver.track.readyState === 'live'
+      )
+      {
+        remoteVideoStream.addTrack(receiver.track);
+      }
+    });
+    
+
+    document.querySelector('#localVideo').srcObject = localVideoStream;
+
+    document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
   });
 
   e.session.on('VoLTE:toAudio', function()
@@ -215,6 +259,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = 'hide';
     setStatus('呼叫结束');
+    resetVideo();
     // location.reload();
 
     // 通话结束先上传录像文件
@@ -267,6 +312,21 @@ flyinnUA.on('newRTCSession', function(e)
   e.session.on('sdp', function(d)
   {
     d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    d.sdp = d.sdp.replace(/a=mid:1.*\r\n/g, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
+    d.sdp = d.sdp.replace(/a=extmap:.*\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n');
+    // d.sdp = d.sdp.replace(/a=extmap:2.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:3.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:4.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:5.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:6.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:7.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:8.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:9.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:10.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:11.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:12.*\r\n/, '');
+    // d.sdp = d.sdp.replace(/a=extmap:14.*\r\n/, '');
   });
 
   // callMode
