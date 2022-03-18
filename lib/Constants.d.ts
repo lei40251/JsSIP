@@ -7,6 +7,7 @@ export enum causes {
   REQUEST_TIMEOUT = 'Request Timeout',
   SIP_FAILURE_CODE = 'SIP Failure Code',
   INTERNAL_ERROR = 'Internal Error',
+  AUTHORIZATION_ERROR = 'authorization Error',
   BUSY = 'Busy',
   REJECTED = 'Rejected',
   REDIRECTED = 'Redirected',
