@@ -1,15 +1,15 @@
 require('./include/common');
-const JsSIP = require('../');
+const CRTC = require('../lib-es5/JsSIP.js');
 
 
 module.exports = {
   'parse URI' : function(test)
   {
     const data = 'SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2';
-    const uri = JsSIP.URI.parse(data);
+    const uri = CRTC.URI.parse(data);
 
     // Parsed data.
-    test.ok(uri instanceof(JsSIP.URI));
+    test.ok(uri instanceof(CRTC.URI));
     test.strictEqual(uri.scheme, 'sip');
     test.strictEqual(uri.user, 'aliCE');
     test.strictEqual(uri.host, 'versatica.com');
@@ -47,10 +47,10 @@ module.exports = {
     const data = ' "Iñaki ðđøþ foo \\"bar\\" \\\\\\\\ \\\\ \\\\d \\\\\\\\d \\\\\' \\\\\\"sdf\\\\\\"" ' +
           '<SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2>;QWE=QWE;ASd';
 
-    const name = JsSIP.NameAddrHeader.parse(data);
+    const name = CRTC.NameAddrHeader.parse(data);
 
     // Parsed data.
-    test.ok(name instanceof(JsSIP.NameAddrHeader));
+    test.ok(name instanceof(CRTC.NameAddrHeader));
     test.strictEqual(name.display_name, 'Iñaki ðđøþ foo "bar" \\\\ \\ \\d \\\\d \\\' \\"sdf\\"');
     test.strictEqual(name.hasParam('qwe'), true);
     test.strictEqual(name.hasParam('asd'), true);
@@ -60,7 +60,7 @@ module.exports = {
 
     const uri = name.uri;
 
-    test.ok(uri instanceof(JsSIP.URI));
+    test.ok(uri instanceof(CRTC.URI));
     test.strictEqual(uri.scheme, 'sip');
     test.strictEqual(uri.user, 'aliCE');
     test.strictEqual(uri.host, 'versatica.com');
@@ -93,15 +93,15 @@ module.exports = {
     const data = `"${buffer.toString()}"` +
           '<sip:foo@bar.com>';
 
-    const name = JsSIP.NameAddrHeader.parse(data);
+    const name = CRTC.NameAddrHeader.parse(data);
 
     // Parsed data.
-    test.ok(name instanceof(JsSIP.NameAddrHeader));
+    test.ok(name instanceof(CRTC.NameAddrHeader));
     test.strictEqual(name.display_name, buffer.toString());
 
     const uri = name.uri;
 
-    test.ok(uri instanceof(JsSIP.URI));
+    test.ok(uri instanceof(CRTC.URI));
     test.strictEqual(uri.scheme, 'sip');
     test.strictEqual(uri.user, 'foo');
     test.strictEqual(uri.host, 'bar.com');
@@ -114,10 +114,10 @@ module.exports = {
   {
     const data = 'Foo    Foo Bar\tBaz<SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2>;QWE=QWE;ASd';
 
-    const name = JsSIP.NameAddrHeader.parse(data);
+    const name = CRTC.NameAddrHeader.parse(data);
 
     // Parsed data.
-    test.ok(name instanceof(JsSIP.NameAddrHeader));
+    test.ok(name instanceof(CRTC.NameAddrHeader));
     test.strictEqual(name.display_name, 'Foo Foo Bar Baz');
 
     test.done();
@@ -127,10 +127,10 @@ module.exports = {
   {
     const data = '"Foo"<SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2>;QWE=QWE;ASd';
 
-    const name = JsSIP.NameAddrHeader.parse(data);
+    const name = CRTC.NameAddrHeader.parse(data);
 
     // Parsed data.
-    test.ok(name instanceof(JsSIP.NameAddrHeader));
+    test.ok(name instanceof(CRTC.NameAddrHeader));
     test.strictEqual(name.display_name, 'Foo');
 
     test.done();
@@ -140,10 +140,10 @@ module.exports = {
   {
     const data = '<SIP:%61liCE@versaTICA.Com:6060;TRansport=TCp;Foo=ABc;baz?X-Header-1=AaA1&X-Header-2=BbB&x-header-1=AAA2>;QWE=QWE;ASd';
 
-    const name = JsSIP.NameAddrHeader.parse(data);
+    const name = CRTC.NameAddrHeader.parse(data);
 
     // Parsed data.
-    test.ok(name instanceof(JsSIP.NameAddrHeader));
+    test.ok(name instanceof(CRTC.NameAddrHeader));
     test.strictEqual(name.display_name, undefined);
 
     test.done();
@@ -152,7 +152,7 @@ module.exports = {
   'parse multiple Contact' : function(test)
   {
     const data = '"Iñaki @ł€" <SIP:+1234@ALIAX.net;Transport=WS>;+sip.Instance="abCD", sip:bob@biloxi.COM;headerParam, <sip:DOMAIN.com:5>';
-    const contacts = JsSIP.Grammar.parse(data, 'Contact');
+    const contacts = CRTC.Grammar.parse(data, 'Contact');
 
     test.ok(contacts instanceof(Array));
     test.strictEqual(contacts.length, 3);
@@ -161,13 +161,13 @@ module.exports = {
     const c3 = contacts[2].parsed;
 
     // Parsed data.
-    test.ok(c1 instanceof(JsSIP.NameAddrHeader));
+    test.ok(c1 instanceof(CRTC.NameAddrHeader));
     test.strictEqual(c1.display_name, 'Iñaki @ł€');
     test.strictEqual(c1.hasParam('+sip.instance'), true);
     test.strictEqual(c1.hasParam('nooo'), false);
     test.strictEqual(c1.getParam('+SIP.instance'), '"abCD"');
     test.strictEqual(c1.getParam('nooo'), undefined);
-    test.ok(c1.uri instanceof(JsSIP.URI));
+    test.ok(c1.uri instanceof(CRTC.URI));
     test.strictEqual(c1.uri.scheme, 'sip');
     test.strictEqual(c1.uri.user, '+1234');
     test.strictEqual(c1.uri.host, 'aliax.net');
@@ -190,10 +190,10 @@ module.exports = {
     test.strictEqual(c1.toString(), '"€€€" <sip:+999@aliax.net;transport=ws;new-param>;+sip.instance="zxCV";new-param');
 
     // Parsed data.
-    test.ok(c2 instanceof(JsSIP.NameAddrHeader));
+    test.ok(c2 instanceof(CRTC.NameAddrHeader));
     test.strictEqual(c2.display_name, undefined);
     test.strictEqual(c2.hasParam('HEADERPARAM'), true);
-    test.ok(c2.uri instanceof(JsSIP.URI));
+    test.ok(c2.uri instanceof(CRTC.URI));
     test.strictEqual(c2.uri.scheme, 'sip');
     test.strictEqual(c2.uri.user, 'bob');
     test.strictEqual(c2.uri.host, 'biloxi.com');
@@ -206,9 +206,9 @@ module.exports = {
     test.strictEqual(c2.toString(), '"@ł€ĸłæß" <sip:bob@biloxi.com>;headerparam');
 
     // Parsed data.
-    test.ok(c3 instanceof(JsSIP.NameAddrHeader));
+    test.ok(c3 instanceof(CRTC.NameAddrHeader));
     test.strictEqual(c3.display_name, undefined);
-    test.ok(c3.uri instanceof(JsSIP.URI));
+    test.ok(c3.uri instanceof(CRTC.URI));
     test.strictEqual(c3.uri.scheme, 'sip');
     test.strictEqual(c3.uri.user, undefined);
     test.strictEqual(c3.uri.host, 'domain.com');
@@ -227,7 +227,7 @@ module.exports = {
   'parse Via' : function(test)
   {
     let data = 'SIP /  3.0 \r\n / UDP [1:ab::FF]:6060 ;\r\n  BRanch=1234;Param1=Foo;paRAM2;param3=Bar';
-    let via = JsSIP.Grammar.parse(data, 'Via');
+    let via = CRTC.Grammar.parse(data, 'Via');
 
     test.strictEqual(via.protocol, 'SIP');
     test.strictEqual(via.transport, 'UDP');
@@ -238,7 +238,7 @@ module.exports = {
     test.deepEqual(via.params, { param1: 'Foo', param2: undefined, param3: 'Bar' });
 
     data = 'SIP /  3.0 \r\n / UDP [1:ab::FF]:6060 ;\r\n  BRanch=1234;rport=1111;Param1=Foo;paRAM2;param3=Bar';
-    via = JsSIP.Grammar.parse(data, 'Via');
+    via = CRTC.Grammar.parse(data, 'Via');
 
     test.strictEqual(via.protocol, 'SIP');
     test.strictEqual(via.transport, 'UDP');
@@ -250,7 +250,7 @@ module.exports = {
     test.deepEqual(via.params, { param1: 'Foo', param2: undefined, param3: 'Bar' });
 
     data = 'SIP /  3.0 \r\n / UDP [1:ab::FF]:6060 ;\r\n  BRanch=1234;rport;Param1=Foo;paRAM2;param3=Bar';
-    via = JsSIP.Grammar.parse(data, 'Via');
+    via = CRTC.Grammar.parse(data, 'Via');
 
     test.strictEqual(via.protocol, 'SIP');
     test.strictEqual(via.transport, 'UDP');
@@ -267,7 +267,7 @@ module.exports = {
   'parse CSeq' : function(test)
   {
     const data = '123456  CHICKEN';
-    const cseq = JsSIP.Grammar.parse(data, 'CSeq');
+    const cseq = CRTC.Grammar.parse(data, 'CSeq');
 
     test.strictEqual(cseq.value, 123456);
     test.strictEqual(cseq.method, 'CHICKEN');
@@ -278,7 +278,7 @@ module.exports = {
   'parse authentication challenge' : function(test)
   {
     const data = 'Digest realm =  "[1:ABCD::abc]", nonce =  "31d0a89ed7781ce6877de5cb032bf114", qop="AUTH,autH-INt", algorithm =  md5  ,  stale =  TRUE , opaque = "00000188"';
-    const auth = JsSIP.Grammar.parse(data, 'challenge');
+    const auth = CRTC.Grammar.parse(data, 'challenge');
 
     test.strictEqual(auth.realm, '[1:ABCD::abc]');
     test.strictEqual(auth.nonce, '31d0a89ed7781ce6877de5cb032bf114');
@@ -293,7 +293,7 @@ module.exports = {
   'parse Event' : function(test)
   {
     const data = 'Presence;Param1=QWe;paraM2';
-    const event = JsSIP.Grammar.parse(data, 'Event');
+    const event = CRTC.Grammar.parse(data, 'Event');
 
     test.strictEqual(event.event, 'presence');
     test.deepEqual(event.params, { param1: 'QWe', param2: undefined });
@@ -306,13 +306,13 @@ module.exports = {
     let data, session_expires;
 
     data = '180;refresher=uac';
-    session_expires = JsSIP.Grammar.parse(data, 'Session_Expires');
+    session_expires = CRTC.Grammar.parse(data, 'Session_Expires');
 
     test.strictEqual(session_expires.expires, 180);
     test.strictEqual(session_expires.refresher, 'uac');
 
     data = '210  ;   refresher  =  UAS ; foo  =  bar';
-    session_expires = JsSIP.Grammar.parse(data, 'Session_Expires');
+    session_expires = CRTC.Grammar.parse(data, 'Session_Expires');
 
     test.strictEqual(session_expires.expires, 210);
     test.strictEqual(session_expires.refresher, 'uas');
@@ -325,14 +325,14 @@ module.exports = {
     let data, reason;
 
     data = 'SIP  ; cause = 488 ; text = "Wrong SDP"';
-    reason = JsSIP.Grammar.parse(data, 'Reason');
+    reason = CRTC.Grammar.parse(data, 'Reason');
 
     test.strictEqual(reason.protocol, 'sip');
     test.strictEqual(reason.cause, 488);
     test.strictEqual(reason.text, 'Wrong SDP');
 
     data = 'ISUP; cause=500 ; LALA = foo';
-    reason = JsSIP.Grammar.parse(data, 'Reason');
+    reason = CRTC.Grammar.parse(data, 'Reason');
 
     test.strictEqual(reason.protocol, 'isup');
     test.strictEqual(reason.cause, 500);
@@ -347,33 +347,33 @@ module.exports = {
     let data, parsed;
 
     data = 'versatica.com';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'domain');
 
     data = 'myhost123';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'domain');
 
     data = '1.2.3.4';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'IPv4');
 
     data = '[1:0:fF::432]';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'IPv6');
 
     data = '1.2.3.444';
-    test.ok(JsSIP.Grammar.parse(data, 'host') === -1);
+    test.ok(CRTC.Grammar.parse(data, 'host') === -1);
 
     data = 'iñaki.com';
-    test.ok(JsSIP.Grammar.parse(data, 'host') === -1);
+    test.ok(CRTC.Grammar.parse(data, 'host') === -1);
 
     data = '1.2.3.bar.qwe-asd.foo';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'domain');
 
     data = '1.2.3.4.bar.qwe-asd.foo';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'host')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'host')) !== -1);
     test.strictEqual(parsed.host_type, 'domain');
 
     test.done();
@@ -384,13 +384,13 @@ module.exports = {
     let data, parsed;
 
     data = 'sip:alice@versatica.com';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'Refer_To')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'Refer_To')) !== -1);
     test.strictEqual(parsed.uri.scheme, 'sip');
     test.strictEqual(parsed.uri.user, 'alice');
     test.strictEqual(parsed.uri.host, 'versatica.com');
 
     data = '<sip:bob@versatica.com?Accept-Contact=sip:bobsdesk.versatica.com>';
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'Refer_To')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'Refer_To')) !== -1);
     test.strictEqual(parsed.uri.scheme, 'sip');
     test.strictEqual(parsed.uri.user, 'bob');
     test.strictEqual(parsed.uri.host, 'versatica.com');
@@ -405,7 +405,7 @@ module.exports = {
 
     const data = '5t2gpbrbi72v79p1i8mr;to-tag=03aq91cl9n;from-tag=kun98clbf7';
 
-    test.ok((parsed = JsSIP.Grammar.parse(data, 'Replaces')) !== -1);
+    test.ok((parsed = CRTC.Grammar.parse(data, 'Replaces')) !== -1);
     test.strictEqual(parsed.call_id, '5t2gpbrbi72v79p1i8mr');
     test.strictEqual(parsed.to_tag, '03aq91cl9n');
     test.strictEqual(parsed.from_tag, 'kun98clbf7');

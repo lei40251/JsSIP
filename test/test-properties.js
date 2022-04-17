@@ -1,5 +1,5 @@
 require('./include/common');
-const JsSIP = require('../');
+const CRTC = require('../lib-es5/JsSIP.js');
 const pkg = require('../package.json');
 
 
@@ -7,13 +7,13 @@ module.exports = {
 
   'name' : function(test)
   {
-    test.equal(JsSIP.name, pkg.title);
+    test.equal(CRTC.name, pkg.title);
     test.done();
   },
 
   'version' : function(test)
   {
-    test.equal(JsSIP.version, pkg.version);
+    test.equal(CRTC.version, pkg.version);
     test.done();
   }
 

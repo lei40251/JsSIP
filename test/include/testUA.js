@@ -6,12 +6,12 @@ module.exports = {
   },
 
   UA_CONFIGURATION : {
-    uri                              : 'sip:f%61keUA@jssip.net',
+    uri                              : 'sip:f%61keUA@crtc.net',
     password                         : '1234ññññ',
     display_name                     : 'Fake UA ð→€ł !!!',
     authorization_user               : 'fakeUA',
     instance_id                      : 'uuid:8f1fa16a-1165-4a96-8341-785b1ef24f12',
-    registrar_server                 : 'registrar.jssip.NET:6060;TRansport=TCP',
+    registrar_server                 : 'registrar.crtc.NET:6060;TRansport=TCP',
     register_expires                 : 600,
     register                         : false,
     connection_recovery_min_interval : 2,
@@ -22,12 +22,12 @@ module.exports = {
   },
 
   UA_CONFIGURATION_AFTER_START : {
-    uri                 : 'sip:fakeUA@jssip.net',
+    uri                 : 'sip:fakeUA@crtc.net',
     password            : '1234ññññ',
     display_name        : 'Fake UA ð→€ł !!!',
     authorization_user  : 'fakeUA',
     instance_id         : '8f1fa16a-1165-4a96-8341-785b1ef24f12', // Without 'uuid:'.
-    registrar_server    : 'sip:registrar.jssip.net:6060;transport=tcp',
+    registrar_server    : 'sip:registrar.crtc.net:6060;transport=tcp',
     register_expires    : 600,
     register            : false,
     use_preloaded_route : true,

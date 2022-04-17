@@ -19,14 +19,17 @@ const eslint = require('gulp-eslint');
 const plumber = require('gulp-plumber');
 const log = require('fancy-log');
 const colors = require('ansi-colors');
+const obfuscate = require('gulp-javascript-obfuscator');
 
 const PKG = require('./package.json');
+const today = new Date();
 
 // gulp-header.
 const BANNER = fs.readFileSync('banner.txt').toString();
 const BANNER_OPTIONS = {
   pkg         : PKG,
-  currentYear : (new Date()).getFullYear()
+  currentYear : today.getFullYear(),
+  compileTime : `${today.getFullYear()}${today.getMonth()+1}${today.getDate()}${today.getHours()}${today.getMinutes()}`
 };
 
 // gulp-expect-file options.
@@ -63,7 +66,7 @@ gulp.task('browserify', function()
 {
   return browserify(
     {
-      entries      : PKG.main,
+      entries      : 'lib-es5/JsSIP.js',
       extensions   : [ '.js' ],
       // Required for sourcemaps (must be false otherwise).
       debug        : false,
@@ -77,22 +80,23 @@ gulp.task('browserify', function()
     })
     .bundle()
     .on('error', logError)
-    .pipe(source(`${PKG.name}.js`))
+    .pipe(source(`${PKG.title}.js`))
     .pipe(buffer())
-    .pipe(rename(`${PKG.name}.js`))
+    .pipe(rename(`${PKG.title}.js`))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(gulp.dest('dist/'));
 });
 
 gulp.task('uglify', function()
 {
-  const src = `dist/${ PKG.name }.js`;
+  const src = `dist/${ PKG.title }.js`;
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
+    .pipe(obfuscate({ compact: true }))
     .pipe(uglify())
     .pipe(header(BANNER, BANNER_OPTIONS))
-    .pipe(rename(`${PKG.name }.min.js`))
+    .pipe(rename(`${PKG.title }.min.js`))
     .pipe(gulp.dest('dist/'));
 });
 

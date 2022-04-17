@@ -1,15 +1,13 @@
 /*
- * JsSIP v3.9.0
- * the Javascript SIP library
+ * CRTC v1.0.0.20224172037
+ * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
- * Homepage: https://jssip.net
- * License: MIT
  */
 
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.JsSIP = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -17,7 +15,7 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
 
 var Utils = require('./Utils');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Grammar = require('./Grammar');
 
@@ -45,7 +43,7 @@ exports.settings = {
   use_preloaded_route: false,
   // Session parameters.
   session_timers: true,
-  session_timers_refresh_method: JsSIP_C.UPDATE,
+  session_timers_refresh_method: CRTC_C.UPDATE,
   session_timers_force_refresher: false,
   no_answer_timeout: 60,
   // Registration parameters.
@@ -54,8 +52,8 @@ exports.settings = {
   registrar_server: null,
   // Connection options.
   sockets: null,
-  connection_recovery_max_interval: JsSIP_C.CONNECTION_RECOVERY_MAX_INTERVAL,
-  connection_recovery_min_interval: JsSIP_C.CONNECTION_RECOVERY_MIN_INTERVAL,
+  connection_recovery_max_interval: CRTC_C.CONNECTION_RECOVERY_MAX_INTERVAL,
+  connection_recovery_min_interval: CRTC_C.CONNECTION_RECOVERY_MIN_INTERVAL,
 
   /*
    * Host address.
@@ -108,7 +106,7 @@ var checks = {
     },
     uri: function uri(_uri) {
       if (!/^sip:/i.test(_uri)) {
-        _uri = "".concat(JsSIP_C.SIP, ":").concat(_uri);
+        _uri = "".concat(CRTC_C.SIP, ":").concat(_uri);
       }
 
       var parsed = URI.parse(_uri);
@@ -199,7 +197,7 @@ var checks = {
       if (typeof method === 'string') {
         method = method.toUpperCase();
 
-        if (method === JsSIP_C.INVITE || method === JsSIP_C.UPDATE) {
+        if (method === CRTC_C.INVITE || method === CRTC_C.UPDATE) {
           return method;
         }
       }
@@ -234,7 +232,7 @@ var checks = {
     },
     registrar_server: function registrar_server(_registrar_server) {
       if (!/^sip:/i.test(_registrar_server)) {
-        _registrar_server = "".concat(JsSIP_C.SIP, ":").concat(_registrar_server);
+        _registrar_server = "".concat(CRTC_C.SIP, ":").concat(_registrar_server);
       }
 
       var parsed = URI.parse(_registrar_server);
@@ -448,7 +446,7 @@ module.exports = {
     493: 'Undecipherable',
     494: 'Security Agreement Required',
     // RFC 3329
-    500: 'JsSIP Internal Error',
+    500: 'CRTC Internal Error',
     501: 'Not Implemented',
     502: 'Bad Gateway',
     503: 'Service Unavailable',
@@ -477,13 +475,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
 var SIPMessage = require('./SIPMessage');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Transactions = require('./Transactions');
 
@@ -499,14 +497,6 @@ var C = {
 }; // RFC 3261 12.1.
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(Dialog, null, [{
-    key: "C",
-    // Expose C object.
-    get: function get() {
-      return C;
-    }
-  }]);
-
   function Dialog(owner, message, type) {
     var state = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : C.STATUS_CONFIRMED;
 
@@ -547,22 +537,22 @@ module.exports = /*#__PURE__*/function () {
       this._ack_seqnum = this._remote_seqnum;
     } // RFC 3261 12.1.2.
     else if (type === 'UAC') {
-        this._id = {
-          call_id: message.call_id,
-          local_tag: message.from_tag,
-          remote_tag: message.to_tag,
-          toString: function toString() {
-            return this.call_id + this.local_tag + this.remote_tag;
-          }
-        };
-        this._state = state;
-        this._local_seqnum = message.cseq;
-        this._local_uri = message.parseHeader('from').uri;
-        this._remote_uri = message.parseHeader('to').uri;
-        this._remote_target = contact.uri;
-        this._route_set = message.getHeaders('record-route').reverse();
-        this._ack_seqnum = null;
-      }
+      this._id = {
+        call_id: message.call_id,
+        local_tag: message.from_tag,
+        remote_tag: message.to_tag,
+        toString: function toString() {
+          return this.call_id + this.local_tag + this.remote_tag;
+        }
+      };
+      this._state = state;
+      this._local_seqnum = message.cseq;
+      this._local_uri = message.parseHeader('from').uri;
+      this._remote_uri = message.parseHeader('to').uri;
+      this._remote_target = contact.uri;
+      this._route_set = message.getHeaders('record-route').reverse();
+      this._ack_seqnum = null;
+    }
 
     this._ua.newDialog(this);
 
@@ -570,6 +560,37 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(Dialog, [{
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
+    key: "local_seqnum",
+    get: function get() {
+      return this._local_seqnum;
+    },
+    set: function set(num) {
+      this._local_seqnum = num;
+    }
+  }, {
+    key: "owner",
+    get: function get() {
+      return this._owner;
+    }
+  }, {
+    key: "uac_pending_reply",
+    get: function get() {
+      return this._uac_pending_reply;
+    },
+    set: function set(pending) {
+      this._uac_pending_reply = pending;
+    }
+  }, {
+    key: "uas_pending_reply",
+    get: function get() {
+      return this._uas_pending_reply;
+    }
+  }, {
     key: "update",
     value: function update(message, type) {
       this._state = C.STATUS_CONFIRMED;
@@ -618,12 +639,12 @@ module.exports = /*#__PURE__*/function () {
       } // ACK received. Cleanup this._ack_seqnum.
 
 
-      if (request.method === JsSIP_C.ACK && this._ack_seqnum !== null) {
+      if (request.method === CRTC_C.ACK && this._ack_seqnum !== null) {
         this._ack_seqnum = null;
       } // INVITE received. Set this._ack_seqnum.
-      else if (request.method === JsSIP_C.INVITE) {
-          this._ack_seqnum = request.cseq;
-        }
+      else if (request.method === CRTC_C.INVITE) {
+        this._ack_seqnum = request.cseq;
+      }
 
       this._owner.receiveRequest(request);
     } // RFC 3261 12.2.1.1.
@@ -637,7 +658,7 @@ module.exports = /*#__PURE__*/function () {
         this._local_seqnum = Math.floor(Math.random() * 10000);
       }
 
-      var cseq = method === JsSIP_C.CANCEL || method === JsSIP_C.ACK ? this._local_seqnum : this._local_seqnum += 1;
+      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._local_seqnum : this._local_seqnum += 1;
       var request = new SIPMessage.OutgoingRequest(method, this._remote_target, this._ua, {
         'cseq': cseq,
         'call_id': this._id.call_id,
@@ -658,7 +679,7 @@ module.exports = /*#__PURE__*/function () {
       if (!this._remote_seqnum) {
         this._remote_seqnum = request.cseq;
       } else if (request.cseq < this._remote_seqnum) {
-        if (request.method === JsSIP_C.ACK) {
+        if (request.method === CRTC_C.ACK) {
           // We are not expecting any ACK with lower seqnum than the current one.
           // Or this is not the ACK we are waiting for.
           if (this._ack_seqnum === null || request.cseq !== this._ack_seqnum) {
@@ -673,7 +694,7 @@ module.exports = /*#__PURE__*/function () {
       } // RFC3261 14.2 Modifying an Existing Session -UAS BEHAVIOR-.
 
 
-      if (request.method === JsSIP_C.INVITE || request.method === JsSIP_C.UPDATE && request.body) {
+      if (request.method === CRTC_C.INVITE || request.method === CRTC_C.UPDATE && request.body) {
         if (this._uac_pending_reply === true) {
           request.reply(491);
         } else if (this._uas_pending_reply === true) {
@@ -701,7 +722,7 @@ module.exports = /*#__PURE__*/function () {
             }
           });
         }
-      } else if (request.method === JsSIP_C.NOTIFY) {
+      } else if (request.method === CRTC_C.NOTIFY) {
         // RFC6665 3.2 Replace the dialog`s remote target URI if the request is accepted.
         if (request.hasHeader('contact')) {
           request.server_transaction.on('stateChanged', function () {
@@ -714,36 +735,11 @@ module.exports = /*#__PURE__*/function () {
 
       return true;
     }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
-  }, {
-    key: "local_seqnum",
-    get: function get() {
-      return this._local_seqnum;
-    },
-    set: function set(num) {
-      this._local_seqnum = num;
-    }
-  }, {
-    key: "owner",
-    get: function get() {
-      return this._owner;
-    }
-  }, {
-    key: "uac_pending_reply",
-    get: function get() {
-      return this._uac_pending_reply;
-    },
-    set: function set(pending) {
-      this._uac_pending_reply = pending;
-    }
-  }, {
-    key: "uas_pending_reply",
-    get: function get() {
-      return this._uas_pending_reply;
+  }], [{
+    key: "C",
+    get: // Expose C object.
+    function get() {
+      return C;
     }
   }]);
 
@@ -756,9 +752,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-var JsSIP_C = require('../Constants');
+var CRTC_C = require('../Constants');
 
 var Transactions = require('../Transactions');
 
@@ -798,6 +794,11 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(DialogRequestSender, [{
+    key: "request",
+    get: function get() {
+      return this._request;
+    }
+  }, {
     key: "send",
     value: function send() {
       var _this = this;
@@ -818,7 +819,7 @@ module.exports = /*#__PURE__*/function () {
       });
       request_sender.send(); // RFC3261 14.2 Modifying an Existing Session -UAC BEHAVIOR-.
 
-      if ((this._request.method === JsSIP_C.INVITE || this._request.method === JsSIP_C.UPDATE && this._request.body) && request_sender.clientTransaction.state !== Transactions.C.STATUS_TERMINATED) {
+      if ((this._request.method === CRTC_C.INVITE || this._request.method === CRTC_C.UPDATE && this._request.body) && request_sender.clientTransaction.state !== Transactions.C.STATUS_TERMINATED) {
         this._dialog.uac_pending_reply = true;
 
         var stateChanged = function stateChanged() {
@@ -839,7 +840,7 @@ module.exports = /*#__PURE__*/function () {
       // RFC3261 12.2.1.2 408 or 481 is received for a request within a dialog.
       if (response.status_code === 408 || response.status_code === 481) {
         this._eventHandlers.onDialogError(response);
-      } else if (response.method === JsSIP_C.INVITE && response.status_code === 491) {
+      } else if (response.method === CRTC_C.INVITE && response.status_code === 491) {
         if (this._reattempt) {
           if (response.status_code >= 200 && response.status_code < 300) {
             this._eventHandlers.onSuccessResponse(response);
@@ -863,11 +864,6 @@ module.exports = /*#__PURE__*/function () {
         this._eventHandlers.onErrorResponse(response);
       }
     }
-  }, {
-    key: "request",
-    get: function get() {
-      return this._request;
-    }
   }]);
 
   return DialogRequestSender;
@@ -879,7 +875,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
@@ -930,9 +926,7 @@ module.exports = /*#__PURE__*/function () {
 
   }, {
     key: "authenticate",
-    value: function authenticate(_ref, challenge)
-    /* test interface */
-    {
+    value: function authenticate(_ref, challenge) {
       var method = _ref.method,
           ruri = _ref.ruri,
           body = _ref.body;
@@ -1012,8 +1006,8 @@ module.exports = /*#__PURE__*/function () {
         this._ha1 = Utils.calculateMD5("".concat(this._credentials.username, ":").concat(this._realm, ":").concat(this._credentials.password));
       } // Otherwise reuse the stored ha1.
       else {
-          this._ha1 = this._credentials.ha1;
-        }
+        this._ha1 = this._credentials.ha1;
+      }
 
       var a2;
       var ha2;
@@ -1083,15 +1077,19 @@ module.exports = /*#__PURE__*/function () {
 },{"./Logger":9,"./Utils":28}],6:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
@@ -1099,7 +1097,7 @@ function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new 
 
 function _construct(Parent, args, Class) { if (_isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
 
@@ -1126,7 +1124,7 @@ var ConfigurationError = /*#__PURE__*/function (_Error) {
     return _this;
   }
 
-  return ConfigurationError;
+  return _createClass(ConfigurationError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
 
 var InvalidStateError = /*#__PURE__*/function (_Error2) {
@@ -1147,7 +1145,7 @@ var InvalidStateError = /*#__PURE__*/function (_Error2) {
     return _this2;
   }
 
-  return InvalidStateError;
+  return _createClass(InvalidStateError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
 
 var NotSupportedError = /*#__PURE__*/function (_Error3) {
@@ -1167,7 +1165,7 @@ var NotSupportedError = /*#__PURE__*/function (_Error3) {
     return _this3;
   }
 
-  return NotSupportedError;
+  return _createClass(NotSupportedError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
 
 var NotReadyError = /*#__PURE__*/function (_Error4) {
@@ -1187,7 +1185,7 @@ var NotReadyError = /*#__PURE__*/function (_Error4) {
     return _this4;
   }
 
-  return NotReadyError;
+  return _createClass(NotReadyError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
 
 module.exports = {
@@ -16118,11 +16116,11 @@ var Grammar = require('./Grammar');
 
 var WebSocketInterface = require('./WebSocketInterface');
 
-var debug = require('debug')('JsSIP');
+var debug = require('debug')('CRTC');
 
 debug('version %s', pkg.version);
 /**
- * Expose the JsSIP module.
+ * Expose the CRTC module.
  */
 
 module.exports = {
@@ -16153,11 +16151,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var debug = require('debug');
 
-var APP_NAME = 'JsSIP';
+var APP_NAME = 'CRTC';
 
 module.exports = /*#__PURE__*/function () {
   function Logger(prefix) {
@@ -16203,25 +16201,25 @@ module.exports = /*#__PURE__*/function () {
 },{"debug":32}],10:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -16229,7 +16227,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var SIPMessage = require('./SIPMessage');
 
@@ -16268,6 +16266,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(Message, [{
+    key: "direction",
+    get: function get() {
+      return this._direction;
+    }
+  }, {
+    key: "local_identity",
+    get: function get() {
+      return this._local_identity;
+    }
+  }, {
+    key: "remote_identity",
+    get: function get() {
+      return this._remote_identity;
+    }
+  }, {
     key: "send",
     value: function send(target, body) {
       var _this2 = this;
@@ -16309,7 +16322,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       extraHeaders.push("Content-Type: ".concat(contentType));
-      this._request = new SIPMessage.OutgoingRequest(JsSIP_C.MESSAGE, target, this._ua, requestParams, extraHeaders);
+      this._request = new SIPMessage.OutgoingRequest(CRTC_C.MESSAGE, target, this._ua, requestParams, extraHeaders);
 
       if (body) {
         this._request.body = body;
@@ -16434,7 +16447,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      this._failed('system', null, JsSIP_C.causes.REQUEST_TIMEOUT);
+      this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
     }
   }, {
     key: "_onTransportError",
@@ -16443,7 +16456,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      this._failed('system', null, JsSIP_C.causes.CONNECTION_ERROR);
+      this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
     }
   }, {
     key: "_close",
@@ -16502,21 +16515,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         response: response
       });
     }
-  }, {
-    key: "direction",
-    get: function get() {
-      return this._direction;
-    }
-  }, {
-    key: "local_identity",
-    get: function get() {
-      return this._local_identity;
-    }
-  }, {
-    key: "remote_identity",
-    get: function get() {
-      return this._remote_identity;
-    }
   }]);
 
   return Message;
@@ -16528,31 +16526,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var URI = require('./URI');
 
 var Grammar = require('./Grammar');
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(NameAddrHeader, null, [{
-    key: "parse",
-
-    /**
-     * Parse the given string and returns a NameAddrHeader instance or undefined if
-     * it is an invalid NameAddrHeader.
-     */
-    value: function parse(name_addr_header) {
-      name_addr_header = Grammar.parse(name_addr_header, 'Name_Addr_Header');
-
-      if (name_addr_header !== -1) {
-        return name_addr_header;
-      } else {
-        return undefined;
-      }
-    }
-  }]);
-
   function NameAddrHeader(uri, display_name, parameters) {
     _classCallCheck(this, NameAddrHeader);
 
@@ -16574,6 +16554,19 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(NameAddrHeader, [{
+    key: "uri",
+    get: function get() {
+      return this._uri;
+    }
+  }, {
+    key: "display_name",
+    get: function get() {
+      return this._display_name;
+    },
+    set: function set(value) {
+      this._display_name = value === 0 ? '0' : value;
+    }
+  }, {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
@@ -16638,18 +16631,21 @@ module.exports = /*#__PURE__*/function () {
 
       return body;
     }
-  }, {
-    key: "uri",
-    get: function get() {
-      return this._uri;
-    }
-  }, {
-    key: "display_name",
-    get: function get() {
-      return this._display_name;
-    },
-    set: function set(value) {
-      this._display_name = value === 0 ? '0' : value;
+  }], [{
+    key: "parse",
+    value:
+    /**
+     * Parse the given string and returns a NameAddrHeader instance or undefined if
+     * it is an invalid NameAddrHeader.
+     */
+    function parse(name_addr_header) {
+      name_addr_header = Grammar.parse(name_addr_header, 'Name_Addr_Header');
+
+      if (name_addr_header !== -1) {
+        return name_addr_header;
+      } else {
+        return undefined;
+      }
     }
   }]);
 
@@ -16658,25 +16654,25 @@ module.exports = /*#__PURE__*/function () {
 },{"./Grammar":7,"./URI":27}],12:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -16684,7 +16680,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var SIPMessage = require('./SIPMessage');
 
@@ -16721,6 +16717,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(Options, [{
+    key: "direction",
+    get: function get() {
+      return this._direction;
+    }
+  }, {
+    key: "local_identity",
+    get: function get() {
+      return this._local_identity;
+    }
+  }, {
+    key: "remote_identity",
+    get: function get() {
+      return this._remote_identity;
+    }
+  }, {
     key: "send",
     value: function send(target, body) {
       var _this2 = this;
@@ -16751,7 +16762,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       extraHeaders.push("Content-Type: ".concat(contentType));
-      this._request = new SIPMessage.OutgoingRequest(JsSIP_C.OPTIONS, target, this._ua, null, extraHeaders);
+      this._request = new SIPMessage.OutgoingRequest(CRTC_C.OPTIONS, target, this._ua, null, extraHeaders);
 
       if (body) {
         this._request.body = body;
@@ -16876,7 +16887,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      this._failed('system', null, JsSIP_C.causes.REQUEST_TIMEOUT);
+      this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
     }
   }, {
     key: "_onTransportError",
@@ -16885,7 +16896,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      this._failed('system', null, JsSIP_C.causes.CONNECTION_ERROR);
+      this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
     }
   }, {
     key: "_close",
@@ -16944,21 +16955,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         response: response
       });
     }
-  }, {
-    key: "direction",
-    get: function get() {
-      return this._direction;
-    }
-  }, {
-    key: "local_identity",
-    get: function get() {
-      return this._local_identity;
-    }
-  }, {
-    key: "remote_identity",
-    get: function get() {
-      return this._remote_identity;
-    }
   }]);
 
   return Options;
@@ -16966,7 +16962,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 },{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":20,"./SIPMessage":21,"./Utils":28,"events":31}],13:[function(require,module,exports){
 "use strict";
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -17024,9 +17020,9 @@ exports.parseMessage = function (data, ua) {
       break;
     } // Data.indexOf returned -1 due to a malformed message.
     else if (headerEnd === -1) {
-        logger.warn('parseMessage() | malformed message');
-        return;
-      }
+      logger.warn('parseMessage() | malformed message');
+      return;
+    }
 
     parsed = parseHeader(message, data, headerStart, headerEnd);
 
@@ -17298,9 +17294,9 @@ function parseHeader(message, data, headerStart, headerEnd) {
 },{"./Grammar":7,"./Logger":9,"./SIPMessage":21}],14:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -17310,19 +17306,19 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -17333,7 +17329,7 @@ var sdp_transform = require('sdp-transform');
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Exceptions = require('./Exceptions');
 
@@ -17383,17 +17379,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(RTCSession, _EventEmitter);
 
   var _super = _createSuper(RTCSession);
-
-  _createClass(RTCSession, null, [{
-    key: "C",
-
-    /**
-     * Expose C object.
-     */
-    get: function get() {
-      return C;
-    }
-  }]);
 
   function RTCSession(ua) {
     var _this;
@@ -17456,7 +17441,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._sessionTimers = {
       enabled: _this._ua.configuration.session_timers,
       refreshMethod: _this._ua.configuration.session_timers_refresh_method,
-      defaultExpires: JsSIP_C.SESSION_EXPIRES,
+      defaultExpires: CRTC_C.SESSION_EXPIRES,
       currentExpires: null,
       running: false,
       refresher: false,
@@ -17476,6 +17461,70 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
   _createClass(RTCSession, [{
+    key: "C",
+    get: function get() {
+      return C;
+    } // Expose session failed/ended causes as a property of the RTCSession instance.
+
+  }, {
+    key: "causes",
+    get: function get() {
+      return CRTC_C.causes;
+    }
+  }, {
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
+    key: "connection",
+    get: function get() {
+      return this._connection;
+    }
+  }, {
+    key: "contact",
+    get: function get() {
+      return this._contact;
+    }
+  }, {
+    key: "direction",
+    get: function get() {
+      return this._direction;
+    }
+  }, {
+    key: "local_identity",
+    get: function get() {
+      return this._local_identity;
+    }
+  }, {
+    key: "remote_identity",
+    get: function get() {
+      return this._remote_identity;
+    }
+  }, {
+    key: "start_time",
+    get: function get() {
+      return this._start_time;
+    }
+  }, {
+    key: "end_time",
+    get: function get() {
+      return this._end_time;
+    }
+  }, {
+    key: "data",
+    get: function get() {
+      return this._data;
+    },
+    set: function set(_data) {
+      this._data = _data;
+    }
+  }, {
+    key: "status",
+    get: function get() {
+      return this._status;
+    }
+  }, {
     key: "isInProgress",
     value: function isInProgress() {
       switch (this._status) {
@@ -17578,10 +17627,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (this._sessionTimers.enabled) {
         if (Utils.isDecimal(options.sessionTimersExpires)) {
-          if (options.sessionTimersExpires >= JsSIP_C.MIN_SESSION_EXPIRES) {
+          if (options.sessionTimersExpires >= CRTC_C.MIN_SESSION_EXPIRES) {
             this._sessionTimers.defaultExpires = options.sessionTimersExpires;
           } else {
-            this._sessionTimers.defaultExpires = JsSIP_C.SESSION_EXPIRES;
+            this._sessionTimers.defaultExpires = CRTC_C.SESSION_EXPIRES;
           }
         }
       } // Set event handlers.
@@ -17691,7 +17740,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._timers.userNoAnswerTimer = setTimeout(function () {
         request.reply(408);
 
-        _this2._failed('local', null, JsSIP_C.causes.NO_ANSWER);
+        _this2._failed('local', null, CRTC_C.causes.NO_ANSWER);
       }, this._ua.configuration.no_answer_timeout);
       /* Set expiresTimer
        * RFC3261 13.3.1
@@ -17702,7 +17751,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (_this2._status === C.STATUS_WAITING_FOR_ANSWER) {
             request.reply(487);
 
-            _this2._failed('system', null, JsSIP_C.causes.EXPIRES);
+            _this2._failed('system', null, CRTC_C.causes.EXPIRES);
           }
         }, expires);
       } // Set internal properties.
@@ -17772,10 +17821,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (this._sessionTimers.enabled) {
         if (Utils.isDecimal(options.sessionTimersExpires)) {
-          if (options.sessionTimersExpires >= JsSIP_C.MIN_SESSION_EXPIRES) {
+          if (options.sessionTimersExpires >= CRTC_C.MIN_SESSION_EXPIRES) {
             this._sessionTimers.defaultExpires = options.sessionTimersExpires;
           } else {
-            this._sessionTimers.defaultExpires = JsSIP_C.SESSION_EXPIRES;
+            this._sessionTimers.defaultExpires = CRTC_C.SESSION_EXPIRES;
           }
         }
       }
@@ -17895,23 +17944,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         } // Audio and/or video requested, prompt getUserMedia.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-            _this3._localMediaStreamLocallyGenerated = true;
-            return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-              if (_this3._status === C.STATUS_TERMINATED) {
-                throw new Error('terminated');
-              }
+          _this3._localMediaStreamLocallyGenerated = true;
+          return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+            if (_this3._status === C.STATUS_TERMINATED) {
+              throw new Error('terminated');
+            }
 
-              request.reply(480);
+            request.reply(480);
 
-              _this3._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+            _this3._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
-              logger.warn('emit "getusermediafailed" [error:%o]', error);
+            logger.warn('emit "getusermediafailed" [error:%o]', error);
 
-              _this3.emit('getusermediafailed', error);
+            _this3.emit('getusermediafailed', error);
 
-              throw new Error('getUserMedia() failed');
-            });
-          }
+            throw new Error('getUserMedia() failed');
+          });
+        }
       }) // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
         if (_this3._status === C.STATUS_TERMINATED) {
@@ -17949,7 +17998,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })["catch"](function (error) {
           request.reply(488);
 
-          _this3._failed('system', null, JsSIP_C.causes.WEBRTC_ERROR);
+          _this3._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
 
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
@@ -17995,7 +18044,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _this3._accepted('local');
         }, function () {
-          _this3._failed('system', null, JsSIP_C.causes.CONNECTION_ERROR);
+          _this3._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
         });
       })["catch"](function (error) {
         if (_this3._status === C.STATUS_TERMINATED) {
@@ -18016,7 +18065,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('terminate()');
-      var cause = options.cause || JsSIP_C.causes.BYE;
+      var cause = options.cause || CRTC_C.causes.BYE;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var body = options.body;
       var cancel_reason;
@@ -18037,7 +18086,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (status_code && (status_code < 200 || status_code >= 700)) {
             throw new TypeError("Invalid status_code: ".concat(status_code));
           } else if (status_code) {
-            reason_phrase = reason_phrase || JsSIP_C.REASON_PHRASE[status_code] || '';
+            reason_phrase = reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
             cancel_reason = "SIP ;cause=".concat(status_code, " ;text=\"").concat(reason_phrase, "\"");
           } // Check Session Status.
 
@@ -18051,7 +18100,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           this._status = C.STATUS_CANCELED;
 
-          this._failed('local', null, JsSIP_C.causes.CANCELED);
+          this._failed('local', null, CRTC_C.causes.CANCELED);
 
           break;
         // - UAS -
@@ -18067,14 +18116,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           this._request.reply(status_code, reason_phrase, extraHeaders, body);
 
-          this._failed('local', null, JsSIP_C.causes.REJECTED);
+          this._failed('local', null, CRTC_C.causes.REJECTED);
 
           break;
 
         case C.STATUS_WAITING_FOR_ACK:
         case C.STATUS_CONFIRMED:
           logger.debug('terminating session');
-          reason_phrase = options.reason_phrase || JsSIP_C.REASON_PHRASE[status_code] || '';
+          reason_phrase = options.reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
 
           if (status_code && (status_code < 200 || status_code >= 700)) {
             throw new TypeError("Invalid status_code: ".concat(status_code));
@@ -18096,8 +18145,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this.receiveRequest = function (_ref) {
               var method = _ref.method;
 
-              if (method === JsSIP_C.ACK) {
-                _this4.sendRequest(JsSIP_C.BYE, {
+              if (method === CRTC_C.ACK) {
+                _this4.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
@@ -18109,7 +18158,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             this._request.server_transaction.on('stateChanged', function () {
               if (_this4._request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
-                _this4.sendRequest(JsSIP_C.BYE, {
+                _this4.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
@@ -18125,7 +18174,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             this._ua.newDialog(dialog);
           } else {
-            this.sendRequest(JsSIP_C.BYE, {
+            this.sendRequest(CRTC_C.BYE, {
               extraHeaders: extraHeaders,
               body: body
             });
@@ -18143,7 +18192,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var position = 0;
       var duration = options.duration || null;
       var interToneGap = options.interToneGap || null;
-      var transportType = options.transportType || JsSIP_C.DTMF_TRANSPORT.INFO;
+      var transportType = options.transportType || CRTC_C.DTMF_TRANSPORT.INFO;
 
       if (tones === undefined) {
         throw new TypeError('Not enough arguments');
@@ -18155,7 +18204,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } // Check Transport type.
 
 
-      if (transportType !== JsSIP_C.DTMF_TRANSPORT.INFO && transportType !== JsSIP_C.DTMF_TRANSPORT.RFC2833) {
+      if (transportType !== CRTC_C.DTMF_TRANSPORT.INFO && transportType !== CRTC_C.DTMF_TRANSPORT.RFC2833) {
         throw new TypeError("invalid transportType: ".concat(transportType));
       } // Convert to string.
 
@@ -18198,7 +18247,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } // RFC2833. Let RTCDTMFSender enqueue the DTMFs.
 
 
-      if (transportType === JsSIP_C.DTMF_TRANSPORT.RFC2833) {
+      if (transportType === CRTC_C.DTMF_TRANSPORT.RFC2833) {
         // Send DTMF in current audio RTP stream.
         var sender = this._getDTMFRTPSender();
 
@@ -18380,7 +18429,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         },
         failed: function failed() {
           _this6.terminate({
-            cause: JsSIP_C.causes.WEBRTC_ERROR,
+            cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Hold Failed'
           });
@@ -18435,7 +18484,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         },
         failed: function failed() {
           _this7.terminate({
-            cause: JsSIP_C.causes.WEBRTC_ERROR,
+            cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Unhold Failed'
           });
@@ -18483,7 +18532,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         },
         failed: function failed() {
           _this8.terminate({
-            cause: JsSIP_C.causes.WEBRTC_ERROR,
+            cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Media Renegotiation Failed'
           });
@@ -18570,10 +18619,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       logger.debug('receiveRequest()');
 
-      if (request.method === JsSIP_C.CANCEL) {
+      if (request.method === CRTC_C.CANCEL) {
         /* RFC3261 15 States that a UAS may have accepted an invitation while a CANCEL
         * was in progress and that the UAC MAY continue with the session established by
-        * any 2xx response, or MAY terminate with BYE. JsSIP does continue with the
+        * any 2xx response, or MAY terminate with BYE. CRTC does continue with the
         * established session. So the CANCEL is processed only if the session is not yet
         * established.
         */
@@ -18587,12 +18636,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           this._request.reply(487);
 
-          this._failed('remote', request, JsSIP_C.causes.CANCELED);
+          this._failed('remote', request, CRTC_C.causes.CANCELED);
         }
       } else {
         // Requests arriving here are in-dialog requests.
         switch (request.method) {
-          case JsSIP_C.ACK:
+          case CRTC_C.ACK:
             if (this._status !== C.STATUS_WAITING_FOR_ACK) {
               return;
             } // Update signaling status.
@@ -18605,7 +18654,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (this._late_sdp) {
               if (!request.body) {
                 this.terminate({
-                  cause: JsSIP_C.causes.MISSING_SDP,
+                  cause: CRTC_C.causes.MISSING_SDP,
                   status_code: 400
                 });
                 break;
@@ -18630,7 +18679,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               })["catch"](function (error) {
                 _this10.terminate({
-                  cause: JsSIP_C.causes.BAD_MEDIA_DESCRIPTION,
+                  cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
 
@@ -18644,24 +18693,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.BYE:
+          case CRTC_C.BYE:
             if (this._status === C.STATUS_CONFIRMED || this._status === C.STATUS_WAITING_FOR_ACK) {
               request.reply(200);
 
-              this._ended('remote', request, JsSIP_C.causes.BYE);
+              this._ended('remote', request, CRTC_C.causes.BYE);
             } else if (this._status === C.STATUS_INVITE_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER) {
               request.reply(200);
 
               this._request.reply(487, 'BYE Received');
 
-              this._ended('remote', request, JsSIP_C.causes.BYE);
+              this._ended('remote', request, CRTC_C.causes.BYE);
             } else {
               request.reply(403, 'Wrong Status');
             }
 
             break;
 
-          case JsSIP_C.INVITE:
+          case CRTC_C.INVITE:
             if (this._status === C.STATUS_CONFIRMED) {
               if (request.hasHeader('replaces')) {
                 this._receiveReplaces(request);
@@ -18674,7 +18723,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.INFO:
+          case CRTC_C.INFO:
             if (this._status === C.STATUS_1XX_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_WAITING_FOR_ACK || this._status === C.STATUS_CONFIRMED) {
               var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
 
@@ -18691,7 +18740,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.UPDATE:
+          case CRTC_C.UPDATE:
             if (this._status === C.STATUS_CONFIRMED) {
               this._receiveUpdate(request);
             } else {
@@ -18700,7 +18749,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.REFER:
+          case CRTC_C.REFER:
             if (this._status === C.STATUS_CONFIRMED) {
               this._receiveRefer(request);
             } else {
@@ -18709,7 +18758,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.NOTIFY:
+          case CRTC_C.NOTIFY:
             if (this._status === C.STATUS_CONFIRMED) {
               this._receiveNotify(request);
             } else {
@@ -18735,8 +18784,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._status !== C.STATUS_TERMINATED) {
         this.terminate({
           status_code: 500,
-          reason_phrase: JsSIP_C.causes.CONNECTION_ERROR,
-          cause: JsSIP_C.causes.CONNECTION_ERROR
+          reason_phrase: CRTC_C.causes.CONNECTION_ERROR,
+          cause: CRTC_C.causes.CONNECTION_ERROR
         });
       }
     }
@@ -18748,8 +18797,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._status !== C.STATUS_TERMINATED) {
         this.terminate({
           status_code: 408,
-          reason_phrase: JsSIP_C.causes.REQUEST_TIMEOUT,
-          cause: JsSIP_C.causes.REQUEST_TIMEOUT
+          reason_phrase: CRTC_C.causes.REQUEST_TIMEOUT,
+          cause: CRTC_C.causes.REQUEST_TIMEOUT
         });
       }
     }
@@ -18761,8 +18810,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._status !== C.STATUS_TERMINATED) {
         this.terminate({
           status_code: 500,
-          reason_phrase: JsSIP_C.causes.DIALOG_ERROR,
-          cause: JsSIP_C.causes.DIALOG_ERROR
+          reason_phrase: CRTC_C.causes.DIALOG_ERROR,
+          cause: CRTC_C.causes.DIALOG_ERROR
         });
       }
     } // Called from DTMF handler.
@@ -18916,9 +18965,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           logger.debug('no ACK received, terminating the session');
           clearTimeout(_this11._timers.invite2xxTimer);
 
-          _this11.sendRequest(JsSIP_C.BYE);
+          _this11.sendRequest(CRTC_C.BYE);
 
-          _this11._ended('remote', null, JsSIP_C.causes.NO_ACK);
+          _this11._ended('remote', null, CRTC_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
     }
@@ -18934,9 +18983,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         if (state === 'failed') {
           _this12.terminate({
-            cause: JsSIP_C.causes.RTP_TIMEOUT,
+            cause: CRTC_C.causes.RTP_TIMEOUT,
             status_code: 408,
-            reason_phrase: JsSIP_C.causes.RTP_TIMEOUT
+            reason_phrase: CRTC_C.causes.RTP_TIMEOUT
           });
         }
       });
@@ -19075,7 +19124,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (early_dialog.error) {
             logger.debug(early_dialog.error);
 
-            this._failed('remote', message, JsSIP_C.causes.INTERNAL_ERROR);
+            this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
 
             return false;
           } else {
@@ -19085,30 +19134,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       } // Confirmed Dialog.
       else {
-          this._from_tag = message.from_tag;
-          this._to_tag = message.to_tag; // In case the dialog is in _early_ state, update it.
+        this._from_tag = message.from_tag;
+        this._to_tag = message.to_tag; // In case the dialog is in _early_ state, update it.
 
-          if (early_dialog) {
-            early_dialog.update(message, type);
-            this._dialog = early_dialog;
-            delete this._earlyDialogs[id];
-            return true;
-          } // Otherwise, create a _confirmed_ dialog.
+        if (early_dialog) {
+          early_dialog.update(message, type);
+          this._dialog = early_dialog;
+          delete this._earlyDialogs[id];
+          return true;
+        } // Otherwise, create a _confirmed_ dialog.
 
 
-          var dialog = new Dialog(this, message, type);
+        var dialog = new Dialog(this, message, type);
 
-          if (dialog.error) {
-            logger.debug(dialog.error);
+        if (dialog.error) {
+          logger.debug(dialog.error);
 
-            this._failed('remote', message, JsSIP_C.causes.INTERNAL_ERROR);
+          this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
 
-            return false;
-          } else {
-            this._dialog = dialog;
-            return true;
-          }
+          return false;
+        } else {
+          this._dialog = dialog;
+          return true;
         }
+      }
     }
     /**
      * In dialog INVITE Reception
@@ -19319,9 +19368,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             hold = true;
           } // If at least one of the streams is active don't emit 'hold'.
           else {
-              hold = false;
-              break;
-            }
+            hold = false;
+            break;
+          }
         }
       } catch (err) {
         _iterator4.e(err);
@@ -19401,7 +19450,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      if (request.refer_to.uri.scheme !== JsSIP_C.SIP) {
+      if (request.refer_to.uri.scheme !== CRTC_C.SIP) {
         logger.debug('Refer-To header field points to a non-SIP URI scheme');
         request.reply(416);
         return;
@@ -19583,21 +19632,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         } // Request for user media access.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-            _this21._localMediaStreamLocallyGenerated = true;
-            return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-              if (_this21._status === C.STATUS_TERMINATED) {
-                throw new Error('terminated');
-              }
+          _this21._localMediaStreamLocallyGenerated = true;
+          return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+            if (_this21._status === C.STATUS_TERMINATED) {
+              throw new Error('terminated');
+            }
 
-              _this21._failed('local', null, JsSIP_C.causes.USER_DENIED_MEDIA_ACCESS);
+            _this21._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
-              logger.warn('emit "getusermediafailed" [error:%o]', error);
+            logger.warn('emit "getusermediafailed" [error:%o]', error);
 
-              _this21.emit('getusermediafailed', error);
+            _this21.emit('getusermediafailed', error);
 
-              throw error;
-            });
-          }
+            throw error;
+          });
+        }
       }).then(function (stream) {
         if (_this21._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -19615,7 +19664,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this21._connecting(_this21._request);
 
         return _this21._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-          _this21._failed('local', null, JsSIP_C.causes.WEBRTC_ERROR);
+          _this21._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
 
           throw error;
         });
@@ -19676,21 +19725,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          * the dialog, send an ACK
          */
         if (this._dialog.id.call_id === response.call_id && this._dialog.id.local_tag === response.from_tag && this._dialog.id.remote_tag === response.to_tag) {
-          this.sendRequest(JsSIP_C.ACK);
+          this.sendRequest(CRTC_C.ACK);
           return;
         } // If not, send an ACK  and terminate.
         else {
-            var dialog = new Dialog(this, response, 'UAC');
+          var dialog = new Dialog(this, response, 'UAC');
 
-            if (dialog.error !== undefined) {
-              logger.debug(dialog.error);
-              return;
-            }
-
-            this.sendRequest(JsSIP_C.ACK);
-            this.sendRequest(JsSIP_C.BYE);
+          if (dialog.error !== undefined) {
+            logger.debug(dialog.error);
             return;
           }
+
+          this.sendRequest(CRTC_C.ACK);
+          this.sendRequest(CRTC_C.BYE);
+          return;
+        }
       } // Proceed to cancellation if the user requested.
 
 
@@ -19765,9 +19814,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._status = C.STATUS_CONFIRMED;
 
             if (!response.body) {
-              this._acceptAndTerminate(response, 400, JsSIP_C.causes.MISSING_SDP);
+              this._acceptAndTerminate(response, 400, CRTC_C.causes.MISSING_SDP);
 
-              this._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
+              this._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
 
               break;
             } // An error on dialog creation will fire 'failed' event.
@@ -19799,7 +19848,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 })["catch"](function (error) {
                   _this22._acceptAndTerminate(response, 500, error.toString());
 
-                  _this22._failed('local', response, JsSIP_C.causes.WEBRTC_ERROR);
+                  _this22._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
@@ -19809,13 +19858,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
                 _this22._accepted('remote', response);
 
-                _this22.sendRequest(JsSIP_C.ACK);
+                _this22.sendRequest(CRTC_C.ACK);
 
                 _this22._confirmed('local', null);
               })["catch"](function (error) {
                 _this22._acceptAndTerminate(response, 488, 'Not Acceptable Here');
 
-                _this22._failed('remote', response, JsSIP_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this22._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
 
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
@@ -19868,7 +19917,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         _this23.emit('sdp', e);
 
-        _this23.sendRequest(JsSIP_C.INVITE, {
+        _this23.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
@@ -19904,7 +19953,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
 
-        this.sendRequest(JsSIP_C.ACK); // If it is a 2XX retransmission exit now.
+        this.sendRequest(CRTC_C.ACK); // If it is a 2XX retransmission exit now.
 
         if (succeeded) {
           return;
@@ -19990,7 +20039,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _this25.emit('sdp', e);
 
-          _this25.sendRequest(JsSIP_C.UPDATE, {
+          _this25.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
@@ -20020,30 +20069,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       } // No SDP.
       else {
-          this.sendRequest(JsSIP_C.UPDATE, {
-            extraHeaders: extraHeaders,
-            eventHandlers: {
-              onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this25, response);
-              },
-              onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this25, response);
-              },
-              onTransportError: function onTransportError() {
-                _this25.onTransportError(); // Do nothing because session ends.
+        this.sendRequest(CRTC_C.UPDATE, {
+          extraHeaders: extraHeaders,
+          eventHandlers: {
+            onSuccessResponse: function onSuccessResponse(response) {
+              onSucceeded.call(_this25, response);
+            },
+            onErrorResponse: function onErrorResponse(response) {
+              onFailed.call(_this25, response);
+            },
+            onTransportError: function onTransportError() {
+              _this25.onTransportError(); // Do nothing because session ends.
 
-              },
-              onRequestTimeout: function onRequestTimeout() {
-                _this25.onRequestTimeout(); // Do nothing because session ends.
+            },
+            onRequestTimeout: function onRequestTimeout() {
+              _this25.onRequestTimeout(); // Do nothing because session ends.
 
-              },
-              onDialogError: function onDialogError() {
-                _this25.onDialogError(); // Do nothing because session ends.
+            },
+            onDialogError: function onDialogError() {
+              _this25.onDialogError(); // Do nothing because session ends.
 
-              }
             }
-          });
-        }
+          }
+        });
+      }
 
       function onSucceeded(response) {
         var _this26 = this;
@@ -20095,8 +20144,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         } // No SDP answer.
         else if (eventHandlers.succeeded) {
-            eventHandlers.succeeded(response);
-          }
+          eventHandlers.succeeded(response);
+        }
       }
 
       function onFailed(response) {
@@ -20112,14 +20161,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var extraHeaders = [];
 
       if (status_code) {
-        reason_phrase = reason_phrase || JsSIP_C.REASON_PHRASE[status_code] || '';
+        reason_phrase = reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
         extraHeaders.push("Reason: SIP ;cause=".concat(status_code, "; text=\"").concat(reason_phrase, "\""));
       } // An error on dialog creation will fire 'failed' event.
 
 
       if (this._dialog || this._createDialog(response, 'UAC')) {
-        this.sendRequest(JsSIP_C.ACK);
-        this.sendRequest(JsSIP_C.BYE, {
+        this.sendRequest(CRTC_C.ACK);
+        this.sendRequest(CRTC_C.BYE, {
           extraHeaders: extraHeaders
         });
       } // Update session status.
@@ -20169,55 +20218,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
-          logger.debug('mangleOffer() | both on hold, mangling offer');
+        logger.debug('mangleOffer() | both on hold, mangling offer');
 
-          var _iterator6 = _createForOfIteratorHelper(sdp.media),
-              _step6;
+        var _iterator6 = _createForOfIteratorHelper(sdp.media),
+            _step6;
 
-          try {
-            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-              var _m = _step6.value;
+        try {
+          for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+            var _m = _step6.value;
 
-              if (holdMediaTypes.indexOf(_m.type) === -1) {
-                continue;
-              }
-
-              _m.direction = 'inactive';
+            if (holdMediaTypes.indexOf(_m.type) === -1) {
+              continue;
             }
-          } catch (err) {
-            _iterator6.e(err);
-          } finally {
-            _iterator6.f();
+
+            _m.direction = 'inactive';
           }
-        } // Remote hold.
-        else if (this._remoteHold) {
-            logger.debug('mangleOffer() | remote on hold, mangling offer');
+        } catch (err) {
+          _iterator6.e(err);
+        } finally {
+          _iterator6.f();
+        }
+      } // Remote hold.
+      else if (this._remoteHold) {
+        logger.debug('mangleOffer() | remote on hold, mangling offer');
 
-            var _iterator7 = _createForOfIteratorHelper(sdp.media),
-                _step7;
+        var _iterator7 = _createForOfIteratorHelper(sdp.media),
+            _step7;
 
-            try {
-              for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                var _m2 = _step7.value;
+        try {
+          for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+            var _m2 = _step7.value;
 
-                if (holdMediaTypes.indexOf(_m2.type) === -1) {
-                  continue;
-                }
+            if (holdMediaTypes.indexOf(_m2.type) === -1) {
+              continue;
+            }
 
-                if (!_m2.direction) {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'sendrecv') {
-                  _m2.direction = 'recvonly';
-                } else if (_m2.direction === 'recvonly') {
-                  _m2.direction = 'inactive';
-                }
-              }
-            } catch (err) {
-              _iterator7.e(err);
-            } finally {
-              _iterator7.f();
+            if (!_m2.direction) {
+              _m2.direction = 'recvonly';
+            } else if (_m2.direction === 'sendrecv') {
+              _m2.direction = 'recvonly';
+            } else if (_m2.direction === 'recvonly') {
+              _m2.direction = 'inactive';
             }
           }
+        } catch (err) {
+          _iterator7.e(err);
+        } finally {
+          _iterator7.f();
+        }
+      }
 
       return sdp_transform.write(sdp);
     }
@@ -20259,7 +20308,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       var session_expires_refresher;
 
-      if (request.session_expires && request.session_expires >= JsSIP_C.MIN_SESSION_EXPIRES) {
+      if (request.session_expires && request.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
         this._sessionTimers.currentExpires = request.session_expires;
         session_expires_refresher = request.session_expires_refresher || 'uas';
       } else {
@@ -20286,7 +20335,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       var session_expires_refresher;
 
-      if (response.session_expires && response.session_expires >= JsSIP_C.MIN_SESSION_EXPIRES) {
+      if (response.session_expires && response.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
         this._sessionTimers.currentExpires = response.session_expires;
         session_expires_refresher = response.session_expires_refresher || 'uac';
       } else {
@@ -20319,7 +20368,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           logger.debug('runSessionTimer() | sending session refresh request');
 
-          if (_this27._sessionTimers.refreshMethod === JsSIP_C.UPDATE) {
+          if (_this27._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
             _this27._sendUpdate();
           } else {
             _this27._sendReinvite();
@@ -20327,20 +20376,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }, expires * 500); // Half the given interval (as the RFC states).
       } // I'm not the refresher.
       else {
-          this._sessionTimers.timer = setTimeout(function () {
-            if (_this27._status === C.STATUS_TERMINATED) {
-              return;
-            }
+        this._sessionTimers.timer = setTimeout(function () {
+          if (_this27._status === C.STATUS_TERMINATED) {
+            return;
+          }
 
-            logger.warn('runSessionTimer() | timer expired, terminating the session');
+          logger.warn('runSessionTimer() | timer expired, terminating the session');
 
-            _this27.terminate({
-              cause: JsSIP_C.causes.REQUEST_TIMEOUT,
-              status_code: 408,
-              reason_phrase: 'Session Timer Expired'
-            });
-          }, expires * 1100);
-        }
+          _this27.terminate({
+            cause: CRTC_C.causes.REQUEST_TIMEOUT,
+            status_code: 408,
+            reason_phrase: 'Session Timer Expired'
+          });
+        }, expires * 1100);
+      }
     }
   }, {
     key: "_toggleMuteAudio",
@@ -20526,69 +20575,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         video: video
       });
     }
-  }, {
+  }], [{
     key: "C",
-    get: function get() {
+    get:
+    /**
+     * Expose C object.
+     */
+    function get() {
       return C;
-    } // Expose session failed/ended causes as a property of the RTCSession instance.
-
-  }, {
-    key: "causes",
-    get: function get() {
-      return JsSIP_C.causes;
-    }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
-  }, {
-    key: "connection",
-    get: function get() {
-      return this._connection;
-    }
-  }, {
-    key: "contact",
-    get: function get() {
-      return this._contact;
-    }
-  }, {
-    key: "direction",
-    get: function get() {
-      return this._direction;
-    }
-  }, {
-    key: "local_identity",
-    get: function get() {
-      return this._local_identity;
-    }
-  }, {
-    key: "remote_identity",
-    get: function get() {
-      return this._remote_identity;
-    }
-  }, {
-    key: "start_time",
-    get: function get() {
-      return this._start_time;
-    }
-  }, {
-    key: "end_time",
-    get: function get() {
-      return this._end_time;
-    }
-  }, {
-    key: "data",
-    get: function get() {
-      return this._data;
-    },
-    set: function set(_data) {
-      this._data = _data;
-    }
-  }, {
-    key: "status",
-    get: function get() {
-      return this._status;
     }
   }]);
 
@@ -20597,25 +20591,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 },{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./Logger":9,"./RTCSession/DTMF":15,"./RTCSession/Info":16,"./RTCSession/ReferNotifier":17,"./RTCSession/ReferSubscriber":18,"./RequestSender":20,"./SIPMessage":21,"./Timers":23,"./Transactions":24,"./URI":27,"./Utils":28,"events":31,"sdp-transform":37}],15:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -20623,7 +20617,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('../Logger');
 
-var JsSIP_C = require('../Constants');
+var CRTC_C = require('../Constants');
 
 var Exceptions = require('../Exceptions');
 
@@ -20658,6 +20652,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(DTMF, [{
+    key: "tone",
+    get: function get() {
+      return this._tone;
+    }
+  }, {
+    key: "duration",
+    get: function get() {
+      return this._duration;
+    }
+  }, {
     key: "send",
     value: function send(tone) {
       var _this2 = this;
@@ -20704,7 +20708,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         request: this._request
       });
 
-      this._session.sendRequest(JsSIP_C.INFO, {
+      this._session.sendRequest(CRTC_C.INFO, {
         extraHeaders: extraHeaders,
         eventHandlers: {
           onSuccessResponse: function onSuccessResponse(response) {
@@ -20775,16 +20779,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }
     }
-  }, {
-    key: "tone",
-    get: function get() {
-      return this._tone;
-    }
-  }, {
-    key: "duration",
-    get: function get() {
-      return this._duration;
-    }
   }]);
 
   return DTMF;
@@ -20798,31 +20792,31 @@ module.exports.C = C;
 },{"../Constants":2,"../Exceptions":6,"../Logger":9,"../Utils":28,"events":31}],16:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
-var JsSIP_C = require('../Constants');
+var CRTC_C = require('../Constants');
 
 var Exceptions = require('../Exceptions');
 
@@ -20847,6 +20841,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(Info, [{
+    key: "contentType",
+    get: function get() {
+      return this._contentType;
+    }
+  }, {
+    key: "body",
+    get: function get() {
+      return this._body;
+    }
+  }, {
     key: "send",
     value: function send(contentType, body) {
       var _this2 = this;
@@ -20874,7 +20878,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         request: this.request
       });
 
-      this._session.sendRequest(JsSIP_C.INFO, {
+      this._session.sendRequest(CRTC_C.INFO, {
         extraHeaders: extraHeaders,
         eventHandlers: {
           onSuccessResponse: function onSuccessResponse(response) {
@@ -20917,16 +20921,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         request: request
       });
     }
-  }, {
-    key: "contentType",
-    get: function get() {
-      return this._contentType;
-    }
-  }, {
-    key: "body",
-    get: function get() {
-      return this._body;
-    }
   }]);
 
   return Info;
@@ -20938,11 +20932,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('../Logger');
 
-var JsSIP_C = require('../Constants');
+var CRTC_C = require('../Constants');
 
 var logger = new Logger('RTCSession:ReferNotifier');
 var C = {
@@ -20972,7 +20966,7 @@ module.exports = /*#__PURE__*/function () {
         return;
       }
 
-      reason = reason || JsSIP_C.REASON_PHRASE[code] || '';
+      reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       var state;
 
       if (code >= 200) {
@@ -20982,7 +20976,7 @@ module.exports = /*#__PURE__*/function () {
       } // Put this in a try/catch block.
 
 
-      this._session.sendRequest(JsSIP_C.NOTIFY, {
+      this._session.sendRequest(CRTC_C.NOTIFY, {
         extraHeaders: ["Event: ".concat(C.event_type, ";id=").concat(this._id), "Subscription-State: ".concat(state), "Content-Type: ".concat(C.body_type)],
         body: "SIP/2.0 ".concat(code, " ").concat(reason),
         eventHandlers: {
@@ -21000,25 +20994,25 @@ module.exports = /*#__PURE__*/function () {
 },{"../Constants":2,"../Logger":9}],18:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -21026,7 +21020,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('../Logger');
 
-var JsSIP_C = require('../Constants');
+var CRTC_C = require('../Constants');
 
 var Grammar = require('../Grammar');
 
@@ -21051,6 +21045,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(ReferSubscriber, [{
+    key: "id",
+    get: function get() {
+      return this._id;
+    }
+  }, {
     key: "sendRefer",
     value: function sendRefer(target) {
       var _this2 = this;
@@ -21089,23 +21088,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       extraHeaders.push("Contact: ".concat(this._session.contact));
 
-      var request = this._session.sendRequest(JsSIP_C.REFER, {
+      var request = this._session.sendRequest(CRTC_C.REFER, {
         extraHeaders: extraHeaders,
         eventHandlers: {
           onSuccessResponse: function onSuccessResponse(response) {
             _this2._requestSucceeded(response);
           },
           onErrorResponse: function onErrorResponse(response) {
-            _this2._requestFailed(response, JsSIP_C.causes.REJECTED);
+            _this2._requestFailed(response, CRTC_C.causes.REJECTED);
           },
           onTransportError: function onTransportError() {
-            _this2._requestFailed(null, JsSIP_C.causes.CONNECTION_ERROR);
+            _this2._requestFailed(null, CRTC_C.causes.CONNECTION_ERROR);
           },
           onRequestTimeout: function onRequestTimeout() {
-            _this2._requestFailed(null, JsSIP_C.causes.REQUEST_TIMEOUT);
+            _this2._requestFailed(null, CRTC_C.causes.REQUEST_TIMEOUT);
           },
           onDialogError: function onDialogError() {
-            _this2._requestFailed(null, JsSIP_C.causes.DIALOG_ERROR);
+            _this2._requestFailed(null, CRTC_C.causes.DIALOG_ERROR);
           }
         }
       });
@@ -21177,11 +21176,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         cause: cause
       });
     }
-  }, {
-    key: "id",
-    get: function get() {
-      return this._id;
-    }
   }]);
 
   return ReferSubscriber;
@@ -21193,13 +21187,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
 var Utils = require('./Utils');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var SIPMessage = require('./SIPMessage');
 
@@ -21242,6 +21236,11 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(Registrator, [{
+    key: "registered",
+    get: function get() {
+      return this._registered;
+    }
+  }, {
     key: "setExtraHeaders",
     value: function setExtraHeaders(extraHeaders) {
       if (!Array.isArray(extraHeaders)) {
@@ -21285,17 +21284,17 @@ module.exports = /*#__PURE__*/function () {
 
       extraHeaders.push("Contact: ".concat(this._contact, ";expires=").concat(this._expires).concat(this._extraContactParams));
       extraHeaders.push("Expires: ".concat(this._expires));
-      var request = new SIPMessage.OutgoingRequest(JsSIP_C.REGISTER, this._registrar, this._ua, {
+      var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
         'to_uri': this._to_uri,
         'call_id': this._call_id,
         'cseq': this._cseq += 1
       }, extraHeaders);
       var request_sender = new RequestSender(this._ua, request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this._registrationFailure(null, JsSIP_C.causes.REQUEST_TIMEOUT);
+          _this._registrationFailure(null, CRTC_C.causes.REQUEST_TIMEOUT);
         },
         onTransportError: function onTransportError() {
-          _this._registrationFailure(null, JsSIP_C.causes.CONNECTION_ERROR);
+          _this._registrationFailure(null, CRTC_C.causes.CONNECTION_ERROR);
         },
         // Increase the CSeq on authentication.
         onAuthenticated: function onAuthenticated() {
@@ -21407,7 +21406,7 @@ module.exports = /*#__PURE__*/function () {
                   // This response MUST contain a Min-Expires header field.
                   logger.debug('423 response received for REGISTER without Min-Expires');
 
-                  _this._registrationFailure(response, JsSIP_C.causes.SIP_FAILURE_CODE);
+                  _this._registrationFailure(response, CRTC_C.causes.SIP_FAILURE_CODE);
                 }
 
                 break;
@@ -21453,17 +21452,17 @@ module.exports = /*#__PURE__*/function () {
       }
 
       extraHeaders.push('Expires: 0');
-      var request = new SIPMessage.OutgoingRequest(JsSIP_C.REGISTER, this._registrar, this._ua, {
+      var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
         'to_uri': this._to_uri,
         'call_id': this._call_id,
         'cseq': this._cseq += 1
       }, extraHeaders);
       var request_sender = new RequestSender(this._ua, request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this2._unregistered(null, JsSIP_C.causes.REQUEST_TIMEOUT);
+          _this2._unregistered(null, CRTC_C.causes.REQUEST_TIMEOUT);
         },
         onTransportError: function onTransportError() {
-          _this2._unregistered(null, JsSIP_C.causes.CONNECTION_ERROR);
+          _this2._unregistered(null, CRTC_C.causes.CONNECTION_ERROR);
         },
         // Increase the CSeq on authentication.
         onAuthenticated: function onAuthenticated() {
@@ -21544,11 +21543,6 @@ module.exports = /*#__PURE__*/function () {
         cause: cause || null
       });
     }
-  }, {
-    key: "registered",
-    get: function get() {
-      return this._registered;
-    }
   }]);
 
   return Registrator;
@@ -21560,11 +21554,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var DigestAuthentication = require('./DigestAuthentication');
 
@@ -21600,7 +21594,7 @@ module.exports = /*#__PURE__*/function () {
     } // If ua is in closing process or even closed just allow sending Bye and ACK.
 
 
-    if (ua.status === ua.C.STATUS_USER_CLOSED && (this._method !== JsSIP_C.BYE || this._method !== JsSIP_C.ACK)) {
+    if (ua.status === ua.C.STATUS_USER_CLOSED && (this._method !== CRTC_C.BYE || this._method !== CRTC_C.ACK)) {
       this._eventHandlers.onTransportError();
     }
   }
@@ -21732,23 +21726,23 @@ module.exports = /*#__PURE__*/function () {
 },{"./Constants":2,"./DigestAuthentication":5,"./Logger":9,"./Transactions":24}],21:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -21758,13 +21752,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var sdp_transform = require('sdp-transform');
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Utils = require('./Utils');
 
@@ -21812,7 +21806,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
 
     this.setHeader('via', ''); // Max-Forwards.
 
-    this.setHeader('max-forwards', JsSIP_C.MAX_FORWARDS); // To
+    this.setHeader('max-forwards', CRTC_C.MAX_FORWARDS); // To
 
     var to_uri = params.to_uri || ruri;
     var to_params = params.to_tag ? {
@@ -21839,7 +21833,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
     this.from = new NameAddrHeader(from_uri, display_name, from_params);
     this.setHeader('from', this.from.toString()); // Call-ID.
 
-    var call_id = params.call_id || ua.configuration.jssip_id + Utils.createRandomToken(15);
+    var call_id = params.call_id || ua.configuration.crtc_id + Utils.createRandomToken(15);
     this.call_id = call_id;
     this.setHeader('call-id', call_id); // CSeq.
 
@@ -22050,11 +22044,11 @@ var OutgoingRequest = /*#__PURE__*/function () {
       var supported = [];
 
       switch (this.method) {
-        case JsSIP_C.REGISTER:
+        case CRTC_C.REGISTER:
           supported.push('path', 'gruu');
           break;
 
-        case JsSIP_C.INVITE:
+        case CRTC_C.INVITE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
@@ -22066,7 +22060,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
           supported.push('ice', 'replaces');
           break;
 
-        case JsSIP_C.UPDATE:
+        case CRTC_C.UPDATE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
@@ -22076,9 +22070,9 @@ var OutgoingRequest = /*#__PURE__*/function () {
       }
 
       supported.push('outbound');
-      var userAgent = this.ua.configuration.user_agent || JsSIP_C.USER_AGENT; // Allow.
+      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // Allow.
 
-      msg += "Allow: ".concat(JsSIP_C.ALLOWED_METHODS, "\r\n");
+      msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
       msg += "Supported: ".concat(supported, "\r\n");
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
@@ -22122,7 +22116,7 @@ var InitialOutgoingInviteRequest = /*#__PURE__*/function (_OutgoingRequest) {
 
     _classCallCheck(this, InitialOutgoingInviteRequest);
 
-    _this = _super.call(this, JsSIP_C.INVITE, ruri, ua, params, extraHeaders, body);
+    _this = _super.call(this, CRTC_C.INVITE, ruri, ua, params, extraHeaders, body);
     _this.transaction = null;
     return _this;
   }
@@ -22390,11 +22384,11 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
         throw new TypeError("Invalid reason_phrase: ".concat(reason));
       }
 
-      reason = reason || JsSIP_C.REASON_PHRASE[code] || '';
+      reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       extraHeaders = Utils.cloneArray(extraHeaders);
       var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
 
-      if (this.method === JsSIP_C.INVITE && code > 100 && code <= 200) {
+      if (this.method === CRTC_C.INVITE && code > 100 && code <= 200) {
         var headers = this.getHeaders('record-route');
 
         var _iterator8 = _createForOfIteratorHelper(headers),
@@ -22455,7 +22449,7 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       }
 
       switch (this.method) {
-        case JsSIP_C.INVITE:
+        case CRTC_C.INVITE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
@@ -22467,7 +22461,7 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
           supported.push('ice', 'replaces');
           break;
 
-        case JsSIP_C.UPDATE:
+        case CRTC_C.UPDATE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
@@ -22481,13 +22475,13 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
 
       supported.push('outbound'); // Allow and Accept.
 
-      if (this.method === JsSIP_C.OPTIONS) {
-        response += "Allow: ".concat(JsSIP_C.ALLOWED_METHODS, "\r\n");
-        response += "Accept: ".concat(JsSIP_C.ACCEPTED_BODY_TYPES, "\r\n");
+      if (this.method === CRTC_C.OPTIONS) {
+        response += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
+        response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
       } else if (code === 405) {
-        response += "Allow: ".concat(JsSIP_C.ALLOWED_METHODS, "\r\n");
+        response += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
       } else if (code === 415) {
-        response += "Accept: ".concat(JsSIP_C.ACCEPTED_BODY_TYPES, "\r\n");
+        response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
       }
 
       response += "Supported: ".concat(supported, "\r\n");
@@ -22522,7 +22516,7 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
         throw new TypeError("Invalid reason_phrase: ".concat(reason));
       }
 
-      reason = reason || JsSIP_C.REASON_PHRASE[code] || '';
+      reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
 
       var _iterator11 = _createForOfIteratorHelper(vias),
@@ -22576,7 +22570,7 @@ var IncomingResponse = /*#__PURE__*/function (_IncomingMessage2) {
     return _this3;
   }
 
-  return IncomingResponse;
+  return _createClass(IncomingResponse);
 }(IncomingMessage);
 
 module.exports = {
@@ -22596,7 +22590,7 @@ var Grammar = require('./Grammar');
 
 var logger = new Logger('Socket');
 /**
- * Interface documentation: https://jssip.net/documentation/$last_version/api/socket/
+ * Interface documentation: https://crtc.net/documentation/$last_version/api/socket/
  *
  * interface Socket {
  *  attribute String via_transport
@@ -22621,25 +22615,25 @@ exports.isSocket = function (socket) {
   }
 
   if (typeof socket === 'undefined') {
-    logger.warn('undefined JsSIP.Socket instance');
+    logger.warn('undefined CRTC.Socket instance');
     return false;
   } // Check Properties.
 
 
   try {
     if (!Utils.isString(socket.url)) {
-      logger.warn('missing or invalid JsSIP.Socket url property');
-      throw new Error('Missing or invalid JsSIP.Socket url property');
+      logger.warn('missing or invalid CRTC.Socket url property');
+      throw new Error('Missing or invalid CRTC.Socket url property');
     }
 
     if (!Utils.isString(socket.via_transport)) {
-      logger.warn('missing or invalid JsSIP.Socket via_transport property');
-      throw new Error('Missing or invalid JsSIP.Socket via_transport property');
+      logger.warn('missing or invalid CRTC.Socket via_transport property');
+      throw new Error('Missing or invalid CRTC.Socket via_transport property');
     }
 
     if (Grammar.parse(socket.sip_uri, 'SIP_URI') === -1) {
-      logger.warn('missing or invalid JsSIP.Socket sip_uri property');
-      throw new Error('missing or invalid JsSIP.Socket sip_uri property');
+      logger.warn('missing or invalid CRTC.Socket sip_uri property');
+      throw new Error('missing or invalid CRTC.Socket sip_uri property');
     }
   } catch (e) {
     return false;
@@ -22649,8 +22643,8 @@ exports.isSocket = function (socket) {
   try {
     ['connect', 'disconnect', 'send'].forEach(function (method) {
       if (!Utils.isFunction(socket[method])) {
-        logger.warn("missing or invalid JsSIP.Socket method: ".concat(method));
-        throw new Error("Missing or invalid JsSIP.Socket method: ".concat(method));
+        logger.warn("missing or invalid CRTC.Socket method: ".concat(method));
+        throw new Error("Missing or invalid CRTC.Socket method: ".concat(method));
       }
     });
   } catch (e) {
@@ -22684,25 +22678,25 @@ module.exports = {
 },{}],24:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -22710,7 +22704,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var SIPMessage = require('./SIPMessage');
 
@@ -22765,6 +22759,11 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(NonInviteClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -22846,11 +22845,6 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return NonInviteClientTransaction;
@@ -22885,6 +22879,11 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
   }
 
   _createClass(InviteClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -22956,7 +22955,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     value: function sendACK(response) {
       var _this6 = this;
 
-      var ack = new SIPMessage.OutgoingRequest(JsSIP_C.ACK, this.request.ruri, this.ua, {
+      var ack = new SIPMessage.OutgoingRequest(CRTC_C.ACK, this.request.ruri, this.ua, {
         'route_set': this.request.getHeaders('route'),
         'call_id': this.request.getHeader('call-id'),
         'cseq': this.request.cseq
@@ -22977,7 +22976,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
         return;
       }
 
-      var cancel = new SIPMessage.OutgoingRequest(JsSIP_C.CANCEL, this.request.ruri, this.ua, {
+      var cancel = new SIPMessage.OutgoingRequest(CRTC_C.CANCEL, this.request.ruri, this.ua, {
         'route_set': this.request.getHeaders('route'),
         'call_id': this.request.getHeader('call-id'),
         'cseq': this.request.cseq
@@ -23040,11 +23039,6 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return InviteClientTransaction;
@@ -23074,6 +23068,11 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
   }
 
   _createClass(AckClientTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "send",
     value: function send() {
       if (!this.transport.send(this.request)) {
@@ -23085,11 +23084,6 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
     value: function onTransportError() {
       loggeract.debug("transport error occurred for transaction ".concat(this.id));
       this.eventHandlers.onTransportError();
-    }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
     }
   }]);
 
@@ -23120,6 +23114,11 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
   }
 
   _createClass(NonInviteServerTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23206,11 +23205,6 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return NonInviteServerTransaction;
@@ -23242,6 +23236,11 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
   }
 
   _createClass(InviteServerTransaction, [{
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
     key: "stateChanged",
     value: function stateChanged(state) {
       this.state = state;
@@ -23386,11 +23385,6 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
         }
       }
     }
-  }, {
-    key: "C",
-    get: function get() {
-      return C;
-    }
   }]);
 
   return InviteServerTransaction;
@@ -23420,7 +23414,7 @@ function checkTransaction(_ref, request) {
   var tr;
 
   switch (request.method) {
-    case JsSIP_C.INVITE:
+    case CRTC_C.INVITE:
       tr = _transactions.ist[request.via_branch];
 
       if (tr) {
@@ -23440,7 +23434,7 @@ function checkTransaction(_ref, request) {
 
       break;
 
-    case JsSIP_C.ACK:
+    case CRTC_C.ACK:
       tr = _transactions.ist[request.via_branch]; // RFC 6026 7.1.
 
       if (tr) {
@@ -23455,12 +23449,12 @@ function checkTransaction(_ref, request) {
         }
       } // ACK to 2XX Response.
       else {
-          return false;
-        }
+        return false;
+      }
 
       break;
 
-    case JsSIP_C.CANCEL:
+    case CRTC_C.CANCEL:
       tr = _transactions.ist[request.via_branch];
 
       if (tr) {
@@ -23514,13 +23508,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
 var Socket = require('./Socket');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var logger = new Logger('Transport');
 /**
@@ -23538,16 +23532,16 @@ var C = {
   // Recovery options.
   recovery_options: {
     // minimum interval in seconds between recover attempts.
-    min_interval: JsSIP_C.CONNECTION_RECOVERY_MIN_INTERVAL,
+    min_interval: CRTC_C.CONNECTION_RECOVERY_MIN_INTERVAL,
     // maximum interval in seconds between recover attempts.
-    max_interval: JsSIP_C.CONNECTION_RECOVERY_MAX_INTERVAL
+    max_interval: CRTC_C.CONNECTION_RECOVERY_MAX_INTERVAL
   }
 };
 /*
- * Manages one or multiple JsSIP.Socket instances.
+ * Manages one or multiple CRTC.Socket instances.
  * Is reponsible for transport recovery logic among all socket instances.
  *
- * @socket JsSIP::Socket instance
+ * @socket CRTC::Socket instance
  */
 
 module.exports = /*#__PURE__*/function () {
@@ -23566,7 +23560,7 @@ module.exports = /*#__PURE__*/function () {
     this.recover_attempts = 0;
     this.recovery_timer = null;
     this.close_requested = false; // It seems that TextDecoder is not available in some versions of React-Native.
-    // See https://github.com/versatica/JsSIP/issues/695
+    // See https://github.com/versatica/CRTC/issues/695
 
     try {
       this.textDecoder = new TextDecoder('utf8');
@@ -23584,7 +23578,7 @@ module.exports = /*#__PURE__*/function () {
 
     sockets.forEach(function (socket) {
       if (!Socket.isSocket(socket.socket)) {
-        throw new TypeError('Invalid argument.' + ' invalid \'JsSIP.Socket\' instance');
+        throw new TypeError('Invalid argument.' + ' invalid \'CRTC.Socket\' instance');
       }
 
       if (socket.weight && !Number(socket.weight)) {
@@ -23606,6 +23600,21 @@ module.exports = /*#__PURE__*/function () {
 
 
   _createClass(Transport, [{
+    key: "via_transport",
+    get: function get() {
+      return this.socket.via_transport;
+    }
+  }, {
+    key: "url",
+    get: function get() {
+      return this.socket.url;
+    }
+  }, {
+    key: "sip_uri",
+    get: function get() {
+      return this.socket.sip_uri;
+    }
+  }, {
     key: "connect",
     value: function connect() {
       logger.debug('connect()');
@@ -23782,12 +23791,12 @@ module.exports = /*#__PURE__*/function () {
         return;
       } // Update socket status.
       else {
-          this.sockets.forEach(function (socket) {
-            if (this.socket === socket.socket) {
-              socket.status = C.SOCKET_STATUS_ERROR;
-            }
-          }, this);
-        }
+        this.sockets.forEach(function (socket) {
+          if (this.socket === socket.socket) {
+            socket.status = C.SOCKET_STATUS_ERROR;
+          }
+        }, this);
+      }
 
       this._reconnect(error);
     }
@@ -23800,38 +23809,23 @@ module.exports = /*#__PURE__*/function () {
         return;
       } // Binary message.
       else if (typeof data !== 'string') {
-          try {
-            if (this.textDecoder) data = this.textDecoder.decode(data);else data = String.fromCharCode.apply(null, new Uint8Array(data));
-          } catch (evt) {
-            logger.debug('received binary message failed to be converted into string,' + ' message discarded');
-            return;
-          }
+        try {
+          if (this.textDecoder) data = this.textDecoder.decode(data);else data = String.fromCharCode.apply(null, new Uint8Array(data));
+        } catch (evt) {
+          logger.debug('received binary message failed to be converted into string,' + ' message discarded');
+          return;
+        }
 
-          logger.debug("received binary message:\n\n".concat(data, "\n"));
-        } // Text message.
-        else {
-            logger.debug("received text message:\n\n".concat(data, "\n"));
-          }
+        logger.debug("received binary message:\n\n".concat(data, "\n"));
+      } // Text message.
+      else {
+        logger.debug("received text message:\n\n".concat(data, "\n"));
+      }
 
       this.ondata({
         transport: this,
         message: data
       });
-    }
-  }, {
-    key: "via_transport",
-    get: function get() {
-      return this.socket.via_transport;
-    }
-  }, {
-    key: "url",
-    get: function get() {
-      return this.socket.url;
-    }
-  }, {
-    key: "sip_uri",
-    get: function get() {
-      return this.socket.sip_uri;
     }
   }]);
 
@@ -23840,25 +23834,25 @@ module.exports = /*#__PURE__*/function () {
 },{"./Constants":2,"./Logger":9,"./Socket":22}],26:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
 
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
@@ -23866,7 +23860,7 @@ var EventEmitter = require('events').EventEmitter;
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Registrator = require('./Registrator');
 
@@ -23907,9 +23901,9 @@ var C = {
 };
 /**
  * The User-Agent class.
- * @class JsSIP.UA
+ * @class CRTC.UA
  * @param {Object} configuration Configuration parameters.
- * @throws {JsSIP.Exceptions.ConfigurationError} If a configuration parameter is invalid.
+ * @throws {CRTC.Exceptions.ConfigurationError} If a configuration parameter is invalid.
  * @throws {TypeError} If no configuration is given.
  */
 
@@ -23917,14 +23911,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(UA, _EventEmitter);
 
   var _super = _createSuper(UA);
-
-  _createClass(UA, null, [{
-    key: "C",
-    // Expose C object.
-    get: function get() {
-      return C;
-    }
-  }]);
 
   function UA(configuration) {
     var _this;
@@ -23975,8 +23961,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }
 
   _createClass(UA, [{
-    key: "start",
-    // =================
+    key: "C",
+    get: function get() {
+      return C;
+    }
+  }, {
+    key: "status",
+    get: function get() {
+      return this._status;
+    }
+  }, {
+    key: "contact",
+    get: function get() {
+      return this._contact;
+    }
+  }, {
+    key: "configuration",
+    get: function get() {
+      return this._configuration;
+    }
+  }, {
+    key: "transport",
+    get: function get() {
+      return this._transport;
+    } // =================
     //  High Level API
     // =================
 
@@ -23984,6 +23992,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * Connect to the server if status = STATUS_INIT.
      * Resume UA after being closed.
      */
+
+  }, {
+    key: "start",
     value: function start() {
       logger.debug('start()');
 
@@ -24192,7 +24203,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     /**
      * Normalice a string into a valid SIP request URI
      * -param {String} target
-     * -returns {JsSIP.URI|undefined}
+     * -returns {CRTC.URI|undefined}
      */
 
   }, {
@@ -24414,7 +24425,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (request.ruri.user !== this._configuration.uri.user && request.ruri.user !== this._contact.uri.user) {
         logger.debug('Request-URI does not point to us');
 
-        if (request.method !== JsSIP_C.ACK) {
+        if (request.method !== CRTC_C.ACK) {
           request.reply_sl(404);
         }
 
@@ -24422,7 +24433,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } // Check request URI scheme.
 
 
-      if (request.ruri.scheme === JsSIP_C.SIPS) {
+      if (request.ruri.scheme === CRTC_C.SIPS) {
         request.reply_sl(416);
         return;
       } // Check transaction.
@@ -24433,11 +24444,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } // Create the server transaction.
 
 
-      if (method === JsSIP_C.INVITE) {
+      if (method === CRTC_C.INVITE) {
         /* eslint-disable no-new */
         new Transactions.InviteServerTransaction(this, this._transport, request);
         /* eslint-enable no-new */
-      } else if (method !== JsSIP_C.ACK && method !== JsSIP_C.CANCEL) {
+      } else if (method !== CRTC_C.ACK && method !== CRTC_C.CANCEL) {
         /* eslint-disable no-new */
         new Transactions.NonInviteServerTransaction(this, this._transport, request);
         /* eslint-enable no-new */
@@ -24449,7 +24460,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
 
 
-      if (method === JsSIP_C.OPTIONS) {
+      if (method === CRTC_C.OPTIONS) {
         if (this.listeners('newOptions').length === 0) {
           request.reply(200);
           return;
@@ -24457,7 +24468,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         var message = new Options(this);
         message.init_incoming(request);
-      } else if (method === JsSIP_C.MESSAGE) {
+      } else if (method === CRTC_C.MESSAGE) {
         if (this.listeners('newMessage').length === 0) {
           request.reply(405);
           return;
@@ -24466,7 +24477,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var _message = new Message(this);
 
         _message.init_incoming(request);
-      } else if (method === JsSIP_C.INVITE) {
+      } else if (method === CRTC_C.INVITE) {
         // Initial INVITE.
         if (!request.to_tag && this.listeners('newRTCSession').length === 0) {
           request.reply(405);
@@ -24479,7 +24490,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (!request.to_tag) {
         switch (method) {
-          case JsSIP_C.INVITE:
+          case CRTC_C.INVITE:
             if (window.RTCPeerConnection) {
               // TODO
               if (request.hasHeader('replaces')) {
@@ -24508,12 +24519,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.BYE:
+          case CRTC_C.BYE:
             // Out of dialog BYE received.
             request.reply(481);
             break;
 
-          case JsSIP_C.CANCEL:
+          case CRTC_C.CANCEL:
             session = this._findSession(request);
 
             if (session) {
@@ -24524,14 +24535,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             break;
 
-          case JsSIP_C.ACK:
+          case CRTC_C.ACK:
             /* Absorb it.
              * ACK request without a corresponding Invite Transaction
              * and without To tag.
              */
             break;
 
-          case JsSIP_C.NOTIFY:
+          case CRTC_C.NOTIFY:
             // Receive new sip event.
             this.emit('sipEvent', {
               event: request.event,
@@ -24546,29 +24557,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       } // In-dialog request.
       else {
-          dialog = this._findDialog(request.call_id, request.from_tag, request.to_tag);
+        dialog = this._findDialog(request.call_id, request.from_tag, request.to_tag);
 
-          if (dialog) {
-            dialog.receiveRequest(request);
-          } else if (method === JsSIP_C.NOTIFY) {
-            session = this._findSession(request);
+        if (dialog) {
+          dialog.receiveRequest(request);
+        } else if (method === CRTC_C.NOTIFY) {
+          session = this._findSession(request);
 
-            if (session) {
-              session.receiveRequest(request);
-            } else {
-              logger.debug('received NOTIFY request for a non existent subscription');
-              request.reply(481, 'Subscription does not exist');
-            }
+          if (session) {
+            session.receiveRequest(request);
+          } else {
+            logger.debug('received NOTIFY request for a non existent subscription');
+            request.reply(481, 'Subscription does not exist');
           }
-          /* RFC3261 12.2.2
-           * Request with to tag, but no matching dialog found.
-           * Exception: ACK for an Invite request for which a dialog has not
-           * been created.
-           */
-          else if (method !== JsSIP_C.ACK) {
-              request.reply(481);
-            }
         }
+        /* RFC3261 12.2.2
+         * Request with to tag, but no matching dialog found.
+         * Exception: ACK for an Invite request for which a dialog has not
+         * been created.
+         */
+        else if (method !== CRTC_C.ACK) {
+          request.reply(481);
+        }
+      }
     } // =================
     // Utils.
     // =================
@@ -24638,10 +24649,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (!this._configuration.instance_id) {
         this._configuration.instance_id = Utils.newUUID();
-      } // Jssip_id instance parameter. Static random tag of length 5.
+      } // Crtc_id instance parameter. Static random tag of length 5.
 
 
-      this._configuration.jssip_id = Utils.createRandomToken(5); // String containing this._configuration.uri without scheme and user.
+      this._configuration.crtc_id = Utils.createRandomToken(5); // String containing this._configuration.uri without scheme and user.
 
       var hostport_params = this._configuration.uri.clone();
 
@@ -24690,10 +24701,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._configuration.via_host = this._configuration.contact_uri.host;
       } // Contact URI.
       else {
-          this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
-            transport: 'ws'
-          });
-        }
+        this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
+          transport: 'ws'
+        });
+      }
 
       this._contact = {
         pub_gruu: null,
@@ -24763,30 +24774,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       return;
     }
-  }, {
+  }], [{
     key: "C",
-    get: function get() {
+    get: // Expose C object.
+    function get() {
       return C;
-    }
-  }, {
-    key: "status",
-    get: function get() {
-      return this._status;
-    }
-  }, {
-    key: "contact",
-    get: function get() {
-      return this._contact;
-    }
-  }, {
-    key: "configuration",
-    get: function get() {
-      return this._configuration;
-    }
-  }, {
-    key: "transport",
-    get: function get() {
-      return this._transport;
     }
   }]);
 
@@ -24872,7 +24864,7 @@ function onTransportData(data) {
     var transaction;
 
     switch (message.method) {
-      case JsSIP_C.INVITE:
+      case CRTC_C.INVITE:
         transaction = this._transactions.ict[message.via_branch];
 
         if (transaction) {
@@ -24881,7 +24873,7 @@ function onTransportData(data) {
 
         break;
 
-      case JsSIP_C.ACK:
+      case CRTC_C.ACK:
         // Just in case ;-).
         break;
 
@@ -24899,7 +24891,7 @@ function onTransportData(data) {
 },{"./Config":1,"./Constants":2,"./Exceptions":6,"./Logger":9,"./Message":10,"./Options":12,"./Parser":13,"./RTCSession":14,"./Registrator":19,"./SIPMessage":21,"./Transactions":24,"./Transport":25,"./URI":27,"./Utils":28,"./sanityCheck":30,"events":31}],27:[function(require,module,exports){
 "use strict";
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -24909,9 +24901,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var Utils = require('./Utils');
 
@@ -24928,24 +24920,6 @@ var Grammar = require('./Grammar');
 
 
 module.exports = /*#__PURE__*/function () {
-  _createClass(URI, null, [{
-    key: "parse",
-
-    /**
-      * Parse the given string and returns a JsSIP.URI instance or undefined if
-      * it is an invalid URI.
-      */
-    value: function parse(uri) {
-      uri = Grammar.parse(uri, 'SIP_URI');
-
-      if (uri !== -1) {
-        return uri;
-      } else {
-        return undefined;
-      }
-    }
-  }]);
-
   function URI(scheme, user, host, port) {
     var parameters = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var headers = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
@@ -24960,7 +24934,7 @@ module.exports = /*#__PURE__*/function () {
 
     this._parameters = {};
     this._headers = {};
-    this._scheme = scheme || JsSIP_C.SIP;
+    this._scheme = scheme || CRTC_C.SIP;
     this._user = user;
     this._host = host;
     this._port = port;
@@ -24979,6 +24953,38 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(URI, [{
+    key: "scheme",
+    get: function get() {
+      return this._scheme;
+    },
+    set: function set(value) {
+      this._scheme = value.toLowerCase();
+    }
+  }, {
+    key: "user",
+    get: function get() {
+      return this._user;
+    },
+    set: function set(value) {
+      this._user = value;
+    }
+  }, {
+    key: "host",
+    get: function get() {
+      return this._host;
+    },
+    set: function set(value) {
+      this._host = value.toLowerCase();
+    }
+  }, {
+    key: "port",
+    get: function get() {
+      return this._port;
+    },
+    set: function set(value) {
+      this._port = value === 0 ? value : parseInt(value, 10) || null;
+    }
+  }, {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
@@ -25122,37 +25128,21 @@ module.exports = /*#__PURE__*/function () {
 
       return aor;
     }
-  }, {
-    key: "scheme",
-    get: function get() {
-      return this._scheme;
-    },
-    set: function set(value) {
-      this._scheme = value.toLowerCase();
-    }
-  }, {
-    key: "user",
-    get: function get() {
-      return this._user;
-    },
-    set: function set(value) {
-      this._user = value;
-    }
-  }, {
-    key: "host",
-    get: function get() {
-      return this._host;
-    },
-    set: function set(value) {
-      this._host = value.toLowerCase();
-    }
-  }, {
-    key: "port",
-    get: function get() {
-      return this._port;
-    },
-    set: function set(value) {
-      this._port = value === 0 ? value : parseInt(value, 10) || null;
+  }], [{
+    key: "parse",
+    value:
+    /**
+      * Parse the given string and returns a CRTC.URI instance or undefined if
+      * it is an invalid URI.
+      */
+    function parse(uri) {
+      uri = Grammar.parse(uri, 'SIP_URI');
+
+      if (uri !== -1) {
+        return uri;
+      } else {
+        return undefined;
+      }
     }
   }]);
 
@@ -25161,15 +25151,15 @@ module.exports = /*#__PURE__*/function () {
 },{"./Constants":2,"./Grammar":7,"./Utils":28}],28:[function(require,module,exports){
 "use strict";
 
-function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var URI = require('./URI');
 
@@ -25321,7 +25311,7 @@ exports.normalizeTarget = function (target, domain) {
     } // Build the complete SIP URI.
 
 
-    target = "".concat(JsSIP_C.SIP, ":").concat(escapeUser(target_user), "@").concat(target_domain); // Finally parse the resulting URI.
+    target = "".concat(CRTC_C.SIP, ":").concat(escapeUser(target_user), "@").concat(target_domain); // Finally parse the resulting URI.
 
     var uri;
 
@@ -25362,13 +25352,13 @@ exports.headerize = function (string) {
 };
 
 exports.sipErrorCause = function (status_code) {
-  for (var cause in JsSIP_C.SIP_ERROR_CAUSES) {
-    if (JsSIP_C.SIP_ERROR_CAUSES[cause].indexOf(status_code) !== -1) {
-      return JsSIP_C.causes[cause];
+  for (var cause in CRTC_C.SIP_ERROR_CAUSES) {
+    if (CRTC_C.SIP_ERROR_CAUSES[cause].indexOf(status_code) !== -1) {
+      return CRTC_C.causes[cause];
     }
   }
 
-  return JsSIP_C.causes.SIP_FAILURE_CODE;
+  return CRTC_C.causes.SIP_FAILURE_CODE;
 };
 /**
 * Generate a random Test-Net IP (https://tools.ietf.org/html/rfc5735)
@@ -25698,7 +25688,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 var Logger = require('./Logger');
 
@@ -25730,6 +25720,24 @@ module.exports = /*#__PURE__*/function () {
   }
 
   _createClass(WebSocketInterface, [{
+    key: "via_transport",
+    get: function get() {
+      return this._via_transport;
+    },
+    set: function set(value) {
+      this._via_transport = value.toUpperCase();
+    }
+  }, {
+    key: "sip_uri",
+    get: function get() {
+      return this._sip_uri;
+    }
+  }, {
+    key: "url",
+    get: function get() {
+      return this._url;
+    }
+  }, {
     key: "connect",
     value: function connect() {
       logger.debug('connect()');
@@ -25839,24 +25847,6 @@ module.exports = /*#__PURE__*/function () {
     value: function _onError(e) {
       logger.warn("WebSocket ".concat(this._url, " error: "), e);
     }
-  }, {
-    key: "via_transport",
-    get: function get() {
-      return this._via_transport;
-    },
-    set: function set(value) {
-      this._via_transport = value.toUpperCase();
-    }
-  }, {
-    key: "sip_uri",
-    get: function get() {
-      return this._sip_uri;
-    }
-  }, {
-    key: "url",
-    get: function get() {
-      return this._url;
-    }
   }]);
 
   return WebSocketInterface;
@@ -25864,7 +25854,7 @@ module.exports = /*#__PURE__*/function () {
 },{"./Grammar":7,"./Logger":9}],30:[function(require,module,exports){
 "use strict";
 
-function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
@@ -25872,7 +25862,7 @@ function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len 
 
 var Logger = require('./Logger');
 
-var JsSIP_C = require('./Constants');
+var CRTC_C = require('./Constants');
 
 var SIPMessage = require('./SIPMessage');
 
@@ -25957,7 +25947,7 @@ module.exports = function (m, u, t) {
  * Requests:
  *  - _rfc3261_8_2_2_1_ Receive a Request with a non supported URI scheme
  *  - _rfc3261_16_3_4_ Receive a Request already sent by us
- *   Does not look at via sent-by but at jssip_id, which is inserted as
+ *   Does not look at via sent-by but at crtc_id, which is inserted as
  *   a prefix in all initial requests generated by the ua
  *  - _rfc3261_18_3_request_ Body Content-Length
  *  - _rfc3261_8_2_2_2_ Merged Requests
@@ -25981,7 +25971,7 @@ function rfc3261_8_2_2_1() {
 
 function rfc3261_16_3_4() {
   if (!message.to_tag) {
-    if (message.call_id.substr(0, 5) === ua.configuration.jssip_id) {
+    if (message.call_id.substr(0, 5) === ua.configuration.crtc_id) {
       reply(482);
       return false;
     }
@@ -26009,7 +25999,7 @@ function rfc3261_8_2_2_2() {
   } // INVITE request.
 
 
-  if (message.method === JsSIP_C.INVITE) {
+  if (message.method === CRTC_C.INVITE) {
     // If the branch matches the key of any IST then assume it is a retransmission
     // and ignore the INVITE.
     // TODO: we should reply the last response.
@@ -26017,36 +26007,36 @@ function rfc3261_8_2_2_2() {
       return false;
     } // Otherwise check whether it is a merged request.
     else {
-        for (var transaction in ua._transactions.ist) {
-          if (Object.prototype.hasOwnProperty.call(ua._transactions.ist, transaction)) {
-            tr = ua._transactions.ist[transaction];
+      for (var transaction in ua._transactions.ist) {
+        if (Object.prototype.hasOwnProperty.call(ua._transactions.ist, transaction)) {
+          tr = ua._transactions.ist[transaction];
 
-            if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
-              reply(482);
-              return false;
-            }
+          if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
+            reply(482);
+            return false;
           }
         }
       }
+    }
   } // Non INVITE request.
   // If the branch matches the key of any NIST then assume it is a retransmission
   // and ignore the request.
   // TODO: we should reply the last response.
   else if (ua._transactions.nist[message.via_branch]) {
-      return false;
-    } // Otherwise check whether it is a merged request.
-    else {
-        for (var _transaction in ua._transactions.nist) {
-          if (Object.prototype.hasOwnProperty.call(ua._transactions.nist, _transaction)) {
-            tr = ua._transactions.nist[_transaction];
+    return false;
+  } // Otherwise check whether it is a merged request.
+  else {
+    for (var _transaction in ua._transactions.nist) {
+      if (Object.prototype.hasOwnProperty.call(ua._transactions.nist, _transaction)) {
+        tr = ua._transactions.nist[_transaction];
 
-            if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
-              reply(482);
-              return false;
-            }
-          }
+        if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
+          reply(482);
+          return false;
         }
       }
+    }
+  }
 } // Sanity Check functions for responses.
 
 
@@ -26085,7 +26075,7 @@ function minimumHeaders() {
 function reply(status_code) {
   var vias = message.getHeaders('via');
   var to;
-  var response = "SIP/2.0 ".concat(status_code, " ").concat(JsSIP_C.REASON_PHRASE[status_code], "\r\n");
+  var response = "SIP/2.0 ".concat(status_code, " ").concat(CRTC_C.REASON_PHRASE[status_code], "\r\n");
 
   var _iterator4 = _createForOfIteratorHelper(vias),
       _step4;
@@ -26640,19 +26630,28 @@ function functionBindPolyfill(context) {
 }
 
 },{}],32:[function(require,module,exports){
-(function (process){
+(function (process){(function (){
 /* eslint-env browser */
 
 /**
  * This is the web browser implementation of `debug()`.
  */
 
-exports.log = log;
 exports.formatArgs = formatArgs;
 exports.save = save;
 exports.load = load;
 exports.useColors = useColors;
 exports.storage = localstorage();
+exports.destroy = (() => {
+	let warned = false;
+
+	return () => {
+		if (!warned) {
+			warned = true;
+			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+		}
+	};
+})();
 
 /**
  * Colors.
@@ -26813,18 +26812,14 @@ function formatArgs(args) {
 }
 
 /**
- * Invokes `console.log()` when available.
- * No-op when `console.log` is not a "function".
+ * Invokes `console.debug()` when available.
+ * No-op when `console.debug` is not a "function".
+ * If `console.debug` is not available, falls back
+ * to `console.log`.
  *
  * @api public
  */
-function log(...args) {
-	// This hackery is required for IE8/9, where
-	// the `console.log` function doesn't have 'apply'
-	return typeof console === 'object' &&
-		console.log &&
-		console.log(...args);
-}
+exports.log = console.debug || console.log || (() => {});
 
 /**
  * Save `namespaces`.
@@ -26906,7 +26901,7 @@ formatters.j = function (v) {
 	}
 };
 
-}).call(this,require('_process'))
+}).call(this)}).call(this,require('_process'))
 },{"./common":33,"_process":35}],33:[function(require,module,exports){
 
 /**
@@ -26922,15 +26917,11 @@ function setup(env) {
 	createDebug.enable = enable;
 	createDebug.enabled = enabled;
 	createDebug.humanize = require('ms');
+	createDebug.destroy = destroy;
 
 	Object.keys(env).forEach(key => {
 		createDebug[key] = env[key];
 	});
-
-	/**
-	* Active `debug` instances.
-	*/
-	createDebug.instances = [];
 
 	/**
 	* The currently active debug mode names, and names to skip.
@@ -26948,7 +26939,7 @@ function setup(env) {
 
 	/**
 	* Selects a color for a debug namespace
-	* @param {String} namespace The namespace string for the for the debug instance to be colored
+	* @param {String} namespace The namespace string for the debug instance to be colored
 	* @return {Number|String} An ANSI color code for the given namespace
 	* @api private
 	*/
@@ -26973,6 +26964,9 @@ function setup(env) {
 	*/
 	function createDebug(namespace) {
 		let prevTime;
+		let enableOverride = null;
+		let namespacesCache;
+		let enabledCache;
 
 		function debug(...args) {
 			// Disabled?
@@ -27002,7 +26996,7 @@ function setup(env) {
 			args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
 				// If we encounter an escaped % then don't increase the array index
 				if (match === '%%') {
-					return match;
+					return '%';
 				}
 				index++;
 				const formatter = createDebug.formatters[format];
@@ -27025,31 +27019,36 @@ function setup(env) {
 		}
 
 		debug.namespace = namespace;
-		debug.enabled = createDebug.enabled(namespace);
 		debug.useColors = createDebug.useColors();
-		debug.color = selectColor(namespace);
-		debug.destroy = destroy;
+		debug.color = createDebug.selectColor(namespace);
 		debug.extend = extend;
-		// Debug.formatArgs = formatArgs;
-		// debug.rawLog = rawLog;
+		debug.destroy = createDebug.destroy; // XXX Temporary. Will be removed in the next major release.
 
-		// env-specific initialization logic for debug instances
+		Object.defineProperty(debug, 'enabled', {
+			enumerable: true,
+			configurable: false,
+			get: () => {
+				if (enableOverride !== null) {
+					return enableOverride;
+				}
+				if (namespacesCache !== createDebug.namespaces) {
+					namespacesCache = createDebug.namespaces;
+					enabledCache = createDebug.enabled(namespace);
+				}
+
+				return enabledCache;
+			},
+			set: v => {
+				enableOverride = v;
+			}
+		});
+
+		// Env-specific initialization logic for debug instances
 		if (typeof createDebug.init === 'function') {
 			createDebug.init(debug);
 		}
 
-		createDebug.instances.push(debug);
-
 		return debug;
-	}
-
-	function destroy() {
-		const index = createDebug.instances.indexOf(this);
-		if (index !== -1) {
-			createDebug.instances.splice(index, 1);
-			return true;
-		}
-		return false;
 	}
 
 	function extend(namespace, delimiter) {
@@ -27067,6 +27066,7 @@ function setup(env) {
 	*/
 	function enable(namespaces) {
 		createDebug.save(namespaces);
+		createDebug.namespaces = namespaces;
 
 		createDebug.names = [];
 		createDebug.skips = [];
@@ -27084,15 +27084,10 @@ function setup(env) {
 			namespaces = split[i].replace(/\*/g, '.*?');
 
 			if (namespaces[0] === '-') {
-				createDebug.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
+				createDebug.skips.push(new RegExp('^' + namespaces.slice(1) + '$'));
 			} else {
 				createDebug.names.push(new RegExp('^' + namespaces + '$'));
 			}
-		}
-
-		for (i = 0; i < createDebug.instances.length; i++) {
-			const instance = createDebug.instances[i];
-			instance.enabled = createDebug.enabled(instance.namespace);
 		}
 	}
 
@@ -27166,6 +27161,14 @@ function setup(env) {
 			return val.stack || val.message;
 		}
 		return val;
+	}
+
+	/**
+	* XXX DO NOT USE. This is a temporary stub function.
+	* XXX It WILL be removed in the next major release.
+	*/
+	function destroy() {
+		console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
 	}
 
 	createDebug.enable(createDebug.load());
@@ -27621,7 +27624,7 @@ var grammar = module.exports = {
       push: 'rtcpFbTrrInt',
       reg: /^rtcp-fb:(\*|\d*) trr-int (\d*)/,
       names: ['payload', 'value'],
-      format: 'rtcp-fb:%d trr-int %d'
+      format: 'rtcp-fb:%s trr-int %d'
     },
     {
       // a=rtcp-fb:98 nack rpsi
@@ -28278,17 +28281,13 @@ module.exports = function (session, opts) {
 
 },{"./grammar":36}],40:[function(require,module,exports){
 module.exports={
-  "name": "jssip",
-  "title": "JsSIP",
-  "description": "the Javascript SIP library",
-  "version": "3.9.0",
-  "homepage": "https://jssip.net",
-  "contributors": [
-    "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
-    "Iñaki Baz Castillo <ibc@aliax.net> (https://inakibaz.me)"
-  ],
-  "types": "lib/JsSIP.d.ts",
-  "main": "lib-es5/JsSIP.js",
+  "name": "crtc",
+  "title": "CRTC",
+  "description": "the Javascript WebRTC and SIP library",
+  "version": "1.0.0",
+  "SIP_version": "3.9.0",
+  "homepage": "",
+  "contributors": [],
   "keywords": [
     "sip",
     "websocket",
@@ -28298,13 +28297,6 @@ module.exports={
     "library"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/versatica/JsSIP.git"
-  },
-  "bugs": {
-    "url": "https://github.com/versatica/JsSIP/issues"
-  },
   "dependencies": {
     "@types/debug": "^4.1.5",
     "@types/node": "^14.14.34",
@@ -28324,6 +28316,7 @@ module.exports={
     "gulp-eslint": "^5.0.0",
     "gulp-expect-file": "^1.0.2",
     "gulp-header": "^2.0.9",
+    "gulp-javascript-obfuscator": "^1.1.6",
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
@@ -28338,6 +28331,5 @@ module.exports={
     "prepublishOnly": "gulp babel"
   }
 }
-
 },{}]},{},[8])(8)
 });

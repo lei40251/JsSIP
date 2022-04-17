@@ -1,15 +1,11 @@
 {
-  "name": "jssip",
-  "title": "JsSIP",
-  "description": "the Javascript SIP library",
-  "version": "3.9.0",
-  "homepage": "https://jssip.net",
-  "contributors": [
-    "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
-    "Iñaki Baz Castillo <ibc@aliax.net> (https://inakibaz.me)"
-  ],
-  "types": "lib/JsSIP.d.ts",
-  "main": "lib-es5/JsSIP.js",
+  "name": "crtc",
+  "title": "CRTC",
+  "description": "the Javascript WebRTC and SIP library",
+  "version": "1.0.0",
+  "SIP_version": "3.9.0",
+  "homepage": "",
+  "contributors": [],
   "keywords": [
     "sip",
     "websocket",
@@ -19,13 +15,6 @@
     "library"
   ],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/versatica/JsSIP.git"
-  },
-  "bugs": {
-    "url": "https://github.com/versatica/JsSIP/issues"
-  },
   "dependencies": {
     "@types/debug": "^4.1.5",
     "@types/node": "^14.14.34",
@@ -45,6 +34,7 @@
     "gulp-eslint": "^5.0.0",
     "gulp-expect-file": "^1.0.2",
     "gulp-header": "^2.0.9",
+    "gulp-javascript-obfuscator": "^1.1.6",
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",

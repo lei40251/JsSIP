@@ -2,7 +2,7 @@
 
 require('./include/common');
 const testUA = require('./include/testUA');
-const JsSIP = require('../');
+const CRTC = require('../lib-es5/JsSIP.js');
 
 
 module.exports = {
@@ -13,10 +13,10 @@ module.exports = {
       function()
       {
         /* eslint no-unused-vars: 0*/
-        const ua = new JsSIP.UA({ 'lalala': 'lololo' });
+        const ua = new CRTC.UA({ 'lalala': 'lololo' });
       },
       // Error validation.
-      // NOTE: We should use JsSIP.Exceptions.ConfigurationError, but
+      // NOTE: We should use CRTC.Exceptions.ConfigurationError, but
       // babel does not properly create Error subclasses.
       function(error)
       {
@@ -30,13 +30,13 @@ module.exports = {
   'UA no WS connection' : function(test)
   {
     const config = testUA.UA_CONFIGURATION;
-    const wsSocket = new JsSIP.WebSocketInterface(testUA.SOCKET_DESCRIPTION.url);
+    const wsSocket = new CRTC.WebSocketInterface(testUA.SOCKET_DESCRIPTION.url);
 
     config.sockets = wsSocket;
 
-    const ua = new JsSIP.UA(config);
+    const ua = new CRTC.UA(config);
 
-    test.ok(ua instanceof(JsSIP.UA));
+    test.ok(ua instanceof(CRTC.UA));
 
     ua.start();
 
@@ -82,7 +82,7 @@ module.exports = {
       eventHandlers : {
         failed : function(e)
         {
-          test.strictEqual(e.cause, JsSIP.C.causes.CONNECTION_ERROR);
+          test.strictEqual(e.cause, CRTC.C.causes.CONNECTION_ERROR);
         }
       }
     });
