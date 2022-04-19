@@ -14,7 +14,7 @@ const uglify = require('gulp-uglify-es').default;
 const rename = require('gulp-rename');
 const header = require('gulp-header');
 const expect = require('gulp-expect-file');
-const nodeunit = require('gulp-nodeunit-runner');
+// const nodeunit = require('gulp-nodeunit-runner');
 const eslint = require('gulp-eslint');
 const plumber = require('gulp-plumber');
 const log = require('fancy-log');
@@ -111,8 +111,8 @@ gulp.task('test', function()
   ];
 
   return gulp.src(src)
-    .pipe(expect(EXPECT_OPTIONS, src))
-    .pipe(nodeunit({ reporter: 'default' }));
+    .pipe(expect(EXPECT_OPTIONS, src));
+  // .pipe(nodeunit({ reporter: 'default' }));
 });
 
 gulp.task('grammar', function(cb)

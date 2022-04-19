@@ -60,11 +60,12 @@ const socket = new FlyInn.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
-  sockets  : socket,
+  sockets    : socket,
   // 与 UA 关联的 SIP URI
-  uri      : `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri        : `sip:${account}@lccsp.zgpajf.com.cn`,
   // SIP身份验证密码
-  password : `yl_19${account}`
+  password   : `yl_19${account}`,
+  secret_key : 'M6lk5Aqykl2nh3aeEjcGgd8GGCLtw4IrjXNos2Na4/V4qG59UVmx3szld6YSxTUDXK7+nakD97DBPdExHKsUzseevqlHYq4Khij9eetK0vU0yHCbuiB0P/9IdTN7MA8EMa3THbK53Gl6i4UB9j4cde1g3MOfu7qOsRwlRDpohHACh8IyJhWFqx3LitQoy1QXOF1uJAkrBGg/G+cr0Eo3vAExzLGvjceqfIzQSLyJibDsXrYgtesiUQWt5uD4fFD0oxzixM1n5HYmaLOB7qdXK+9Nd0xzvlUhi2jbj42DtJz1WbcVefsjqI+dqoINpBJLGcGG+Sv6NEc8e3TYl+4Yag=='
 };
 
 // Flyinn 实例

@@ -1,9 +1,6 @@
 {
+  "liveServer.settings.port": 5501,
   "cSpell.words": [
-    "Aurn",
-    "createtelocaldescriptionfailed",
-    "icsi",
-    "mmtel"
-  ],
-  "liveServer.settings.port": 5502
+    "jsencrypt"
+  ]
 }
