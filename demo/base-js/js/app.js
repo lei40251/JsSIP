@@ -6,16 +6,15 @@ FlyInn.debug.enable('FlyInn:*');
 // FlyInn.debug.disable('FlyInn:*');
 
 let deg=0;
-let RTCRecord = false;
 let inCallSession = null;
-const recordRTC = [];
 
+// 旋转视频
 function rotaVideo()
 {
   deg+=1;
   $('#remoteVideo').css({ 'transform': `rotate(${90*deg}deg)` });
 }
-
+// 重置视频旋转
 function resetVideo()
 {
   $('#remoteVideo').css({ 'transform': 'rotate(0deg)' });
@@ -65,15 +64,16 @@ const configuration = {
   uri        : `sip:${account}@lccsp.zgpajf.com.cn`,
   // SIP身份验证密码
   password   : `yl_19${account}`,
+  // 授权码，请联系商务负责人获取
   secret_key : 'M6lk5Aqykl2nh3aeEjcGgd8GGCLtw4IrjXNos2Na4/V4qG59UVmx3szld6YSxTUDXK7+nakD97DBPdExHKsUzseevqlHYq4Khij9eetK0vU0yHCbuiB0P/9IdTN7MA8EMa3THbK53Gl6i4UB9j4cde1g3MOfu7qOsRwlRDpohHACh8IyJhWFqx3LitQoy1QXOF1uJAkrBGg/G+cr0Eo3vAExzLGvjceqfIzQSLyJibDsXrYgtesiUQWt5uD4fFD0oxzixM1n5HYmaLOB7qdXK+9Nd0xzvlUhi2jbj42DtJz1WbcVefsjqI+dqoINpBJLGcGG+Sv6NEc8e3TYl+4Yag=='
 };
 
-// Flyinn 实例
+// UA 实例
 // eslint-disable-next-line no-undef
-const flyinnUA = new FlyInn.UA(configuration);
+const UA = new FlyInn.UA(configuration);
 
 // 新通话
-flyinnUA.on('newRTCSession', function(e)
+UA.on('newRTCSession', function(e)
 {
   let curMuted = null;
 
@@ -137,18 +137,6 @@ flyinnUA.on('newRTCSession', function(e)
       e.session.mute({ video: true });
     }
   };
-
-  // document.querySelector('#switchCam').onclick = function()
-  // {
-  //   // 切换摄像头
-  //   const stream = e.session.switchCam({ frameRate: 15 });
-
-  //   stream &&
-  //     stream.then((s) =>
-  //     {
-  //       document.querySelector('#localVideo').srcObject = s;
-  //     });
-  // };
 
   document.querySelector('#screenShare').onclick = function()
   {
@@ -234,25 +222,6 @@ flyinnUA.on('newRTCSession', function(e)
     document.querySelector('#video_area').classList = 'hide';
     setStatus(`呼叫失败: ${d.cause}`);
     // location.reload();
-
-    // 呼叫失败上传录像文件
-    if (RTCRecord)
-    {
-      recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
-      {
-        getSeekableBlob(
-          recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
-          function(seekableBlob)
-          {
-            // uploadVideoHandler(seekableBlob);
-            console.log('seek: ', seekableBlob);
-            document.querySelector('#record').src = URL.createObjectURL(seekableBlob);
-          }
-        );
-      });
-
-      RTCRecord = false;
-    }
   });
 
   // 呼叫结束
@@ -262,24 +231,6 @@ flyinnUA.on('newRTCSession', function(e)
     setStatus('呼叫结束');
     resetVideo();
     // location.reload();
-
-    // 通话结束先上传录像文件
-    if (RTCRecord)
-    {
-      recordRTC[sessionStorage.getItem('sessionId')].stopRecording(function()
-      {
-        getSeekableBlob(
-          recordRTC[sessionStorage.getItem('sessionId')].getBlob(),
-          function(seekableBlob)
-          {
-            console.log('seekss: ', seekableBlob);
-            // uploadVideoHandler(seekableBlob);
-            document.querySelector('#record').src = URL.createObjectURL(seekableBlob);
-          }
-        );
-      });
-      RTCRecord = false;
-    }
   });
 
   // 呼叫已确认
@@ -287,53 +238,23 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = '';
 
-    // if (inCallSession)
-    // {
-    //   const localStream = new MediaStream();
-    //   const remoteStream = new MediaStream();
+    if (inCallSession)
+    {
+      const localStream = new MediaStream();
+      const remoteStream = new MediaStream();
 
-    //   inCallSession.connection.getSenders().forEach(function(sender)
-    //   {
-    //     localStream.addTrack(sender.track);
-    //   });
-    //   inCallSession.connection.getReceivers().forEach(function(receiver)
-    //   {
-    //     remoteStream.addTrack(receiver.track);
-    //   });
+      inCallSession.connection.getSenders().forEach(function(sender)
+      {
+        localStream.addTrack(sender.track);
+      });
+      inCallSession.connection.getReceivers().forEach(function(receiver)
+      {
+        remoteStream.addTrack(receiver.track);
+      });
+      document.querySelector('#localVideo').srcObject = localStream;
+      document.querySelector('#remoteVideo').srcObject = remoteStream;
+    }
 
-    //   document.querySelector('#localVideo').srcObject = localStream;
-
-    //   document.querySelector('#remoteVideo').srcObject = remoteStream;
-
-    // }
-
-  });
-
-  // 取消bundle
-  e.session.on('sdp', function(d)
-  {
-    d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    d.sdp = d.sdp.replace(/a=mid:1.*\r\n/g, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
-    d.sdp = d.sdp.replace(/a=extmap:.*\r\n/g, '');
-    d.sdp = d.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n');
-    // d.sdp = d.sdp.replace(/a=extmap:2.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:3.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:4.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:5.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:6.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:7.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:8.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:9.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:10.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:11.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:12.*\r\n/, '');
-    // d.sdp = d.sdp.replace(/a=extmap:14.*\r\n/, '');
-  });
-
-  // callMode
-  e.session.on('callmode', function(d)
-  {
-    console.log('callmode: ', d);
   });
 
   // 摄像头、麦克风已关闭
@@ -364,25 +285,25 @@ flyinnUA.on('newRTCSession', function(e)
 });
 
 // 注册成功
-flyinnUA.on('registered', function()
+UA.on('registered', function()
 {
   setStatus(`注册成功：${account}`);
 });
 
 // 注册成功
-flyinnUA.on('failed', function(d)
+UA.on('failed', function(d)
 {
   console.log(d);
 });
 
 // 启动
-flyinnUA.start();
+UA.start();
 
 // 发起呼叫
 document.querySelector('#call').onclick = function()
 {
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
+  const session = UA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
     mediaConstraints : {
       audio : true,
       video : { width: { ideal: 480 }, height: { ideal: 640 } }
@@ -410,17 +331,6 @@ document.querySelector('#call').onclick = function()
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
     document.querySelector('#remoteVideo').srcObject = event.streams[0];
-
-    // 外呼端视频录制
-    const arrayOfStreams = [ localVideoStream, event.streams[0] ];
-
-    recordRTC[sessionStorage.getItem('sessionId')] = RecordRTC(arrayOfStreams, {
-      type      : 'video',
-      mimeType  : 'video/webm;codecs=vp8',
-      watermark : '北京市, 北京市, 西城区, 前后井胡同, 8号'
-    });
-    recordRTC[sessionStorage.getItem('sessionId')].startRecording();
-    RTCRecord = true;
 
   };
 
@@ -451,5 +361,5 @@ document.querySelector('#capture').onclick = function()
 
 window.onbeforeunload = function()
 {
-  flyinnUA.stop();
+  UA.stop();
 };

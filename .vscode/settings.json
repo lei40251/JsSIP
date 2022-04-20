@@ -1,6 +1,12 @@
 {
   "liveServer.settings.port": 5501,
   "cSpell.words": [
-    "jsencrypt"
+    "ENDTIME",
+    "ENDVERSION",
+    "jsencrypt",
+    "PLATFORMID",
+    "SIPDOMAIN",
+    "SIPPROXY",
+    "STARTTIME"
   ]
 }
