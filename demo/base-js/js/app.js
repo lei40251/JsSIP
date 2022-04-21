@@ -54,18 +54,18 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInn.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const socket = new FlyInn.WebSocketInterface('wss://pro.vsbc.com:60041/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets    : socket,
   // 与 UA 关联的 SIP URI
-  uri        : `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri        : `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
   password   : `yl_19${account}`,
   // 授权码，请联系商务负责人获取
-  secret_key : 'M6lk5Aqykl2nh3aeEjcGgd8GGCLtw4IrjXNos2Na4/V4qG59UVmx3szld6YSxTUDXK7+nakD97DBPdExHKsUzseevqlHYq4Khij9eetK0vU0yHCbuiB0P/9IdTN7MA8EMa3THbK53Gl6i4UB9j4cde1g3MOfu7qOsRwlRDpohHACh8IyJhWFqx3LitQoy1QXOF1uJAkrBGg/G+cr0Eo3vAExzLGvjceqfIzQSLyJibDsXrYgtesiUQWt5uD4fFD0oxzixM1n5HYmaLOB7qdXK+9Nd0xzvlUhi2jbj42DtJz1WbcVefsjqI+dqoINpBJLGcGG+Sv6NEc8e3TYl+4Yag=='
+  secret_key : 'B8tPKerpcLqEMDw8LzeRHVEAsrH7uKmXnZrZgKbrQc6RujF9tKyVKI3h8LWPHeWnyyICE4BiZ2H55DKs8QXP9CkzT5HObFvyTYO8F1MlWLmoOPHHBoLbiPcZjuk9x29Vccka7lWwauFoAFk5kvKJm8Is4SE6r/BM4v2Ekcu8roXK7smhnijNPHAd5J0QR7p0si5G73026y0hpxUNe5flI6umtMSVZM4XuNpnB6YhnnakJTqd0c0KFE5fRPAEqNRWhhrAEeqrNl6BeexdS/cOL45r1oRppXKKCDmYPBW6a9ds2x/Iai+04ldiPlut+Mr2zlt93wjxVEaZ6Zygl9jg+g=='
 };
 
 // UA 实例
@@ -137,6 +137,19 @@ UA.on('newRTCSession', function(e)
       e.session.mute({ video: true });
     }
   };
+
+  document.querySelector('#switchCam').onclick = function()
+  {
+    // 切换摄像头
+    const stream = e.session.switchCam({ frameRate: 15 });
+
+    stream &&
+      stream.then((s) =>
+      {
+        document.querySelector('#localVideo').srcObject = s;
+      });
+  };
+
 
   document.querySelector('#screenShare').onclick = function()
   {
@@ -303,7 +316,7 @@ UA.start();
 document.querySelector('#call').onclick = function()
 {
   const linkman = document.querySelector('#linkman').value;
-  const session = UA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
+  const session = UA.call(`${linkman}@pro.vsbc.com`, {
     mediaConstraints : {
       audio : true,
       video : { width: { ideal: 480 }, height: { ideal: 640 } }
