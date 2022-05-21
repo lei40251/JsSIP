@@ -3,7 +3,7 @@
 FlyInn.debug.enable('FlyInn:*');
 
 // 关闭调试信息输出
-FlyInn.debug.disable('FlyInn:*');
+// FlyInn.debug.disable('FlyInn:*');
 
 let deg=0;
 let inCallSession = null;
@@ -65,8 +65,7 @@ const configuration = {
   // SIP身份验证密码
   password   : `yl_19${account}`,
   // 授权码，请联系商务负责人获取
-  secret_key : 'M6lk5Aqykl2nh3aeEjcGgd8GGCLtw4IrjXNos2Na4/V4qG59UVmx3szld6YSxTUDXK7+nakD97DBPdExHKsUzseevqlHYq4Khij9eetK0vU0yHCbuiB0P/9IdTN7MA8EMa3THbK53Gl6i4UB9j4cde1g3MOfu7qOsRwlRDpohHACh8IyJhWFqx3LitQoy1QXOF1uJAkrBGg/G+cr0Eo3vAExzLGvjceqfIzQSLyJibDsXrYgtesiUQWt5uD4fFD0oxzixM1n5HYmaLOB7qdXK+9Nd0xzvlUhi2jbj42DtJz1WbcVefsjqI+dqoINpBJLGcGG+Sv6NEc8e3TYl+4Yag=='
-  // secret_key : 'B8tPKerpcLqEMDw8LzeRHVEAsrH7uKmXnZrZgKbrQc6RujF9tKyVKI3h8LWPHeWnyyICE4BiZ2H55DKs8QXP9CkzT5HObFvyTYO8F1MlWLmoOPHHBoLbiPcZjuk9x29Vccka7lWwauFoAFk5kvKJm8Is4SE6r/BM4v2Ekcu8roXK7smhnijNPHAd5J0QR7p0si5G73026y0hpxUNe5flI6umtMSVZM4XuNpnB6YhnnakJTqd0c0KFE5fRPAEqNRWhhrAEeqrNl6BeexdS/cOL45r1oRppXKKCDmYPBW6a9ds2x/Iai+04ldiPlut+Mr2zlt93wjxVEaZ6Zygl9jg+g=='
+  secret_key : 'XS46jluzKxpuNONkefBPgxwjtMXJocuVasTYHR0B3ZuQZCgI6PysQ8ZJr8lGitY1v8SZmvDuGR4ju34ZUOh72L6Ow/IularABuiPqo5NUIip3VbEdRp8rWNmD2hxETisqkdbfeRnp0+kvLOCV1tjHPyJgtakvUZnlLsuSQa42P9CstZ7LqWISanz9XnIGYfhCyP5mfpBUER7cdWLn9KtlVimucuUNOnMckX59aTgvUlvKUDvijn96/eeRz/Jei8hKDhoFXaoECfpXGavvL8pLNhW0I4HXBghVw60lYO+7pSSCtz31GeF7iGr6YbjLFzVE4OVki715w38hP3jk9eF9w=='
 };
 
 // UA 实例
