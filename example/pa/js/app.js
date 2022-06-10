@@ -1,9 +1,10 @@
+/* eslint-disable no-undef */
 /* eslint-disable no-console */
 // 调试信息输出
-FlyInn.debug.enable('FlyInn:*');
+CRTC.debug.enable('CRTC:*');
 
 // 关闭调试信息输出
-FlyInn.debug.disable('FlyInn:*');
+// CRTC.debug.disable('CRTC:*');
 
 function handleGetQuery(name)
 {
@@ -16,7 +17,7 @@ function handleGetQuery(name)
   return null;
 }
 
-const uuid = FlyInn.Utils.newUUID();
+const uuid = CRTC.Utils.newUUID();
 
 // 注册UA的用户名
 const account = handleGetQuery('linkman')
@@ -25,7 +26,7 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new FlyInn.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
 
 // UA 配置项
 const configuration = {
@@ -39,7 +40,7 @@ const configuration = {
 
 // Flyinn 实例
 // eslint-disable-next-line no-undef
-const flyinnUA = new FlyInn.UA(configuration);
+const flyinnUA = new CRTC.UA(configuration);
 
 /**
  * 输出显示状态
@@ -123,38 +124,38 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#screenShare').onclick = function()
   {
-    e.session.displayShare('replace');
+    e.session.share('screen');
   };
 
-  const c_f = document.querySelector('#cav_s');
-  // const c_f = document.createElement('canvas');
-  const ctx_f = c_f.getContext('2d');
+  // const c_f = document.querySelector('#cav_s');
+  // // const c_f = document.createElement('canvas');
+  // const ctx_f = c_f.getContext('2d');
 
-  let isRecordingStarted = false;
-  let isStoppedRecording = false;
+  // let isRecordingStarted = false;
+  // let isStoppedRecording = false;
 
-  (function looper()
-  {
-    const r_f = document.querySelector('#form_s');
+  // (function looper()
+  // {
+  //   const r_f = document.querySelector('#form_s');
 
-    c_f.width = r_f.clientWidth;
-    c_f.height = r_f.clientHeight;
+  //   c_f.width = r_f.clientWidth;
+  //   c_f.height = r_f.clientHeight;
 
-    if (!isRecordingStarted)
-    {
-      return setTimeout(looper, 500);
-    }
-    html2canvas(r_f).then(function(canvas)
-    {
-      ctx_f.clearRect(0, 0, c_f.width, c_f.height);
-      ctx_f.drawImage(canvas, 0, 0, c_f.width, c_f.height);
-      if (isStoppedRecording)
-      {
-        return;
-      }
-      requestAnimationFrame(looper);
-    });
-  })();
+  //   if (!isRecordingStarted)
+  //   {
+  //     return setTimeout(looper, 500);
+  //   }
+  //   html2canvas(r_f).then(function(canvas)
+  //   {
+  //     ctx_f.clearRect(0, 0, c_f.width, c_f.height);
+  //     ctx_f.drawImage(canvas, 0, 0, c_f.width, c_f.height);
+  //     if (isStoppedRecording)
+  //     {
+  //       return;
+  //     }
+  //     requestAnimationFrame(looper);
+  //   });
+  // })();
 
   document.querySelector('#formShare').onclick = function()
   {
@@ -162,38 +163,21 @@ flyinnUA.on('newRTCSession', function(e)
     e.session.videoShare(c_f.captureStream(15));
   };
 
-  let timer;
+  // let timer;
 
   document.querySelector('#picShare').onclick = function()
   {
-    if (timer)
-    {
-      clearInterval(timer);
-    }
-    const c = document.createElement('canvas');
-
-    c.width = 320;
-    c.height = 240;
-
-    const ctx = c.getContext('2d');
-    const pic = document.querySelector('#pic_s');
-
-    timer = setInterval(() =>
-    {
-      ctx.drawImage(pic, 0, 0, 320, 240);
-    }, 100);
-
-    e.session.videoShare(c.captureStream());
+    e.session.share('pic', document.querySelector('#pic_s'));
   };
 
   document.querySelector('#videoShare').onclick = function()
   {
-    e.session.videoShare(document.querySelector('#video_s').captureStream());
+    e.session.share('video', document.querySelector('#video_s'));
   };
 
   document.querySelector('#stopShare').onclick = function()
   {
-    e.session.unVideoShare();
+    e.session.unShare();
 
     isStoppedRecording = false;
   };
@@ -411,44 +395,6 @@ window.onbeforeunload = function()
   flyinnUA.stop();
 };
 
-document.querySelector('#outboundCall').onclick = function()
-{
-  const linkman = document.querySelector('#linkman').value;
-
-  const settings = {
-    url     : `https://lccsp.zgpajf.com.cn:8089/cu/outbound?uuid=${uuid}&mobile=${linkman}&extensionNumber=${account}`,
-    method  : 'GET',
-    timeout : 0
-  };
-
-  $.ajax(settings).done(function(response)
-  {
-    setStatus(`预测外呼：${response}`);
-    if (response === 'hangup')
-    {
-      setTimeout(() =>
-      {
-        location.reload();
-      }, 1000);
-    }
-  });
-  setStatus(`正在预测外呼：${linkman}`);
-};
-
-document.querySelector('#cancelOutboundCall').onclick = function()
-{
-  const settings = {
-    url     : `https://lccsp.zgpajf.com.cn:8089/cu/hangupoutbound?uuid=${uuid}`,
-    method  : 'GET',
-    timeout : 0
-  };
-
-  $.ajax(settings).done(function(response)
-  {
-    console.log(response);
-  });
-};
-
 document.querySelector('#capture').onclick = function()
 {
   const canvas = document.getElementById('captureView');
@@ -464,26 +410,4 @@ document.querySelector('#capture').onclick = function()
     $('#remoteVideo')[0].videoWidth,
     $('#remoteVideo')[0].videoHeight
   );
-};
-
-document.querySelector('#uploadVideo').onclick = function()
-{
-  const form = new FormData();
-
-  form.append('file', document.querySelector('#file').files[0]);
-
-  const settings = {
-    url         : 'https://lccsp.zgpajf.com.cn:8089/cu/upload?filename=xcpvideo',
-    method      : 'POST',
-    timeout     : 0,
-    processData : false,
-    mimeType    : 'multipart/form-data',
-    contentType : false,
-    data        : form
-  };
-
-  $.ajax(settings).done(function(response)
-  {
-    console.log(response);
-  });
 };

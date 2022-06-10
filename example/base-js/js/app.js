@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable no-console */
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
@@ -51,21 +52,22 @@ function setStatus(text)
 const account = handleGetQuery('linkman')
   ? handleGetQuery('linkman')
   : parseInt(`90${Math.random() * 100}`);
-
+const domain = 'lccsp.zgpajf.com.cn';
 // websocket 实例
-// eslint-disable-next-line no-undef
 const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const contactURI = new CRTC.URI('sip', account, domain, null, { transport: 'ws' });
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
-  sockets    : socket,
+  sockets     : socket,
   // 与 UA 关联的 SIP URI
-  uri        : `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri         : `sip:${account}@${domain}`,
+  contact_uri : contactURI.toString(),
   // SIP身份验证密码
-  password   : `yl_19${account}`,
+  password    : `yl_19${account}`,
   // 授权码，请联系商务负责人获取
-  secret_key : 'XS46jluzKxpuNONkefBPgxwjtMXJocuVasTYHR0B3ZuQZCgI6PysQ8ZJr8lGitY1v8SZmvDuGR4ju34ZUOh72L6Ow/IularABuiPqo5NUIip3VbEdRp8rWNmD2hxETisqkdbfeRnp0+kvLOCV1tjHPyJgtakvUZnlLsuSQa42P9CstZ7LqWISanz9XnIGYfhCyP5mfpBUER7cdWLn9KtlVimucuUNOnMckX59aTgvUlvKUDvijn96/eeRz/Jei8hKDhoFXaoECfpXGavvL8pLNhW0I4HXBghVw60lYO+7pSSCtz31GeF7iGr6YbjLFzVE4OVki715w38hP3jk9eF9w=='
+  secret_key  : 'XS46jluzKxpuNONkefBPgxwjtMXJocuVasTYHR0B3ZuQZCgI6PysQ8ZJr8lGitY1v8SZmvDuGR4ju34ZUOh72L6Ow/IularABuiPqo5NUIip3VbEdRp8rWNmD2hxETisqkdbfeRnp0+kvLOCV1tjHPyJgtakvUZnlLsuSQa42P9CstZ7LqWISanz9XnIGYfhCyP5mfpBUER7cdWLn9KtlVimucuUNOnMckX59aTgvUlvKUDvijn96/eeRz/Jei8hKDhoFXaoECfpXGavvL8pLNhW0I4HXBghVw60lYO+7pSSCtz31GeF7iGr6YbjLFzVE4OVki715w38hP3jk9eF9w=='
 };
 
 // UA 实例
@@ -136,6 +138,11 @@ UA.on('newRTCSession', function(e)
       // 关闭摄像头
       e.session.mute({ video: true });
     }
+  };
+
+  document.querySelector('#turnToAudio').onclick = function()
+  {
+    e.session.turnToAudio();
   };
 
   document.querySelector('#switchCam').onclick = function()
