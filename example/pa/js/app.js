@@ -53,10 +53,32 @@ function setStatus(text)
   statusDom.innerText = text;
 }
 
+function updateDevices()
+{
+  CRTC.Utils.getCameras()
+    .then((cameras) => 
+    {
+      let option = '<option selected value="">请选择</option>';
+    
+      cameras.forEach((device) =>
+      {
+        option += `<option value="${device.deviceId}">${device.label}</option>`;
+      });
+    
+      document.querySelector('#cameras').innerHTML = option;
+    });
+}
+
 // 新通话
 flyinnUA.on('newRTCSession', function(e)
 {
   let curMuted = null;
+
+  document.querySelector('#cameras').onchange = function()
+  {
+    console.log(this);
+    e.session.switchDevice('camera',this.options[this.selectedIndex].value)
+  }
 
   document.querySelector('#answer').onclick = function()
   {
@@ -204,15 +226,20 @@ flyinnUA.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('VoLTE:toVideo', function()
-  {
-    console.log('切换为视频模式');
-  });
+  // e.session.on('VoLTE:toVideo', function()
+  // {
+  //   console.log('切换为视频模式');
+  // });
 
-  e.session.on('VoLTE:toAudio', function()
+  // e.session.on('VoLTE:toAudio', function()
+  // {
+  //   console.log('切换为音频模式');
+  // });
+
+  e.session.on('cameraChanged', function(d)
   {
-    console.log('切换为音频模式');
-  });
+    document.querySelector('#localVideo').srcObject = d
+  })
 
   // 呼叫失败处理
   e.session.on('failed', function(d)
@@ -235,33 +262,33 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = '';
     // 本地视频
-    // const localVideoStream = new MediaStream();
+    const localVideoStream = new MediaStream();
 
-    // e.session.connection.getSenders().forEach((sender) =>
-    // {
-    //   if (
-    //     sender.track &&
-    //     sender.track.kind === 'video' &&
-    //     sender.track.readyState === 'live'
-    //   )
-    //   {
-    //     localVideoStream.addTrack(sender.track);
-    //   }
-    // });
+    e.session.connection.getSenders().forEach((sender) =>
+    {
+      if (
+        sender.track &&
+        sender.track.kind === 'video' &&
+        sender.track.readyState === 'live'
+      )
+      {
+        localVideoStream.addTrack(sender.track);
+      }
+    });
 
-    // document.querySelector('#localVideo').srcObject = localVideoStream;
+    document.querySelector('#localVideo').srcObject = localVideoStream;
 
     // 远端视频
-    // const remoteVideoStream = new MediaStream();
+    const remoteVideoStream = new MediaStream();
 
-    // e.session.connection.getReceivers().forEach((receiver) =>
-    // {
-    //   if (receiver.track && receiver.track.readyState === 'live')
-    //   {
-    //     remoteVideoStream.addTrack(receiver.track);
-    //   }
-    // });
-    // document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+    e.session.connection.getReceivers().forEach((receiver) =>
+    {
+      if (receiver.track && receiver.track.readyState === 'live')
+      {
+        remoteVideoStream.addTrack(receiver.track);
+      }
+    });
+    document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
   });
 
   // 收到新消息
@@ -344,14 +371,14 @@ document.querySelector('#call').onclick = function()
 
   session.connection.ontrack = function(event)
   {
-    // console.error('track: ', event);
+    console.error('track: ', event);
     // 远端视频
-    // const remoteVideoStream = new MediaStream();
+    const remoteVideoStream = new MediaStream();
 
-    // if (receiver.track && receiver.track.readyState === 'live')
-    // {
-    //   remoteVideoStream.addTrack(receiver.track);
-    // }
+    if (receiver.track && receiver.track.readyState === 'live')
+    {
+      remoteVideoStream.addTrack(receiver.track);
+    }
 
     // 本地视频
     const localVideoStream = new MediaStream();
@@ -411,3 +438,10 @@ document.querySelector('#capture').onclick = function()
     $('#remoteVideo')[0].videoHeight
   );
 };
+
+updateDevices();
+
+navigator.mediaDevices.addEventListener('devicechange', async() =>
+{
+  await updateDevices();
+});
