@@ -4,7 +4,7 @@
 CRTC.debug.enable('CRTC:*');
 
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 function handleGetQuery(name)
 {
@@ -73,6 +73,9 @@ function updateDevices()
 flyinnUA.on('newRTCSession', function(e)
 {
   let curMuted = null;
+  
+  console.warn('mode: ', e.mode);
+  console.log('session: ', e.session)
 
   document.querySelector('#cameras').onchange = function()
   {
@@ -84,8 +87,22 @@ flyinnUA.on('newRTCSession', function(e)
   {
     // 接听
     e.session.answer({
+      mediaConstraints : { audio: true, video: false }
+    });
+  };
+
+  document.querySelector('#answerVideo').onclick = function()
+  {
+    // 接听
+    e.session.answer({
       mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
     });
+  };
+
+  document.querySelector('#toAudio').onclick = function()
+  {
+    // 拒绝/挂机
+    e.session.turnToAudio();
   };
 
   document.querySelector('#cancel').onclick = function()
@@ -204,21 +221,26 @@ flyinnUA.on('newRTCSession', function(e)
     isStoppedRecording = false;
   };
 
+  e.session.on('mode', function(d)
+  {
+    console.log('mode: ', d);
+  })
+
   // 呼入振铃 & 呼出回铃音
   e.session.on('progress', function(d)
   {
     if (d.originator === 'local')
     {
       setStatus('通话中');
-      setTimeout(() =>
-      {
-        e.session.answer({
-          mediaConstraints : {
-            audio : true,
-            video : { width: { ideal: 480 }, height: { ideal: 640 } }
-          }
-        });
-      }, 200);
+      // setTimeout(() =>
+      // {
+      //   e.session.answer({
+      //     mediaConstraints : {
+      //       audio : true,
+      //       video : { width: { ideal: 480 }, height: { ideal: 640 } }
+      //     }
+      //   });
+      // }, 200);
     }
     else
     {
@@ -361,24 +383,45 @@ flyinnUA.start();
 // 发起呼叫
 document.querySelector('#call').onclick = function()
 {
+  call()
+};
+
+// 发起呼叫
+document.querySelector('#callVideo').onclick = function()
+{
+  call('video')
+};
+
+function call(type)
+{  
+  const mediaConstraints = {
+    audio : true,
+  }
+
+  if(type === 'video')
+  {
+    mediaConstraints.video = true;
+  }
   const linkman = document.querySelector('#linkman').value;
   const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
-    mediaConstraints : {
-      audio : true,
-      video : { width: { ideal: 480 }, height: { ideal: 640 } }
-    }
+    mediaConstraints
+    // mediaConstraints : {
+    //   audio : true,
+    //   video : { width: { ideal: 480 }, height: { ideal: 640 } }
+    // }
   });
+  console.log('session: ',session);
 
   session.connection.ontrack = function(event)
   {
     console.error('track: ', event);
     // 远端视频
-    const remoteVideoStream = new MediaStream();
+    // const remoteVideoStream = new MediaStream();
 
-    if (receiver.track && receiver.track.readyState === 'live')
-    {
-      remoteVideoStream.addTrack(receiver.track);
-    }
+    // if (receiver.track && receiver.track.readyState === 'live')
+    // {
+    //   remoteVideoStream.addTrack(receiver.track);
+    // }
 
     // 本地视频
     const localVideoStream = new MediaStream();
@@ -406,7 +449,7 @@ document.querySelector('#call').onclick = function()
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    document.querySelector('#remoteVideo').srcObject = event.streams[0];
+    // document.querySelector('#remoteVideo').srcObject = event.streams[0];
   };
 
   document.querySelector('#cancel').onclick = function()
@@ -415,7 +458,7 @@ document.querySelector('#call').onclick = function()
     session.terminate();
     location.reload();
   };
-};
+}
 
 window.onbeforeunload = function()
 {
