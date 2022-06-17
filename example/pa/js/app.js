@@ -74,7 +74,6 @@ flyinnUA.on('newRTCSession', function(e)
 {
   let curMuted = null;
   
-  console.warn('mode: ', e.mode);
   console.log('session: ', e.session)
 
   document.querySelector('#cameras').onchange = function()
@@ -102,7 +101,13 @@ flyinnUA.on('newRTCSession', function(e)
   document.querySelector('#toAudio').onclick = function()
   {
     // 拒绝/挂机
-    e.session.turnToAudio();
+    e.session.demoteToAudio();
+  };
+
+  document.querySelector('#toVideo').onclick = function()
+  {
+    // 拒绝/挂机
+    e.session.upgradeToVideo();
   };
 
   document.querySelector('#cancel').onclick = function()
@@ -166,35 +171,6 @@ flyinnUA.on('newRTCSession', function(e)
     e.session.share('screen');
   };
 
-  // const c_f = document.querySelector('#cav_s');
-  // // const c_f = document.createElement('canvas');
-  // const ctx_f = c_f.getContext('2d');
-
-  // let isRecordingStarted = false;
-  // let isStoppedRecording = false;
-
-  // (function looper()
-  // {
-  //   const r_f = document.querySelector('#form_s');
-
-  //   c_f.width = r_f.clientWidth;
-  //   c_f.height = r_f.clientHeight;
-
-  //   if (!isRecordingStarted)
-  //   {
-  //     return setTimeout(looper, 500);
-  //   }
-  //   html2canvas(r_f).then(function(canvas)
-  //   {
-  //     ctx_f.clearRect(0, 0, c_f.width, c_f.height);
-  //     ctx_f.drawImage(canvas, 0, 0, c_f.width, c_f.height);
-  //     if (isStoppedRecording)
-  //     {
-  //       return;
-  //     }
-  //     requestAnimationFrame(looper);
-  //   });
-  // })();
 
   document.querySelector('#formShare').onclick = function()
   {
@@ -224,6 +200,36 @@ flyinnUA.on('newRTCSession', function(e)
   e.session.on('mode', function(d)
   {
     console.log('mode: ', d);
+
+    document.querySelector('#video_area').classList = '';
+    // 本地视频
+    const localVideoStream = new MediaStream();
+
+    e.session.connection.getSenders().forEach((sender) =>
+    {
+      if (
+        sender.track &&
+        sender.track.kind === 'video' &&
+        sender.track.readyState === 'live'
+      )
+      {
+        localVideoStream.addTrack(sender.track);
+      }
+    });
+
+    document.querySelector('#localVideo').srcObject = localVideoStream;
+
+    // 远端视频
+    const remoteVideoStream = new MediaStream();
+
+    e.session.connection.getReceivers().forEach((receiver) =>
+    {
+      if (receiver.track && receiver.track.readyState === 'live')
+      {
+        remoteVideoStream.addTrack(receiver.track);
+      }
+    });
+    document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
   })
 
   // 呼入振铃 & 呼出回铃音
@@ -276,8 +282,12 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = 'hide';
     setStatus('呼叫结束');
-    location.reload();
+    // location.reload();
   });
+
+  // e.session.on('upgradeToVideo', function(data){
+  //   console.log('invite to video', data);
+  // })
 
   // 呼叫已确认
   e.session.on('confirmed', function()
@@ -332,11 +342,6 @@ flyinnUA.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
   });
 
-  // callMode
-  e.session.on('callmode', function(d)
-  {
-    console.log('callmode: ', d);
-  });
 
   // 摄像头、麦克风已关闭
   e.session.on('muted', function(d)
@@ -410,11 +415,9 @@ function call(type)
     //   video : { width: { ideal: 480 }, height: { ideal: 640 } }
     // }
   });
-  console.log('session: ',session);
 
   session.connection.ontrack = function(event)
   {
-    console.error('track: ', event);
     // 远端视频
     // const remoteVideoStream = new MediaStream();
 
