@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226171456
+ * CRTC v1.0.0.20226171610
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -17679,7 +17679,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         requestParams.from_display_name = options.fromDisplayName;
       }
 
-      extraHeaders.push("Contact: ".concat(this._contact));
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
+
+      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       extraHeaders.push('Content-Type: application/sdp');
 
       if (this._sessionTimers.enabled) {
@@ -19083,11 +19086,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
 
           case CRTC_C.UPDATE:
-            if (this._status === C.STATUS_CONFIRMED) {
-              this._receiveUpdate(request);
-            } else {
-              request.reply(403, 'Wrong Status');
-            }
+            // 以下修改为兼容 VoLTE 在通话建立前的彩铃及预先申请资源 UPDATE 携带 SDP 的情况
+            // if (this._status === C.STATUS_CONFIRMED)
+            // {
+            this._receiveUpdate(request); // }
+            // else
+            // {
+            //   request.reply(403, 'Wrong Status');
+            // }
+
 
             break;
 
@@ -19367,6 +19374,65 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }) // Set local description.
       .then(function (desc) {
+        // 处理5G外呼sdp过大问题
+        if (type === 'offer') {
+          var sdp = sdp_transform.parse(desc.sdp);
+          sdp.media.forEach(function (media) {
+            if (media.type === 'video') {
+              var maximumMedia = 3;
+              var payloadArr = []; // const videoMedia = sdp.media.filter((media) => media.type === 'video');
+
+              media.rtp.forEach(function (rtp) {
+                if (rtp.codec === 'ulpfec') {
+                  payloadArr.push(rtp.payload);
+                }
+
+                if (rtp.codec === 'red') {
+                  payloadArr.push(rtp.payload);
+                }
+
+                if ((rtp.codec.toLowerCase() === 'h264' || rtp.codec.toLowerCase() === 'vp8') && maximumMedia > 0) {
+                  maximumMedia--;
+                  payloadArr.push(rtp.payload);
+                }
+              });
+              media.fmtp.forEach(function (fmtp) {
+                if (payloadArr.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
+                  payloadArr.push(fmtp.payload);
+                }
+              });
+              media.payloads = payloadArr.join(' ');
+
+              if (media.fmtp) {
+                media.fmtp = media.fmtp.filter(function (r) {
+                  return payloadArr.indexOf(r.payload) !== -1;
+                });
+              }
+
+              if (media.rtp) {
+                media.rtp = media.rtp.filter(function (r) {
+                  return payloadArr.indexOf(r.payload) !== -1;
+                });
+              }
+
+              if (media.rtcpFb) {
+                media.rtcpFb = media.rtcpFb.filter(function (r) {
+                  return payloadArr.indexOf(r.payload) !== -1;
+                });
+              }
+
+              desc.sdp = sdp_transform.write(sdp); // desc.sdp = desc.sdp.replace(/a=rtcp-fb:127 goog-remb\r\n/, 'a=rtcp-fb:127 ccm tmmbr\r\n');
+
+              desc.sdp = desc.sdp.replace(/a=mid:0\r\n/, 'b=AS:100\r\nb=RR:600\r\nb=RS:2000\r\na=mid:0\r\n');
+              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
+              desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+              desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
+              desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/g, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
+              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n');
+            }
+          });
+        }
+
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -19468,6 +19534,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               if (_this18._localToAudio) {
                 m.port = 0;
+                m.direction = 'inactive';
               }
 
               if (m.port !== 0) {
@@ -19497,6 +19564,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               if (_m.type === 'video') {
                 _m.port = 0;
+                _m.direction = 'inactive';
               }
             }
           } catch (err) {
@@ -20315,18 +20383,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         case /^2[0-9]{2}$/.test(response.status_code):
           {
-            this._status = C.STATUS_CONFIRMED;
-
-            if (!response.body) {
-              this._acceptAndTerminate(response, 400, CRTC_C.causes.MISSING_SDP);
-
-              this._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
-
-              break;
-            } // An error on dialog creation will fire 'failed' event.
-
+            this._status = C.STATUS_CONFIRMED; // An error on dialog creation will fire 'failed' event.
 
             if (!this._createDialog(response, 'UAC')) {
+              break;
+            } // 以下修改为兼容 VoLTE 的 200ok 不带 SDP 的情况
+
+
+            if (!response.body) {
+              this._accepted('remote', response);
+
+              this.sendRequest(CRTC_C.ACK);
+
+              this._confirmed('local', null);
+
               break;
             }
             /**
@@ -20439,7 +20509,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
+
+      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       extraHeaders.push('Content-Type: application/sdp'); // Session Timers.
 
       if (this._sessionTimers.running) {
@@ -20597,7 +20670,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var sdpOffer = options.sdpOffer || false;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact)); // Session Timers.
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
+
+      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel'); // Session Timers.
 
       if (this._sessionTimers.running) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
@@ -25368,9 +25444,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           if (outbound && (anonymous ? !this.temp_gruu : !this.pub_gruu)) {
             contact += ';ob';
-          }
+          } // 5G contact
 
-          contact += '>';
+
+          contact += '>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"';
           return contact;
         }
       }; // Seal the configuration.

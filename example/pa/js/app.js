@@ -274,7 +274,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     document.querySelector('#video_area').classList = 'hide';
     setStatus(`呼叫失败: ${d.cause}`);
-    location.reload();
+    // location.reload();
   });
 
   // 呼叫结束

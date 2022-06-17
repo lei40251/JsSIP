@@ -40,11 +40,11 @@ module.exports = {
 
     ua.start();
 
-    test.strictEqual(ua.contact.toString(), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws>`);
-    test.strictEqual(ua.contact.toString({ outbound: false, anonymous: false, foo: true }), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws>`);
-    test.strictEqual(ua.contact.toString({ outbound: true }), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws;ob>`);
-    test.strictEqual(ua.contact.toString({ anonymous: true }), '<sip:anonymous@anonymous.invalid;transport=ws>');
-    test.strictEqual(ua.contact.toString({ anonymous: true, outbound: true }), '<sip:anonymous@anonymous.invalid;transport=ws;ob>');
+    test.strictEqual(ua.contact.toString(), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"`);
+    test.strictEqual(ua.contact.toString({ outbound: false, anonymous: false, foo: true }), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"`);
+    test.strictEqual(ua.contact.toString({ outbound: true }), `<sip:${ ua.contact.uri.user }@${ ua.configuration.via_host };transport=ws;ob>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"`);
+    test.strictEqual(ua.contact.toString({ anonymous: true }), '<sip:anonymous@anonymous.invalid;transport=ws>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"');
+    test.strictEqual(ua.contact.toString({ anonymous: true, outbound: true }), '<sip:anonymous@anonymous.invalid;transport=ws;ob>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"');
 
     for (const parameter in testUA.UA_CONFIGURATION_AFTER_START)
     {
