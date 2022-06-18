@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226171610
+ * CRTC v1.0.0.20226182227
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19550,7 +19550,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
 
           _this18._mode === '' && (_this18._mode = 'audio');
-        } else if (_this18._localToAudio) {
+        } else {
           /**
            * 本地音频接听后设置 video 的 port=0
            * @author: lei
@@ -19562,9 +19562,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
               var _m = _step6.value;
 
-              if (_m.type === 'video') {
+              if (_m.type !== 'video') {
+                continue;
+              }
+
+              if (_this18._localToAudio) {
                 _m.port = 0;
                 _m.direction = 'inactive';
+
+                _this18._ontogglemode('audio');
+              } else {
+                _this18._ontogglemode('video');
               }
             }
           } catch (err) {
@@ -19572,10 +19580,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator6.f();
           }
-
-          _this18._ontogglemode('audio');
-        } else {
-          _this18._ontogglemode('video');
         }
 
         return sdp_transform.write(sdp_desc);
@@ -19731,6 +19735,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
       if (request.body) {
+        var waiting = false;
         var sdp_request = sdp_transform.parse(request.body); // request['mode'] = 'audio';
 
         this._remoteToAudio = true;
@@ -19745,17 +19750,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             if (m.type == 'audio') {
               continue;
-            }
+            } // waiting = true;
 
-            if (m.port === 0 && this._mode === 'video') {
-              this._ontogglemode('audio');
 
-              this._localToAudio = true;
-              this._localToVideo = false;
-              nextS.call(this);
+            if (m.port === 0 || m.port === 0 && this._mode === 'video') {
+              this._ontogglemode('audio'); // this._localToAudio = true;
+              // this._localToVideo = false;
+              // nextS.call(this);
+
             } else if (this._mode === 'audio') {
-              // request['mode'] = 'video';
+              waiting = true; // request['mode'] = 'video';
               // TODO: 触发切换事件，要求用户授权
+
               this._remoteToVideo = true;
               this._remoteToAudio = false;
               this._localToAudio = false;
@@ -19783,6 +19789,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _iterator7.e(err);
         } finally {
           _iterator7.f();
+        }
+
+        if (!waiting) {
+          this._localToAudio = true;
+          this._localToVideo = false;
+          nextS.call(this);
         }
       }
 

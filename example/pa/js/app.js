@@ -100,20 +100,22 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#toAudio').onclick = function()
   {
-    // 拒绝/挂机
     e.session.demoteToAudio();
   };
 
   document.querySelector('#toVideo').onclick = function()
   {
-    // 拒绝/挂机
     e.session.upgradeToVideo();
   };
 
   document.querySelector('#cancel').onclick = function()
   {
-    // 拒绝/挂机
     e.session.terminate();
+  };
+
+  document.querySelector('#referBtn').onclick = function()
+  {
+    e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`);
   };
 
   document.querySelector('#muteMic').onclick = function()
@@ -196,6 +198,10 @@ flyinnUA.on('newRTCSession', function(e)
 
     isStoppedRecording = false;
   };
+
+  e.session.on('refer', function(e){
+    e.accept()
+  })
 
   e.session.on('mode', function(d)
   {
@@ -401,12 +407,14 @@ function call(type)
 {  
   const mediaConstraints = {
     audio : true,
+    video:false
   }
 
   if(type === 'video')
   {
     mediaConstraints.video = true;
   }
+
   const linkman = document.querySelector('#linkman').value;
   const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
     mediaConstraints
