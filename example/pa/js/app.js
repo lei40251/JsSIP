@@ -176,20 +176,29 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#formShare').onclick = function()
   {
-    isRecordingStarted = true;
-    e.session.videoShare(c_f.captureStream(15));
+    // isRecordingStarted = true;
+    // let cav;
+
+    // setInterval(() => {
+    //   html2canvas(document.querySelector("#ele")).then(canvas => {
+    //       // document.body.appendChild(canvas)   
+    //     cav = canvas;
+    //   });      
+    // }, 500);
+   
+    e.session.share('html', '#ele', html2canvas);
   };
 
   // let timer;
 
   document.querySelector('#picShare').onclick = function()
   {
-    e.session.share('pic', document.querySelector('#pic_s'));
+    e.session.share('pic','#pic_s');
   };
 
   document.querySelector('#videoShare').onclick = function()
   {
-    e.session.share('video', document.querySelector('#video_s'));
+    e.session.share('video','#video_s');
   };
 
   document.querySelector('#stopShare').onclick = function()

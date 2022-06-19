@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226182227
+ * CRTC v1.0.0.2022619103
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -18276,7 +18276,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
   }, {
     key: "share",
-    value: function share(type, element) {
+    value: function share(type, id, assembly) {
       var _this7 = this;
 
       logger.debug('share()'); // Check Session Status.
@@ -18285,7 +18285,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         throw new Exceptions.InvalidStateError(this._status);
       }
 
-      var timer; // 分享视频
+      var timer;
+      var element = document.querySelector(id); // 分析页面元素
+
+      function renderHtml(canvas, ctx) {
+        assembly(document.querySelector(id), {
+          allowTaint: true,
+          logging: false
+        }).then(function (cvs) {
+          canvas.width = cvs.width;
+          canvas.height = cvs.height;
+          ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
+        }).then(function () {
+          renderHtml(canvas, ctx);
+        });
+      } // 分享视频
+
 
       if (type === 'video') {
         logger.debug('share video');
@@ -18314,6 +18329,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           ctx.drawImage(element, 0, 0, element.width, element.height);
         }, 100);
         this._localShareStream = canvas.captureStream();
+
+        this._localShareStream.getVideoTracks().forEach(function (track) {
+          var sender = _this7._connection.getSenders().find(function (s) {
+            return s.track.kind == 'video' && s.track.readyState !== 'ended';
+          });
+
+          sender.replaceTrack(track);
+        });
+      } // 分享页面元素
+      else if (type === 'html') {
+        logger.debug('share html');
+
+        if (!assembly) {
+          return;
+        }
+
+        var _canvas = document.createElement('canvas');
+
+        _canvas.width = 1;
+        _canvas.height = 1;
+
+        var _ctx = _canvas.getContext('2d');
+
+        renderHtml(_canvas, _ctx);
+        this._localShareStream = _canvas.captureStream();
 
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
