@@ -15,6 +15,8 @@ export function newTag(): string;
 
 export function newUUID(): string;
 
+export function getABU(str:string): Array;
+
 export function hostType(host: string): string;
 
 export function escapeUser(user: string): string;
