@@ -4,7 +4,7 @@
 CRTC.debug.enable('CRTC:*');
 
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 function handleGetQuery(name)
 {
@@ -26,16 +26,16 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const socket = new CRTC.WebSocketInterface('wss://pro.vsbc.com:60040/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets  : socket,
   // 与 UA 关联的 SIP URI
-  uri      : `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri      : `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
-  password : `yl_19${ account}`
+  password : account
 };
 
 // Flyinn 实例
@@ -78,7 +78,6 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#cameras').onchange = function()
   {
-    console.log(this);
     e.session.switchDevice('camera',this.options[this.selectedIndex].value)
   }
 
@@ -115,7 +114,7 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#referBtn').onclick = function()
   {
-    e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`);
+    e.session.refer(`${document.querySelector('#refer').value}@pro.vsbc.com`);
   };
 
   document.querySelector('#muteMic').onclick = function()
@@ -131,6 +130,18 @@ flyinnUA.on('newRTCSession', function(e)
     {
       // 关闭麦克风
       e.session.mute({ audio: true });
+    }
+  };
+
+  document.querySelector('#hold').onclick = function()
+  {
+    if (e.session.isOnHold().local)
+    {
+      e.session.unhold();
+    }
+    else
+    {
+      e.session.hold();
     }
   };
 
@@ -165,6 +176,7 @@ flyinnUA.on('newRTCSession', function(e)
       stream.then((s) =>
       {
         document.querySelector('#localVideo').srcObject = s;
+        document.querySelector('#localVideo').play()
       });
   };
 
@@ -217,34 +229,50 @@ flyinnUA.on('newRTCSession', function(e)
     console.log('mode: ', d);
 
     document.querySelector('#video_area').classList = '';
-    // 本地视频
-    const localVideoStream = new MediaStream();
-
-    e.session.connection.getSenders().forEach((sender) =>
-    {
-      if (
-        sender.track &&
-        sender.track.kind === 'video' &&
-        sender.track.readyState === 'live'
-      )
-      {
-        localVideoStream.addTrack(sender.track);
-      }
-    });
-
-    document.querySelector('#localVideo').srcObject = localVideoStream;
-
-    // 远端视频
-    const remoteVideoStream = new MediaStream();
-
-    e.session.connection.getReceivers().forEach((receiver) =>
-    {
-      if (receiver.track && receiver.track.readyState === 'live')
-      {
-        remoteVideoStream.addTrack(receiver.track);
-      }
-    });
-    document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+     // 本地视频
+     let localVideoStream = new MediaStream();
+ 
+     if(RTCPeerConnection.prototype.getSenders)
+     {
+       e.session.connection.getSenders().forEach((sender) =>
+       {
+         if (
+           sender.track &&
+           sender.track.kind === 'video' &&
+           sender.track.readyState === 'live'
+         )
+         {
+           localVideoStream.addTrack(sender.track);
+         }
+       });
+     }
+     else
+     {
+       localVideoStream = e.session.connection.getLocalStreams()[0];
+     }
+ 
+     document.querySelector('#localVideo').srcObject = localVideoStream;
+     document.querySelector('#localVideo').play()
+ 
+     // 远端视频
+     let remoteVideoStream = new MediaStream();
+ 
+     if(RTCPeerConnection.prototype.getReceivers)
+     {
+       e.session.connection.getReceivers().forEach((receiver) =>
+       {
+         if (receiver.track && receiver.track.readyState === 'live')
+         {
+           remoteVideoStream.addTrack(receiver.track);
+         }
+       });
+     }
+     else
+     {
+       remoteVideoStream = e.session.connection.getRemoteStreams()[0];
+     }
+     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+     document.querySelector('#remoteVideo').play()
   })
 
   // 呼入振铃 & 呼出回铃音
@@ -252,7 +280,7 @@ flyinnUA.on('newRTCSession', function(e)
   {
     if (d.originator === 'local')
     {
-      setStatus('通话中');
+      setStatus('振铃中');
       // setTimeout(() =>
       // {
       //   e.session.answer({
@@ -269,19 +297,10 @@ flyinnUA.on('newRTCSession', function(e)
     }
   });
 
-  // e.session.on('VoLTE:toVideo', function()
-  // {
-  //   console.log('切换为视频模式');
-  // });
-
-  // e.session.on('VoLTE:toAudio', function()
-  // {
-  //   console.log('切换为音频模式');
-  // });
-
   e.session.on('cameraChanged', function(d)
   {
     document.querySelector('#localVideo').srcObject = d
+    document.querySelector('#localVideo').play();
   })
 
   // 呼叫失败处理
@@ -305,37 +324,53 @@ flyinnUA.on('newRTCSession', function(e)
   // })
 
   // 呼叫已确认
-  e.session.on('confirmed', function()
+  e.session.on('confirmed', function(d)
   {
     document.querySelector('#video_area').classList = '';
     // 本地视频
-    const localVideoStream = new MediaStream();
+    let localVideoStream = new MediaStream();
 
-    e.session.connection.getSenders().forEach((sender) =>
+    if(RTCPeerConnection.prototype.getSenders)
     {
-      if (
-        sender.track &&
-        sender.track.kind === 'video' &&
-        sender.track.readyState === 'live'
-      )
+      e.session.connection.getSenders().forEach((sender) =>
       {
-        localVideoStream.addTrack(sender.track);
-      }
-    });
+        if (
+          sender.track &&
+          sender.track.kind === 'video' &&
+          sender.track.readyState === 'live'
+        )
+        {
+          localVideoStream.addTrack(sender.track);
+        }
+      });
+    }
+    else
+    {
+      localVideoStream = e.session.connection.getLocalStreams()[0];
+    }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
+    document.querySelector('#localVideo').play()
 
     // 远端视频
-    const remoteVideoStream = new MediaStream();
+    let remoteVideoStream = new MediaStream();
 
-    e.session.connection.getReceivers().forEach((receiver) =>
+    if(RTCPeerConnection.prototype.getReceivers)
     {
-      if (receiver.track && receiver.track.readyState === 'live')
+      e.session.connection.getReceivers().forEach((receiver) =>
       {
-        remoteVideoStream.addTrack(receiver.track);
-      }
-    });
+        if (receiver.track && receiver.track.readyState === 'live')
+        {
+          remoteVideoStream.addTrack(receiver.track);
+        }
+      });
+    }
+    else
+    {
+      remoteVideoStream = e.session.connection.getRemoteStreams()[0];
+    }
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+    document.querySelector('#remoteVideo').play()
   });
 
   // 收到新消息
@@ -425,7 +460,7 @@ function call(type)
   }
 
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
+  const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
     mediaConstraints
     // mediaConstraints : {
     //   audio : true,
@@ -443,20 +478,30 @@ function call(type)
     //   remoteVideoStream.addTrack(receiver.track);
     // }
 
-    // 本地视频
-    const localVideoStream = new MediaStream();
-
-    session.connection.getSenders().forEach((sender) =>
-    {
-      if (
-        sender.track &&
-        sender.track.kind === 'video' &&
-        sender.track.readyState === 'live'
-      )
-      {
-        localVideoStream.addTrack(sender.track);
-      }
-    });
+     // 本地视频
+     let localVideoStream = new MediaStream();
+ 
+     if(RTCPeerConnection.prototype.getSenders)
+     {
+       e.session.connection.getSenders().forEach((sender) =>
+       {
+         if (
+           sender.track &&
+           sender.track.kind === 'video' &&
+           sender.track.readyState === 'live'
+         )
+         {
+           localVideoStream.addTrack(sender.track);
+         }
+       });
+     }
+     else
+     {
+       localVideoStream = e.session.connection.getLocalStreams()[0];
+     }
+ 
+     document.querySelector('#localVideo').srcObject = localVideoStream;
+     document.querySelector('#localVideo').play()
 
     // localVideoStream.getVideoTracks().forEach((track) =>
     // {
@@ -467,7 +512,6 @@ function call(type)
     // });
 
 
-    document.querySelector('#localVideo').srcObject = localVideoStream;
 
     // document.querySelector('#remoteVideo').srcObject = event.streams[0];
   };
