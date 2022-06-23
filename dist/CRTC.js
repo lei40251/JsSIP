@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226221741
+ * CRTC v1.0.0.2022623151
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -18314,7 +18314,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (type === 'video') {
         logger.debug('share video');
-        this._localShareStream = element.captureStream();
+        this._localShareStream = element.captureStream(0);
 
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
@@ -18332,13 +18332,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         var canvas = document.createElement('canvas');
-        canvas.width = element.width;
-        canvas.height = element.height;
+        canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
+        canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
         var ctx = canvas.getContext('2d');
         timer = setInterval(function () {
-          ctx.drawImage(element, 0, 0, element.width, element.height);
+          ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
         }, 100);
-        this._localShareStream = canvas.captureStream();
+        this._localShareStream = canvas.captureStream(15);
 
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
@@ -18363,7 +18363,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var _ctx = _canvas.getContext('2d');
 
         renderHtml(_canvas, _ctx);
-        this._localShareStream = _canvas.captureStream();
+        this._localShareStream = _canvas.captureStream(15);
 
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
@@ -19477,9 +19477,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
               desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
               desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
-              desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
               desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/g, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
-              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n');
+              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n'); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
+
+              desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
             }
           });
         }
