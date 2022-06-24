@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.2022623151
+ * CRTC v1.0.0.20226241530
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19618,7 +19618,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 continue;
               }
 
-              if (_this18._localToAudio) {
+              if (_this18._localToAudio && _this18._localHold) {
                 _m.port = 0;
                 _m.direction = 'inactive';
 
