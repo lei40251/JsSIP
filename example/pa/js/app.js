@@ -37,7 +37,7 @@ const configuration = {
   // SIP身份验证密码
   password : `yl_19${ account}`,
   // 授权码，请联系商务负责人获取
-  secret_key  : 'q5C9HjA06HlDn2dv+3B6uQPmV7bhA0HTq+kSOnSEK58Tqu+5+uqJ7lBlR+HqzWWXDgS/2zXsltnQIYOz0gXkMY/OBHyC2dqBCfQhIdKopH6t16x5ZtlatK+/E2hKE1DuTH5v1lFVPUfZlvaT3twwMEmSaBDzc0S5o1RdP6LQ87D9iMIVN6DCmBf2LCIiO/om0LvVhhR6/j1cmqQXotivZjHHcNvKPw0za+NvLLiWswTmiT/vW69HfsoVigcBtmABHzVJGQPjDIp9oeR5A0tjozt3EUXoawrSwu8cyJdedWSYJxoDx5yzAD2sjFZP9KRydMEFRO3I2QSsTXOkX0Y3fA=='
+  secret_key  : 'vVzhaqGp/xBMOcT4g7ktAAUQbjEkeqxd3GnMtfzT3qTnckCJimv8WnADYSGk8RHG65T0NTitA+Y78MVleUAX8DWv8hkSIFcYEOBix4x31Rm1yA2w3GzoYK0rgg9r3DHAiQK5IjDQk++FbhtBhIakPfNiqIqAacjKHFVEskMKDXHDP06NBB1Nys2m6MH/cm2uDh+iNcQ9aZzb34/8Xk4qQ7Vag9KhhSxZj6lrgNmux/rk59Fis+Wprm6KZwcmyBUd5zJX36KkN1BKOKK9an6KI/BjyNnd626wfYaQz6IGHoYj9d3KutLXaZ/4lHeL3H5Dq5l1pvPi2Qi0p4v4lb1w0A=='
 };
 // Flyinn 实例
 // eslint-disable-next-line no-undef
@@ -116,7 +116,7 @@ flyinnUA.on('newRTCSession', function(e)
 
   document.querySelector('#referBtn').onclick = function()
   {
-    e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`);
+    e.session.refer(`${document.querySelector('#refer').value}@pro.vsbc.com`);
   };
 
   document.querySelector('#muteMic').onclick = function()
@@ -426,7 +426,7 @@ function call(type)
   }
 
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
+  const session = flyinnUA.call(`${linkman}@pro.vsbc.com`, {
     mediaConstraints
     // mediaConstraints : {
     //   audio : true,

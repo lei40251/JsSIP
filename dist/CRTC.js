@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226251943
+ * CRTC v1.0.0.20226252028
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -17721,9 +17721,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         requestParams.from_display_name = options.fromDisplayName;
       }
 
-      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
 
-      if (this._ua.sk[7] > 3) {
+      if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       }
@@ -19468,7 +19468,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }) // Set local description.
       .then(function (desc) {
         // 处理5G外呼sdp过大问题
-        if (type === 'offer' && _this18._ua.sk[7] > 3) {
+        if (type === 'offer' && _this18._ua.sk[7] >= 3) {
           var sdp = sdp_transform.parse(desc.sdp);
           sdp.media.forEach(function (media) {
             if (media.type === 'video') {
@@ -19603,6 +19603,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         });
       }).then(function (sdp) {
+        // 去掉IPV6
+        sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
         var sdp_desc = sdp_transform.parse(sdp);
 
         if (type === 'offer') {
@@ -20621,7 +20623,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var succeeded = false;
       extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
-      if (this._ua.sk[7] > 3) {
+      if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       }
@@ -20785,7 +20787,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var succeeded = false;
       extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
 
-      if (this._ua.sk[7] > 3) {
+      if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       } // Session Timers.
@@ -25702,7 +25704,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } // 5G contact
 
 
-          contact += '>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"';
+          if (sk[7] >= 3) {
+            contact += '>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"';
+          } else {
+            contact += '>';
+          }
+
           return contact;
         }
       }; // Seal the configuration.
