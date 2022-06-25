@@ -26,18 +26,19 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const socket = new CRTC.WebSocketInterface('wss://pro.vsbc.com:60041/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets  : socket,
   // 与 UA 关联的 SIP URI
-  uri      : `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri      : `sip:${account}@pro.vsbc.com`,
   // SIP身份验证密码
-  password : `yl_19${ account}`
+  password : `yl_19${ account}`,
+  // 授权码，请联系商务负责人获取
+  secret_key  : 'q5C9HjA06HlDn2dv+3B6uQPmV7bhA0HTq+kSOnSEK58Tqu+5+uqJ7lBlR+HqzWWXDgS/2zXsltnQIYOz0gXkMY/OBHyC2dqBCfQhIdKopH6t16x5ZtlatK+/E2hKE1DuTH5v1lFVPUfZlvaT3twwMEmSaBDzc0S5o1RdP6LQ87D9iMIVN6DCmBf2LCIiO/om0LvVhhR6/j1cmqQXotivZjHHcNvKPw0za+NvLLiWswTmiT/vW69HfsoVigcBtmABHzVJGQPjDIp9oeR5A0tjozt3EUXoawrSwu8cyJdedWSYJxoDx5yzAD2sjFZP9KRydMEFRO3I2QSsTXOkX0Y3fA=='
 };
-
 // Flyinn 实例
 // eslint-disable-next-line no-undef
 const flyinnUA = new CRTC.UA(configuration);
