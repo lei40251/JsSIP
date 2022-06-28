@@ -4,7 +4,7 @@
 CRTC.debug.enable('CRTC:*');
 
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 function handleGetQuery(name) {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
@@ -16,6 +16,9 @@ function handleGetQuery(name) {
   return null;
 }
 
+let currMode;
+let holdMode;
+
 const uuid = CRTC.Utils.newUUID();
 
 // 注册UA的用户名
@@ -25,16 +28,16 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new CRTC.WebSocketInterface('wss://5g.vsbc.com:9002/wss');
+const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets: socket,
   // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@5g.vsbc.com`,
+  uri: `sip:${account}@lccsp.zgpajf.com.cn`,
   // SIP身份验证密码
-  password: 'yl_19'+account
+  password: 'yl_19' + account
 };
 
 // Flyinn 实例
@@ -101,22 +104,47 @@ flyinnUA.on('newRTCSession', function (e) {
   };
 
   var eventHandlers = {
-    'progress':   function(data){ console.log('progress',data) },
-    'failed':   function(data){ console.log('progress',data) },
-    'accepted':   function(data){ console.log('progress',data) },
-    'trying':   function(data){ console.log('progress',data) },
-    'requestSucceeded':   function(data){ console.log('progress',data) },
-    'requestFailed':   function(data){ console.log('progress',data) },
+    'progress': function (data) { console.log('progress', data) },
+    'failed': function (data) {
+      console.log('failed', data);
+      if (e.session.isOnHold().local) {
+        e.session.unhold({}, function () {
+          console.warn('hm: ', holdMode)
+          if (holdMode == 'video') {
+            e.session.upgradeToVideo()
+          }
+        });
+      }
+    },
+    'accepted': function (data) { console.log('accept', data); e.session.terminate() },
+    'trying': function (data) { console.log('trying', data) },
+    'requestSucceeded': function (data) { console.log('requestSucceeded', data) },
+    'requestFailed': function (data) {
+      console.log('requestFailed', data);
+      if (e.session.isOnHold().local) {
+        e.session.unhold({}, function () {
+          console.warn('hm: ', holdMode)
+          if (holdMode == 'video') {
+            e.session.upgradeToVideo()
+          }
+        });
+      }
+    },
   };
 
   document.querySelector('#referBtn').onclick = function () {
-    // e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`); 
-    
-    e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`,{
-      replaces:e.session,
-      mediaConstraints:{audio:true,video:true},
-      eventHandlers:eventHandlers
+    holdMode = currMode;
+    e.session.hold();
+
+    e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`, {
+      eventHandlers: eventHandlers
     });
+
+    // e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`,{
+    //   replaces:e.session,
+    //   mediaConstraints:{audio:true,video:true},
+    //   eventHandlers:eventHandlers
+    // });
   };
 
   document.querySelector('#muteMic').onclick = function () {
@@ -134,9 +162,15 @@ flyinnUA.on('newRTCSession', function (e) {
 
   document.querySelector('#hold').onclick = function () {
     if (e.session.isOnHold().local) {
-      e.session.unhold();
+      e.session.unhold({}, function () {
+        console.warn('hm: ', holdMode)
+        if (holdMode == 'video') {
+          e.session.upgradeToVideo()
+        }
+      });
     }
     else {
+      holdMode = currMode;
       e.session.hold();
     }
   };
@@ -217,12 +251,77 @@ flyinnUA.on('newRTCSession', function (e) {
   })
 
   e.session.on('replaces', function (e) {
-    console.log('replaces: ',e)
+    console.log('replaces: ', e)
     e.accept()
   })
 
+  e.session.on('hold', function () {
+
+    document.querySelector('#video_area').classList = '';
+    // 本地视频
+    document.querySelector('#localVideo').srcObject = new MediaStream();
+    // 远端视频
+    document.querySelector('#remoteVideo').srcObject = new MediaStream();
+  })
+
+  e.session.on('unhold', function () {
+
+    document.querySelector('#video_area').classList = '';
+    // 本地视频
+    let localVideoStream = new MediaStream();
+
+    if (RTCPeerConnection.prototype.getSenders) {
+      e.session.connection.getSenders().forEach((sender) => {
+
+        if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
+          localVideoStream.addTrack(sender.track);
+        }
+
+      });
+    }
+    else {
+      localVideoStream = e.session.connection.getLocalStreams()[0];
+    }
+
+    document.querySelector('#localVideo').srcObject = localVideoStream;
+
+    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
+      document.querySelector('#localVideo').play()
+    })
+
+    // 远端视频
+    let remoteVideoStream = new MediaStream();
+
+    if (RTCPeerConnection.prototype.getReceivers) {
+      e.session.connection.getReceivers().forEach((receiver) => {
+
+        if (receiver.track && receiver.track.readyState === 'live') {
+          if (receiver.track.kind === 'video') {
+            remoteVideoStream.addTrack(receiver.track);
+          }
+          else {
+            remoteVideoStream.addTrack(receiver.track);
+          }
+        }
+
+      });
+    }
+    else {
+      remoteVideoStream = e.session.connection.getRemoteStreams()[0];
+    }
+    document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
+
+    document.querySelector('#remoteVideo').addEventListener('canplay', (event) => {
+      document.querySelector('#remoteVideo').play()
+    })
+  })
+
+
+
   e.session.on('mode', function (d) {
     console.log('mode: ', d);
+
+    currMode = d.mode;
 
     document.querySelector('#video_area').classList = '';
     // 本地视频
@@ -430,11 +529,13 @@ flyinnUA.start();
 
 // 发起呼叫
 document.querySelector('#call').onclick = function () {
+  currMode = 'audio'
   call()
 };
 
 // 发起呼叫
 document.querySelector('#callVideo').onclick = function () {
+  currMode = 'video'
   call('video')
 };
 
@@ -449,7 +550,7 @@ function call(type) {
   }
 
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@5g.vsbc.com`, {
+  const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
     mediaConstraints
     // mediaConstraints : {
     //   audio : true,
