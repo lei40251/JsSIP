@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226281414
+ * CRTC v1.0.0.20226291811
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19424,65 +19424,66 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }) // Set local description.
       .then(function (desc) {
-        // 处理5G外呼sdp过大问题
+        /**
+         * 处理5G外呼sdp过大问题,
+         * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+         */
         if (type === 'offer') {
           var sdp = sdp_transform.parse(desc.sdp);
           sdp.media.forEach(function (media) {
             if (media.type === 'video') {
-              var maximumMedia = 3;
-              var payloadArr = []; // const videoMedia = sdp.media.filter((media) => media.type === 'video');
-
+              var maximumH264 = 2;
+              var delH264Payload = [];
+              var payloads = media.payloads.split(' ');
               media.rtp.forEach(function (rtp) {
-                if (rtp.codec === 'ulpfec') {
-                  payloadArr.push(rtp.payload);
-                }
+                if (rtp.codec.toLowerCase() === 'h264') {
+                  if (maximumH264 <= 0) {
+                    delH264Payload.push(rtp.payload);
+                  }
 
-                if (rtp.codec === 'red') {
-                  payloadArr.push(rtp.payload);
-                }
-
-                if ((rtp.codec.toLowerCase() === 'h264' || rtp.codec.toLowerCase() === 'vp8') && maximumMedia > 0) {
-                  maximumMedia--;
-                  payloadArr.push(rtp.payload);
+                  maximumH264--;
                 }
               });
               media.fmtp.forEach(function (fmtp) {
-                if (payloadArr.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
-                  payloadArr.push(fmtp.payload);
+                if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
+                  delH264Payload.push(fmtp.payload);
                 }
               });
-              media.payloads = payloadArr.join(' ');
+              media.payloads = payloads.filter(function (x) {
+                return !delH264Payload.some(function (i) {
+                  return i == x;
+                });
+              }).join(' ');
 
               if (media.fmtp) {
                 media.fmtp = media.fmtp.filter(function (r) {
-                  return payloadArr.indexOf(r.payload) !== -1;
+                  return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
 
               if (media.rtp) {
                 media.rtp = media.rtp.filter(function (r) {
-                  return payloadArr.indexOf(r.payload) !== -1;
+                  return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
 
               if (media.rtcpFb) {
                 media.rtcpFb = media.rtcpFb.filter(function (r) {
-                  return payloadArr.indexOf(r.payload) !== -1;
+                  return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
-
-              desc.sdp = sdp_transform.write(sdp); // desc.sdp = desc.sdp.replace(/a=rtcp-fb:127 goog-remb\r\n/, 'a=rtcp-fb:127 ccm tmmbr\r\n');
-
-              desc.sdp = desc.sdp.replace(/a=mid:0\r\n/, 'b=AS:100\r\nb=RR:600\r\nb=RS:2000\r\na=mid:0\r\n');
-              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
-              desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-              desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
-              desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/g, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
-              desc.sdp = desc.sdp.replace(/a=mid:1\r\n/g, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n'); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
-
-              desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
             }
           });
+          desc.sdp = sdp_transform.write(sdp); // desc.sdp = desc.sdp.replace(/a=rtcp-fb:127 goog-remb\r\n/, 'a=rtcp-fb:127 ccm tmmbr\r\n');
+
+          desc.sdp = desc.sdp.replace(/a=mid:0.*\r\n/, 'b=AS:100\r\nb=RR:600\r\nb=RS:2000\r\na=mid:0\r\n');
+          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
+          desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+          desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
+          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
+          desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n'); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
+
+          desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         }
 
         return connection.setLocalDescription(desc)["catch"](function (error) {
@@ -19585,8 +19586,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
 
               if (_this18._localToAudio) {
-                m.port = 0;
-                m.direction = 'inactive';
+                m.port = 0; // m.direction = 'inactive';
               }
 
               if (m.port !== 0) {
@@ -19618,9 +19618,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 continue;
               }
 
+              var port = _m.port; // const direction = m.direction;
+
               if (_this18._localToAudio) {
-                _m.port = 0;
-                _m.direction = 'inactive';
+                _m.port = 0; // m.direction = 'inactive';
+
+                if (_this18._remoteHold) {
+                  _m.port = port; // m.direction = direction;
+                }
 
                 _this18._ontogglemode('audio');
               } else {
@@ -19767,7 +19772,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       function nextS() {
         var _this20 = this;
 
-        // this._localToAudio = false;      
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
           if (_this20._status === C.STATUS_TERMINATED) {
@@ -19811,8 +19815,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // nextS.call(this);
 
             } else if (this._mode === 'audio') {
-              waiting = true; // request['mode'] = 'video';
-              // TODO: 触发切换事件，要求用户授权
+              waiting = true; // 触发切换事件，要求用户授权
 
               this._remoteToVideo = true;
               this._remoteToAudio = false;
@@ -20027,7 +20030,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this23._onhold('remote');
         }
       }).then(function () {
-        if (_this23._remoteToVideo) {
+        var notHold = true;
+
+        _this23._localMediaStream.getVideoTracks().forEach(function (track) {
+          if (track.readyState !== 'ended') {
+            notHold = false;
+          }
+        });
+
+        if (_this23._remoteToVideo && notHold) {
           return navigator.mediaDevices.getUserMedia({
             video: true
           })["catch"](function (error) {
@@ -21362,7 +21373,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._mode = mode;
       logger.debug('session ontogglemode');
 
-      this._setLocalMedia(mode);
+      if (!this._remoteHold) {
+        this._setLocalMedia(mode);
+      }
 
       logger.debug('emit "mode"');
       this.emit('mode', {

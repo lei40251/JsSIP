@@ -28,16 +28,16 @@ const account = handleGetQuery('linkman')
 
 // websocket 实例
 // eslint-disable-next-line no-undef
-const socket = new CRTC.WebSocketInterface('wss://lccsp.zgpajf.com.cn:5092/wss');
+const socket = new CRTC.WebSocketInterface('wss://5g.vsbc.com:9002/wss');
 
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
   sockets: socket,
   // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@lccsp.zgpajf.com.cn`,
+  uri: `sip:${account}@5g.vsbc.com`,
   // SIP身份验证密码
-  password: 'yl_19' + account
+  password: 'yl_19'+account
 };
 
 // Flyinn 实例
@@ -71,7 +71,7 @@ function updateDevices() {
 flyinnUA.on('newRTCSession', function (e) {
   let curMuted = null;
 
-  console.log('session: ', e.session)
+  // console.log('session: ', e.session)
 
   document.querySelector('#cameras').onchange = function () {
     e.session.switchDevice('camera', this.options[this.selectedIndex].value)
@@ -136,15 +136,14 @@ flyinnUA.on('newRTCSession', function (e) {
     holdMode = currMode;
     e.session.hold();
 
-    e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`, {
+    e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`, {
       eventHandlers: eventHandlers
     });
 
-    // e.session.refer(`${document.querySelector('#refer').value}@lccsp.zgpajf.com.cn`,{
+    // e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`,{
     //   replaces:e.session,
     //   mediaConstraints:{audio:true,video:true},
     //   eventHandlers:eventHandlers
-    // });
   };
 
   document.querySelector('#muteMic').onclick = function () {
@@ -164,9 +163,9 @@ flyinnUA.on('newRTCSession', function (e) {
     if (e.session.isOnHold().local) {
       e.session.unhold({}, function () {
         console.warn('hm: ', holdMode)
-        if (holdMode == 'video') {
-          e.session.upgradeToVideo()
-        }
+        // if (holdMode == 'video') {
+        //   e.session.upgradeToVideo()
+        // }
       });
     }
     else {
@@ -201,9 +200,9 @@ flyinnUA.on('newRTCSession', function (e) {
       stream.then((s) => {
         document.querySelector('#localVideo').srcObject = s;
 
-        document.querySelector('#localVideo').addEventListener('canplay', (event) => {
+        setTimeout(() => {
           document.querySelector('#localVideo').play()
-        })
+        }, 100);
       });
   };
 
@@ -213,20 +212,8 @@ flyinnUA.on('newRTCSession', function (e) {
 
 
   document.querySelector('#formShare').onclick = function () {
-    // isRecordingStarted = true;
-    // let cav;
-
-    // setInterval(() => {
-    //   html2canvas(document.querySelector("#ele")).then(canvas => {
-    //       // document.body.appendChild(canvas)
-    //     cav = canvas;
-    //   });      
-    // }, 500);
-
     e.session.share('html', '#ele', html2canvas);
   };
-
-  // let timer;
 
   document.querySelector('#picShare').onclick = function () {
     e.session.share('pic', '#pic_s');
@@ -285,9 +272,9 @@ flyinnUA.on('newRTCSession', function (e) {
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
-      document.querySelector('#localVideo').play()
-    })
+      setTimeout(() => {
+        document.querySelector('#localVideo').play()
+      }, 100);
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
@@ -311,9 +298,9 @@ flyinnUA.on('newRTCSession', function (e) {
     }
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
 
-    document.querySelector('#remoteVideo').addEventListener('canplay', (event) => {
+    setTimeout(() => {
       document.querySelector('#remoteVideo').play()
-    })
+    }, 100);
   })
 
 
@@ -342,9 +329,9 @@ flyinnUA.on('newRTCSession', function (e) {
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
+    setTimeout(() => {
       document.querySelector('#localVideo').play()
-    })
+    }, 100);
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
@@ -370,9 +357,9 @@ flyinnUA.on('newRTCSession', function (e) {
     }
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
 
-    document.querySelector('#remoteVideo').addEventListener('canplay', (event) => {
+    setTimeout(() => {
       document.querySelector('#remoteVideo').play()
-    })
+    }, 100);
   })
 
   // 呼入振铃 & 呼出回铃音
@@ -396,9 +383,10 @@ flyinnUA.on('newRTCSession', function (e) {
 
   e.session.on('cameraChanged', function (d) {
     document.querySelector('#localVideo').srcObject = d
-    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
+    
+    setTimeout(() => {
       document.querySelector('#localVideo').play()
-    })
+    }, 100);
   })
 
   // 呼叫失败处理
@@ -441,9 +429,9 @@ flyinnUA.on('newRTCSession', function (e) {
     }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
-    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
-      document.querySelector('#localVideo').play()
-    })
+    // document.querySelector('#localVideo').addEventListener('loadedmetadata', (event) => {
+    document.querySelector('#localVideo').play()
+    // })
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
@@ -467,14 +455,16 @@ flyinnUA.on('newRTCSession', function (e) {
     const audio = new Audio();
     audio.srcObject = remoteAudioStream;
 
-    audio.addEventListener('canplay', (event) => {
-      audio.play()
-    })
+    // audio.addEventListener('loadedmetadata', (event) => {
+    audio.play()
+    // })
+
 
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
-    document.querySelector('#remoteVideo').addEventListener('canplay', (event) => {
-      document.querySelector('#remoteVideo').play()
-    })
+    // document.querySelector('#remoteVideo').addEventListener('loadedmetadata', (event) => {
+    document.querySelector('#remoteVideo').play()
+    // })
+
   });
 
   // 收到新消息
@@ -550,7 +540,7 @@ function call(type) {
   }
 
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@lccsp.zgpajf.com.cn`, {
+  const session = flyinnUA.call(`${linkman}@5g.vsbc.com`, {
     mediaConstraints
     // mediaConstraints : {
     //   audio : true,
@@ -587,9 +577,9 @@ function call(type) {
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    document.querySelector('#localVideo').addEventListener('canplay', (event) => {
+    setTimeout(() => {
       document.querySelector('#localVideo').play()
-    })
+    }, 100);
 
     // localVideoStream.getVideoTracks().forEach((track) =>
     // {
@@ -636,3 +626,53 @@ updateDevices();
 navigator.mediaDevices.addEventListener('devicechange', async () => {
   await updateDevices();
 });
+
+
+document.querySelector('#referBtn').onclick = function () {
+  var eventHandlers = {
+    'succeeded': function(data){ console.warn('succeeded: ', data) },
+    'failed':    function(data){ console.warn('failed: ', data) }
+  };
+  
+// To: <sip:15369385624@ims.js.chinamobile.com:5060>
+// CSeq: 9986 INVITE
+// Call-ID: quffrh1e54jlfpskf3c7
+// Max-Forwards: 70
+// Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video
+// P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel
+// Allow: INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY
+// Supported: timer,ice,replaces,outbound
+// User-Agent: CRTC 1.0.0
+// Session-Expires: 1800;refresher=uac
+// Min-SE: 90
+// Proxy-Authorization: Digest username="+8651280734884@ims.js.chinamobile.com", realm="ims.js.chinamobile.com", nonce="sLC5+yHR3ixK0FCyiqktgQ==", uri="s
+// :15369385624@ims.js.chinamobile.com:5060;transport=udp", response="879d59293ffea3c2ff18df94ee7c92ab", algorithm=MD5
+// Content-Type: application/sdp
+// Contact: <sip:+8651280734884@10.183.219.78:5060;transport=udp>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"
+// Content-Length: 920
+
+
+
+// INVITE sip:13831175769@36.154.21.38:6977;transport=udp SIP/2.0
+// Via: SIP/2.0/UDP 8.130.24.221:9010;branch=z9hG4bKGbBX2anQ;rport
+// From: "7101" <sip:051280734884@36.154.21.38:6977>;tag=e451c7a8
+// To: <sip:13831175769@36.154.21.38:6977>
+// CSeq: 31 INVITE
+// Call-ID: 1173332031-49383-4@BJC.BGI.B.BBD
+// Max-Forwards: 70
+// User-Agent: Grandstream Wave 1.2.14
+// Privacy: none
+// P-Preferred-Identity: <sip:7101@5g.vsbc.com>
+// Supported: replaces, path, timer, eventlist
+// Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE
+// Accept: application/sdp, application/dtmf-relay
+// Content-Type: application/sdp
+// Contact: <sip:051280734884@8.130.24.221:9010;transport=udp>
+// Content-Length: 473
+
+  var options = {
+    'eventHandlers': eventHandlers,
+    'extraHeaders':['P-Preferred-Identity: <sip:7306@5g.vsbc.com>', ' P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel', 'Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video']
+  };
+  flyinnUA.sendOptions(`${document.querySelector('#refer').value}@5g.vsbc.com`,null,options)
+};
