@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226291811
+ * CRTC v1.0.0.20226301538
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -18336,6 +18336,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
         var ctx = canvas.getContext('2d');
         timer = setInterval(function () {
+          // eslint-disable-next-line max-len
           ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
         }, 100);
         this._localShareStream = canvas.captureStream(15);
@@ -25508,7 +25509,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._configuration.via_host = this._configuration.contact_uri.host;
       } // Contact URI.
       else {
-        this._configuration.contact_uri = new URI('sip', Utils.createRandomToken(8), this._configuration.via_host, null, {
+        // 兼容SBC Contact URI默认用户id设置为SIP URI里面的用户名
+        this._configuration.contact_uri = new URI('sip', this._configuration.uri.user, this._configuration.via_host, null, {
           transport: 'ws'
         });
       }
