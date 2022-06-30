@@ -1,14 +1,16 @@
-/* eslint-disable no-undef */
 /* eslint-disable no-console */
+/* eslint-disable no-undef */
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
-
 // 关闭调试信息输出
 CRTC.debug.disable('CRTC:*');
 
-function handleGetQuery(name) {
+/**
+ * 获取url参数
+ */
+function handleGetQuery(name)
+{
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-
   const r = window.location.search.substr(1).match(reg);
 
   if (r != null) return unescape(r[2]);
@@ -16,50 +18,28 @@ function handleGetQuery(name) {
   return null;
 }
 
-let currMode;
-let holdMode;
-
-const uuid = CRTC.Utils.newUUID();
-
-// 注册UA的用户名
-const account = handleGetQuery('linkman')
-  ? handleGetQuery('linkman')
-  : parseInt(`90${Math.random() * 100}`);
-
-// websocket 实例
-// eslint-disable-next-line no-undef
-const socket = new CRTC.WebSocketInterface('wss://5g.vsbc.com:9002/wss');
-
-// UA 配置项
-const configuration = {
-  // JsSIP.Socket 实例
-  sockets: socket,
-  // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@5g.vsbc.com`,
-  // SIP身份验证密码
-  password: 'yl_19'+account
-};
-
-// Flyinn 实例
-// eslint-disable-next-line no-undef
-const flyinnUA = new CRTC.UA(configuration);
-
 /**
  * 输出显示状态
- * @param {String} text
  */
-function setStatus(text) {
+function setStatus(text) 
+{
   const statusDom = document.querySelector('#status');
 
   statusDom.innerText = text;
 }
 
-function updateDevices() {
+/**
+ * 更新摄像头下拉列表
+ */
+function updateDevices() 
+{
   CRTC.Utils.getCameras()
-    .then((cameras) => {
+    .then((cameras) => 
+    {
       let option = '<option selected value="">请选择</option>';
 
-      cameras.forEach((device) => {
+      cameras.forEach((device) => 
+      {
         option += `<option value="${device.deviceId}">${device.label}</option>`;
       });
 
@@ -67,77 +47,114 @@ function updateDevices() {
     });
 }
 
+let currMode;
+let holdMode;
+
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const sipDomain = '5g.vsbc.com';
+// 注册UA的用户名
+const account = handleGetQuery('linkman');
+// websocket 实例
+const socket = new CRTC.WebSocketInterface(signalingUrl);
+// UA 配置项
+const configuration = {
+  // JsSIP.Socket 实例
+  sockets  : socket,
+  // 与 UA 关联的 SIP URI
+  uri      : `sip:${account}@${sipDomain}`,
+  // SIP身份验证密码
+  password : `yl_19${account}`
+};
+// UA 实例
+const ua = new CRTC.UA(configuration);
+
 // 新通话
-flyinnUA.on('newRTCSession', function (e) {
+ua.on('newRTCSession', function(e)
+{
   let curMuted = null;
 
   // console.log('session: ', e.session)
 
-  document.querySelector('#cameras').onchange = function () {
-    e.session.switchDevice('camera', this.options[this.selectedIndex].value)
-  }
+  document.querySelector('#cameras').onchange = function() 
+  {
+    e.session.switchDevice('camera', this.options[this.selectedIndex].value);
+  };
 
-  document.querySelector('#answer').onclick = function () {
+  document.querySelector('#answer').onclick = function() 
+  {
     // 接听
     e.session.answer({
-      mediaConstraints: { audio: true, video: false }
+      mediaConstraints : { audio: true, video: false }
     });
   };
 
-  document.querySelector('#answerVideo').onclick = function () {
+  document.querySelector('#answerVideo').onclick = function() 
+  {
     // 接听
     e.session.answer({
-      mediaConstraints: { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
+      mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
     });
   };
 
-  document.querySelector('#toAudio').onclick = function () {
+  document.querySelector('#toAudio').onclick = function() 
+  {
     e.session.demoteToAudio();
   };
 
-  document.querySelector('#toVideo').onclick = function () {
+  document.querySelector('#toVideo').onclick = function() 
+  {
     e.session.upgradeToVideo();
   };
 
-  document.querySelector('#cancel').onclick = function () {
+  document.querySelector('#cancel').onclick = function() 
+  {
     e.session.terminate();
   };
 
-  var eventHandlers = {
-    'progress': function (data) { console.log('progress', data) },
-    'failed': function (data) {
+  const eventHandlers = {
+    'progress' : function(data) { console.log('progress', data); },
+    'failed'   : function(data) 
+    {
       console.log('failed', data);
-      if (e.session.isOnHold().local) {
-        e.session.unhold({}, function () {
-          console.warn('hm: ', holdMode)
-          if (holdMode == 'video') {
-            e.session.upgradeToVideo()
+      if (e.session.isOnHold().local) 
+      {
+        e.session.unhold({}, function() 
+        {
+          console.warn('hm: ', holdMode);
+          if (holdMode == 'video') 
+          {
+            e.session.upgradeToVideo();
           }
         });
       }
     },
-    'accepted': function (data) { console.log('accept', data); e.session.terminate() },
-    'trying': function (data) { console.log('trying', data) },
-    'requestSucceeded': function (data) { console.log('requestSucceeded', data) },
-    'requestFailed': function (data) {
+    'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
+    'trying'           : function(data) { console.log('trying', data); },
+    'requestSucceeded' : function(data) { console.log('requestSucceeded', data); },
+    'requestFailed'    : function(data) 
+    {
       console.log('requestFailed', data);
-      if (e.session.isOnHold().local) {
-        e.session.unhold({}, function () {
-          console.warn('hm: ', holdMode)
-          if (holdMode == 'video') {
-            e.session.upgradeToVideo()
+      if (e.session.isOnHold().local) 
+      {
+        e.session.unhold({}, function() 
+        {
+          console.warn('hm: ', holdMode);
+          if (holdMode == 'video') 
+          {
+            e.session.upgradeToVideo();
           }
         });
       }
-    },
+    }
   };
 
-  document.querySelector('#referBtn').onclick = function () {
+  document.querySelector('#referBtn').onclick = function() 
+  {
     holdMode = currMode;
     e.session.hold();
 
     e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`, {
-      eventHandlers: eventHandlers
+      eventHandlers : eventHandlers
     });
 
     // e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`,{
@@ -146,166 +163,202 @@ flyinnUA.on('newRTCSession', function (e) {
     //   eventHandlers:eventHandlers
   };
 
-  document.querySelector('#muteMic').onclick = function () {
+  document.querySelector('#muteMic').onclick = function() 
+  {
     // 获取视频和麦克风的关闭状态
     curMuted = e.session.isMuted();
-    if (curMuted.audio) {
+    if (curMuted.audio) 
+    {
       // 开启麦克风
       e.session.unmute({ audio: true });
     }
-    else {
+    else 
+    {
       // 关闭麦克风
       e.session.mute({ audio: true });
     }
   };
 
-  document.querySelector('#hold').onclick = function () {
-    if (e.session.isOnHold().local) {
-      e.session.unhold({}, function () {
-        console.warn('hm: ', holdMode)
+  document.querySelector('#hold').onclick = function() 
+  {
+    if (e.session.isOnHold().local) 
+    {
+      e.session.unhold({}, function() 
+      {
+        console.warn('hm: ', holdMode);
         // if (holdMode == 'video') {
         //   e.session.upgradeToVideo()
         // }
       });
     }
-    else {
+    else 
+    {
       holdMode = currMode;
       e.session.hold();
     }
   };
 
-  document.querySelector('#muteCam').onclick = function () {
+  document.querySelector('#muteCam').onclick = function() 
+  {
     // 获取视频和麦克风的关闭状态
     curMuted = e.session.isMuted();
-    if (curMuted.video) {
+    if (curMuted.video) 
+    {
       // 开启摄像头
       e.session.unmute({ video: true });
     }
-    else {
+    else 
+    {
       // 关闭摄像头
       e.session.mute({ video: true });
     }
   };
 
-  document.querySelector('#sendInfo').onclick = function () {
+  document.querySelector('#sendInfo').onclick = function() 
+  {
     // 通话中发送消息  注意： contentType 必填
     e.session.sendInfo('text/plain', document.querySelector('#info').value);
   };
 
-  document.querySelector('#switchCam').onclick = function () {
+  document.querySelector('#switchCam').onclick = function() 
+  {
     // 切换摄像头
     const stream = e.session.switchCam({ frameRate: 15 });
 
     stream &&
-      stream.then((s) => {
+      stream.then((s) => 
+      {
         document.querySelector('#localVideo').srcObject = s;
 
-        setTimeout(() => {
-          document.querySelector('#localVideo').play()
+        setTimeout(() => 
+        {
+          document.querySelector('#localVideo').play();
         }, 100);
       });
   };
 
-  document.querySelector('#screenShare').onclick = function () {
+  document.querySelector('#screenShare').onclick = function() 
+  {
     e.session.share('screen');
   };
 
 
-  document.querySelector('#formShare').onclick = function () {
+  document.querySelector('#formShare').onclick = function() 
+  {
     e.session.share('html', '#ele', html2canvas);
   };
 
-  document.querySelector('#picShare').onclick = function () {
+  document.querySelector('#picShare').onclick = function() 
+  {
     e.session.share('pic', '#pic_s');
   };
 
-  document.querySelector('#videoShare').onclick = function () {
+  document.querySelector('#videoShare').onclick = function() 
+  {
     document.querySelector('#video_s').play()
-      .then(() => {
+      .then(() => 
+      {
         e.session.share('video', '#video_s');
       });
   };
 
-  document.querySelector('#stopShare').onclick = function () {
+  document.querySelector('#stopShare').onclick = function() 
+  {
     e.session.unShare();
 
     isStoppedRecording = false;
   };
 
-  e.session.on('refer', function (d) {
-    console.log('refer')
-    d.accept()
-  })
+  e.session.on('refer', function(d) 
+  {
+    console.log('refer');
+    d.accept();
+  });
 
-  e.session.on('replaces', function (e) {
-    console.log('replaces: ', e)
-    e.accept()
-  })
+  e.session.on('replaces', function(ev) 
+  {
+    console.log('replaces: ', ev);
+    ev.accept();
+  });
 
-  e.session.on('hold', function () {
+  e.session.on('hold', function() 
+  {
 
     document.querySelector('#video_area').classList = '';
     // 本地视频
     document.querySelector('#localVideo').srcObject = new MediaStream();
     // 远端视频
     document.querySelector('#remoteVideo').srcObject = new MediaStream();
-  })
+  });
 
-  e.session.on('unhold', function () {
+  e.session.on('unhold', function() 
+  {
 
     document.querySelector('#video_area').classList = '';
     // 本地视频
     let localVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getSenders) {
-      e.session.connection.getSenders().forEach((sender) => {
+    if (RTCPeerConnection.prototype.getSenders) 
+    {
+      e.session.connection.getSenders().forEach((sender) => 
+      {
 
-        if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
+        if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') 
+        {
           localVideoStream.addTrack(sender.track);
         }
 
       });
     }
-    else {
+    else 
+    {
       localVideoStream = e.session.connection.getLocalStreams()[0];
     }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-      setTimeout(() => {
-        document.querySelector('#localVideo').play()
-      }, 100);
+    setTimeout(() => 
+    {
+      document.querySelector('#localVideo').play();
+    }, 100);
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getReceivers) {
-      e.session.connection.getReceivers().forEach((receiver) => {
+    if (RTCPeerConnection.prototype.getReceivers) 
+    {
+      e.session.connection.getReceivers().forEach((receiver) => 
+      {
 
-        if (receiver.track && receiver.track.readyState === 'live') {
-          if (receiver.track.kind === 'video') {
+        if (receiver.track && receiver.track.readyState === 'live') 
+        {
+          if (receiver.track.kind === 'video') 
+          {
             remoteVideoStream.addTrack(receiver.track);
           }
-          else {
+          else 
+          {
             remoteVideoStream.addTrack(receiver.track);
           }
         }
 
       });
     }
-    else {
+    else 
+    {
       remoteVideoStream = e.session.connection.getRemoteStreams()[0];
     }
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
 
-    setTimeout(() => {
-      document.querySelector('#remoteVideo').play()
+    setTimeout(() => 
+    {
+      document.querySelector('#remoteVideo').play();
     }, 100);
-  })
+  });
 
 
-
-  e.session.on('mode', function (d) {
+  e.session.on('mode', function(d) 
+  {
     console.log('mode: ', d);
 
     currMode = d.mode;
@@ -314,57 +367,72 @@ flyinnUA.on('newRTCSession', function (e) {
     // 本地视频
     let localVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getSenders) {
-      e.session.connection.getSenders().forEach((sender) => {
+    if (RTCPeerConnection.prototype.getSenders) 
+    {
+      e.session.connection.getSenders().forEach((sender) => 
+      {
 
-        if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live' && d.mode !== 'audio') {
+        if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live' && d.mode !== 'audio') 
+        {
           localVideoStream.addTrack(sender.track);
         }
 
       });
     }
-    else {
+    else 
+    {
       localVideoStream = e.session.connection.getLocalStreams()[0];
     }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    setTimeout(() => {
-      document.querySelector('#localVideo').play()
+    setTimeout(() => 
+    {
+      document.querySelector('#localVideo').play();
     }, 100);
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getReceivers) {
-      e.session.connection.getReceivers().forEach((receiver) => {
+    if (RTCPeerConnection.prototype.getReceivers) 
+    {
+      e.session.connection.getReceivers().forEach((receiver) => 
+      {
 
-        if (receiver.track && receiver.track.readyState === 'live') {
-          if (receiver.track.kind === 'video') {
-            if (d.mode !== 'audio') {
+        if (receiver.track && receiver.track.readyState === 'live') 
+        {
+          if (receiver.track.kind === 'video') 
+          {
+            if (d.mode !== 'audio') 
+            {
               remoteVideoStream.addTrack(receiver.track);
             }
           }
-          else {
+          else 
+          {
             remoteVideoStream.addTrack(receiver.track);
           }
         }
 
       });
     }
-    else {
+    else 
+    {
       remoteVideoStream = e.session.connection.getRemoteStreams()[0];
     }
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
 
-    setTimeout(() => {
-      document.querySelector('#remoteVideo').play()
+    setTimeout(() => 
+    {
+      document.querySelector('#remoteVideo').play();
     }, 100);
-  })
+  });
 
   // 呼入振铃 & 呼出回铃音
-  e.session.on('progress', function (d) {
-    if (d.originator === 'local') {
+  e.session.on('progress', function(d) 
+  {
+    if (d.originator === 'local') 
+    {
       setStatus('振铃中');
       // setTimeout(() =>
       // {
@@ -376,28 +444,33 @@ flyinnUA.on('newRTCSession', function (e) {
       //   });
       // }, 200);
     }
-    else {
+    else 
+    {
       setStatus('播放回铃音');
     }
   });
 
-  e.session.on('cameraChanged', function (d) {
-    document.querySelector('#localVideo').srcObject = d
+  e.session.on('cameraChanged', function(d) 
+  {
+    document.querySelector('#localVideo').srcObject = d;
     
-    setTimeout(() => {
-      document.querySelector('#localVideo').play()
+    setTimeout(() => 
+    {
+      document.querySelector('#localVideo').play();
     }, 100);
-  })
+  });
 
   // 呼叫失败处理
-  e.session.on('failed', function (d) {
+  e.session.on('failed', function(d) 
+  {
     document.querySelector('#video_area').classList = 'hide';
     setStatus(`呼叫失败: ${d.cause}`);
     // location.reload();
   });
 
   // 呼叫结束
-  e.session.on('ended', function () {
+  e.session.on('ended', function() 
+  {
     document.querySelector('#video_area').classList = 'hide';
     setStatus('呼叫结束');
     // location.reload();
@@ -408,139 +481,167 @@ flyinnUA.on('newRTCSession', function (e) {
   // })
 
   // 呼叫已确认
-  e.session.on('confirmed', function (d) {
+  e.session.on('confirmed', function() 
+  {
     document.querySelector('#video_area').classList = '';
     // 本地视频
     let localVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getSenders) {
-      e.session.connection.getSenders().forEach((sender) => {
+    if (RTCPeerConnection.prototype.getSenders) 
+    {
+      e.session.connection.getSenders().forEach((sender) => 
+      {
         if (
           sender.track &&
           sender.track.kind === 'video' &&
           sender.track.readyState === 'live'
-        ) {
+        ) 
+        {
           localVideoStream.addTrack(sender.track);
         }
       });
     }
-    else {
+    else 
+    {
       localVideoStream = e.session.connection.getLocalStreams()[0];
     }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
     // document.querySelector('#localVideo').addEventListener('loadedmetadata', (event) => {
-    document.querySelector('#localVideo').play()
+    document.querySelector('#localVideo').play();
     // })
 
     // 远端视频
     let remoteVideoStream = new MediaStream();
-    let remoteAudioStream = new MediaStream();
+    const remoteAudioStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getReceivers) {
-      e.session.connection.getReceivers().forEach((receiver) => {
-        if (receiver.track && receiver.track.readyState === 'live') {
-          if (receiver.track.kind === 'audio') {
-            remoteAudioStream.addTrack(receiver.track)
+    if (RTCPeerConnection.prototype.getReceivers) 
+    {
+      e.session.connection.getReceivers().forEach((receiver) => 
+      {
+        if (receiver.track && receiver.track.readyState === 'live') 
+        {
+          if (receiver.track.kind === 'audio') 
+          {
+            remoteAudioStream.addTrack(receiver.track);
           }
-          else {
+          else 
+          {
             remoteVideoStream.addTrack(receiver.track);
           }
         }
       });
     }
-    else {
+    else 
+    {
       remoteVideoStream = e.session.connection.getRemoteStreams()[0];
     }
     const audio = new Audio();
+
     audio.srcObject = remoteAudioStream;
 
     // audio.addEventListener('loadedmetadata', (event) => {
-    audio.play()
+    audio.play();
     // })
 
 
     document.querySelector('#remoteVideo').srcObject = remoteVideoStream;
     // document.querySelector('#remoteVideo').addEventListener('loadedmetadata', (event) => {
-    document.querySelector('#remoteVideo').play()
+    document.querySelector('#remoteVideo').play();
     // })
 
   });
 
   // 收到新消息
-  e.session.on('newInfo', function (d) {
-    if (d.originator === 'remote') {
+  e.session.on('newInfo', function(d) 
+  {
+    if (d.originator === 'remote') 
+    {
       console.log('收到新消息：', d.info.body);
     }
-    else if (d.originator === 'local') {
+    else if (d.originator === 'local') 
+    {
       console.log('发出消息：', d.info.body);
     }
   });
 
   // 取消bundle
-  e.session.on('sdp', function (d) {
+  e.session.on('sdp', function(d) 
+  {
     d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
   });
 
 
   // 摄像头、麦克风已关闭
-  e.session.on('muted', function (d) {
-    if (d.audio) {
+  e.session.on('muted', function(d) 
+  {
+    if (d.audio) 
+    {
       document.querySelector('#muteMic').innerText = '开启麦克风';
     }
-    else if (d.video) {
+    else if (d.video) 
+    {
       document.querySelector('#muteCam').innerText = '开启摄像头';
     }
   });
 
   // 摄像头、麦克风已开启
-  e.session.on('unmuted', function (d) {
-    if (d.audio) {
+  e.session.on('unmuted', function(d) 
+  {
+    if (d.audio) 
+    {
       document.querySelector('#muteMic').innerText = '关闭麦克风';
     }
-    else if (d.video) {
+    else if (d.video) 
+    {
       document.querySelector('#muteCam').innerText = '关闭摄像头';
     }
   });
 });
 
 // 注册成功
-flyinnUA.on('registered', function () {
+ua.on('registered', function() 
+{
   setStatus(`注册成功：${account}`);
 });
 
 // 注册成功
-flyinnUA.on('failed', function (d) {
+ua.on('failed', function(d) 
+{
   console.log(d);
 });
 
 // 启动
-flyinnUA.start();
+ua.start();
 
 // 发起呼叫
-document.querySelector('#call').onclick = function () {
-  currMode = 'audio'
-  call()
+document.querySelector('#call').onclick = function() 
+{
+  currMode = 'audio';
+  call();
 };
 
 // 发起呼叫
-document.querySelector('#callVideo').onclick = function () {
-  currMode = 'video'
-  call('video')
+document.querySelector('#callVideo').onclick = function() 
+{
+  currMode = 'video';
+  call('video');
 };
 
-function call(type) {
+function call(type) 
+{
   const mediaConstraints = {
-    audio: true,
-    video: false
-  }
+    audio : true,
+    video : false
+  };
 
-  if (type === 'video') {
+  if (type === 'video') 
+  {
     mediaConstraints.video = true;
   }
 
   const linkman = document.querySelector('#linkman').value;
-  const session = flyinnUA.call(`${linkman}@5g.vsbc.com`, {
+  const session = ua.call(`${linkman}@5g.vsbc.com`, {
     mediaConstraints
     // mediaConstraints : {
     //   audio : true,
@@ -548,7 +649,8 @@ function call(type) {
     // }
   });
 
-  session.connection.ontrack = function (event) {
+  session.connection.ontrack = function() 
+  {
     // 远端视频
     // const remoteVideoStream = new MediaStream();
 
@@ -560,25 +662,30 @@ function call(type) {
     // 本地视频
     let localVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getSenders) {
-      session.connection.getSenders().forEach((sender) => {
+    if (RTCPeerConnection.prototype.getSenders) 
+    {
+      session.connection.getSenders().forEach((sender) => 
+      {
         if (
           sender.track &&
           sender.track.kind === 'video' &&
           sender.track.readyState === 'live'
-        ) {
+        ) 
+        {
           localVideoStream.addTrack(sender.track);
         }
       });
     }
-    else {
+    else 
+    {
       localVideoStream = session.connection.getLocalStreams()[0];
     }
 
     document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    setTimeout(() => {
-      document.querySelector('#localVideo').play()
+    setTimeout(() => 
+    {
+      document.querySelector('#localVideo').play();
     }, 100);
 
     // localVideoStream.getVideoTracks().forEach((track) =>
@@ -590,22 +697,24 @@ function call(type) {
     // });
 
 
-
     // document.querySelector('#remoteVideo').srcObject = event.streams[0];
   };
 
-  document.querySelector('#cancel').onclick = function () {
+  document.querySelector('#cancel').onclick = function() 
+  {
     // 取消呼叫
     session.terminate();
     location.reload();
   };
 }
 
-window.onbeforeunload = function () {
-  flyinnUA.stop();
+window.onbeforeunload = function() 
+{
+  ua.stop();
 };
 
-document.querySelector('#capture').onclick = function () {
+document.querySelector('#capture').onclick = function() 
+{
   const canvas = document.getElementById('captureView');
   const ctx = canvas.getContext('2d');
 
@@ -623,56 +732,8 @@ document.querySelector('#capture').onclick = function () {
 
 updateDevices();
 
-navigator.mediaDevices.addEventListener('devicechange', async () => {
-  await updateDevices();
+navigator.mediaDevices.addEventListener('devicechange', () => 
+{
+  updateDevices();
 });
 
-
-document.querySelector('#referBtn').onclick = function () {
-  var eventHandlers = {
-    'succeeded': function(data){ console.warn('succeeded: ', data) },
-    'failed':    function(data){ console.warn('failed: ', data) }
-  };
-  
-// To: <sip:15369385624@ims.js.chinamobile.com:5060>
-// CSeq: 9986 INVITE
-// Call-ID: quffrh1e54jlfpskf3c7
-// Max-Forwards: 70
-// Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video
-// P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel
-// Allow: INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY
-// Supported: timer,ice,replaces,outbound
-// User-Agent: CRTC 1.0.0
-// Session-Expires: 1800;refresher=uac
-// Min-SE: 90
-// Proxy-Authorization: Digest username="+8651280734884@ims.js.chinamobile.com", realm="ims.js.chinamobile.com", nonce="sLC5+yHR3ixK0FCyiqktgQ==", uri="s
-// :15369385624@ims.js.chinamobile.com:5060;transport=udp", response="879d59293ffea3c2ff18df94ee7c92ab", algorithm=MD5
-// Content-Type: application/sdp
-// Contact: <sip:+8651280734884@10.183.219.78:5060;transport=udp>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"
-// Content-Length: 920
-
-
-
-// INVITE sip:13831175769@36.154.21.38:6977;transport=udp SIP/2.0
-// Via: SIP/2.0/UDP 8.130.24.221:9010;branch=z9hG4bKGbBX2anQ;rport
-// From: "7101" <sip:051280734884@36.154.21.38:6977>;tag=e451c7a8
-// To: <sip:13831175769@36.154.21.38:6977>
-// CSeq: 31 INVITE
-// Call-ID: 1173332031-49383-4@BJC.BGI.B.BBD
-// Max-Forwards: 70
-// User-Agent: Grandstream Wave 1.2.14
-// Privacy: none
-// P-Preferred-Identity: <sip:7101@5g.vsbc.com>
-// Supported: replaces, path, timer, eventlist
-// Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE
-// Accept: application/sdp, application/dtmf-relay
-// Content-Type: application/sdp
-// Contact: <sip:051280734884@8.130.24.221:9010;transport=udp>
-// Content-Length: 473
-
-  var options = {
-    'eventHandlers': eventHandlers,
-    'extraHeaders':['P-Preferred-Identity: <sip:7306@5g.vsbc.com>', ' P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel', 'Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video']
-  };
-  flyinnUA.sendOptions(`${document.querySelector('#refer').value}@5g.vsbc.com`,null,options)
-};

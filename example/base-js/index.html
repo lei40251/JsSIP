@@ -6,119 +6,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
   <link rel="icon" href="data:image/ico;base64,aWNv" />
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-    }
-
-    .hide {
-      display: none !important;
-    }
-
-    .cav {
-      position: fixed;
-      left: 0;
-      top: 0;
-    }
-  </style>
-  <title>FlyInn Web</title>
+  <!-- Bootstrap CSS -->
+  <link href="./bootstrap-5.1.3-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+  <!-- Bootstrap icons CSS -->
+  <link rel="stylesheet" href="./bootstrap-icons-1.8.1/bootstrap-icons.css">
+  <link rel="stylesheet" href="./style/style.css">
+  <title>CRTC Demo</title>
 </head>
 
 <body style="margin: 0">
-  <canvas id="cav_s" class="cav"></canvas>
-  <p style="width: 94vw; padding: 20px; margin: 0; background-color: #eee" id="status"></p>
-  <div style="width: 100vw; display: flex; padding: 3vw 0" id="video_area">
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <img src="./imgs/logo.svg" alt="" width="26" class="d-inline-block align-text-top">
+        CRTC 实时音视频 Demo
+      </a>
+      <span class="navbar-text text-warning" id="status"></span>
+    </div>
+  </nav>
+  <div style="width: 100vw; display: flex; padding: 1vw 0" id="video_area">
     <div style="background-color: #eee; position: relative; width:50vw; text-align:center;">
-      <div style="
-            position: absolute;
-            top: 30px;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            color: rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          ">
-        <p style="transform: rotate(-30deg)">水印测试</p>
-        <p style="transform: rotate(-30deg)">水印测试</p>
-        <p style="transform: rotate(-30deg)">水印测试</p>
-      </div>
       <p style="width: 100%; text-align: center; margin: 5px 0">本端视频</p>
       <video muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
-        style="height:240px; margin: 1vw" id="localVideo" src=""></video>
+        style="max-height:240px; margin: 1vw" id="localVideo" src=""></video>
     </div>
     <div style="background-color: #eee; position: relative; width:50vw; text-align:center;">
-      <div style="
-            position: absolute;
-            top: 30px;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            color: rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          ">
-        <p style="transform: rotate(-30deg)">水印测试</p>
-        <p style="transform: rotate(-30deg)">水印测试</p>
-        <p style="transform: rotate(-30deg)">水印测试</p>
-      </div>
       <p style="width: 100%; text-align: center; margin: 5px 0">远端视频</p>
-      <video playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" style="height: 240px; margin: 1vw"
-        id="remoteVideo" src=""></video>
+      <video playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+        style="max-height: 240px; margin: 1vw" id="remoteVideo" src=""></video>
     </div>
   </div>
-  <div style="margin: 5vw; background-color: #efefef" id="ele">
+  <div style="margin: 0 1vw; background-color: #efefef" id="ele">
     <p>
-      <select id="cameras">
-
-      </select>
-      <input type="text" value="15369385624" title="请输入要呼叫的号码" id="linkman" />
-      <button id="call">语音外呼</button>
-      <button id="callVideo">视频外呼</button>&nbsp;&nbsp;&nbsp;
-      <button id="cancel">挂机/取消</button><br><br>
-      <button id="answer">语音接听</button>
-      <button id="answerVideo">视频接听</button>&nbsp;&nbsp;&nbsp;
-      <button id="toAudio">音频模式</button>
-      <button id="toVideo">视频模式</button>
-      <input type="text" value="" id="refer">
-      <button id="referBtn">呼转</button>
+      <select id="cameras" class="form-select form-select-sm"></select>
+      <input class="form-control form-control-sm" type="text" value="" title="请输入要呼叫的号码" id="linkman" />
+      <button class="btn btn-primary btn-sm" id="call">语音外呼</button>
+      <button class="btn btn-primary btn-sm" id="callVideo">视频外呼</button>&nbsp;&nbsp;&nbsp;
+      <button class="btn btn-danger btn-sm" id="cancel">挂机/取消</button><br><br>
+      <button class="btn btn-primary btn-sm" id="answer">语音接听</button>
+      <button class="btn btn-primary btn-sm" id="answerVideo">视频接听</button>&nbsp;&nbsp;&nbsp;
+      <button class="btn btn-primary btn-sm" id="toAudio">音频模式</button>
+      <button class="btn btn-primary btn-sm" id="toVideo">视频模式</button>
+      <input class="form-control form-control-sm" type="text" value="" id="refer">
+      <button class="btn btn-primary btn-sm" id="referBtn">呼转</button>
     </p>
     <p>
-      <button id="muteMic">关闭麦克风</button>
-      <button id="muteCam">关闭摄像头</button>
-      <button id="switchCam">切换摄像头</button>
-      <button id="hold">保持/取消保持</button>
-      <button id="capture">对远端视频截图</button>
+      <button class="btn btn-primary btn-sm" id="muteMic">关闭麦克风</button>
+      <button class="btn btn-primary btn-sm" id="muteCam">关闭摄像头</button>
+      <button class="btn btn-primary btn-sm" id="switchCam">切换摄像头</button>
+      <button class="btn btn-primary btn-sm" id="hold">保持/取消保持</button>
+      <button class="btn btn-primary btn-sm" id="capture">对远端视频截图</button>
     </p>
     <p>
-      <button id="screenShare">分享桌面</button>
-      <button id="formShare">分享表单</button>
-      <button id="picShare">分享图片</button>
-      <button id="videoShare">分享视频</button>
-      <button id="stopShare">停止分享</button>
+      <button class="btn btn-primary btn-sm" id="screenShare">分享桌面</button>
+      <button class="btn btn-primary btn-sm" id="formShare">分享表单</button>
+      <button class="btn btn-primary btn-sm" id="picShare">分享图片</button>
+      <button class="btn btn-primary btn-sm" id="videoShare">分享视频</button>
+      <button class="btn btn-danger btn-sm" id="stopShare">停止分享</button>
     </p>
     <p class="hide">
       <input type="text" id="info" />
       <button id="sendInfo">推送消息</button>
     </p>
   </div>
-  <div style="margin: 5vw; height: 240px; background-color: #efefef; display: flex; justify-content: space-between">
-    <div style="width: 320px; height: 240px; overflow-x: hidden; overflow-y: auto;" class="hide">
-      <div id="form_s" style="background-color: #ccc;">
-        <input type="text" value="请输入要分享的表单内容">
-      </div>
+  <div style="margin: 1vw; height: 240px; background-color: #efefef; display: flex; justify-content: space-between">
+    <div style="max-width: 320px; overflow: hidden">
+      <img id="pic_s" style="height: 100%;" src="../pic.png" alt="" />
     </div>
-    <div style="width: 320px; height: 240px; overflow: hidden">
-      <img id="pic_s" style="width: 100%" src="./6372081616257524357003003.jpg" alt="" />
-    </div>
-    <div style="width: 320px; height: 240px">
-      <video playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" id="video_s" src="./video.mp4" loop
-        muted style="width: 100%" controls></video>
+    <div style="max-width: 320px;">
+      <video playsinline x5-video-player-fullscreen=" true" x5-video-player-type="h5" id="video_s" src="../video.mp4"
+        loop muted style="height: 100%" controls></video>
+      <!-- <video playsinline x5-video-player-fullscreen=" true" x5-video-player-type="h5" id="video_s" src="../video1.mp4"
+        loop muted style="height: 100%" controls></video> -->
     </div>
     <div>
       <canvas id="captureView" style="width: 100%;"></canvas>
