@@ -5,55 +5,16 @@ CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
 CRTC.debug.disable('CRTC:*');
 
-/**
- * 获取url参数
- */
-function handleGetQuery(name)
-{
-  const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-  const r = window.location.search.substr(1).match(reg);
-
-  if (r != null) return unescape(r[2]);
-
-  return null;
-}
-
-/**
- * 输出显示状态
- */
-function setStatus(text) 
-{
-  const statusDom = document.querySelector('#status');
-
-  statusDom.innerText = text;
-}
-
-/**
- * 更新摄像头下拉列表
- */
-function updateDevices() 
-{
-  CRTC.Utils.getCameras()
-    .then((cameras) => 
-    {
-      let option = '<option selected value="">请选择</option>';
-
-      cameras.forEach((device) => 
-      {
-        option += `<option value="${device.deviceId}">${device.label}</option>`;
-      });
-
-      document.querySelector('#cameras').innerHTML = option;
-    });
-}
-
+// 当前通话模式： audio 或者 video
 let currMode;
+// 暂停前的通话模式
 let holdMode;
-
+// 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// sip domain
 const sipDomain = '5g.vsbc.com';
 // 注册UA的用户名
-const account = handleGetQuery('linkman');
+const account = handleGetQuery('caller');
 // websocket 实例
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
@@ -65,109 +26,104 @@ const configuration = {
   // SIP身份验证密码
   password : `yl_19${account}`
 };
+// 媒体约束条件
+const videoConstraints = {
+  width     : { ideal: 640 },
+  height    : { ideal: 480 },
+  frameRate : 15
+};
+
 // UA 实例
 const ua = new CRTC.UA(configuration);
 
-// 新通话
+// 新通话（呼入或呼出）
 ua.on('newRTCSession', function(e)
 {
-  let curMuted = null;
+  /**
+   * DOM 事件绑定
+   */
 
-  // console.log('session: ', e.session)
-
+  // 切换摄像头
   document.querySelector('#cameras').onchange = function() 
   {
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
+    setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
 
+  // 音频接听
   document.querySelector('#answer').onclick = function() 
   {
-    // 接听
     e.session.answer({
       mediaConstraints : { audio: true, video: false }
     });
+    setStatus('audio answer');
   };
 
+  // 视频接听
   document.querySelector('#answerVideo').onclick = function() 
   {
-    // 接听
     e.session.answer({
-      mediaConstraints : { audio: true, video: { width: { ideal: 480 }, height: { ideal: 640 } } }
+      mediaConstraints : { audio: true, video: videoConstraints }
     });
+    setStatus('video answer');
   };
 
+  // 切换为音频模式
   document.querySelector('#toAudio').onclick = function() 
   {
     e.session.demoteToAudio();
   };
 
+  // 切换为视频模式
   document.querySelector('#toVideo').onclick = function() 
   {
     e.session.upgradeToVideo();
   };
 
+  // 挂机
   document.querySelector('#cancel').onclick = function() 
   {
     e.session.terminate();
   };
 
-  const eventHandlers = {
-    'progress' : function(data) { console.log('progress', data); },
-    'failed'   : function(data) 
-    {
-      console.log('failed', data);
-      if (e.session.isOnHold().local) 
-      {
-        e.session.unhold({}, function() 
-        {
-          console.warn('hm: ', holdMode);
-          if (holdMode == 'video') 
-          {
-            e.session.upgradeToVideo();
-          }
-        });
-      }
-    },
-    'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
-    'trying'           : function(data) { console.log('trying', data); },
-    'requestSucceeded' : function(data) { console.log('requestSucceeded', data); },
-    'requestFailed'    : function(data) 
-    {
-      console.log('requestFailed', data);
-      if (e.session.isOnHold().local) 
-      {
-        e.session.unhold({}, function() 
-        {
-          console.warn('hm: ', holdMode);
-          if (holdMode == 'video') 
-          {
-            e.session.upgradeToVideo();
-          }
-        });
-      }
-    }
-  };
-
+  // 呼转
   document.querySelector('#referBtn').onclick = function() 
   {
-    holdMode = currMode;
+    const eventHandlers = {
+      'progress' : function(data) { console.log('progress', data); },
+      'failed'   : function(data) 
+      {
+        console.log('failed', data);
+        if (e.session.isOnHold().local) 
+        {
+          e.session.unhold();
+        }
+      },
+      'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
+      'trying'           : function(data) { console.log('trying', data); },
+      'requestSucceeded' : function(data) { console.log('requestSucceeded', data); },
+      'requestFailed'    : function(data) 
+      {
+        console.log('requestFailed', data);
+        if (e.session.isOnHold().local) 
+        {
+          e.session.unhold();
+        }
+      }
+    };
+    
     e.session.hold();
 
-    e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`, {
+    e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
       eventHandlers : eventHandlers
     });
-
-    // e.session.refer(`${document.querySelector('#refer').value}@5g.vsbc.com`,{
-    //   replaces:e.session,
-    //   mediaConstraints:{audio:true,video:true},
-    //   eventHandlers:eventHandlers
   };
 
+  // 静麦/取消静麦
   document.querySelector('#muteMic').onclick = function() 
   {
-    // 获取视频和麦克风的关闭状态
-    curMuted = e.session.isMuted();
-    if (curMuted.audio) 
+    // 获取麦克风状态
+    if (e.session.isMuted().audio) 
     {
       // 开启麦克风
       e.session.unmute({ audio: true });
@@ -179,30 +135,11 @@ ua.on('newRTCSession', function(e)
     }
   };
 
-  document.querySelector('#hold').onclick = function() 
-  {
-    if (e.session.isOnHold().local) 
-    {
-      e.session.unhold({}, function() 
-      {
-        console.warn('hm: ', holdMode);
-        // if (holdMode == 'video') {
-        //   e.session.upgradeToVideo()
-        // }
-      });
-    }
-    else 
-    {
-      holdMode = currMode;
-      e.session.hold();
-    }
-  };
-
+  // 关闭/开启视频
   document.querySelector('#muteCam').onclick = function() 
   {
-    // 获取视频和麦克风的关闭状态
-    curMuted = e.session.isMuted();
-    if (curMuted.video) 
+    // 获取视频状态
+    if (e.session.isMuted().video) 
     {
       // 开启摄像头
       e.session.unmute({ video: true });
@@ -214,47 +151,45 @@ ua.on('newRTCSession', function(e)
     }
   };
 
-  document.querySelector('#sendInfo').onclick = function() 
+  // 保持/取消保持
+  document.querySelector('#hold').onclick = function() 
   {
-    // 通话中发送消息  注意： contentType 必填
-    e.session.sendInfo('text/plain', document.querySelector('#info').value);
+    // 获取保持状态
+    const isHold = e.session.isOnHold();
+
+    // 本地和远端都未保持才可以保持
+    if (isHold.local) 
+    {
+      e.session.unhold();
+    }
+    else if (!isHold.remote)
+    {
+      e.session.hold();
+    }
   };
 
-  document.querySelector('#switchCam').onclick = function() 
-  {
-    // 切换摄像头
-    const stream = e.session.switchCam({ frameRate: 15 });
-
-    stream &&
-      stream.then((s) => 
-      {
-        document.querySelector('#localVideo').srcObject = s;
-
-        setTimeout(() => 
-        {
-          document.querySelector('#localVideo').play();
-        }, 100);
-      });
-  };
-
+  // 分享屏幕
   document.querySelector('#screenShare').onclick = function() 
   {
     e.session.share('screen');
   };
 
-
+  // 分享页面元素
   document.querySelector('#formShare').onclick = function() 
   {
     e.session.share('html', '#ele', html2canvas);
   };
 
+  // 分享图片
   document.querySelector('#picShare').onclick = function() 
   {
     e.session.share('pic', '#pic_s');
   };
 
+  // 分享视频
   document.querySelector('#videoShare').onclick = function() 
   {
+    // 分享视频需要视频在播放状态
     document.querySelector('#video_s').play()
       .then(() => 
       {
@@ -262,39 +197,41 @@ ua.on('newRTCSession', function(e)
       });
   };
 
+  // 停止分享
   document.querySelector('#stopShare').onclick = function() 
   {
     e.session.unShare();
-
-    isStoppedRecording = false;
   };
 
+  // 通话种推送消息
+  document.querySelector('#sendInfo').onclick = function() 
+  {
+    // 注意： contentType 必填
+    e.session.sendInfo('text/plain', document.querySelector('#info').value);
+  };
+
+  /**
+   * session event
+   */
+  // 收到呼转事件
   e.session.on('refer', function(d) 
   {
     console.log('refer');
     d.accept();
   });
 
-  e.session.on('replaces', function(ev) 
-  {
-    console.log('replaces: ', ev);
-    ev.accept();
-  });
-
+  // 保持通话事件
   e.session.on('hold', function() 
   {
-
-    document.querySelector('#video_area').classList = '';
     // 本地视频
     document.querySelector('#localVideo').srcObject = new MediaStream();
     // 远端视频
     document.querySelector('#remoteVideo').srcObject = new MediaStream();
   });
 
+  // 取消保持通话事件
   e.session.on('unhold', function() 
   {
-
-    document.querySelector('#video_area').classList = '';
     // 本地视频
     let localVideoStream = new MediaStream();
 
@@ -356,14 +293,14 @@ ua.on('newRTCSession', function(e)
     }, 100);
   });
 
-
+  // 通话模式切换事件
   e.session.on('mode', function(d) 
   {
     console.log('mode: ', d);
 
     currMode = d.mode;
 
-    document.querySelector('#video_area').classList = '';
+    // document.querySelector('#video_area').classList = '';
     // 本地视频
     let localVideoStream = new MediaStream();
 
@@ -433,23 +370,15 @@ ua.on('newRTCSession', function(e)
   {
     if (d.originator === 'local') 
     {
-      setStatus('振铃中');
-      // setTimeout(() =>
-      // {
-      //   e.session.answer({
-      //     mediaConstraints : {
-      //       audio : true,
-      //       video : { width: { ideal: 480 }, height: { ideal: 640 } }
-      //     }
-      //   });
-      // }, 200);
+      setStatus('收到呼叫，振铃中');
     }
     else 
     {
-      setStatus('播放回铃音');
+      setStatus('对方已振铃，收到回铃音');
     }
   });
 
+  // 切换摄像头事件
   e.session.on('cameraChanged', function(d) 
   {
     document.querySelector('#localVideo').srcObject = d;
@@ -463,27 +392,18 @@ ua.on('newRTCSession', function(e)
   // 呼叫失败处理
   e.session.on('failed', function(d) 
   {
-    document.querySelector('#video_area').classList = 'hide';
     setStatus(`呼叫失败: ${d.cause}`);
-    // location.reload();
   });
 
   // 呼叫结束
   e.session.on('ended', function() 
   {
-    document.querySelector('#video_area').classList = 'hide';
     setStatus('呼叫结束');
-    // location.reload();
   });
-
-  // e.session.on('upgradeToVideo', function(data){
-  //   console.log('invite to video', data);
-  // })
 
   // 呼叫已确认
   e.session.on('confirmed', function() 
   {
-    document.querySelector('#video_area').classList = '';
     // 本地视频
     let localVideoStream = new MediaStream();
 
@@ -557,11 +477,11 @@ ua.on('newRTCSession', function(e)
   {
     if (d.originator === 'remote') 
     {
-      console.log('收到新消息：', d.info.body);
+      setStatus(`收到新消息：${d.info.body}`);
     }
     else if (d.originator === 'local') 
     {
-      console.log('发出消息：', d.info.body);
+      setStatus(`发出消息：${d.info.body}`);
     }
   });
 
@@ -570,7 +490,6 @@ ua.on('newRTCSession', function(e)
   {
     d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
   });
-
 
   // 摄像头、麦克风已关闭
   e.session.on('muted', function(d) 
@@ -599,35 +518,39 @@ ua.on('newRTCSession', function(e)
   });
 });
 
+// ua events
 // 注册成功
 ua.on('registered', function() 
 {
   setStatus(`注册成功：${account}`);
 });
 
-// 注册成功
+// 注册失败
 ua.on('failed', function(d) 
 {
   console.log(d);
 });
 
-// 启动
-ua.start();
-
-// 发起呼叫
+// 发起音频呼叫
 document.querySelector('#call').onclick = function() 
 {
+  // 设置当前通话模式为音频模式
   currMode = 'audio';
   call();
 };
 
-// 发起呼叫
+// 发起视频呼叫
 document.querySelector('#callVideo').onclick = function() 
 {
+  // 设置当前通话模式为视频模式
   currMode = 'video';
   call('video');
 };
 
+/**
+ * 发起呼叫
+ * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
+ */
 function call(type) 
 {
   const mediaConstraints = {
@@ -637,82 +560,73 @@ function call(type)
 
   if (type === 'video') 
   {
-    mediaConstraints.video = true;
+    mediaConstraints.video = videoConstraints;
   }
 
-  const linkman = document.querySelector('#linkman').value;
-  const session = ua.call(`${linkman}@5g.vsbc.com`, {
+  const callee = document.querySelector('#callee').value;
+  const session = ua.call(`${callee}@${sipDomain}`, {
     mediaConstraints
-    // mediaConstraints : {
-    //   audio : true,
-    //   video : { width: { ideal: 480 }, height: { ideal: 640 } }
-    // }
   });
 
-  session.connection.ontrack = function() 
-  {
-    // 远端视频
-    // const remoteVideoStream = new MediaStream();
+  // session.connection.ontrack = function() 
+  // {
+  // 远端视频
+  // const remoteVideoStream = new MediaStream();
 
-    // if (receiver.track && receiver.track.readyState === 'live')
-    // {
-    //   remoteVideoStream.addTrack(receiver.track);
-    // }
+  // if (receiver.track && receiver.track.readyState === 'live')
+  // {
+  //   remoteVideoStream.addTrack(receiver.track);
+  // }
 
-    // 本地视频
-    let localVideoStream = new MediaStream();
+  // 本地视频
+  // let localVideoStream = new MediaStream();
 
-    if (RTCPeerConnection.prototype.getSenders) 
-    {
-      session.connection.getSenders().forEach((sender) => 
-      {
-        if (
-          sender.track &&
-          sender.track.kind === 'video' &&
-          sender.track.readyState === 'live'
-        ) 
-        {
-          localVideoStream.addTrack(sender.track);
-        }
-      });
-    }
-    else 
-    {
-      localVideoStream = session.connection.getLocalStreams()[0];
-    }
+  // if (RTCPeerConnection.prototype.getSenders) 
+  // {
+  //   session.connection.getSenders().forEach((sender) => 
+  //   {
+  //     if (
+  //       sender.track &&
+  //       sender.track.kind === 'video' &&
+  //       sender.track.readyState === 'live'
+  //     ) 
+  //     {
+  //       localVideoStream.addTrack(sender.track);
+  //     }
+  //   });
+  // }
+  // else 
+  // {
+  //   localVideoStream = session.connection.getLocalStreams()[0];
+  // }
 
-    document.querySelector('#localVideo').srcObject = localVideoStream;
+  // document.querySelector('#localVideo').srcObject = localVideoStream;
 
-    setTimeout(() => 
-    {
-      document.querySelector('#localVideo').play();
-    }, 100);
+  // setTimeout(() => 
+  // {
+  //   document.querySelector('#localVideo').play();
+  // }, 100);
 
-    // localVideoStream.getVideoTracks().forEach((track) =>
-    // {
-    //   track.addEventListener('ended', () =>
-    //   {
-    //     console.log('这里可以切换为音频界面');
-    //   });
-    // });
+  // localVideoStream.getVideoTracks().forEach((track) =>
+  // {
+  //   track.addEventListener('ended', () =>
+  //   {
+  //     console.log('这里可以切换为音频界面');
+  //   });
+  // });
 
 
-    // document.querySelector('#remoteVideo').srcObject = event.streams[0];
-  };
+  // document.querySelector('#remoteVideo').srcObject = event.streams[0];
+  // };
 
+  // 外呼取消呼叫
   document.querySelector('#cancel').onclick = function() 
   {
-    // 取消呼叫
     session.terminate();
-    location.reload();
   };
 }
 
-window.onbeforeunload = function() 
-{
-  ua.stop();
-};
-
+// 对远端媒体截图
 document.querySelector('#capture').onclick = function() 
 {
   const canvas = document.getElementById('captureView');
@@ -730,10 +644,25 @@ document.querySelector('#capture').onclick = function()
   );
 };
 
-updateDevices();
+// 页面刷新 终止会话，注销ua
+window.onbeforeunload = function() 
+{
+  ua.stop();
+};
 
+// 监听系统输入设备变化更新摄像头列表
 navigator.mediaDevices.addEventListener('devicechange', () => 
 {
   updateDevices();
 });
 
+// 启动
+function start()
+{
+  updateDevices();
+
+  // 启动UA，连接信令服务器并注册
+  ua.start();
+}
+
+start();
