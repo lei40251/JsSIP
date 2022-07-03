@@ -5,10 +5,6 @@ CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
 CRTC.debug.disable('CRTC:*');
 
-// 当前通话模式： audio 或者 video
-let currMode;
-// 暂停前的通话模式
-let holdMode;
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // sip domain
@@ -42,7 +38,7 @@ ua.on('newRTCSession', function(e)
   /**
    * DOM 事件绑定
    */
-
+  console.warn('session: ', e.session);
   // 切换摄像头
   document.querySelector('#cameras').onchange = function() 
   {
@@ -296,7 +292,7 @@ ua.on('newRTCSession', function(e)
   // 通话模式切换事件
   e.session.on('mode', function(d) 
   {
-    console.log('mode: ', d);
+    setStatus(`mode: ${d.mode}`);
 
     currMode = d.mode;
 
@@ -404,6 +400,7 @@ ua.on('newRTCSession', function(e)
   // 呼叫已确认
   e.session.on('confirmed', function() 
   {
+    setStatus('confirmed');
     // 本地视频
     let localVideoStream = new MediaStream();
 
@@ -415,7 +412,7 @@ ua.on('newRTCSession', function(e)
           sender.track &&
           sender.track.kind === 'video' &&
           sender.track.readyState === 'live'
-        ) 
+        )
         {
           localVideoStream.addTrack(sender.track);
         }
@@ -568,56 +565,12 @@ function call(type)
     mediaConstraints
   });
 
-  // session.connection.ontrack = function() 
-  // {
-  // 远端视频
-  // const remoteVideoStream = new MediaStream();
-
-  // if (receiver.track && receiver.track.readyState === 'live')
-  // {
-  //   remoteVideoStream.addTrack(receiver.track);
-  // }
-
-  // 本地视频
-  // let localVideoStream = new MediaStream();
-
-  // if (RTCPeerConnection.prototype.getSenders) 
-  // {
-  //   session.connection.getSenders().forEach((sender) => 
-  //   {
-  //     if (
-  //       sender.track &&
-  //       sender.track.kind === 'video' &&
-  //       sender.track.readyState === 'live'
-  //     ) 
-  //     {
-  //       localVideoStream.addTrack(sender.track);
-  //     }
-  //   });
-  // }
-  // else 
-  // {
-  //   localVideoStream = session.connection.getLocalStreams()[0];
-  // }
-
-  // document.querySelector('#localVideo').srcObject = localVideoStream;
-
-  // setTimeout(() => 
-  // {
-  //   document.querySelector('#localVideo').play();
-  // }, 100);
-
-  // localVideoStream.getVideoTracks().forEach((track) =>
-  // {
-  //   track.addEventListener('ended', () =>
-  //   {
-  //     console.log('这里可以切换为音频界面');
-  //   });
-  // });
-
-
-  // document.querySelector('#remoteVideo').srcObject = event.streams[0];
-  // };
+  // 播放183的回铃音
+  session.connection.ontrack = function(event)
+  {
+    document.querySelector('#remoteVideo').srcObject = event.streams[0];
+    document.querySelector('#remoteVideo').play();
+  };
 
   // 外呼取消呼叫
   document.querySelector('#cancel').onclick = function() 
