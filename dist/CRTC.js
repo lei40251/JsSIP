@@ -1,5 +1,5 @@
 /*
- * CRTC v1.0.0.20226301538
+ * CRTC v1.0.0.2022731045
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -298,7 +298,7 @@ exports.load = function (dst, src) {
 var pkg = require('../package.json');
 
 module.exports = {
-  USER_AGENT: "".concat(pkg.title, " ").concat(pkg.version),
+  USER_AGENT: "".concat(pkg.title, " Web SDK ").concat(pkg.version),
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -343,6 +343,8 @@ module.exports = {
   },
   // SIP Methods.
   ACK: 'ACK',
+  PRACK: 'PRACK',
+  // 100rel rfc3262
   BYE: 'BYE',
   CANCEL: 'CANCEL',
   INFO: 'INFO',
@@ -460,7 +462,7 @@ module.exports = {
     604: 'Does Not Exist Anywhere',
     606: 'Not Acceptable'
   },
-  ALLOWED_METHODS: 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
+  ALLOWED_METHODS: 'INVITE,ACK,PRACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
   MAX_FORWARDS: 69,
   SESSION_EXPIRES: 90,
@@ -616,9 +618,11 @@ module.exports = /*#__PURE__*/function () {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var body = options.body || null;
+      var body = options.body || null; // 增加适配 100rel 200ok nobody情况下的cseq
 
-      var request = this._createRequest(method, extraHeaders, body); // Increase the local CSeq on authentication.
+      var requestNoBody = options.requestNoBody || false;
+
+      var request = this._createRequest(method, extraHeaders, body, requestNoBody); // Increase the local CSeq on authentication.
 
 
       eventHandlers.onAuthenticated = function () {
@@ -647,18 +651,25 @@ module.exports = /*#__PURE__*/function () {
       }
 
       this._owner.receiveRequest(request);
-    } // RFC 3261 12.2.1.1.
+    } // 增加兼容100rel 情况下 200ok 无sdp 时候的ack cseq值
+    // RFC 3261 12.2.1.1.
 
   }, {
     key: "_createRequest",
-    value: function _createRequest(method, extraHeaders, body) {
+    value: function _createRequest(method, extraHeaders, body, requestNoBody) {
       extraHeaders = Utils.cloneArray(extraHeaders);
 
       if (!this._local_seqnum) {
         this._local_seqnum = Math.floor(Math.random() * 10000);
-      }
+      } // 增加100rel的 prack
 
-      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._local_seqnum : this._local_seqnum += 1;
+
+      if (method === CRTC_C.PRACK) {
+        extraHeaders.push("RAck: 1 ".concat(this.local_seqnum, " INVITE"));
+      } // 200ok no body 情况下的cseq值
+
+
+      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? requestNoBody ? this._local_seqnum - 1 : this._local_seqnum : this._local_seqnum += 1;
       var request = new SIPMessage.OutgoingRequest(method, this._remote_target, this._ua, {
         'cseq': cseq,
         'call_id': this._id.call_id,
@@ -1095,15 +1106,15 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== "function") { throw new TypeError("Super expression must either be null or a function"); } if (typeof _cache !== "undefined") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }
 
-function _construct(Parent, args, Class) { if (_isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
+function _construct(Parent, args, Class) { if (_isNativeReflectConstruct()) { _construct = Reflect.construct.bind(); } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
 function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var ConfigurationError = /*#__PURE__*/function (_Error) {
   _inherits(ConfigurationError, _Error);
@@ -16211,7 +16222,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -16221,7 +16232,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -16664,7 +16675,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -16674,7 +16685,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -17310,7 +17321,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -17320,7 +17331,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 /* globals RTCPeerConnection: false, RTCSessionDescription: false */
 var EventEmitter = require('events').EventEmitter;
@@ -17447,7 +17458,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._localToVideo = false; // 远端切换到音视频模式
 
     _this._remoteToAudio = false;
-    _this._remoteToVideo = false; // Session Timers (RFC 4028).
+    _this._remoteToVideo = false; // 适配 100rel 调整reinvite的hold判断
+
+    _this._notHold = true; // Session Timers (RFC 4028).
 
     _this._sessionTimers = {
       enabled: _this._ua.configuration.session_timers,
@@ -19773,6 +19786,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       function nextS() {
         var _this20 = this;
 
+        // 适配100rel调整 reinvite 的 hold 判断
+        this._notHold = true;
+
+        this._localMediaStream.getVideoTracks().forEach(function (track) {
+          if (track.readyState !== 'ended') {
+            _this20._notHold = false;
+          }
+        });
+
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
           if (_this20._status === C.STATUS_TERMINATED) {
@@ -19885,7 +19907,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
-      var _this22 = this;
+      var _this23 = this;
 
       logger.debug('receiveUpdate()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
@@ -19930,18 +19952,94 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         logger.debug('invalid Content-Type');
         request.reply(415);
         return;
-      }
+      } // 适配 100rel 调整update带sdp的处理
 
-      this._processInDialogSdpOffer(request) // Send answer.
-      .then(function (desc) {
-        if (_this22._status === C.STATUS_TERMINATED) {
-          return;
+
+      function nextS() {
+        var _this22 = this;
+
+        this._notHold = true;
+
+        this._processInDialogSdpOffer(request) // Send answer.
+        .then(function (desc) {
+          if (_this22._status === C.STATUS_TERMINATED) {
+            return;
+          }
+
+          sendAnswer.call(_this22, desc);
+        })["catch"](function (error) {
+          logger.warn(error);
+        });
+      }
+      /**
+       * 音视频切换相关
+       * 收到reinvite时候判断是否要就行音视频模式切换
+       * @author: lei
+       */
+
+
+      if (request.body) {
+        var waiting = false;
+        var sdp_request = sdp_transform.parse(request.body); // request['mode'] = 'audio';
+
+        this._remoteToAudio = true;
+        this._remoteToVideo = false;
+
+        var _iterator8 = _createForOfIteratorHelper(sdp_request.media),
+            _step8;
+
+        try {
+          for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+            var m = _step8.value;
+
+            if (m.type == 'audio') {
+              continue;
+            } // waiting = true;
+
+
+            if (m.port === 0 || m.port === 0 && this._mode === 'video') {
+              this._ontogglemode('audio'); // this._localToAudio = true;
+              // this._localToVideo = false;
+              // nextS.call(this);
+
+            } else {
+              waiting = true; // 触发切换事件，要求用户授权
+
+              this._remoteToVideo = true;
+              this._remoteToAudio = false;
+              this._localToAudio = false;
+              this._localToVideo = true;
+
+              if (this.listeners('upgradeToVideo').length === 0) {
+                this._localToAudio = false;
+                nextS.call(this);
+              } else {
+                this.emit('upgradeToVideo', {
+                  request: request,
+                  accept: function accept() {
+                    _this23._localToAudio = false;
+                    nextS.call(_this23);
+                  },
+                  reject: function reject() {
+                    _this23._localToAudio = true;
+                    nextS.call(_this23);
+                  }
+                });
+              }
+            }
+          }
+        } catch (err) {
+          _iterator8.e(err);
+        } finally {
+          _iterator8.f();
         }
 
-        sendAnswer.call(_this22, desc);
-      })["catch"](function (error) {
-        logger.warn(error);
-      });
+        if (!waiting) {
+          this._localToAudio = true;
+          this._localToVideo = false;
+          nextS.call(this);
+        }
+      }
 
       function sendAnswer(desc) {
         var extraHeaders = ["Contact: ".concat(this._contact)];
@@ -19958,18 +20056,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
-      var _this23 = this;
+      var _this24 = this;
 
       logger.debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
       var hold = false;
 
-      var _iterator8 = _createForOfIteratorHelper(sdp.media),
-          _step8;
+      var _iterator9 = _createForOfIteratorHelper(sdp.media),
+          _step9;
 
       try {
-        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-          var m = _step8.value;
+        for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+          var m = _step9.value;
 
           if (holdMediaTypes.indexOf(m.type) === -1) {
             continue;
@@ -19986,9 +20084,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       } catch (err) {
-        _iterator8.e(err);
+        _iterator9.e(err);
       } finally {
-        _iterator8.f();
+        _iterator9.f();
       }
 
       var e = {
@@ -20004,54 +20102,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
       this._connectionPromiseQueue = this._connectionPromiseQueue // Set remote description.
       .then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this23._connection.setRemoteDescription(offer)["catch"](function (error) {
+        return _this24._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this23.emit('peerconnection:setremotedescriptionfailed', error);
+          _this24.emit('peerconnection:setremotedescriptionfailed', error);
 
           throw error;
         });
       }).then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        if (_this23._remoteHold === true && hold === false) {
-          _this23._remoteHold = false;
+        if (_this24._remoteHold === true && hold === false) {
+          _this24._remoteHold = false;
 
-          _this23._onunhold('remote');
-        } else if (_this23._remoteHold === false && hold === true) {
-          _this23._remoteHold = true;
+          _this24._onunhold('remote');
+        } else if (_this24._remoteHold === false && hold === true) {
+          _this24._remoteHold = true;
 
-          _this23._onhold('remote');
+          _this24._onhold('remote');
         }
       }).then(function () {
-        var notHold = true;
-
-        _this23._localMediaStream.getVideoTracks().forEach(function (track) {
-          if (track.readyState !== 'ended') {
-            notHold = false;
-          }
-        });
-
-        if (_this23._remoteToVideo && notHold) {
+        // 适配 100rel 调整 hold 的判断
+        if (_this24._remoteToVideo && _this24._notHold) {
           return navigator.mediaDevices.getUserMedia({
             video: true
           })["catch"](function (error) {
-            if (_this23._status === C.STATUS_TERMINATED) {
+            if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
 
-            _this23._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+            _this24._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
             logger.warn('emit "getusermediafailed" [error:%o]', error);
 
-            _this23.emit('getusermediafailed', error);
+            _this24.emit('getusermediafailed', error);
 
             throw error;
           });
@@ -20059,24 +20150,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (stream) {
         if (stream) {
           stream.getVideoTracks().forEach(function (track) {
-            _this23._localMediaStream.addTrack(track); // 兼容低版本浏览器不支持addTrack的情况
+            _this24._localMediaStream.addTrack(track); // 兼容低版本浏览器不支持addTrack的情况
 
 
             if (RTCPeerConnection.prototype.addTrack) {
-              _this23._connection.addTrack(track, stream);
+              _this24._connection.addTrack(track, stream);
             } else {
-              _this23._connection.addStream(stream);
+              _this24._connection.addStream(stream);
             }
           });
-          _this23._iceReady = false; // this._rtcAnswerConstraints['iceRestart'] = true;
+          _this24._iceReady = false; // this._rtcAnswerConstraints['iceRestart'] = true;
         }
       }) // Create local description.
       .then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        return _this23._createLocalDescription('answer', _this23._rtcAnswerConstraints)["catch"](function (error) {
+        return _this24._createLocalDescription('answer', _this24._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
           logger.warn('emit "peerconnection:createtelocaldescriptionfailed" [error:%o]', error);
           throw error;
@@ -20093,7 +20184,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
-      var _this24 = this;
+      var _this25 = this;
 
       logger.debug('receiveRefer()');
 
@@ -20117,10 +20208,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
-          _accept.call(_this24, initCallback, options);
+          _accept.call(_this25, initCallback, options);
         },
         reject: function reject() {
-          _reject.call(_this24);
+          _reject.call(_this25);
         }
       });
 
@@ -20217,12 +20308,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this26 = this;
+      var _this27 = this;
 
       logger.debug('receiveReplaces()');
 
       function _accept2(initCallback) {
-        var _this25 = this;
+        var _this26 = this;
 
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
@@ -20231,7 +20322,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua); // Terminate the current session when the new one is confirmed.
 
         session.on('confirmed', function () {
-          _this25.terminate();
+          _this26.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -20245,10 +20336,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this26, initCallback);
+          _accept2.call(_this27, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this26);
+          _reject2.call(_this27);
         }
       });
     }
@@ -20259,21 +20350,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) {
-      var _this27 = this;
+      var _this28 = this;
 
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this27.onRequestTimeout();
+          _this28.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this27.onTransportError();
+          _this28.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this27._request = request;
+          _this28._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this27._receiveInviteResponse(response);
+          _this28._receiveInviteResponse(response);
         }
       }); // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
@@ -20285,63 +20376,63 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         } // Request for user media access.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-          _this27._localMediaStreamLocallyGenerated = true;
+          _this28._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-            if (_this27._status === C.STATUS_TERMINATED) {
+            if (_this28._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
 
-            _this27._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+            _this28._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
             logger.warn('emit "getusermediafailed" [error:%o]', error);
 
-            _this27.emit('getusermediafailed', error);
+            _this28.emit('getusermediafailed', error);
 
             throw error;
           });
         }
       }).then(function (stream) {
-        if (_this27._status === C.STATUS_TERMINATED) {
+        if (_this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this27._localMediaStream = stream;
+        _this28._localMediaStream = stream;
 
         if (stream) {
           // 兼容低版本浏览器不支持addTrack的情况
           if (RTCPeerConnection.prototype.addTrack) {
             stream.getTracks().forEach(function (track) {
-              _this27._connection.addTrack(track, stream);
+              _this28._connection.addTrack(track, stream);
             });
           } else {
-            _this27._connection.addStream(stream);
+            _this28._connection.addStream(stream);
           }
         } // TODO: should this be triggered here?
 
 
-        _this27._connecting(_this27._request);
+        _this28._connecting(_this28._request);
 
-        return _this27._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-          _this27._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+        return _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+          _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
 
           throw error;
         });
       }).then(function (desc) {
-        if (_this27._is_canceled || _this27._status === C.STATUS_TERMINATED) {
+        if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
-        _this27._request.body = desc;
-        _this27._status = C.STATUS_INVITE_SENT;
-        logger.debug('emit "sending" [request:%o]', _this27._request); // Emit 'sending' so the app can mangle the body before the request is sent.
+        _this28._request.body = desc;
+        _this28._status = C.STATUS_INVITE_SENT;
+        logger.debug('emit "sending" [request:%o]', _this28._request); // Emit 'sending' so the app can mangle the body before the request is sent.
 
-        _this27.emit('sending', {
-          request: _this27._request
+        _this28.emit('sending', {
+          request: _this28._request
         });
 
         request_sender.send();
       })["catch"](function (error) {
-        if (_this27._status === C.STATUS_TERMINATED) {
+        if (_this28._status === C.STATUS_TERMINATED) {
           return;
         }
 
@@ -20373,7 +20464,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this28 = this;
+      var _this29 = this;
 
       logger.debug('receiveInviteResponse()'); // Handle 2XX retransmissions and responses from forked requests.
 
@@ -20456,13 +20547,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              return _this28._connection.setRemoteDescription(answer);
+              return _this29._connection.setRemoteDescription(answer);
+            }) // 发送 RFC3262 183 PRACK
+            .then(function () {
+              return response.getHeader('require') === '100rel' && _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK);
             }).then(function () {
-              return _this28._progress('remote', response);
+              return _this29._progress('remote', response);
             })["catch"](function (error) {
               logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-              _this28.emit('peerconnection:setremotedescriptionfailed', error);
+              _this29.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -20477,9 +20571,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
 
             if (!response.body) {
-              this._accepted('remote', response);
+              this._accepted('remote', response); // 适配 100rel 调整 ack 的 cseq
 
-              this.sendRequest(CRTC_C.ACK);
+
+              this.sendRequest(CRTC_C.ACK, {
+                requestNoBody: true
+              });
 
               this._confirmed('local', null);
 
@@ -20496,12 +20593,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._remoteToAudio = true;
             this._remoteToVideo = false;
 
-            var _iterator9 = _createForOfIteratorHelper(sdp.media),
-                _step9;
+            var _iterator10 = _createForOfIteratorHelper(sdp.media),
+                _step10;
 
             try {
-              for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-                var m = _step9.value;
+              for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+                var m = _step10.value;
 
                 if (m.type === 'audio') {
                   continue;
@@ -20513,9 +20610,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               }
             } catch (err) {
-              _iterator9.e(err);
+              _iterator10.e(err);
             } finally {
-              _iterator9.f();
+              _iterator10.f();
             }
 
             if (this._remoteToAudio) {
@@ -20540,33 +20637,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this28._connection.signalingState === 'stable') {
-                return _this28._connection.createOffer(_this28._rtcOfferConstraints).then(function (offer) {
-                  return _this28._connection.setLocalDescription(offer);
+              if (_this29._connection.signalingState === 'stable') {
+                return _this29._connection.createOffer(_this29._rtcOfferConstraints).then(function (offer) {
+                  return _this29._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this28._acceptAndTerminate(response, 500, error.toString());
+                  _this29._acceptAndTerminate(response, 500, error.toString());
 
-                  _this28._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
+                  _this29._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
-              _this28._connection.setRemoteDescription(_answer).then(function () {
+              _this29._connection.setRemoteDescription(_answer).then(function () {
                 // Handle Session Timers.
-                _this28._handleSessionTimersInIncomingResponse(response);
+                _this29._handleSessionTimersInIncomingResponse(response);
 
-                _this28._accepted('remote', response);
+                _this29._accepted('remote', response);
 
-                _this28.sendRequest(CRTC_C.ACK);
+                _this29.sendRequest(CRTC_C.ACK);
 
-                _this28._confirmed('local', null);
+                _this29._confirmed('local', null);
               })["catch"](function (error) {
-                _this28._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
 
-                _this28._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
 
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-                _this28.emit('peerconnection:setremotedescriptionfailed', error);
+                _this29.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -20587,7 +20684,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this29 = this;
+      var _this30 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
@@ -20606,9 +20703,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this29._createLocalDescription('offer', rtcOfferConstraints);
+        return _this30._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this29._mangleOffer(sdp);
+        sdp = _this30._mangleOffer(sdp);
         var e = {
           originator: 'local',
           type: 'offer',
@@ -20616,29 +20713,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         logger.debug('emit "sdp"');
 
-        _this29.emit('sdp', e);
+        _this30.emit('sdp', e);
 
-        _this29.sendRequest(CRTC_C.INVITE, {
+        _this30.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this29, response);
+              onSucceeded.call(_this30, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this29, response);
+              onFailed.call(_this30, response);
             },
             onTransportError: function onTransportError() {
-              _this29.onTransportError(); // Do nothing because session ends.
+              _this30.onTransportError(); // Do nothing because session ends.
 
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this29.onRequestTimeout(); // Do nothing because session ends.
+              _this30.onRequestTimeout(); // Do nothing because session ends.
 
             },
             onDialogError: function onDialogError() {
-              _this29.onDialogError(); // Do nothing because session ends.
+              _this30.onDialogError(); // Do nothing because session ends.
 
             }
           }
@@ -20648,7 +20745,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
 
       function onSucceeded(response) {
-        var _this30 = this;
+        var _this31 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -20680,12 +20777,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         var sdp_body = sdp_transform.parse(response.body);
 
-        var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
-            _step10;
+        var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
+            _step11;
 
         try {
-          for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-            var m = _step10.value;
+          for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+            var m = _step11.value;
 
             if (m.type == 'audio') {
               continue;
@@ -20704,9 +20801,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator10.e(err);
+          _iterator11.e(err);
         } finally {
-          _iterator10.f();
+          _iterator11.f();
         }
 
         var e = {
@@ -20721,16 +20818,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this30._connection.setRemoteDescription(answer);
+          return _this31._connection.setRemoteDescription(answer);
         }).then(function () {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this30);
+          onFailed.call(_this31);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-          _this30.emit('peerconnection:setremotedescriptionfailed', error);
+          _this31.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
 
@@ -20747,7 +20844,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this31 = this;
+      var _this32 = this;
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendUpdate()');
@@ -20768,9 +20865,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this31._createLocalDescription('offer', rtcOfferConstraints);
+          return _this32._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this31._mangleOffer(sdp);
+          sdp = _this32._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
@@ -20778,35 +20875,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           logger.debug('emit "sdp"');
 
-          _this31.emit('sdp', e);
+          _this32.emit('sdp', e);
 
-          _this31.sendRequest(CRTC_C.UPDATE, {
+          _this32.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this31, response);
+                onSucceeded.call(_this32, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this31, response);
+                onFailed.call(_this32, response);
               },
               onTransportError: function onTransportError() {
-                _this31.onTransportError(); // Do nothing because session ends.
+                _this32.onTransportError(); // Do nothing because session ends.
 
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this31.onRequestTimeout(); // Do nothing because session ends.
+                _this32.onRequestTimeout(); // Do nothing because session ends.
 
               },
               onDialogError: function onDialogError() {
-                _this31.onDialogError(); // Do nothing because session ends.
+                _this32.onDialogError(); // Do nothing because session ends.
 
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this31);
+          onFailed.call(_this32);
         });
       } // No SDP.
       else {
@@ -20814,21 +20911,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: extraHeaders,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this31, response);
+              onSucceeded.call(_this32, response);
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this31, response);
+              onFailed.call(_this32, response);
             },
             onTransportError: function onTransportError() {
-              _this31.onTransportError(); // Do nothing because session ends.
+              _this32.onTransportError(); // Do nothing because session ends.
 
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this31.onRequestTimeout(); // Do nothing because session ends.
+              _this32.onRequestTimeout(); // Do nothing because session ends.
 
             },
             onDialogError: function onDialogError() {
-              _this31.onDialogError(); // Do nothing because session ends.
+              _this32.onDialogError(); // Do nothing because session ends.
 
             }
           }
@@ -20836,7 +20933,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       function onSucceeded(response) {
-        var _this32 = this;
+        var _this33 = this;
 
         if (this._status === C.STATUS_TERMINATED) {
           return;
@@ -20868,12 +20965,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           var sdp_body = sdp_transform.parse(response.body);
 
-          var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
-              _step11;
+          var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
+              _step12;
 
           try {
-            for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-              var m = _step11.value;
+            for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+              var m = _step12.value;
 
               if (m.type == 'audio') {
                 continue;
@@ -20892,9 +20989,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }
           } catch (err) {
-            _iterator11.e(err);
+            _iterator12.e(err);
           } finally {
-            _iterator11.f();
+            _iterator12.f();
           }
 
           var e = {
@@ -20909,16 +21006,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this32._connection.setRemoteDescription(answer);
+            return _this33._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this32);
+            onFailed.call(_this33);
             logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
-            _this32.emit('peerconnection:setremotedescriptionfailed', error);
+            _this33.emit('peerconnection:setremotedescriptionfailed', error);
           });
         } // No SDP answer.
         else if (eventHandlers.succeeded) {
@@ -20970,12 +21067,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._localHold && !this._remoteHold) {
         logger.debug('mangleOffer() | me on hold, mangling offer');
 
-        var _iterator12 = _createForOfIteratorHelper(sdp.media),
-            _step12;
+        var _iterator13 = _createForOfIteratorHelper(sdp.media),
+            _step13;
 
         try {
-          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-            var m = _step12.value;
+          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+            var m = _step13.value;
 
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
@@ -20990,20 +21087,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator12.e(err);
+          _iterator13.e(err);
         } finally {
-          _iterator12.f();
+          _iterator13.f();
         }
       } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
         logger.debug('mangleOffer() | both on hold, mangling offer');
 
-        var _iterator13 = _createForOfIteratorHelper(sdp.media),
-            _step13;
+        var _iterator14 = _createForOfIteratorHelper(sdp.media),
+            _step14;
 
         try {
-          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-            var _m2 = _step13.value;
+          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+            var _m2 = _step14.value;
 
             if (holdMediaTypes.indexOf(_m2.type) === -1) {
               continue;
@@ -21012,20 +21109,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _m2.direction = 'inactive';
           }
         } catch (err) {
-          _iterator13.e(err);
+          _iterator14.e(err);
         } finally {
-          _iterator13.f();
+          _iterator14.f();
         }
       } // Remote hold.
       else if (this._remoteHold) {
         logger.debug('mangleOffer() | remote on hold, mangling offer');
 
-        var _iterator14 = _createForOfIteratorHelper(sdp.media),
-            _step14;
+        var _iterator15 = _createForOfIteratorHelper(sdp.media),
+            _step15;
 
         try {
-          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-            var _m3 = _step14.value;
+          for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+            var _m3 = _step15.value;
 
             if (holdMediaTypes.indexOf(_m3.type) === -1) {
               continue;
@@ -21040,9 +21137,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator14.e(err);
+          _iterator15.e(err);
         } finally {
-          _iterator14.f();
+          _iterator15.f();
         }
       }
 
@@ -21138,7 +21235,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this33 = this;
+      var _this34 = this;
 
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
@@ -21146,32 +21243,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this33._status === C.STATUS_TERMINATED) {
+          if (_this34._status === C.STATUS_TERMINATED) {
             return;
           }
 
-          if (!_this33._isReadyToReOffer()) {
+          if (!_this34._isReadyToReOffer()) {
             return;
           }
 
           logger.debug('runSessionTimer() | sending session refresh request');
 
-          if (_this33._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this33._sendUpdate();
+          if (_this34._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
+            _this34._sendUpdate();
           } else {
-            _this33._sendReinvite();
+            _this34._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       } // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this33._status === C.STATUS_TERMINATED) {
+          if (_this34._status === C.STATUS_TERMINATED) {
             return;
           }
 
           logger.warn('runSessionTimer() | timer expired, terminating the session');
 
-          _this33.terminate({
+          _this34.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
             reason_phrase: 'Session Timer Expired'
@@ -21186,27 +21283,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return sender.track && sender.track.kind === 'audio';
       });
 
-      var _iterator15 = _createForOfIteratorHelper(senders),
-          _step15;
-
-      try {
-        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-          var sender = _step15.value;
-          sender.track.enabled = !mute;
-        }
-      } catch (err) {
-        _iterator15.e(err);
-      } finally {
-        _iterator15.f();
-      }
-    }
-  }, {
-    key: "_toggleMuteVideo",
-    value: function _toggleMuteVideo(mute) {
-      var senders = this._connection.getSenders().filter(function (sender) {
-        return sender.track && sender.track.kind === 'video';
-      });
-
       var _iterator16 = _createForOfIteratorHelper(senders),
           _step16;
 
@@ -21219,6 +21295,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _iterator16.e(err);
       } finally {
         _iterator16.f();
+      }
+    }
+  }, {
+    key: "_toggleMuteVideo",
+    value: function _toggleMuteVideo(mute) {
+      var senders = this._connection.getSenders().filter(function (sender) {
+        return sender.track && sender.track.kind === 'video';
+      });
+
+      var _iterator17 = _createForOfIteratorHelper(senders),
+          _step17;
+
+      try {
+        for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+          var sender = _step17.value;
+          sender.track.enabled = !mute;
+        }
+      } catch (err) {
+        _iterator17.e(err);
+      } finally {
+        _iterator17.f();
       }
     }
   }, {
@@ -21409,7 +21506,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -21419,7 +21516,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -21610,7 +21707,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -21620,7 +21717,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -21812,7 +21909,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -21822,7 +21919,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -22538,7 +22635,7 @@ function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" =
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -22548,7 +22645,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 
@@ -22878,10 +22975,11 @@ var OutgoingRequest = /*#__PURE__*/function () {
       }
 
       supported.push('outbound');
-      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // Allow.
+      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持
+      // Allow.
 
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      msg += "Supported: ".concat(supported, "\r\n");
+      msg += "Supported: ".concat(supported, ",100rel\r\n");
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
       if (this.body) {
@@ -23496,7 +23594,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -23506,7 +23604,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -24652,7 +24750,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
 
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
 
@@ -24662,7 +24760,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 
 var EventEmitter = require('events').EventEmitter;
 
