@@ -24,6 +24,13 @@
   <div style="height: 310px;" class="bg-light row row-cols-2 m-2 text-center" id="video_area">
     <div class="position-relative h-100">
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">本端视频</p>
+      <div class="position-absolute top-50 opacity-50 start-0 text-start bg-light" style="font-size: 11px">
+        上行速率: <span id="upS"></span><br>
+        下行速率: <span id="downS"></span><br>
+        下行丢包率: <span id="downL"></span><br>
+        上行分辨率: <span id="upF"></span><br>
+        下行分辨率: <span id="downF"></span><br>
+      </div>
       <video muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" class="h-100"
         id="localVideo"></video>
     </div>
@@ -35,7 +42,7 @@
   </div>
   <div class="bg-light p-2 m-2" id="ele">
     <div class="row">
-      <div class="col col-9">
+      <div class="col col-8">
         <div class="col col-12 row">
           <div class="col col-3">
             <select id="cameras" class="form-select"></select>
@@ -43,7 +50,7 @@
           <div class="col col-auto row">
             <div class="col col-auto">
               <div class="input-group">
-                <input class="form-control" type="text" value="13831175769" placeholder="请输入要呼叫的号码" id="callee" />
+                <input class="form-control" type="text" value="" placeholder="请输入要呼叫的号码" id="callee" />
                 <button class="btn btn-success" id="call"><i class="bi-mic"></i> 语音外呼</button>
                 <button class="btn btn-primary" id="callVideo"><i class="bi-camera-video"></i> 视频外呼</button>
               </div>
@@ -113,14 +120,13 @@
           </div>
         </div>
       </div>
-      <div class="col col-3 align-items-stretch">
+      <div class="col col-4 align-items-stretch">
         <div class="bg-light border-1 p-2 rounded border border-1 overflow-auto" style="max-height: 230px;">
           <pre id="status" class="w-100 overflow-hidden h-auto mb-0"
             style="font-size: 11px;line-height: 1.2; color: #666; font-family: 'Microsoft YaHei', Arial, Helvetica, sans-serif;"></pre>
         </div>
       </div>
     </div>
-  </div>
   </div>
   <canvas id="captureView" style="width: 240px;"></canvas>
   <div class="hide">
