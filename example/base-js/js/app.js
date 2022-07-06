@@ -8,7 +8,7 @@ CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
-// 是否存在远端铃声
+// 是否存在远端回铃音
 let earlyMedia = false;
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
@@ -27,7 +27,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `yl_19${account}`
+  password     : `yl_19${account}`,
+  secret_key   : ''
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -118,7 +119,6 @@ ua.on('newRTCSession', function(e)
     * @type {object}
     * @property {string} mode - 'audio'音频模式，'video'视频模式
     */
-  // TODO:
   e.session.on('progress', function(d) 
   {
     if (d.originator === 'local') 
@@ -639,11 +639,13 @@ function call(type)
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ]
   });
 
+  // 默认远端无回铃音
   earlyMedia = false;
 
-  // 播放运营商的回铃音
+  // 播放远端的回铃音
   session.connection.ontrack = function(event)
   {
+    // 收到远端媒体则设置远端回铃音
     earlyMedia = true;
 
     document.querySelector('#remoteVideo').srcObject = event.streams[0];
