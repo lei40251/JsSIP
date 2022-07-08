@@ -20,6 +20,7 @@
     "@types/node": "^14.14.34",
     "debug": "^4.3.1",
     "events": "^3.3.0",
+    "jsencrypt": "github:lei40251/JSEncrypt",
     "sdp-transform": "^2.14.1"
   },
   "devDependencies": {
