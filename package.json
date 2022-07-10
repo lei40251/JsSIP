@@ -2,7 +2,7 @@
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.0.0",
+  "version": "1.6.0",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -20,6 +20,7 @@
     "@types/node": "^14.14.34",
     "debug": "^4.3.1",
     "events": "^3.3.0",
+    "jsencrypt": "github:lei40251/JSEncrypt",
     "sdp-transform": "^2.14.1"
   },
   "devDependencies": {
