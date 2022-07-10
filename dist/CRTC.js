@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.0.2022710835
+ * CRTC v1.6.0.2022710943
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -298,7 +298,7 @@ exports.load = function (dst, src) {
 var pkg = require('../package.json');
 
 module.exports = {
-  USER_AGENT: "".concat(pkg.title, " Web SDK ").concat(pkg.version),
+  USER_AGENT: "UA/".concat(pkg.version, " (Web)"),
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -23050,7 +23050,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
       // Allow.
 
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      msg += "Supported: ".concat(supported, ",100rel\r\n");
+      msg += "Supported: ".concat(supported, ", 100rel\r\n");
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
       if (this.body) {

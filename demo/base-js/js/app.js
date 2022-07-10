@@ -137,6 +137,11 @@ ua.on('newRTCSession', function(e)
   //   console.log('refer');
   //   d.accept();
   // });
+  
+  e.session.on('sdp', function(d) 
+  {
+    d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+  });
    
   /**
     * progress
