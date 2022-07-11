@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.0.2022710943
+ * CRTC v1.6.1.20227112010
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19230,8 +19230,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
 
           case CRTC_C.NOTIFY:
-            if (this._status === C.STATUS_CONFIRMED) {
+            // if (this._status === C.STATUS_CONFIRMED)
+            // {
+            //   this._receiveNotify(request);
+            // }
+            // for 3pcc
+            if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
               this._receiveNotify(request);
+
+              this.newNotify({
+                request: request
+              });
             } else {
               request.reply(403, 'Wrong Status');
             }
@@ -19299,6 +19308,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function newInfo(data) {
       logger.debug('newInfo()');
       this.emit('newInfo', data);
+    } // for 3pcc, Called from Notify handler.
+
+  }, {
+    key: "newNotify",
+    value: function newNotify(data) {
+      logger.debug('newNotify()');
+      this.emit('newNotify', data);
     }
     /**
      * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
@@ -20351,6 +20367,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             referSubscriber.receiveNotify(request);
+            request.reply(200);
+            break;
+          }
+        // for 3pcc
+
+        case 'talk':
+          {
+            request.reply(200);
+            break;
+          }
+        // for 3pcc
+
+        case 'hold':
+          {
             request.reply(200);
             break;
           }
@@ -23050,7 +23080,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
       // Allow.
 
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      msg += "Supported: ".concat(supported, ", 100rel\r\n");
+      msg += "Supported: ".concat(supported, ",100rel\r\n");
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
       if (this.body) {
@@ -23350,7 +23380,9 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
   _createClass(IncomingRequest, [{
     key: "reply",
     value: function reply(code, reason, extraHeaders, body, onSuccess, onFailure) {
-      var supported = [];
+      var supported = []; // for 3PCC notify event
+
+      var allow_events = ['talk', 'hold', 'conference', 'refer', 'check-sync'];
       var to = this.getHeader('To');
       code = code || null;
       reason = reason || null; // Validate code and reason values.
@@ -23461,7 +23493,9 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
         response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
       }
 
-      response += "Supported: ".concat(supported, "\r\n");
+      response += "Supported: ".concat(supported, "\r\n"); // for 3PCC notify event
+
+      response += "Allow-Events: ".concat(allow_events, "\r\n");
 
       if (body) {
         var length = Utils.str_utf8_length(body);
@@ -35247,7 +35281,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -35273,6 +35307,7 @@ module.exports={
     "@babel/preset-env": "^7.13.10",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
+    "del": "^6.1.1",
     "eslint": "^5.16.0",
     "fancy-log": "^1.3.3",
     "gulp": "^4.0.2",
@@ -35285,6 +35320,7 @@ module.exports={
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
     "gulp-uglify-es": "^1.0.4",
+    "gulp-zip": "^5.1.0",
     "pegjs": "^0.7.0",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0"
