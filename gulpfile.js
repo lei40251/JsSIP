@@ -20,6 +20,8 @@ const plumber = require('gulp-plumber');
 const log = require('fancy-log');
 const colors = require('ansi-colors');
 const obfuscate = require('gulp-javascript-obfuscator');
+const zip = require('gulp-zip');
+const del = require('del');
 
 const PKG = require('./package.json');
 const today = new Date();
@@ -148,6 +150,48 @@ gulp.task('grammar', function(cb)
     }
   );
 });
+
+// 打zip压缩包用
+gulp.task('zip-demo', function()
+{
+  return gulp
+    .src('demo/**')
+    .pipe(gulp.dest('zip/demo/'));
+});
+
+gulp.task('zip-dist', function()
+{
+  return gulp
+    .src('dist/*.min.js')
+    .pipe(gulp.dest('zip/dist/'));
+});
+
+gulp.task('zip-doc', function()
+{
+  return gulp
+    .src('doc/*.pdf')
+    .pipe(gulp.dest('zip/doc/'));
+});
+
+gulp.task('zip-zip', function()
+{
+  return gulp
+    .src('zip/**')
+    .pipe(zip(`CRTC_Web_SDK_${ PKG.version }.zip`))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('zip-del-zip', function(done)
+{
+  del.sync(`./CRTC_Web_SDK_${ PKG.version }.zip`, done());
+});
+
+gulp.task('zip-del', function(done)
+{
+  del.sync('./zip', done());
+});
+
+gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-doc', 'zip-zip', 'zip-del'));
 
 gulp.task('devel', gulp.series('grammar'));
 
