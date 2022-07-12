@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.1.20227112010
+ * CRTC v1.6.1.20227121033
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19610,12 +19610,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return new Promise(function (resolve) {
           var finished = false;
           var iceCandidateListener;
-          var iceGatheringStateListener;
+          var iceGatheringStateListener; // ice 超时设置
+
+          var iceGatheringDuration = 0;
+          var iceGatheringTimer;
+          var iceGatherFlag = true;
           _this18._iceReady = false;
 
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
-            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
+            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener); // 清理 ICE 收集超时定时器
+
+            clearInterval(iceGatheringTimer);
             finished = true;
             _this18._rtcReady = true; // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
 
@@ -19633,7 +19639,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
 
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
-            var candidate = event.candidate;
+            var candidate = event.candidate; // 添加 ice 收集超时控制
+
+            iceGatheringDuration += 2 * 1000;
+
+            if (iceGatherFlag) {
+              iceGatherFlag = false;
+              iceGatheringTimer = setInterval(function () {
+                iceGatheringDuration -= 100;
+
+                if (iceGatheringDuration <= 0) {
+                  ready();
+                }
+              }, 100);
+            }
 
             if (candidate) {
               _this18.emit('icecandidate', {

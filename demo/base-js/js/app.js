@@ -11,9 +11,9 @@ let stats;
 // 是否存在远端回铃音
 let earlyMedia = false;
 // 信令地址
-const signalingUrl = 'wss://webrtc.rxjiujiu.com:50602/wss';
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // sip domain
-const sipDomain = 'webrtc.rxjiujiu.com';
+const sipDomain = '5g.vsbc.com';
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 // websocket 实例
@@ -28,7 +28,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `${account}`,
-  secret_key   : 'mVErFsVu5mtEWWgLeJ23cu/BpPeWtTxBS6rpdv1wQkWbVsQB63baOREVgZkVa4/25pLBcLURopqPrPuGeaKwfjCpmb8Sf7fQmWGlXECNhae9M939y6Ftz3b7i+yuOa0GkGJ5fwi6/Jg8QjG+INo7rrmL0UXcq5cHuU1FTg7OzG/OQnypkmpQaAyvg5SNGCPmLT+WzSunA90npinZdeZOB4lG7M2RD7nNQ/MBFr/YO7lkWymrlKM1JctlNisoVMf+vOKpWB2gsD21SzZM2k9VEUZlbaskgoSCEP4ePj5fQMgnKHhHhLdTPf8wa14JlWEChB92xNn/3lHPixM5v5A0Rg=='
+  secret_key   : ''
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -41,9 +41,9 @@ const videoConstraints = {
 const pcConfig = {
   'iceServers' : [ 
     { 
-      'urls'       : 'turn:webrtc.rxjiujiu.com:6000?transport=udp', 
-      'username'   : 'ipcu', 
-      'credential' : 'yl_19cu' 
+      'urls'       : 'turn:47.103.104.206:10001', 
+      'username'   : 'user', 
+      'credential' : 'yl_19passw0rd' 
     } ],
   'iceTransportPolicy' : 'relay'
 };

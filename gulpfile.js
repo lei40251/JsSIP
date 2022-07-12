@@ -178,12 +178,12 @@ gulp.task('zip-zip', function()
   return gulp
     .src('zip/**')
     .pipe(zip(`CRTC_Web_SDK_${ PKG.version }.zip`))
-    .pipe(gulp.dest('./'));
+    .pipe(gulp.dest('./SDK_zip/'));
 });
 
 gulp.task('zip-del-zip', function(done)
 {
-  del.sync(`./CRTC_Web_SDK_${ PKG.version }.zip`, done());
+  del.sync('./SDK_zip/**', done());
 });
 
 gulp.task('zip-del', function(done)
