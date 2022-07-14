@@ -80,7 +80,7 @@ ua.on('failed', function(data)
 ua.on('disconnected', function(data)
 {
   console.log(data);
-  setStatus(`信令连接断开:${ data.cause}`);
+  setStatus(`信令连接断开: ${ data.code} ${ data.reason}`);
 });
 
 /**
