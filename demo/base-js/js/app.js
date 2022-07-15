@@ -10,6 +10,7 @@ CRTC.debug.disable('CRTC:*');
 let stats;
 // 是否存在远端回铃音
 let earlyMedia = false;
+let tmpAudioStream;
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // sip domain
@@ -27,8 +28,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `${account}`,
-  secret_key   : ''
+  password     : `yl_19${account}`,
+  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -377,19 +378,19 @@ ua.on('newRTCSession', function(e)
     * @type {object}
     * @property {string} originator - 'remote'为远端触发，'local'为本端触发
     */
-  e.session.on('confirmed', function() 
+  e.session.on('confirmed', function(d) 
   {  
     setStatus('confirmed');
  
     // 获取统计信息
     stats = new CRTC.getStats(e.session.connection);
-    stats.on('report', function(d)
+    stats.on('report', function(r)
     {
-      document.querySelector('#upF').innerText = `${d.upFrameWidth }X${ d.upFrameHeight}`;
-      document.querySelector('#downF').innerText = `${d.downFrameWidth }X${ d.downFrameHeight}`;
-      document.querySelector('#upS').innerText = d.uplinkSpeed;
-      document.querySelector('#downS').innerText = d.downlinkSpeed;
-      document.querySelector('#downL').innerText = d.downlinkLoss;
+      document.querySelector('#upF').innerText = `${r.upFrameWidth }X${ r.upFrameHeight}`;
+      document.querySelector('#downF').innerText = `${r.downFrameWidth }X${ r.downFrameHeight}`;
+      document.querySelector('#upS').innerText = r.uplinkSpeed;
+      document.querySelector('#downS').innerText = r.downlinkSpeed;
+      document.querySelector('#downL').innerText = r.downlinkLoss;
     });
 
     // 兼容部分手机初始黑屏问题
@@ -399,8 +400,26 @@ ua.on('newRTCSession', function(e)
       e.session.unmute({ video: true });
     }, 500);
  
-    // 获取媒体流
-    getStreams(e.session.connection);
+    if (d.originator === 'local' && navigator.userAgent.indexOf('iPhone') === -1)
+    {
+      navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        .then((stream) => 
+        {
+          tmpAudioStream = stream;
+
+          const sender = e.session.connection.getSenders().find((s) =>
+          {
+            return s.track.kind == 'audio';
+          });
+
+          sender.replaceTrack(stream.getAudioTracks()[0]);
+        });
+    }
+    else
+    {
+      // 获取媒体流
+      getStreams(e.session.connection);
+    }
   });
 
   //  ***** DOM 事件绑定 *****
@@ -411,8 +430,8 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answer').onclick = function() 
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: false },
-      pcConfig         : pcConfig
+      mediaConstraints : { audio: true, video: false }
+      // pcConfig         : pcConfig
     });
 
     setStatus('audio answer');
@@ -424,8 +443,8 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answerVideo').onclick = function() 
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: videoConstraints },
-      pcConfig         : pcConfig
+      mediaConstraints : { audio: true, video: videoConstraints }
+      // pcConfig         : pcConfig
     });
 
     setStatus('video answer');
@@ -656,30 +675,45 @@ function call(type)
     
     return;
   }
-  const mediaConstraints = {
-    audio : true,
-    video : false
+  
+  const options = {
+    // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ]
+    // pcConfig     : pcConfig
   };
 
-  if (type === 'video') 
+  if (type === 'video')
   {
-    mediaConstraints.video = videoConstraints;
+    options['mediaConstraints'] = {
+      audio : true,
+      video : videoConstraints
+    };
   }
+  else if (navigator.userAgent.indexOf('iPhone') != -1)
+  {
+    options['mediaConstraints'] = {
+      audio : true,
+      video : false
+    };
+  }
+  else
+  {
+    const audioCtx = new AudioContext();
+    const destination = audioCtx.createMediaStreamDestination();
+  
+    options['mediaStream'] = destination.stream;
+  }
+  
 
   const callee = document.querySelector('#callee').value;
-  const session = ua.call(`${callee}@${sipDomain}`, {
-    mediaConstraints,
-    // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ],
-    pcConfig     : pcConfig
-  });
+  const session = ua.call(`${callee}@${sipDomain}`, options);
 
   // 默认远端无回铃音
   earlyMedia = false;
 
   // 播放远端的回铃音
   session.connection.ontrack = function(event)
-  {
+  {    
     // 收到远端媒体则设置远端回铃音
     earlyMedia = true;
 
@@ -737,6 +771,10 @@ function stopStreams()
   // 停止媒体流，这里可以切换页面UI
   document.querySelector('#remoteVideo').srcObject = null;
   document.querySelector('#localVideo').srcObject = null;
+  tmpAudioStream && tmpAudioStream.getTracks().forEach((track) => 
+  {
+    track.stop();
+  });
 }
 
 /**
