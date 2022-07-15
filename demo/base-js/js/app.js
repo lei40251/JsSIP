@@ -28,8 +28,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  password     : `${account}`,
+  secret_key   : sessionStorage.getItem('secret_key')
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -430,8 +430,8 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answer').onclick = function() 
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: false }
-      // pcConfig         : pcConfig
+      mediaConstraints : { audio: true, video: false },
+      pcConfig         : pcConfig
     });
 
     setStatus('audio answer');
@@ -443,8 +443,8 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answerVideo').onclick = function() 
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: videoConstraints }
-      // pcConfig         : pcConfig
+      mediaConstraints : { audio: true, video: videoConstraints },
+      pcConfig         : pcConfig
     });
 
     setStatus('video answer');
@@ -678,8 +678,8 @@ function call(type)
   
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ]
-    // pcConfig     : pcConfig
+    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=' ],
+    pcConfig     : pcConfig
   };
 
   if (type === 'video')
