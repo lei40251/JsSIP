@@ -42,7 +42,7 @@ const videoConstraints = {
 const pcConfig = {
   'iceServers' : [ 
     { 
-      'urls'       : 'turn:webrtc.rxjiujiu.com:6000?transport=udp', 
+      'urls'       : 'turn:webrtc.rxjiujiu.com:60001?transport=udp', 
       'username'   : 'ipcu', 
       'credential' : 'yl_19cu' 
     } ],
