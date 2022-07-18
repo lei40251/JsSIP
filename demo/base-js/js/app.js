@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -12,9 +12,9 @@ let stats;
 let earlyMedia = false;
 let tmpAudioStream;
 // 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://webrtc.rxjiujiu.com:50602/wss';
 // sip domain
-const sipDomain = '5g.vsbc.com';
+const sipDomain = 'webrtc.rxjiujiu.com';
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 // websocket 实例
@@ -28,8 +28,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `${account}`,
-  secret_key   : sessionStorage.getItem('secret_key')
+  password     : '123456',
+  secret_key   : sessionStorage.getItem('secret_key') || 'mVErFsVu5mtEWWgLeJ23cu/BpPeWtTxBS6rpdv1wQkWbVsQB63baOREVgZkVa4/25pLBcLURopqPrPuGeaKwfjCpmb8Sf7fQmWGlXECNhae9M939y6Ftz3b7i+yuOa0GkGJ5fwi6/Jg8QjG+INo7rrmL0UXcq5cHuU1FTg7OzG/OQnypkmpQaAyvg5SNGCPmLT+WzSunA90npinZdeZOB4lG7M2RD7nNQ/MBFr/YO7lkWymrlKM1JctlNisoVMf+vOKpWB2gsD21SzZM2k9VEUZlbaskgoSCEP4ePj5fQMgnKHhHhLdTPf8wa14JlWEChB92xNn/3lHPixM5v5A0Rg=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -42,9 +42,9 @@ const videoConstraints = {
 const pcConfig = {
   'iceServers' : [ 
     { 
-      'urls'       : 'turn:47.103.104.206:10001', 
-      'username'   : 'user', 
-      'credential' : 'yl_19passw0rd' 
+      'urls'       : 'turn:webrtc.rxjiujiu.com:6000?transport=udp', 
+      'username'   : 'ipcu', 
+      'credential' : 'yl_19cu' 
     } ],
   'iceTransportPolicy' : 'relay'
 };
@@ -139,6 +139,7 @@ ua.on('newRTCSession', function(e)
   //   d.accept();
   // });
   
+  // 部分场景兼容使用
   e.session.on('sdp', function(d) 
   {
     d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
@@ -326,6 +327,35 @@ ua.on('newRTCSession', function(e)
     {
       setStatus(`发出消息：${d.info.body}`);
     }
+  });
+   
+  /**
+    * notify
+    * 
+    * @fires 收到需要处理的notify消息（talk，hold）时触发
+    * 
+    * @type {object}
+    * @property {string} event - 'talk'，'hold'
+    * @property {object} request - 请求对象
+    */
+  e.session.on('notify', function(d) 
+  {
+    // 3pcc自动接听
+    if (d.event == 'talk')
+    {
+      e.session.answer({
+        mediaConstraints : { audio: true, video: false },
+        pcConfig         : pcConfig
+      });
+
+      setStatus('audio autoAnswer');
+    }
+    else if (d.event == 'hold')
+    {
+      e.session.hold();
+      setStatus('auto hold');
+    }
+
   });
    
   /**
