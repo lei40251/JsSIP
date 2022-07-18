@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.1.20227121033
+ * CRTC v1.6.1.2022718170
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -20392,15 +20392,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // for 3pcc
 
         case 'talk':
-          {
-            request.reply(200);
-            break;
-          }
-        // for 3pcc
-
         case 'hold':
           {
             request.reply(200);
+            this.emit('notify', {
+              event: request.event.event,
+              request: request
+            });
             break;
           }
 
