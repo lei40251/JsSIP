@@ -2,9 +2,9 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-// CRTC.debug.enable('CRTC:*');
+CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -123,6 +123,8 @@ ua.on('registrationFailed', function(data)
  */
 ua.on('newRTCSession', function(e) 
 {
+  console.log('nsession: ', e);
+
   if (e.originator === 'remote') 
   {
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
@@ -142,7 +144,8 @@ ua.on('newRTCSession', function(e)
   // 部分场景兼容使用
   e.session.on('sdp', function(d) 
   {
-    d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    d.sdp = d.sdp.replace(/a=group.*\r\n/, '');
+    d.sdp = d.sdp.replace(/a=mid.*\r\n/, '');
   });
 
   /**
@@ -183,7 +186,7 @@ ua.on('newRTCSession', function(e)
   {
     setStatus(`${d.originator}hold`);
     // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    stopStreams();
+    stopStreams('hold');
   });
 
   /**
@@ -515,10 +518,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#cancel').onclick = function() 
   {
-    if (e.session.isEstablished()) 
-    {
-      e.session.terminate();
-    }
+    e.session.terminate();
   };
 
   /**
@@ -795,12 +795,12 @@ function getStreams(pc)
     .catch(() => { });
 }
 
-function stopStreams() 
+function stopStreams(type) 
 {
   // 停止媒体流，这里可以切换页面UI
   document.querySelector('#remoteVideo').srcObject = null;
   document.querySelector('#localVideo').srcObject = null;
-  tmpAudioStream && tmpAudioStream.getTracks().forEach((track) => 
+  type !== 'hold' && tmpAudioStream && tmpAudioStream.getTracks().forEach((track) => 
   {
     track.stop();
   });
