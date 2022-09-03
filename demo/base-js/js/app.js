@@ -12,6 +12,9 @@ let stats;
 let earlyMedia = false;
 let tmpAudioStream;
 let tmpVideoStream;
+// 远端客户端UA
+// let remoteUA;
+
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // sip domain
@@ -146,12 +149,18 @@ ua.on('newRTCSession', function(e)
   //   d.accept();
   // });
 
+  // e.session.on('accepted', function(d)
+  // {
+  //   remoteUA = d.response.getHeader('x-ua');
+  // });
+
   // 部分场景兼容使用
   e.session.on('sdp', function(d)
   {
-    // if (d.originator === 'remote')
+    // if (d.originator === 'remote' && remoteUA && remoteUA.indexOf('Mac OS') == -1)
     // {
-    d.sdp = d.sdp.replace(/a=mid.*\r\n/g, '');
+    //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    //   d.sdp = d.sdp.replace(/a=mid.*\r\n/g, '');
     // }
   });
 
@@ -469,7 +478,9 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : { audio: true, video: false },
-      pcConfig         : pcConfig
+      pcConfig         : pcConfig,
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders     : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
     });
 
     setStatus('audio answer');
@@ -482,7 +493,9 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : { audio: true, video: videoConstraints },
-      pcConfig         : pcConfig
+      pcConfig         : pcConfig,
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders     : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
     });
 
     setStatus('video answer');
@@ -753,14 +766,14 @@ async function call(type)
     // 收到远端媒体则设置远端回铃音
     earlyMedia = true;
 
-    document.querySelector('#remoteVideo').srcObject = event.streams[0];
+    document.querySelector('#remoteAudio').srcObject = event.streams[0];
 
     /**
      * 兼容chrome
      * https://developer.chrome.com/blog/play-request-was-interrupted/#error
      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
      */
-    document.querySelector('#remoteVideo').play()
+    document.querySelector('#remoteAudio').play()
       .catch(() => { });
   };
 
@@ -778,17 +791,15 @@ async function call(type)
  */
 function getStreams(pc)
 {
-  // 本地视频
+  // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
-  // 远端音频
-  const audio = new Audio();
-  // 远端视频
+  // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
   // 本地视频
   document.querySelector('#localVideo').srcObject = localStream.videoStream;
   // 远端音频
-  audio.srcObject = remoteStream.audioStream;
+  document.querySelector('#remoteAudio').srcObject = remoteStream.audioStream;
   // 远端视频
   document.querySelector('#remoteVideo').srcObject = remoteStream.videoStream;
 
@@ -797,7 +808,7 @@ function getStreams(pc)
    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
-  Promise.all([ document.querySelector('#localVideo').play(), audio.play(), document.querySelector('#remoteVideo').play() ])
+  Promise.all([ document.querySelector('#localVideo').play(), document.querySelector('#remoteAudio').play(), document.querySelector('#remoteVideo').play() ])
     .then(() => { })
     .catch(() => { });
 }
@@ -806,6 +817,7 @@ function stopStreams(type)
 {
   // 停止媒体流，这里可以切换页面UI
   document.querySelector('#remoteVideo').srcObject = null;
+  document.querySelector('#remoteAudio').srcObject = null;
   document.querySelector('#localVideo').srcObject = null;
   type !== 'hold' && tmpAudioStream && tmpAudioStream.getTracks().forEach((track) =>
   {
@@ -868,6 +880,10 @@ function updateDevices()
  */
 function start()
 {
+  // 输出SDK版本号
+  setStatus(`SDK Ver: ${CRTC.version}`);
+
+  // 更新摄像头下拉列表
   updateDevices();
 
   // 启动UA，连接信令服务器并注册

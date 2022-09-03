@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.3.2022818191
+ * CRTC v1.6.4.2022922140
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -17737,7 +17737,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         requestParams.from_display_name = options.fromDisplayName;
       }
 
-      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
@@ -18466,7 +18466,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (_this7._localShareStream && _this7._localShareStreamLocallyGenerated) {
               _this7._localMediaStream.getVideoTracks().forEach(function (track) {
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video'; // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1 
+                  return s.track.kind == 'video'; // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1
                   // || s.track.label.indexOf('web-')!==-1 || s.track.label.indexOf('screen') !==-1);
                 });
 
@@ -19352,6 +19352,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         Utils.closeMediaStream(this._localMediaStream);
       }
 
+      if (this._localShareStream) {
+        logger.debug('close() | closing local MediaStream');
+        Utils.closeMediaStream(this._localShareStream);
+      }
+
       if (this._status === C.STATUS_TERMINATED) {
         return;
       }
@@ -19512,68 +19517,100 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }) // Set local description.
       .then(function (desc) {
-        /**
-         * 处理5G外呼sdp过大问题,
-         * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-         */
-        if (type === 'offer' && _this18._ua.sk[7] >= 3) {
+        if (type === 'offer') {
           var sdp = sdp_transform.parse(desc.sdp);
-          sdp.media.forEach(function (media) {
-            if (media.type === 'video') {
-              var maximumH264 = 2;
-              var delH264Payload = [];
-              var payloads = media.payloads.split(' ');
-              media.rtp.forEach(function (rtp) {
-                if (rtp.codec.toLowerCase() === 'h264') {
-                  if (maximumH264 <= 0) {
-                    delH264Payload.push(rtp.payload);
+          var mids = [];
+          sdp.media.forEach(function (media, index) {
+            // 处理视频呼叫音频接听后再切换视频时 mid 值问题
+            media.mid = index;
+            mids.push(index);
+            /**
+             * 处理5G外呼sdp过大问题,
+             * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+             */
+
+            if (_this18._ua.sk[7] >= 3) {
+              if (media.type === 'video') {
+                media.bandwidth = [{
+                  type: 'AS',
+                  limit: 1024
+                }, {
+                  type: 'RR',
+                  limit: 6000
+                }, {
+                  type: 'RS',
+                  limit: 8000
+                }];
+                media.ext = [{
+                  value: 13,
+                  uri: 'urn:3gpp:video-orientation'
+                }];
+                media.invalid = [{
+                  value: 'tcap:1 RTP/AVPF'
+                }, {
+                  value: 'pcfg:1 t=1'
+                }];
+                var maximumH264 = 2;
+                var delH264Payload = [];
+                var payloads = media.payloads.split(' ');
+                media.rtp.forEach(function (rtp) {
+                  if (rtp.codec.toLowerCase() === 'h264') {
+                    if (maximumH264 <= 0) {
+                      delH264Payload.push(rtp.payload);
+                    }
+
+                    maximumH264--;
                   }
+                });
+                media.fmtp.forEach(function (fmtp) {
+                  if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
+                    delH264Payload.push(fmtp.payload);
+                  }
+                });
+                media.payloads = payloads.filter(function (x) {
+                  return !delH264Payload.some(function (i) {
+                    return i == x;
+                  });
+                }).join(' ');
 
-                  maximumH264--;
+                if (media.fmtp) {
+                  media.fmtp = media.fmtp.filter(function (r) {
+                    return delH264Payload.indexOf(r.payload) == -1;
+                  });
                 }
-              });
-              media.fmtp.forEach(function (fmtp) {
-                if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
-                  delH264Payload.push(fmtp.payload);
+
+                if (media.rtp) {
+                  media.rtp = media.rtp.filter(function (r) {
+                    return delH264Payload.indexOf(r.payload) == -1;
+                  });
                 }
-              });
-              media.payloads = payloads.filter(function (x) {
-                return !delH264Payload.some(function (i) {
-                  return i == x;
-                });
-              }).join(' ');
 
-              if (media.fmtp) {
-                media.fmtp = media.fmtp.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
-              }
-
-              if (media.rtp) {
-                media.rtp = media.rtp.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
-              }
-
-              if (media.rtcpFb) {
-                media.rtcpFb = media.rtcpFb.filter(function (r) {
-                  return delH264Payload.indexOf(r.payload) == -1;
-                });
+                if (media.rtcpFb) {
+                  media.rtcpFb = media.rtcpFb.filter(function (r) {
+                    return delH264Payload.indexOf(r.payload) == -1;
+                  });
+                }
+              } else if (media.type === 'audio') {
+                media.bandwidth = [{
+                  type: 'AS',
+                  limit: 100
+                }, {
+                  type: 'RR',
+                  limit: 600
+                }, {
+                  type: 'RS',
+                  limit: 2000
+                }];
               }
             }
-          });
-          desc.sdp = sdp_transform.write(sdp); // desc.sdp = desc.sdp.replace(/a=rtcp-fb:127 goog-remb\r\n/, 'a=rtcp-fb:127 ccm tmmbr\r\n');
+          }); // 处理视频呼叫音频接听后再切换视频时 mid 值问题
 
-          desc.sdp = desc.sdp.replace(/a=mid:0.*\r\n/, 'b=AS:100\r\nb=RR:600\r\nb=RS:2000\r\na=mid:0\r\n');
-          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
-          desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-          desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
-          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
-          desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n'); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
+          sdp.groups[0].mids = mids.join(' ');
+          desc.sdp = sdp_transform.write(sdp);
+        } // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
 
-          desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
-        }
 
+        desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -20968,7 +21005,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var sdpOffer = options.sdpOffer || false;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
@@ -35298,7 +35335,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
