@@ -799,7 +799,11 @@ function getStreams(pc)
   // 本地视频
   document.querySelector('#localVideo').srcObject = localStream.videoStream;
   // 远端音频
-  document.querySelector('#remoteAudio').srcObject = remoteStream.audioStream;
+  // 适配安卓微信部分情况下无声音问题 trackId
+  setTimeout(() =>
+  {
+    document.querySelector('#remoteAudio').srcObject = remoteStream.audioStream;
+  }, 100);
   // 远端视频
   document.querySelector('#remoteVideo').srcObject = remoteStream.videoStream;
 
