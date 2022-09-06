@@ -157,7 +157,12 @@ ua.on('newRTCSession', function(e)
   // 部分场景兼容使用
   e.session.on('sdp', function(d)
   {
-    // if (d.originator === 'remote' && remoteUA && remoteUA.indexOf('Mac OS') == -1)
+    if (d.originator === 'remote' && d.sdp.indexOf('a=inactive') !== -1)
+    {
+      d.sdp = d.sdp.replace(/m=video \d*/, 'm=video 0');
+    }
+
+    // if (d.originator === 'local')
     // {
     //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
     //   d.sdp = d.sdp.replace(/a=mid.*\r\n/g, '');

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.4.2022922140
+ * CRTC v1.6.5.2022961053
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19520,89 +19520,102 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (type === 'offer') {
           var sdp = sdp_transform.parse(desc.sdp);
           var mids = [];
+          console.warn('sdp: ', sdp);
           sdp.media.forEach(function (media, index) {
             // 处理视频呼叫音频接听后再切换视频时 mid 值问题
             media.mid = index;
             mids.push(index);
+
+            if (media.type === 'video') {
+              var lowH264 = false;
+              var delH264Payload = [];
+              var payloads = media.payloads.split(' ');
+              media.fmtp.forEach(function (fmtp) {
+                if (fmtp.config.indexOf('profile-level-id=42e0') !== -1) {
+                  lowH264 = true;
+                }
+
+                if (fmtp.config.indexOf('packetization-mode=0') !== -1 || fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
+                  delH264Payload.push(fmtp.payload);
+                }
+              });
+              media.fmtp.forEach(function (fmtp) {
+                if (lowH264 && fmtp.config.indexOf('profile-level-id=4200') !== -1) {
+                  delH264Payload.push(fmtp.payload);
+                }
+              });
+              media.fmtp.forEach(function (fmtp) {
+                if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
+                  delH264Payload.push(fmtp.payload);
+                }
+              });
+              media.payloads = payloads.filter(function (x) {
+                return !delH264Payload.some(function (i) {
+                  return i == x;
+                });
+              }).join(' ');
+
+              if (media.fmtp) {
+                media.fmtp = media.fmtp.filter(function (r) {
+                  return delH264Payload.indexOf(r.payload) == -1;
+                });
+              }
+
+              if (media.rtp) {
+                media.rtp = media.rtp.filter(function (r) {
+                  return delH264Payload.indexOf(r.payload) == -1;
+                });
+              }
+
+              if (media.rtcpFb) {
+                media.rtcpFb = media.rtcpFb.filter(function (r) {
+                  return delH264Payload.indexOf(r.payload) == -1;
+                });
+              }
+            }
             /**
              * 处理5G外呼sdp过大问题,
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
+            // if (this._ua.sk[7] >= 3)
+            // {
 
-            if (_this18._ua.sk[7] >= 3) {
-              if (media.type === 'video') {
-                media.bandwidth = [{
-                  type: 'AS',
-                  limit: 1024
-                }, {
-                  type: 'RR',
-                  limit: 6000
-                }, {
-                  type: 'RS',
-                  limit: 8000
-                }];
-                media.ext = [{
-                  value: 13,
-                  uri: 'urn:3gpp:video-orientation'
-                }];
-                media.invalid = [{
-                  value: 'tcap:1 RTP/AVPF'
-                }, {
-                  value: 'pcfg:1 t=1'
-                }];
-                var maximumH264 = 2;
-                var delH264Payload = [];
-                var payloads = media.payloads.split(' ');
-                media.rtp.forEach(function (rtp) {
-                  if (rtp.codec.toLowerCase() === 'h264') {
-                    if (maximumH264 <= 0) {
-                      delH264Payload.push(rtp.payload);
-                    }
 
-                    maximumH264--;
-                  }
-                });
-                media.fmtp.forEach(function (fmtp) {
-                  if (delH264Payload.indexOf(Number(fmtp.config.replace('apt=', ''))) != -1) {
-                    delH264Payload.push(fmtp.payload);
-                  }
-                });
-                media.payloads = payloads.filter(function (x) {
-                  return !delH264Payload.some(function (i) {
-                    return i == x;
-                  });
-                }).join(' ');
+            delete media.ext;
 
-                if (media.fmtp) {
-                  media.fmtp = media.fmtp.filter(function (r) {
-                    return delH264Payload.indexOf(r.payload) == -1;
-                  });
-                }
+            if (media.type === 'video') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 1024
+              }, {
+                type: 'RR',
+                limit: 6000
+              }, {
+                type: 'RS',
+                limit: 8000
+              }];
+              media.ext = [{
+                value: 13,
+                uri: 'urn:3gpp:video-orientation'
+              }];
+              media.invalid = [{
+                value: 'tcap:1 RTP/AVPF'
+              }, {
+                value: 'pcfg:1 t=1'
+              }];
+            } else if (media.type === 'audio') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 100
+              }, {
+                type: 'RR',
+                limit: 600
+              }, {
+                type: 'RS',
+                limit: 2000
+              }];
+            } // }
 
-                if (media.rtp) {
-                  media.rtp = media.rtp.filter(function (r) {
-                    return delH264Payload.indexOf(r.payload) == -1;
-                  });
-                }
-
-                if (media.rtcpFb) {
-                  media.rtcpFb = media.rtcpFb.filter(function (r) {
-                    return delH264Payload.indexOf(r.payload) == -1;
-                  });
-                }
-              } else if (media.type === 'audio') {
-                media.bandwidth = [{
-                  type: 'AS',
-                  limit: 100
-                }, {
-                  type: 'RR',
-                  limit: 600
-                }, {
-                  type: 'RS',
-                  limit: 2000
-                }];
-              }
-            }
           }); // 处理视频呼叫音频接听后再切换视频时 mid 值问题
 
           sdp.groups[0].mids = mids.join(' ');
@@ -19712,11 +19725,42 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var sdp_desc = sdp_transform.parse(sdp);
 
         if (type === 'offer') {
-          /**
-           * 音视频切换相关
-           * 根据offer的sdp判断呼叫模式
-           * @author: lei
-           */
+          sdp_desc.media.forEach(function (media) {
+            /**
+              * 处理5G外呼sdp过大问题,
+              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+              */
+            if (_this18._ua.sk[7] >= 3) {
+              if (media.type === 'video') {
+                media.bandwidth = [{
+                  type: 'AS',
+                  limit: 1024
+                }, {
+                  type: 'RR',
+                  limit: 6000
+                }, {
+                  type: 'RS',
+                  limit: 8000
+                }];
+                media.invalid = [{
+                  value: 'tcap:1 RTP/AVPF'
+                }, {
+                  value: 'pcfg:1 t=1'
+                }];
+              } else if (media.type === 'audio') {
+                media.bandwidth = [{
+                  type: 'AS',
+                  limit: 100
+                }, {
+                  type: 'RR',
+                  limit: 600
+                }, {
+                  type: 'RS',
+                  limit: 2000
+                }];
+              }
+            }
+          });
           _this18._localToAudio === '' && (_this18._localToAudio = true);
           _this18._localToVideo === '' && (_this18._localToVideo = false);
 
@@ -35335,7 +35379,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
