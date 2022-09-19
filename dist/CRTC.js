@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.5.2022961053
+ * CRTC v1.6.5.20229191755
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19520,7 +19520,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (type === 'offer') {
           var sdp = sdp_transform.parse(desc.sdp);
           var mids = [];
-          console.warn('sdp: ', sdp);
           sdp.media.forEach(function (media, index) {
             // 处理视频呼叫音频接听后再切换视频时 mid 值问题
             media.mid = index;

@@ -15,6 +15,10 @@ let tmpVideoStream;
 // 远端客户端UA
 // let remoteUA;
 
+const localVideo = document.querySelector('#localVideo');
+const remoteVideo = document.querySelector('#remoteVideo');
+const remoteAudio = document.querySelector('#remoteAudio');
+
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // sip domain
@@ -258,12 +262,12 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('cameraChanged', function(d)
   {
-    document.querySelector('#localVideo').srcObject = d.videoStream;
+    localVideo.srcObject = d.videoStream;
 
     // 兼容不同浏览器安全策略
     setTimeout(() =>
     {
-      document.querySelector('#localVideo').play();
+      localVideo.play();
     }, 100);
   });
 
@@ -454,7 +458,7 @@ ua.on('newRTCSession', function(e)
       e.session.unmute({ video: true });
     }, 500);
 
-    if (d.originator === 'local' && navigator.userAgent.indexOf('WeChat') != -1)
+    if (d.originator === 'local' && navigator.userAgent.indexOf('MicroMessenger') != -1)
     {
       navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         .then((stream) =>
@@ -735,7 +739,7 @@ async function call(type)
     pcConfig     : pcConfig
   };
 
-  if (navigator.userAgent.indexOf('WeChat') != -1)
+  if (navigator.userAgent.indexOf('MicroMessenger') != -1)
   {
     const localStream = new MediaStream();
     const audioCtx = new AudioContext();
@@ -771,14 +775,14 @@ async function call(type)
     // 收到远端媒体则设置远端回铃音
     earlyMedia = true;
 
-    document.querySelector('#remoteAudio').srcObject = event.streams[0];
+    remoteAudio.srcObject = event.streams[0];
 
     /**
      * 兼容chrome
      * https://developer.chrome.com/blog/play-request-was-interrupted/#error
      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
      */
-    document.querySelector('#remoteAudio').play()
+    remoteAudio.play()
       .catch(() => { });
   };
 
@@ -802,22 +806,40 @@ function getStreams(pc)
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
   // 本地视频
-  document.querySelector('#localVideo').srcObject = localStream.videoStream;
+  localVideo.srcObject = localStream.videoStream;
+  localStream.videoStream.getTracks().length>0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  {
+    // 特殊情况下清理页面残留的video黑框
+    localVideo.srcObject = null;
+  });
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
   setTimeout(() =>
   {
-    document.querySelector('#remoteAudio').srcObject = remoteStream.audioStream;
+    remoteAudio.srcObject = remoteStream.audioStream;
+
+    /**
+     * 兼容chrome
+     * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+     * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+     */
+    remoteAudio.play()
+      .catch(() => { });
   }, 100);
   // 远端视频
-  document.querySelector('#remoteVideo').srcObject = remoteStream.videoStream;
+  remoteVideo.srcObject = remoteStream.videoStream;
+  remoteStream.videoStream.getTracks().length> 0 && remoteStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  {
+    // 特殊情况下清理页面残留的video黑框
+    remoteVideo.srcObject = null;
+  });
 
   /**
    * 兼容chrome
    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
-  Promise.all([ document.querySelector('#localVideo').play(), document.querySelector('#remoteAudio').play(), document.querySelector('#remoteVideo').play() ])
+  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() => { })
     .catch(() => { });
 }
@@ -825,9 +847,9 @@ function getStreams(pc)
 function stopStreams(type)
 {
   // 停止媒体流，这里可以切换页面UI
-  document.querySelector('#remoteVideo').srcObject = null;
-  document.querySelector('#remoteAudio').srcObject = null;
-  document.querySelector('#localVideo').srcObject = null;
+  remoteVideo.srcObject = null;
+  remoteAudio.srcObject = null;
+  localVideo.srcObject = null;
   type !== 'hold' && tmpAudioStream && tmpAudioStream.getTracks().forEach((track) =>
   {
     track.stop();
