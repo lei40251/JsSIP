@@ -458,7 +458,7 @@ ua.on('newRTCSession', function(e)
       e.session.unmute({ video: true });
     }, 500);
 
-    if (d.originator === 'local' && navigator.userAgent.indexOf('MicroMessenger') != -1)
+    if (d.originator === 'local' && navigator.userAgent.indexOf('WeChat') != -1)
     {
       navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         .then((stream) =>
@@ -739,7 +739,7 @@ async function call(type)
     pcConfig     : pcConfig
   };
 
-  if (navigator.userAgent.indexOf('MicroMessenger') != -1)
+  if (navigator.userAgent.indexOf('WeChat') != -1)
   {
     const localStream = new MediaStream();
     const audioCtx = new AudioContext();
