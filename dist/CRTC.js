@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.6.202210251520
+ * CRTC v1.6.6.202210261028
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19542,8 +19542,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }) // Set local description.
       .then(function (desc) {
+        var sdp = sdp_transform.parse(desc.sdp);
+
         if (type === 'offer') {
-          var sdp = sdp_transform.parse(desc.sdp);
           var mids = [];
           sdp.media.forEach(function (media, index) {
             // 处理视频呼叫音频接听后再切换视频时 mid 值问题
@@ -19601,104 +19602,50 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * 处理5G外呼sdp过大问题,
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
-            // if (this._ua.sk[7] >= 3)
-            // {
 
 
-            delete media.ext;
+            if (_this18._ua.sk[7] >= 3) {
+              delete media.ext;
 
-            if (media.type === 'video') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 960
-              }, {
-                type: 'RR',
-                limit: 6000
-              }, {
-                type: 'RS',
-                limit: 8000
-              }];
-              media.ext = [{
-                value: 13,
-                uri: 'urn:3gpp:video-orientation'
-              }];
-              media.invalid = [{
-                value: 'tcap:1 RTP/AVPF'
-              }, {
-                value: 'pcfg:1 t=1'
-              }];
-            } else if (media.type === 'audio') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 90
-              }, {
-                type: 'RR',
-                limit: 600
-              }, {
-                type: 'RS',
-                limit: 2000
-              }];
-            } // }
-
+              if (media.type === 'video') {
+                media.ext = [{
+                  value: 13,
+                  uri: 'urn:3gpp:video-orientation'
+                }];
+                media.invalid = [{
+                  value: 'tcap:1 RTP/AVPF'
+                }, {
+                  value: 'pcfg:1 t=1'
+                }];
+              }
+            }
           }); // 处理视频呼叫音频接听后再切换视频时 mid 值问题
 
           sdp.groups[0].mids = mids.join(' ');
-          sdp.bandwidth = [{
-            type: 'AS',
-            limit: 1050
-          }, {
-            type: 'RR',
-            limit: 6600
-          }, {
-            type: 'RS',
-            limit: 10000
-          }];
           desc.sdp = sdp_transform.write(sdp);
-        } else {
-          var _sdp = sdp_transform.parse(desc.sdp);
+        }
 
-          _sdp.media.forEach(function (media) {
-            /**
-             * 处理SDP的码率配置
-             */
-            if (media.type === 'video') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 960
-              }, {
-                type: 'RR',
-                limit: 6000
-              }, {
-                type: 'RS',
-                limit: 8000
-              }];
-            } else if (media.type === 'audio') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 90
-              }, {
-                type: 'RR',
-                limit: 600
-              }, {
-                type: 'RS',
-                limit: 2000
-              }];
-            }
-          });
-
-          _sdp.bandwidth = [{
-            type: 'AS',
-            limit: 1050
-          }, {
-            type: 'RR',
-            limit: 6600
-          }, {
-            type: 'RS',
-            limit: 10000
-          }];
-          desc.sdp = sdp_transform.write(_sdp);
-        } // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
-
+        sdp.media.forEach(function (media) {
+          /**
+           * 处理SDP的码率配置
+           */
+          if (media.type === 'video') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 960
+            }];
+          } else if (media.type === 'audio') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 90
+            }];
+          }
+        });
+        sdp.bandwidth = [{
+          type: 'AS',
+          limit: 1050
+        }];
+        desc.sdp = sdp_transform.write(sdp); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
 
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         return connection.setLocalDescription(desc)["catch"](function (error) {
@@ -19802,53 +19749,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var sdp_desc = sdp_transform.parse(sdp);
 
         if (type === 'offer') {
-          sdp_desc.media.forEach(function (media) {
-            /**
-              * 处理5G外呼sdp过大问题,
-              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-              */
-            if (_this18._ua.sk[7] >= 3) {
-              if (media.type === 'video') {
-                media.bandwidth = [{
-                  type: 'AS',
-                  limit: 960
-                }, {
-                  type: 'RR',
-                  limit: 6000
-                }, {
-                  type: 'RS',
-                  limit: 8000
-                }];
-                media.invalid = [{
-                  value: 'tcap:1 RTP/AVPF'
-                }, {
-                  value: 'pcfg:1 t=1'
-                }];
-              } else if (media.type === 'audio') {
-                media.bandwidth = [{
-                  type: 'AS',
-                  limit: 90
-                }, {
-                  type: 'RR',
-                  limit: 600
-                }, {
-                  type: 'RS',
-                  limit: 2000
-                }];
-              }
-
-              sdp_desc.bandwidth = [{
-                type: 'AS',
-                limit: 1050
-              }, {
-                type: 'RR',
-                limit: 6600
-              }, {
-                type: 'RS',
-                limit: 10000
-              }];
-            }
-          });
           _this18._localToAudio === '' && (_this18._localToAudio = true);
           _this18._localToVideo === '' && (_this18._localToVideo = false);
 
@@ -19917,7 +19817,56 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
 
-        return sdp_transform.write(sdp_desc);
+        sdp_desc.media.forEach(function (media) {
+          /**
+            * 处理5G外呼sdp过大问题,
+            * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+            */
+          if (_this18._ua.sk[7] >= 3) {
+            if (media.type === 'video') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 960
+              }, {
+                type: 'RR',
+                limit: 6000
+              }, {
+                type: 'RS',
+                limit: 8000
+              }];
+              media.invalid = [{
+                value: 'tcap:1 RTP/AVPF'
+              }, {
+                value: 'pcfg:1 t=1'
+              }];
+            } else if (media.type === 'audio') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 90
+              }, {
+                type: 'RR',
+                limit: 600
+              }, {
+                type: 'RS',
+                limit: 2000
+              }];
+            }
+
+            sdp_desc.bandwidth = [{
+              type: 'AS',
+              limit: 1050
+            }, {
+              type: 'RR',
+              limit: 6600
+            }, {
+              type: 'RS',
+              limit: 10000
+            }];
+          }
+        });
+        var nSdp = sdp_transform.write(sdp_desc);
+        nSdp = nSdp.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=rtcp-xfb\r\n');
+        return nSdp;
       });
     }
     /**
