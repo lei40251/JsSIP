@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.8.20221027109
+ * CRTC v1.6.8-beta.221030.202210301455
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -531,10 +531,7 @@ module.exports = /*#__PURE__*/function () {
     this._owner = owner;
     this._ua = owner._ua;
     this._uac_pending_reply = false;
-    this._uas_pending_reply = false; // 兼容 100rel
-
-    this._hasPrack = false;
-    this._ackCancelCseq = 0;
+    this._uas_pending_reply = false;
 
     if (!message.hasHeader('contact')) {
       return {
@@ -576,6 +573,7 @@ module.exports = /*#__PURE__*/function () {
       };
       this._state = state;
       this._local_seqnum = message.cseq;
+      this._invite_seqnum = message.cseq;
       this._local_uri = message.parseHeader('from').uri;
       this._remote_uri = message.parseHeader('to').uri;
       this._remote_target = contact.uri;
@@ -645,9 +643,12 @@ module.exports = /*#__PURE__*/function () {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
+      var RSeq = options.RSeq || null;
       var body = options.body || null;
 
-      var request = this._createRequest(method, extraHeaders, body); // Increase the local CSeq on authentication.
+      var request = this._createRequest(method, extraHeaders, body, {
+        RSeq: RSeq
+      }); // Increase the local CSeq on authentication.
 
 
       eventHandlers.onAuthenticated = function () {
@@ -682,6 +683,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_createRequest",
     value: function _createRequest(method, extraHeaders, body) {
+      var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
       extraHeaders = Utils.cloneArray(extraHeaders);
 
       if (!this._local_seqnum) {
@@ -689,14 +691,12 @@ module.exports = /*#__PURE__*/function () {
       } // 增加100rel的 prack
 
 
-      if (method === CRTC_C.PRACK) {
-        extraHeaders.push("RAck: 1 ".concat(this.local_seqnum, " INVITE"));
-        this._hasPrack = true;
-        this._ackCancelCseq = this._local_seqnum;
-      } // 恢复，因为有些情况ack
+      options.RSeq && extraHeaders.push("RAck: ".concat(options.RSeq, " ").concat(this._invite_seqnum, " INVITE"));
+      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._invite_seqnum : this._local_seqnum += 1;
+      method === CRTC_C.INVITE && (this._invite_seqnum = this._local_seqnum); // const cseq = (method === CRTC_C.CANCEL || method === CRTC_C.ACK) ?
+      //   this._local_seqnum :
+      //   this._local_seqnum += 1;
 
-
-      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._hasPrack ? this._ackCancelCseq : this._local_seqnum : this._local_seqnum += 1;
       var request = new SIPMessage.OutgoingRequest(method, this._remote_target, this._ua, {
         'cseq': cseq,
         'call_id': this._id.call_id,
@@ -18315,7 +18315,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function switchDevice(type, deviceId) {
       var _this6 = this;
 
-      logger.debug('switchDevice()'); // Check Session Status.
+      logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId)); // Check Session Status.
 
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
@@ -18325,6 +18325,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (type === 'camera') {
         return Promise.resolve().then(function () {
           _this6._connection.getSenders().find(function (s) {
+            logger.debug("kind: ".concat(s.track.kind));
+
             if (s.track.kind == 'video') {
               s.track.stop();
             }
@@ -19864,9 +19866,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }];
           }
         });
-        var nSdp = sdp_transform.write(sdp_desc);
-        nSdp = nSdp.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
-        return nSdp;
+        return sdp_transform.write(sdp_desc);
       });
     }
     /**
@@ -20010,6 +20010,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF')) {
+            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
+            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
+          }
+
           if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
@@ -20175,6 +20181,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF')) {
+            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
+            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
+          }
+
           if (_this22._status === C.STATUS_TERMINATED) {
             return;
           }
@@ -20768,8 +20780,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._status = C.STATUS_1XX_RECEIVED;
 
             if (!response.body) {
-              this._progress('remote', response);
-
+              Promise.resolve().then(function () {
+                if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+                  _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                    RSeq: response.getHeader('rseq')
+                  });
+                }
+              }).then(function () {
+                _this29._progress('remote', response);
+              });
               break;
             }
 
@@ -20788,7 +20807,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _this29._connection.setRemoteDescription(answer);
             }) // 发送 RFC3262 183 PRACK
             .then(function () {
-              return response.getHeader('require') === '100rel' && _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK);
+              if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+                _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                  RSeq: response.getHeader('rseq')
+                });
+              }
             }).then(function () {
               return _this29._progress('remote', response);
             })["catch"](function (error) {
@@ -35485,7 +35508,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.8",
+  "version": "1.6.8-beta.221030",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -35535,5 +35558,6 @@ module.exports={
     "prepublishOnly": "gulp babel"
   }
 }
+
 },{}]},{},[8])(8)
 });

@@ -168,11 +168,14 @@ ua.on('newRTCSession', function(e)
     {
       d.sdp = d.sdp.replace(/m=video \d*/, 'm=video 0');
     }
+    d.sdp = d.sdp.replace(/42e01f/, '42c01e');
+    d.sdp = d.sdp.replace(/a=rtcp-fb:98 goog-remb\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=rtcp-fb:98 transport-cc\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
 
     // if (d.originator === 'local')
     // {
     //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    //   d.sdp = d.sdp.replace(/a=mid.*\r\n/g, '');
     // }
   });
 
