@@ -493,10 +493,11 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answer').onclick = function()
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: false },
-      pcConfig         : pcConfig,
+      mediaConstraints    : { audio: true, video: false },
+      pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders     : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
+      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: false }
     });
 
     setStatus('audio answer');
@@ -508,10 +509,11 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answerVideo').onclick = function()
   {
     e.session.answer({
-      mediaConstraints : { audio: true, video: videoConstraints },
-      pcConfig         : pcConfig,
+      mediaConstraints    : { audio: true, video: videoConstraints },
+      pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders     : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
+      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true }
     });
 
     setStatus('video answer');
