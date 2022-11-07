@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -12,6 +12,10 @@ let stats;
 let earlyMedia = false;
 let tmpAudioStream;
 let tmpVideoStream;
+// 断线重连
+let rtcSession;
+let needReinvite = false;
+let optionsTimer;
 // 远端客户端UA
 // let remoteUA;
 
@@ -95,8 +99,28 @@ ua.on('failed', function(data)
  */
 ua.on('disconnected', function(data)
 {
-  console.log(data);
+  needReinvite = true;
   setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+});
+
+
+/**
+ * connected
+ *
+ * @fires 信令连接尝试(或自动重新尝试)成功时触发
+ *
+ * @type {object}
+ */
+ua.on('connected', function()
+{
+  if (needReinvite)
+  {
+    rtcSession && rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+    // rtcSession.renegotiate({ useUpdate: true });
+
+    setStatus('reinvite');
+  }
+  setStatus('信令已连接');
 });
 
 /**
@@ -139,6 +163,13 @@ ua.on('registrationFailed', function(data)
 ua.on('newRTCSession', function(e)
 {
   console.log('nsession: ', e);
+
+  rtcSession = e.session;
+
+  optionsTimer = setInterval(() =>
+  {
+    ua.sendOptions(`${callee}@${sipDomain}`);
+  }, 3000);
 
   if (e.originator === 'remote')
   {
@@ -292,6 +323,8 @@ ua.on('newRTCSession', function(e)
   {
     setStatus(`通话建立失败: ${d.cause}`);
 
+    needReinvite = false;
+
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
@@ -301,6 +334,8 @@ ua.on('newRTCSession', function(e)
 
     // 停止获取统计信息
     stats && stats.stop();
+
+    optionsTimer && clearInterval(optionsTimer);
   });
 
   /**
@@ -317,6 +352,8 @@ ua.on('newRTCSession', function(e)
   {
     setStatus('通话结束');
 
+    needReinvite = false;
+
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
@@ -326,6 +363,8 @@ ua.on('newRTCSession', function(e)
 
     // 停止获取统计信息
     stats && stats.stop();
+
+    optionsTimer && clearInterval(optionsTimer);
   });
 
   /**

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.8-beta.221030.202210301455
+ * CRTC v1.7.0-beta.221107.20221171519
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -16194,14 +16194,39 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
+/* eslint-disable no-console */
+
+/* eslint-disable prefer-rest-params */
 var debug = require('debug');
 
-var APP_NAME = 'CRTC';
+var APP_NAME = 'CRTC'; // const _info = console.info;
+// const _warn = console.warn;
+// const _error = console.error;
+// function parseLog(msg)
+// {
+//   console.log(`${new Date().toISOString()} → ${msg.replace(/%c/g, '')}`);
+// }
 
 module.exports = /*#__PURE__*/function () {
   function Logger(prefix) {
     _classCallCheck(this, Logger);
 
+    /* eslint-disable no-console */
+    // console.info = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _info.apply(console, arguments);
+    // };
+    // console.warn = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _warn.apply(console, arguments);
+    // };
+    // console.error = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _error.apply(console, arguments);
+    // };
     if (prefix) {
       this._debug = debug["default"]("".concat(APP_NAME, ":").concat(prefix));
       this._warn = debug["default"]("".concat(APP_NAME, ":WARN:").concat(prefix));
@@ -18330,9 +18355,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (s.track.kind == 'video') {
               s.track.stop();
             }
-          }); // this._localMediaStreamLocallyGenerated = true;
+          });
 
-
+          _this6._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
@@ -18353,12 +18378,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
 
           if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-            _this6._localShareStream = Utils.getStreamThroughCanvas(stream);
+            _this6._localMediaStream = Utils.getStreamThroughCanvas(stream);
           } else {
-            _this6._localShareStream = stream;
+            _this6._localMediaStream = stream;
           }
 
-          _this6._localShareStream.getVideoTracks().forEach(function (track) {
+          _this6._localMediaStream.getVideoTracks().forEach(function (track) {
             var sender = _this6._connection.getSenders().find(function (s) {
               return s.track.kind == 'video';
             });
@@ -19288,12 +19313,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function onTransportError() {
       logger.warn('onTransportError()');
 
-      if (this._status !== C.STATUS_TERMINATED) {
-        this.terminate({
-          status_code: 500,
-          reason_phrase: CRTC_C.causes.CONNECTION_ERROR,
-          cause: CRTC_C.causes.CONNECTION_ERROR
-        });
+      if (this._status !== C.STATUS_TERMINATED) {// this.terminate({
+        //   status_code   : 500,
+        //   reason_phrase : CRTC_C.causes.CONNECTION_ERROR,
+        //   cause         : CRTC_C.causes.CONNECTION_ERROR
+        // });
+        // 连接错误不处理，延长重试时间
       }
     }
   }, {
@@ -19501,11 +19526,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var state = _this17._connection.iceConnectionState; // TODO: Do more with different states.
 
         if (state === 'failed') {
-          _this17.terminate({
-            cause: CRTC_C.causes.RTP_TIMEOUT,
-            status_code: 408,
-            reason_phrase: CRTC_C.causes.RTP_TIMEOUT
-          });
+          // this.terminate({
+          //   cause         : CRTC_C.causes.RTP_TIMEOUT,
+          //   status_code   : 408,
+          //   reason_phrase : CRTC_C.causes.RTP_TIMEOUT
+          // });
+          // RTCPeerConnection failed断开后启动重新协商
+          _this17.renegotiate();
         }
       });
 
@@ -20080,6 +20107,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 });
               }
+            } else {
+              waiting = true;
+              nextS.call(this);
             }
           }
         } catch (err) {
@@ -20227,7 +20257,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // this._localToVideo = false;
               // nextS.call(this);
 
-            } else {
+            } else if (this._mode === 'audio') {
               waiting = true; // 触发切换事件，要求用户授权
 
               this._remoteToVideo = true;
@@ -20251,6 +20281,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 });
               }
+            } else {
+              waiting = true;
+              nextS.call(this);
             }
           }
         } catch (err) {
@@ -20384,7 +20417,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this24._connection.addStream(stream);
             }
           });
-          _this24._iceReady = false; // this._rtcAnswerConstraints['iceRestart'] = true;
+          _this24._iceReady = false;
+          _this24._rtcAnswerConstraints['iceRestart'] = true;
         }
       }) // Create local description.
       .then(function () {
@@ -24276,7 +24310,7 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
     _this.request = request;
     _this.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this.id);
 
     _this.request.setHeader('via', via);
 
@@ -24396,7 +24430,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     _this4.eventHandlers = eventHandlers;
     request.transaction = _assertThisInitialized(_this4);
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this4.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this4.id);
 
     _this4.request.setHeader('via', via);
 
@@ -24587,7 +24621,7 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
     _this8.request = request;
     _this8.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this8.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this8.id);
 
     _this8.request.setHeader('via', via);
 
@@ -35508,7 +35542,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.8-beta.221030",
+  "version": "1.7.0-beta.221107",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -35558,6 +35592,5 @@ module.exports={
     "prepublishOnly": "gulp babel"
   }
 }
-
 },{}]},{},[8])(8)
 });
