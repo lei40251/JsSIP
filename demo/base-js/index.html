@@ -38,7 +38,7 @@
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">远端视频</p>
       <video playsinline muted x5-video-player-fullscreen="true" x5-video-player-type="h5" class="h-100"
         id="remoteVideo"></video>
-      <audio id="remoteAudio" autoplay class="hide"></audio>
+      <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
     </div>
   </div>
   <div class="bg-light p-2 m-2" id="ele">
@@ -51,7 +51,7 @@
           <div class="col col-auto row">
             <div class="col col-auto">
               <div class="input-group">
-                <input class="form-control" type="text" value="7305" placeholder="请输入要呼叫的号码" id="callee" />
+                <input class="form-control" type="text" value="15383733130" placeholder="请输入要呼叫的号码" id="callee" />
                 <button class="btn btn-success" id="call"><i class="bi-mic"></i> 语音外呼</button>
                 <button class="btn btn-primary" id="callVideo"><i class="bi-camera-video"></i> 视频外呼</button>
               </div>
@@ -141,7 +141,8 @@
   <script src="./js/jquery-3.3.1.min.js"></script>
   <script src="./js/html2canvas.min.js"></script>
   <script src="./js/adapter-latest.js"></script>
-  <script src="../../dist/CRTC.js"></script>
+  <script src="../../dist/CRTC.min.js"></script>
+  <script src="./js/config.js"></script>
   <script src="./js/app.js"></script>
 </body>
 
