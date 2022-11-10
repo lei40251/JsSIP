@@ -1,5 +1,5 @@
 /*
- * CRTC v1.7.0-beta.221110.20221110918
+ * CRTC v1.7.0-beta.221110.202211101553
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -20044,7 +20044,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
-          if (request.body.indexOf('tcap:1 RTP/AVPF')) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
             desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
@@ -20218,7 +20218,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
-          if (request.body.indexOf('tcap:1 RTP/AVPF')) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
             desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');

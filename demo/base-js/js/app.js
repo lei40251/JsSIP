@@ -23,12 +23,12 @@ const localVideo = document.querySelector('#localVideo');
 const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
-// // 信令地址
-// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
-// // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
-// // sip domain
-// const sipDomain = '5g.vsbc.com';
-// // const sipDomain = 'pro.vsbc.com';
+// 信令地址
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
+// sip domain
+const sipDomain = '5g.vsbc.com';
+// const sipDomain = 'pro.vsbc.com';
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 // websocket 实例
@@ -43,9 +43,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  // secret_key   : 'K/8VaNX0AZftraSKZPZQ8TTVVg3hx2mjD/p9CM5iwUhfs+cxiXvODrjTb7s4lAfBN8VL9DwQMRq+xcVLE6ual5D84VLQZnMGE0iaa/wf4M0GTjsnVqANsSToT9JzZ/50pXmi0UGfQxZ/v9MVSlpiLnSNPSmTq59d0oNU+KRZvi1zmIpvOsttvoNO4gvxW6WwFzxSd4lmM47YkPz6lu+n4hsNJi2iWxkboDLuY/O3zXt7Nlnk/MahS9TunaAFrVj93WRI25jKunBlHlcJWQC66BnPdwOZaET4oQ2qQEXi+YX8HGRgSVzJrDfOpEeNGkdWy4Re8Ko/agmb0lvrvSyYLQ=='
-  secret_key   : 'k96K3qevsgm4WJObwP6bDyoCF6ZHP3Sl7vYBqCYUR4p+DBDXGRbY1LQRhHF4vE4g5NdH0LW+wIdWuGM71DgmFiTi8JqnmFLvrEP2bgpp/34s49lNTLXYSbdk0o9vhkNxtiIJ4Lg1PwgFM0kvGd59leCKNsRqfq4oioE1XdR80l69JMk1yOlkgitFqOFJM4/mwsQhEfIbvyW0Hn97ayNSNCrvcazASBT/2JRVZUc+Vmx8XnwFmTDCKKAREM+vVAdhHF2Na3rZHoEVWDXFfFW6rWjeGnO6TR4EUKAac/3rOwkuj8eOLR4ZLU3F/P8AY9xM0WXiREKt6N+ZCtj4mMGMsw=='
-  // secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -206,10 +204,10 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:98 transport-cc\r\n/g, '');
     d.sdp = d.sdp.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
 
-    // if (d.originator === 'local')
-    // {
-    //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    // }
+    if (d.originator === 'local')
+    {
+      d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    }
   });
 
   /**
@@ -791,10 +789,17 @@ async function call(type)
 
   if (navigator.userAgent.indexOf('WeChat') != -1)
   {
+    // 增加安卓微信呼叫的语音提醒
+    const audio = new Audio('./sound/waiting.mp3');
     const localStream = new MediaStream();
     const audioCtx = new AudioContext();
     const destination = audioCtx.createMediaStreamDestination();
+    const source = audioCtx.createMediaElementSource(audio);
 
+    audio.loop = true;
+    audio.crossOrigin = 'anonymous';
+    audio.play().catch((e) => { console.log(e); });
+    source.connect(destination);
     localStream.addTrack(destination.stream.getAudioTracks()[0]);
 
     if (type === 'video')
