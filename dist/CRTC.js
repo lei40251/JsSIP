@@ -1,5 +1,5 @@
 /*
- * CRTC v1.7.0-beta.221110.202211101553
+ * CRTC v1.7.0.20221111233
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -23283,11 +23283,11 @@ var OutgoingRequest = /*#__PURE__*/function () {
       }
 
       supported.push('outbound');
-      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持
+      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持, OPTIONS 消息不添加 Supported 头
       // Allow.
 
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      msg += "Supported: ".concat(supported, ",100rel\r\n");
+      this.method !== CRTC_C.OPTIONS && (msg += "Supported: ".concat(supported, ",100rel\r\n"));
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
       if (this.body) {
@@ -35551,7 +35551,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.7.0-beta.221110",
+  "version": "1.7.0",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
