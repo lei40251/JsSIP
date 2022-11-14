@@ -1,5 +1,5 @@
 /*
- * CRTC v1.7.0.20221111233
+ * CRTC v1.7.1-beta.221114.20221114149
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19539,7 +19539,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           //   reason_phrase : CRTC_C.causes.RTP_TIMEOUT
           // });
           // RTCPeerConnection failed断开后启动重新协商
-          _this17.renegotiate();
+          _this17.renegotiate({
+            rtcOfferConstraints: {
+              iceRestart: true
+            }
+          });
         }
       });
 
@@ -19557,6 +19561,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
       this._rtcReady = false;
+      console.warn('aaaaaaaaaaa');
       return Promise.resolve() // Create Offer or Answer.
       .then(function () {
         if (type === 'offer') {
@@ -19579,6 +19584,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }) // Set local description.
       .then(function (desc) {
         var sdp = sdp_transform.parse(desc.sdp);
+        console.warn('bbbbbbb', desc, type);
 
         if (type === 'offer') {
           var mids = [];
@@ -19684,6 +19690,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         desc.sdp = sdp_transform.write(sdp); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
 
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+        console.warn('desc: ', desc);
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -19714,8 +19721,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this18.emit('sdp', e);
 
           return Promise.resolve(e.sdp);
-        } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
+        }
 
+        console.warn('cccccccccccc', connection.iceGatheringState, iceRestart, _this18._iceReady); // Add 'pc.onicencandidate' event handler to resolve on last candidate.
 
         return new Promise(function (resolve) {
           var finished = false;
@@ -19782,6 +19790,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (sdp) {
         // 去掉IPV6
         sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
+        console.warn('ssdd: ', sdp);
         var sdp_desc = sdp_transform.parse(sdp);
 
         if (type === 'offer') {
@@ -20264,7 +20273,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // this._localToVideo = false;
               // nextS.call(this);
 
-            } else if (this._mode === 'audio') {
+            } else {
               waiting = true; // 触发切换事件，要求用户授权
 
               this._remoteToVideo = true;
@@ -20288,9 +20297,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 });
               }
-            } else {
-              waiting = true;
-              nextS.call(this);
             }
           }
         } catch (err) {
@@ -20424,8 +20430,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this24._connection.addStream(stream);
             }
           });
-          _this24._iceReady = false;
-          _this24._rtcAnswerConstraints['iceRestart'] = true;
+          _this24._iceReady = false; //   this._rtcAnswerConstraints = { iceRestart: true };
         }
       }) // Create local description.
       .then(function () {
@@ -35551,7 +35556,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.7.0",
+  "version": "1.7.1-beta.221114",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

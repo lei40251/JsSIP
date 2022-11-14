@@ -24,11 +24,15 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
+const signalingUrl = 'wss://devns.esoon.com:5092/wss';
+// const signalingUrl = 'wss://vod.sinovancoo.com:5091/wss';
 // sip domain
-const sipDomain = '5g.vsbc.com';
+// const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
+const sipDomain = 'devns.esoon.com';
+// const sipDomain = 'vod.sinovancoo.com';
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 // websocket 实例
@@ -43,7 +47,11 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  // password     : '1010_Zk!@34',
+  // secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  // secret_key   : sessionStorage.getItem('secret_key')||'k96K3qevsgm4WJObwP6bDyoCF6ZHP3Sl7vYBqCYUR4p+DBDXGRbY1LQRhHF4vE4g5NdH0LW+wIdWuGM71DgmFiTi8JqnmFLvrEP2bgpp/34s49lNTLXYSbdk0o9vhkNxtiIJ4Lg1PwgFM0kvGd59leCKNsRqfq4oioE1XdR80l69JMk1yOlkgitFqOFJM4/mwsQhEfIbvyW0Hn97ayNSNCrvcazASBT/2JRVZUc+Vmx8XnwFmTDCKKAREM+vVAdhHF2Na3rZHoEVWDXFfFW6rWjeGnO6TR4EUKAac/3rOwkuj8eOLR4ZLU3F/P8AY9xM0WXiREKt6N+ZCtj4mMGMsw=='
+  secret_key   : 'L6aWhbVFlzabI0f+6xnxU4+yHRo3kCUWytF3cK1aoeR2t6s3xRFB83oKwsucmCoMcVkRrh4VOmvQGRohlH2ADiWxco6hOjl3bDYmUBPORoVb19/gT9mM7MONf/9LkTyFVAHe5wOaihYpeagCSbJnhrwBw1ObiP/gPIrYXGXbbb3Vrr2cnIt+TYiqQ+Hkad+vSmQ+CIJwYhroW3RNKh6AP3ekXYjbdhBM40x5XqWnU4KhJMRziVcjGQohJ1gSs35mjxVIUeUqlUkTHLHV2MalVxh7kWOJkEnS1vWUYW0iZcyIwiYHYUkcmXWCmZJXEBVRXUw/1fC+HUbFmT9NSJMVpg=='
+  // secret_key   : 'SJyOQCwHEQrrC0eyQg3lvsfbr39CtlS9B/UxZ4Ywyea6yL1ixoeHD4EMWJLdt3MtBavn+98pTn1MB9NlHlR0R5/vcLRZQ4c9yoERasXmAesDfsIwyU05ebhiCBPbT8wCDijjF46reoajvamC51Y91E318FJCme7tc+dok4jcehRkfkLOEquNvWNsBctBnxFveEUZ9qg+kasmfIdEOlMdsi6w9T7PzqiafHUBH7i81sInqWPJ54+AGDPm1xE7l+BVrXU0j+lFDkJ5FDpgPD03eHrauQ58n8rzOfVIFaO7NB3F0IAJSdYAu3DSTThy9u+hFiXIwpAMl7jnB7bGprvY1Q=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -115,7 +123,6 @@ ua.on('connected', function()
   if (needReinvite)
   {
     rtcSession && rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-    // rtcSession.renegotiate({ useUpdate: true });
 
     setStatus('reinvite');
   }
@@ -149,10 +156,10 @@ ua.on('registrationFailed', function(data)
   setStatus(`注册失败${data.cause}`);
 });
 
-setInterval(() =>
-{
-  ua.sendOptions(`sip_ping@${sipDomain}`);
-}, 3000);
+// setInterval(() =>
+// {
+//   ua.sendOptions(`sip_ping@${sipDomain}`);
+// }, 3000);
 
 /**
  * newRTCSession
@@ -418,16 +425,17 @@ ua.on('newRTCSession', function(e)
     if (d.event == 'talk')
     {
       e.session.answer({
-        mediaConstraints : { audio: true, video: false },
-        pcConfig         : pcConfig
+        rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+        mediaConstraints    : { audio: true, video: true },
+        pcConfig            : pcConfig
       });
 
-      setStatus('audio autoAnswer');
+      setStatus('3pcc answer');
     }
     else if (d.event == 'hold')
     {
       e.session.hold();
-      setStatus('auto hold');
+      setStatus('3pcc hold');
     }
 
   });
