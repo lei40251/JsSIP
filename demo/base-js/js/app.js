@@ -16,6 +16,9 @@ let tmpVideoStream;
 let rtcSession;
 let needReinvite = false;
 let optionsTimer;
+// 呼叫转移 被转用
+let tmpSession;
+
 // 远端客户端UA
 // let remoteUA;
 
@@ -48,9 +51,9 @@ const configuration = {
   // SIP身份验证密码
   password     : `yl_19${account}`,
   // password     : '1010_Zk!@34',
-  // secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
   // secret_key   : sessionStorage.getItem('secret_key')||'k96K3qevsgm4WJObwP6bDyoCF6ZHP3Sl7vYBqCYUR4p+DBDXGRbY1LQRhHF4vE4g5NdH0LW+wIdWuGM71DgmFiTi8JqnmFLvrEP2bgpp/34s49lNTLXYSbdk0o9vhkNxtiIJ4Lg1PwgFM0kvGd59leCKNsRqfq4oioE1XdR80l69JMk1yOlkgitFqOFJM4/mwsQhEfIbvyW0Hn97ayNSNCrvcazASBT/2JRVZUc+Vmx8XnwFmTDCKKAREM+vVAdhHF2Na3rZHoEVWDXFfFW6rWjeGnO6TR4EUKAac/3rOwkuj8eOLR4ZLU3F/P8AY9xM0WXiREKt6N+ZCtj4mMGMsw=='
-  secret_key   : 'L6aWhbVFlzabI0f+6xnxU4+yHRo3kCUWytF3cK1aoeR2t6s3xRFB83oKwsucmCoMcVkRrh4VOmvQGRohlH2ADiWxco6hOjl3bDYmUBPORoVb19/gT9mM7MONf/9LkTyFVAHe5wOaihYpeagCSbJnhrwBw1ObiP/gPIrYXGXbbb3Vrr2cnIt+TYiqQ+Hkad+vSmQ+CIJwYhroW3RNKh6AP3ekXYjbdhBM40x5XqWnU4KhJMRziVcjGQohJ1gSs35mjxVIUeUqlUkTHLHV2MalVxh7kWOJkEnS1vWUYW0iZcyIwiYHYUkcmXWCmZJXEBVRXUw/1fC+HUbFmT9NSJMVpg=='
+  // secret_key   : 'L6aWhbVFlzabI0f+6xnxU4+yHRo3kCUWytF3cK1aoeR2t6s3xRFB83oKwsucmCoMcVkRrh4VOmvQGRohlH2ADiWxco6hOjl3bDYmUBPORoVb19/gT9mM7MONf/9LkTyFVAHe5wOaihYpeagCSbJnhrwBw1ObiP/gPIrYXGXbbb3Vrr2cnIt+TYiqQ+Hkad+vSmQ+CIJwYhroW3RNKh6AP3ekXYjbdhBM40x5XqWnU4KhJMRziVcjGQohJ1gSs35mjxVIUeUqlUkTHLHV2MalVxh7kWOJkEnS1vWUYW0iZcyIwiYHYUkcmXWCmZJXEBVRXUw/1fC+HUbFmT9NSJMVpg=='
   // secret_key   : 'SJyOQCwHEQrrC0eyQg3lvsfbr39CtlS9B/UxZ4Ywyea6yL1ixoeHD4EMWJLdt3MtBavn+98pTn1MB9NlHlR0R5/vcLRZQ4c9yoERasXmAesDfsIwyU05ebhiCBPbT8wCDijjF46reoajvamC51Y91E318FJCme7tc+dok4jcehRkfkLOEquNvWNsBctBnxFveEUZ9qg+kasmfIdEOlMdsi6w9T7PzqiafHUBH7i81sInqWPJ54+AGDPm1xE7l+BVrXU0j+lFDkJ5FDpgPD03eHrauQ58n8rzOfVIFaO7NB3F0IAJSdYAu3DSTThy9u+hFiXIwpAMl7jnB7bGprvY1Q=='
 };
 // 媒体约束条件
@@ -175,8 +178,18 @@ ua.on('newRTCSession', function(e)
 {
   console.log('nsession: ', e);
 
-  rtcSession = e.session;
-
+  if (tmpSession)
+  {
+    e.session.terminate({ status_code: 486 });
+  }
+  else if (!rtcSession)
+  {
+    rtcSession = e.session;
+  }
+  else
+  {
+    tmpSession = e.session;
+  }
 
   if (e.originator === 'remote')
   {
@@ -188,11 +201,11 @@ ua.on('newRTCSession', function(e)
 
   // ***** Session 事件回调 *****
 
-  // e.session.on('refer', function(d)
-  // {
-  //   console.log('refer');
-  //   d.accept();
-  // });
+  e.session.on('refer', function(d)
+  {
+    console.log('refer');
+    d.accept();
+  });
 
   // e.session.on('accepted', function(d)
   // {
@@ -493,6 +506,11 @@ ua.on('newRTCSession', function(e)
   e.session.on('confirmed', function(d)
   {
     setStatus('confirmed');
+
+    if (e.session === tmpSession)
+    {
+      rtcSession.terminate();
+    }
 
     // 获取统计信息
     stats = new CRTC.getStats(e.session.connection);
@@ -822,7 +840,7 @@ async function call(type)
   {
     options['mediaConstraints'] = {
       audio : true,
-      video : type=== 'video' ? videoConstraints : false
+      video : type === 'video' ? videoConstraints : false
     };
   }
 
@@ -894,7 +912,10 @@ function getStreams(pc)
   remoteStream.videoStream.getTracks().length> 0 && remoteStream.videoStream.getTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
-    remoteVideo.srcObject = null;
+    if (!tmpSession)
+    {
+      remoteVideo.srcObject = null;
+    }
   });
 
   /**
