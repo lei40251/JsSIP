@@ -16,7 +16,7 @@ module.exports =
 	settings: {},
 	parserOptions:
 	{
-		ecmaVersion: 6,
+		ecmaVersion: 8,
 		sourceType: 'module',
 		ecmaFeatures:
 		{
@@ -59,7 +59,7 @@ module.exports =
 			}
 		}],
 		'keyword-spacing': 2,
-		'linebreak-style': [ 2, 'unix' ],
+		'linebreak-style': [ 2, 'windows' ],
 		'lines-around-comment': [ 2,
 		{
 			allowBlockStart: true,
@@ -67,7 +67,7 @@ module.exports =
 			beforeBlockComment: true,
 			beforeLineComment: false
 		}],
-		'max-len': [ 2, 90,
+		'max-len': [ 2, 150,
 		{
 			tabWidth: 2,
 			comments: 110,

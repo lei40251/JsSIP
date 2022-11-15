@@ -1,0 +1,16 @@
+
+html, body {
+  margin : 0;
+  padding : 0;
+  overflow-x : hidden;
+}
+
+.hide {
+  display : none !important;
+}
+
+.cav {
+  position : fixed;
+  left : 0;
+  top : 0;
+}

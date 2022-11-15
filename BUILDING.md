@@ -44,6 +44,7 @@ Finally, run `gulp dist` (or just `gulp`) to get:
 $ gulp dist
 ```
 
+npm --no-git-tag-version version 1.6.8-beta.221030
 
 ## Test units
 

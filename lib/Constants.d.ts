@@ -39,6 +39,7 @@ export const SIP_ERROR_CAUSES: {
   AUTHENTICATION_ERROR: [401, 407]
 }
 export const ACK = 'ACK'
+export const PRACK = 'PRACK'
 export const BYE = 'BYE'
 export const CANCEL = 'CANCEL'
 export const INFO = 'INFO'

@@ -925,7 +925,7 @@ CHANGELOG
 
 
 * Update dependencies.
- 
+
 
 ### 0.6.18
 
