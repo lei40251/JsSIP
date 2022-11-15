@@ -168,6 +168,10 @@ export interface OutgoingEvent {
   response: IncomingResponse
 }
 
+export interface ModeEvent {
+  mode: string
+}
+
 // listener
 export type AnyListener = (...args: any[]) => void;
 export type PeerConnectionListener = (event: PeerConnectionEvent) => void;
@@ -190,6 +194,7 @@ export type UpdateListener = ReInviteListener;
 export type ReferListener = (event: ReferEvent) => void;
 export type SDPListener = (event: SDPEvent) => void;
 export type IceCandidateListener = (event: IceCandidateEvent) => void;
+export type ModeListener = (event: ModeEvent) => void;
 
 export interface RTCSessionEventMap {
   'peerconnection': PeerConnectionListener;
@@ -212,6 +217,8 @@ export interface RTCSessionEventMap {
   'replaces': ReferListener;
   'sdp': SDPListener;
   'icecandidate': IceCandidateListener;
+  'mode': ModeListener,
+  'upgradeToVideo': AnyListener,
   'getusermediafailed': AnyListener;
   'peerconnection:createofferfailed': AnyListener;
   'peerconnection:createanswerfailed': AnyListener;
@@ -269,6 +276,16 @@ export class RTCSession extends EventEmitter {
   isReadyToReOffer(): boolean;
 
   answer(options?: AnswerOptions): void;
+
+  upgradeToVideo(): any;
+
+  demoteToAudio(options?: any, done?: VoidFunction): any;
+
+  switchDevice(type: string, deviceId: string): any;
+
+  share(type: string, id?: string, assembly?: any): void;
+
+  unShare(): void;
 
   terminate(options?: TerminateOptions): void;
 

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.6.3.2022818191
+ * CRTC v1.7.1-beta.221114.20221114149
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -573,6 +573,7 @@ module.exports = /*#__PURE__*/function () {
       };
       this._state = state;
       this._local_seqnum = message.cseq;
+      this._invite_seqnum = message.cseq;
       this._local_uri = message.parseHeader('from').uri;
       this._remote_uri = message.parseHeader('to').uri;
       this._remote_target = contact.uri;
@@ -642,11 +643,12 @@ module.exports = /*#__PURE__*/function () {
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var body = options.body || null; // 增加适配 100rel 200ok nobody情况下的cseq
+      var RSeq = options.RSeq || null;
+      var body = options.body || null;
 
-      var requestNoBody = options.requestNoBody || false;
-
-      var request = this._createRequest(method, extraHeaders, body, requestNoBody); // Increase the local CSeq on authentication.
+      var request = this._createRequest(method, extraHeaders, body, {
+        RSeq: RSeq
+      }); // Increase the local CSeq on authentication.
 
 
       eventHandlers.onAuthenticated = function () {
@@ -680,7 +682,8 @@ module.exports = /*#__PURE__*/function () {
 
   }, {
     key: "_createRequest",
-    value: function _createRequest(method, extraHeaders, body, requestNoBody) {
+    value: function _createRequest(method, extraHeaders, body) {
+      var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
       extraHeaders = Utils.cloneArray(extraHeaders);
 
       if (!this._local_seqnum) {
@@ -688,12 +691,12 @@ module.exports = /*#__PURE__*/function () {
       } // 增加100rel的 prack
 
 
-      if (method === CRTC_C.PRACK) {
-        extraHeaders.push("RAck: 1 ".concat(this.local_seqnum, " INVITE"));
-      } // 200ok no body 情况下的cseq值
+      options.RSeq && extraHeaders.push("RAck: ".concat(options.RSeq, " ").concat(this._invite_seqnum, " INVITE"));
+      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._invite_seqnum : this._local_seqnum += 1;
+      method === CRTC_C.INVITE && (this._invite_seqnum = this._local_seqnum); // const cseq = (method === CRTC_C.CANCEL || method === CRTC_C.ACK) ?
+      //   this._local_seqnum :
+      //   this._local_seqnum += 1;
 
-
-      var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? requestNoBody ? this._local_seqnum - 1 : this._local_seqnum : this._local_seqnum += 1;
       var request = new SIPMessage.OutgoingRequest(method, this._remote_target, this._ua, {
         'cseq': cseq,
         'call_id': this._id.call_id,
@@ -16191,14 +16194,39 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
+/* eslint-disable no-console */
+
+/* eslint-disable prefer-rest-params */
 var debug = require('debug');
 
-var APP_NAME = 'CRTC';
+var APP_NAME = 'CRTC'; // const _info = console.info;
+// const _warn = console.warn;
+// const _error = console.error;
+// function parseLog(msg)
+// {
+//   console.log(`${new Date().toISOString()} → ${msg.replace(/%c/g, '')}`);
+// }
 
 module.exports = /*#__PURE__*/function () {
   function Logger(prefix) {
     _classCallCheck(this, Logger);
 
+    /* eslint-disable no-console */
+    // console.info = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _info.apply(console, arguments);
+    // };
+    // console.warn = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _warn.apply(console, arguments);
+    // };
+    // console.error = function(msg)
+    // {
+    //   parseLog(msg);
+    //   _error.apply(console, arguments);
+    // };
     if (prefix) {
       this._debug = debug["default"]("".concat(APP_NAME, ":").concat(prefix));
       this._warn = debug["default"]("".concat(APP_NAME, ":WARN:").concat(prefix));
@@ -16799,7 +16827,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
 
-      extraHeaders.push("Content-Type: ".concat(contentType));
+      if (body) {
+        extraHeaders.push("Content-Type: ".concat(contentType));
+      }
+
       this._request = new SIPMessage.OutgoingRequest(CRTC_C.OPTIONS, target, this._ua, null, extraHeaders);
 
       if (body) {
@@ -17680,14 +17711,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       if (!target) {
         throw new TypeError("Invalid target: ".concat(originalTarget));
-      } // 判断授权的信令服务器
+      } // 判断授权的 sip domain
 
 
       if (this._ua.sk && this._ua.sk[8].split(';').indexOf(target.host) == -1) {
         this._ua.emit('failed', {
           originator: 'local',
           message: CRTC_C.causes.AUTHORIZATION_ERROR,
-          cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_SIPPROXY_ERROR
+          cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_SIPDOMAIN_ERROR
         });
 
         return false;
@@ -17737,7 +17768,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         requestParams.from_display_name = options.fromDisplayName;
       }
 
-      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
@@ -17920,7 +17951,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var peerOffersFullVideo = false;
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
-      this._data = options.data || this._data; // Check Session Direction and Status.
+      this._data = options.data || this._data; // 5G Headers
+
+      if (this._ua.sk[7] >= 3) {
+        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+        extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+      } // Check Session Direction and Status.
+
 
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"answer" not supported for outgoing RTCSession');
@@ -18093,9 +18130,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       .then(function (stream) {
         if (_this3._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
-        }
+        } // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+        // let ua;
+        // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
+        //   .match(/cpu iphone os (.*?) like mac os/));
+        // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
+        // {
+        //   this._localMediaStream = Utils.getStreamThroughCanvas(stream);
+        // }
+        // else
+        // {
 
-        _this3._localMediaStream = stream;
+
+        _this3._localMediaStream = stream; // }
 
         if (stream) {
           // 兼容低版本浏览器不支持addTrack的情况
@@ -18298,7 +18345,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function switchDevice(type, deviceId) {
       var _this6 = this;
 
-      logger.debug('switchDevice()'); // Check Session Status.
+      logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId)); // Check Session Status.
 
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
@@ -18308,12 +18355,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (type === 'camera') {
         return Promise.resolve().then(function () {
           _this6._connection.getSenders().find(function (s) {
+            logger.debug("kind: ".concat(s.track.kind));
+
             if (s.track.kind == 'video') {
               s.track.stop();
             }
-          }); // this._localMediaStreamLocallyGenerated = true;
+          });
 
-
+          _this6._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
@@ -18329,9 +18378,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             throw new Error('getUserMedia() failed');
           });
         }).then(function (stream) {
-          _this6._localShareStream = stream;
+          // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+          // let ua;
+          // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
+          //   .match(/cpu iphone os (.*?) like mac os/));
+          // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
+          // {
+          //   this._localMediaStream = Utils.getStreamThroughCanvas(stream);
+          // }
+          // else
+          // {
+          _this6._localMediaStream = stream; // }
 
-          _this6._localShareStream.getVideoTracks().forEach(function (track) {
+          _this6._localMediaStream.getVideoTracks().forEach(function (track) {
             var sender = _this6._connection.getSenders().find(function (s) {
               return s.track.kind == 'video';
             });
@@ -18466,7 +18525,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (_this7._localShareStream && _this7._localShareStreamLocallyGenerated) {
               _this7._localMediaStream.getVideoTracks().forEach(function (track) {
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video'; // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1 
+                  return s.track.kind == 'video'; // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1
                   // || s.track.label.indexOf('web-')!==-1 || s.track.label.indexOf('screen') !==-1);
                 });
 
@@ -19261,12 +19320,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function onTransportError() {
       logger.warn('onTransportError()');
 
-      if (this._status !== C.STATUS_TERMINATED) {
-        this.terminate({
-          status_code: 500,
-          reason_phrase: CRTC_C.causes.CONNECTION_ERROR,
-          cause: CRTC_C.causes.CONNECTION_ERROR
-        });
+      if (this._status !== C.STATUS_TERMINATED) {// this.terminate({
+        //   status_code   : 500,
+        //   reason_phrase : CRTC_C.causes.CONNECTION_ERROR,
+        //   cause         : CRTC_C.causes.CONNECTION_ERROR
+        // });
+        // 连接错误不处理，延长重试时间
       }
     }
   }, {
@@ -19350,6 +19409,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
         logger.debug('close() | closing local MediaStream');
         Utils.closeMediaStream(this._localMediaStream);
+      }
+
+      if (this._localShareStream) {
+        logger.debug('close() | closing local MediaStream');
+        Utils.closeMediaStream(this._localShareStream);
       }
 
       if (this._status === C.STATUS_TERMINATED) {
@@ -19469,10 +19533,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var state = _this17._connection.iceConnectionState; // TODO: Do more with different states.
 
         if (state === 'failed') {
-          _this17.terminate({
-            cause: CRTC_C.causes.RTP_TIMEOUT,
-            status_code: 408,
-            reason_phrase: CRTC_C.causes.RTP_TIMEOUT
+          // this.terminate({
+          //   cause         : CRTC_C.causes.RTP_TIMEOUT,
+          //   status_code   : 408,
+          //   reason_phrase : CRTC_C.causes.RTP_TIMEOUT
+          // });
+          // RTCPeerConnection failed断开后启动重新协商
+          _this17.renegotiate({
+            rtcOfferConstraints: {
+              iceRestart: true
+            }
           });
         }
       });
@@ -19491,6 +19561,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
       this._rtcReady = false;
+      console.warn('aaaaaaaaaaa');
       return Promise.resolve() // Create Offer or Answer.
       .then(function () {
         if (type === 'offer') {
@@ -19512,24 +19583,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }) // Set local description.
       .then(function (desc) {
-        /**
-         * 处理5G外呼sdp过大问题,
-         * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-         */
-        if (type === 'offer' && _this18._ua.sk[7] >= 3) {
-          var sdp = sdp_transform.parse(desc.sdp);
-          sdp.media.forEach(function (media) {
+        var sdp = sdp_transform.parse(desc.sdp);
+        console.warn('bbbbbbb', desc, type);
+
+        if (type === 'offer') {
+          var mids = [];
+          sdp.media.forEach(function (media, index) {
+            // 处理视频呼叫音频接听后再切换视频时 mid 值问题
+            media.mid = index;
+            mids.push(index);
+
             if (media.type === 'video') {
-              var maximumH264 = 2;
+              var lowH264 = false;
               var delH264Payload = [];
               var payloads = media.payloads.split(' ');
-              media.rtp.forEach(function (rtp) {
-                if (rtp.codec.toLowerCase() === 'h264') {
-                  if (maximumH264 <= 0) {
-                    delH264Payload.push(rtp.payload);
-                  }
+              media.fmtp.forEach(function (fmtp) {
+                if (fmtp.config.indexOf('profile-level-id=42e0') !== -1) {
+                  lowH264 = true;
+                }
 
-                  maximumH264--;
+                if (fmtp.config.indexOf('packetization-mode=0') !== -1 || fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
+                  delH264Payload.push(fmtp.payload);
+                }
+              });
+              media.fmtp.forEach(function (fmtp) {
+                if (lowH264 && fmtp.config.indexOf('profile-level-id=4200') !== -1) {
+                  delH264Payload.push(fmtp.payload);
                 }
               });
               media.fmtp.forEach(function (fmtp) {
@@ -19561,19 +19640,57 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }
-          });
-          desc.sdp = sdp_transform.write(sdp); // desc.sdp = desc.sdp.replace(/a=rtcp-fb:127 goog-remb\r\n/, 'a=rtcp-fb:127 ccm tmmbr\r\n');
+            /**
+             * 处理5G外呼sdp过大问题,
+             * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+             */
 
-          desc.sdp = desc.sdp.replace(/a=mid:0.*\r\n/, 'b=AS:100\r\nb=RR:600\r\nb=RS:2000\r\na=mid:0\r\n');
-          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'b=AS:1024\r\nb=RR:6000\r\nb=RS:8000\r\na=mid:1\r\n');
-          desc.sdp = desc.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-          desc.sdp = desc.sdp.replace(/a=extmap:.*\r\n/g, '');
-          desc.sdp = desc.sdp.replace(/a=mid:1.*\r\n/, 'a=mid:1\r\na=tcap:1 RTP/AVPF\r\na=pcfg:1 t=1\r\n');
-          desc.sdp = desc.sdp.replace(/a=mid:1\r\n/, 'a=extmap:13 urn:3gpp:video-orientation\r\na=mid:1\r\n'); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
 
-          desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+            if (_this18._ua.sk[7] >= 3) {
+              delete media.ext;
+
+              if (media.type === 'video') {
+                media.ext = [{
+                  value: 13,
+                  uri: 'urn:3gpp:video-orientation'
+                }];
+                media.invalid = [{
+                  value: 'tcap:1 RTP/AVPF'
+                }, {
+                  value: 'pcfg:1 t=1'
+                }];
+              }
+            }
+          }); // 处理视频呼叫音频接听后再切换视频时 mid 值问题
+
+          sdp.groups[0].mids = mids.join(' ');
+          desc.sdp = sdp_transform.write(sdp);
         }
 
+        sdp.media.forEach(function (media) {
+          /**
+           * 处理SDP的码率配置
+           */
+          if (media.type === 'video') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 960
+            }];
+          } else if (media.type === 'audio') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 90
+            }];
+          }
+        });
+        sdp.bandwidth = [{
+          type: 'AS',
+          limit: 1050
+        }];
+        desc.sdp = sdp_transform.write(sdp); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
+
+        desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+        console.warn('desc: ', desc);
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -19604,8 +19721,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this18.emit('sdp', e);
 
           return Promise.resolve(e.sdp);
-        } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
+        }
 
+        console.warn('cccccccccccc', connection.iceGatheringState, iceRestart, _this18._iceReady); // Add 'pc.onicencandidate' event handler to resolve on last candidate.
 
         return new Promise(function (resolve) {
           var finished = false;
@@ -19672,14 +19790,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (sdp) {
         // 去掉IPV6
         sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
+        console.warn('ssdd: ', sdp);
         var sdp_desc = sdp_transform.parse(sdp);
 
         if (type === 'offer') {
-          /**
-           * 音视频切换相关
-           * 根据offer的sdp判断呼叫模式
-           * @author: lei
-           */
           _this18._localToAudio === '' && (_this18._localToAudio = true);
           _this18._localToVideo === '' && (_this18._localToVideo = false);
 
@@ -19748,6 +19862,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
 
+        sdp_desc.media.forEach(function (media) {
+          /**
+            * 处理5G外呼sdp过大问题,
+            * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+            */
+          if (_this18._ua.sk[7] >= 3) {
+            if (media.type === 'video') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 960
+              }, {
+                type: 'RR',
+                limit: 6000
+              }, {
+                type: 'RS',
+                limit: 8000
+              }];
+              media.invalid = [{
+                value: 'tcap:1 RTP/AVPF'
+              }, {
+                value: 'pcfg:1 t=1'
+              }];
+            } else if (media.type === 'audio') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 90
+              }, {
+                type: 'RR',
+                limit: 600
+              }, {
+                type: 'RS',
+                limit: 2000
+              }];
+            }
+
+            sdp_desc.bandwidth = [{
+              type: 'AS',
+              limit: 1050
+            }, {
+              type: 'RR',
+              limit: 6600
+            }, {
+              type: 'RS',
+              limit: 10000
+            }];
+          }
+        });
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -19892,6 +20053,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
+            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
+            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
+          }
+
           if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
@@ -19956,6 +20123,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 });
               }
+            } else {
+              waiting = true;
+              nextS.call(this);
             }
           }
         } catch (err) {
@@ -20057,6 +20227,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
+          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
+            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+            desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
+            desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
+          }
+
           if (_this22._status === C.STATUS_TERMINATED) {
             return;
           }
@@ -20254,7 +20430,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this24._connection.addStream(stream);
             }
           });
-          _this24._iceReady = false; // this._rtcAnswerConstraints['iceRestart'] = true;
+          _this24._iceReady = false; //   this._rtcAnswerConstraints = { iceRestart: true };
         }
       }) // Create local description.
       .then(function () {
@@ -20506,9 +20682,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (stream) {
         if (_this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
-        }
+        } // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+        // let ua;
+        // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
+        //   .match(/cpu iphone os (.*?) like mac os/));
+        // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
+        // {
+        //   this._localMediaStream = Utils.getStreamThroughCanvas(stream);
+        // }
+        // else
+        // {
 
-        _this28._localMediaStream = stream;
+
+        _this28._localMediaStream = stream; // }
 
         if (stream) {
           // 兼容低版本浏览器不支持addTrack的情况
@@ -20642,8 +20828,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._status = C.STATUS_1XX_RECEIVED;
 
             if (!response.body) {
-              this._progress('remote', response);
-
+              Promise.resolve().then(function () {
+                if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+                  _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                    RSeq: response.getHeader('rseq')
+                  });
+                }
+              }).then(function () {
+                _this29._progress('remote', response);
+              });
               break;
             }
 
@@ -20662,7 +20855,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _this29._connection.setRemoteDescription(answer);
             }) // 发送 RFC3262 183 PRACK
             .then(function () {
-              return response.getHeader('require') === '100rel' && _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK);
+              if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+                _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                  RSeq: response.getHeader('rseq')
+                });
+              }
             }).then(function () {
               return _this29._progress('remote', response);
             })["catch"](function (error) {
@@ -20686,9 +20883,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._accepted('remote', response); // 适配 100rel 调整 ack 的 cseq
 
 
-              this.sendRequest(CRTC_C.ACK, {
-                requestNoBody: true
-              });
+              this.sendRequest(CRTC_C.ACK);
 
               this._confirmed('local', null);
 
@@ -20968,7 +21163,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var sdpOffer = options.sdpOffer || false;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers    
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
@@ -23093,11 +23288,11 @@ var OutgoingRequest = /*#__PURE__*/function () {
       }
 
       supported.push('outbound');
-      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持
+      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持, OPTIONS 消息不添加 Supported 头
       // Allow.
 
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
-      msg += "Supported: ".concat(supported, ",100rel\r\n");
+      this.method !== CRTC_C.OPTIONS && (msg += "Supported: ".concat(supported, ",100rel\r\n"));
       msg += "User-Agent: ".concat(userAgent, "\r\n");
 
       if (this.body) {
@@ -24129,7 +24324,7 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
     _this.request = request;
     _this.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this.id);
 
     _this.request.setHeader('via', via);
 
@@ -24249,7 +24444,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     _this4.eventHandlers = eventHandlers;
     request.transaction = _assertThisInitialized(_this4);
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this4.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this4.id);
 
     _this4.request.setHeader('via', via);
 
@@ -24440,7 +24635,7 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
     _this8.request = request;
     _this8.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
-    via += " ".concat(ua.configuration.via_host, ";branch=").concat(_this8.id);
+    via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this8.id);
 
     _this8.request.setHeader('via', via);
 
@@ -27222,14 +27417,14 @@ exports.cloneObject = function (obj) {
   return obj && Object.assign({}, obj) || fallback;
 };
 /**
-   * 返回摄像头设备列表
-   *
-   * 该接口不支持在 http 协议下使用，请使用 https 协议部署您的网站
-   * <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#Privacy_and_security"> Privacy and security </a>。<br>
-   * '出于安全的考虑，在用户未授权摄像头或麦克风访问权限前，label 及 deviceId 字段可能都是空的。<br>
-   * 因此建议在用户授权访问后， 再调用该接口获取设备详情
-   *
-   */
+ * 返回摄像头设备列表
+ *
+ * 该接口不支持在 http 协议下使用，请使用 https 协议部署您的网站
+ * <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#Privacy_and_security"> Privacy and security </a>。<br>
+ * '出于安全的考虑，在用户未授权摄像头或麦克风访问权限前，label 及 deviceId 字段可能都是空的。<br>
+ * 因此建议在用户授权访问后， 再调用该接口获取设备详情
+ *
+ */
 
 
 exports.getCameras = function () {
@@ -27256,7 +27451,7 @@ exports.getCameras = function () {
 };
 /**
  * 获取 RTCPeerConnection 收发的音视频媒体流
- * 
+ *
  * @param {RTCPeerConnection} pc - 要操作的 RTCPeerConnection
  * @param {string} type - 'local' 发送的媒体流；'remote' 接收的媒体流
  */
@@ -27303,6 +27498,69 @@ exports.getStreams = function (pc, type) {
     audioStream: audioStream,
     videoStream: videoStream
   };
+};
+/**
+ * 通过 canvas 画布获取视频流
+ *
+ * @param {MediaStream} stream - 要转换的媒体流
+ */
+
+
+exports.getStreamThroughCanvas = function (stream) {
+  if (stream.getVideoTracks().length === 0) {
+    return;
+  }
+
+  var video = document.createElement('video');
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  video.setAttribute('style', 'display:none');
+  canvas.setAttribute('style', 'display:none');
+  video.muted = true;
+  video.autoplay = true;
+  video.setAttribute('playsinline', '');
+  document.body.append(video);
+  document.body.append(canvas);
+  video.srcObject = stream; // 将视频绘制到画布
+
+  var drawToCanvas = function drawToCanvas() {
+    if (ctx !== null) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      window.requestAnimationFrame(drawToCanvas);
+    }
+  }; // 开始播放视频并设置画布尺寸后开始绘制视频到画布
+
+
+  video.oncanplay = function () {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    video.play();
+    drawToCanvas();
+  };
+
+  var newStream = canvas.captureStream(15);
+  var canvasTrack = newStream.getVideoTracks()[0];
+  var trackStop = canvasTrack.stop; // 视频停止后清理数据
+
+  canvasTrack.stop = function () {
+    trackStop.call(canvasTrack);
+    drawToCanvas();
+    stream.getTracks().forEach(function (track) {
+      track.stop();
+    });
+    video.srcObject = null;
+    video.remove();
+    canvas.width = 0;
+    canvas.remove();
+  }; // 合并音频轨道
+
+
+  if (stream instanceof MediaStream && stream.getAudioTracks().length !== 0) {
+    var audioTrack = stream.getAudioTracks()[0];
+    newStream.addTrack(audioTrack);
+  }
+
+  return newStream;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
 "use strict";
@@ -35298,7 +35556,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.6.3",
+  "version": "1.7.1-beta.221114",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
