@@ -1,6 +1,35 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
+/* 对日志的处理 */
+window.CLog = console;
+let consoleHolder = window.CLog;
+
+function debug(bool)
+{
+  if (!bool)
+  {
+    consoleHolder = window.CLog;
+    window.CLog = {};
+    Object.keys(consoleHolder).forEach(function(key)
+    {
+      window.CLog[key] = function()
+      {
+        // 这里可以写自己方法上传到服务器等
+        // eslint-disable-next-line prefer-rest-params
+        consoleHolder.log(arguments);
+      };
+    });
+  }
+  else
+  {
+    window.CLog = consoleHolder;
+  }
+}
+
+debug(false);
+// 结束
+
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
@@ -29,13 +58,10 @@ const remoteAudio = document.querySelector('#remoteAudio');
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
-// const signalingUrl = 'wss://devns.esoon.com:5092/wss';
-// const signalingUrl = 'wss://vod.sinovancoo.com:5091/wss';
 // sip domain
 const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
-// const sipDomain = 'devns.esoon.com';
-// const sipDomain = 'vod.sinovancoo.com';
+
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 // websocket 实例
@@ -50,11 +76,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  // password     : '1010_Zk!@34',
   secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
-  // secret_key   : sessionStorage.getItem('secret_key')||'k96K3qevsgm4WJObwP6bDyoCF6ZHP3Sl7vYBqCYUR4p+DBDXGRbY1LQRhHF4vE4g5NdH0LW+wIdWuGM71DgmFiTi8JqnmFLvrEP2bgpp/34s49lNTLXYSbdk0o9vhkNxtiIJ4Lg1PwgFM0kvGd59leCKNsRqfq4oioE1XdR80l69JMk1yOlkgitFqOFJM4/mwsQhEfIbvyW0Hn97ayNSNCrvcazASBT/2JRVZUc+Vmx8XnwFmTDCKKAREM+vVAdhHF2Na3rZHoEVWDXFfFW6rWjeGnO6TR4EUKAac/3rOwkuj8eOLR4ZLU3F/P8AY9xM0WXiREKt6N+ZCtj4mMGMsw=='
-  // secret_key   : 'L6aWhbVFlzabI0f+6xnxU4+yHRo3kCUWytF3cK1aoeR2t6s3xRFB83oKwsucmCoMcVkRrh4VOmvQGRohlH2ADiWxco6hOjl3bDYmUBPORoVb19/gT9mM7MONf/9LkTyFVAHe5wOaihYpeagCSbJnhrwBw1ObiP/gPIrYXGXbbb3Vrr2cnIt+TYiqQ+Hkad+vSmQ+CIJwYhroW3RNKh6AP3ekXYjbdhBM40x5XqWnU4KhJMRziVcjGQohJ1gSs35mjxVIUeUqlUkTHLHV2MalVxh7kWOJkEnS1vWUYW0iZcyIwiYHYUkcmXWCmZJXEBVRXUw/1fC+HUbFmT9NSJMVpg=='
-  // secret_key   : 'SJyOQCwHEQrrC0eyQg3lvsfbr39CtlS9B/UxZ4Ywyea6yL1ixoeHD4EMWJLdt3MtBavn+98pTn1MB9NlHlR0R5/vcLRZQ4c9yoERasXmAesDfsIwyU05ebhiCBPbT8wCDijjF46reoajvamC51Y91E318FJCme7tc+dok4jcehRkfkLOEquNvWNsBctBnxFveEUZ9qg+kasmfIdEOlMdsi6w9T7PzqiafHUBH7i81sInqWPJ54+AGDPm1xE7l+BVrXU0j+lFDkJ5FDpgPD03eHrauQ58n8rzOfVIFaO7NB3F0IAJSdYAu3DSTThy9u+hFiXIwpAMl7jnB7bGprvY1Q=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -68,7 +90,7 @@ const pcConfig = {
   // TURN 配置
   // iceServers: [
   //   {
-  //     'urls': 'turn:webrtc.rxjiujiu.com:60001?transport=udp',
+  //     'urls': 'turn:webrtc.xxxx.com:60001?transport=udp',
   //     'username': 'ipcu',
   //     'credential': 'yl_19cu'
   //   }],
@@ -158,11 +180,6 @@ ua.on('registrationFailed', function(data)
 {
   setStatus(`注册失败${data.cause}`);
 });
-
-// setInterval(() =>
-// {
-//   ua.sendOptions(`sip_ping@${sipDomain}`);
-// }, 3000);
 
 /**
  * newRTCSession
@@ -794,6 +811,12 @@ ua.on('newRTCSession', function(e)
   };
 });
 
+// 部分场景视频卡死需要重新播放
+document.querySelector('.resume').onclick = function()
+{
+  document.querySelectorAll('video').forEach((video) => video.play().catch());
+};
+
 /**
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
@@ -846,6 +869,16 @@ async function call(type)
 
   const callee = document.querySelector('#callee').value;
   const session = ua.call(`${callee}@${sipDomain}`, options);
+
+  // 兼容iOS
+  if (optionsTimer)
+  {
+    clearInterval(optionsTimer);
+  }
+  optionsTimer = setInterval(() =>
+  {
+    ua.sendOptions(`sip_ping@${sipDomain}`);
+  }, 3000);
 
   // 默认远端无回铃音
   earlyMedia = false;

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.8.0-beta.221115.202211151844
+ * CRTC v1.8.0-beta.221121.20221121101
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -13576,41 +13576,14 @@ module.exports = {
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-/* eslint-disable no-console */
-/* eslint-disable prefer-rest-params */
 var debug = require('debug');
 var APP_NAME = 'CRTC';
-// const _info = console.info;
-// const _warn = console.warn;
-// const _error = console.error;
-
-// function parseLog(msg)
-// {
-//   console.log(`${new Date().toISOString()} → ${msg.replace(/%c/g, '')}`);
-// }
-
+if (!window.CLog) {
+  window.CLog = console;
+}
 module.exports = /*#__PURE__*/function () {
   function Logger(prefix) {
     _classCallCheck(this, Logger);
-    /* eslint-disable no-console */
-    // console.info = function(msg)
-    // {
-    //   parseLog(msg);
-    //   _info.apply(console, arguments);
-    // };
-
-    // console.warn = function(msg)
-    // {
-    //   parseLog(msg);
-    //   _warn.apply(console, arguments);
-    // };
-
-    // console.error = function(msg)
-    // {
-    //   parseLog(msg);
-    //   _error.apply(console, arguments);
-    // };
-
     if (prefix) {
       this._debug = debug["default"]("".concat(APP_NAME, ":").concat(prefix));
       this._warn = debug["default"]("".concat(APP_NAME, ":WARN:").concat(prefix));
@@ -13621,9 +13594,9 @@ module.exports = /*#__PURE__*/function () {
       this._error = debug["default"]("".concat(APP_NAME, ":ERROR"));
     }
     /* eslint-disable no-console */
-    this._debug.log = console.info.bind(console);
-    this._warn.log = console.warn.bind(console);
-    this._error.log = console.error.bind(console);
+    this._debug.log = window.CLog.info.bind(window.CLog);
+    this._warn.log = window.CLog.warn.bind(window.CLog);
+    this._error.log = window.CLog.error.bind(window.CLog);
     /* eslint-enable no-console */
   }
   _createClass(Logger, [{
@@ -31653,7 +31626,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.8.0-beta.221115",
+  "version": "1.8.0-beta.221121",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -31704,6 +31677,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
