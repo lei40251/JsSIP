@@ -845,6 +845,19 @@ async function call(type)
     const destination = audioCtx.createMediaStreamDestination();
     const source = audioCtx.createMediaElementSource(audio);
 
+    // 兼容自动播放bug的
+    // const source = audioCtx.createBufferSource();
+
+    // await fetch('./sound/waiting.mp3').then((res) => res.arrayBuffer())
+    //   .then((res) => { return audioCtx.decodeAudioData(res); })
+    //   .then((res) =>
+    //   {
+    //     source.buffer=res;
+    //     source.loop = true;
+    //     source.connect(destination);
+    //     source.start();
+    //   });
+
     audio.loop = true;
     audio.crossOrigin = 'anonymous';
     audio.play().catch((e) => { console.log(e); });
