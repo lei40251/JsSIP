@@ -27,14 +27,14 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
-const signalingUrl = 'wss://devns.esoon.com:5092/wss';
+// const signalingUrl = 'wss://devns.esoon.com:5092/wss';
 // const signalingUrl = 'wss://vod.sinovancoo.com:5091/wss';
 // sip domain
-// const sipDomain = '5g.vsbc.com';
+const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
-const sipDomain = 'devns.esoon.com';
+// const sipDomain = 'devns.esoon.com';
 // const sipDomain = 'vod.sinovancoo.com';
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -793,6 +793,12 @@ ua.on('newRTCSession', function(e)
     );
   };
 });
+
+// 部分场景视频卡死需要重新播放
+document.querySelector('.resume').onclick = function()
+{
+  document.querySelectorAll('video').forEach((video) => video.play().catch());
+};
 
 /**
  * 发起呼叫
