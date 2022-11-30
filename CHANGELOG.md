@@ -1,6 +1,32 @@
 CHANGELOG
 =========
 
+### 3.9.4
+
+
+* Dialog/RequestSender: Avoid circular dependency (#788).
+* Fixed REFER NOTIFY parsing in accordance to RFC 3515 section 2.4.5 (#767).
+* MD5: Do not strip new line (#789).
+
+
+### 3.9.3
+
+
+* UA: Add TS types for 'newOptions' event (closes #777).
+
+
+### 3.9.2
+
+
+* Dialog/RequestSender: Fix reference to undefined method (#787).
+
+
+### 3.9.1
+
+
+* Fix RTCSession 'confirmed' event type description (#770). Thanks @stefang42.
+
+
 ### 3.9.0
 
 
@@ -899,7 +925,7 @@ CHANGELOG
 
 
 * Update dependencies.
- 
+
 
 ### 0.6.18
 
