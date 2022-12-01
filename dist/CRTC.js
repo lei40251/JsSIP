@@ -1,5 +1,5 @@
 /*
- * CRTC v1.8.1.202211211619
+ * CRTC v1.8.2.20221211654
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -8,16 +8,24 @@
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-var Utils = require('./Utils');
-var CRTC_C = require('./Constants');
-var Grammar = require('./Grammar');
-var URI = require('./URI');
-var Socket = require('./Socket');
-var Exceptions = require('./Exceptions');
 
-// Default settings.
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+var Utils = require('./Utils');
+
+var CRTC_C = require('./Constants');
+
+var Grammar = require('./Grammar');
+
+var URI = require('./URI');
+
+var Socket = require('./Socket');
+
+var Exceptions = require('./Exceptions'); // Default settings.
+
+
 exports.settings = {
   // SIP authentication.
   authorization_user: null,
@@ -46,14 +54,14 @@ exports.settings = {
   sockets: null,
   connection_recovery_max_interval: CRTC_C.CONNECTION_RECOVERY_MAX_INTERVAL,
   connection_recovery_min_interval: CRTC_C.CONNECTION_RECOVERY_MIN_INTERVAL,
+
   /*
    * Host address.
    * Value to be set in Via sent_by and host part of Contact FQDN.
   */
   via_host: "".concat(Utils.createRandomToken(12), ".invalid")
-};
+}; // Configuration checks.
 
-// Configuration checks.
 var checks = {
   mandatory: {
     sockets: function sockets(_sockets2) {
@@ -64,16 +72,19 @@ var checks = {
        *  Array of Objects and Socket: [{socket: socket1}, socket2]
        */
       var _sockets = [];
+
       if (Socket.isSocket(_sockets2)) {
         _sockets.push({
           socket: _sockets2
         });
       } else if (Array.isArray(_sockets2) && _sockets2.length) {
         var _iterator = _createForOfIteratorHelper(_sockets2),
-          _step;
+            _step;
+
         try {
           for (_iterator.s(); !(_step = _iterator.n()).done;) {
             var socket = _step.value;
+
             if (Object.prototype.hasOwnProperty.call(socket, 'socket') && Socket.isSocket(socket.socket)) {
               _sockets.push(socket);
             } else if (Socket.isSocket(socket)) {
@@ -90,13 +101,16 @@ var checks = {
       } else {
         return;
       }
+
       return _sockets;
     },
     uri: function uri(_uri) {
       if (!/^sip:/i.test(_uri)) {
         _uri = "".concat(CRTC_C.SIP, ":").concat(_uri);
       }
+
       var parsed = URI.parse(_uri);
+
       if (!parsed) {
         return;
       } else if (!parsed.user) {
@@ -127,6 +141,7 @@ var checks = {
     connection_recovery_max_interval: function connection_recovery_max_interval(_connection_recovery_max_interval) {
       if (Utils.isDecimal(_connection_recovery_max_interval)) {
         var value = Number(_connection_recovery_max_interval);
+
         if (value > 0) {
           return value;
         }
@@ -135,6 +150,7 @@ var checks = {
     connection_recovery_min_interval: function connection_recovery_min_interval(_connection_recovery_min_interval) {
       if (Utils.isDecimal(_connection_recovery_min_interval)) {
         var value = Number(_connection_recovery_min_interval);
+
         if (value > 0) {
           return value;
         }
@@ -143,6 +159,7 @@ var checks = {
     contact_uri: function contact_uri(_contact_uri) {
       if (typeof _contact_uri === 'string') {
         var uri = Grammar.parse(_contact_uri, 'SIP_URI');
+
         if (uri !== -1) {
           return uri;
         }
@@ -155,6 +172,7 @@ var checks = {
       if (/^uuid:/i.test(_instance_id)) {
         _instance_id = _instance_id.substr(5);
       }
+
       if (Grammar.parse(_instance_id, 'uuid') === -1) {
         return;
       } else {
@@ -164,6 +182,7 @@ var checks = {
     no_answer_timeout: function no_answer_timeout(_no_answer_timeout) {
       if (Utils.isDecimal(_no_answer_timeout)) {
         var value = Number(_no_answer_timeout);
+
         if (value > 0) {
           return value;
         }
@@ -177,6 +196,7 @@ var checks = {
     session_timers_refresh_method: function session_timers_refresh_method(method) {
       if (typeof method === 'string') {
         method = method.toUpperCase();
+
         if (method === CRTC_C.INVITE || method === CRTC_C.UPDATE) {
           return method;
         }
@@ -204,6 +224,7 @@ var checks = {
     register_expires: function register_expires(_register_expires) {
       if (Utils.isDecimal(_register_expires)) {
         var value = Number(_register_expires);
+
         if (value > 0) {
           return value;
         }
@@ -213,7 +234,9 @@ var checks = {
       if (!/^sip:/i.test(_registrar_server)) {
         _registrar_server = "".concat(CRTC_C.SIP, ":").concat(_registrar_server);
       }
+
       var parsed = URI.parse(_registrar_server);
+
       if (!parsed) {
         return;
       } else if (parsed.user) {
@@ -229,6 +252,7 @@ var checks = {
     }
   }
 };
+
 exports.load = function (dst, src) {
   // Check Mandatory parameters.
   for (var parameter in checks.mandatory) {
@@ -237,26 +261,29 @@ exports.load = function (dst, src) {
     } else {
       var value = src[parameter];
       var checked_value = checks.mandatory[parameter](value);
+
       if (checked_value !== undefined) {
         dst[parameter] = checked_value;
       } else {
         throw new Exceptions.ConfigurationError(parameter, value);
       }
     }
-  }
+  } // Check Optional parameters.
 
-  // Check Optional parameters.
+
   for (var _parameter in checks.optional) {
     if (src.hasOwnProperty(_parameter)) {
       var _value = src[_parameter];
-
       /* If the parameter value is null, empty string, undefined, empty array
        * or it's a number with NaN value, then apply its default value.
        */
+
       if (Utils.isEmpty(_value)) {
         continue;
       }
+
       var _checked_value = checks.optional[_parameter](_value);
+
       if (_checked_value !== undefined) {
         dst[_parameter] = _checked_value;
       } else {
@@ -269,6 +296,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 var pkg = require('../package.json');
+
 module.exports = {
   USER_AGENT: "UA/".concat(pkg.version, " (Web)"),
   // SIP scheme.
@@ -325,8 +353,8 @@ module.exports = {
     AUTH_SIPPROXY_ERROR: -1008,
     // 代理服务器地址错误 
     AUTH_PLATFORMID_ERROR: -1009 // 授权平台错误
-  },
 
+  },
   SIP_ERROR_CAUSES: {
     REDIRECTED: [300, 301, 302, 305, 380],
     BUSY: [486, 600],
@@ -357,6 +385,7 @@ module.exports = {
     INFO: 'INFO',
     RFC2833: 'RFC2833'
   },
+
   /* SIP Response Reasons
    * DOC: https://www.iana.org/assignments/sip-parameters
    * Copied from https://github.com/versatica/OverSIP/blob/master/lib/oversip/sip/constants.rb#L7
@@ -469,42 +498,54 @@ module.exports = {
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var Logger = require('./Logger');
+
 var SIPMessage = require('./SIPMessage');
+
 var CRTC_C = require('./Constants');
+
 var Transactions = require('./Transactions');
+
 var Dialog_RequestSender = require('./Dialog/RequestSender');
+
 var Utils = require('./Utils');
+
 var logger = new Logger('Dialog');
 var C = {
   // Dialog states.
   STATUS_EARLY: 1,
   STATUS_CONFIRMED: 2,
   STATUS_TERMINATED: 3
-};
+}; // RFC 3261 12.1.
 
-// RFC 3261 12.1.
 module.exports = /*#__PURE__*/function () {
   function Dialog(owner, message, type) {
     var state = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : C.STATUS_CONFIRMED;
+
     _classCallCheck(this, Dialog);
+
     this._owner = owner;
     this._ua = owner._ua;
     this._uac_pending_reply = false;
     this._uas_pending_reply = false;
+
     if (!message.hasHeader('contact')) {
       return {
         error: 'unable to create a Dialog without Contact header field'
       };
     }
+
     if (message instanceof SIPMessage.IncomingResponse) {
       state = message.status_code < 200 ? C.STATUS_EARLY : C.STATUS_CONFIRMED;
     }
-    var contact = message.parseHeader('contact');
 
-    // RFC 3261 12.1.1.
+    var contact = message.parseHeader('contact'); // RFC 3261 12.1.1.
+
     if (type === 'UAS') {
       this._id = {
         call_id: message.call_id,
@@ -521,8 +562,7 @@ module.exports = /*#__PURE__*/function () {
       this._remote_target = contact.uri;
       this._route_set = message.getHeaders('record-route');
       this._ack_seqnum = this._remote_seqnum;
-    }
-    // RFC 3261 12.1.2.
+    } // RFC 3261 12.1.2.
     else if (type === 'UAC') {
       this._id = {
         call_id: message.call_id,
@@ -541,9 +581,12 @@ module.exports = /*#__PURE__*/function () {
       this._route_set = message.getHeaders('record-route').reverse();
       this._ack_seqnum = null;
     }
+
     this._ua.newDialog(this);
+
     logger.debug("new ".concat(type, " dialog created with status ").concat(this._state === C.STATUS_EARLY ? 'EARLY' : 'CONFIRMED'));
   }
+
   _createClass(Dialog, [{
     key: "id",
     get: function get() {
@@ -585,6 +628,7 @@ module.exports = /*#__PURE__*/function () {
     value: function update(message, type) {
       this._state = C.STATUS_CONFIRMED;
       logger.debug("dialog ".concat(this._id.toString(), "  changed to CONFIRMED state"));
+
       if (type === 'UAC') {
         // RFC 3261 13.2.2.4.
         this._route_set = message.getHeaders('record-route').reverse();
@@ -594,30 +638,34 @@ module.exports = /*#__PURE__*/function () {
     key: "terminate",
     value: function terminate() {
       logger.debug("dialog ".concat(this._id.toString(), " deleted"));
+
       this._ua.destroyDialog(this);
+
       this._state = C.STATUS_TERMINATED;
     }
   }, {
     key: "sendRequest",
     value: function sendRequest(method) {
       var _this = this;
+
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var RSeq = options.RSeq || null;
       var body = options.body || null;
+
       var request = this._createRequest(method, extraHeaders, body, {
         RSeq: RSeq
-      });
+      }); // Increase the local CSeq on authentication.
 
-      // Increase the local CSeq on authentication.
+
       eventHandlers.onAuthenticated = function () {
         _this._local_seqnum += 1;
       };
-      var request_sender = new Dialog_RequestSender(this, request, eventHandlers);
-      request_sender.send();
 
-      // Return the instance of OutgoingRequest.
+      var request_sender = new Dialog_RequestSender(this, request, eventHandlers);
+      request_sender.send(); // Return the instance of OutgoingRequest.
+
       return request;
     }
   }, {
@@ -626,36 +674,34 @@ module.exports = /*#__PURE__*/function () {
       // Check in-dialog request.
       if (!this._checkInDialogRequest(request)) {
         return;
-      }
+      } // ACK received. Cleanup this._ack_seqnum.
 
-      // ACK received. Cleanup this._ack_seqnum.
+
       if (request.method === CRTC_C.ACK && this._ack_seqnum !== null) {
         this._ack_seqnum = null;
-      }
-      // INVITE received. Set this._ack_seqnum.
+      } // INVITE received. Set this._ack_seqnum.
       else if (request.method === CRTC_C.INVITE) {
         this._ack_seqnum = request.cseq;
       }
-      this._owner.receiveRequest(request);
-    }
 
-    // 增加兼容100rel 情况下 200ok 无sdp 时候的ack cseq值
+      this._owner.receiveRequest(request);
+    } // 增加兼容100rel 情况下 200ok 无sdp 时候的ack cseq值
     // RFC 3261 12.2.1.1.
+
   }, {
     key: "_createRequest",
     value: function _createRequest(method, extraHeaders, body) {
       var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
       extraHeaders = Utils.cloneArray(extraHeaders);
+
       if (!this._local_seqnum) {
         this._local_seqnum = Math.floor(Math.random() * 10000);
-      }
+      } // 增加100rel的 prack
 
-      // 增加100rel的 prack
+
       options.RSeq && extraHeaders.push("RAck: ".concat(options.RSeq, " ").concat(this._invite_seqnum, " INVITE"));
       var cseq = method === CRTC_C.CANCEL || method === CRTC_C.ACK ? this._invite_seqnum : this._local_seqnum += 1;
-      method === CRTC_C.INVITE && (this._invite_seqnum = this._local_seqnum);
-
-      // const cseq = (method === CRTC_C.CANCEL || method === CRTC_C.ACK) ?
+      method === CRTC_C.INVITE && (this._invite_seqnum = this._local_seqnum); // const cseq = (method === CRTC_C.CANCEL || method === CRTC_C.ACK) ?
       //   this._local_seqnum :
       //   this._local_seqnum += 1;
 
@@ -669,13 +715,13 @@ module.exports = /*#__PURE__*/function () {
         'route_set': this._route_set
       }, extraHeaders, body);
       return request;
-    }
+    } // RFC 3261 12.2.2.
 
-    // RFC 3261 12.2.2.
   }, {
     key: "_checkInDialogRequest",
     value: function _checkInDialogRequest(request) {
       var _this2 = this;
+
       if (!this._remote_seqnum) {
         this._remote_seqnum = request.cseq;
       } else if (request.cseq < this._remote_seqnum) {
@@ -691,9 +737,9 @@ module.exports = /*#__PURE__*/function () {
         }
       } else if (request.cseq > this._remote_seqnum) {
         this._remote_seqnum = request.cseq;
-      }
+      } // RFC3261 14.2 Modifying an Existing Session -UAS BEHAVIOR-.
 
-      // RFC3261 14.2 Modifying an Existing Session -UAS BEHAVIOR-.
+
       if (request.method === CRTC_C.INVITE || request.method === CRTC_C.UPDATE && request.body) {
         if (this._uac_pending_reply === true) {
           request.reply(491);
@@ -703,16 +749,18 @@ module.exports = /*#__PURE__*/function () {
           return false;
         } else {
           this._uas_pending_reply = true;
+
           var stateChanged = function stateChanged() {
             if (request.server_transaction.state === Transactions.C.STATUS_ACCEPTED || request.server_transaction.state === Transactions.C.STATUS_COMPLETED || request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
               request.server_transaction.removeListener('stateChanged', stateChanged);
               _this2._uas_pending_reply = false;
             }
           };
-          request.server_transaction.on('stateChanged', stateChanged);
-        }
 
-        // RFC3261 12.2.2 Replace the dialog`s remote target URI if the request is accepted.
+          request.server_transaction.on('stateChanged', stateChanged);
+        } // RFC3261 12.2.2 Replace the dialog`s remote target URI if the request is accepted.
+
+
         if (request.hasHeader('contact')) {
           request.server_transaction.on('stateChanged', function () {
             if (request.server_transaction.state === Transactions.C.STATUS_ACCEPTED) {
@@ -730,29 +778,35 @@ module.exports = /*#__PURE__*/function () {
           });
         }
       }
+
       return true;
     }
   }], [{
     key: "C",
-    get:
-    // Expose C object.
+    get: // Expose C object.
     function get() {
       return C;
     }
   }]);
+
   return Dialog;
 }();
 },{"./Constants":2,"./Dialog/RequestSender":4,"./Logger":9,"./SIPMessage":22,"./Transactions":26,"./Utils":30}],4:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-var CRTC_C = require('../Constants');
-var Transactions = require('../Transactions');
-var RequestSender = require('../RequestSender');
 
-// Default event handlers.
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+var CRTC_C = require('../Constants');
+
+var Transactions = require('../Transactions');
+
+var RequestSender = require('../RequestSender'); // Default event handlers.
+
+
 var EventHandlers = {
   onRequestTimeout: function onRequestTimeout() {},
   onTransportError: function onTransportError() {},
@@ -761,19 +815,19 @@ var EventHandlers = {
   onAuthenticated: function onAuthenticated() {},
   onDialogError: function onDialogError() {}
 };
+
 module.exports = /*#__PURE__*/function () {
   function DialogRequestSender(dialog, request, eventHandlers) {
     _classCallCheck(this, DialogRequestSender);
+
     this._dialog = dialog;
     this._ua = dialog._ua;
     this._request = request;
-    this._eventHandlers = eventHandlers;
+    this._eventHandlers = eventHandlers; // RFC3261 14.1 Modifying an Existing Session. UAC Behavior.
 
-    // RFC3261 14.1 Modifying an Existing Session. UAC Behavior.
     this._reattempt = false;
-    this._reattemptTimer = null;
+    this._reattemptTimer = null; // Define the undefined handlers.
 
-    // Define the undefined handlers.
     for (var handler in EventHandlers) {
       if (Object.prototype.hasOwnProperty.call(EventHandlers, handler)) {
         if (!this._eventHandlers[handler]) {
@@ -782,6 +836,7 @@ module.exports = /*#__PURE__*/function () {
       }
     }
   }
+
   _createClass(DialogRequestSender, [{
     key: "request",
     get: function get() {
@@ -791,6 +846,7 @@ module.exports = /*#__PURE__*/function () {
     key: "send",
     value: function send() {
       var _this = this;
+
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
           _this._eventHandlers.onRequestTimeout();
@@ -805,17 +861,18 @@ module.exports = /*#__PURE__*/function () {
           _this._receiveResponse(response);
         }
       });
-      request_sender.send();
+      request_sender.send(); // RFC3261 14.2 Modifying an Existing Session -UAC BEHAVIOR-.
 
-      // RFC3261 14.2 Modifying an Existing Session -UAC BEHAVIOR-.
       if ((this._request.method === CRTC_C.INVITE || this._request.method === CRTC_C.UPDATE && this._request.body) && request_sender.clientTransaction.state !== Transactions.C.STATUS_TERMINATED) {
         this._dialog.uac_pending_reply = true;
+
         var stateChanged = function stateChanged() {
           if (request_sender.clientTransaction.state === Transactions.C.STATUS_ACCEPTED || request_sender.clientTransaction.state === Transactions.C.STATUS_COMPLETED || request_sender.clientTransaction.state === Transactions.C.STATUS_TERMINATED) {
             request_sender.clientTransaction.removeListener('stateChanged', stateChanged);
             _this._dialog.uac_pending_reply = false;
           }
         };
+
         request_sender.clientTransaction.on('stateChanged', stateChanged);
       }
     }
@@ -823,6 +880,7 @@ module.exports = /*#__PURE__*/function () {
     key: "_receiveResponse",
     value: function _receiveResponse(response) {
       var _this2 = this;
+
       // RFC3261 12.2.1.2 408 or 481 is received for a request within a dialog.
       if (response.status_code === 408 || response.status_code === 481) {
         this._eventHandlers.onDialogError(response);
@@ -838,6 +896,7 @@ module.exports = /*#__PURE__*/function () {
           this._reattemptTimer = setTimeout(function () {
             if (!_this2._dialog.isTerminated()) {
               _this2._reattempt = true;
+
               _this2.send();
             }
           }, 1000);
@@ -849,20 +908,28 @@ module.exports = /*#__PURE__*/function () {
       }
     }
   }]);
+
   return DialogRequestSender;
 }();
 },{"../Constants":2,"../RequestSender":21,"../Transactions":26}],5:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var Logger = require('./Logger');
+
 var Utils = require('./Utils');
+
 var logger = new Logger('DigestAuthentication');
+
 module.exports = /*#__PURE__*/function () {
   function DigestAuthentication(credentials) {
     _classCallCheck(this, DigestAuthentication);
+
     this._credentials = credentials;
     this._cnonce = null;
     this._nc = 0;
@@ -878,37 +945,41 @@ module.exports = /*#__PURE__*/function () {
     this._ha1 = null;
     this._response = null;
   }
+
   _createClass(DigestAuthentication, [{
     key: "get",
     value: function get(parameter) {
       switch (parameter) {
         case 'realm':
           return this._realm;
+
         case 'ha1':
           return this._ha1;
+
         default:
           logger.warn('get() | cannot get "%s" parameter', parameter);
           return undefined;
       }
     }
-
     /**
     * Performs Digest authentication given a SIP request and the challenge
     * received in a response to that request.
     * Returns true if auth was successfully generated, false otherwise.
     */
+
   }, {
     key: "authenticate",
     value: function authenticate(_ref, challenge) {
       var method = _ref.method,
-        ruri = _ref.ruri,
-        body = _ref.body;
+          ruri = _ref.ruri,
+          body = _ref.body;
       var cnonce = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
       this._algorithm = challenge.algorithm;
       this._realm = challenge.realm;
       this._nonce = challenge.nonce;
       this._opaque = challenge.opaque;
       this._stale = challenge.stale;
+
       if (this._algorithm) {
         if (this._algorithm !== 'MD5') {
           logger.warn('authenticate() | challenge with Digest algorithm different than "MD5", authentication aborted');
@@ -917,31 +988,33 @@ module.exports = /*#__PURE__*/function () {
       } else {
         this._algorithm = 'MD5';
       }
+
       if (!this._nonce) {
         logger.warn('authenticate() | challenge without Digest nonce, authentication aborted');
         return false;
       }
+
       if (!this._realm) {
         logger.warn('authenticate() | challenge without Digest realm, authentication aborted');
         return false;
-      }
+      } // If no plain SIP password is provided.
 
-      // If no plain SIP password is provided.
+
       if (!this._credentials.password) {
         // If ha1 is not provided we cannot authenticate.
         if (!this._credentials.ha1) {
           logger.warn('authenticate() | no plain SIP password nor ha1 provided, authentication aborted');
           return false;
-        }
+        } // If the realm does not match the stored realm we cannot authenticate.
 
-        // If the realm does not match the stored realm we cannot authenticate.
+
         if (this._credentials.realm !== this._realm) {
           logger.warn('authenticate() | no plain SIP password, and stored `realm` does not match the given `realm`, cannot authenticate [stored:"%s", given:"%s"]', this._credentials.realm, this._realm);
           return false;
         }
-      }
+      } // 'qop' can contain a list of values (Array). Let's choose just one.
 
-      // 'qop' can contain a list of values (Array). Let's choose just one.
+
       if (challenge.qop) {
         if (challenge.qop.indexOf('auth-int') > -1) {
           this._qop = 'auth-int';
@@ -954,117 +1027,137 @@ module.exports = /*#__PURE__*/function () {
         }
       } else {
         this._qop = null;
-      }
+      } // Fill other attributes.
 
-      // Fill other attributes.
 
       this._method = method;
       this._uri = ruri;
       this._cnonce = cnonce || Utils.createRandomToken(12);
       this._nc += 1;
       var hex = Number(this._nc).toString(16);
-      this._ncHex = '00000000'.substr(0, 8 - hex.length) + hex;
+      this._ncHex = '00000000'.substr(0, 8 - hex.length) + hex; // Nc-value = 8LHEX. Max value = 'FFFFFFFF'.
 
-      // Nc-value = 8LHEX. Max value = 'FFFFFFFF'.
       if (this._nc === 4294967296) {
         this._nc = 1;
         this._ncHex = '00000001';
-      }
-
-      // Calculate the Digest "response" value.
-
+      } // Calculate the Digest "response" value.
       // If we have plain SIP password then regenerate ha1.
+
+
       if (this._credentials.password) {
         // HA1 = MD5(A1) = MD5(username:realm:password).
         this._ha1 = Utils.calculateMD5("".concat(this._credentials.username, ":").concat(this._realm, ":").concat(this._credentials.password));
-      }
-      // Otherwise reuse the stored ha1.
+      } // Otherwise reuse the stored ha1.
       else {
         this._ha1 = this._credentials.ha1;
       }
+
       var a2;
       var ha2;
+
       if (this._qop === 'auth') {
         // HA2 = MD5(A2) = MD5(method:digestURI).
         a2 = "".concat(this._method, ":").concat(this._uri);
         ha2 = Utils.calculateMD5(a2);
-        logger.debug('authenticate() | using qop=auth [a2:"%s"]', a2);
+        logger.debug('authenticate() | using qop=auth [a2:"%s"]', a2); // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
 
-        // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
         this._response = Utils.calculateMD5("".concat(this._ha1, ":").concat(this._nonce, ":").concat(this._ncHex, ":").concat(this._cnonce, ":auth:").concat(ha2));
       } else if (this._qop === 'auth-int') {
         // HA2 = MD5(A2) = MD5(method:digestURI:MD5(entityBody)).
         a2 = "".concat(this._method, ":").concat(this._uri, ":").concat(Utils.calculateMD5(body ? body : ''));
         ha2 = Utils.calculateMD5(a2);
-        logger.debug('authenticate() | using qop=auth-int [a2:"%s"]', a2);
+        logger.debug('authenticate() | using qop=auth-int [a2:"%s"]', a2); // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
 
-        // Response = MD5(HA1:nonce:nonceCount:credentialsNonce:qop:HA2).
         this._response = Utils.calculateMD5("".concat(this._ha1, ":").concat(this._nonce, ":").concat(this._ncHex, ":").concat(this._cnonce, ":auth-int:").concat(ha2));
       } else if (this._qop === null) {
         // HA2 = MD5(A2) = MD5(method:digestURI).
         a2 = "".concat(this._method, ":").concat(this._uri);
         ha2 = Utils.calculateMD5(a2);
-        logger.debug('authenticate() | using qop=null [a2:"%s"]', a2);
+        logger.debug('authenticate() | using qop=null [a2:"%s"]', a2); // Response = MD5(HA1:nonce:HA2).
 
-        // Response = MD5(HA1:nonce:HA2).
         this._response = Utils.calculateMD5("".concat(this._ha1, ":").concat(this._nonce, ":").concat(ha2));
       }
+
       logger.debug('authenticate() | response generated');
       return true;
     }
-
     /**
     * Return the Proxy-Authorization or WWW-Authorization header value.
     */
+
   }, {
     key: "toString",
     value: function toString() {
       var auth_params = [];
+
       if (!this._response) {
         throw new Error('response field does not exist, cannot generate Authorization header');
       }
+
       auth_params.push("algorithm=".concat(this._algorithm));
       auth_params.push("username=\"".concat(this._credentials.username, "\""));
       auth_params.push("realm=\"".concat(this._realm, "\""));
       auth_params.push("nonce=\"".concat(this._nonce, "\""));
       auth_params.push("uri=\"".concat(this._uri, "\""));
       auth_params.push("response=\"".concat(this._response, "\""));
+
       if (this._opaque) {
         auth_params.push("opaque=\"".concat(this._opaque, "\""));
       }
+
       if (this._qop) {
         auth_params.push("qop=".concat(this._qop));
         auth_params.push("cnonce=\"".concat(this._cnonce, "\""));
         auth_params.push("nc=".concat(this._ncHex));
       }
+
       return "Digest ".concat(auth_params.join(', '));
     }
   }]);
+
   return DigestAuthentication;
 }();
 },{"./Logger":9,"./Utils":30}],6:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== "function") { throw new TypeError("Super expression must either be null or a function"); } if (typeof _cache !== "undefined") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }
+
 function _construct(Parent, args, Class) { if (_isNativeReflectConstruct()) { _construct = Reflect.construct.bind(); } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var ConfigurationError = /*#__PURE__*/function (_Error) {
   _inherits(ConfigurationError, _Error);
+
   var _super = _createSuper(ConfigurationError);
+
   function ConfigurationError(parameter, value) {
     var _this;
+
     _classCallCheck(this, ConfigurationError);
+
     _this = _super.call(this);
     _this.code = 1;
     _this.name = 'CONFIGURATION_ERROR';
@@ -1073,14 +1166,20 @@ var ConfigurationError = /*#__PURE__*/function (_Error) {
     _this.message = !_this.value ? "Missing parameter: ".concat(_this.parameter) : "Invalid value ".concat(JSON.stringify(_this.value), " for parameter \"").concat(_this.parameter, "\"");
     return _this;
   }
+
   return _createClass(ConfigurationError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
+
 var InvalidStateError = /*#__PURE__*/function (_Error2) {
   _inherits(InvalidStateError, _Error2);
+
   var _super2 = _createSuper(InvalidStateError);
+
   function InvalidStateError(status) {
     var _this2;
+
     _classCallCheck(this, InvalidStateError);
+
     _this2 = _super2.call(this);
     _this2.code = 2;
     _this2.name = 'INVALID_STATE_ERROR';
@@ -1088,36 +1187,50 @@ var InvalidStateError = /*#__PURE__*/function (_Error2) {
     _this2.message = "Invalid status: ".concat(status);
     return _this2;
   }
+
   return _createClass(InvalidStateError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
+
 var NotSupportedError = /*#__PURE__*/function (_Error3) {
   _inherits(NotSupportedError, _Error3);
+
   var _super3 = _createSuper(NotSupportedError);
+
   function NotSupportedError(message) {
     var _this3;
+
     _classCallCheck(this, NotSupportedError);
+
     _this3 = _super3.call(this);
     _this3.code = 3;
     _this3.name = 'NOT_SUPPORTED_ERROR';
     _this3.message = message;
     return _this3;
   }
+
   return _createClass(NotSupportedError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
+
 var NotReadyError = /*#__PURE__*/function (_Error4) {
   _inherits(NotReadyError, _Error4);
+
   var _super4 = _createSuper(NotReadyError);
+
   function NotReadyError(message) {
     var _this4;
+
     _classCallCheck(this, NotReadyError);
+
     _this4 = _super4.call(this);
     _this4.code = 4;
     _this4.name = 'NOT_READY_ERROR';
     _this4.message = message;
     return _this4;
   }
+
   return _createClass(NotReadyError);
 }( /*#__PURE__*/_wrapNativeSuper(Error));
+
 module.exports = {
   ConfigurationError: ConfigurationError,
   InvalidStateError: InvalidStateError,
@@ -1153,6 +1266,7 @@ module.exports = function () {
     .replace(/\r/g, '\\r') // carriage return
     .replace(/[\x00-\x07\x0B\x0E-\x1F\x80-\uFFFF]/g, escape) + '"';
   }
+
   var result = {
     /*
      * Parses the input with a generated parser. If the parsing is successfull,
@@ -1389,6 +1503,7 @@ module.exports = function () {
         "from_tag": parse_from_tag,
         "early_flag": parse_early_flag
       };
+
       if (startRule !== undefined) {
         if (parseFunctions[startRule] === undefined) {
           throw new Error("Invalid rule name: " + quote(startRule) + ".");
@@ -1396,22 +1511,28 @@ module.exports = function () {
       } else {
         startRule = "CRLF";
       }
+
       var pos = 0;
       var reportFailures = 0;
       var rightmostFailuresPos = 0;
       var rightmostFailuresExpected = [];
+
       function padLeft(input, padding, length) {
         var result = input;
         var padLength = length - input.length;
+
         for (var i = 0; i < padLength; i++) {
           result = padding + result;
         }
+
         return result;
       }
+
       function escape(ch) {
         var charCode = ch.charCodeAt(0);
         var escapeChar;
         var length;
+
         if (charCode <= 0xFF) {
           escapeChar = 'x';
           length = 2;
@@ -1419,240 +1540,304 @@ module.exports = function () {
           escapeChar = 'u';
           length = 4;
         }
+
         return '\\' + escapeChar + padLeft(charCode.toString(16).toUpperCase(), '0', length);
       }
+
       function matchFailed(failure) {
         if (pos < rightmostFailuresPos) {
           return;
         }
+
         if (pos > rightmostFailuresPos) {
           rightmostFailuresPos = pos;
           rightmostFailuresExpected = [];
         }
+
         rightmostFailuresExpected.push(failure);
       }
+
       function parse_CRLF() {
         var result0;
+
         if (input.substr(pos, 2) === "\r\n") {
           result0 = "\r\n";
           pos += 2;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"\\r\\n\"");
           }
         }
+
         return result0;
       }
+
       function parse_DIGIT() {
         var result0;
+
         if (/^[0-9]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[0-9]");
           }
         }
+
         return result0;
       }
+
       function parse_ALPHA() {
         var result0;
+
         if (/^[a-zA-Z]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[a-zA-Z]");
           }
         }
+
         return result0;
       }
+
       function parse_HEXDIG() {
         var result0;
+
         if (/^[0-9a-fA-F]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[0-9a-fA-F]");
           }
         }
+
         return result0;
       }
+
       function parse_WSP() {
         var result0;
         result0 = parse_SP();
+
         if (result0 === null) {
           result0 = parse_HTAB();
         }
+
         return result0;
       }
+
       function parse_OCTET() {
         var result0;
+
         if (/^[\0-\xFF]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[\\0-\\xFF]");
           }
         }
+
         return result0;
       }
+
       function parse_DQUOTE() {
         var result0;
+
         if (/^["]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[\"]");
           }
         }
+
         return result0;
       }
+
       function parse_SP() {
         var result0;
+
         if (input.charCodeAt(pos) === 32) {
           result0 = " ";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\" \"");
           }
         }
+
         return result0;
       }
+
       function parse_HTAB() {
         var result0;
+
         if (input.charCodeAt(pos) === 9) {
           result0 = "\t";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"\\t\"");
           }
         }
+
         return result0;
       }
+
       function parse_alphanum() {
         var result0;
+
         if (/^[a-zA-Z0-9]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[a-zA-Z0-9]");
           }
         }
+
         return result0;
       }
+
       function parse_reserved() {
         var result0;
+
         if (input.charCodeAt(pos) === 59) {
           result0 = ";";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\";\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 47) {
             result0 = "/";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"/\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 63) {
               result0 = "?";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"?\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 58) {
                 result0 = ":";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\":\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 64) {
                   result0 = "@";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"@\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 38) {
                     result0 = "&";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"&\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 61) {
                       result0 = "=";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"=\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 43) {
                         result0 = "+";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"+\"");
                         }
                       }
+
                       if (result0 === null) {
                         if (input.charCodeAt(pos) === 36) {
                           result0 = "$";
                           pos++;
                         } else {
                           result0 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"$\"");
                           }
                         }
+
                         if (result0 === null) {
                           if (input.charCodeAt(pos) === 44) {
                             result0 = ",";
                             pos++;
                           } else {
                             result0 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\",\"");
                             }
@@ -1666,103 +1851,126 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_unreserved() {
         var result0;
         result0 = parse_alphanum();
+
         if (result0 === null) {
           result0 = parse_mark();
         }
+
         return result0;
       }
+
       function parse_mark() {
         var result0;
+
         if (input.charCodeAt(pos) === 45) {
           result0 = "-";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"-\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 95) {
             result0 = "_";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"_\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 46) {
               result0 = ".";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 33) {
                 result0 = "!";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"!\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 126) {
                   result0 = "~";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"~\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 42) {
                     result0 = "*";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"*\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 39) {
                       result0 = "'";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"'\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 40) {
                         result0 = "(";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"(\"");
                         }
                       }
+
                       if (result0 === null) {
                         if (input.charCodeAt(pos) === 41) {
                           result0 = ")";
                           pos++;
                         } else {
                           result0 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\")\"");
                           }
@@ -1775,26 +1983,33 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_escaped() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.charCodeAt(pos) === 37) {
           result0 = "%";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"%\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_HEXDIG();
+
           if (result1 !== null) {
             result2 = parse_HEXDIG();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -1809,16 +2024,20 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, escaped) {
             return escaped.join('');
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_LWS() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
@@ -1827,12 +2046,15 @@ module.exports = function () {
         pos2 = pos;
         result0 = [];
         result1 = parse_WSP();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_WSP();
         }
+
         if (result0 !== null) {
           result1 = parse_CRLF();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -1843,11 +2065,15 @@ module.exports = function () {
           result0 = null;
           pos = pos2;
         }
+
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result2 = parse_WSP();
+
           if (result2 !== null) {
             result1 = [];
+
             while (result2 !== null) {
               result1.push(result2);
               result2 = parse_WSP();
@@ -1855,6 +2081,7 @@ module.exports = function () {
           } else {
             result1 = null;
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -1865,22 +2092,27 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return " ";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_SWS() {
         var result0;
         result0 = parse_LWS();
         result0 = result0 !== null ? result0 : "";
         return result0;
       }
+
       function parse_HCOLON() {
         var result0, result1, result2;
         var pos0, pos1;
@@ -1888,28 +2120,35 @@ module.exports = function () {
         pos1 = pos;
         result0 = [];
         result1 = parse_SP();
+
         if (result1 === null) {
           result1 = parse_HTAB();
         }
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_SP();
+
           if (result1 === null) {
             result1 = parse_HTAB();
           }
         }
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -1924,24 +2163,30 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ':';
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_TEXT_UTF8_TRIM() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result1 = parse_TEXT_UTF8char();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_TEXT_UTF8char();
@@ -1949,17 +2194,21 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = [];
           result3 = parse_LWS();
+
           while (result3 !== null) {
             result2.push(result3);
             result3 = parse_LWS();
           }
+
           if (result2 !== null) {
             result3 = parse_TEXT_UTF8char();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -1970,17 +2219,21 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = [];
             result3 = parse_LWS();
+
             while (result3 !== null) {
               result2.push(result3);
               result3 = parse_LWS();
             }
+
             if (result2 !== null) {
               result3 = parse_TEXT_UTF8char();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -1992,6 +2245,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -2002,175 +2256,216 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_TEXT_UTF8char() {
         var result0;
+
         if (/^[!-~]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[!-~]");
           }
         }
+
         if (result0 === null) {
           result0 = parse_UTF8_NONASCII();
         }
+
         return result0;
       }
+
       function parse_UTF8_NONASCII() {
         var result0;
+
         if (/^[\x80-\uFFFF]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[\\x80-\\uFFFF]");
           }
         }
+
         return result0;
       }
+
       function parse_UTF8_CONT() {
         var result0;
+
         if (/^[\x80-\xBF]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[\\x80-\\xBF]");
           }
         }
+
         return result0;
       }
+
       function parse_LHEX() {
         var result0;
         result0 = parse_DIGIT();
+
         if (result0 === null) {
           if (/^[a-f]/.test(input.charAt(pos))) {
             result0 = input.charAt(pos);
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("[a-f]");
             }
           }
         }
+
         return result0;
       }
+
       function parse_token() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_alphanum();
+
         if (result1 === null) {
           if (input.charCodeAt(pos) === 45) {
             result1 = "-";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"-\"");
             }
           }
+
           if (result1 === null) {
             if (input.charCodeAt(pos) === 46) {
               result1 = ".";
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 33) {
                 result1 = "!";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"!\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 37) {
                   result1 = "%";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"%\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 42) {
                     result1 = "*";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"*\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 95) {
                       result1 = "_";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"_\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 43) {
                         result1 = "+";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"+\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 96) {
                           result1 = "`";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"`\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 39) {
                             result1 = "'";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"'\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 126) {
                               result1 = "~";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"~\"");
                               }
@@ -2185,107 +2480,129 @@ module.exports = function () {
             }
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_alphanum();
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 45) {
                 result1 = "-";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 46) {
                   result1 = ".";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\".\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 33) {
                     result1 = "!";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"!\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 37) {
                       result1 = "%";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"%\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 42) {
                         result1 = "*";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"*\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 95) {
                           result1 = "_";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"_\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 43) {
                             result1 = "+";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"+\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 96) {
                               result1 = "`";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"`\"");
                               }
                             }
+
                             if (result1 === null) {
                               if (input.charCodeAt(pos) === 39) {
                                 result1 = "'";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"'\"");
                                 }
                               }
+
                               if (result1 === null) {
                                 if (input.charCodeAt(pos) === 126) {
                                   result1 = "~";
                                   pos++;
                                 } else {
                                   result1 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\"~\"");
                                   }
@@ -2304,107 +2621,129 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_token_nodot() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_alphanum();
+
         if (result1 === null) {
           if (input.charCodeAt(pos) === 45) {
             result1 = "-";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"-\"");
             }
           }
+
           if (result1 === null) {
             if (input.charCodeAt(pos) === 33) {
               result1 = "!";
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"!\"");
               }
             }
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 37) {
                 result1 = "%";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"%\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 42) {
                   result1 = "*";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"*\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 95) {
                     result1 = "_";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"_\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 43) {
                       result1 = "+";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"+\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 96) {
                         result1 = "`";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"`\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 39) {
                           result1 = "'";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"'\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 126) {
                             result1 = "~";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"~\"");
                             }
@@ -2418,97 +2757,117 @@ module.exports = function () {
             }
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_alphanum();
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 45) {
                 result1 = "-";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 33) {
                   result1 = "!";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"!\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 37) {
                     result1 = "%";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"%\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 42) {
                       result1 = "*";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"*\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 95) {
                         result1 = "_";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"_\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 43) {
                           result1 = "+";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"+\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 96) {
                             result1 = "`";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"`\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 39) {
                               result1 = "'";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"'\"");
                               }
                             }
+
                             if (result1 === null) {
                               if (input.charCodeAt(pos) === 126) {
                                 result1 = "~";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"~\"");
                                 }
@@ -2526,181 +2885,220 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_separators() {
         var result0;
+
         if (input.charCodeAt(pos) === 40) {
           result0 = "(";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"(\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 41) {
             result0 = ")";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\")\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 60) {
               result0 = "<";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"<\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 62) {
                 result0 = ">";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\">\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 64) {
                   result0 = "@";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"@\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 44) {
                     result0 = ",";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\",\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 59) {
                       result0 = ";";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\";\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 58) {
                         result0 = ":";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result0 === null) {
                         if (input.charCodeAt(pos) === 92) {
                           result0 = "\\";
                           pos++;
                         } else {
                           result0 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"\\\\\"");
                           }
                         }
+
                         if (result0 === null) {
                           result0 = parse_DQUOTE();
+
                           if (result0 === null) {
                             if (input.charCodeAt(pos) === 47) {
                               result0 = "/";
                               pos++;
                             } else {
                               result0 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"/\"");
                               }
                             }
+
                             if (result0 === null) {
                               if (input.charCodeAt(pos) === 91) {
                                 result0 = "[";
                                 pos++;
                               } else {
                                 result0 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"[\"");
                                 }
                               }
+
                               if (result0 === null) {
                                 if (input.charCodeAt(pos) === 93) {
                                   result0 = "]";
                                   pos++;
                                 } else {
                                   result0 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\"]\"");
                                   }
                                 }
+
                                 if (result0 === null) {
                                   if (input.charCodeAt(pos) === 63) {
                                     result0 = "?";
                                     pos++;
                                   } else {
                                     result0 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\"?\"");
                                     }
                                   }
+
                                   if (result0 === null) {
                                     if (input.charCodeAt(pos) === 61) {
                                       result0 = "=";
                                       pos++;
                                     } else {
                                       result0 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\"=\"");
                                       }
                                     }
+
                                     if (result0 === null) {
                                       if (input.charCodeAt(pos) === 123) {
                                         result0 = "{";
                                         pos++;
                                       } else {
                                         result0 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\"{\"");
                                         }
                                       }
+
                                       if (result0 === null) {
                                         if (input.charCodeAt(pos) === 125) {
                                           result0 = "}";
                                           pos++;
                                         } else {
                                           result0 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\"}\"");
                                           }
                                         }
+
                                         if (result0 === null) {
                                           result0 = parse_SP();
+
                                           if (result0 === null) {
                                             result0 = parse_HTAB();
                                           }
@@ -2721,231 +3119,278 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_word() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_alphanum();
+
         if (result1 === null) {
           if (input.charCodeAt(pos) === 45) {
             result1 = "-";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"-\"");
             }
           }
+
           if (result1 === null) {
             if (input.charCodeAt(pos) === 46) {
               result1 = ".";
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 33) {
                 result1 = "!";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"!\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 37) {
                   result1 = "%";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"%\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 42) {
                     result1 = "*";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"*\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 95) {
                       result1 = "_";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"_\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 43) {
                         result1 = "+";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"+\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 96) {
                           result1 = "`";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"`\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 39) {
                             result1 = "'";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"'\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 126) {
                               result1 = "~";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"~\"");
                               }
                             }
+
                             if (result1 === null) {
                               if (input.charCodeAt(pos) === 40) {
                                 result1 = "(";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"(\"");
                                 }
                               }
+
                               if (result1 === null) {
                                 if (input.charCodeAt(pos) === 41) {
                                   result1 = ")";
                                   pos++;
                                 } else {
                                   result1 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\")\"");
                                   }
                                 }
+
                                 if (result1 === null) {
                                   if (input.charCodeAt(pos) === 60) {
                                     result1 = "<";
                                     pos++;
                                   } else {
                                     result1 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\"<\"");
                                     }
                                   }
+
                                   if (result1 === null) {
                                     if (input.charCodeAt(pos) === 62) {
                                       result1 = ">";
                                       pos++;
                                     } else {
                                       result1 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\">\"");
                                       }
                                     }
+
                                     if (result1 === null) {
                                       if (input.charCodeAt(pos) === 58) {
                                         result1 = ":";
                                         pos++;
                                       } else {
                                         result1 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result1 === null) {
                                         if (input.charCodeAt(pos) === 92) {
                                           result1 = "\\";
                                           pos++;
                                         } else {
                                           result1 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\"\\\\\"");
                                           }
                                         }
+
                                         if (result1 === null) {
                                           result1 = parse_DQUOTE();
+
                                           if (result1 === null) {
                                             if (input.charCodeAt(pos) === 47) {
                                               result1 = "/";
                                               pos++;
                                             } else {
                                               result1 = null;
+
                                               if (reportFailures === 0) {
                                                 matchFailed("\"/\"");
                                               }
                                             }
+
                                             if (result1 === null) {
                                               if (input.charCodeAt(pos) === 91) {
                                                 result1 = "[";
                                                 pos++;
                                               } else {
                                                 result1 = null;
+
                                                 if (reportFailures === 0) {
                                                   matchFailed("\"[\"");
                                                 }
                                               }
+
                                               if (result1 === null) {
                                                 if (input.charCodeAt(pos) === 93) {
                                                   result1 = "]";
                                                   pos++;
                                                 } else {
                                                   result1 = null;
+
                                                   if (reportFailures === 0) {
                                                     matchFailed("\"]\"");
                                                   }
                                                 }
+
                                                 if (result1 === null) {
                                                   if (input.charCodeAt(pos) === 63) {
                                                     result1 = "?";
                                                     pos++;
                                                   } else {
                                                     result1 = null;
+
                                                     if (reportFailures === 0) {
                                                       matchFailed("\"?\"");
                                                     }
                                                   }
+
                                                   if (result1 === null) {
                                                     if (input.charCodeAt(pos) === 123) {
                                                       result1 = "{";
                                                       pos++;
                                                     } else {
                                                       result1 = null;
+
                                                       if (reportFailures === 0) {
                                                         matchFailed("\"{\"");
                                                       }
                                                     }
+
                                                     if (result1 === null) {
                                                       if (input.charCodeAt(pos) === 125) {
                                                         result1 = "}";
                                                         pos++;
                                                       } else {
                                                         result1 = null;
+
                                                         if (reportFailures === 0) {
                                                           matchFailed("\"}\"");
                                                         }
@@ -2973,229 +3418,276 @@ module.exports = function () {
             }
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_alphanum();
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 45) {
                 result1 = "-";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 46) {
                   result1 = ".";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\".\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 33) {
                     result1 = "!";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"!\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 37) {
                       result1 = "%";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"%\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 42) {
                         result1 = "*";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"*\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 95) {
                           result1 = "_";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"_\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 43) {
                             result1 = "+";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"+\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 96) {
                               result1 = "`";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"`\"");
                               }
                             }
+
                             if (result1 === null) {
                               if (input.charCodeAt(pos) === 39) {
                                 result1 = "'";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"'\"");
                                 }
                               }
+
                               if (result1 === null) {
                                 if (input.charCodeAt(pos) === 126) {
                                   result1 = "~";
                                   pos++;
                                 } else {
                                   result1 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\"~\"");
                                   }
                                 }
+
                                 if (result1 === null) {
                                   if (input.charCodeAt(pos) === 40) {
                                     result1 = "(";
                                     pos++;
                                   } else {
                                     result1 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\"(\"");
                                     }
                                   }
+
                                   if (result1 === null) {
                                     if (input.charCodeAt(pos) === 41) {
                                       result1 = ")";
                                       pos++;
                                     } else {
                                       result1 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\")\"");
                                       }
                                     }
+
                                     if (result1 === null) {
                                       if (input.charCodeAt(pos) === 60) {
                                         result1 = "<";
                                         pos++;
                                       } else {
                                         result1 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\"<\"");
                                         }
                                       }
+
                                       if (result1 === null) {
                                         if (input.charCodeAt(pos) === 62) {
                                           result1 = ">";
                                           pos++;
                                         } else {
                                           result1 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\">\"");
                                           }
                                         }
+
                                         if (result1 === null) {
                                           if (input.charCodeAt(pos) === 58) {
                                             result1 = ":";
                                             pos++;
                                           } else {
                                             result1 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result1 === null) {
                                             if (input.charCodeAt(pos) === 92) {
                                               result1 = "\\";
                                               pos++;
                                             } else {
                                               result1 = null;
+
                                               if (reportFailures === 0) {
                                                 matchFailed("\"\\\\\"");
                                               }
                                             }
+
                                             if (result1 === null) {
                                               result1 = parse_DQUOTE();
+
                                               if (result1 === null) {
                                                 if (input.charCodeAt(pos) === 47) {
                                                   result1 = "/";
                                                   pos++;
                                                 } else {
                                                   result1 = null;
+
                                                   if (reportFailures === 0) {
                                                     matchFailed("\"/\"");
                                                   }
                                                 }
+
                                                 if (result1 === null) {
                                                   if (input.charCodeAt(pos) === 91) {
                                                     result1 = "[";
                                                     pos++;
                                                   } else {
                                                     result1 = null;
+
                                                     if (reportFailures === 0) {
                                                       matchFailed("\"[\"");
                                                     }
                                                   }
+
                                                   if (result1 === null) {
                                                     if (input.charCodeAt(pos) === 93) {
                                                       result1 = "]";
                                                       pos++;
                                                     } else {
                                                       result1 = null;
+
                                                       if (reportFailures === 0) {
                                                         matchFailed("\"]\"");
                                                       }
                                                     }
+
                                                     if (result1 === null) {
                                                       if (input.charCodeAt(pos) === 63) {
                                                         result1 = "?";
                                                         pos++;
                                                       } else {
                                                         result1 = null;
+
                                                         if (reportFailures === 0) {
                                                           matchFailed("\"?\"");
                                                         }
                                                       }
+
                                                       if (result1 === null) {
                                                         if (input.charCodeAt(pos) === 123) {
                                                           result1 = "{";
                                                           pos++;
                                                         } else {
                                                           result1 = null;
+
                                                           if (reportFailures === 0) {
                                                             matchFailed("\"{\"");
                                                           }
                                                         }
+
                                                         if (result1 === null) {
                                                           if (input.charCodeAt(pos) === 125) {
                                                             result1 = "}";
                                                             pos++;
                                                           } else {
                                                             result1 = null;
+
                                                             if (reportFailures === 0) {
                                                               matchFailed("\"}\"");
                                                             }
@@ -3227,34 +3719,42 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_STAR() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 42) {
             result1 = "*";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"*\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3269,34 +3769,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "*";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_SLASH() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 47) {
             result1 = "/";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"/\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3311,34 +3819,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "/";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_EQUAL() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 61) {
             result1 = "=";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"=\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3353,34 +3869,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "=";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_LPAREN() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 40) {
             result1 = "(";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"(\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3395,34 +3919,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "(";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_RPAREN() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 41) {
             result1 = ")";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\")\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3437,32 +3969,40 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ")";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_RAQUOT() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.charCodeAt(pos) === 62) {
           result0 = ">";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\">\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_SWS();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -3473,32 +4013,39 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ">";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_LAQUOT() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 60) {
             result1 = "<";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"<\"");
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -3509,34 +4056,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "<";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_COMMA() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 44) {
             result1 = ",";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\",\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3551,34 +4106,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ",";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_SEMI() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 59) {
             result1 = ";";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\";\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3593,34 +4156,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ";";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_COLON() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_SWS();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3635,24 +4206,30 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return ":";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_LDQUOT() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           result1 = parse_DQUOTE();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -3663,24 +4240,30 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "\"";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_RDQUOT() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_DQUOTE();
+
         if (result0 !== null) {
           result1 = parse_SWS();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -3691,42 +4274,54 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return "\"";
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_comment() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_LPAREN();
+
         if (result0 !== null) {
           result1 = [];
           result2 = parse_ctext();
+
           if (result2 === null) {
             result2 = parse_quoted_pair();
+
             if (result2 === null) {
               result2 = parse_comment();
             }
           }
+
           while (result2 !== null) {
             result1.push(result2);
             result2 = parse_ctext();
+
             if (result2 === null) {
               result2 = parse_quoted_pair();
+
               if (result2 === null) {
                 result2 = parse_comment();
               }
             }
           }
+
           if (result1 !== null) {
             result2 = parse_RPAREN();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -3741,72 +4336,91 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_ctext() {
         var result0;
+
         if (/^[!-']/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("[!-']");
           }
         }
+
         if (result0 === null) {
           if (/^[*-[]/.test(input.charAt(pos))) {
             result0 = input.charAt(pos);
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("[*-[]");
             }
           }
+
           if (result0 === null) {
             if (/^[\]-~]/.test(input.charAt(pos))) {
               result0 = input.charAt(pos);
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("[\\]-~]");
               }
             }
+
             if (result0 === null) {
               result0 = parse_UTF8_NONASCII();
+
               if (result0 === null) {
                 result0 = parse_LWS();
               }
             }
           }
         }
+
         return result0;
       }
+
       function parse_quoted_string() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           result1 = parse_DQUOTE();
+
           if (result1 !== null) {
             result2 = [];
             result3 = parse_qdtext();
+
             if (result3 === null) {
               result3 = parse_quoted_pair();
             }
+
             while (result3 !== null) {
               result2.push(result3);
               result3 = parse_qdtext();
+
               if (result3 === null) {
                 result3 = parse_quoted_pair();
               }
             }
+
             if (result2 !== null) {
               result3 = parse_DQUOTE();
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -3825,39 +4439,50 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_quoted_string_clean() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SWS();
+
         if (result0 !== null) {
           result1 = parse_DQUOTE();
+
           if (result1 !== null) {
             result2 = [];
             result3 = parse_qdtext();
+
             if (result3 === null) {
               result3 = parse_quoted_pair();
             }
+
             while (result3 !== null) {
               result2.push(result3);
               result3 = parse_qdtext();
+
               if (result3 === null) {
                 result3 = parse_quoted_pair();
               }
             }
+
             if (result2 !== null) {
               result3 = parse_DQUOTE();
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -3876,6 +4501,7 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var trimmed = input.substring(pos, offset).trim();
@@ -3883,97 +4509,118 @@ module.exports = function () {
             .replace(/\\([\x00-\x09\x0b-\x0c\x0e-\x7f])/g, '$1');
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_qdtext() {
         var result0;
         result0 = parse_LWS();
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 33) {
             result0 = "!";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"!\"");
             }
           }
+
           if (result0 === null) {
             if (/^[#-[]/.test(input.charAt(pos))) {
               result0 = input.charAt(pos);
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("[#-[]");
               }
             }
+
             if (result0 === null) {
               if (/^[\]-~]/.test(input.charAt(pos))) {
                 result0 = input.charAt(pos);
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("[\\]-~]");
                 }
               }
+
               if (result0 === null) {
                 result0 = parse_UTF8_NONASCII();
               }
             }
           }
         }
+
         return result0;
       }
+
       function parse_quoted_pair() {
         var result0, result1;
         var pos0;
         pos0 = pos;
+
         if (input.charCodeAt(pos) === 92) {
           result0 = "\\";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"\\\\\"");
           }
         }
+
         if (result0 !== null) {
           if (/^[\0-\t]/.test(input.charAt(pos))) {
             result1 = input.charAt(pos);
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("[\\0-\\t]");
             }
           }
+
           if (result1 === null) {
             if (/^[\x0B-\f]/.test(input.charAt(pos))) {
               result1 = input.charAt(pos);
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("[\\x0B-\\f]");
               }
             }
+
             if (result1 === null) {
               if (/^[\x0E-]/.test(input.charAt(pos))) {
                 result1 = input.charAt(pos);
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("[\\x0E-]");
                 }
               }
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -3984,29 +4631,36 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_SIP_URI_noparams() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_uri_scheme();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_userinfo();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_hostport();
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -4025,6 +4679,7 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             try {
@@ -4039,37 +4694,47 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_SIP_URI() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_uri_scheme();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_userinfo();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_hostport();
+
               if (result3 !== null) {
                 result4 = parse_uri_parameters();
+
                 if (result4 !== null) {
                   result5 = parse_headers();
                   result5 = result5 !== null ? result5 : "";
+
                   if (result5 !== null) {
                     result0 = [result0, result1, result2, result3, result4, result5];
                   } else {
@@ -4096,9 +4761,11 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var header;
+
             try {
               data.uri = new URI(data.scheme, data.user, data.host, data.port, data.uri_params, data.uri_headers);
               delete data.scheme;
@@ -4107,6 +4774,7 @@ module.exports = function () {
               delete data.host_type;
               delete data.port;
               delete data.uri_params;
+
               if (startRule === 'SIP_URI') {
                 data = data.uri;
               }
@@ -4115,84 +4783,107 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_uri_scheme() {
         var result0;
         result0 = parse_uri_scheme_sips();
+
         if (result0 === null) {
           result0 = parse_uri_scheme_sip();
         }
+
         return result0;
       }
+
       function parse_uri_scheme_sips() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 4).toLowerCase() === "sips") {
           result0 = input.substr(pos, 4);
           pos += 4;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"sips\"");
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset, scheme) {
             data.scheme = scheme.toLowerCase();
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_uri_scheme_sip() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "sip") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"sip\"");
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset, scheme) {
             data.scheme = scheme.toLowerCase();
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_userinfo() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_user();
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_password();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -4203,17 +4894,21 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             if (input.charCodeAt(pos) === 64) {
               result2 = "@";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"@\"");
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -4228,32 +4923,42 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.user = decodeURIComponent(input.substring(pos - 1, offset));
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_user() {
         var result0, result1;
         result1 = parse_unreserved();
+
         if (result1 === null) {
           result1 = parse_escaped();
+
           if (result1 === null) {
             result1 = parse_user_unreserved();
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_unreserved();
+
             if (result1 === null) {
               result1 = parse_escaped();
+
               if (result1 === null) {
                 result1 = parse_user_unreserved();
               }
@@ -4262,85 +4967,103 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         return result0;
       }
+
       function parse_user_unreserved() {
         var result0;
+
         if (input.charCodeAt(pos) === 38) {
           result0 = "&";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"&\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 61) {
             result0 = "=";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"=\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 43) {
               result0 = "+";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"+\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 36) {
                 result0 = "$";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"$\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 44) {
                   result0 = ",";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\",\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 59) {
                     result0 = ";";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\";\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 63) {
                       result0 = "?";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"?\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 47) {
                         result0 = "/";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"/\"");
                         }
@@ -4352,62 +5075,75 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_password() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result0 = [];
         result1 = parse_unreserved();
+
         if (result1 === null) {
           result1 = parse_escaped();
+
           if (result1 === null) {
             if (input.charCodeAt(pos) === 38) {
               result1 = "&";
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"&\"");
               }
             }
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 61) {
                 result1 = "=";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"=\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 43) {
                   result1 = "+";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"+\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 36) {
                     result1 = "$";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"$\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 44) {
                       result1 = ",";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\",\"");
                       }
@@ -4418,57 +5154,69 @@ module.exports = function () {
             }
           }
         }
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_unreserved();
+
           if (result1 === null) {
             result1 = parse_escaped();
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 38) {
                 result1 = "&";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"&\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 61) {
                   result1 = "=";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"=\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 43) {
                     result1 = "+";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"+\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 36) {
                       result1 = "$";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"$\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 44) {
                         result1 = ",";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\",\"");
                         }
@@ -4480,34 +5228,43 @@ module.exports = function () {
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.password = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hostport() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_host();
+
         if (result0 !== null) {
           pos1 = pos;
+
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_port();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -4518,7 +5275,9 @@ module.exports = function () {
             result1 = null;
             pos = pos1;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -4529,30 +5288,38 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_host() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_hostname();
+
         if (result0 === null) {
           result0 = parse_IPv4address();
+
           if (result0 === null) {
             result0 = parse_IPv6reference();
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host = input.substring(pos, offset).toLowerCase();
             return data.host;
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hostname() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
@@ -4561,16 +5328,19 @@ module.exports = function () {
         result0 = [];
         pos2 = pos;
         result1 = parse_domainlabel();
+
         if (result1 !== null) {
           if (input.charCodeAt(pos) === 46) {
             result2 = ".";
             pos++;
           } else {
             result2 = null;
+
             if (reportFailures === 0) {
               matchFailed("\".\"");
             }
           }
+
           if (result2 !== null) {
             result1 = [result1, result2];
           } else {
@@ -4581,20 +5351,24 @@ module.exports = function () {
           result1 = null;
           pos = pos2;
         }
+
         while (result1 !== null) {
           result0.push(result1);
           pos2 = pos;
           result1 = parse_domainlabel();
+
           if (result1 !== null) {
             if (input.charCodeAt(pos) === 46) {
               result2 = ".";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -4606,19 +5380,24 @@ module.exports = function () {
             pos = pos2;
           }
         }
+
         if (result0 !== null) {
           result1 = parse_toplabel();
+
           if (result1 !== null) {
             if (input.charCodeAt(pos) === 46) {
               result2 = ".";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -4633,66 +5412,80 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host_type = 'domain';
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_domainlabel() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_alphanum();
+
         if (result0 !== null) {
           result1 = [];
           result2 = parse_alphanum();
+
           if (result2 === null) {
             if (input.charCodeAt(pos) === 45) {
               result2 = "-";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"-\"");
               }
             }
+
             if (result2 === null) {
               if (input.charCodeAt(pos) === 95) {
                 result2 = "_";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"_\"");
                 }
               }
             }
           }
+
           while (result2 !== null) {
             result1.push(result2);
             result2 = parse_alphanum();
+
             if (result2 === null) {
               if (input.charCodeAt(pos) === 45) {
                 result2 = "-";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result2 === null) {
                 if (input.charCodeAt(pos) === 95) {
                   result2 = "_";
                   pos++;
                 } else {
                   result2 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"_\"");
                   }
@@ -4700,6 +5493,7 @@ module.exports = function () {
               }
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -4710,57 +5504,69 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_toplabel() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_ALPHA();
+
         if (result0 !== null) {
           result1 = [];
           result2 = parse_alphanum();
+
           if (result2 === null) {
             if (input.charCodeAt(pos) === 45) {
               result2 = "-";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"-\"");
               }
             }
+
             if (result2 === null) {
               if (input.charCodeAt(pos) === 95) {
                 result2 = "_";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"_\"");
                 }
               }
             }
           }
+
           while (result2 !== null) {
             result1.push(result2);
             result2 = parse_alphanum();
+
             if (result2 === null) {
               if (input.charCodeAt(pos) === 45) {
                 result2 = "-";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result2 === null) {
                 if (input.charCodeAt(pos) === 95) {
                   result2 = "_";
                   pos++;
                 } else {
                   result2 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"_\"");
                   }
@@ -4768,6 +5574,7 @@ module.exports = function () {
               }
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -4778,34 +5585,42 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_IPv6reference() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.charCodeAt(pos) === 91) {
           result0 = "[";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"[\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_IPv6address();
+
           if (result1 !== null) {
             if (input.charCodeAt(pos) === 93) {
               result2 = "]";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"]\"");
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -4820,95 +5635,118 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host_type = 'IPv6';
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_IPv6address() {
         var result0, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10, result11, result12;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_h16();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_h16();
+
             if (result2 !== null) {
               if (input.charCodeAt(pos) === 58) {
                 result3 = ":";
                 pos++;
               } else {
                 result3 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\":\"");
                 }
               }
+
               if (result3 !== null) {
                 result4 = parse_h16();
+
                 if (result4 !== null) {
                   if (input.charCodeAt(pos) === 58) {
                     result5 = ":";
                     pos++;
                   } else {
                     result5 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\":\"");
                     }
                   }
+
                   if (result5 !== null) {
                     result6 = parse_h16();
+
                     if (result6 !== null) {
                       if (input.charCodeAt(pos) === 58) {
                         result7 = ":";
                         pos++;
                       } else {
                         result7 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result7 !== null) {
                         result8 = parse_h16();
+
                         if (result8 !== null) {
                           if (input.charCodeAt(pos) === 58) {
                             result9 = ":";
                             pos++;
                           } else {
                             result9 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\":\"");
                             }
                           }
+
                           if (result9 !== null) {
                             result10 = parse_h16();
+
                             if (result10 !== null) {
                               if (input.charCodeAt(pos) === 58) {
                                 result11 = ":";
                                 pos++;
                               } else {
                                 result11 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\":\"");
                                 }
                               }
+
                               if (result11 !== null) {
                                 result12 = parse_ls32();
+
                                 if (result12 !== null) {
                                   result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10, result11, result12];
                                 } else {
@@ -4963,79 +5801,99 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 === null) {
           pos1 = pos;
+
           if (input.substr(pos, 2) === "::") {
             result0 = "::";
             pos += 2;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"::\"");
             }
           }
+
           if (result0 !== null) {
             result1 = parse_h16();
+
             if (result1 !== null) {
               if (input.charCodeAt(pos) === 58) {
                 result2 = ":";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\":\"");
                 }
               }
+
               if (result2 !== null) {
                 result3 = parse_h16();
+
                 if (result3 !== null) {
                   if (input.charCodeAt(pos) === 58) {
                     result4 = ":";
                     pos++;
                   } else {
                     result4 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\":\"");
                     }
                   }
+
                   if (result4 !== null) {
                     result5 = parse_h16();
+
                     if (result5 !== null) {
                       if (input.charCodeAt(pos) === 58) {
                         result6 = ":";
                         pos++;
                       } else {
                         result6 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result6 !== null) {
                         result7 = parse_h16();
+
                         if (result7 !== null) {
                           if (input.charCodeAt(pos) === 58) {
                             result8 = ":";
                             pos++;
                           } else {
                             result8 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\":\"");
                             }
                           }
+
                           if (result8 !== null) {
                             result9 = parse_h16();
+
                             if (result9 !== null) {
                               if (input.charCodeAt(pos) === 58) {
                                 result10 = ":";
                                 pos++;
                               } else {
                                 result10 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\":\"");
                                 }
                               }
+
                               if (result10 !== null) {
                                 result11 = parse_ls32();
+
                                 if (result11 !== null) {
                                   result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10, result11];
                                 } else {
@@ -5086,67 +5944,84 @@ module.exports = function () {
             result0 = null;
             pos = pos1;
           }
+
           if (result0 === null) {
             pos1 = pos;
+
             if (input.substr(pos, 2) === "::") {
               result0 = "::";
               pos += 2;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"::\"");
               }
             }
+
             if (result0 !== null) {
               result1 = parse_h16();
+
               if (result1 !== null) {
                 if (input.charCodeAt(pos) === 58) {
                   result2 = ":";
                   pos++;
                 } else {
                   result2 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\":\"");
                   }
                 }
+
                 if (result2 !== null) {
                   result3 = parse_h16();
+
                   if (result3 !== null) {
                     if (input.charCodeAt(pos) === 58) {
                       result4 = ":";
                       pos++;
                     } else {
                       result4 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\":\"");
                       }
                     }
+
                     if (result4 !== null) {
                       result5 = parse_h16();
+
                       if (result5 !== null) {
                         if (input.charCodeAt(pos) === 58) {
                           result6 = ":";
                           pos++;
                         } else {
                           result6 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\":\"");
                           }
                         }
+
                         if (result6 !== null) {
                           result7 = parse_h16();
+
                           if (result7 !== null) {
                             if (input.charCodeAt(pos) === 58) {
                               result8 = ":";
                               pos++;
                             } else {
                               result8 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\":\"");
                               }
                             }
+
                             if (result8 !== null) {
                               result9 = parse_ls32();
+
                               if (result9 !== null) {
                                 result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9];
                               } else {
@@ -5189,55 +6064,69 @@ module.exports = function () {
               result0 = null;
               pos = pos1;
             }
+
             if (result0 === null) {
               pos1 = pos;
+
               if (input.substr(pos, 2) === "::") {
                 result0 = "::";
                 pos += 2;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"::\"");
                 }
               }
+
               if (result0 !== null) {
                 result1 = parse_h16();
+
                 if (result1 !== null) {
                   if (input.charCodeAt(pos) === 58) {
                     result2 = ":";
                     pos++;
                   } else {
                     result2 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\":\"");
                     }
                   }
+
                   if (result2 !== null) {
                     result3 = parse_h16();
+
                     if (result3 !== null) {
                       if (input.charCodeAt(pos) === 58) {
                         result4 = ":";
                         pos++;
                       } else {
                         result4 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result4 !== null) {
                         result5 = parse_h16();
+
                         if (result5 !== null) {
                           if (input.charCodeAt(pos) === 58) {
                             result6 = ":";
                             pos++;
                           } else {
                             result6 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\":\"");
                             }
                           }
+
                           if (result6 !== null) {
                             result7 = parse_ls32();
+
                             if (result7 !== null) {
                               result0 = [result0, result1, result2, result3, result4, result5, result6, result7];
                             } else {
@@ -5272,43 +6161,54 @@ module.exports = function () {
                 result0 = null;
                 pos = pos1;
               }
+
               if (result0 === null) {
                 pos1 = pos;
+
                 if (input.substr(pos, 2) === "::") {
                   result0 = "::";
                   pos += 2;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"::\"");
                   }
                 }
+
                 if (result0 !== null) {
                   result1 = parse_h16();
+
                   if (result1 !== null) {
                     if (input.charCodeAt(pos) === 58) {
                       result2 = ":";
                       pos++;
                     } else {
                       result2 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\":\"");
                       }
                     }
+
                     if (result2 !== null) {
                       result3 = parse_h16();
+
                       if (result3 !== null) {
                         if (input.charCodeAt(pos) === 58) {
                           result4 = ":";
                           pos++;
                         } else {
                           result4 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\":\"");
                           }
                         }
+
                         if (result4 !== null) {
                           result5 = parse_ls32();
+
                           if (result5 !== null) {
                             result0 = [result0, result1, result2, result3, result4, result5];
                           } else {
@@ -5335,31 +6235,39 @@ module.exports = function () {
                   result0 = null;
                   pos = pos1;
                 }
+
                 if (result0 === null) {
                   pos1 = pos;
+
                   if (input.substr(pos, 2) === "::") {
                     result0 = "::";
                     pos += 2;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"::\"");
                     }
                   }
+
                   if (result0 !== null) {
                     result1 = parse_h16();
+
                     if (result1 !== null) {
                       if (input.charCodeAt(pos) === 58) {
                         result2 = ":";
                         pos++;
                       } else {
                         result2 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result2 !== null) {
                         result3 = parse_ls32();
+
                         if (result3 !== null) {
                           result0 = [result0, result1, result2, result3];
                         } else {
@@ -5378,19 +6286,24 @@ module.exports = function () {
                     result0 = null;
                     pos = pos1;
                   }
+
                   if (result0 === null) {
                     pos1 = pos;
+
                     if (input.substr(pos, 2) === "::") {
                       result0 = "::";
                       pos += 2;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"::\"");
                       }
                     }
+
                     if (result0 !== null) {
                       result1 = parse_ls32();
+
                       if (result1 !== null) {
                         result0 = [result0, result1];
                       } else {
@@ -5401,19 +6314,24 @@ module.exports = function () {
                       result0 = null;
                       pos = pos1;
                     }
+
                     if (result0 === null) {
                       pos1 = pos;
+
                       if (input.substr(pos, 2) === "::") {
                         result0 = "::";
                         pos += 2;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"::\"");
                         }
                       }
+
                       if (result0 !== null) {
                         result1 = parse_h16();
+
                         if (result1 !== null) {
                           result0 = [result0, result1];
                         } else {
@@ -5424,69 +6342,86 @@ module.exports = function () {
                         result0 = null;
                         pos = pos1;
                       }
+
                       if (result0 === null) {
                         pos1 = pos;
                         result0 = parse_h16();
+
                         if (result0 !== null) {
                           if (input.substr(pos, 2) === "::") {
                             result1 = "::";
                             pos += 2;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"::\"");
                             }
                           }
+
                           if (result1 !== null) {
                             result2 = parse_h16();
+
                             if (result2 !== null) {
                               if (input.charCodeAt(pos) === 58) {
                                 result3 = ":";
                                 pos++;
                               } else {
                                 result3 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\":\"");
                                 }
                               }
+
                               if (result3 !== null) {
                                 result4 = parse_h16();
+
                                 if (result4 !== null) {
                                   if (input.charCodeAt(pos) === 58) {
                                     result5 = ":";
                                     pos++;
                                   } else {
                                     result5 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\":\"");
                                     }
                                   }
+
                                   if (result5 !== null) {
                                     result6 = parse_h16();
+
                                     if (result6 !== null) {
                                       if (input.charCodeAt(pos) === 58) {
                                         result7 = ":";
                                         pos++;
                                       } else {
                                         result7 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result7 !== null) {
                                         result8 = parse_h16();
+
                                         if (result8 !== null) {
                                           if (input.charCodeAt(pos) === 58) {
                                             result9 = ":";
                                             pos++;
                                           } else {
                                             result9 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result9 !== null) {
                                             result10 = parse_ls32();
+
                                             if (result10 !== null) {
                                               result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9, result10];
                                             } else {
@@ -5533,22 +6468,28 @@ module.exports = function () {
                           result0 = null;
                           pos = pos1;
                         }
+
                         if (result0 === null) {
                           pos1 = pos;
                           result0 = parse_h16();
+
                           if (result0 !== null) {
                             pos2 = pos;
+
                             if (input.charCodeAt(pos) === 58) {
                               result1 = ":";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\":\"");
                               }
                             }
+
                             if (result1 !== null) {
                               result2 = parse_h16();
+
                               if (result2 !== null) {
                                 result1 = [result1, result2];
                               } else {
@@ -5559,55 +6500,69 @@ module.exports = function () {
                               result1 = null;
                               pos = pos2;
                             }
+
                             result1 = result1 !== null ? result1 : "";
+
                             if (result1 !== null) {
                               if (input.substr(pos, 2) === "::") {
                                 result2 = "::";
                                 pos += 2;
                               } else {
                                 result2 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"::\"");
                                 }
                               }
+
                               if (result2 !== null) {
                                 result3 = parse_h16();
+
                                 if (result3 !== null) {
                                   if (input.charCodeAt(pos) === 58) {
                                     result4 = ":";
                                     pos++;
                                   } else {
                                     result4 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\":\"");
                                     }
                                   }
+
                                   if (result4 !== null) {
                                     result5 = parse_h16();
+
                                     if (result5 !== null) {
                                       if (input.charCodeAt(pos) === 58) {
                                         result6 = ":";
                                         pos++;
                                       } else {
                                         result6 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result6 !== null) {
                                         result7 = parse_h16();
+
                                         if (result7 !== null) {
                                           if (input.charCodeAt(pos) === 58) {
                                             result8 = ":";
                                             pos++;
                                           } else {
                                             result8 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result8 !== null) {
                                             result9 = parse_ls32();
+
                                             if (result9 !== null) {
                                               result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8, result9];
                                             } else {
@@ -5650,22 +6605,28 @@ module.exports = function () {
                             result0 = null;
                             pos = pos1;
                           }
+
                           if (result0 === null) {
                             pos1 = pos;
                             result0 = parse_h16();
+
                             if (result0 !== null) {
                               pos2 = pos;
+
                               if (input.charCodeAt(pos) === 58) {
                                 result1 = ":";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\":\"");
                                 }
                               }
+
                               if (result1 !== null) {
                                 result2 = parse_h16();
+
                                 if (result2 !== null) {
                                   result1 = [result1, result2];
                                 } else {
@@ -5676,20 +6637,26 @@ module.exports = function () {
                                 result1 = null;
                                 pos = pos2;
                               }
+
                               result1 = result1 !== null ? result1 : "";
+
                               if (result1 !== null) {
                                 pos2 = pos;
+
                                 if (input.charCodeAt(pos) === 58) {
                                   result2 = ":";
                                   pos++;
                                 } else {
                                   result2 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\":\"");
                                   }
                                 }
+
                                 if (result2 !== null) {
                                   result3 = parse_h16();
+
                                   if (result3 !== null) {
                                     result2 = [result2, result3];
                                   } else {
@@ -5700,43 +6667,54 @@ module.exports = function () {
                                   result2 = null;
                                   pos = pos2;
                                 }
+
                                 result2 = result2 !== null ? result2 : "";
+
                                 if (result2 !== null) {
                                   if (input.substr(pos, 2) === "::") {
                                     result3 = "::";
                                     pos += 2;
                                   } else {
                                     result3 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\"::\"");
                                     }
                                   }
+
                                   if (result3 !== null) {
                                     result4 = parse_h16();
+
                                     if (result4 !== null) {
                                       if (input.charCodeAt(pos) === 58) {
                                         result5 = ":";
                                         pos++;
                                       } else {
                                         result5 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result5 !== null) {
                                         result6 = parse_h16();
+
                                         if (result6 !== null) {
                                           if (input.charCodeAt(pos) === 58) {
                                             result7 = ":";
                                             pos++;
                                           } else {
                                             result7 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result7 !== null) {
                                             result8 = parse_ls32();
+
                                             if (result8 !== null) {
                                               result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8];
                                             } else {
@@ -5775,22 +6753,28 @@ module.exports = function () {
                               result0 = null;
                               pos = pos1;
                             }
+
                             if (result0 === null) {
                               pos1 = pos;
                               result0 = parse_h16();
+
                               if (result0 !== null) {
                                 pos2 = pos;
+
                                 if (input.charCodeAt(pos) === 58) {
                                   result1 = ":";
                                   pos++;
                                 } else {
                                   result1 = null;
+
                                   if (reportFailures === 0) {
                                     matchFailed("\":\"");
                                   }
                                 }
+
                                 if (result1 !== null) {
                                   result2 = parse_h16();
+
                                   if (result2 !== null) {
                                     result1 = [result1, result2];
                                   } else {
@@ -5801,20 +6785,26 @@ module.exports = function () {
                                   result1 = null;
                                   pos = pos2;
                                 }
+
                                 result1 = result1 !== null ? result1 : "";
+
                                 if (result1 !== null) {
                                   pos2 = pos;
+
                                   if (input.charCodeAt(pos) === 58) {
                                     result2 = ":";
                                     pos++;
                                   } else {
                                     result2 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\":\"");
                                     }
                                   }
+
                                   if (result2 !== null) {
                                     result3 = parse_h16();
+
                                     if (result3 !== null) {
                                       result2 = [result2, result3];
                                     } else {
@@ -5825,20 +6815,26 @@ module.exports = function () {
                                     result2 = null;
                                     pos = pos2;
                                   }
+
                                   result2 = result2 !== null ? result2 : "";
+
                                   if (result2 !== null) {
                                     pos2 = pos;
+
                                     if (input.charCodeAt(pos) === 58) {
                                       result3 = ":";
                                       pos++;
                                     } else {
                                       result3 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\":\"");
                                       }
                                     }
+
                                     if (result3 !== null) {
                                       result4 = parse_h16();
+
                                       if (result4 !== null) {
                                         result3 = [result3, result4];
                                       } else {
@@ -5849,31 +6845,39 @@ module.exports = function () {
                                       result3 = null;
                                       pos = pos2;
                                     }
+
                                     result3 = result3 !== null ? result3 : "";
+
                                     if (result3 !== null) {
                                       if (input.substr(pos, 2) === "::") {
                                         result4 = "::";
                                         pos += 2;
                                       } else {
                                         result4 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\"::\"");
                                         }
                                       }
+
                                       if (result4 !== null) {
                                         result5 = parse_h16();
+
                                         if (result5 !== null) {
                                           if (input.charCodeAt(pos) === 58) {
                                             result6 = ":";
                                             pos++;
                                           } else {
                                             result6 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result6 !== null) {
                                             result7 = parse_ls32();
+
                                             if (result7 !== null) {
                                               result0 = [result0, result1, result2, result3, result4, result5, result6, result7];
                                             } else {
@@ -5908,22 +6912,28 @@ module.exports = function () {
                                 result0 = null;
                                 pos = pos1;
                               }
+
                               if (result0 === null) {
                                 pos1 = pos;
                                 result0 = parse_h16();
+
                                 if (result0 !== null) {
                                   pos2 = pos;
+
                                   if (input.charCodeAt(pos) === 58) {
                                     result1 = ":";
                                     pos++;
                                   } else {
                                     result1 = null;
+
                                     if (reportFailures === 0) {
                                       matchFailed("\":\"");
                                     }
                                   }
+
                                   if (result1 !== null) {
                                     result2 = parse_h16();
+
                                     if (result2 !== null) {
                                       result1 = [result1, result2];
                                     } else {
@@ -5934,20 +6944,26 @@ module.exports = function () {
                                     result1 = null;
                                     pos = pos2;
                                   }
+
                                   result1 = result1 !== null ? result1 : "";
+
                                   if (result1 !== null) {
                                     pos2 = pos;
+
                                     if (input.charCodeAt(pos) === 58) {
                                       result2 = ":";
                                       pos++;
                                     } else {
                                       result2 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\":\"");
                                       }
                                     }
+
                                     if (result2 !== null) {
                                       result3 = parse_h16();
+
                                       if (result3 !== null) {
                                         result2 = [result2, result3];
                                       } else {
@@ -5958,20 +6974,26 @@ module.exports = function () {
                                       result2 = null;
                                       pos = pos2;
                                     }
+
                                     result2 = result2 !== null ? result2 : "";
+
                                     if (result2 !== null) {
                                       pos2 = pos;
+
                                       if (input.charCodeAt(pos) === 58) {
                                         result3 = ":";
                                         pos++;
                                       } else {
                                         result3 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result3 !== null) {
                                         result4 = parse_h16();
+
                                         if (result4 !== null) {
                                           result3 = [result3, result4];
                                         } else {
@@ -5982,20 +7004,26 @@ module.exports = function () {
                                         result3 = null;
                                         pos = pos2;
                                       }
+
                                       result3 = result3 !== null ? result3 : "";
+
                                       if (result3 !== null) {
                                         pos2 = pos;
+
                                         if (input.charCodeAt(pos) === 58) {
                                           result4 = ":";
                                           pos++;
                                         } else {
                                           result4 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\":\"");
                                           }
                                         }
+
                                         if (result4 !== null) {
                                           result5 = parse_h16();
+
                                           if (result5 !== null) {
                                             result4 = [result4, result5];
                                           } else {
@@ -6006,19 +7034,24 @@ module.exports = function () {
                                           result4 = null;
                                           pos = pos2;
                                         }
+
                                         result4 = result4 !== null ? result4 : "";
+
                                         if (result4 !== null) {
                                           if (input.substr(pos, 2) === "::") {
                                             result5 = "::";
                                             pos += 2;
                                           } else {
                                             result5 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\"::\"");
                                             }
                                           }
+
                                           if (result5 !== null) {
                                             result6 = parse_ls32();
+
                                             if (result6 !== null) {
                                               result0 = [result0, result1, result2, result3, result4, result5, result6];
                                             } else {
@@ -6049,22 +7082,28 @@ module.exports = function () {
                                   result0 = null;
                                   pos = pos1;
                                 }
+
                                 if (result0 === null) {
                                   pos1 = pos;
                                   result0 = parse_h16();
+
                                   if (result0 !== null) {
                                     pos2 = pos;
+
                                     if (input.charCodeAt(pos) === 58) {
                                       result1 = ":";
                                       pos++;
                                     } else {
                                       result1 = null;
+
                                       if (reportFailures === 0) {
                                         matchFailed("\":\"");
                                       }
                                     }
+
                                     if (result1 !== null) {
                                       result2 = parse_h16();
+
                                       if (result2 !== null) {
                                         result1 = [result1, result2];
                                       } else {
@@ -6075,20 +7114,26 @@ module.exports = function () {
                                       result1 = null;
                                       pos = pos2;
                                     }
+
                                     result1 = result1 !== null ? result1 : "";
+
                                     if (result1 !== null) {
                                       pos2 = pos;
+
                                       if (input.charCodeAt(pos) === 58) {
                                         result2 = ":";
                                         pos++;
                                       } else {
                                         result2 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result2 !== null) {
                                         result3 = parse_h16();
+
                                         if (result3 !== null) {
                                           result2 = [result2, result3];
                                         } else {
@@ -6099,20 +7144,26 @@ module.exports = function () {
                                         result2 = null;
                                         pos = pos2;
                                       }
+
                                       result2 = result2 !== null ? result2 : "";
+
                                       if (result2 !== null) {
                                         pos2 = pos;
+
                                         if (input.charCodeAt(pos) === 58) {
                                           result3 = ":";
                                           pos++;
                                         } else {
                                           result3 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\":\"");
                                           }
                                         }
+
                                         if (result3 !== null) {
                                           result4 = parse_h16();
+
                                           if (result4 !== null) {
                                             result3 = [result3, result4];
                                           } else {
@@ -6123,20 +7174,26 @@ module.exports = function () {
                                           result3 = null;
                                           pos = pos2;
                                         }
+
                                         result3 = result3 !== null ? result3 : "";
+
                                         if (result3 !== null) {
                                           pos2 = pos;
+
                                           if (input.charCodeAt(pos) === 58) {
                                             result4 = ":";
                                             pos++;
                                           } else {
                                             result4 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result4 !== null) {
                                             result5 = parse_h16();
+
                                             if (result5 !== null) {
                                               result4 = [result4, result5];
                                             } else {
@@ -6147,20 +7204,26 @@ module.exports = function () {
                                             result4 = null;
                                             pos = pos2;
                                           }
+
                                           result4 = result4 !== null ? result4 : "";
+
                                           if (result4 !== null) {
                                             pos2 = pos;
+
                                             if (input.charCodeAt(pos) === 58) {
                                               result5 = ":";
                                               pos++;
                                             } else {
                                               result5 = null;
+
                                               if (reportFailures === 0) {
                                                 matchFailed("\":\"");
                                               }
                                             }
+
                                             if (result5 !== null) {
                                               result6 = parse_h16();
+
                                               if (result6 !== null) {
                                                 result5 = [result5, result6];
                                               } else {
@@ -6171,19 +7234,24 @@ module.exports = function () {
                                               result5 = null;
                                               pos = pos2;
                                             }
+
                                             result5 = result5 !== null ? result5 : "";
+
                                             if (result5 !== null) {
                                               if (input.substr(pos, 2) === "::") {
                                                 result6 = "::";
                                                 pos += 2;
                                               } else {
                                                 result6 = null;
+
                                                 if (reportFailures === 0) {
                                                   matchFailed("\"::\"");
                                                 }
                                               }
+
                                               if (result6 !== null) {
                                                 result7 = parse_h16();
+
                                                 if (result7 !== null) {
                                                   result0 = [result0, result1, result2, result3, result4, result5, result6, result7];
                                                 } else {
@@ -6218,22 +7286,28 @@ module.exports = function () {
                                     result0 = null;
                                     pos = pos1;
                                   }
+
                                   if (result0 === null) {
                                     pos1 = pos;
                                     result0 = parse_h16();
+
                                     if (result0 !== null) {
                                       pos2 = pos;
+
                                       if (input.charCodeAt(pos) === 58) {
                                         result1 = ":";
                                         pos++;
                                       } else {
                                         result1 = null;
+
                                         if (reportFailures === 0) {
                                           matchFailed("\":\"");
                                         }
                                       }
+
                                       if (result1 !== null) {
                                         result2 = parse_h16();
+
                                         if (result2 !== null) {
                                           result1 = [result1, result2];
                                         } else {
@@ -6244,20 +7318,26 @@ module.exports = function () {
                                         result1 = null;
                                         pos = pos2;
                                       }
+
                                       result1 = result1 !== null ? result1 : "";
+
                                       if (result1 !== null) {
                                         pos2 = pos;
+
                                         if (input.charCodeAt(pos) === 58) {
                                           result2 = ":";
                                           pos++;
                                         } else {
                                           result2 = null;
+
                                           if (reportFailures === 0) {
                                             matchFailed("\":\"");
                                           }
                                         }
+
                                         if (result2 !== null) {
                                           result3 = parse_h16();
+
                                           if (result3 !== null) {
                                             result2 = [result2, result3];
                                           } else {
@@ -6268,20 +7348,26 @@ module.exports = function () {
                                           result2 = null;
                                           pos = pos2;
                                         }
+
                                         result2 = result2 !== null ? result2 : "";
+
                                         if (result2 !== null) {
                                           pos2 = pos;
+
                                           if (input.charCodeAt(pos) === 58) {
                                             result3 = ":";
                                             pos++;
                                           } else {
                                             result3 = null;
+
                                             if (reportFailures === 0) {
                                               matchFailed("\":\"");
                                             }
                                           }
+
                                           if (result3 !== null) {
                                             result4 = parse_h16();
+
                                             if (result4 !== null) {
                                               result3 = [result3, result4];
                                             } else {
@@ -6292,20 +7378,26 @@ module.exports = function () {
                                             result3 = null;
                                             pos = pos2;
                                           }
+
                                           result3 = result3 !== null ? result3 : "";
+
                                           if (result3 !== null) {
                                             pos2 = pos;
+
                                             if (input.charCodeAt(pos) === 58) {
                                               result4 = ":";
                                               pos++;
                                             } else {
                                               result4 = null;
+
                                               if (reportFailures === 0) {
                                                 matchFailed("\":\"");
                                               }
                                             }
+
                                             if (result4 !== null) {
                                               result5 = parse_h16();
+
                                               if (result5 !== null) {
                                                 result4 = [result4, result5];
                                               } else {
@@ -6316,20 +7408,26 @@ module.exports = function () {
                                               result4 = null;
                                               pos = pos2;
                                             }
+
                                             result4 = result4 !== null ? result4 : "";
+
                                             if (result4 !== null) {
                                               pos2 = pos;
+
                                               if (input.charCodeAt(pos) === 58) {
                                                 result5 = ":";
                                                 pos++;
                                               } else {
                                                 result5 = null;
+
                                                 if (reportFailures === 0) {
                                                   matchFailed("\":\"");
                                                 }
                                               }
+
                                               if (result5 !== null) {
                                                 result6 = parse_h16();
+
                                                 if (result6 !== null) {
                                                   result5 = [result5, result6];
                                                 } else {
@@ -6340,20 +7438,26 @@ module.exports = function () {
                                                 result5 = null;
                                                 pos = pos2;
                                               }
+
                                               result5 = result5 !== null ? result5 : "";
+
                                               if (result5 !== null) {
                                                 pos2 = pos;
+
                                                 if (input.charCodeAt(pos) === 58) {
                                                   result6 = ":";
                                                   pos++;
                                                 } else {
                                                   result6 = null;
+
                                                   if (reportFailures === 0) {
                                                     matchFailed("\":\"");
                                                   }
                                                 }
+
                                                 if (result6 !== null) {
                                                   result7 = parse_h16();
+
                                                   if (result7 !== null) {
                                                     result6 = [result6, result7];
                                                   } else {
@@ -6364,17 +7468,21 @@ module.exports = function () {
                                                   result6 = null;
                                                   pos = pos2;
                                                 }
+
                                                 result6 = result6 !== null ? result6 : "";
+
                                                 if (result6 !== null) {
                                                   if (input.substr(pos, 2) === "::") {
                                                     result7 = "::";
                                                     pos += 2;
                                                   } else {
                                                     result7 = null;
+
                                                     if (reportFailures === 0) {
                                                       matchFailed("\"::\"");
                                                     }
                                                   }
+
                                                   if (result7 !== null) {
                                                     result0 = [result0, result1, result2, result3, result4, result5, result6, result7];
                                                   } else {
@@ -6423,31 +7531,39 @@ module.exports = function () {
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host_type = 'IPv6';
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_h16() {
         var result0, result1, result2, result3;
         var pos0;
         pos0 = pos;
         result0 = parse_HEXDIG();
+
         if (result0 !== null) {
           result1 = parse_HEXDIG();
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result2 = parse_HEXDIG();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_HEXDIG();
               result3 = result3 !== null ? result3 : "";
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -6466,25 +7582,31 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_ls32() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_h16();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_h16();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -6499,53 +7621,66 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         if (result0 === null) {
           result0 = parse_IPv4address();
         }
+
         return result0;
       }
+
       function parse_IPv4address() {
         var result0, result1, result2, result3, result4, result5, result6;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_dec_octet();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 46) {
             result1 = ".";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\".\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_dec_octet();
+
             if (result2 !== null) {
               if (input.charCodeAt(pos) === 46) {
                 result3 = ".";
                 pos++;
               } else {
                 result3 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\".\"");
                 }
               }
+
               if (result3 !== null) {
                 result4 = parse_dec_octet();
+
                 if (result4 !== null) {
                   if (input.charCodeAt(pos) === 46) {
                     result5 = ".";
                     pos++;
                   } else {
                     result5 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\".\"");
                     }
                   }
+
                   if (result5 !== null) {
                     result6 = parse_dec_octet();
+
                     if (result6 !== null) {
                       result0 = [result0, result1, result2, result3, result4, result5, result6];
                     } else {
@@ -6576,40 +7711,49 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host_type = 'IPv4';
             return input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_dec_octet() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 2) === "25") {
           result0 = "25";
           pos += 2;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"25\"");
           }
         }
+
         if (result0 !== null) {
           if (/^[0-5]/.test(input.charAt(pos))) {
             result1 = input.charAt(pos);
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("[0-5]");
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -6620,29 +7764,36 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         if (result0 === null) {
           pos0 = pos;
+
           if (input.charCodeAt(pos) === 50) {
             result0 = "2";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"2\"");
             }
           }
+
           if (result0 !== null) {
             if (/^[0-4]/.test(input.charAt(pos))) {
               result1 = input.charAt(pos);
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("[0-4]");
               }
             }
+
             if (result1 !== null) {
               result2 = parse_DIGIT();
+
               if (result2 !== null) {
                 result0 = [result0, result1, result2];
               } else {
@@ -6657,21 +7808,27 @@ module.exports = function () {
             result0 = null;
             pos = pos0;
           }
+
           if (result0 === null) {
             pos0 = pos;
+
             if (input.charCodeAt(pos) === 49) {
               result0 = "1";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"1\"");
               }
             }
+
             if (result0 !== null) {
               result1 = parse_DIGIT();
+
               if (result1 !== null) {
                 result2 = parse_DIGIT();
+
                 if (result2 !== null) {
                   result0 = [result0, result1, result2];
                 } else {
@@ -6686,19 +7843,24 @@ module.exports = function () {
               result0 = null;
               pos = pos0;
             }
+
             if (result0 === null) {
               pos0 = pos;
+
               if (/^[1-9]/.test(input.charAt(pos))) {
                 result0 = input.charAt(pos);
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("[1-9]");
                 }
               }
+
               if (result0 !== null) {
                 result1 = parse_DIGIT();
+
                 if (result1 !== null) {
                   result0 = [result0, result1];
                 } else {
@@ -6709,14 +7871,17 @@ module.exports = function () {
                 result0 = null;
                 pos = pos0;
               }
+
               if (result0 === null) {
                 result0 = parse_DIGIT();
               }
             }
           }
         }
+
         return result0;
       }
+
       function parse_port() {
         var result0, result1, result2, result3, result4;
         var pos0, pos1;
@@ -6724,18 +7889,23 @@ module.exports = function () {
         pos1 = pos;
         result0 = parse_DIGIT();
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result1 = parse_DIGIT();
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_DIGIT();
               result3 = result3 !== null ? result3 : "";
+
               if (result3 !== null) {
                 result4 = parse_DIGIT();
                 result4 = result4 !== null ? result4 : "";
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -6758,6 +7928,7 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, port) {
             port = parseInt(port.join(''));
@@ -6765,27 +7936,34 @@ module.exports = function () {
             return port;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_uri_parameters() {
         var result0, result1, result2;
         var pos0;
         result0 = [];
         pos0 = pos;
+
         if (input.charCodeAt(pos) === 59) {
           result1 = ";";
           pos++;
         } else {
           result1 = null;
+
           if (reportFailures === 0) {
             matchFailed("\";\"");
           }
         }
+
         if (result1 !== null) {
           result2 = parse_uri_parameter();
+
           if (result2 !== null) {
             result1 = [result1, result2];
           } else {
@@ -6796,20 +7974,25 @@ module.exports = function () {
           result1 = null;
           pos = pos0;
         }
+
         while (result1 !== null) {
           result0.push(result1);
           pos0 = pos;
+
           if (input.charCodeAt(pos) === 59) {
             result1 = ";";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\";\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_uri_parameter();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -6821,21 +8004,29 @@ module.exports = function () {
             pos = pos0;
           }
         }
+
         return result0;
       }
+
       function parse_uri_parameter() {
         var result0;
         result0 = parse_transport_param();
+
         if (result0 === null) {
           result0 = parse_user_param();
+
           if (result0 === null) {
             result0 = parse_method_param();
+
             if (result0 === null) {
               result0 = parse_ttl_param();
+
               if (result0 === null) {
                 result0 = parse_maddr_param();
+
                 if (result0 === null) {
                   result0 = parse_lr_param();
+
                   if (result0 === null) {
                     result0 = parse_other_param();
                   }
@@ -6844,68 +8035,82 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_transport_param() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 10).toLowerCase() === "transport=") {
           result0 = input.substr(pos, 10);
           pos += 10;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"transport=\"");
           }
         }
+
         if (result0 !== null) {
           if (input.substr(pos, 3).toLowerCase() === "udp") {
             result1 = input.substr(pos, 3);
             pos += 3;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"udp\"");
             }
           }
+
           if (result1 === null) {
             if (input.substr(pos, 3).toLowerCase() === "tcp") {
               result1 = input.substr(pos, 3);
               pos += 3;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"tcp\"");
               }
             }
+
             if (result1 === null) {
               if (input.substr(pos, 4).toLowerCase() === "sctp") {
                 result1 = input.substr(pos, 4);
                 pos += 4;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"sctp\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.substr(pos, 3).toLowerCase() === "tls") {
                   result1 = input.substr(pos, 3);
                   pos += 3;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"tls\"");
                   }
                 }
+
                 if (result1 === null) {
                   result1 = parse_token();
                 }
               }
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -6916,55 +8121,67 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, transport) {
             if (!data.uri_params) data.uri_params = {};
             data.uri_params['transport'] = transport.toLowerCase();
           }(pos0, result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_user_param() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "user=") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"user=\"");
           }
         }
+
         if (result0 !== null) {
           if (input.substr(pos, 5).toLowerCase() === "phone") {
             result1 = input.substr(pos, 5);
             pos += 5;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"phone\"");
             }
           }
+
           if (result1 === null) {
             if (input.substr(pos, 2).toLowerCase() === "ip") {
               result1 = input.substr(pos, 2);
               pos += 2;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"ip\"");
               }
             }
+
             if (result1 === null) {
               result1 = parse_token();
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -6975,33 +8192,41 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, user) {
             if (!data.uri_params) data.uri_params = {};
             data.uri_params['user'] = user.toLowerCase();
           }(pos0, result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_method_param() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 7).toLowerCase() === "method=") {
           result0 = input.substr(pos, 7);
           pos += 7;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"method=\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_Method();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7012,33 +8237,41 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, method) {
             if (!data.uri_params) data.uri_params = {};
             data.uri_params['method'] = method;
           }(pos0, result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_ttl_param() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 4).toLowerCase() === "ttl=") {
           result0 = input.substr(pos, 4);
           pos += 4;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"ttl=\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_ttl();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7049,33 +8282,41 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, ttl) {
             if (!data.params) data.params = {};
             data.params['ttl'] = ttl;
           }(pos0, result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_maddr_param() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "maddr=") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"maddr=\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_host();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7086,44 +8327,55 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, maddr) {
             if (!data.uri_params) data.uri_params = {};
             data.uri_params['maddr'] = maddr;
           }(pos0, result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_lr_param() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 2).toLowerCase() === "lr") {
           result0 = input.substr(pos, 2);
           pos += 2;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"lr\"");
           }
         }
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 61) {
             result1 = "=";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"=\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -7134,7 +8386,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7145,36 +8399,45 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             if (!data.uri_params) data.uri_params = {};
             data.uri_params['lr'] = undefined;
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_other_param() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_pname();
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 61) {
             result1 = "=";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"=\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_pvalue();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -7185,7 +8448,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7196,29 +8461,37 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, param, value) {
             if (!data.uri_params) data.uri_params = {};
+
             if (typeof value === 'undefined') {
               value = undefined;
             } else {
               value = value[1];
             }
+
             data.uri_params[param.toLowerCase()] = value;
           }(pos0, result0[0], result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_pname() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_paramchar();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_paramchar();
@@ -7226,23 +8499,29 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, pname) {
             return pname.join('');
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_pvalue() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_paramchar();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_paramchar();
@@ -7250,94 +8529,116 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, pvalue) {
             return pvalue.join('');
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_paramchar() {
         var result0;
         result0 = parse_param_unreserved();
+
         if (result0 === null) {
           result0 = parse_unreserved();
+
           if (result0 === null) {
             result0 = parse_escaped();
           }
         }
+
         return result0;
       }
+
       function parse_param_unreserved() {
         var result0;
+
         if (input.charCodeAt(pos) === 91) {
           result0 = "[";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"[\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 93) {
             result0 = "]";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"]\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 47) {
               result0 = "/";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"/\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 58) {
                 result0 = ":";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\":\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 38) {
                   result0 = "&";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"&\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 43) {
                     result0 = "+";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"+\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 36) {
                       result0 = "$";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"$\"");
                       }
@@ -7348,37 +8649,47 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_headers() {
         var result0, result1, result2, result3, result4;
         var pos0, pos1;
         pos0 = pos;
+
         if (input.charCodeAt(pos) === 63) {
           result0 = "?";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"?\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_header();
+
           if (result1 !== null) {
             result2 = [];
             pos1 = pos;
+
             if (input.charCodeAt(pos) === 38) {
               result3 = "&";
               pos++;
             } else {
               result3 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"&\"");
               }
             }
+
             if (result3 !== null) {
               result4 = parse_header();
+
               if (result4 !== null) {
                 result3 = [result3, result4];
               } else {
@@ -7389,20 +8700,25 @@ module.exports = function () {
               result3 = null;
               pos = pos1;
             }
+
             while (result3 !== null) {
               result2.push(result3);
               pos1 = pos;
+
               if (input.charCodeAt(pos) === 38) {
                 result3 = "&";
                 pos++;
               } else {
                 result3 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"&\"");
                 }
               }
+
               if (result3 !== null) {
                 result4 = parse_header();
+
                 if (result4 !== null) {
                   result3 = [result3, result4];
                 } else {
@@ -7414,6 +8730,7 @@ module.exports = function () {
                 pos = pos1;
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -7428,26 +8745,32 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_header() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_hname();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 61) {
             result1 = "=";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"=\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_hvalue();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -7462,11 +8785,13 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, hname, hvalue) {
             hname = hname.join('').toLowerCase();
             hvalue = hvalue.join('');
             if (!data.uri_headers) data.uri_headers = {};
+
             if (!data.uri_headers[hname]) {
               data.uri_headers[hname] = [hvalue];
             } else {
@@ -7474,27 +8799,36 @@ module.exports = function () {
             }
           }(pos0, result0[0], result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hname() {
         var result0, result1;
         result1 = parse_hnv_unreserved();
+
         if (result1 === null) {
           result1 = parse_unreserved();
+
           if (result1 === null) {
             result1 = parse_escaped();
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_hnv_unreserved();
+
             if (result1 === null) {
               result1 = parse_unreserved();
+
               if (result1 === null) {
                 result1 = parse_escaped();
               }
@@ -7503,97 +8837,120 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         return result0;
       }
+
       function parse_hvalue() {
         var result0, result1;
         result0 = [];
         result1 = parse_hnv_unreserved();
+
         if (result1 === null) {
           result1 = parse_unreserved();
+
           if (result1 === null) {
             result1 = parse_escaped();
           }
         }
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_hnv_unreserved();
+
           if (result1 === null) {
             result1 = parse_unreserved();
+
             if (result1 === null) {
               result1 = parse_escaped();
             }
           }
         }
+
         return result0;
       }
+
       function parse_hnv_unreserved() {
         var result0;
+
         if (input.charCodeAt(pos) === 91) {
           result0 = "[";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"[\"");
           }
         }
+
         if (result0 === null) {
           if (input.charCodeAt(pos) === 93) {
             result0 = "]";
             pos++;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"]\"");
             }
           }
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 47) {
               result0 = "/";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"/\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 63) {
                 result0 = "?";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"?\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 58) {
                   result0 = ":";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\":\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 43) {
                     result0 = "+";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"+\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 36) {
                       result0 = "$";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"$\"");
                       }
@@ -7604,29 +8961,39 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_Request_Response() {
         var result0;
         result0 = parse_Status_Line();
+
         if (result0 === null) {
           result0 = parse_Request_Line();
         }
+
         return result0;
       }
+
       function parse_Request_Line() {
         var result0, result1, result2, result3, result4;
         var pos0;
         pos0 = pos;
         result0 = parse_Method();
+
         if (result0 !== null) {
           result1 = parse_SP();
+
           if (result1 !== null) {
             result2 = parse_Request_URI();
+
             if (result2 !== null) {
               result3 = parse_SP();
+
               if (result3 !== null) {
                 result4 = parse_SIP_Version();
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -7649,36 +9016,46 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Request_URI() {
         var result0;
         result0 = parse_SIP_URI();
+
         if (result0 === null) {
           result0 = parse_absoluteURI();
         }
+
         return result0;
       }
+
       function parse_absoluteURI() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_scheme();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 58) {
             result1 = ":";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\":\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_hier_part();
+
             if (result2 === null) {
               result2 = parse_opaque_part();
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -7693,29 +9070,37 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hier_part() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_net_path();
+
         if (result0 === null) {
           result0 = parse_abs_path();
         }
+
         if (result0 !== null) {
           pos1 = pos;
+
           if (input.charCodeAt(pos) === 63) {
             result1 = "?";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"?\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_query();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -7726,7 +9111,9 @@ module.exports = function () {
             result1 = null;
             pos = pos1;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7737,26 +9124,33 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_net_path() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 2) === "//") {
           result0 = "//";
           pos += 2;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"//\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_authority();
+
           if (result1 !== null) {
             result2 = parse_abs_path();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -7771,23 +9165,29 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_abs_path() {
         var result0, result1;
         var pos0;
         pos0 = pos;
+
         if (input.charCodeAt(pos) === 47) {
           result0 = "/";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"/\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_path_segments();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7798,20 +9198,25 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_opaque_part() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_uric_no_slash();
+
         if (result0 !== null) {
           result1 = [];
           result2 = parse_uric();
+
           while (result2 !== null) {
             result1.push(result2);
             result2 = parse_uric();
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -7822,110 +9227,135 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_uric() {
         var result0;
         result0 = parse_reserved();
+
         if (result0 === null) {
           result0 = parse_unreserved();
+
           if (result0 === null) {
             result0 = parse_escaped();
           }
         }
+
         return result0;
       }
+
       function parse_uric_no_slash() {
         var result0;
         result0 = parse_unreserved();
+
         if (result0 === null) {
           result0 = parse_escaped();
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 59) {
               result0 = ";";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\";\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 63) {
                 result0 = "?";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"?\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 58) {
                   result0 = ":";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\":\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 64) {
                     result0 = "@";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"@\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 38) {
                       result0 = "&";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"&\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 61) {
                         result0 = "=";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"=\"");
                         }
                       }
+
                       if (result0 === null) {
                         if (input.charCodeAt(pos) === 43) {
                           result0 = "+";
                           pos++;
                         } else {
                           result0 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"+\"");
                           }
                         }
+
                         if (result0 === null) {
                           if (input.charCodeAt(pos) === 36) {
                             result0 = "$";
                             pos++;
                           } else {
                             result0 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"$\"");
                             }
                           }
+
                           if (result0 === null) {
                             if (input.charCodeAt(pos) === 44) {
                               result0 = ",";
                               pos++;
                             } else {
                               result0 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\",\"");
                               }
@@ -7940,27 +9370,34 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_path_segments() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_segment();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
+
           if (input.charCodeAt(pos) === 47) {
             result2 = "/";
             pos++;
           } else {
             result2 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"/\"");
             }
           }
+
           if (result2 !== null) {
             result3 = parse_segment();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -7971,20 +9408,25 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
+
             if (input.charCodeAt(pos) === 47) {
               result2 = "/";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"/\"");
               }
             }
+
             if (result2 !== null) {
               result3 = parse_segment();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -7996,6 +9438,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8006,32 +9449,40 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_segment() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = [];
         result1 = parse_pchar();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_pchar();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
+
           if (input.charCodeAt(pos) === 59) {
             result2 = ";";
             pos++;
           } else {
             result2 = null;
+
             if (reportFailures === 0) {
               matchFailed("\";\"");
             }
           }
+
           if (result2 !== null) {
             result3 = parse_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -8042,20 +9493,25 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
+
             if (input.charCodeAt(pos) === 59) {
               result2 = ";";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\";\"");
               }
             }
+
             if (result2 !== null) {
               result3 = parse_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -8067,6 +9523,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8077,89 +9534,109 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_param() {
         var result0, result1;
         result0 = [];
         result1 = parse_pchar();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_pchar();
         }
+
         return result0;
       }
+
       function parse_pchar() {
         var result0;
         result0 = parse_unreserved();
+
         if (result0 === null) {
           result0 = parse_escaped();
+
           if (result0 === null) {
             if (input.charCodeAt(pos) === 58) {
               result0 = ":";
               pos++;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\":\"");
               }
             }
+
             if (result0 === null) {
               if (input.charCodeAt(pos) === 64) {
                 result0 = "@";
                 pos++;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"@\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.charCodeAt(pos) === 38) {
                   result0 = "&";
                   pos++;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"&\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.charCodeAt(pos) === 61) {
                     result0 = "=";
                     pos++;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"=\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.charCodeAt(pos) === 43) {
                       result0 = "+";
                       pos++;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"+\"");
                       }
                     }
+
                     if (result0 === null) {
                       if (input.charCodeAt(pos) === 36) {
                         result0 = "$";
                         pos++;
                       } else {
                         result0 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"$\"");
                         }
                       }
+
                       if (result0 === null) {
                         if (input.charCodeAt(pos) === 44) {
                           result0 = ",";
                           pos++;
                         } else {
                           result0 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\",\"");
                           }
@@ -8172,45 +9649,55 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_scheme() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_ALPHA();
+
         if (result0 !== null) {
           result1 = [];
           result2 = parse_ALPHA();
+
           if (result2 === null) {
             result2 = parse_DIGIT();
+
             if (result2 === null) {
               if (input.charCodeAt(pos) === 43) {
                 result2 = "+";
                 pos++;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"+\"");
                 }
               }
+
               if (result2 === null) {
                 if (input.charCodeAt(pos) === 45) {
                   result2 = "-";
                   pos++;
                 } else {
                   result2 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"-\"");
                   }
                 }
+
                 if (result2 === null) {
                   if (input.charCodeAt(pos) === 46) {
                     result2 = ".";
                     pos++;
                   } else {
                     result2 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\".\"");
                     }
@@ -8219,37 +9706,45 @@ module.exports = function () {
               }
             }
           }
+
           while (result2 !== null) {
             result1.push(result2);
             result2 = parse_ALPHA();
+
             if (result2 === null) {
               result2 = parse_DIGIT();
+
               if (result2 === null) {
                 if (input.charCodeAt(pos) === 43) {
                   result2 = "+";
                   pos++;
                 } else {
                   result2 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"+\"");
                   }
                 }
+
                 if (result2 === null) {
                   if (input.charCodeAt(pos) === 45) {
                     result2 = "-";
                     pos++;
                   } else {
                     result2 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"-\"");
                     }
                   }
+
                   if (result2 === null) {
                     if (input.charCodeAt(pos) === 46) {
                       result2 = ".";
                       pos++;
                     } else {
                       result2 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\".\"");
                       }
@@ -8259,6 +9754,7 @@ module.exports = function () {
               }
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8269,40 +9765,50 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.scheme = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_authority() {
         var result0;
         result0 = parse_srvr();
+
         if (result0 === null) {
           result0 = parse_reg_name();
         }
+
         return result0;
       }
+
       function parse_srvr() {
         var result0, result1;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_userinfo();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 64) {
             result1 = "@";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"@\"");
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8313,9 +9819,12 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result1 = parse_hostport();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8326,90 +9835,109 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         result0 = result0 !== null ? result0 : "";
         return result0;
       }
+
       function parse_reg_name() {
         var result0, result1;
         result1 = parse_unreserved();
+
         if (result1 === null) {
           result1 = parse_escaped();
+
           if (result1 === null) {
             if (input.charCodeAt(pos) === 36) {
               result1 = "$";
               pos++;
             } else {
               result1 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"$\"");
               }
             }
+
             if (result1 === null) {
               if (input.charCodeAt(pos) === 44) {
                 result1 = ",";
                 pos++;
               } else {
                 result1 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\",\"");
                 }
               }
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 59) {
                   result1 = ";";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\";\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 58) {
                     result1 = ":";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\":\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 64) {
                       result1 = "@";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"@\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 38) {
                         result1 = "&";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"&\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 61) {
                           result1 = "=";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"=\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 43) {
                             result1 = "+";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"+\"");
                             }
@@ -8423,89 +9951,108 @@ module.exports = function () {
             }
           }
         }
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_unreserved();
+
             if (result1 === null) {
               result1 = parse_escaped();
+
               if (result1 === null) {
                 if (input.charCodeAt(pos) === 36) {
                   result1 = "$";
                   pos++;
                 } else {
                   result1 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"$\"");
                   }
                 }
+
                 if (result1 === null) {
                   if (input.charCodeAt(pos) === 44) {
                     result1 = ",";
                     pos++;
                   } else {
                     result1 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\",\"");
                     }
                   }
+
                   if (result1 === null) {
                     if (input.charCodeAt(pos) === 59) {
                       result1 = ";";
                       pos++;
                     } else {
                       result1 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\";\"");
                       }
                     }
+
                     if (result1 === null) {
                       if (input.charCodeAt(pos) === 58) {
                         result1 = ":";
                         pos++;
                       } else {
                         result1 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\":\"");
                         }
                       }
+
                       if (result1 === null) {
                         if (input.charCodeAt(pos) === 64) {
                           result1 = "@";
                           pos++;
                         } else {
                           result1 = null;
+
                           if (reportFailures === 0) {
                             matchFailed("\"@\"");
                           }
                         }
+
                         if (result1 === null) {
                           if (input.charCodeAt(pos) === 38) {
                             result1 = "&";
                             pos++;
                           } else {
                             result1 = null;
+
                             if (reportFailures === 0) {
                               matchFailed("\"&\"");
                             }
                           }
+
                           if (result1 === null) {
                             if (input.charCodeAt(pos) === 61) {
                               result1 = "=";
                               pos++;
                             } else {
                               result1 = null;
+
                               if (reportFailures === 0) {
                                 matchFailed("\"=\"");
                               }
                             }
+
                             if (result1 === null) {
                               if (input.charCodeAt(pos) === 43) {
                                 result1 = "+";
                                 pos++;
                               } else {
                                 result1 = null;
+
                                 if (reportFailures === 0) {
                                   matchFailed("\"+\"");
                                 }
@@ -8523,46 +10070,58 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         return result0;
       }
+
       function parse_query() {
         var result0, result1;
         result0 = [];
         result1 = parse_uric();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_uric();
         }
+
         return result0;
       }
+
       function parse_SIP_Version() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "sip") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"SIP\"");
           }
         }
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 47) {
             result1 = "/";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"/\"");
             }
           }
+
           if (result1 !== null) {
             result3 = parse_DIGIT();
+
             if (result3 !== null) {
               result2 = [];
+
               while (result3 !== null) {
                 result2.push(result3);
                 result3 = parse_DIGIT();
@@ -8570,20 +10129,25 @@ module.exports = function () {
             } else {
               result2 = null;
             }
+
             if (result2 !== null) {
               if (input.charCodeAt(pos) === 46) {
                 result3 = ".";
                 pos++;
               } else {
                 result3 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\".\"");
                 }
               }
+
               if (result3 !== null) {
                 result5 = parse_DIGIT();
+
                 if (result5 !== null) {
                   result4 = [];
+
                   while (result5 !== null) {
                     result4.push(result5);
                     result5 = parse_DIGIT();
@@ -8591,6 +10155,7 @@ module.exports = function () {
                 } else {
                   result4 = null;
                 }
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -8613,154 +10178,203 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.sip_version = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_INVITEm() {
         var result0;
+
         if (input.substr(pos, 6) === "INVITE") {
           result0 = "INVITE";
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"INVITE\"");
           }
         }
+
         return result0;
       }
+
       function parse_ACKm() {
         var result0;
+
         if (input.substr(pos, 3) === "ACK") {
           result0 = "ACK";
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"ACK\"");
           }
         }
+
         return result0;
       }
+
       function parse_OPTIONSm() {
         var result0;
+
         if (input.substr(pos, 7) === "OPTIONS") {
           result0 = "OPTIONS";
           pos += 7;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"OPTIONS\"");
           }
         }
+
         return result0;
       }
+
       function parse_BYEm() {
         var result0;
+
         if (input.substr(pos, 3) === "BYE") {
           result0 = "BYE";
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"BYE\"");
           }
         }
+
         return result0;
       }
+
       function parse_CANCELm() {
         var result0;
+
         if (input.substr(pos, 6) === "CANCEL") {
           result0 = "CANCEL";
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"CANCEL\"");
           }
         }
+
         return result0;
       }
+
       function parse_REGISTERm() {
         var result0;
+
         if (input.substr(pos, 8) === "REGISTER") {
           result0 = "REGISTER";
           pos += 8;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"REGISTER\"");
           }
         }
+
         return result0;
       }
+
       function parse_SUBSCRIBEm() {
         var result0;
+
         if (input.substr(pos, 9) === "SUBSCRIBE") {
           result0 = "SUBSCRIBE";
           pos += 9;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"SUBSCRIBE\"");
           }
         }
+
         return result0;
       }
+
       function parse_NOTIFYm() {
         var result0;
+
         if (input.substr(pos, 6) === "NOTIFY") {
           result0 = "NOTIFY";
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"NOTIFY\"");
           }
         }
+
         return result0;
       }
+
       function parse_REFERm() {
         var result0;
+
         if (input.substr(pos, 5) === "REFER") {
           result0 = "REFER";
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"REFER\"");
           }
         }
+
         return result0;
       }
+
       function parse_Method() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_INVITEm();
+
         if (result0 === null) {
           result0 = parse_ACKm();
+
           if (result0 === null) {
             result0 = parse_OPTIONSm();
+
             if (result0 === null) {
               result0 = parse_BYEm();
+
               if (result0 === null) {
                 result0 = parse_CANCELm();
+
                 if (result0 === null) {
                   result0 = parse_REGISTERm();
+
                   if (result0 === null) {
                     result0 = parse_SUBSCRIBEm();
+
                     if (result0 === null) {
                       result0 = parse_NOTIFYm();
+
                       if (result0 === null) {
                         result0 = parse_REFERm();
+
                         if (result0 === null) {
                           result0 = parse_token();
                         }
@@ -8772,30 +10386,39 @@ module.exports = function () {
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.method = input.substring(pos, offset);
             return data.method;
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Status_Line() {
         var result0, result1, result2, result3, result4;
         var pos0;
         pos0 = pos;
         result0 = parse_SIP_Version();
+
         if (result0 !== null) {
           result1 = parse_SP();
+
           if (result1 !== null) {
             result2 = parse_Status_Code();
+
             if (result2 !== null) {
               result3 = parse_SP();
+
               if (result3 !== null) {
                 result4 = parse_Reason_Phrase();
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -8818,32 +10441,41 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Status_Code() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_extension_code();
+
         if (result0 !== null) {
           result0 = function (offset, status_code) {
             data.status_code = parseInt(status_code.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_extension_code() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_DIGIT();
+
         if (result0 !== null) {
           result1 = parse_DIGIT();
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -8858,24 +10490,32 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Reason_Phrase() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result0 = [];
         result1 = parse_reserved();
+
         if (result1 === null) {
           result1 = parse_unreserved();
+
           if (result1 === null) {
             result1 = parse_escaped();
+
             if (result1 === null) {
               result1 = parse_UTF8_NONASCII();
+
               if (result1 === null) {
                 result1 = parse_UTF8_CONT();
+
                 if (result1 === null) {
                   result1 = parse_SP();
+
                   if (result1 === null) {
                     result1 = parse_HTAB();
                   }
@@ -8884,19 +10524,26 @@ module.exports = function () {
             }
           }
         }
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_reserved();
+
           if (result1 === null) {
             result1 = parse_unreserved();
+
             if (result1 === null) {
               result1 = parse_escaped();
+
               if (result1 === null) {
                 result1 = parse_UTF8_NONASCII();
+
                 if (result1 === null) {
                   result1 = parse_UTF8_CONT();
+
                   if (result1 === null) {
                     result1 = parse_SP();
+
                     if (result1 === null) {
                       result1 = parse_HTAB();
                     }
@@ -8906,27 +10553,34 @@ module.exports = function () {
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.reason_phrase = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Allow_Events() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_event_type();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_event_type();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -8937,12 +10591,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_event_type();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -8954,6 +10611,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -8964,27 +10622,34 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Call_ID() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_word();
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 64) {
             result1 = "@";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"@\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_word();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -8995,7 +10660,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9006,30 +10673,38 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Contact() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         result0 = parse_STAR();
+
         if (result0 === null) {
           pos1 = pos;
           result0 = parse_contact_param();
+
           if (result0 !== null) {
             result1 = [];
             pos2 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_contact_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -9040,12 +10715,15 @@ module.exports = function () {
               result2 = null;
               pos = pos2;
             }
+
             while (result2 !== null) {
               result1.push(result2);
               pos2 = pos;
               result2 = parse_COMMA();
+
               if (result2 !== null) {
                 result3 = parse_contact_param();
+
                 if (result3 !== null) {
                   result2 = [result2, result3];
                 } else {
@@ -9057,6 +10735,7 @@ module.exports = function () {
                 pos = pos2;
               }
             }
+
             if (result1 !== null) {
               result0 = [result0, result1];
             } else {
@@ -9068,16 +10747,19 @@ module.exports = function () {
             pos = pos1;
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var idx, length;
             length = data.multi_header.length;
+
             for (idx = 0; idx < length; idx++) {
               if (data.multi_header[idx].parsed === null) {
                 data = null;
                 break;
               }
             }
+
             if (data !== null) {
               data = data.multi_header;
             } else {
@@ -9085,26 +10767,33 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_contact_param() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SIP_URI_noparams();
+
         if (result0 === null) {
           result0 = parse_name_addr();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_contact_params();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -9115,12 +10804,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_contact_params();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -9132,6 +10824,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9142,10 +10835,12 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var header;
             if (!data.multi_header) data.multi_header = [];
+
             try {
               header = new NameAddrHeader(data.uri, data.display_name, data.params);
               delete data.uri;
@@ -9154,6 +10849,7 @@ module.exports = function () {
             } catch (e) {
               header = null;
             }
+
             data.multi_header.push({
               'possition': pos,
               'offset': offset,
@@ -9161,23 +10857,30 @@ module.exports = function () {
             });
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_name_addr() {
         var result0, result1, result2, result3;
         var pos0;
         pos0 = pos;
         result0 = parse_display_name();
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result1 = parse_LAQUOT();
+
           if (result1 !== null) {
             result2 = parse_SIP_URI();
+
             if (result2 !== null) {
               result3 = parse_RAQUOT();
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -9196,20 +10899,25 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_display_name() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_LWS();
+
           if (result2 !== null) {
             result3 = parse_token();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -9220,12 +10928,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_LWS();
+
             if (result2 !== null) {
               result3 = parse_token();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -9237,6 +10948,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9247,9 +10959,11 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 === null) {
           result0 = parse_quoted_string_clean();
         }
+
         if (result0 !== null) {
           result0 = function (offset, display_name) {
             if (typeof display_name === 'string') {
@@ -9263,40 +10977,52 @@ module.exports = function () {
             }
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_contact_params() {
         var result0;
         result0 = parse_c_p_q();
+
         if (result0 === null) {
           result0 = parse_c_p_expires();
+
           if (result0 === null) {
             result0 = parse_generic_param();
           }
         }
+
         return result0;
       }
+
       function parse_c_p_q() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 1).toLowerCase() === "q") {
           result0 = input.substr(pos, 1);
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"q\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_qvalue();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -9311,35 +11037,44 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, q) {
             if (!data.params) data.params = {};
             data.params['q'] = q;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_c_p_expires() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 7).toLowerCase() === "expires") {
           result0 = input.substr(pos, 7);
           pos += 7;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"expires\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_delta_seconds();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -9354,24 +11089,30 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, expires) {
             if (!data.params) data.params = {};
             data.params['expires'] = expires;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_delta_seconds() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_DIGIT();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_DIGIT();
@@ -9379,50 +11120,63 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, delta_seconds) {
             return parseInt(delta_seconds.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_qvalue() {
         var result0, result1, result2, result3, result4;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
+
         if (input.charCodeAt(pos) === 48) {
           result0 = "0";
           pos++;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"0\"");
           }
         }
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 46) {
             result1 = ".";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\".\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_DIGIT();
               result3 = result3 !== null ? result3 : "";
+
               if (result3 !== null) {
                 result4 = parse_DIGIT();
                 result4 = result4 !== null ? result4 : "";
+
                 if (result4 !== null) {
                   result1 = [result1, result2, result3, result4];
                 } else {
@@ -9441,7 +11195,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9452,27 +11208,34 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             return parseFloat(input.substring(pos, offset));
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_generic_param() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           pos2 = pos;
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_gen_value();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -9483,7 +11246,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9494,44 +11259,57 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, param, value) {
             if (!data.params) data.params = {};
+
             if (typeof value === 'undefined') {
               value = undefined;
             } else {
               value = value[1];
             }
+
             data.params[param.toLowerCase()] = value;
           }(pos0, result0[0], result0[1]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_gen_value() {
         var result0;
         result0 = parse_token();
+
         if (result0 === null) {
           result0 = parse_host();
+
           if (result0 === null) {
             result0 = parse_quoted_string();
           }
         }
+
         return result0;
       }
+
       function parse_Content_Disposition() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_disp_type();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_disp_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -9542,12 +11320,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_disp_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -9559,6 +11340,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9569,104 +11351,129 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_disp_type() {
         var result0;
+
         if (input.substr(pos, 6).toLowerCase() === "render") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"render\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 7).toLowerCase() === "session") {
             result0 = input.substr(pos, 7);
             pos += 7;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"session\"");
             }
           }
+
           if (result0 === null) {
             if (input.substr(pos, 4).toLowerCase() === "icon") {
               result0 = input.substr(pos, 4);
               pos += 4;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"icon\"");
               }
             }
+
             if (result0 === null) {
               if (input.substr(pos, 5).toLowerCase() === "alert") {
                 result0 = input.substr(pos, 5);
                 pos += 5;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"alert\"");
                 }
               }
+
               if (result0 === null) {
                 result0 = parse_token();
               }
             }
           }
         }
+
         return result0;
       }
+
       function parse_disp_param() {
         var result0;
         result0 = parse_handling_param();
+
         if (result0 === null) {
           result0 = parse_generic_param();
         }
+
         return result0;
       }
+
       function parse_handling_param() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 8).toLowerCase() === "handling") {
           result0 = input.substr(pos, 8);
           pos += 8;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"handling\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             if (input.substr(pos, 8).toLowerCase() === "optional") {
               result2 = input.substr(pos, 8);
               pos += 8;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"optional\"");
               }
             }
+
             if (result2 === null) {
               if (input.substr(pos, 8).toLowerCase() === "required") {
                 result2 = input.substr(pos, 8);
                 pos += 8;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"required\"");
                 }
               }
+
               if (result2 === null) {
                 result2 = parse_token();
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -9681,19 +11488,24 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Content_Encoding() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_token();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -9704,12 +11516,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_token();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -9721,6 +11536,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9731,15 +11547,19 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Content_Length() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_DIGIT();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_DIGIT();
@@ -9747,46 +11567,59 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, length) {
             data = parseInt(length.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Content_Type() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_media_type();
+
         if (result0 !== null) {
           result0 = function (offset) {
             data = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_media_type() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_m_type();
+
         if (result0 !== null) {
           result1 = parse_SLASH();
+
           if (result1 !== null) {
             result2 = parse_m_subtype();
+
             if (result2 !== null) {
               result3 = [];
               pos1 = pos;
               result4 = parse_SEMI();
+
               if (result4 !== null) {
                 result5 = parse_m_parameter();
+
                 if (result5 !== null) {
                   result4 = [result4, result5];
                 } else {
@@ -9797,12 +11630,15 @@ module.exports = function () {
                 result4 = null;
                 pos = pos1;
               }
+
               while (result4 !== null) {
                 result3.push(result4);
                 pos1 = pos;
                 result4 = parse_SEMI();
+
                 if (result4 !== null) {
                   result5 = parse_m_parameter();
+
                   if (result5 !== null) {
                     result4 = [result4, result5];
                   } else {
@@ -9814,6 +11650,7 @@ module.exports = function () {
                   pos = pos1;
                 }
               }
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -9832,67 +11669,83 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_m_type() {
         var result0;
         result0 = parse_discrete_type();
+
         if (result0 === null) {
           result0 = parse_composite_type();
         }
+
         return result0;
       }
+
       function parse_discrete_type() {
         var result0;
+
         if (input.substr(pos, 4).toLowerCase() === "text") {
           result0 = input.substr(pos, 4);
           pos += 4;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"text\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 5).toLowerCase() === "image") {
             result0 = input.substr(pos, 5);
             pos += 5;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"image\"");
             }
           }
+
           if (result0 === null) {
             if (input.substr(pos, 5).toLowerCase() === "audio") {
               result0 = input.substr(pos, 5);
               pos += 5;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"audio\"");
               }
             }
+
             if (result0 === null) {
               if (input.substr(pos, 5).toLowerCase() === "video") {
                 result0 = input.substr(pos, 5);
                 pos += 5;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"video\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.substr(pos, 11).toLowerCase() === "application") {
                   result0 = input.substr(pos, 11);
                   pos += 11;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"application\"");
                   }
                 }
+
                 if (result0 === null) {
                   result0 = parse_extension_token();
                 }
@@ -9900,58 +11753,74 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_composite_type() {
         var result0;
+
         if (input.substr(pos, 7).toLowerCase() === "message") {
           result0 = input.substr(pos, 7);
           pos += 7;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"message\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 9).toLowerCase() === "multipart") {
             result0 = input.substr(pos, 9);
             pos += 9;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"multipart\"");
             }
           }
+
           if (result0 === null) {
             result0 = parse_extension_token();
           }
         }
+
         return result0;
       }
+
       function parse_extension_token() {
         var result0;
         result0 = parse_token();
+
         if (result0 === null) {
           result0 = parse_x_token();
         }
+
         return result0;
       }
+
       function parse_x_token() {
         var result0, result1;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 2).toLowerCase() === "x-") {
           result0 = input.substr(pos, 2);
           pos += 2;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"x-\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_token();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -9962,25 +11831,33 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_m_subtype() {
         var result0;
         result0 = parse_extension_token();
+
         if (result0 === null) {
           result0 = parse_token();
         }
+
         return result0;
       }
+
       function parse_m_parameter() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_m_value();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -9995,25 +11872,33 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_m_value() {
         var result0;
         result0 = parse_token();
+
         if (result0 === null) {
           result0 = parse_quoted_string();
         }
+
         return result0;
       }
+
       function parse_CSeq() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_CSeq_value();
+
         if (result0 !== null) {
           result1 = parse_LWS();
+
           if (result1 !== null) {
             result2 = parse_Method();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10028,15 +11913,19 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_CSeq_value() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_DIGIT();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_DIGIT();
@@ -10044,43 +11933,54 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, cseq_value) {
             data.value = parseInt(cseq_value.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Expires() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_delta_seconds();
+
         if (result0 !== null) {
           result0 = function (offset, expires) {
             data = expires;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Event() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_event_type();
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_generic_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -10091,12 +11991,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_generic_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -10108,6 +12011,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -10118,35 +12022,44 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, event_type) {
             data.event = event_type.join('').toLowerCase();
           }(pos0, result0[0]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_event_type() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token_nodot();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
+
           if (input.charCodeAt(pos) === 46) {
             result2 = ".";
             pos++;
           } else {
             result2 = null;
+
             if (reportFailures === 0) {
               matchFailed("\".\"");
             }
           }
+
           if (result2 !== null) {
             result3 = parse_token_nodot();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -10157,20 +12070,25 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
+
             if (input.charCodeAt(pos) === 46) {
               result2 = ".";
               pos++;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\".\"");
               }
             }
+
             if (result2 !== null) {
               result3 = parse_token_nodot();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -10182,6 +12100,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -10192,23 +12111,29 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_From() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SIP_URI_noparams();
+
         if (result0 === null) {
           result0 = parse_name_addr();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_from_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -10219,12 +12144,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_from_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -10236,6 +12164,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -10246,11 +12175,14 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var tag = data.tag;
+
             try {
               data = new NameAddrHeader(data.uri, data.display_name, data.params);
+
               if (tag) {
                 data.setParam('tag', tag);
               }
@@ -10259,37 +12191,48 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_from_param() {
         var result0;
         result0 = parse_tag_param();
+
         if (result0 === null) {
           result0 = parse_generic_param();
         }
+
         return result0;
       }
+
       function parse_tag_param() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "tag") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"tag\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10304,23 +12247,29 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, tag) {
             data.tag = tag;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Max_Forwards() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result1 = parse_DIGIT();
+
         if (result1 !== null) {
           result0 = [];
+
           while (result1 !== null) {
             result0.push(result1);
             result1 = parse_DIGIT();
@@ -10328,31 +12277,39 @@ module.exports = function () {
         } else {
           result0 = null;
         }
+
         if (result0 !== null) {
           result0 = function (offset, forwards) {
             data = parseInt(forwards.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Min_Expires() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_delta_seconds();
+
         if (result0 !== null) {
           result0 = function (offset, min_expires) {
             data = min_expires;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Name_Addr_Header() {
         var result0, result1, result2, result3, result4, result5, result6;
         var pos0, pos1, pos2;
@@ -10360,22 +12317,29 @@ module.exports = function () {
         pos1 = pos;
         result0 = [];
         result1 = parse_display_name();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_display_name();
         }
+
         if (result0 !== null) {
           result1 = parse_LAQUOT();
+
           if (result1 !== null) {
             result2 = parse_SIP_URI();
+
             if (result2 !== null) {
               result3 = parse_RAQUOT();
+
               if (result3 !== null) {
                 result4 = [];
                 pos2 = pos;
                 result5 = parse_SEMI();
+
                 if (result5 !== null) {
                   result6 = parse_generic_param();
+
                   if (result6 !== null) {
                     result5 = [result5, result6];
                   } else {
@@ -10386,12 +12350,15 @@ module.exports = function () {
                   result5 = null;
                   pos = pos2;
                 }
+
                 while (result5 !== null) {
                   result4.push(result5);
                   pos2 = pos;
                   result5 = parse_SEMI();
+
                   if (result5 !== null) {
                     result6 = parse_generic_param();
+
                     if (result6 !== null) {
                       result5 = [result5, result6];
                     } else {
@@ -10403,6 +12370,7 @@ module.exports = function () {
                     pos = pos2;
                   }
                 }
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -10425,6 +12393,7 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             try {
@@ -10434,39 +12403,50 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Proxy_Authenticate() {
         var result0;
         result0 = parse_challenge();
         return result0;
       }
+
       function parse_challenge() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "digest") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"Digest\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_LWS();
+
           if (result1 !== null) {
             result2 = parse_digest_cln();
+
             if (result2 !== null) {
               result3 = [];
               pos1 = pos;
               result4 = parse_COMMA();
+
               if (result4 !== null) {
                 result5 = parse_digest_cln();
+
                 if (result5 !== null) {
                   result4 = [result4, result5];
                 } else {
@@ -10477,12 +12457,15 @@ module.exports = function () {
                 result4 = null;
                 pos = pos1;
               }
+
               while (result4 !== null) {
                 result3.push(result4);
                 pos1 = pos;
                 result4 = parse_COMMA();
+
                 if (result4 !== null) {
                   result5 = parse_digest_cln();
+
                   if (result5 !== null) {
                     result4 = [result4, result5];
                   } else {
@@ -10494,6 +12477,7 @@ module.exports = function () {
                   pos = pos1;
                 }
               }
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -10512,26 +12496,34 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         if (result0 === null) {
           result0 = parse_other_challenge();
         }
+
         return result0;
       }
+
       function parse_other_challenge() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = parse_LWS();
+
           if (result1 !== null) {
             result2 = parse_auth_param();
+
             if (result2 !== null) {
               result3 = [];
               pos1 = pos;
               result4 = parse_COMMA();
+
               if (result4 !== null) {
                 result5 = parse_auth_param();
+
                 if (result5 !== null) {
                   result4 = [result4, result5];
                 } else {
@@ -10542,12 +12534,15 @@ module.exports = function () {
                 result4 = null;
                 pos = pos1;
               }
+
               while (result4 !== null) {
                 result3.push(result4);
                 pos1 = pos;
                 result4 = parse_COMMA();
+
                 if (result4 !== null) {
                   result5 = parse_auth_param();
+
                   if (result5 !== null) {
                     result4 = [result4, result5];
                   } else {
@@ -10559,6 +12554,7 @@ module.exports = function () {
                   pos = pos1;
                 }
               }
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -10577,20 +12573,26 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_auth_param() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 === null) {
               result2 = parse_quoted_string();
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10605,23 +12607,32 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_digest_cln() {
         var result0;
         result0 = parse_realm();
+
         if (result0 === null) {
           result0 = parse_domain();
+
           if (result0 === null) {
             result0 = parse_nonce();
+
             if (result0 === null) {
               result0 = parse_opaque();
+
               if (result0 === null) {
                 result0 = parse_stale();
+
                 if (result0 === null) {
                   result0 = parse_algorithm();
+
                   if (result0 === null) {
                     result0 = parse_qop_options();
+
                     if (result0 === null) {
                       result0 = parse_auth_param();
                     }
@@ -10631,25 +12642,32 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_realm() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "realm") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"realm\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_realm_value();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10664,48 +12682,62 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_realm_value() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_quoted_string_clean();
+
         if (result0 !== null) {
           result0 = function (offset, realm) {
             data.realm = realm;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_domain() {
         var result0, result1, result2, result3, result4, result5, result6;
         var pos0, pos1;
         pos0 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "domain") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"domain\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_LDQUOT();
+
             if (result2 !== null) {
               result3 = parse_URI();
+
               if (result3 !== null) {
                 result4 = [];
                 pos1 = pos;
                 result6 = parse_SP();
+
                 if (result6 !== null) {
                   result5 = [];
+
                   while (result6 !== null) {
                     result5.push(result6);
                     result6 = parse_SP();
@@ -10713,8 +12745,10 @@ module.exports = function () {
                 } else {
                   result5 = null;
                 }
+
                 if (result5 !== null) {
                   result6 = parse_URI();
+
                   if (result6 !== null) {
                     result5 = [result5, result6];
                   } else {
@@ -10725,12 +12759,15 @@ module.exports = function () {
                   result5 = null;
                   pos = pos1;
                 }
+
                 while (result5 !== null) {
                   result4.push(result5);
                   pos1 = pos;
                   result6 = parse_SP();
+
                   if (result6 !== null) {
                     result5 = [];
+
                     while (result6 !== null) {
                       result5.push(result6);
                       result6 = parse_SP();
@@ -10738,8 +12775,10 @@ module.exports = function () {
                   } else {
                     result5 = null;
                   }
+
                   if (result5 !== null) {
                     result6 = parse_URI();
+
                     if (result6 !== null) {
                       result5 = [result5, result6];
                     } else {
@@ -10751,8 +12790,10 @@ module.exports = function () {
                     pos = pos1;
                   }
                 }
+
                 if (result4 !== null) {
                   result5 = parse_RDQUOT();
+
                   if (result5 !== null) {
                     result0 = [result0, result1, result2, result3, result4, result5];
                   } else {
@@ -10779,33 +12820,43 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_URI() {
         var result0;
         result0 = parse_absoluteURI();
+
         if (result0 === null) {
           result0 = parse_abs_path();
         }
+
         return result0;
       }
+
       function parse_nonce() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "nonce") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"nonce\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_nonce_value();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10820,41 +12871,52 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_nonce_value() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_quoted_string_clean();
+
         if (result0 !== null) {
           result0 = function (offset, nonce) {
             data.nonce = nonce;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_opaque() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "opaque") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"opaque\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_quoted_string_clean();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10869,70 +12931,88 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, opaque) {
             data.opaque = opaque;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_stale() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "stale") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"stale\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             pos1 = pos;
+
             if (input.substr(pos, 4).toLowerCase() === "true") {
               result2 = input.substr(pos, 4);
               pos += 4;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"true\"");
               }
             }
+
             if (result2 !== null) {
               result2 = function (offset) {
                 data.stale = true;
               }(pos1);
             }
+
             if (result2 === null) {
               pos = pos1;
             }
+
             if (result2 === null) {
               pos1 = pos;
+
               if (input.substr(pos, 5).toLowerCase() === "false") {
                 result2 = input.substr(pos, 5);
                 pos += 5;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"false\"");
                 }
               }
+
               if (result2 !== null) {
                 result2 = function (offset) {
                   data.stale = false;
                 }(pos1);
               }
+
               if (result2 === null) {
                 pos = pos1;
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -10947,48 +13027,59 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_algorithm() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 9).toLowerCase() === "algorithm") {
           result0 = input.substr(pos, 9);
           pos += 9;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"algorithm\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             if (input.substr(pos, 3).toLowerCase() === "md5") {
               result2 = input.substr(pos, 3);
               pos += 3;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"MD5\"");
               }
             }
+
             if (result2 === null) {
               if (input.substr(pos, 8).toLowerCase() === "md5-sess") {
                 result2 = input.substr(pos, 8);
                 pos += 8;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"MD5-sess\"");
                 }
               }
+
               if (result2 === null) {
                 result2 = parse_token();
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -11003,50 +13094,64 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, algorithm) {
             data.algorithm = algorithm.toUpperCase();
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_qop_options() {
         var result0, result1, result2, result3, result4, result5, result6;
         var pos0, pos1, pos2;
         pos0 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "qop") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"qop\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_LDQUOT();
+
             if (result2 !== null) {
               pos1 = pos;
               result3 = parse_qop_value();
+
               if (result3 !== null) {
                 result4 = [];
                 pos2 = pos;
+
                 if (input.charCodeAt(pos) === 44) {
                   result5 = ",";
                   pos++;
                 } else {
                   result5 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\",\"");
                   }
                 }
+
                 if (result5 !== null) {
                   result6 = parse_qop_value();
+
                   if (result6 !== null) {
                     result5 = [result5, result6];
                   } else {
@@ -11057,20 +13162,25 @@ module.exports = function () {
                   result5 = null;
                   pos = pos2;
                 }
+
                 while (result5 !== null) {
                   result4.push(result5);
                   pos2 = pos;
+
                   if (input.charCodeAt(pos) === 44) {
                     result5 = ",";
                     pos++;
                   } else {
                     result5 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\",\"");
                     }
                   }
+
                   if (result5 !== null) {
                     result6 = parse_qop_value();
+
                     if (result6 !== null) {
                       result5 = [result5, result6];
                     } else {
@@ -11082,6 +13192,7 @@ module.exports = function () {
                     pos = pos2;
                   }
                 }
+
                 if (result4 !== null) {
                   result3 = [result3, result4];
                 } else {
@@ -11092,8 +13203,10 @@ module.exports = function () {
                 result3 = null;
                 pos = pos1;
               }
+
               if (result3 !== null) {
                 result4 = parse_RDQUOT();
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -11116,57 +13229,71 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_qop_value() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 8).toLowerCase() === "auth-int") {
           result0 = input.substr(pos, 8);
           pos += 8;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"auth-int\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 4).toLowerCase() === "auth") {
             result0 = input.substr(pos, 4);
             pos += 4;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"auth\"");
             }
           }
+
           if (result0 === null) {
             result0 = parse_token();
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset, qop_value) {
             data.qop || (data.qop = []);
             data.qop.push(qop_value.toLowerCase());
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Proxy_Require() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_token();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11177,12 +13304,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_token();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11194,6 +13324,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11204,20 +13335,25 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Record_Route() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_rec_route();
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_rec_route();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11228,12 +13364,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_rec_route();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11245,6 +13384,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11255,16 +13395,19 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var idx, length;
             length = data.multi_header.length;
+
             for (idx = 0; idx < length; idx++) {
               if (data.multi_header[idx].parsed === null) {
                 data = null;
                 break;
               }
             }
+
             if (data !== null) {
               data = data.multi_header;
             } else {
@@ -11272,23 +13415,29 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_rec_route() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_name_addr();
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_generic_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11299,12 +13448,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_generic_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11316,6 +13468,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11326,10 +13479,12 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var header;
             if (!data.multi_header) data.multi_header = [];
+
             try {
               header = new NameAddrHeader(data.uri, data.display_name, data.params);
               delete data.uri;
@@ -11338,6 +13493,7 @@ module.exports = function () {
             } catch (e) {
               header = null;
             }
+
             data.multi_header.push({
               'possition': pos,
               'offset': offset,
@@ -11345,34 +13501,43 @@ module.exports = function () {
             });
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Reason() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "sip") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"SIP\"");
           }
         }
+
         if (result0 === null) {
           result0 = parse_token();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_reason_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11383,12 +13548,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_reason_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11400,6 +13568,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11410,10 +13579,12 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, protocol) {
             data.protocol = protocol.toLowerCase();
             if (!data.params) data.params = {};
+
             if (data.params.text && data.params.text[0] === '"') {
               var text = data.params.text;
               data.text = text.substring(1, text.length - 1);
@@ -11421,39 +13592,51 @@ module.exports = function () {
             }
           }(pos0, result0[0]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_reason_param() {
         var result0;
         result0 = parse_reason_cause();
+
         if (result0 === null) {
           result0 = parse_generic_param();
         }
+
         return result0;
       }
+
       function parse_reason_cause() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "cause") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"cause\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result3 = parse_DIGIT();
+
             if (result3 !== null) {
               result2 = [];
+
               while (result3 !== null) {
                 result2.push(result3);
                 result3 = parse_DIGIT();
@@ -11461,6 +13644,7 @@ module.exports = function () {
             } else {
               result2 = null;
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -11475,27 +13659,34 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, cause) {
             data.cause = parseInt(cause.join(''));
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Require() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_token();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11506,12 +13697,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_token();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11523,6 +13717,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11533,19 +13728,24 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Route() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_route_param();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_route_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11556,12 +13756,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_route_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11573,6 +13776,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11583,19 +13787,24 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_route_param() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_name_addr();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_generic_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11606,12 +13815,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_generic_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11623,6 +13835,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11633,19 +13846,24 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Subscription_State() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_substate_value();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_subexp_params();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11656,12 +13874,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_subexp_params();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11673,6 +13894,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11683,74 +13905,92 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_substate_value() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "active") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"active\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 7).toLowerCase() === "pending") {
             result0 = input.substr(pos, 7);
             pos += 7;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"pending\"");
             }
           }
+
           if (result0 === null) {
             if (input.substr(pos, 10).toLowerCase() === "terminated") {
               result0 = input.substr(pos, 10);
               pos += 10;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"terminated\"");
               }
             }
+
             if (result0 === null) {
               result0 = parse_token();
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.state = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_subexp_params() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "reason") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"reason\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_event_reason_value();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -11765,30 +14005,38 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, reason) {
             if (typeof reason !== 'undefined') data.reason = reason;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         if (result0 === null) {
           pos0 = pos;
           pos1 = pos;
+
           if (input.substr(pos, 7).toLowerCase() === "expires") {
             result0 = input.substr(pos, 7);
             pos += 7;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"expires\"");
             }
           }
+
           if (result0 !== null) {
             result1 = parse_EQUAL();
+
             if (result1 !== null) {
               result2 = parse_delta_seconds();
+
               if (result2 !== null) {
                 result0 = [result0, result1, result2];
               } else {
@@ -11803,30 +14051,38 @@ module.exports = function () {
             result0 = null;
             pos = pos1;
           }
+
           if (result0 !== null) {
             result0 = function (offset, expires) {
               if (typeof expires !== 'undefined') data.expires = expires;
             }(pos0, result0[2]);
           }
+
           if (result0 === null) {
             pos = pos0;
           }
+
           if (result0 === null) {
             pos0 = pos;
             pos1 = pos;
+
             if (input.substr(pos, 11).toLowerCase() === "retry_after") {
               result0 = input.substr(pos, 11);
               pos += 11;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"retry_after\"");
               }
             }
+
             if (result0 !== null) {
               result1 = parse_EQUAL();
+
               if (result1 !== null) {
                 result2 = parse_delta_seconds();
+
                 if (result2 !== null) {
                   result0 = [result0, result1, result2];
                 } else {
@@ -11841,92 +14097,112 @@ module.exports = function () {
               result0 = null;
               pos = pos1;
             }
+
             if (result0 !== null) {
               result0 = function (offset, retry_after) {
                 if (typeof retry_after !== 'undefined') data.retry_after = retry_after;
               }(pos0, result0[2]);
             }
+
             if (result0 === null) {
               pos = pos0;
             }
+
             if (result0 === null) {
               result0 = parse_generic_param();
             }
           }
         }
+
         return result0;
       }
+
       function parse_event_reason_value() {
         var result0;
+
         if (input.substr(pos, 11).toLowerCase() === "deactivated") {
           result0 = input.substr(pos, 11);
           pos += 11;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"deactivated\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 9).toLowerCase() === "probation") {
             result0 = input.substr(pos, 9);
             pos += 9;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"probation\"");
             }
           }
+
           if (result0 === null) {
             if (input.substr(pos, 8).toLowerCase() === "rejected") {
               result0 = input.substr(pos, 8);
               pos += 8;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"rejected\"");
               }
             }
+
             if (result0 === null) {
               if (input.substr(pos, 7).toLowerCase() === "timeout") {
                 result0 = input.substr(pos, 7);
                 pos += 7;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"timeout\"");
                 }
               }
+
               if (result0 === null) {
                 if (input.substr(pos, 6).toLowerCase() === "giveup") {
                   result0 = input.substr(pos, 6);
                   pos += 6;
                 } else {
                   result0 = null;
+
                   if (reportFailures === 0) {
                     matchFailed("\"giveup\"");
                   }
                 }
+
                 if (result0 === null) {
                   if (input.substr(pos, 10).toLowerCase() === "noresource") {
                     result0 = input.substr(pos, 10);
                     pos += 10;
                   } else {
                     result0 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"noresource\"");
                     }
                   }
+
                   if (result0 === null) {
                     if (input.substr(pos, 9).toLowerCase() === "invariant") {
                       result0 = input.substr(pos, 9);
                       pos += 9;
                     } else {
                       result0 = null;
+
                       if (reportFailures === 0) {
                         matchFailed("\"invariant\"");
                       }
                     }
+
                     if (result0 === null) {
                       result0 = parse_token();
                     }
@@ -11936,25 +14212,31 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_Subject() {
         var result0;
         result0 = parse_TEXT_UTF8_TRIM();
         result0 = result0 !== null ? result0 : "";
         return result0;
       }
+
       function parse_Supported() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_token();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -11965,12 +14247,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_token();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -11982,6 +14267,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -11992,24 +14278,30 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         result0 = result0 !== null ? result0 : "";
         return result0;
       }
+
       function parse_To() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SIP_URI_noparams();
+
         if (result0 === null) {
           result0 = parse_name_addr();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_to_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -12020,12 +14312,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_to_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -12037,6 +14332,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12047,11 +14343,14 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             var tag = data.tag;
+
             try {
               data = new NameAddrHeader(data.uri, data.display_name, data.params);
+
               if (tag) {
                 data.setParam('tag', tag);
               }
@@ -12060,30 +14359,39 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_to_param() {
         var result0;
         result0 = parse_tag_param();
+
         if (result0 === null) {
           result0 = parse_generic_param();
         }
+
         return result0;
       }
+
       function parse_Via() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_via_param();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_COMMA();
+
           if (result2 !== null) {
             result3 = parse_via_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -12094,12 +14402,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_COMMA();
+
             if (result2 !== null) {
               result3 = parse_via_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -12111,6 +14422,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12121,23 +14433,30 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_param() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_sent_protocol();
+
         if (result0 !== null) {
           result1 = parse_LWS();
+
           if (result1 !== null) {
             result2 = parse_sent_by();
+
             if (result2 !== null) {
               result3 = [];
               pos1 = pos;
               result4 = parse_SEMI();
+
               if (result4 !== null) {
                 result5 = parse_via_params();
+
                 if (result5 !== null) {
                   result4 = [result4, result5];
                 } else {
@@ -12148,12 +14467,15 @@ module.exports = function () {
                 result4 = null;
                 pos = pos1;
               }
+
               while (result4 !== null) {
                 result3.push(result4);
                 pos1 = pos;
                 result4 = parse_SEMI();
+
                 if (result4 !== null) {
                   result5 = parse_via_params();
+
                   if (result5 !== null) {
                     result4 = [result4, result5];
                   } else {
@@ -12165,6 +14487,7 @@ module.exports = function () {
                   pos = pos1;
                 }
               }
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -12183,19 +14506,26 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_params() {
         var result0;
         result0 = parse_via_ttl();
+
         if (result0 === null) {
           result0 = parse_via_maddr();
+
           if (result0 === null) {
             result0 = parse_via_received();
+
             if (result0 === null) {
               result0 = parse_via_branch();
+
               if (result0 === null) {
                 result0 = parse_response_port();
+
                 if (result0 === null) {
                   result0 = parse_generic_param();
                 }
@@ -12203,26 +14533,33 @@ module.exports = function () {
             }
           }
         }
+
         return result0;
       }
+
       function parse_via_ttl() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "ttl") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"ttl\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_ttl();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12237,34 +14574,43 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_ttl_value) {
             data.ttl = via_ttl_value;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_maddr() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "maddr") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"maddr\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_host();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12279,37 +14625,47 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_maddr) {
             data.maddr = via_maddr;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_received() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 8).toLowerCase() === "received") {
           result0 = input.substr(pos, 8);
           pos += 8;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"received\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_IPv4address();
+
             if (result2 === null) {
               result2 = parse_IPv6address();
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12324,34 +14680,43 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_received) {
             data.received = via_received;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_branch() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 6).toLowerCase() === "branch") {
           result0 = input.substr(pos, 6);
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"branch\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12366,34 +14731,43 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_branch) {
             data.branch = via_branch;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_response_port() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
+
         if (input.substr(pos, 5).toLowerCase() === "rport") {
           result0 = input.substr(pos, 5);
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"rport\"");
           }
         }
+
         if (result0 !== null) {
           pos1 = pos;
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_rport();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -12404,7 +14778,9 @@ module.exports = function () {
             result1 = null;
             pos = pos1;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12415,8 +14791,10 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_rport() {
         var result0, result1, result2, result3, result4;
         var pos0, pos1;
@@ -12424,18 +14802,23 @@ module.exports = function () {
         pos1 = pos;
         result0 = parse_DIGIT();
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result1 = parse_DIGIT();
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_DIGIT();
               result3 = result3 !== null ? result3 : "";
+
               if (result3 !== null) {
                 result4 = parse_DIGIT();
                 result4 = result4 !== null ? result4 : "";
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -12458,29 +14841,38 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, rport) {
             data.rport = parseInt(rport.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_sent_protocol() {
         var result0, result1, result2, result3, result4;
         var pos0;
         pos0 = pos;
         result0 = parse_protocol_name();
+
         if (result0 !== null) {
           result1 = parse_SLASH();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result3 = parse_SLASH();
+
               if (result3 !== null) {
                 result4 = parse_transport();
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -12503,103 +14895,128 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_protocol_name() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "sip") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"SIP\"");
           }
         }
+
         if (result0 === null) {
           result0 = parse_token();
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_protocol) {
             data.protocol = via_protocol;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_transport() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 3).toLowerCase() === "udp") {
           result0 = input.substr(pos, 3);
           pos += 3;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"UDP\"");
           }
         }
+
         if (result0 === null) {
           if (input.substr(pos, 3).toLowerCase() === "tcp") {
             result0 = input.substr(pos, 3);
             pos += 3;
           } else {
             result0 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"TCP\"");
             }
           }
+
           if (result0 === null) {
             if (input.substr(pos, 3).toLowerCase() === "tls") {
               result0 = input.substr(pos, 3);
               pos += 3;
             } else {
               result0 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"TLS\"");
               }
             }
+
             if (result0 === null) {
               if (input.substr(pos, 4).toLowerCase() === "sctp") {
                 result0 = input.substr(pos, 4);
                 pos += 4;
               } else {
                 result0 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"SCTP\"");
                 }
               }
+
               if (result0 === null) {
                 result0 = parse_token();
               }
             }
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_transport) {
             data.transport = via_transport;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_sent_by() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_via_host();
+
         if (result0 !== null) {
           pos1 = pos;
           result1 = parse_COLON();
+
           if (result1 !== null) {
             result2 = parse_via_port();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -12610,7 +15027,9 @@ module.exports = function () {
             result1 = null;
             pos = pos1;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12621,29 +15040,37 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_host() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_IPv4address();
+
         if (result0 === null) {
           result0 = parse_IPv6reference();
+
           if (result0 === null) {
             result0 = parse_hostname();
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.host = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_via_port() {
         var result0, result1, result2, result3, result4;
         var pos0, pos1;
@@ -12651,18 +15078,23 @@ module.exports = function () {
         pos1 = pos;
         result0 = parse_DIGIT();
         result0 = result0 !== null ? result0 : "";
+
         if (result0 !== null) {
           result1 = parse_DIGIT();
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result3 = parse_DIGIT();
               result3 = result3 !== null ? result3 : "";
+
               if (result3 !== null) {
                 result4 = parse_DIGIT();
                 result4 = result4 !== null ? result4 : "";
+
                 if (result4 !== null) {
                   result0 = [result0, result1, result2, result3, result4];
                 } else {
@@ -12685,28 +15117,35 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, via_sent_by_port) {
             data.port = parseInt(via_sent_by_port.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_ttl() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_DIGIT();
+
         if (result0 !== null) {
           result1 = parse_DIGIT();
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result2 = parse_DIGIT();
             result2 = result2 !== null ? result2 : "";
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12721,32 +15160,40 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, ttl) {
             return parseInt(ttl.join(''));
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_WWW_Authenticate() {
         var result0;
         result0 = parse_challenge();
         return result0;
       }
+
       function parse_Session_Expires() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_s_e_expires();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_s_e_params();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -12757,12 +15204,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_s_e_params();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -12774,6 +15224,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12784,68 +15235,85 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_s_e_expires() {
         var result0;
         var pos0;
         pos0 = pos;
         result0 = parse_delta_seconds();
+
         if (result0 !== null) {
           result0 = function (offset, expires) {
             data.expires = expires;
           }(pos0, result0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_s_e_params() {
         var result0;
         result0 = parse_s_e_refresher();
+
         if (result0 === null) {
           result0 = parse_generic_param();
         }
+
         return result0;
       }
+
       function parse_s_e_refresher() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 9).toLowerCase() === "refresher") {
           result0 = input.substr(pos, 9);
           pos += 9;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"refresher\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             if (input.substr(pos, 3).toLowerCase() === "uac") {
               result2 = input.substr(pos, 3);
               pos += 3;
             } else {
               result2 = null;
+
               if (reportFailures === 0) {
                 matchFailed("\"uac\"");
               }
             }
+
             if (result2 === null) {
               if (input.substr(pos, 3).toLowerCase() === "uas") {
                 result2 = input.substr(pos, 3);
                 pos += 3;
               } else {
                 result2 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"uas\"");
                 }
               }
             }
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12860,25 +15328,32 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, s_e_refresher_value) {
             data.refresher = s_e_refresher_value.toLowerCase();
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_extension_header() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_token();
+
         if (result0 !== null) {
           result1 = parse_HCOLON();
+
           if (result1 !== null) {
             result2 = parse_header_value();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -12893,55 +15368,71 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_header_value() {
         var result0, result1;
         result0 = [];
         result1 = parse_TEXT_UTF8char();
+
         if (result1 === null) {
           result1 = parse_UTF8_CONT();
+
           if (result1 === null) {
             result1 = parse_LWS();
           }
         }
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_TEXT_UTF8char();
+
           if (result1 === null) {
             result1 = parse_UTF8_CONT();
+
             if (result1 === null) {
               result1 = parse_LWS();
             }
           }
         }
+
         return result0;
       }
+
       function parse_message_body() {
         var result0, result1;
         result0 = [];
         result1 = parse_OCTET();
+
         while (result1 !== null) {
           result0.push(result1);
           result1 = parse_OCTET();
         }
+
         return result0;
       }
+
       function parse_uuid_URI() {
         var result0, result1;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 5) === "uuid:") {
           result0 = "uuid:";
           pos += 5;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"uuid:\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_uuid();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -12952,62 +15443,77 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_uuid() {
         var result0, result1, result2, result3, result4, result5, result6, result7, result8;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_hex8();
+
         if (result0 !== null) {
           if (input.charCodeAt(pos) === 45) {
             result1 = "-";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"-\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_hex4();
+
             if (result2 !== null) {
               if (input.charCodeAt(pos) === 45) {
                 result3 = "-";
                 pos++;
               } else {
                 result3 = null;
+
                 if (reportFailures === 0) {
                   matchFailed("\"-\"");
                 }
               }
+
               if (result3 !== null) {
                 result4 = parse_hex4();
+
                 if (result4 !== null) {
                   if (input.charCodeAt(pos) === 45) {
                     result5 = "-";
                     pos++;
                   } else {
                     result5 = null;
+
                     if (reportFailures === 0) {
                       matchFailed("\"-\"");
                     }
                   }
+
                   if (result5 !== null) {
                     result6 = parse_hex4();
+
                     if (result6 !== null) {
                       if (input.charCodeAt(pos) === 45) {
                         result7 = "-";
                         pos++;
                       } else {
                         result7 = null;
+
                         if (reportFailures === 0) {
                           matchFailed("\"-\"");
                         }
                       }
+
                       if (result7 !== null) {
                         result8 = parse_hex12();
+
                         if (result8 !== null) {
                           result0 = [result0, result1, result2, result3, result4, result5, result6, result7, result8];
                         } else {
@@ -13046,27 +15552,35 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, uuid) {
             data = input.substring(pos + 5, offset);
           }(pos0, result0[0]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hex4() {
         var result0, result1, result2, result3;
         var pos0;
         pos0 = pos;
         result0 = parse_HEXDIG();
+
         if (result0 !== null) {
           result1 = parse_HEXDIG();
+
           if (result1 !== null) {
             result2 = parse_HEXDIG();
+
             if (result2 !== null) {
               result3 = parse_HEXDIG();
+
               if (result3 !== null) {
                 result0 = [result0, result1, result2, result3];
               } else {
@@ -13085,15 +15599,19 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hex8() {
         var result0, result1;
         var pos0;
         pos0 = pos;
         result0 = parse_hex4();
+
         if (result0 !== null) {
           result1 = parse_hex4();
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -13104,17 +15622,22 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_hex12() {
         var result0, result1, result2;
         var pos0;
         pos0 = pos;
         result0 = parse_hex4();
+
         if (result0 !== null) {
           result1 = parse_hex4();
+
           if (result1 !== null) {
             result2 = parse_hex4();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -13129,23 +15652,29 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Refer_To() {
         var result0, result1, result2, result3;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_SIP_URI_noparams();
+
         if (result0 === null) {
           result0 = parse_name_addr();
         }
+
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_generic_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -13156,12 +15685,15 @@ module.exports = function () {
             result2 = null;
             pos = pos2;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos2 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_generic_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -13173,6 +15705,7 @@ module.exports = function () {
               pos = pos2;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -13183,6 +15716,7 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             try {
@@ -13192,22 +15726,28 @@ module.exports = function () {
             }
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_Replaces() {
         var result0, result1, result2, result3;
         var pos0, pos1;
         pos0 = pos;
         result0 = parse_call_id();
+
         if (result0 !== null) {
           result1 = [];
           pos1 = pos;
           result2 = parse_SEMI();
+
           if (result2 !== null) {
             result3 = parse_replaces_param();
+
             if (result3 !== null) {
               result2 = [result2, result3];
             } else {
@@ -13218,12 +15758,15 @@ module.exports = function () {
             result2 = null;
             pos = pos1;
           }
+
           while (result2 !== null) {
             result1.push(result2);
             pos1 = pos;
             result2 = parse_SEMI();
+
             if (result2 !== null) {
               result3 = parse_replaces_param();
+
               if (result3 !== null) {
                 result2 = [result2, result3];
               } else {
@@ -13235,6 +15778,7 @@ module.exports = function () {
               pos = pos1;
             }
           }
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -13245,27 +15789,34 @@ module.exports = function () {
           result0 = null;
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_call_id() {
         var result0, result1, result2;
         var pos0, pos1, pos2;
         pos0 = pos;
         pos1 = pos;
         result0 = parse_word();
+
         if (result0 !== null) {
           pos2 = pos;
+
           if (input.charCodeAt(pos) === 64) {
             result1 = "@";
             pos++;
           } else {
             result1 = null;
+
             if (reportFailures === 0) {
               matchFailed("\"@\"");
             }
           }
+
           if (result1 !== null) {
             result2 = parse_word();
+
             if (result2 !== null) {
               result1 = [result1, result2];
             } else {
@@ -13276,7 +15827,9 @@ module.exports = function () {
             result1 = null;
             pos = pos2;
           }
+
           result1 = result1 !== null ? result1 : "";
+
           if (result1 !== null) {
             result0 = [result0, result1];
           } else {
@@ -13287,48 +15840,62 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.call_id = input.substring(pos, offset);
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_replaces_param() {
         var result0;
         result0 = parse_to_tag();
+
         if (result0 === null) {
           result0 = parse_from_tag();
+
           if (result0 === null) {
             result0 = parse_early_flag();
+
             if (result0 === null) {
               result0 = parse_generic_param();
             }
           }
         }
+
         return result0;
       }
+
       function parse_to_tag() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 6) === "to-tag") {
           result0 = "to-tag";
           pos += 6;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"to-tag\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -13343,34 +15910,43 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, to_tag) {
             data.to_tag = to_tag;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_from_tag() {
         var result0, result1, result2;
         var pos0, pos1;
         pos0 = pos;
         pos1 = pos;
+
         if (input.substr(pos, 8) === "from-tag") {
           result0 = "from-tag";
           pos += 8;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"from-tag\"");
           }
         }
+
         if (result0 !== null) {
           result1 = parse_EQUAL();
+
           if (result1 !== null) {
             result2 = parse_token();
+
             if (result2 !== null) {
               result0 = [result0, result1, result2];
             } else {
@@ -13385,51 +15961,64 @@ module.exports = function () {
           result0 = null;
           pos = pos1;
         }
+
         if (result0 !== null) {
           result0 = function (offset, from_tag) {
             data.from_tag = from_tag;
           }(pos0, result0[2]);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function parse_early_flag() {
         var result0;
         var pos0;
         pos0 = pos;
+
         if (input.substr(pos, 10) === "early-only") {
           result0 = "early-only";
           pos += 10;
         } else {
           result0 = null;
+
           if (reportFailures === 0) {
             matchFailed("\"early-only\"");
           }
         }
+
         if (result0 !== null) {
           result0 = function (offset) {
             data.early_only = true;
           }(pos0);
         }
+
         if (result0 === null) {
           pos = pos0;
         }
+
         return result0;
       }
+
       function cleanupExpected(expected) {
         expected.sort();
         var lastExpected = null;
         var cleanExpected = [];
+
         for (var i = 0; i < expected.length; i++) {
           if (expected[i] !== lastExpected) {
             cleanExpected.push(expected[i]);
             lastExpected = expected[i];
           }
         }
+
         return cleanExpected;
       }
+
       function computeErrorPosition() {
         /*
          * The first idea was to use |String.split| to break the input up to the
@@ -13440,12 +16029,15 @@ module.exports = function () {
         var line = 1;
         var column = 1;
         var seenCR = false;
+
         for (var i = 0; i < Math.max(pos, rightmostFailuresPos); i++) {
           var ch = input.charAt(i);
+
           if (ch === "\n") {
             if (!seenCR) {
               line++;
             }
+
             column = 1;
             seenCR = false;
           } else if (ch === "\r" || ch === "\u2028" || ch === "\u2029") {
@@ -13457,13 +16049,17 @@ module.exports = function () {
             seenCR = false;
           }
         }
+
         return {
           line: line,
           column: column
         };
       }
+
       var URI = require('./URI');
+
       var NameAddrHeader = require('./NameAddrHeader');
+
       var data = {};
       var result = parseFunctions[startRule]();
       /*
@@ -13490,6 +16086,7 @@ module.exports = function () {
        * All code following this comment (including called functions) must
        * handle these states.
        */
+
       if (result === null || pos !== input.length) {
         var offset = Math.max(pos, rightmostFailuresPos);
         var found = offset < input.length ? input.charAt(offset) : null;
@@ -13497,30 +16094,38 @@ module.exports = function () {
         new this.SyntaxError(cleanupExpected(rightmostFailuresExpected), found, offset, errorPosition.line, errorPosition.column);
         return -1;
       }
+
       return data;
     },
+
     /* Returns the parser source code. */
     toSource: function toSource() {
       return this._source;
     }
   };
   /* Thrown when a parser encounters a syntax error. */
+
   result.SyntaxError = function (expected, found, offset, line, column) {
     function buildMessage(expected, found) {
       var expectedHumanized, foundHumanized;
+
       switch (expected.length) {
         case 0:
           expectedHumanized = "end of input";
           break;
+
         case 1:
           expectedHumanized = expected[0];
           break;
+
         default:
           expectedHumanized = expected.slice(0, expected.length - 1).join(", ") + " or " + expected[expected.length - 1];
       }
+
       foundHumanized = found ? quote(found) : "end of input";
       return "Expected " + expectedHumanized + " but " + foundHumanized + " found.";
     }
+
     this.name = "SyntaxError";
     this.expected = expected;
     this.found = found;
@@ -13529,6 +16134,7 @@ module.exports = function () {
     this.line = line;
     this.column = column;
   };
+
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
@@ -13536,21 +16142,32 @@ module.exports = function () {
 "use strict";
 
 var pkg = require('../package.json');
-var C = require('./Constants');
-var Exceptions = require('./Exceptions');
-var Utils = require('./Utils');
-var UA = require('./UA');
-var URI = require('./URI');
-var NameAddrHeader = require('./NameAddrHeader');
-var Grammar = require('./Grammar');
-var WebSocketInterface = require('./WebSocketInterface');
-var debug = require('debug')('CRTC');
-var getStats = require('./Stats');
-debug('version %s', pkg.version);
 
+var C = require('./Constants');
+
+var Exceptions = require('./Exceptions');
+
+var Utils = require('./Utils');
+
+var UA = require('./UA');
+
+var URI = require('./URI');
+
+var NameAddrHeader = require('./NameAddrHeader');
+
+var Grammar = require('./Grammar');
+
+var WebSocketInterface = require('./WebSocketInterface');
+
+var debug = require('debug')('CRTC');
+
+var getStats = require('./Stats');
+
+debug('version %s', pkg.version);
 /**
  * Expose the CRTC module.
  */
+
 module.exports = {
   C: C,
   Exceptions: Exceptions,
@@ -13563,27 +16180,37 @@ module.exports = {
   getStats: getStats,
   // Expose the debug module.
   debug: require('debug'),
+
   get name() {
     return pkg.title;
   },
+
   get version() {
     return pkg.version;
   }
+
 };
 },{"../package.json":43,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":11,"./Stats":24,"./UA":28,"./URI":29,"./Utils":30,"./WebSocketInterface":31,"debug":34}],9:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var debug = require('debug');
+
 var APP_NAME = 'CRTC';
+
 if (!window.CLog) {
   window.CLog = console;
 }
+
 module.exports = /*#__PURE__*/function () {
   function Logger(prefix) {
     _classCallCheck(this, Logger);
+
     if (prefix) {
       this._debug = debug["default"]("".concat(APP_NAME, ":").concat(prefix));
       this._warn = debug["default"]("".concat(APP_NAME, ":WARN:").concat(prefix));
@@ -13594,11 +16221,14 @@ module.exports = /*#__PURE__*/function () {
       this._error = debug["default"]("".concat(APP_NAME, ":ERROR"));
     }
     /* eslint-disable no-console */
+
+
     this._debug.log = window.CLog.info.bind(window.CLog);
     this._warn.log = window.CLog.warn.bind(window.CLog);
     this._error.log = window.CLog.error.bind(window.CLog);
     /* eslint-enable no-console */
   }
+
   _createClass(Logger, [{
     key: "debug",
     get: function get() {
@@ -13615,52 +16245,76 @@ module.exports = /*#__PURE__*/function () {
       return this._error;
     }
   }]);
+
   return Logger;
 }();
 },{"debug":34}],10:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var SIPMessage = require('./SIPMessage');
+
 var Utils = require('./Utils');
+
 var RequestSender = require('./RequestSender');
+
 var Exceptions = require('./Exceptions');
+
 var URI = require('./URI');
+
 var logger = new Logger('Message');
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(Message, _EventEmitter);
+
   var _super = _createSuper(Message);
+
   function Message(ua) {
     var _this;
+
     _classCallCheck(this, Message);
+
     _this = _super.call(this);
     _this._ua = ua;
     _this._request = null;
     _this._closed = false;
     _this._direction = null;
     _this._local_identity = null;
-    _this._remote_identity = null;
+    _this._remote_identity = null; // Whether an incoming message has been replied.
 
-    // Whether an incoming message has been replied.
-    _this._is_replied = false;
+    _this._is_replied = false; // Custom message empty object for high level use.
 
-    // Custom message empty object for high level use.
     _this._data = {};
     return _this;
   }
+
   _createClass(Message, [{
     key: "direction",
     get: function get() {
@@ -13680,42 +16334,50 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "send",
     value: function send(target, body) {
       var _this2 = this;
+
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       var originalTarget = target;
+
       if (target === undefined || body === undefined) {
         throw new TypeError('Not enough arguments');
-      }
+      } // Check target validity.
 
-      // Check target validity.
+
       target = this._ua.normalizeTarget(target);
+
       if (!target) {
         throw new TypeError("Invalid target: ".concat(originalTarget));
-      }
+      } // Get call options.
 
-      // Get call options.
+
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var contentType = options.contentType || 'text/plain';
       var requestParams = {};
+
       if (options.fromUserName) {
         requestParams.from_uri = new URI('sip', options.fromUserName, this._ua.configuration.uri.host);
         extraHeaders.push("P-Preferred-Identity: ".concat(this._ua.configuration.uri.toString()));
       }
+
       if (options.fromDisplayName) {
         requestParams.from_display_name = options.fromDisplayName;
-      }
+      } // Set event handlers.
 
-      // Set event handlers.
+
       for (var event in eventHandlers) {
         if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
           this.on(event, eventHandlers[event]);
         }
       }
+
       extraHeaders.push("Content-Type: ".concat(contentType));
       this._request = new SIPMessage.OutgoingRequest(CRTC_C.MESSAGE, target, this._ua, requestParams, extraHeaders);
+
       if (body) {
         this._request.body = body;
       }
+
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
           _this2._onRequestTimeout();
@@ -13727,47 +16389,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this2._receiveResponse(response);
         }
       });
+
       this._newMessage('local', this._request);
+
       request_sender.send();
     }
   }, {
     key: "init_incoming",
     value: function init_incoming(request) {
       this._request = request;
-      this._newMessage('remote', request);
 
-      // Reply with a 200 OK if the user didn't reply.
+      this._newMessage('remote', request); // Reply with a 200 OK if the user didn't reply.
+
+
       if (!this._is_replied) {
         this._is_replied = true;
         request.reply(200);
       }
+
       this._close();
     }
-
     /**
      * Accept the incoming Message
      * Only valid for incoming Messages
      */
+
   }, {
     key: "accept",
     value: function accept() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var body = options.body;
+
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"accept" not supported for outgoing Message');
       }
+
       if (this._is_replied) {
         throw new Error('incoming Message already replied');
       }
+
       this._is_replied = true;
+
       this._request.reply(200, null, extraHeaders, body);
     }
-
     /**
      * Reject the incoming Message
      * Only valid for incoming Messages
      */
+
   }, {
     key: "reject",
     value: function reject() {
@@ -13776,16 +16446,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var reason_phrase = options.reason_phrase;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var body = options.body;
+
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"reject" not supported for outgoing Message');
       }
+
       if (this._is_replied) {
         throw new Error('incoming Message already replied');
       }
+
       if (status_code < 300 || status_code >= 700) {
         throw new TypeError("Invalid status_code: ".concat(status_code));
       }
+
       this._is_replied = true;
+
       this._request.reply(status_code, reason_phrase, extraHeaders, body);
     }
   }, {
@@ -13794,17 +16469,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       switch (true) {
         case /^1[0-9]{2}$/.test(response.status_code):
           // Ignore provisional responses.
           break;
+
         case /^2[0-9]{2}$/.test(response.status_code):
           this._succeeded('remote', response);
+
           break;
+
         default:
           {
             var cause = Utils.sipErrorCause(response.status_code);
+
             this._failed('remote', response, cause);
+
             break;
           }
       }
@@ -13815,6 +16496,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
     }
   }, {
@@ -13823,18 +16505,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
     }
   }, {
     key: "_close",
     value: function _close() {
       this._closed = true;
+
       this._ua.destroyMessage(this);
     }
-
     /**
      * Internal Callbacks
      */
+
   }, {
     key: "_newMessage",
     value: function _newMessage(originator, request) {
@@ -13847,6 +16531,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._local_identity = request.from;
         this._remote_identity = request.to;
       }
+
       this._ua.newMessage(this, {
         originator: originator,
         message: this,
@@ -13857,7 +16542,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_failed",
     value: function _failed(originator, response, cause) {
       logger.debug('MESSAGE failed');
+
       this._close();
+
       logger.debug('emit "failed"');
       this.emit('failed', {
         originator: originator,
@@ -13869,7 +16556,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_succeeded",
     value: function _succeeded(originator, response) {
       logger.debug('MESSAGE succeeded');
+
       this._close();
+
       logger.debug('emit "succeeded"');
       this.emit('succeeded', {
         originator: originator,
@@ -13877,34 +16566,43 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
     }
   }]);
+
   return Message;
 }(EventEmitter);
 },{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./URI":29,"./Utils":30,"events":33}],11:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var URI = require('./URI');
+
 var Grammar = require('./Grammar');
+
 module.exports = /*#__PURE__*/function () {
   function NameAddrHeader(uri, display_name, parameters) {
     _classCallCheck(this, NameAddrHeader);
+
     // Checks.
     if (!uri || !(uri instanceof URI)) {
       throw new TypeError('missing or invalid "uri" parameter');
-    }
+    } // Initialize parameters.
 
-    // Initialize parameters.
+
     this._uri = uri;
     this._parameters = {};
     this.display_name = display_name;
+
     for (var param in parameters) {
       if (Object.prototype.hasOwnProperty.call(parameters, param)) {
         this.setParam(param, parameters[param]);
       }
     }
   }
+
   _createClass(NameAddrHeader, [{
     key: "uri",
     get: function get() {
@@ -13943,6 +16641,7 @@ module.exports = /*#__PURE__*/function () {
     key: "deleteParam",
     value: function deleteParam(parameter) {
       parameter = parameter.toLowerCase();
+
       if (this._parameters.hasOwnProperty(parameter)) {
         var value = this._parameters[parameter];
         delete this._parameters[parameter];
@@ -13969,14 +16668,17 @@ module.exports = /*#__PURE__*/function () {
     value: function toString() {
       var body = this._display_name ? "\"".concat(this._quote(this._display_name), "\" ") : '';
       body += "<".concat(this._uri.toString(), ">");
+
       for (var parameter in this._parameters) {
         if (Object.prototype.hasOwnProperty.call(this._parameters, parameter)) {
           body += ";".concat(parameter);
+
           if (this._parameters[parameter] !== null) {
             body += "=".concat(this._parameters[parameter]);
           }
         }
       }
+
       return body;
     }
   }], [{
@@ -13988,6 +16690,7 @@ module.exports = /*#__PURE__*/function () {
      */
     function parse(name_addr_header) {
       name_addr_header = Grammar.parse(name_addr_header, 'Name_Addr_Header');
+
       if (name_addr_header !== -1) {
         return name_addr_header;
       } else {
@@ -13995,51 +16698,74 @@ module.exports = /*#__PURE__*/function () {
       }
     }
   }]);
+
   return NameAddrHeader;
 }();
 },{"./Grammar":7,"./URI":29}],12:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var SIPMessage = require('./SIPMessage');
+
 var Utils = require('./Utils');
+
 var RequestSender = require('./RequestSender');
+
 var Exceptions = require('./Exceptions');
+
 var logger = new Logger('Options');
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(Options, _EventEmitter);
+
   var _super = _createSuper(Options);
+
   function Options(ua) {
     var _this;
+
     _classCallCheck(this, Options);
+
     _this = _super.call(this);
     _this._ua = ua;
     _this._request = null;
     _this._closed = false;
     _this._direction = null;
     _this._local_identity = null;
-    _this._remote_identity = null;
+    _this._remote_identity = null; // Whether an incoming message has been replied.
 
-    // Whether an incoming message has been replied.
-    _this._is_replied = false;
+    _this._is_replied = false; // Custom message empty object for high level use.
 
-    // Custom message empty object for high level use.
     _this._data = {};
     return _this;
   }
+
   _createClass(Options, [{
     key: "direction",
     get: function get() {
@@ -14059,36 +16785,42 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "send",
     value: function send(target, body) {
       var _this2 = this;
+
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       var originalTarget = target;
+
       if (target === undefined) {
         throw new TypeError('A target is required for OPTIONS');
-      }
+      } // Check target validity.
 
-      // Check target validity.
+
       target = this._ua.normalizeTarget(target);
+
       if (!target) {
         throw new TypeError("Invalid target: ".concat(originalTarget));
-      }
+      } // Get call options.
 
-      // Get call options.
+
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var contentType = options.contentType || 'application/sdp';
+      var contentType = options.contentType || 'application/sdp'; // Set event handlers.
 
-      // Set event handlers.
       for (var event in eventHandlers) {
         if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
           this.on(event, eventHandlers[event]);
         }
       }
+
       if (body) {
         extraHeaders.push("Content-Type: ".concat(contentType));
       }
+
       this._request = new SIPMessage.OutgoingRequest(CRTC_C.OPTIONS, target, this._ua, null, extraHeaders);
+
       if (body) {
         this._request.body = body;
       }
+
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
           _this2._onRequestTimeout();
@@ -14100,47 +16832,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this2._receiveResponse(response);
         }
       });
+
       this._newOptions('local', this._request);
+
       request_sender.send();
     }
   }, {
     key: "init_incoming",
     value: function init_incoming(request) {
       this._request = request;
-      this._newOptions('remote', request);
 
-      // Reply with a 200 OK if the user didn't reply.
+      this._newOptions('remote', request); // Reply with a 200 OK if the user didn't reply.
+
+
       if (!this._is_replied) {
         this._is_replied = true;
         request.reply(200);
       }
+
       this._close();
     }
-
     /**
      * Accept the incoming Options
      * Only valid for incoming Options
      */
+
   }, {
     key: "accept",
     value: function accept() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var body = options.body;
+
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"accept" not supported for outgoing Options');
       }
+
       if (this._is_replied) {
         throw new Error('incoming Options already replied');
       }
+
       this._is_replied = true;
+
       this._request.reply(200, null, extraHeaders, body);
     }
-
     /**
      * Reject the incoming Options
      * Only valid for incoming Options
      */
+
   }, {
     key: "reject",
     value: function reject() {
@@ -14149,16 +16889,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var reason_phrase = options.reason_phrase;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var body = options.body;
+
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"reject" not supported for outgoing Options');
       }
+
       if (this._is_replied) {
         throw new Error('incoming Options already replied');
       }
+
       if (status_code < 300 || status_code >= 700) {
         throw new TypeError("Invalid status_code: ".concat(status_code));
       }
+
       this._is_replied = true;
+
       this._request.reply(status_code, reason_phrase, extraHeaders, body);
     }
   }, {
@@ -14167,17 +16912,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       switch (true) {
         case /^1[0-9]{2}$/.test(response.status_code):
           // Ignore provisional responses.
           break;
+
         case /^2[0-9]{2}$/.test(response.status_code):
           this._succeeded('remote', response);
+
           break;
+
         default:
           {
             var cause = Utils.sipErrorCause(response.status_code);
+
             this._failed('remote', response, cause);
+
             break;
           }
       }
@@ -14188,6 +16939,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
     }
   }, {
@@ -14196,18 +16948,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._closed) {
         return;
       }
+
       this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
     }
   }, {
     key: "_close",
     value: function _close() {
       this._closed = true;
+
       this._ua.destroyMessage(this);
     }
-
     /**
      * Internal Callbacks
      */
+
   }, {
     key: "_newOptions",
     value: function _newOptions(originator, request) {
@@ -14220,6 +16974,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._local_identity = request.from;
         this._remote_identity = request.to;
       }
+
       this._ua.newOptions(this, {
         originator: originator,
         message: this,
@@ -14230,7 +16985,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_failed",
     value: function _failed(originator, response, cause) {
       logger.debug('OPTIONS failed');
+
       this._close();
+
       logger.debug('emit "failed"');
       this.emit('failed', {
         originator: originator,
@@ -14242,7 +16999,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_succeeded",
     value: function _succeeded(originator, response) {
       logger.debug('OPTIONS succeeded');
+
       this._close();
+
       logger.debug('emit "succeeded"');
       this.emit('succeeded', {
         originator: originator,
@@ -14250,34 +17009,43 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
     }
   }]);
+
   return Options;
 }(EventEmitter);
 },{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30,"events":33}],13:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-var Logger = require('./Logger');
-var Grammar = require('./Grammar');
-var SIPMessage = require('./SIPMessage');
-var logger = new Logger('Parser');
 
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+var Logger = require('./Logger');
+
+var Grammar = require('./Grammar');
+
+var SIPMessage = require('./SIPMessage');
+
+var logger = new Logger('Parser');
 /**
  * Parse SIP Message
  */
+
 exports.parseMessage = function (data, ua) {
   var message;
   var bodyStart;
   var headerEnd = data.indexOf('\r\n');
+
   if (headerEnd === -1) {
     logger.warn('parseMessage() | no CRLF found, not a SIP message');
     return;
-  }
+  } // Parse first line. Check if it is a Request or a Reply.
 
-  // Parse first line. Check if it is a Request or a Reply.
+
   var firstLine = data.substring(0, headerEnd);
   var parsed = Grammar.parse(firstLine, 'Request_Response');
+
   if (parsed === -1) {
     logger.warn("parseMessage() | error parsing first line of SIP message: \"".concat(firstLine, "\""));
     return;
@@ -14290,69 +17058,74 @@ exports.parseMessage = function (data, ua) {
     message.status_code = parsed.status_code;
     message.reason_phrase = parsed.reason_phrase;
   }
+
   message.data = data;
   var headerStart = headerEnd + 2;
-
   /* Loop over every line in data. Detect the end of each header and parse
   * it or simply add to the headers collection.
   */
-  while (true) {
-    headerEnd = getHeader(data, headerStart);
 
-    // The SIP message has normally finished.
+  while (true) {
+    headerEnd = getHeader(data, headerStart); // The SIP message has normally finished.
+
     if (headerEnd === -2) {
       bodyStart = headerStart + 2;
       break;
-    }
-    // Data.indexOf returned -1 due to a malformed message.
+    } // Data.indexOf returned -1 due to a malformed message.
     else if (headerEnd === -1) {
       logger.warn('parseMessage() | malformed message');
       return;
     }
+
     parsed = parseHeader(message, data, headerStart, headerEnd);
+
     if (parsed !== true) {
       logger.warn('parseMessage() |', parsed.error);
       return;
     }
+
     headerStart = headerEnd + 2;
   }
-
   /* RFC3261 18.3.
    * If there are additional bytes in the transport packet
    * beyond the end of the body, they MUST be discarded.
    */
+
+
   if (message.hasHeader('content-length')) {
     var contentLength = message.getHeader('content-length');
     message.body = data.substr(bodyStart, contentLength);
   } else {
     message.body = data.substring(bodyStart);
   }
+
   return message;
 };
-
 /**
  * Extract and parse every header of a SIP message.
  */
+
+
 function getHeader(data, headerStart) {
   // 'start' position of the header.
-  var start = headerStart;
-  // 'end' position of the header.
-  var end = 0;
-  // 'partial end' position of the header.
-  var partialEnd = 0;
+  var start = headerStart; // 'end' position of the header.
 
-  // End of message.
+  var end = 0; // 'partial end' position of the header.
+
+  var partialEnd = 0; // End of message.
+
   if (data.substring(start, start + 2).match(/(^\r\n)/)) {
     return -2;
   }
+
   while (end === 0) {
     // Partial End of Header.
-    partialEnd = data.indexOf('\r\n', start);
+    partialEnd = data.indexOf('\r\n', start); // 'indexOf' returns -1 if the value to be found never occurs.
 
-    // 'indexOf' returns -1 if the value to be found never occurs.
     if (partialEnd === -1) {
       return partialEnd;
     }
+
     if (!data.substring(partialEnd + 2, partialEnd + 4).match(/(^\r\n)/) && data.charAt(partialEnd + 2).match(/(^\s+)/)) {
       // Not the end of the message. Continue from the next position.
       start = partialEnd + 2;
@@ -14360,21 +17133,24 @@ function getHeader(data, headerStart) {
       end = partialEnd;
     }
   }
+
   return end;
 }
+
 function parseHeader(message, data, headerStart, headerEnd) {
   var parsed;
   var hcolonIndex = data.indexOf(':', headerStart);
   var headerName = data.substring(headerStart, hcolonIndex).trim();
-  var headerValue = data.substring(hcolonIndex + 1, headerEnd).trim();
+  var headerValue = data.substring(hcolonIndex + 1, headerEnd).trim(); // If header-field is well-known, parse it.
 
-  // If header-field is well-known, parse it.
   switch (headerName.toLowerCase()) {
     case 'via':
     case 'v':
       message.addHeader('via', headerValue);
+
       if (message.getHeaders('via').length === 1) {
         parsed = message.parseHeader('Via');
+
         if (parsed) {
           message.via = parsed;
           message.via_branch = parsed.branch;
@@ -14382,32 +17158,42 @@ function parseHeader(message, data, headerStart, headerEnd) {
       } else {
         parsed = 0;
       }
+
       break;
+
     case 'from':
     case 'f':
       message.setHeader('from', headerValue);
       parsed = message.parseHeader('from');
+
       if (parsed) {
         message.from = parsed;
         message.from_tag = parsed.getParam('tag');
       }
+
       break;
+
     case 'to':
     case 't':
       message.setHeader('to', headerValue);
       parsed = message.parseHeader('to');
+
       if (parsed) {
         message.to = parsed;
         message.to_tag = parsed.getParam('tag');
       }
+
       break;
+
     case 'record-route':
       parsed = Grammar.parse(headerValue, 'Record_Route');
+
       if (parsed === -1) {
         parsed = undefined;
       } else {
         var _iterator = _createForOfIteratorHelper(parsed),
-          _step;
+            _step;
+
         try {
           for (_iterator.s(); !(_step = _iterator.n()).done;) {
             var header = _step.value;
@@ -14420,23 +17206,30 @@ function parseHeader(message, data, headerStart, headerEnd) {
           _iterator.f();
         }
       }
+
       break;
+
     case 'call-id':
     case 'i':
       message.setHeader('call-id', headerValue);
       parsed = message.parseHeader('call-id');
+
       if (parsed) {
         message.call_id = headerValue;
       }
+
       break;
+
     case 'contact':
     case 'm':
       parsed = Grammar.parse(headerValue, 'Contact');
+
       if (parsed === -1) {
         parsed = undefined;
       } else {
         var _iterator2 = _createForOfIteratorHelper(parsed),
-          _step2;
+            _step2;
+
         try {
           for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
             var _header = _step2.value;
@@ -14449,76 +17242,100 @@ function parseHeader(message, data, headerStart, headerEnd) {
           _iterator2.f();
         }
       }
+
       break;
+
     case 'content-length':
     case 'l':
       message.setHeader('content-length', headerValue);
       parsed = message.parseHeader('content-length');
       break;
+
     case 'content-type':
     case 'c':
       message.setHeader('content-type', headerValue);
       parsed = message.parseHeader('content-type');
       break;
+
     case 'cseq':
       message.setHeader('cseq', headerValue);
       parsed = message.parseHeader('cseq');
+
       if (parsed) {
         message.cseq = parsed.value;
       }
+
       if (message instanceof SIPMessage.IncomingResponse) {
         message.method = parsed.method;
       }
+
       break;
+
     case 'max-forwards':
       message.setHeader('max-forwards', headerValue);
       parsed = message.parseHeader('max-forwards');
       break;
+
     case 'www-authenticate':
       message.setHeader('www-authenticate', headerValue);
       parsed = message.parseHeader('www-authenticate');
       break;
+
     case 'proxy-authenticate':
       message.setHeader('proxy-authenticate', headerValue);
       parsed = message.parseHeader('proxy-authenticate');
       break;
+
     case 'session-expires':
     case 'x':
       message.setHeader('session-expires', headerValue);
       parsed = message.parseHeader('session-expires');
+
       if (parsed) {
         message.session_expires = parsed.expires;
         message.session_expires_refresher = parsed.refresher;
       }
+
       break;
+
     case 'refer-to':
     case 'r':
       message.setHeader('refer-to', headerValue);
       parsed = message.parseHeader('refer-to');
+
       if (parsed) {
         message.refer_to = parsed;
       }
+
       break;
+
     case 'replaces':
       message.setHeader('replaces', headerValue);
       parsed = message.parseHeader('replaces');
+
       if (parsed) {
         message.replaces = parsed;
       }
+
       break;
+
     case 'event':
     case 'o':
       message.setHeader('event', headerValue);
       parsed = message.parseHeader('event');
+
       if (parsed) {
         message.event = parsed;
       }
+
       break;
+
     default:
       // Do not parse this header.
       message.addHeader(headerName, headerValue);
       parsed = 0;
   }
+
   if (parsed === undefined) {
     return {
       error: "error parsing header \"".concat(headerName, "\"")
@@ -14538,37 +17355,66 @@ module.exports = pk;
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
-function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-/* globals RTCPeerConnection: false, RTCSessionDescription: false */
 
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+/* globals RTCPeerConnection: false, RTCSessionDescription: false */
 var EventEmitter = require('events').EventEmitter;
+
 var sdp_transform = require('sdp-transform');
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var Exceptions = require('./Exceptions');
+
 var Transactions = require('./Transactions');
+
 var Utils = require('./Utils');
+
 var Timers = require('./Timers');
+
 var SIPMessage = require('./SIPMessage');
+
 var Dialog = require('./Dialog');
+
 var RequestSender = require('./RequestSender');
+
 var RTCSession_DTMF = require('./RTCSession/DTMF');
+
 var RTCSession_Info = require('./RTCSession/Info');
+
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
+
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
+
 var URI = require('./URI');
+
 var logger = new Logger('RTCSession');
 var C = {
   // RTCSession states.
@@ -14583,17 +17429,22 @@ var C = {
   STATUS_TERMINATED: 8,
   STATUS_CONFIRMED: 9
 };
-
 /**
  * Local variables.
  */
+
 var holdMediaTypes = ['audio', 'video'];
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(RTCSession, _EventEmitter);
+
   var _super = _createSuper(RTCSession);
+
   function RTCSession(ua) {
     var _this;
+
     _classCallCheck(this, RTCSession);
+
     logger.debug('new');
     _this = _super.call(this);
     _this._id = null;
@@ -14603,79 +17454,63 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._earlyDialogs = {};
     _this._contact = null;
     _this._from_tag = null;
-    _this._to_tag = null;
+    _this._to_tag = null; // The RTCPeerConnection instance (public attribute).
 
-    // The RTCPeerConnection instance (public attribute).
-    _this._connection = null;
+    _this._connection = null; // Prevent races on serial PeerConnction operations.
 
-    // Prevent races on serial PeerConnction operations.
-    _this._connectionPromiseQueue = Promise.resolve();
+    _this._connectionPromiseQueue = Promise.resolve(); // Incoming/Outgoing request being currently processed.
 
-    // Incoming/Outgoing request being currently processed.
-    _this._request = null;
+    _this._request = null; // Cancel state for initial outgoing request.
 
-    // Cancel state for initial outgoing request.
     _this._is_canceled = false;
-    _this._cancel_reason = '';
+    _this._cancel_reason = ''; // RTCSession confirmation flag.
 
-    // RTCSession confirmation flag.
-    _this._is_confirmed = false;
+    _this._is_confirmed = false; // Is late SDP being negotiated.
 
-    // Is late SDP being negotiated.
-    _this._late_sdp = false;
+    _this._late_sdp = false; // Default rtcOfferConstraints and rtcAnswerConstrainsts (passed in connect() or answer()).
 
-    // Default rtcOfferConstraints and rtcAnswerConstrainsts (passed in connect() or answer()).
     _this._rtcOfferConstraints = null;
-    _this._rtcAnswerConstraints = null;
+    _this._rtcAnswerConstraints = null; // Local MediaStream.
 
-    // Local MediaStream.
     _this._localMediaStream = null;
-    _this._localMediaStreamLocallyGenerated = false;
+    _this._localMediaStreamLocallyGenerated = false; // 本地分享媒体：图片、视频、屏幕等.
 
-    // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareStream = null;
-    _this._localShareStreamLocallyGenerated = false;
+    _this._localShareStreamLocallyGenerated = false; // Flag to indicate PeerConnection ready for new actions.
 
-    // Flag to indicate PeerConnection ready for new actions.
-    _this._rtcReady = true;
+    _this._rtcReady = true; // Flag to indicate ICE candidate gathering is finished even if iceGatheringState is not yet 'complete'.
 
-    // Flag to indicate ICE candidate gathering is finished even if iceGatheringState is not yet 'complete'.
-    _this._iceReady = false;
+    _this._iceReady = false; // SIP Timers.
 
-    // SIP Timers.
     _this._timers = {
       ackTimer: null,
       expiresTimer: null,
       invite2xxTimer: null,
       userNoAnswerTimer: null
-    };
+    }; // Session info.
 
-    // Session info.
     _this._direction = null;
     _this._local_identity = null;
     _this._remote_identity = null;
     _this._start_time = null;
     _this._end_time = null;
-    _this._tones = null;
+    _this._tones = null; // Mute/Hold state.
 
-    // Mute/Hold state.
     _this._audioMuted = false;
     _this._videoMuted = false;
     _this._localHold = false;
-    _this._remoteHold = false;
+    _this._remoteHold = false; // 通话模式
 
-    // 通话模式
-    _this._mode = '';
-    // 本地切换到音视频模式
+    _this._mode = ''; // 本地切换到音视频模式
+
     _this._localToAudio = false;
-    _this._localToVideo = false;
-    // 远端切换到音视频模式
-    _this._remoteToAudio = false;
-    _this._remoteToVideo = false;
-    // 适配 100rel 调整reinvite的hold判断
-    _this._notHold = true;
+    _this._localToVideo = false; // 远端切换到音视频模式
 
-    // Session Timers (RFC 4028).
+    _this._remoteToAudio = false;
+    _this._remoteToVideo = false; // 适配 100rel 调整reinvite的hold判断
+
+    _this._notHold = true; // Session Timers (RFC 4028).
+
     _this._sessionTimers = {
       enabled: _this._ua.configuration.session_timers,
       refreshMethod: _this._ua.configuration.session_timers_refresh_method,
@@ -14684,28 +17519,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       running: false,
       refresher: false,
       timer: null // A setTimeout.
-    };
 
-    // Map of ReferSubscriber instances indexed by the REFER's CSeq number.
-    _this._referSubscribers = {};
+    }; // Map of ReferSubscriber instances indexed by the REFER's CSeq number.
 
-    // Custom session empty object for high level use.
+    _this._referSubscribers = {}; // Custom session empty object for high level use.
+
     _this._data = {};
     return _this;
   }
-
   /**
    * User API
    */
-
   // Expose RTCSession constants as a property of the RTCSession instance.
+
+
   _createClass(RTCSession, [{
     key: "C",
     get: function get() {
       return C;
-    }
+    } // Expose session failed/ended causes as a property of the RTCSession instance.
 
-    // Expose session failed/ended causes as a property of the RTCSession instance.
   }, {
     key: "causes",
     get: function get() {
@@ -14774,6 +17607,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         case C.STATUS_INVITE_RECEIVED:
         case C.STATUS_WAITING_FOR_ANSWER:
           return true;
+
         default:
           return false;
       }
@@ -14786,6 +17620,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         case C.STATUS_WAITING_FOR_ACK:
         case C.STATUS_CONFIRMED:
           return true;
+
         default:
           return false;
       }
@@ -14797,6 +17632,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         case C.STATUS_CANCELED:
         case C.STATUS_TERMINATED:
           return true;
+
         default:
           return false;
       }
@@ -14838,40 +17674,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
-      this._data = options.data || this._data;
+      this._data = options.data || this._data; // Check target.
 
-      // Check target.
       if (target === undefined) {
         throw new TypeError('Not enough arguments');
-      }
+      } // Check Session Status.
 
-      // Check Session Status.
+
       if (this._status !== C.STATUS_NULL) {
         throw new Exceptions.InvalidStateError(this._status);
-      }
+      } // Check WebRTC support.
 
-      // Check WebRTC support.
+
       if (!window.RTCPeerConnection) {
         throw new Exceptions.NotSupportedError('WebRTC not supported');
-      }
+      } // Check target validity.
 
-      // Check target validity.
+
       target = this._ua.normalizeTarget(target);
+
       if (!target) {
         throw new TypeError("Invalid target: ".concat(originalTarget));
-      }
+      } // 判断授权的 sip domain
 
-      // 判断授权的 sip domain
+
       if (this._ua.sk && this._ua.sk[8].split(';').indexOf(target.host) == -1) {
         this._ua.emit('failed', {
           originator: 'local',
           message: CRTC_C.causes.AUTHORIZATION_ERROR,
           cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_SIPDOMAIN_ERROR
         });
-        return false;
-      }
 
-      // Session Timers.
+        return false;
+      } // Session Timers.
+
+
       if (this._sessionTimers.enabled) {
         if (Utils.isDecimal(options.sessionTimersExpires)) {
           if (options.sessionTimersExpires >= CRTC_C.MIN_SESSION_EXPIRES) {
@@ -14880,19 +17717,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._sessionTimers.defaultExpires = CRTC_C.SESSION_EXPIRES;
           }
         }
-      }
+      } // Set event handlers.
 
-      // Set event handlers.
+
       for (var event in eventHandlers) {
         if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
           this.on(event, eventHandlers[event]);
         }
-      }
+      } // Session parameter initialization.
 
-      // Session parameter initialization.
-      this._from_tag = Utils.newTag();
 
-      // Set anonymous property.
+      this._from_tag = Utils.newTag(); // Set anonymous property.
+
       var anonymous = options.anonymous || false;
       var requestParams = {
         from_tag: this._from_tag
@@ -14901,6 +17737,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         anonymous: anonymous,
         outbound: true
       });
+
       if (anonymous) {
         requestParams.from_display_name = 'Anonymous';
         requestParams.from_uri = new URI('sip', 'anonymous', 'anonymous.invalid');
@@ -14910,128 +17747,138 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         requestParams.from_uri = new URI('sip', options.fromUserName, this._ua.configuration.uri.host);
         extraHeaders.push("P-Preferred-Identity: ".concat(this._ua.configuration.uri.toString()));
       }
+
       if (options.fromDisplayName) {
         requestParams.from_display_name = options.fromDisplayName;
       }
-      extraHeaders.push("Contact: ".concat(this._contact));
 
-      // 5G Headers
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
+
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       }
+
       extraHeaders.push('Content-Type: application/sdp');
+
       if (this._sessionTimers.enabled) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.defaultExpires).concat(this._ua.configuration.session_timers_force_refresher ? ';refresher=uac' : ''));
       }
+
       this._request = new SIPMessage.InitialOutgoingInviteRequest(target, this._ua, requestParams, extraHeaders);
-      this._id = this._request.call_id + this._from_tag;
+      this._id = this._request.call_id + this._from_tag; // Create a new RTCPeerConnection instance.
 
-      // Create a new RTCPeerConnection instance.
-      this._createRTCConnection(pcConfig, rtcConstraints);
+      this._createRTCConnection(pcConfig, rtcConstraints); // Set internal properties.
 
-      // Set internal properties.
+
       this._direction = 'outgoing';
       this._local_identity = this._request.from;
-      this._remote_identity = this._request.to;
+      this._remote_identity = this._request.to; // User explicitly provided a newRTCSession callback for this session.
 
-      // User explicitly provided a newRTCSession callback for this session.
       if (initCallback) {
         initCallback(this);
       }
+
       this._newRTCSession('local', this._request);
+
       this._sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream);
     }
   }, {
     key: "init_incoming",
     value: function init_incoming(request, initCallback) {
       var _this2 = this;
+
       logger.debug('init_incoming()');
       var expires;
-      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
+      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined; // Check body and content type.
 
-      // Check body and content type.
       if (request.body && contentType !== 'application/sdp') {
         request.reply(415);
         return;
-      }
+      } // Session parameter initialization.
 
-      // Session parameter initialization.
+
       this._status = C.STATUS_INVITE_RECEIVED;
       this._from_tag = request.from_tag;
       this._id = request.call_id + this._from_tag;
       this._request = request;
-      this._contact = this._ua.contact.toString();
+      this._contact = this._ua.contact.toString(); // Get the Expires header value if exists.
 
-      // Get the Expires header value if exists.
       if (request.hasHeader('expires')) {
         expires = request.getHeader('expires') * 1000;
       }
-
       /* Set the to_tag before
        * replying a response code that will create a dialog.
        */
-      request.to_tag = Utils.newTag();
 
-      // An error on dialog creation will fire 'failed' event.
+
+      request.to_tag = Utils.newTag(); // An error on dialog creation will fire 'failed' event.
+
       if (!this._createDialog(request, 'UAS', true)) {
         request.reply(500, 'Missing Contact header field');
         return;
       }
+
       if (request.body) {
         this._late_sdp = false;
       } else {
         this._late_sdp = true;
       }
-      this._status = C.STATUS_WAITING_FOR_ANSWER;
 
-      // Set userNoAnswerTimer.
+      this._status = C.STATUS_WAITING_FOR_ANSWER; // Set userNoAnswerTimer.
+
       this._timers.userNoAnswerTimer = setTimeout(function () {
         request.reply(408);
+
         _this2._failed('local', null, CRTC_C.causes.NO_ANSWER);
       }, this._ua.configuration.no_answer_timeout);
-
       /* Set expiresTimer
        * RFC3261 13.3.1
        */
+
       if (expires) {
         this._timers.expiresTimer = setTimeout(function () {
           if (_this2._status === C.STATUS_WAITING_FOR_ANSWER) {
             request.reply(487);
+
             _this2._failed('system', null, CRTC_C.causes.EXPIRES);
           }
         }, expires);
-      }
+      } // Set internal properties.
 
-      // Set internal properties.
+
       this._direction = 'incoming';
       this._local_identity = request.to;
-      this._remote_identity = request.from;
+      this._remote_identity = request.from; // A init callback was specifically defined.
 
-      // A init callback was specifically defined.
       if (initCallback) {
         initCallback(this);
       }
-
       /**
        * 音视频切换相关
        * 根据远端offer的sdp判断呼入的通话模式
        * @author: lei
        */
+
+
       if (request.body) {
         var sdp = sdp_transform.parse(request.body);
         request['mode'] = 'audio';
         this._mode = 'audio';
         this._remoteToAudio = true;
         this._remoteToVideo = false;
+
         var _iterator = _createForOfIteratorHelper(sdp.media),
-          _step;
+            _step;
+
         try {
           for (_iterator.s(); !(_step = _iterator.n()).done;) {
             var m = _step.value;
+
             if (m.type == 'audio') {
               continue;
             }
+
             if (m.port !== 0) {
               request['mode'] = 'video';
               this._mode = 'video';
@@ -15044,31 +17891,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator.f();
         }
-      }
+      } // Fire 'newRTCSession' event.
 
-      // Fire 'newRTCSession' event.
-      this._newRTCSession('remote', request);
 
-      // The user may have rejected the call in the 'newRTCSession' event.
+      this._newRTCSession('remote', request); // The user may have rejected the call in the 'newRTCSession' event.
+
+
       if (this._status === C.STATUS_TERMINATED) {
         return;
-      }
+      } // Reply 180.
 
-      // Reply 180.
-      request.reply(180, null, ["Contact: ".concat(this._contact)]);
 
-      // Fire 'progress' event.
+      request.reply(180, null, ["Contact: ".concat(this._contact)]); // Fire 'progress' event.
       // TODO: Document that 'response' field in 'progress' event is null for incoming calls.
+
       this._progress('local', null);
     }
-
     /**
      * Answer the call.
      */
+
   }, {
     key: "answer",
     value: function answer() {
       var _this3 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('answer()');
       var request = this._request;
@@ -15088,25 +17935,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var peerOffersFullVideo = false;
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
-      this._data = options.data || this._data;
+      this._data = options.data || this._data; // 5G Headers
 
-      // 5G Headers
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-      }
+      } // Check Session Direction and Status.
 
-      // Check Session Direction and Status.
+
       if (this._direction !== 'incoming') {
         throw new Exceptions.NotSupportedError('"answer" not supported for outgoing RTCSession');
-      }
+      } // Check Session status.
 
-      // Check Session status.
+
       if (this._status !== C.STATUS_WAITING_FOR_ANSWER) {
         throw new Exceptions.InvalidStateError(this._status);
-      }
+      } // Session Timers.
 
-      // Session Timers.
+
       if (this._sessionTimers.enabled) {
         if (Utils.isDecimal(options.sessionTimersExpires)) {
           if (options.sessionTimersExpires >= CRTC_C.MIN_SESSION_EXPIRES) {
@@ -15116,54 +17962,60 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       }
-      this._status = C.STATUS_ANSWERED;
 
-      // An error on dialog creation will fire 'failed' event.
+      this._status = C.STATUS_ANSWERED; // An error on dialog creation will fire 'failed' event.
+
       if (!this._createDialog(request, 'UAS')) {
         request.reply(500, 'Error creating dialog');
         return;
       }
+
       clearTimeout(this._timers.userNoAnswerTimer);
-      extraHeaders.unshift("Contact: ".concat(this._contact));
+      extraHeaders.unshift("Contact: ".concat(this._contact)); // Determine incoming media from incoming SDP offer (if any).
 
-      // Determine incoming media from incoming SDP offer (if any).
-      var sdp = request.parseSDP();
+      var sdp = request.parseSDP(); // Make sure sdp.media is an array, not the case if there is only one media.
 
-      // Make sure sdp.media is an array, not the case if there is only one media.
       if (!Array.isArray(sdp.media)) {
         sdp.media = [sdp.media];
-      }
+      } // Go through all medias in SDP to find offered capabilities to answer with.
 
-      // Go through all medias in SDP to find offered capabilities to answer with.
+
       var _iterator2 = _createForOfIteratorHelper(sdp.media),
-        _step2;
+          _step2;
+
       try {
         for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
           var m = _step2.value;
+
           if (m.type === 'audio') {
             peerHasAudioLine = true;
+
             if (!m.direction || m.direction === 'sendrecv') {
               peerOffersFullAudio = true;
             }
           }
+
           if (m.type === 'video') {
             peerHasVideoLine = true;
+
             if (!m.direction || m.direction === 'sendrecv') {
               peerOffersFullVideo = true;
             }
           }
-        }
+        } // Remove audio from mediaStream if suggested by mediaConstraints.
 
-        // Remove audio from mediaStream if suggested by mediaConstraints.
       } catch (err) {
         _iterator2.e(err);
       } finally {
         _iterator2.f();
       }
+
       if (mediaStream && mediaConstraints.audio === false) {
         tracks = mediaStream.getAudioTracks();
+
         var _iterator3 = _createForOfIteratorHelper(tracks),
-          _step3;
+            _step3;
+
         try {
           for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
             var track = _step3.value;
@@ -15174,13 +18026,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator3.f();
         }
-      }
+      } // Remove video from mediaStream if suggested by mediaConstraints.
 
-      // Remove video from mediaStream if suggested by mediaConstraints.
+
       if (mediaStream && mediaConstraints.video === false) {
         tracks = mediaStream.getVideoTracks();
+
         var _iterator4 = _createForOfIteratorHelper(tracks),
-          _step4;
+            _step4;
+
         try {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
             var _track = _step4.value;
@@ -15191,77 +18045,77 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator4.f();
         }
-      }
+      } // Set audio constraints based on incoming stream if not supplied.
 
-      // Set audio constraints based on incoming stream if not supplied.
+
       if (!mediaStream && mediaConstraints.audio === undefined) {
         mediaConstraints.audio = peerOffersFullAudio;
-      }
+      } // Set video constraints based on incoming stream if not supplied.
 
-      // Set video constraints based on incoming stream if not supplied.
+
       if (!mediaStream && mediaConstraints.video === undefined) {
         mediaConstraints.video = peerOffersFullVideo;
-      }
+      } // Don't ask for audio if the incoming offer has no audio section.
 
-      // Don't ask for audio if the incoming offer has no audio section.
+
       if (!mediaStream && !peerHasAudioLine && !rtcOfferConstraints.offerToReceiveAudio) {
         mediaConstraints.audio = false;
-      }
+      } // Don't ask for video if the incoming offer has no video section.
 
-      // Don't ask for video if the incoming offer has no video section.
+
       if (!mediaStream && !peerHasVideoLine && !rtcOfferConstraints.offerToReceiveVideo) {
         mediaConstraints.video = false;
-      }
-
-      // Create a new RTCPeerConnection instance.
+      } // Create a new RTCPeerConnection instance.
       // TODO: This may throw an error, should react.
+
+
       this._createRTCConnection(pcConfig, rtcConstraints);
-      Promise.resolve()
-      // Handle local MediaStream.
+
+      Promise.resolve() // Handle local MediaStream.
       .then(function () {
         // A local MediaStream is given, use it.
         if (mediaStream) {
           return mediaStream;
-        }
-
-        // Audio and/or video requested, prompt getUserMedia.
+        } // Audio and/or video requested, prompt getUserMedia.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-          _this3._localMediaStreamLocallyGenerated = true;
+          _this3._localMediaStreamLocallyGenerated = true; // 判断授权是否包含视频
 
-          // 判断授权是否包含视频
           if (Number(_this3._ua.sk[7]) < 1) {
             delete mediaConstraints.video;
           }
-
           /**
            * 音视频切换相关
            * 判断是视频接听还是音频接听
            * @author: lei
            */
+
+
           if (!mediaConstraints.video) {
             _this3._localToAudio = true;
           }
+
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this3._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
+
             request.reply(480);
+
             _this3._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+
             logger.warn('emit "getusermediafailed" [error:%o]', error);
+
             _this3.emit('getusermediafailed', error);
+
             throw new Error('getUserMedia() failed');
           });
         }
-      })
-      // Attach MediaStream to RTCPeerconnection.
+      }) // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
         if (_this3._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
-        }
-
-        // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+        } // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
         // let ua;
-
         // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
         //   .match(/cpu iphone os (.*?) like mac os/));
         // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
@@ -15270,8 +18124,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // }
         // else
         // {
-        _this3._localMediaStream = stream;
-        // }
+
+
+        _this3._localMediaStream = stream; // }
 
         if (stream) {
           // 兼容低版本浏览器不支持addTrack的情况
@@ -15283,19 +18138,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this3._connection.addStream(stream);
           }
         }
-      })
-      // Set remote description.
+      }) // Set remote description.
       .then(function () {
         if (_this3._late_sdp) {
           return;
         }
+
         var e = {
           originator: 'remote',
           type: 'offer',
           sdp: request.body
         };
         logger.debug('emit "sdp"');
+
         _this3.emit('sdp', e);
+
         var offer = new RTCSessionDescription({
           type: 'offer',
           sdp: e.sdp
@@ -15304,21 +18161,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return _this3._connection.setRemoteDescription(offer);
         })["catch"](function (error) {
           request.reply(488);
+
           _this3._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
+
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
           _this3.emit('peerconnection:setremotedescriptionfailed', error);
+
           throw new Error('peerconnection.setRemoteDescription() failed');
         });
         return _this3._connectionPromiseQueue;
-      })
-      // Create local description.
+      }) // Create local description.
       .then(function () {
         if (_this3._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
-        }
+        } // TODO: Is this event already useful?
 
-        // TODO: Is this event already useful?
+
         _this3._connecting(request);
+
         if (!_this3._late_sdp) {
           return _this3._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function () {
             request.reply(500);
@@ -15330,17 +18191,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             throw new Error('_createLocalDescription() failed');
           });
         }
-      })
-      // Send reply.
+      }) // Send reply.
       .then(function (desc) {
         if (_this3._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
         _this3._handleSessionTimersInIncomingRequest(request, extraHeaders);
+
         request.reply(200, null, extraHeaders, desc, function () {
           _this3._status = C.STATUS_WAITING_FOR_ACK;
+
           _this3._setInvite2xxTimer(request, desc);
+
           _this3._setACKTimer();
+
           _this3._accepted('local');
         }, function () {
           _this3._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
@@ -15349,35 +18214,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (_this3._status === C.STATUS_TERMINATED) {
           return;
         }
+
         logger.warn(error);
       });
     }
-
     /**
      * 切换到视频模式
      */
+
   }, {
     key: "upgradeToVideo",
     value: function upgradeToVideo() {
       var _this4 = this;
+
       logger.debug('upgradeToVideo()');
+
       if (this._ua.sk[7] < 2) {
         return;
-      }
+      } // Check Session Status.
 
-      // Check Session Status.
+
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
+
       this._localToAudio = false;
       this._localToVideo = true;
       navigator.mediaDevices.getUserMedia({
         video: true
       }).then(function (stream) {
         var videoTracks = stream.getVideoTracks();
-        _this4._localMediaStream.addTrack(videoTracks[0]);
 
-        // 兼容低版本浏览器不支持addTrack的情况
+        _this4._localMediaStream.addTrack(videoTracks[0]); // 兼容低版本浏览器不支持addTrack的情况
+
+
         if (RTCPeerConnection.prototype.addTrack) {
           _this4._connection.addTrack(videoTracks[0], _this4._localMediaStream);
         } else {
@@ -15385,6 +18255,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }).then(function () {
         _this4._iceReady = false;
+
         _this4.renegotiate({
           rtcOfferConstraints: {
             iceRestart: true
@@ -15392,28 +18263,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       });
     }
-
     /**
      * 切换到音频模式
      */
+
   }, {
     key: "demoteToAudio",
     value: function demoteToAudio() {
       var _this5 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
-      logger.debug('demoteToAudio()');
+      logger.debug('demoteToAudio()'); // Check Session Status.
 
-      // Check Session Status.
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
+
       if (this._localToAudio === true) {
         return false;
       }
+
       if (!this._isReadyToReOffer()) {
         return false;
       }
+
       this._localToAudio = true;
       this._localToVideo = false;
       var eventHandlers = {
@@ -15430,6 +18304,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         }
       };
+
       if (options.useUpdate) {
         this._sendUpdate({
           sdpOffer: true,
@@ -15442,32 +18317,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: options.extraHeaders
         });
       }
+
       return true;
     }
-
     /**
      * 切换设备，一般用于切换摄像头
      */
+
   }, {
     key: "switchDevice",
     value: function switchDevice(type, deviceId) {
       var _this6 = this;
-      logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
-      // Check Session Status.
+      logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId)); // Check Session Status.
+
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
-      }
+      } // TODO 需要判断当前是否是视频通话
 
-      // TODO 需要判断当前是否是视频通话
+
       if (type === 'camera') {
         return Promise.resolve().then(function () {
           _this6._connection.getSenders().find(function (s) {
             logger.debug("kind: ".concat(s.track.kind));
+
             if (s.track.kind == 'video') {
               s.track.stop();
             }
           });
+
           _this6._localMediaStreamLocallyGenerated = true;
           return navigator.mediaDevices.getUserMedia({
             audio: false,
@@ -15478,13 +18356,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           })["catch"](function (error) {
             logger.error('emit "getusermediafailed" [error:%o]', error);
+
             _this6.emit('getusermediafailed', error);
+
             throw new Error('getUserMedia() failed');
           });
         }).then(function (stream) {
           // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
           // let ua;
-
           // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
           //   .match(/cpu iphone os (.*?) like mac os/));
           // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
@@ -15493,18 +18372,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           // }
           // else
           // {
-          _this6._localMediaStream = stream;
-          // }
+          _this6._localMediaStream = stream; // }
 
           _this6._localMediaStream.getVideoTracks().forEach(function (track) {
             var sender = _this6._connection.getSenders().find(function (s) {
               return s.track.kind == 'video';
             });
+
             sender.replaceTrack(track);
+
             _this6.emit('cameraChanged', {
               videoStream: stream
             });
           });
+
           return {
             stream: stream
           };
@@ -15513,24 +18394,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return false;
       }
     }
-
     /**
      * 分享媒体
      */
+
   }, {
     key: "share",
     value: function share(type, id, assembly) {
       var _this7 = this;
-      logger.debug('share()');
 
-      // Check Session Status.
+      logger.debug('share()'); // Check Session Status.
+
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
-      var timer;
-      var element = document.querySelector(id);
 
-      // 分享页面元素
+      var timer;
+      var element = document.querySelector(id); // 分享页面元素
+
       function renderHtml(canvas, ctx) {
         assembly(document.querySelector(id), {
           allowTaint: true,
@@ -15542,25 +18423,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }).then(function () {
           renderHtml(canvas, ctx);
         });
-      }
+      } // 分享视频
 
-      // 分享视频
+
       if (type === 'video') {
         logger.debug('share video');
         this._localShareStream = element.captureStream(0);
+
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
             return s.track.kind == 'video' && s.track.readyState !== 'ended';
           });
+
           sender.replaceTrack(track);
         });
-      }
-      // 分享图片
+      } // 分享图片
       else if (type === 'pic') {
         logger.debug('share pic');
+
         if (timer) {
           clearInterval(timer);
         }
+
         var canvas = document.createElement('canvas');
         canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
         canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
@@ -15570,115 +18454,125 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
         }, 100);
         this._localShareStream = canvas.captureStream(15);
+
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
             return s.track.kind == 'video' && s.track.readyState !== 'ended';
           });
+
           sender.replaceTrack(track);
         });
-      }
-      // 分享页面元素
+      } // 分享页面元素
       else if (type === 'html') {
         logger.debug('share html');
+
         if (!assembly) {
           return;
         }
+
         var _canvas = document.createElement('canvas');
+
         _canvas.width = 1;
         _canvas.height = 1;
+
         var _ctx = _canvas.getContext('2d');
+
         renderHtml(_canvas, _ctx);
         this._localShareStream = _canvas.captureStream(15);
+
         this._localShareStream.getVideoTracks().forEach(function (track) {
           var sender = _this7._connection.getSenders().find(function (s) {
             return s.track.kind == 'video' && s.track.readyState !== 'ended';
           });
+
           sender.replaceTrack(track);
         });
-      }
-      // 分享屏幕
+      } // 分享屏幕
       else if (type === 'screen') {
-        logger.debug('share screen');
+        logger.debug('share screen'); // 判断浏览器是否兼容获取屏幕分享
 
-        // 判断浏览器是否兼容获取屏幕分享
         if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
           logger.warn('getDisplayMedia is not supported');
           this.emit('getdisplaymediafailed');
         }
-        this._localShareStreamLocallyGenerated = true;
 
-        // 分享屏幕 默认帧率 5
+        this._localShareStreamLocallyGenerated = true; // 分享屏幕 默认帧率 5
+
         navigator.mediaDevices.getDisplayMedia({
           video: {
             frameRate: 5
           }
         }).then(function (stream) {
-          _this7._localShareStream = stream;
+          _this7._localShareStream = stream; // 分享屏幕点击系统停止按钮后停止分享
 
-          // 分享屏幕点击系统停止按钮后停止分享
           stream.addEventListener('inactive', function () {
             if (_this7._localShareStream && _this7._localShareStreamLocallyGenerated) {
               _this7._localMediaStream.getVideoTracks().forEach(function (track) {
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video';
-                  // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1
+                  return s.track.kind == 'video'; // return s.track.kind == 'video' && (s.track.label.indexOf('window')!==-1
                   // || s.track.label.indexOf('web-')!==-1 || s.track.label.indexOf('screen') !==-1);
                 });
 
                 sender.replaceTrack(track);
               });
+
               _this7._localShareStreamLocallyGenerated = false;
               Utils.closeMediaStream(_this7._localShareStream);
             }
-          });
+          }); // 替换流方式分享屏幕
 
-          // 替换流方式分享屏幕
           stream.getVideoTracks().forEach(function (track) {
             var sender = _this7._connection.getSenders().find(function (s) {
               return s.track.kind == 'video' && s.track.readyState !== 'ended';
             });
+
             sender.replaceTrack(track);
           });
         })["catch"](function (error) {
           logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+
           _this7.emit('getdisplaymediafailed', error);
+
           throw new Error('getDisplayMedia() failed');
         });
-      }
-
-      // 重新协商
+      } // 重新协商
       // this.renegotiate();
-    }
 
+    }
     /**
      * 停止分享媒体
      */
+
   }, {
     key: "unShare",
     value: function unShare() {
       var _this8 = this;
-      logger.debug('unShare()');
 
-      // Check Session Status.
+      logger.debug('unShare()'); // Check Session Status.
+
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
+
       Utils.closeMediaStream(this._localShareStream);
+
       this._localMediaStream.getVideoTracks().forEach(function (track) {
         var sender = _this8._connection.getSenders().find(function (s) {
           return s.track.kind == 'video';
         });
+
         sender.replaceTrack(track);
       });
     }
-
     /**
      * Terminate the call.
      */
+
   }, {
     key: "terminate",
     value: function terminate() {
       var _this9 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('terminate()');
       var cause = options.cause || CRTC_C.causes.BYE;
@@ -15686,103 +18580,118 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var body = options.body;
       var cancel_reason;
       var status_code = options.status_code;
-      var reason_phrase = options.reason_phrase;
+      var reason_phrase = options.reason_phrase; // Check Session Status.
 
-      // Check Session Status.
       if (this._status === C.STATUS_TERMINATED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
+
       switch (this._status) {
         // - UAC -
         case C.STATUS_NULL:
         case C.STATUS_INVITE_SENT:
         case C.STATUS_1XX_RECEIVED:
           logger.debug('canceling session');
+
           if (status_code && (status_code < 200 || status_code >= 700)) {
             throw new TypeError("Invalid status_code: ".concat(status_code));
           } else if (status_code) {
             reason_phrase = reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
             cancel_reason = "SIP ;cause=".concat(status_code, " ;text=\"").concat(reason_phrase, "\"");
-          }
+          } // Check Session Status.
 
-          // Check Session Status.
+
           if (this._status === C.STATUS_NULL || this._status === C.STATUS_INVITE_SENT) {
             this._is_canceled = true;
             this._cancel_reason = cancel_reason;
           } else if (this._status === C.STATUS_1XX_RECEIVED) {
             this._request.cancel(cancel_reason);
           }
-          this._status = C.STATUS_CANCELED;
-          this._failed('local', null, CRTC_C.causes.CANCELED);
-          break;
 
+          this._status = C.STATUS_CANCELED;
+
+          this._failed('local', null, CRTC_C.causes.CANCELED);
+
+          break;
         // - UAS -
+
         case C.STATUS_WAITING_FOR_ANSWER:
         case C.STATUS_ANSWERED:
           logger.debug('rejecting session');
           status_code = status_code || 480;
+
           if (status_code < 300 || status_code >= 700) {
             throw new TypeError("Invalid status_code: ".concat(status_code));
           }
+
           this._request.reply(status_code, reason_phrase, extraHeaders, body);
+
           this._failed('local', null, CRTC_C.causes.REJECTED);
+
           break;
+
         case C.STATUS_WAITING_FOR_ACK:
         case C.STATUS_CONFIRMED:
           logger.debug('terminating session');
           reason_phrase = options.reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
+
           if (status_code && (status_code < 200 || status_code >= 700)) {
             throw new TypeError("Invalid status_code: ".concat(status_code));
           } else if (status_code) {
             extraHeaders.push("Reason: SIP ;cause=".concat(status_code, "; text=\"").concat(reason_phrase, "\""));
           }
-
           /* RFC 3261 section 15 (Terminating a session):
             *
             * "...the callee's UA MUST NOT send a BYE on a confirmed dialog
             * until it has received an ACK for its 2xx response or until the server
             * transaction times out."
             */
+
+
           if (this._status === C.STATUS_WAITING_FOR_ACK && this._direction === 'incoming' && this._request.server_transaction.state !== Transactions.C.STATUS_TERMINATED) {
             // Save the dialog for later restoration.
-            var dialog = this._dialog;
+            var dialog = this._dialog; // Send the BYE as soon as the ACK is received...
 
-            // Send the BYE as soon as the ACK is received...
             this.receiveRequest = function (_ref) {
               var method = _ref.method;
+
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
+
                 dialog.terminate();
               }
-            };
+            }; // .., or when the INVITE transaction times out
 
-            // .., or when the INVITE transaction times out
+
             this._request.server_transaction.on('stateChanged', function () {
               if (_this9._request.server_transaction.state === Transactions.C.STATUS_TERMINATED) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
                   body: body
                 });
+
                 dialog.terminate();
               }
             });
-            this._ended('local', null, cause);
 
-            // Restore the dialog into 'this' in order to be able to send the in-dialog BYE :-).
-            this._dialog = dialog;
+            this._ended('local', null, cause); // Restore the dialog into 'this' in order to be able to send the in-dialog BYE :-).
 
-            // Restore the dialog into 'ua' so the ACK can reach 'this' session.
+
+            this._dialog = dialog; // Restore the dialog into 'ua' so the ACK can reach 'this' session.
+
             this._ua.newDialog(dialog);
           } else {
             this.sendRequest(CRTC_C.BYE, {
               extraHeaders: extraHeaders,
               body: body
             });
+
             this._ended('local', null, cause);
           }
+
       }
     }
   }, {
@@ -15794,31 +18703,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var duration = options.duration || null;
       var interToneGap = options.interToneGap || null;
       var transportType = options.transportType || CRTC_C.DTMF_TRANSPORT.INFO;
+
       if (tones === undefined) {
         throw new TypeError('Not enough arguments');
-      }
+      } // Check Session Status.
 
-      // Check Session Status.
+
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
-      }
+      } // Check Transport type.
 
-      // Check Transport type.
+
       if (transportType !== CRTC_C.DTMF_TRANSPORT.INFO && transportType !== CRTC_C.DTMF_TRANSPORT.RFC2833) {
         throw new TypeError("invalid transportType: ".concat(transportType));
-      }
+      } // Convert to string.
 
-      // Convert to string.
+
       if (typeof tones === 'number') {
         tones = tones.toString();
-      }
+      } // Check tones.
 
-      // Check tones.
+
       if (!tones || typeof tones !== 'string' || !tones.match(/^[0-9A-DR#*,]+$/i)) {
         throw new TypeError("Invalid tones: ".concat(tones));
-      }
+      } // Check duration.
 
-      // Check duration.
+
       if (duration && !Utils.isDecimal(duration)) {
         throw new TypeError("Invalid tone duration: ".concat(duration));
       } else if (!duration) {
@@ -15832,9 +18742,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } else {
         duration = Math.abs(duration);
       }
-      options.duration = duration;
 
-      // Check interToneGap.
+      options.duration = duration; // Check interToneGap.
+
       if (interToneGap && !Utils.isDecimal(interToneGap)) {
         throw new TypeError("Invalid interToneGap: ".concat(interToneGap));
       } else if (!interToneGap) {
@@ -15844,39 +18754,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         interToneGap = RTCSession_DTMF.C.MIN_INTER_TONE_GAP;
       } else {
         interToneGap = Math.abs(interToneGap);
-      }
+      } // RFC2833. Let RTCDTMFSender enqueue the DTMFs.
 
-      // RFC2833. Let RTCDTMFSender enqueue the DTMFs.
+
       if (transportType === CRTC_C.DTMF_TRANSPORT.RFC2833) {
         // Send DTMF in current audio RTP stream.
         var sender = this._getDTMFRTPSender();
+
         if (sender) {
           // Add remaining buffered tones.
-          tones = sender.toneBuffer + tones;
-          // Insert tones.
+          tones = sender.toneBuffer + tones; // Insert tones.
+
           sender.insertDTMF(tones, duration, interToneGap);
         }
+
         return;
       }
+
       if (this._tones) {
         // Tones are already queued, just add to the queue.
         this._tones += tones;
         return;
       }
-      this._tones = tones;
 
-      // Send the first tone.
+      this._tones = tones; // Send the first tone.
+
       _sendDTMF.call(this);
+
       function _sendDTMF() {
         var _this10 = this;
+
         var timeout;
+
         if (this._status === C.STATUS_TERMINATED || !this._tones || position >= this._tones.length) {
           // Stop sending DTMF.
           this._tones = null;
           return;
         }
+
         var tone = this._tones[position];
         position += 1;
+
         if (tone === ',') {
           timeout = 2000;
         } else {
@@ -15889,9 +18807,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           dtmf.send(tone, options);
           timeout = duration + interToneGap;
-        }
+        } // Set timeout for the next tone.
 
-        // Set timeout for the next tone.
+
         setTimeout(_sendDTMF.bind(this), timeout);
       }
     }
@@ -15899,19 +18817,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "sendInfo",
     value: function sendInfo(contentType, body) {
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-      logger.debug('sendInfo()');
+      logger.debug('sendInfo()'); // Check Session Status.
 
-      // Check Session Status.
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
         throw new Exceptions.InvalidStateError(this._status);
       }
+
       var info = new RTCSession_Info(this);
       info.send(contentType, body, options);
     }
-
     /**
      * Mute
      */
+
   }, {
     key: "mute",
     value: function mute() {
@@ -15921,17 +18839,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       };
       logger.debug('mute()');
       var audioMuted = false,
-        videoMuted = false;
+          videoMuted = false;
+
       if (this._audioMuted === false && options.audio) {
         audioMuted = true;
         this._audioMuted = true;
+
         this._toggleMuteAudio(true);
       }
+
       if (this._videoMuted === false && options.video) {
         videoMuted = true;
         this._videoMuted = true;
+
         this._toggleMuteVideo(true);
       }
+
       if (audioMuted === true || videoMuted === true) {
         this._onmute({
           audio: audioMuted,
@@ -15939,10 +18862,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }
     }
-
     /**
      * Unmute
      */
+
   }, {
     key: "unmute",
     value: function unmute() {
@@ -15952,21 +18875,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       };
       logger.debug('unmute()');
       var audioUnMuted = false,
-        videoUnMuted = false;
+          videoUnMuted = false;
+
       if (this._audioMuted === true && options.audio) {
         audioUnMuted = true;
         this._audioMuted = false;
+
         if (this._localHold === false) {
           this._toggleMuteAudio(false);
         }
       }
+
       if (this._videoMuted === true && options.video) {
         videoUnMuted = true;
         this._videoMuted = false;
+
         if (this._localHold === false) {
           this._toggleMuteVideo(false);
         }
       }
+
       if (audioUnMuted === true || videoUnMuted === true) {
         this._onunmute({
           audio: audioUnMuted,
@@ -15974,28 +18902,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }
     }
-
     /**
      * Hold
      */
+
   }, {
     key: "hold",
     value: function hold() {
       var _this11 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('hold()');
+
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
       }
+
       if (this._localHold === true) {
         return false;
       }
+
       if (!this._isReadyToReOffer()) {
         return false;
       }
+
       this._localHold = true;
+
       this._onhold('local');
+
       var eventHandlers = {
         succeeded: function succeeded() {
           if (done) {
@@ -16010,6 +18945,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         }
       };
+
       if (options.useUpdate) {
         this._sendUpdate({
           sdpOffer: true,
@@ -16022,26 +18958,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: options.extraHeaders
         });
       }
+
       return true;
     }
   }, {
     key: "unhold",
     value: function unhold() {
       var _this12 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('unhold()');
+
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
       }
+
       if (this._localHold === false) {
         return false;
       }
+
       if (!this._isReadyToReOffer()) {
         return false;
       }
+
       this._localHold = false;
+
       this._onunhold('local');
+
       var eventHandlers = {
         succeeded: function succeeded() {
           if (done) {
@@ -16056,6 +19000,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         }
       };
+
       if (options.useUpdate) {
         this._sendUpdate({
           sdpOffer: true,
@@ -16068,22 +19013,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: options.extraHeaders
         });
       }
+
       return true;
     }
   }, {
     key: "renegotiate",
     value: function renegotiate() {
       var _this13 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('renegotiate()');
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
+
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
       }
+
       if (!this._isReadyToReOffer()) {
         return false;
       }
+
       var eventHandlers = {
         succeeded: function succeeded() {
           if (done) {
@@ -16098,7 +19048,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         }
       };
+
       this._setLocalMediaStatus();
+
       if (options.useUpdate) {
         this._sendUpdate({
           sdpOffer: true,
@@ -16113,35 +19065,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: options.extraHeaders
         });
       }
+
       return true;
     }
-
     /**
      * Refer
      */
+
   }, {
     key: "refer",
     value: function refer(target, options) {
       var _this14 = this;
+
       logger.debug('refer()');
       var originalTarget = target;
+
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
-      }
+      } // Check target validity.
 
-      // Check target validity.
+
       target = this._ua.normalizeTarget(target);
+
       if (!target) {
         throw new TypeError("Invalid target: ".concat(originalTarget));
       }
+
       var referSubscriber = new RTCSession_ReferSubscriber(this);
-      referSubscriber.sendRefer(target, options);
+      referSubscriber.sendRefer(target, options); // Store in the map.
 
-      // Store in the map.
       var id = referSubscriber.id;
-      this._referSubscribers[id] = referSubscriber;
+      this._referSubscribers[id] = referSubscriber; // Listen for ending events so we can remove it from the map.
 
-      // Listen for ending events so we can remove it from the map.
       referSubscriber.on('requestFailed', function () {
         delete _this14._referSubscribers[id];
       });
@@ -16153,25 +19108,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
       return referSubscriber;
     }
-
     /**
      * Send a generic in-dialog Request
      */
+
   }, {
     key: "sendRequest",
     value: function sendRequest(method, options) {
       logger.debug('sendRequest()');
       return this._dialog.sendRequest(method, options);
     }
-
     /**
      * In dialog Request Reception
      */
+
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
       var _this15 = this;
+
       logger.debug('receiveRequest()');
+
       if (request.method === CRTC_C.CANCEL) {
         /* RFC3261 15 States that a UAS may have accepted an invitation while a CANCEL
         * was in progress and that the UAC MAY continue with the session established by
@@ -16186,7 +19143,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         */
         if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED) {
           this._status = C.STATUS_CANCELED;
+
           this._request.reply(487);
+
           this._failed('remote', request, CRTC_C.causes.CANCELED);
         }
       } else {
@@ -16195,12 +19154,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           case CRTC_C.ACK:
             if (this._status !== C.STATUS_WAITING_FOR_ACK) {
               return;
-            }
+            } // Update signaling status.
 
-            // Update signaling status.
+
             this._status = C.STATUS_CONFIRMED;
             clearTimeout(this._timers.ackTimer);
             clearTimeout(this._timers.invite2xxTimer);
+
             if (this._late_sdp) {
               if (!request.body) {
                 this.terminate({
@@ -16209,6 +19169,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 break;
               }
+
               var e = {
                 originator: 'remote',
                 type: 'answer',
@@ -16231,25 +19192,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
+
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
                 _this15.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
               this._confirmed('remote', request);
             }
+
             break;
+
           case CRTC_C.BYE:
             if (this._status === C.STATUS_CONFIRMED || this._status === C.STATUS_WAITING_FOR_ACK) {
               request.reply(200);
+
               this._ended('remote', request, CRTC_C.causes.BYE);
             } else if (this._status === C.STATUS_INVITE_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER) {
               request.reply(200);
+
               this._request.reply(487, 'BYE Received');
+
               this._ended('remote', request, CRTC_C.causes.BYE);
             } else {
               request.reply(403, 'Wrong Status');
             }
+
             break;
+
           case CRTC_C.INVITE:
             if (this._status === C.STATUS_CONFIRMED) {
               if (request.hasHeader('replaces')) {
@@ -16260,10 +19230,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             } else {
               request.reply(403, 'Wrong Status');
             }
+
             break;
+
           case CRTC_C.INFO:
             if (this._status === C.STATUS_1XX_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_WAITING_FOR_ACK || this._status === C.STATUS_CONFIRMED) {
               var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
+
               if (contentType && contentType.match(/^application\/dtmf-relay/i)) {
                 new RTCSession_DTMF(this).init_incoming(request);
               } else if (contentType !== undefined) {
@@ -16274,25 +19247,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             } else {
               request.reply(403, 'Wrong Status');
             }
+
             break;
+
           case CRTC_C.UPDATE:
             // 以下修改为兼容 VoLTE 在通话建立前的彩铃及预先申请资源 UPDATE 携带 SDP 的情况
             // if (this._status === C.STATUS_CONFIRMED)
             // {
-            this._receiveUpdate(request);
-            // }
+            this._receiveUpdate(request); // }
             // else
             // {
             //   request.reply(403, 'Wrong Status');
             // }
+
+
             break;
+
           case CRTC_C.REFER:
             if (this._status === C.STATUS_CONFIRMED) {
               this._receiveRefer(request);
             } else {
               request.reply(403, 'Wrong Status');
             }
+
             break;
+
           case CRTC_C.NOTIFY:
             // if (this._status === C.STATUS_CONFIRMED)
             // {
@@ -16301,28 +19280,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // for 3pcc
             if (this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_CONFIRMED) {
               this._receiveNotify(request);
+
               this.newNotify({
                 request: request
               });
             } else {
               request.reply(403, 'Wrong Status');
             }
+
             break;
+
           default:
             request.reply(501);
         }
       }
     }
-
     /**
      * Session Callbacks
      */
+
   }, {
     key: "onTransportError",
     value: function onTransportError() {
       logger.warn('onTransportError()');
-      if (this._status !== C.STATUS_TERMINATED) {
-        // this.terminate({
+
+      if (this._status !== C.STATUS_TERMINATED) {// this.terminate({
         //   status_code   : 500,
         //   reason_phrase : CRTC_C.causes.CONNECTION_ERROR,
         //   cause         : CRTC_C.causes.CONNECTION_ERROR
@@ -16334,6 +19316,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "onRequestTimeout",
     value: function onRequestTimeout() {
       logger.warn('onRequestTimeout()');
+
       if (this._status !== C.STATUS_TERMINATED) {
         this.terminate({
           status_code: 408,
@@ -16346,6 +19329,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "onDialogError",
     value: function onDialogError() {
       logger.warn('onDialogError()');
+
       if (this._status !== C.STATUS_TERMINATED) {
         this.terminate({
           status_code: 500,
@@ -16353,118 +19337,118 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           cause: CRTC_C.causes.DIALOG_ERROR
         });
       }
-    }
+    } // Called from DTMF handler.
 
-    // Called from DTMF handler.
   }, {
     key: "newDTMF",
     value: function newDTMF(data) {
       logger.debug('newDTMF()');
       this.emit('newDTMF', data);
-    }
+    } // Called from Info handler.
 
-    // Called from Info handler.
   }, {
     key: "newInfo",
     value: function newInfo(data) {
       logger.debug('newInfo()');
       this.emit('newInfo', data);
-    }
+    } // for 3pcc, Called from Notify handler.
 
-    // for 3pcc, Called from Notify handler.
   }, {
     key: "newNotify",
     value: function newNotify(data) {
       logger.debug('newNotify()');
       this.emit('newNotify', data);
     }
-
     /**
      * Check if RTCSession is ready for an outgoing re-INVITE or UPDATE with SDP.
      */
+
   }, {
     key: "_isReadyToReOffer",
     value: function _isReadyToReOffer() {
       if (!this._rtcReady) {
         logger.debug('_isReadyToReOffer() | internal WebRTC status not ready');
         return false;
-      }
+      } // No established yet.
 
-      // No established yet.
+
       if (!this._dialog) {
         logger.debug('_isReadyToReOffer() | session not established yet');
         return false;
-      }
+      } // Another INVITE transaction is in progress.
 
-      // Another INVITE transaction is in progress.
+
       if (this._dialog.uac_pending_reply === true || this._dialog.uas_pending_reply === true) {
         logger.debug('_isReadyToReOffer() | there is another INVITE/UPDATE transaction in progress');
         return false;
       }
+
       return true;
     }
   }, {
     key: "_close",
     value: function _close() {
-      logger.debug('close()');
-      // Close local MediaStream if it was not given by the user.
+      logger.debug('close()'); // Close local MediaStream if it was not given by the user.
+
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
         logger.debug('close() | closing local MediaStream');
         Utils.closeMediaStream(this._localMediaStream);
       }
+
       if (this._localShareStream) {
         logger.debug('close() | closing local MediaStream');
         Utils.closeMediaStream(this._localShareStream);
       }
+
       if (this._status === C.STATUS_TERMINATED) {
         return;
       }
-      this._status = C.STATUS_TERMINATED;
 
-      // Terminate RTC.
+      this._status = C.STATUS_TERMINATED; // Terminate RTC.
+
       if (this._connection) {
         try {
           this._connection.close();
         } catch (error) {
           logger.warn('close() | error closing the RTCPeerConnection: %o', error);
         }
-      }
-
-      // Terminate signaling.
-
+      } // Terminate signaling.
       // Clear SIP timers.
+
+
       for (var timer in this._timers) {
         if (Object.prototype.hasOwnProperty.call(this._timers, timer)) {
           clearTimeout(this._timers[timer]);
         }
-      }
+      } // Clear Session Timers.
 
-      // Clear Session Timers.
-      clearTimeout(this._sessionTimers.timer);
 
-      // Terminate confirmed dialog.
+      clearTimeout(this._sessionTimers.timer); // Terminate confirmed dialog.
+
       if (this._dialog) {
         this._dialog.terminate();
-        delete this._dialog;
-      }
 
-      // Terminate early dialogs.
+        delete this._dialog;
+      } // Terminate early dialogs.
+
+
       for (var dialog in this._earlyDialogs) {
         if (Object.prototype.hasOwnProperty.call(this._earlyDialogs, dialog)) {
           this._earlyDialogs[dialog].terminate();
+
           delete this._earlyDialogs[dialog];
         }
-      }
+      } // Terminate REFER subscribers.
 
-      // Terminate REFER subscribers.
+
       for (var subscriber in this._referSubscribers) {
         if (Object.prototype.hasOwnProperty.call(this._referSubscribers, subscriber)) {
           delete this._referSubscribers[subscriber];
         }
       }
+
       this._ua.destroyRTCSession(this);
     }
-
     /**
      * Private API.
      */
@@ -16474,40 +19458,50 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * Response retransmissions cannot be accomplished by transaction layer
      *  since it is destroyed when receiving the first 2xx answer
      */
+
   }, {
     key: "_setInvite2xxTimer",
     value: function _setInvite2xxTimer(request, body) {
       var timeout = Timers.T1;
+
       function invite2xxRetransmission() {
         if (this._status !== C.STATUS_WAITING_FOR_ACK) {
           return;
         }
+
         request.reply(200, null, ["Contact: ".concat(this._contact)], body);
+
         if (timeout < Timers.T2) {
           timeout = timeout * 2;
+
           if (timeout > Timers.T2) {
             timeout = Timers.T2;
           }
         }
+
         this._timers.invite2xxTimer = setTimeout(invite2xxRetransmission.bind(this), timeout);
       }
+
       this._timers.invite2xxTimer = setTimeout(invite2xxRetransmission.bind(this), timeout);
     }
-
     /**
      * RFC3261 14.2
      * If a UAS generates a 2xx response and never receives an ACK,
      *  it SHOULD generate a BYE to terminate the dialog.
      */
+
   }, {
     key: "_setACKTimer",
     value: function _setACKTimer() {
       var _this16 = this;
+
       this._timers.ackTimer = setTimeout(function () {
         if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
           logger.debug('no ACK received, terminating the session');
           clearTimeout(_this16._timers.invite2xxTimer);
+
           _this16.sendRequest(CRTC_C.BYE);
+
           _this16._ended('remote', null, CRTC_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
@@ -16516,11 +19510,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
       var _this17 = this;
-      this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
-      this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this17._connection.iceConnectionState;
 
-        // TODO: Do more with different states.
+      this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
+
+      this._connection.addEventListener('iceconnectionstatechange', function () {
+        var state = _this17._connection.iceConnectionState; // TODO: Do more with different states.
+
         if (state === 'failed') {
           // this.terminate({
           //   cause         : CRTC_C.causes.RTP_TIMEOUT,
@@ -16535,6 +19530,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
         }
       });
+
       logger.debug('emit "peerconnection"');
       this.emit('peerconnection', {
         peerconnection: this._connection
@@ -16544,36 +19540,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_createLocalDescription",
     value: function _createLocalDescription(type, constraints) {
       var _this18 = this;
+
       logger.debug('createLocalDescription()');
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
       this._rtcReady = false;
-      return Promise.resolve()
-      // Create Offer or Answer.
+      return Promise.resolve() // Create Offer or Answer.
       .then(function () {
         if (type === 'offer') {
           return connection.createOffer(constraints)["catch"](function (error) {
             logger.warn('emit "peerconnection:createofferfailed" [error:%o]', error);
+
             _this18.emit('peerconnection:createofferfailed', error);
+
             return Promise.reject(error);
           });
         } else {
           return connection.createAnswer(constraints)["catch"](function (error) {
             logger.warn('emit "peerconnection:createanswerfailed" [error:%o]', error);
+
             _this18.emit('peerconnection:createanswerfailed', error);
+
             return Promise.reject(error);
           });
         }
-      })
-      // Set local description.
+      }) // Set local description.
       .then(function (desc) {
         var sdp = sdp_transform.parse(desc.sdp);
+
         if (type === 'offer') {
           var mids = [];
           sdp.media.forEach(function (media, index) {
             // 处理视频呼叫音频接听后再切换视频时 mid 值问题
             media.mid = index;
             mids.push(index);
+
             if (media.type === 'video') {
               var lowH264 = false;
               var delH264Payload = [];
@@ -16582,6 +19583,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1) {
                   lowH264 = true;
                 }
+
                 if (fmtp.config.indexOf('packetization-mode=0') !== -1 || fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
                   delH264Payload.push(fmtp.payload);
                 }
@@ -16601,29 +19603,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return i == x;
                 });
               }).join(' ');
+
               if (media.fmtp) {
                 media.fmtp = media.fmtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
+
               if (media.rtp) {
                 media.rtp = media.rtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
+
               if (media.rtcpFb) {
                 media.rtcpFb = media.rtcpFb.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
               }
             }
-
             /**
              * 处理5G外呼sdp过大问题,
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
+
+
             if (_this18._ua.sk[7] >= 3) {
               delete media.ext;
+
               if (media.type === 'video') {
                 media.ext = [{
                   value: 13,
@@ -16636,12 +19643,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }];
               }
             }
-          });
+          }); // 处理视频呼叫音频接听后再切换视频时 mid 值问题
 
-          // 处理视频呼叫音频接听后再切换视频时 mid 值问题
           sdp.groups[0].mids = mids.join(' ');
           desc.sdp = sdp_transform.write(sdp);
         }
+
         sdp.media.forEach(function (media) {
           /**
            * 处理SDP的码率配置
@@ -16662,24 +19669,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           type: 'AS',
           limit: 1050
         }];
-        desc.sdp = sdp_transform.write(sdp);
+        desc.sdp = sdp_transform.write(sdp); // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
 
-        // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
+
           _this18.emit('peerconnection:setlocaldescriptionfailed', error);
+
           return Promise.reject(error);
         });
       }).then(function () {
         // Resolve right away if 'pc.iceGatheringState' is 'complete'.
+
         /**
          * Resolve right away if:
          * - 'connection.iceGatheringState' is 'complete' and no 'iceRestart' constraint is set.
          * - 'connection.iceGatheringState' is 'gathering' and 'iceReady' is true.
          */
         var iceRestart = constraints && constraints.iceRestart;
+
         if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this18._iceReady) {
           _this18._rtcReady = true;
           var e = {
@@ -16688,31 +19698,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: connection.localDescription.sdp
           };
           logger.debug('emit "sdp"');
-          _this18.emit('sdp', e);
-          return Promise.resolve(e.sdp);
-        }
 
-        // Add 'pc.onicencandidate' event handler to resolve on last candidate.
+          _this18.emit('sdp', e);
+
+          return Promise.resolve(e.sdp);
+        } // Add 'pc.onicencandidate' event handler to resolve on last candidate.
+
+
         return new Promise(function (resolve) {
           var finished = false;
           var iceCandidateListener;
-          var iceGatheringStateListener;
-          // ice 超时设置
+          var iceGatheringStateListener; // ice 超时设置
+
           var iceGatheringDuration = 0;
           var iceGatheringTimer;
           var iceGatherFlag = true;
           _this18._iceReady = false;
           _this18._iceReady = false;
+
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
-            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
+            connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener); // 清理 ICE 收集超时定时器
 
-            // 清理 ICE 收集超时定时器
             clearInterval(iceGatheringTimer);
             finished = true;
-            _this18._rtcReady = true;
+            _this18._rtcReady = true; // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
 
-            // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
             _this18._iceReady = true;
             var e = {
               originator: 'local',
@@ -16720,23 +19731,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: connection.localDescription.sdp
             };
             logger.debug('emit "sdp"');
+
             _this18.emit('sdp', e);
+
             resolve(e.sdp);
           };
-          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
-            var candidate = event.candidate;
 
-            // 添加 ice 收集超时控制
+          connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
+            var candidate = event.candidate; // 添加 ice 收集超时控制
+
             iceGatheringDuration += 2 * 1000;
+
             if (iceGatherFlag) {
               iceGatherFlag = false;
               iceGatheringTimer = setInterval(function () {
                 iceGatheringDuration -= 100;
+
                 if (iceGatheringDuration <= 0) {
                   ready();
                 }
               }, 100);
             }
+
             if (candidate) {
               _this18.emit('icecandidate', {
                 candidate: candidate,
@@ -16756,20 +19772,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 去掉IPV6
         sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
         var sdp_desc = sdp_transform.parse(sdp);
+
         if (type === 'offer') {
           _this18._localToAudio === '' && (_this18._localToAudio = true);
           _this18._localToVideo === '' && (_this18._localToVideo = false);
+
           var _iterator5 = _createForOfIteratorHelper(sdp_desc.media),
-            _step5;
+              _step5;
+
           try {
             for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
               var m = _step5.value;
+
               if (m.type === 'audio') {
                 continue;
               }
+
               if (_this18._localToAudio) {
-                m.port = 0;
-                // m.direction = 'inactive';
+                m.port = 0; // m.direction = 'inactive';
               }
 
               if (m.port !== 0) {
@@ -16783,6 +19803,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator5.f();
           }
+
           _this18._mode === '' && (_this18._mode = 'audio');
         } else {
           /**
@@ -16790,22 +19811,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * @author: lei
            */
           var _iterator6 = _createForOfIteratorHelper(sdp_desc.media),
-            _step6;
+              _step6;
+
           try {
             for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
               var _m = _step6.value;
+
               if (_m.type !== 'video') {
                 continue;
               }
-              var port = _m.port;
-              // const direction = m.direction;
+
+              var port = _m.port; // const direction = m.direction;
 
               if (_this18._localToAudio) {
-                _m.port = 0;
-                // m.direction = 'inactive';
+                _m.port = 0; // m.direction = 'inactive';
+
                 if (_this18._remoteHold) {
-                  _m.port = port;
-                  // m.direction = direction;
+                  _m.port = port; // m.direction = direction;
                 }
 
                 _this18._ontogglemode('audio');
@@ -16819,6 +19841,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _iterator6.f();
           }
         }
+
         sdp_desc.media.forEach(function (media) {
           /**
             * 处理5G外呼sdp过大问题,
@@ -16853,6 +19876,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 limit: 2000
               }];
             }
+
             sdp_desc.bandwidth = [{
               type: 'AS',
               limit: 1050
@@ -16868,55 +19892,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return sdp_transform.write(sdp_desc);
       });
     }
-
     /**
      * Dialog Management
      */
+
   }, {
     key: "_createDialog",
     value: function _createDialog(message, type, early) {
       var local_tag = type === 'UAS' ? message.to_tag : message.from_tag;
       var remote_tag = type === 'UAS' ? message.from_tag : message.to_tag;
       var id = message.call_id + local_tag + remote_tag;
-      var early_dialog = this._earlyDialogs[id];
+      var early_dialog = this._earlyDialogs[id]; // Early Dialog.
 
-      // Early Dialog.
       if (early) {
         if (early_dialog) {
           return true;
         } else {
-          early_dialog = new Dialog(this, message, type, Dialog.C.STATUS_EARLY);
+          early_dialog = new Dialog(this, message, type, Dialog.C.STATUS_EARLY); // Dialog has been successfully created.
 
-          // Dialog has been successfully created.
           if (early_dialog.error) {
             logger.debug(early_dialog.error);
+
             this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
+
             return false;
           } else {
             this._earlyDialogs[id] = early_dialog;
             return true;
           }
         }
-      }
-
-      // Confirmed Dialog.
+      } // Confirmed Dialog.
       else {
         this._from_tag = message.from_tag;
-        this._to_tag = message.to_tag;
+        this._to_tag = message.to_tag; // In case the dialog is in _early_ state, update it.
 
-        // In case the dialog is in _early_ state, update it.
         if (early_dialog) {
           early_dialog.update(message, type);
           this._dialog = early_dialog;
           delete this._earlyDialogs[id];
           return true;
-        }
+        } // Otherwise, create a _confirmed_ dialog.
 
-        // Otherwise, create a _confirmed_ dialog.
+
         var dialog = new Dialog(this, message, type);
+
         if (dialog.error) {
           logger.debug(dialog.error);
+
           this._failed('remote', message, CRTC_C.causes.INTERNAL_ERROR);
+
           return false;
         } else {
           this._dialog = dialog;
@@ -16924,14 +19948,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
     }
-
     /**
      * In dialog INVITE Reception
      */
+
   }, {
     key: "_receiveReinvite",
     value: function _receiveReinvite(request) {
       var _this19 = this;
+
       logger.debug('receiveReinvite()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -16940,35 +19965,43 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         reject: reject.bind(this)
       };
       var rejected = false;
+
       function reject() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         rejected = true;
         var status_code = options.status_code || 403;
         var reason_phrase = options.reason_phrase || '';
         var extraHeaders = Utils.cloneArray(options.extraHeaders);
+
         if (this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
+
         if (status_code < 300 || status_code >= 700) {
           throw new TypeError("Invalid status_code: ".concat(status_code));
         }
-        request.reply(status_code, reason_phrase, extraHeaders);
-      }
 
-      // Emit 'reinvite'.
+        request.reply(status_code, reason_phrase, extraHeaders);
+      } // Emit 'reinvite'.
+
+
       this.emit('reinvite', data);
+
       if (rejected) {
         return;
       }
-      this._late_sdp = false;
 
-      // Request without SDP.
+      this._late_sdp = false; // Request without SDP.
+
       if (!request.body) {
         this._late_sdp = true;
+
         if (this._remoteHold) {
           this._remoteHold = false;
+
           this._onunhold('remote');
         }
+
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
           return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
@@ -16977,76 +20010,83 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           request.reply(500);
         });
         return;
-      }
+      } // Request with SDP.
 
-      // Request with SDP.
+
       if (contentType !== 'application/sdp') {
         logger.debug('invalid Content-Type');
         request.reply(415);
         return;
       }
+
       function nextS() {
         var _this20 = this;
+
         // 适配100rel调整 reinvite 的 hold 判断
         this._notHold = true;
+
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           if (track.readyState !== 'ended') {
             _this20._notHold = false;
           }
         });
-        this._processInDialogSdpOffer(request)
-        // Send answer.
+
+        this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
           if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
             desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
+
           if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
+
           sendAnswer.call(_this20, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
       }
-
       /**
        * 音视频切换相关
        * 收到reinvite时候判断是否要就行音视频模式切换
        * @author: lei
        */
+
+
       if (request.body) {
         var waiting = false;
-        var sdp_request = sdp_transform.parse(request.body);
-
-        // request['mode'] = 'audio';
+        var sdp_request = sdp_transform.parse(request.body); // request['mode'] = 'audio';
 
         this._remoteToAudio = true;
         this._remoteToVideo = false;
+
         var _iterator7 = _createForOfIteratorHelper(sdp_request.media),
-          _step7;
+            _step7;
+
         try {
           for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
             var m = _step7.value;
+
             if (m.type == 'audio') {
               continue;
-            }
+            } // waiting = true;
 
-            // waiting = true;
 
             if (m.port === 0 || m.port === 0 && this._mode === 'video') {
-              this._ontogglemode('audio');
-              // this._localToAudio = true;
+              this._ontogglemode('audio'); // this._localToAudio = true;
               // this._localToVideo = false;
               // nextS.call(this);
+
             } else if (this._mode === 'audio') {
-              waiting = true;
-              // 触发切换事件，要求用户授权
+              waiting = true; // 触发切换事件，要求用户授权
+
               this._remoteToVideo = true;
               this._remoteToAudio = false;
               this._localToAudio = false;
               this._localToVideo = true;
+
               if (this.listeners('upgradeToVideo').length === 0) {
                 this._localToAudio = false;
                 nextS.call(this);
@@ -17073,39 +20113,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator7.f();
         }
+
         if (!waiting) {
           this._localToAudio = true;
           this._localToVideo = false;
           nextS.call(this);
         }
       }
+
       function sendAnswer(desc) {
         var _this21 = this;
+
         var extraHeaders = ["Contact: ".concat(this._contact)];
+
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
+
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
         }
+
         request.reply(200, null, extraHeaders, desc, function () {
           _this21._status = C.STATUS_WAITING_FOR_ACK;
-          _this21._setInvite2xxTimer(request, desc);
-          _this21._setACKTimer();
-        });
 
-        // If callback is given execute it.
+          _this21._setInvite2xxTimer(request, desc);
+
+          _this21._setACKTimer();
+        }); // If callback is given execute it.
+
         if (typeof data.callback === 'function') {
           data.callback();
         }
       }
     }
-
     /**
      * In dialog UPDATE Reception
      */
+
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
       var _this23 = this;
+
       logger.debug('receiveUpdate()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -17114,92 +20162,105 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         reject: reject.bind(this)
       };
       var rejected = false;
+
       function reject() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         rejected = true;
         var status_code = options.status_code || 403;
         var reason_phrase = options.reason_phrase || '';
         var extraHeaders = Utils.cloneArray(options.extraHeaders);
+
         if (this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
+
         if (status_code < 300 || status_code >= 700) {
           throw new TypeError("Invalid status_code: ".concat(status_code));
         }
-        request.reply(status_code, reason_phrase, extraHeaders);
-      }
 
-      // Emit 'update'.
+        request.reply(status_code, reason_phrase, extraHeaders);
+      } // Emit 'update'.
+
+
       this.emit('update', data);
+
       if (rejected) {
         return;
       }
+
       if (!request.body) {
         sendAnswer.call(this, null);
         return;
       }
+
       if (contentType !== 'application/sdp') {
         logger.debug('invalid Content-Type');
         request.reply(415);
         return;
-      }
+      } // 适配 100rel 调整update带sdp的处理
 
-      // 适配 100rel 调整update带sdp的处理
+
       function nextS() {
         var _this22 = this;
+
         this._notHold = true;
-        this._processInDialogSdpOffer(request)
-        // Send answer.
+
+        this._processInDialogSdpOffer(request) // Send answer.
         .then(function (desc) {
           if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
             desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
+
           if (_this22._status === C.STATUS_TERMINATED) {
             return;
           }
+
           sendAnswer.call(_this22, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
       }
-
       /**
        * 音视频切换相关
        * 收到reinvite时候判断是否要就行音视频模式切换
        * @author: lei
        */
+
+
       if (request.body) {
         var waiting = false;
-        var sdp_request = sdp_transform.parse(request.body);
-
-        // request['mode'] = 'audio';
+        var sdp_request = sdp_transform.parse(request.body); // request['mode'] = 'audio';
 
         this._remoteToAudio = true;
         this._remoteToVideo = false;
+
         var _iterator8 = _createForOfIteratorHelper(sdp_request.media),
-          _step8;
+            _step8;
+
         try {
           for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
             var m = _step8.value;
+
             if (m.type == 'audio') {
               continue;
-            }
+            } // waiting = true;
 
-            // waiting = true;
+
             if (m.port === 0 || m.port === 0 && this._mode === 'video') {
-              this._ontogglemode('audio');
-              // this._localToAudio = true;
+              this._ontogglemode('audio'); // this._localToAudio = true;
               // this._localToVideo = false;
               // nextS.call(this);
+
             } else {
-              waiting = true;
-              // 触发切换事件，要求用户授权
+              waiting = true; // 触发切换事件，要求用户授权
+
               this._remoteToVideo = true;
               this._remoteToAudio = false;
               this._localToAudio = false;
               this._localToVideo = true;
+
               if (this.listeners('upgradeToVideo').length === 0) {
                 this._localToAudio = false;
                 nextS.call(this);
@@ -17223,18 +20284,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator8.f();
         }
+
         if (!waiting) {
           this._localToAudio = true;
           this._localToVideo = false;
           nextS.call(this);
         }
       }
+
       function sendAnswer(desc) {
         var extraHeaders = ["Contact: ".concat(this._contact)];
-        this._handleSessionTimersInIncomingRequest(request, extraHeaders);
-        request.reply(200, null, extraHeaders, desc);
 
-        // If callback is given execute it.
+        this._handleSessionTimersInIncomingRequest(request, extraHeaders);
+
+        request.reply(200, null, extraHeaders, desc); // If callback is given execute it.
+
         if (typeof data.callback === 'function') {
           data.callback();
         }
@@ -17244,22 +20308,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
       var _this24 = this;
+
       logger.debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
       var hold = false;
+
       var _iterator9 = _createForOfIteratorHelper(sdp.media),
-        _step9;
+          _step9;
+
       try {
         for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
           var m = _step9.value;
+
           if (holdMediaTypes.indexOf(m.type) === -1) {
             continue;
           }
+
           var direction = m.direction || sdp.direction || 'sendrecv';
+
           if (direction === 'sendonly' || direction === 'inactive') {
             hold = true;
-          }
-          // If at least one of the streams is active don't emit 'hold'.
+          } // If at least one of the streams is active don't emit 'hold'.
           else {
             hold = false;
             break;
@@ -17270,6 +20339,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } finally {
         _iterator9.f();
       }
+
       var e = {
         originator: 'remote',
         type: 'offer',
@@ -17281,27 +20351,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         type: 'offer',
         sdp: e.sdp
       });
-      this._connectionPromiseQueue = this._connectionPromiseQueue
-      // Set remote description.
+      this._connectionPromiseQueue = this._connectionPromiseQueue // Set remote description.
       .then(function () {
         if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
         return _this24._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
           _this24.emit('peerconnection:setremotedescriptionfailed', error);
+
           throw error;
         });
       }).then(function () {
         if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
         if (_this24._remoteHold === true && hold === false) {
           _this24._remoteHold = false;
+
           _this24._onunhold('remote');
         } else if (_this24._remoteHold === false && hold === true) {
           _this24._remoteHold = true;
+
           _this24._onhold('remote');
         }
       }).then(function () {
@@ -17313,18 +20388,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
+
             _this24._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+
             logger.warn('emit "getusermediafailed" [error:%o]', error);
+
             _this24.emit('getusermediafailed', error);
+
             throw error;
           });
         }
       }).then(function (stream) {
         if (stream) {
           stream.getVideoTracks().forEach(function (track) {
-            _this24._localMediaStream.addTrack(track);
+            _this24._localMediaStream.addTrack(track); // 兼容低版本浏览器不支持addTrack的情况
 
-            // 兼容低版本浏览器不支持addTrack的情况
+
             if (RTCPeerConnection.prototype.addTrack) {
               _this24._connection.addTrack(track, stream);
             } else {
@@ -17333,12 +20412,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           _this24._iceReady = false;
         }
-      })
-      // Create local description.
+      }) // Create local description.
       .then(function () {
         if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
         return _this24._createLocalDescription('answer', _this24._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
           logger.warn('emit "peerconnection:createtelocaldescriptionfailed" [error:%o]', error);
@@ -17349,32 +20428,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
       return this._connectionPromiseQueue;
     }
-
     /**
      * In dialog Refer Reception
      */
+
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
       var _this25 = this;
+
       logger.debug('receiveRefer()');
+
       if (!request.refer_to) {
         logger.debug('no Refer-To header field present in REFER');
         request.reply(400);
         return;
       }
+
       if (request.refer_to.uri.scheme !== CRTC_C.SIP) {
         logger.debug('Refer-To header field points to a non-SIP URI scheme');
         request.reply(416);
         return;
-      }
+      } // Reply before the transaction timer expires.
 
-      // Reply before the transaction timer expires.
+
       request.reply(202);
       var notifier = new RTCSession_ReferNotifier(this, request.cseq);
-      logger.debug('emit "refer"');
+      logger.debug('emit "refer"'); // Emit 'refer'.
 
-      // Emit 'refer'.
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
@@ -17384,12 +20465,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _reject.call(_this25);
         }
       });
+
       function _accept(initCallback) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
         initCallback = typeof initCallback === 'function' ? initCallback : null;
+
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
+
         var session = new RTCSession(this._ua);
         session.on('progress', function (_ref2) {
           var response = _ref2.response;
@@ -17401,42 +20485,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         session.on('_failed', function (_ref4) {
           var message = _ref4.message,
-            cause = _ref4.cause;
+              cause = _ref4.cause;
+
           if (message) {
             notifier.notify(message.status_code, message.reason_phrase);
           } else {
             notifier.notify(487, cause);
           }
-        });
+        }); // Consider the Replaces header present in the Refer-To URI.
 
-        // Consider the Replaces header present in the Refer-To URI.
         if (request.refer_to.uri.hasHeader('replaces')) {
           var replaces = decodeURIComponent(request.refer_to.uri.getHeader('replaces'));
           options.extraHeaders = Utils.cloneArray(options.extraHeaders);
           options.extraHeaders.push("Replaces: ".concat(replaces));
         }
+
         session.connect(request.refer_to.uri.toAor(), options, initCallback);
       }
+
       function _reject() {
         notifier.notify(603);
       }
     }
-
     /**
      * In dialog Notify Reception
      */
+
   }, {
     key: "_receiveNotify",
     value: function _receiveNotify(request) {
       logger.debug('receiveNotify()');
+
       if (!request.event) {
         request.reply(400);
       }
+
       switch (request.event.event) {
         case 'refer':
           {
             var id;
             var referSubscriber;
+
             if (request.event.params && request.event.params.id) {
               id = request.event.params.id;
               referSubscriber = this._referSubscribers[id];
@@ -17446,16 +20535,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               request.reply(400, 'Missing event id parameter');
               return;
             }
+
             if (!referSubscriber) {
               request.reply(481, 'Subscription does not exist');
               return;
             }
+
             referSubscriber.receiveNotify(request);
             request.reply(200);
             break;
           }
-
         // for 3pcc
+
         case 'talk':
         case 'hold':
           {
@@ -17466,40 +20557,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             });
             break;
           }
+
         default:
           {
             request.reply(489);
           }
       }
     }
-
     /**
      * INVITE with Replaces Reception
      */
+
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
       var _this27 = this;
+
       logger.debug('receiveReplaces()');
+
       function _accept2(initCallback) {
         var _this26 = this;
+
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
-        var session = new RTCSession(this._ua);
 
-        // Terminate the current session when the new one is confirmed.
+        var session = new RTCSession(this._ua); // Terminate the current session when the new one is confirmed.
+
         session.on('confirmed', function () {
           _this26.terminate();
         });
         session.init_incoming(request, initCallback);
       }
+
       function _reject2() {
         logger.debug('Replaced INVITE rejected by the user');
         request.reply(486);
-      }
+      } // Emit 'replace'.
 
-      // Emit 'replace'.
+
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
@@ -17510,14 +20606,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       });
     }
-
     /**
      * Initial Request Sender
      */
+
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) {
       var _this28 = this;
+
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
           _this28.onRequestTimeout();
@@ -17532,43 +20629,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         onReceiveResponse: function onReceiveResponse(response) {
           _this28._receiveInviteResponse(response);
         }
-      });
-
-      // This Promise is resolved within the next iteration, so the app has now
+      }); // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve()
-      // Get a stream if required.
+
+      Promise.resolve() // Get a stream if required.
       .then(function () {
         // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
         if (mediaStream) {
           return mediaStream;
-        }
-        // Request for user media access.
+        } // Request for user media access.
         else if (mediaConstraints.audio || mediaConstraints.video) {
-          _this28._localMediaStreamLocallyGenerated = true;
+          _this28._localMediaStreamLocallyGenerated = true; // 判断授权是否包含视频
 
-          // 判断授权是否包含视频
           if (Number(_this28._ua.sk[7]) < 1) {
             delete mediaConstraints.video;
           }
+
           return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this28._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
+
             _this28._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+
             logger.warn('emit "getusermediafailed" [error:%o]', error);
+
             _this28.emit('getusermediafailed', error);
+
             throw error;
           });
         }
       }).then(function (stream) {
         if (_this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
-        }
-
-        // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+        } // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
         // let ua;
-
         // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
         //   .match(/cpu iphone os (.*?) like mac os/));
         // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
@@ -17577,8 +20672,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // }
         // else
         // {
-        _this28._localMediaStream = stream;
-        // }
+
+
+        _this28._localMediaStream = stream; // }
 
         if (stream) {
           // 兼容低版本浏览器不支持addTrack的情况
@@ -17589,61 +20685,67 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else {
             _this28._connection.addStream(stream);
           }
-        }
+        } // TODO: should this be triggered here?
 
-        // TODO: should this be triggered here?
+
         _this28._connecting(_this28._request);
+
         return _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
           _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+
           throw error;
         });
       }).then(function (desc) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
-        logger.debug('emit "sending" [request:%o]', _this28._request);
+        logger.debug('emit "sending" [request:%o]', _this28._request); // Emit 'sending' so the app can mangle the body before the request is sent.
 
-        // Emit 'sending' so the app can mangle the body before the request is sent.
         _this28.emit('sending', {
           request: _this28._request
         });
+
         request_sender.send();
       })["catch"](function (error) {
         if (_this28._status === C.STATUS_TERMINATED) {
           return;
         }
+
         logger.warn(error);
       });
     }
-
     /**
      * Get DTMF RTCRtpSender.
      */
+
   }, {
     key: "_getDTMFRTPSender",
     value: function _getDTMFRTPSender() {
       var sender = this._connection.getSenders().find(function (rtpSender) {
         return rtpSender.track && rtpSender.track.kind === 'audio';
       });
+
       if (!(sender && sender.dtmf)) {
         logger.warn('sendDTMF() | no local audio track to send DTMF with');
         return;
       }
+
       return sender.dtmf;
     }
-
     /**
      * Reception of Response for Initial INVITE
      */
+
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
       var _this29 = this;
-      logger.debug('receiveInviteResponse()');
 
-      // Handle 2XX retransmissions and responses from forked requests.
+      logger.debug('receiveInviteResponse()'); // Handle 2XX retransmissions and responses from forked requests.
+
       if (this._dialog && response.status_code >= 200 && response.status_code <= 299) {
         /*
          * If it is a retransmission from the endpoint that established
@@ -17652,53 +20754,59 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (this._dialog.id.call_id === response.call_id && this._dialog.id.local_tag === response.from_tag && this._dialog.id.remote_tag === response.to_tag) {
           this.sendRequest(CRTC_C.ACK);
           return;
-        }
-
-        // If not, send an ACK  and terminate.
+        } // If not, send an ACK  and terminate.
         else {
           var dialog = new Dialog(this, response, 'UAC');
+
           if (dialog.error !== undefined) {
             logger.debug(dialog.error);
             return;
           }
+
           this.sendRequest(CRTC_C.ACK);
           this.sendRequest(CRTC_C.BYE);
           return;
         }
-      }
+      } // Proceed to cancellation if the user requested.
 
-      // Proceed to cancellation if the user requested.
+
       if (this._is_canceled) {
         if (response.status_code >= 100 && response.status_code < 200) {
           this._request.cancel(this._cancel_reason);
         } else if (response.status_code >= 200 && response.status_code < 299) {
           this._acceptAndTerminate(response);
         }
+
         return;
       }
+
       if (this._status !== C.STATUS_INVITE_SENT && this._status !== C.STATUS_1XX_RECEIVED) {
         return;
       }
+
       switch (true) {
         case /^100$/.test(response.status_code):
           this._status = C.STATUS_1XX_RECEIVED;
           break;
+
         case /^1[0-9]{2}$/.test(response.status_code):
           {
             // Do nothing with 1xx responses without To tag.
             if (!response.to_tag) {
               logger.debug('1xx response received without to tag');
               break;
-            }
+            } // Create Early Dialog if 1XX comes with contact.
 
-            // Create Early Dialog if 1XX comes with contact.
+
             if (response.hasHeader('contact')) {
               // An error on dialog creation will fire 'failed' event.
               if (!this._createDialog(response, 'UAC', true)) {
                 break;
               }
             }
+
             this._status = C.STATUS_1XX_RECEIVED;
+
             if (!response.body) {
               Promise.resolve().then(function () {
                 if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
@@ -17711,6 +20819,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               });
               break;
             }
+
             var e = {
               originator: 'remote',
               type: 'answer',
@@ -17724,8 +20833,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               return _this29._connection.setRemoteDescription(answer);
-            })
-            // 发送 RFC3262 183 PRACK
+            }) // 发送 RFC3262 183 PRACK
             .then(function () {
               if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
                 _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
@@ -17736,44 +20844,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _this29._progress('remote', response);
             })["catch"](function (error) {
               logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
               _this29.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
+
         case /^2[0-9]{2}$/.test(response.status_code):
           {
-            this._status = C.STATUS_CONFIRMED;
+            this._status = C.STATUS_CONFIRMED; // An error on dialog creation will fire 'failed' event.
 
-            // An error on dialog creation will fire 'failed' event.
             if (!this._createDialog(response, 'UAC')) {
               break;
-            }
+            } // 以下修改为兼容 VoLTE 的 200ok 不带 SDP 的情况
 
-            // 以下修改为兼容 VoLTE 的 200ok 不带 SDP 的情况
+
             if (!response.body) {
-              this._accepted('remote', response);
-              // 适配 100rel 调整 ack 的 cseq
+              this._accepted('remote', response); // 适配 100rel 调整 ack 的 cseq
+
+
               this.sendRequest(CRTC_C.ACK);
+
               this._confirmed('local', null);
+
               break;
             }
-
             /**
              * 音视频切换相关
              * 根据sdp判断用户Answer的通话模式，并触发mode事件
              * @author: lei
              */
+
+
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
+
             var _iterator10 = _createForOfIteratorHelper(sdp.media),
-              _step10;
+                _step10;
+
             try {
               for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
                 var m = _step10.value;
+
                 if (m.type === 'audio') {
                   continue;
                 }
+
                 if (m.port !== 0) {
                   this._remoteToAudio = false;
                   this._remoteToVideo = true;
@@ -17784,11 +20901,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             } finally {
               _iterator10.f();
             }
+
             if (this._remoteToAudio) {
               this._ontogglemode('audio');
             } else {
               this._ontogglemode('video');
             }
+
             var _e = {
               originator: 'remote',
               type: 'answer',
@@ -17796,10 +20915,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', _e);
+
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
             });
+
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
@@ -17808,6 +20929,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return _this29._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
                   _this29._acceptAndTerminate(response, 500, error.toString());
+
                   _this29._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
@@ -17815,52 +20937,61 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this29._connection.setRemoteDescription(_answer).then(function () {
                 // Handle Session Timers.
                 _this29._handleSessionTimersInIncomingResponse(response);
+
                 _this29._accepted('remote', response);
+
                 _this29.sendRequest(CRTC_C.ACK);
+
                 _this29._confirmed('local', null);
               })["catch"](function (error) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
+
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
                 _this29.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
           }
+
         default:
           {
             var cause = Utils.sipErrorCause(response.status_code);
+
             this._failed('remote', response, cause);
           }
       }
     }
-
     /**
      * Send Re-INVITE
      */
+
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
       var _this30 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
-      // 5G Headers
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       }
-      extraHeaders.push('Content-Type: application/sdp');
 
-      // Session Timers.
+      extraHeaders.push('Content-Type: application/sdp'); // Session Timers.
+
       if (this._sessionTimers.running) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
       }
+
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
         return _this30._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
@@ -17871,7 +21002,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: sdp
         };
         logger.debug('emit "sdp"');
+
         _this30.emit('sdp', e);
+
         _this30.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
@@ -17885,36 +21018,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             },
             onTransportError: function onTransportError() {
               _this30.onTransportError(); // Do nothing because session ends.
-            },
 
+            },
             onRequestTimeout: function onRequestTimeout() {
               _this30.onRequestTimeout(); // Do nothing because session ends.
-            },
 
+            },
             onDialogError: function onDialogError() {
               _this30.onDialogError(); // Do nothing because session ends.
+
             }
           }
         });
       })["catch"](function () {
         onFailed();
       });
+
       function onSucceeded(response) {
         var _this31 = this;
+
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
-        this.sendRequest(CRTC_C.ACK);
 
-        // If it is a 2XX retransmission exit now.
+        this.sendRequest(CRTC_C.ACK); // If it is a 2XX retransmission exit now.
+
         if (succeeded) {
           return;
-        }
+        } // Handle Session Timers.
 
-        // Handle Session Timers.
-        this._handleSessionTimersInIncomingResponse(response);
 
-        // Must have SDP answer.
+        this._handleSessionTimersInIncomingResponse(response); // Must have SDP answer.
+
+
         if (!response.body) {
           onFailed.call(this);
           return;
@@ -17922,28 +21058,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           onFailed.call(this);
           return;
         }
-
         /**
          * 音视频切换相关
          * 远端接听模式
          * @author: lei
          */
+
+
         var sdp_body = sdp_transform.parse(response.body);
+
         var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
-          _step11;
+            _step11;
+
         try {
           for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
             var m = _step11.value;
+
             if (m.type == 'audio') {
               continue;
             }
+
             if (m.port !== 0) {
               this._remoteToAudio = false;
               this._remoteToVideo = true;
+
               this._ontogglemode('video');
             } else {
               this._remoteToAudio = true;
               this._remoteToVideo = false;
+
               this._ontogglemode('audio');
             }
           }
@@ -17952,6 +21095,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator11.f();
         }
+
         var e = {
           originator: 'remote',
           type: 'answer',
@@ -17972,23 +21116,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })["catch"](function (error) {
           onFailed.call(_this31);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
           _this31.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
+
       function onFailed(response) {
         if (eventHandlers.failed) {
           eventHandlers.failed(response);
         }
       }
     }
-
     /**
      * Send UPDATE
      */
+
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
       var _this32 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendUpdate()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -17996,18 +21143,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var sdpOffer = options.sdpOffer || false;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
+      extraHeaders.push("Contact: ".concat(this._contact)); // 5G Headers
 
-      // 5G Headers
       if (this._ua.sk[7] >= 3) {
         extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-      }
+      } // Session Timers.
 
-      // Session Timers.
+
       if (this._sessionTimers.running) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
       }
+
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
@@ -18020,7 +21167,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: sdp
           };
           logger.debug('emit "sdp"');
+
           _this32.emit('sdp', e);
+
           _this32.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
@@ -18034,23 +21183,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               },
               onTransportError: function onTransportError() {
                 _this32.onTransportError(); // Do nothing because session ends.
-              },
 
+              },
               onRequestTimeout: function onRequestTimeout() {
                 _this32.onRequestTimeout(); // Do nothing because session ends.
-              },
 
+              },
               onDialogError: function onDialogError() {
                 _this32.onDialogError(); // Do nothing because session ends.
+
               }
             }
           });
         })["catch"](function () {
           onFailed.call(_this32);
         });
-      }
-
-      // No SDP.
+      } // No SDP.
       else {
         this.sendRequest(CRTC_C.UPDATE, {
           extraHeaders: extraHeaders,
@@ -18063,14 +21211,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             },
             onTransportError: function onTransportError() {
               _this32.onTransportError(); // Do nothing because session ends.
-            },
 
+            },
             onRequestTimeout: function onRequestTimeout() {
               _this32.onRequestTimeout(); // Do nothing because session ends.
-            },
 
+            },
             onDialogError: function onDialogError() {
               _this32.onDialogError(); // Do nothing because session ends.
+
             }
           }
         });
@@ -18078,19 +21227,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       function onSucceeded(response) {
         var _this33 = this;
+
         if (this._status === C.STATUS_TERMINATED) {
           return;
-        }
+        } // If it is a 2XX retransmission exit now.
 
-        // If it is a 2XX retransmission exit now.
+
         if (succeeded) {
           return;
-        }
+        } // Handle Session Timers.
 
-        // Handle Session Timers.
-        this._handleSessionTimersInIncomingResponse(response);
 
-        // Must have SDP answer.
+        this._handleSessionTimersInIncomingResponse(response); // Must have SDP answer.
+
+
         if (sdpOffer) {
           if (!response.body) {
             onFailed.call(this);
@@ -18099,28 +21249,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             onFailed.call(this);
             return;
           }
-
           /**
           * 音视频切换相关
           * 远端接听模式
           * @author: lei
           */
+
+
           var sdp_body = sdp_transform.parse(response.body);
+
           var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
-            _step12;
+              _step12;
+
           try {
             for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
               var m = _step12.value;
+
               if (m.type == 'audio') {
                 continue;
               }
+
               if (m.port !== 0) {
                 this._remoteToAudio = false;
                 this._remoteToVideo = true;
+
                 this._ontogglemode('video');
               } else {
                 this._remoteToAudio = true;
                 this._remoteToVideo = false;
+
                 this._ontogglemode('audio');
               }
             }
@@ -18129,6 +21286,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator12.f();
           }
+
           var e = {
             originator: 'remote',
             type: 'answer',
@@ -18149,14 +21307,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           })["catch"](function (error) {
             onFailed.call(_this33);
             logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
+
             _this33.emit('peerconnection:setremotedescriptionfailed', error);
           });
-        }
-        // No SDP answer.
+        } // No SDP answer.
         else if (eventHandlers.succeeded) {
           eventHandlers.succeeded(response);
         }
       }
+
       function onFailed(response) {
         if (eventHandlers.failed) {
           eventHandlers.failed(response);
@@ -18168,45 +21327,50 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _acceptAndTerminate(response, status_code, reason_phrase) {
       logger.debug('acceptAndTerminate()');
       var extraHeaders = [];
+
       if (status_code) {
         reason_phrase = reason_phrase || CRTC_C.REASON_PHRASE[status_code] || '';
         extraHeaders.push("Reason: SIP ;cause=".concat(status_code, "; text=\"").concat(reason_phrase, "\""));
-      }
+      } // An error on dialog creation will fire 'failed' event.
 
-      // An error on dialog creation will fire 'failed' event.
+
       if (this._dialog || this._createDialog(response, 'UAC')) {
         this.sendRequest(CRTC_C.ACK);
         this.sendRequest(CRTC_C.BYE, {
           extraHeaders: extraHeaders
         });
-      }
+      } // Update session status.
 
-      // Update session status.
+
       this._status = C.STATUS_TERMINATED;
     }
-
     /**
      * Correctly set the SDP direction attributes if the call is on local hold
      */
+
   }, {
     key: "_mangleOffer",
     value: function _mangleOffer(sdp) {
       if (!this._localHold && !this._remoteHold) {
         return sdp;
       }
-      sdp = sdp_transform.parse(sdp);
 
-      // Local hold.
+      sdp = sdp_transform.parse(sdp); // Local hold.
+
       if (this._localHold && !this._remoteHold) {
         logger.debug('mangleOffer() | me on hold, mangling offer');
+
         var _iterator13 = _createForOfIteratorHelper(sdp.media),
-          _step13;
+            _step13;
+
         try {
           for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
             var m = _step13.value;
+
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
             }
+
             if (!m.direction) {
               m.direction = 'sendonly';
             } else if (m.direction === 'sendrecv') {
@@ -18220,18 +21384,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator13.f();
         }
-      }
-      // Local and remote hold.
+      } // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
         logger.debug('mangleOffer() | both on hold, mangling offer');
+
         var _iterator14 = _createForOfIteratorHelper(sdp.media),
-          _step14;
+            _step14;
+
         try {
           for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
             var _m2 = _step14.value;
+
             if (holdMediaTypes.indexOf(_m2.type) === -1) {
               continue;
             }
+
             _m2.direction = 'inactive';
           }
         } catch (err) {
@@ -18239,18 +21406,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator14.f();
         }
-      }
-      // Remote hold.
+      } // Remote hold.
       else if (this._remoteHold) {
         logger.debug('mangleOffer() | remote on hold, mangling offer');
+
         var _iterator15 = _createForOfIteratorHelper(sdp.media),
-          _step15;
+            _step15;
+
         try {
           for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
             var _m3 = _step15.value;
+
             if (holdMediaTypes.indexOf(_m3.type) === -1) {
               continue;
             }
+
             if (!_m3.direction) {
               _m3.direction = 'recvonly';
             } else if (_m3.direction === 'sendrecv') {
@@ -18265,28 +21435,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _iterator15.f();
         }
       }
+
       return sdp_transform.write(sdp);
     }
   }, {
     key: "_setLocalMediaStatus",
     value: function _setLocalMediaStatus() {
       var enableAudio = true,
-        enableVideo = true;
+          enableVideo = true;
+
       if (this._localHold || this._remoteHold) {
         enableAudio = false;
         enableVideo = false;
       }
+
       if (this._audioMuted) {
         enableAudio = false;
       }
+
       if (this._videoMuted) {
         enableVideo = false;
       }
-      this._toggleMuteAudio(!enableAudio);
-      this._toggleMuteVideo(!enableVideo);
-    }
 
-    // 如果是音频模式，则关闭本地视频
+      this._toggleMuteAudio(!enableAudio);
+
+      this._toggleMuteVideo(!enableVideo);
+    } // 如果是音频模式，则关闭本地视频
+
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
@@ -18296,19 +21471,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }
     }
-
     /**
      * Handle SessionTimers for an incoming INVITE or UPDATE.
      * @param  {IncomingRequest} request
      * @param  {Array} responseExtraHeaders  Extra headers for the 200 response.
      */
+
   }, {
     key: "_handleSessionTimersInIncomingRequest",
     value: function _handleSessionTimersInIncomingRequest(request, responseExtraHeaders) {
       if (!this._sessionTimers.enabled) {
         return;
       }
+
       var session_expires_refresher;
+
       if (request.session_expires && request.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
         this._sessionTimers.currentExpires = request.session_expires;
         session_expires_refresher = request.session_expires_refresher || 'uas';
@@ -18316,22 +21493,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._sessionTimers.currentExpires = this._sessionTimers.defaultExpires;
         session_expires_refresher = 'uas';
       }
+
       responseExtraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(session_expires_refresher));
       this._sessionTimers.refresher = session_expires_refresher === 'uas';
+
       this._runSessionTimer();
     }
-
     /**
      * Handle SessionTimers for an incoming response to INVITE or UPDATE.
      * @param  {IncomingResponse} response
      */
+
   }, {
     key: "_handleSessionTimersInIncomingResponse",
     value: function _handleSessionTimersInIncomingResponse(response) {
       if (!this._sessionTimers.enabled) {
         return;
       }
+
       var session_expires_refresher;
+
       if (response.session_expires && response.session_expires >= CRTC_C.MIN_SESSION_EXPIRES) {
         this._sessionTimers.currentExpires = response.session_expires;
         session_expires_refresher = response.session_expires_refresher || 'uac';
@@ -18339,42 +21520,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._sessionTimers.currentExpires = this._sessionTimers.defaultExpires;
         session_expires_refresher = 'uac';
       }
+
       this._sessionTimers.refresher = session_expires_refresher === 'uac';
+
       this._runSessionTimer();
     }
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
       var _this34 = this;
+
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
-      clearTimeout(this._sessionTimers.timer);
+      clearTimeout(this._sessionTimers.timer); // I'm the refresher.
 
-      // I'm the refresher.
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
           if (_this34._status === C.STATUS_TERMINATED) {
             return;
           }
+
           if (!_this34._isReadyToReOffer()) {
             return;
           }
+
           logger.debug('runSessionTimer() | sending session refresh request');
+
           if (_this34._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
             _this34._sendUpdate();
           } else {
             _this34._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
-      }
-
-      // I'm not the refresher.
+      } // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
           if (_this34._status === C.STATUS_TERMINATED) {
             return;
           }
+
           logger.warn('runSessionTimer() | timer expired, terminating the session');
+
           _this34.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
@@ -18389,8 +21575,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var senders = this._connection.getSenders().filter(function (sender) {
         return sender.track && sender.track.kind === 'audio';
       });
+
       var _iterator16 = _createForOfIteratorHelper(senders),
-        _step16;
+          _step16;
+
       try {
         for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
           var sender = _step16.value;
@@ -18408,8 +21596,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var senders = this._connection.getSenders().filter(function (sender) {
         return sender.track && sender.track.kind === 'video';
       });
+
       var _iterator17 = _createForOfIteratorHelper(senders),
-        _step17;
+          _step17;
+
       try {
         for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
           var sender = _step17.value;
@@ -18425,6 +21615,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_newRTCSession",
     value: function _newRTCSession(originator, request) {
       logger.debug('newRTCSession()');
+
       this._ua.newRTCSession(this, {
         originator: originator,
         session: this,
@@ -18477,7 +21668,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _ended(originator, message, cause) {
       logger.debug('session ended');
       this._end_time = new Date();
+
       this._close();
+
       logger.debug('emit "ended"');
       this.emit('ended', {
         originator: originator,
@@ -18488,16 +21681,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_failed",
     value: function _failed(originator, message, cause) {
-      logger.debug('session failed');
+      logger.debug('session failed'); // Emit private '_failed' event first.
 
-      // Emit private '_failed' event first.
       logger.debug('emit "_failed"');
       this.emit('_failed', {
         originator: originator,
         message: message || null,
         cause: cause
       });
+
       this._close();
+
       logger.debug('emit "failed"');
       this.emit('failed', {
         originator: originator,
@@ -18509,7 +21703,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onhold",
     value: function _onhold(originator) {
       logger.debug('session onhold');
+
       this._setLocalMediaStatus();
+
       logger.debug('emit "hold"');
       this.emit('hold', {
         originator: originator
@@ -18519,7 +21715,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onunhold",
     value: function _onunhold(originator) {
       logger.debug('session onunhold');
+
       this._setLocalMediaStatus();
+
       logger.debug('emit "unhold"');
       this.emit('unhold', {
         originator: originator
@@ -18529,9 +21727,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onmute",
     value: function _onmute(_ref5) {
       var audio = _ref5.audio,
-        video = _ref5.video;
+          video = _ref5.video;
       logger.debug('session onmute');
+
       this._setLocalMediaStatus();
+
       logger.debug('emit "muted"');
       this.emit('muted', {
         audio: audio,
@@ -18542,28 +21742,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onunmute",
     value: function _onunmute(_ref6) {
       var audio = _ref6.audio,
-        video = _ref6.video;
+          video = _ref6.video;
       logger.debug('session onunmute');
+
       this._setLocalMediaStatus();
+
       logger.debug('emit "unmuted"');
       this.emit('unmuted', {
         audio: audio,
         video: video
       });
-    }
+    } // 切换音视频模式触发 mode 事件
 
-    // 切换音视频模式触发 mode 事件
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
       if (mode === this._mode) {
         return;
       }
+
       this._mode = mode;
       logger.debug('session ontogglemode');
+
       if (!this._remoteHold) {
         this._setLocalMedia(mode);
       }
+
       logger.debug('emit "mode"');
       this.emit('mode', {
         mode: mode
@@ -18579,27 +21783,44 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return C;
     }
   }]);
+
   return RTCSession;
 }(EventEmitter);
 },{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./Logger":9,"./RTCSession/DTMF":16,"./RTCSession/Info":17,"./RTCSession/ReferNotifier":18,"./RTCSession/ReferSubscriber":19,"./RequestSender":21,"./SIPMessage":22,"./Timers":25,"./Transactions":26,"./URI":29,"./Utils":30,"events":33,"sdp-transform":40}],16:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('../Logger');
+
 var CRTC_C = require('../Constants');
+
 var Exceptions = require('../Exceptions');
+
 var Utils = require('../Utils');
+
 var logger = new Logger('RTCSession:DTMF');
 var C = {
   MIN_DURATION: 70,
@@ -18608,12 +21829,17 @@ var C = {
   MIN_INTER_TONE_GAP: 50,
   DEFAULT_INTER_TONE_GAP: 500
 };
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(DTMF, _EventEmitter);
+
   var _super = _createSuper(DTMF);
+
   function DTMF(session) {
     var _this;
+
     _classCallCheck(this, DTMF);
+
     _this = _super.call(this);
     _this._session = session;
     _this._direction = null;
@@ -18622,6 +21848,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._request = null;
     return _this;
   }
+
   _createClass(DTMF, [{
     key: "tone",
     get: function get() {
@@ -18636,45 +21863,49 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "send",
     value: function send(tone) {
       var _this2 = this;
+
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
       if (tone === undefined) {
         throw new TypeError('Not enough arguments');
       }
-      this._direction = 'outgoing';
 
-      // Check RTCSession Status.
+      this._direction = 'outgoing'; // Check RTCSession Status.
+
       if (this._session.status !== this._session.C.STATUS_CONFIRMED && this._session.status !== this._session.C.STATUS_WAITING_FOR_ACK) {
         throw new Exceptions.InvalidStateError(this._session.status);
       }
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      this.eventHandlers = Utils.cloneObject(options.eventHandlers);
 
-      // Check tone type.
+      var extraHeaders = Utils.cloneArray(options.extraHeaders);
+      this.eventHandlers = Utils.cloneObject(options.eventHandlers); // Check tone type.
+
       if (typeof tone === 'string') {
         tone = tone.toUpperCase();
       } else if (typeof tone === 'number') {
         tone = tone.toString();
       } else {
         throw new TypeError("Invalid tone: ".concat(tone));
-      }
+      } // Check tone value.
 
-      // Check tone value.
+
       if (!tone.match(/^[0-9A-DR#*]$/)) {
         throw new TypeError("Invalid tone: ".concat(tone));
       } else {
         this._tone = tone;
-      }
+      } // Duration is checked/corrected in RTCSession.
 
-      // Duration is checked/corrected in RTCSession.
+
       this._duration = options.duration;
       extraHeaders.push('Content-Type: application/dtmf-relay');
       var body = "Signal=".concat(this._tone, "\r\n");
       body += "Duration=".concat(this._duration);
+
       this._session.newDTMF({
         originator: 'local',
         dtmf: this,
         request: this._request
       });
+
       this._session.sendRequest(CRTC_C.INFO, {
         extraHeaders: extraHeaders,
         eventHandlers: {
@@ -18688,6 +21919,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (_this2.eventHandlers.onFailed) {
               _this2.eventHandlers.onFailed();
             }
+
             _this2.emit('failed', {
               originator: 'remote',
               response: response
@@ -18714,22 +21946,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._direction = 'incoming';
       this._request = request;
       request.reply(200);
+
       if (request.body) {
         var body = request.body.split('\n');
+
         if (body.length >= 1) {
           if (reg_tone.test(body[0])) {
             this._tone = body[0].replace(reg_tone, '$2');
           }
         }
+
         if (body.length >= 2) {
           if (reg_duration.test(body[1])) {
             this._duration = parseInt(body[1].replace(reg_duration, '$2'), 10);
           }
         }
       }
+
       if (!this._duration) {
         this._duration = C.DEFAULT_DURATION;
       }
+
       if (!this._tone) {
         logger.debug('invalid INFO DTMF received, discarded');
       } else {
@@ -18741,37 +21978,58 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
     }
   }]);
+
   return DTMF;
 }(EventEmitter);
-
 /**
  * Expose C object.
  */
+
+
 module.exports.C = C;
 },{"../Constants":2,"../Exceptions":6,"../Logger":9,"../Utils":30,"events":33}],17:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var CRTC_C = require('../Constants');
+
 var Exceptions = require('../Exceptions');
+
 var Utils = require('../Utils');
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(Info, _EventEmitter);
+
   var _super = _createSuper(Info);
+
   function Info(session) {
     var _this;
+
     _classCallCheck(this, Info);
+
     _this = _super.call(this);
     _this._session = session;
     _this._direction = null;
@@ -18779,6 +22037,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._body = null;
     return _this;
   }
+
   _createClass(Info, [{
     key: "contentType",
     get: function get() {
@@ -18793,25 +22052,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "send",
     value: function send(contentType, body) {
       var _this2 = this;
+
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       this._direction = 'outgoing';
+
       if (contentType === undefined) {
         throw new TypeError('Not enough arguments');
-      }
+      } // Check RTCSession Status.
 
-      // Check RTCSession Status.
+
       if (this._session.status !== this._session.C.STATUS_CONFIRMED && this._session.status !== this._session.C.STATUS_WAITING_FOR_ACK) {
         throw new Exceptions.InvalidStateError(this._session.status);
       }
+
       this._contentType = contentType;
       this._body = body;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       extraHeaders.push("Content-Type: ".concat(contentType));
+
       this._session.newInfo({
         originator: 'local',
         info: this,
         request: this.request
       });
+
       this._session.sendRequest(CRTC_C.INFO, {
         extraHeaders: extraHeaders,
         eventHandlers: {
@@ -18848,6 +22112,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       request.reply(200);
       this._contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       this._body = request.body;
+
       this._session.newInfo({
         originator: 'remote',
         info: this,
@@ -18855,49 +22120,60 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
     }
   }]);
+
   return Info;
 }(EventEmitter);
 },{"../Constants":2,"../Exceptions":6,"../Utils":30,"events":33}],18:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var Logger = require('../Logger');
+
 var CRTC_C = require('../Constants');
+
 var logger = new Logger('RTCSession:ReferNotifier');
 var C = {
   event_type: 'refer',
   body_type: 'message/sipfrag;version=2.0',
   expires: 300
 };
+
 module.exports = /*#__PURE__*/function () {
   function ReferNotifier(session, id, expires) {
     _classCallCheck(this, ReferNotifier);
+
     this._session = session;
     this._id = id;
     this._expires = expires || C.expires;
-    this._active = true;
+    this._active = true; // The creation of a Notifier results in an immediate NOTIFY.
 
-    // The creation of a Notifier results in an immediate NOTIFY.
     this.notify(100);
   }
+
   _createClass(ReferNotifier, [{
     key: "notify",
     value: function notify(code, reason) {
       logger.debug('notify()');
+
       if (this._active === false) {
         return;
       }
+
       reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       var state;
+
       if (code >= 200) {
         state = 'terminated;reason=noresource';
       } else {
         state = "active;expires=".concat(this._expires);
-      }
+      } // Put this in a try/catch block.
 
-      // Put this in a try/catch block.
+
       this._session.sendRequest(CRTC_C.NOTIFY, {
         extraHeaders: ["Event: ".concat(C.event_type, ";id=").concat(this._id), "Subscription-State: ".concat(state), "Content-Type: ".concat(C.body_type)],
         body: "SIP/2.0 ".concat(code, " ").concat(reason),
@@ -18910,39 +22186,62 @@ module.exports = /*#__PURE__*/function () {
       });
     }
   }]);
+
   return ReferNotifier;
 }();
 },{"../Constants":2,"../Logger":9}],19:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('../Logger');
+
 var CRTC_C = require('../Constants');
+
 var Grammar = require('../Grammar');
+
 var Utils = require('../Utils');
+
 var logger = new Logger('RTCSession:ReferSubscriber');
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(ReferSubscriber, _EventEmitter);
+
   var _super = _createSuper(ReferSubscriber);
+
   function ReferSubscriber(session) {
     var _this;
+
     _classCallCheck(this, ReferSubscriber);
+
     _this = _super.call(this);
     _this._id = null;
     _this._session = session;
     return _this;
   }
+
   _createClass(ReferSubscriber, [{
     key: "id",
     get: function get() {
@@ -18952,39 +22251,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "sendRefer",
     value: function sendRefer(target) {
       var _this2 = this;
+
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       logger.debug('sendRefer()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var eventHandlers = Utils.cloneObject(options.eventHandlers);
+      var eventHandlers = Utils.cloneObject(options.eventHandlers); // Set event handlers.
 
-      // Set event handlers.
       for (var event in eventHandlers) {
         if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
           this.on(event, eventHandlers[event]);
         }
-      }
+      } // Replaces URI header field.
 
-      // Replaces URI header field.
+
       var replaces = null;
+
       if (options.replaces) {
         replaces = options.replaces._request.call_id;
         replaces += ";to-tag=".concat(options.replaces._to_tag);
         replaces += ";from-tag=".concat(options.replaces._from_tag);
         replaces = encodeURIComponent(replaces);
-      }
+      } // Refer-To header field.
 
-      // Refer-To header field.
+
       var referTo = "Refer-To: <".concat(target).concat(replaces ? "?Replaces=".concat(replaces) : '', ">");
-      extraHeaders.push(referTo);
+      extraHeaders.push(referTo); // Referred-By header field (if not already present).
 
-      // Referred-By header field (if not already present).
       if (!extraHeaders.some(function (header) {
         return header.toLowerCase().startsWith('referred-by:');
       })) {
         var referredBy = "Referred-By: <".concat(this._session._ua._configuration.uri._scheme, ":").concat(this._session._ua._configuration.uri._user, "@").concat(this._session._ua._configuration.uri._host, ">");
         extraHeaders.push(referredBy);
       }
+
       extraHeaders.push("Contact: ".concat(this._session.contact));
+
       var request = this._session.sendRequest(CRTC_C.REFER, {
         extraHeaders: extraHeaders,
         eventHandlers: {
@@ -19005,20 +22306,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       });
+
       this._id = request.cseq;
     }
   }, {
     key: "receiveNotify",
     value: function receiveNotify(request) {
       logger.debug('receiveNotify()');
+
       if (!request.body) {
         return;
       }
+
       var status_line = Grammar.parse(request.body.trim().split('\r\n', 1)[0], 'Status_Line');
+
       if (status_line === -1) {
         logger.debug("receiveNotify() | error parsing NOTIFY body: \"".concat(request.body, "\""));
         return;
       }
+
       switch (true) {
         case /^100$/.test(status_line.status_code):
           this.emit('trying', {
@@ -19026,18 +22332,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             status_line: status_line
           });
           break;
+
         case /^1[0-9]{2}$/.test(status_line.status_code):
           this.emit('progress', {
             request: request,
             status_line: status_line
           });
           break;
+
         case /^2[0-9]{2}$/.test(status_line.status_code):
           this.emit('accepted', {
             request: request,
             status_line: status_line
           });
           break;
+
         default:
           this.emit('failed', {
             request: request,
@@ -19066,61 +22375,64 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
     }
   }]);
+
   return ReferSubscriber;
 }(EventEmitter);
 },{"../Constants":2,"../Grammar":7,"../Logger":9,"../Utils":30,"events":33}],20:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var Logger = require('./Logger');
+
 var Utils = require('./Utils');
+
 var CRTC_C = require('./Constants');
+
 var SIPMessage = require('./SIPMessage');
+
 var RequestSender = require('./RequestSender');
+
 var logger = new Logger('Registrator');
 var MIN_REGISTER_EXPIRES = 10; // In seconds.
 
 module.exports = /*#__PURE__*/function () {
   function Registrator(ua, transport) {
     _classCallCheck(this, Registrator);
+
     // Force reg_id to 1.
     this._reg_id = 1;
     this._ua = ua;
     this._transport = transport;
     this._registrar = ua.configuration.registrar_server;
-    this._expires = ua.configuration.register_expires;
+    this._expires = ua.configuration.register_expires; // Call-ID and CSeq values RFC3261 10.2.
 
-    // Call-ID and CSeq values RFC3261 10.2.
     this._call_id = Utils.createRandomToken(22);
     this._cseq = 0;
     this._to_uri = ua.configuration.uri;
-    this._registrationTimer = null;
+    this._registrationTimer = null; // Ongoing Register request.
 
-    // Ongoing Register request.
-    this._registering = false;
+    this._registering = false; // Set status.
 
-    // Set status.
-    this._registered = false;
+    this._registered = false; // Contact header.
 
-    // Contact header.
-    this._contact = this._ua.contact.toString();
+    this._contact = this._ua.contact.toString(); // Sip.ice media feature tag (RFC 5768).
 
-    // Sip.ice media feature tag (RFC 5768).
-    this._contact += ';+sip.ice';
+    this._contact += ';+sip.ice'; // Custom headers for REGISTER and un-REGISTER.
 
-    // Custom headers for REGISTER and un-REGISTER.
-    this._extraHeaders = [];
+    this._extraHeaders = []; // Custom Contact header params for REGISTER and un-REGISTER.
 
-    // Custom Contact header params for REGISTER and un-REGISTER.
-    this._extraContactParams = '';
+    this._extraContactParams = ''; // Contents of the sip.instance Contact header parameter.
 
-    // Contents of the sip.instance Contact header parameter.
     this._sipInstance = "\"<urn:uuid:".concat(this._ua.configuration.instance_id, ">\"");
     this._contact += ";reg-id=".concat(this._reg_id);
     this._contact += ";+sip.instance=".concat(this._sipInstance);
   }
+
   _createClass(Registrator, [{
     key: "registered",
     get: function get() {
@@ -19132,6 +22444,7 @@ module.exports = /*#__PURE__*/function () {
       if (!Array.isArray(extraHeaders)) {
         extraHeaders = [];
       }
+
       this._extraHeaders = extraHeaders.slice();
     }
   }, {
@@ -19139,14 +22452,16 @@ module.exports = /*#__PURE__*/function () {
     value: function setExtraContactParams(extraContactParams) {
       if (!(extraContactParams instanceof Object)) {
         extraContactParams = {};
-      }
+      } // Reset it.
 
-      // Reset it.
+
       this._extraContactParams = '';
+
       for (var param_key in extraContactParams) {
         if (Object.prototype.hasOwnProperty.call(extraContactParams, param_key)) {
           var param_value = extraContactParams[param_key];
           this._extraContactParams += ";".concat(param_key);
+
           if (param_value) {
             this._extraContactParams += "=".concat(param_value);
           }
@@ -19157,11 +22472,14 @@ module.exports = /*#__PURE__*/function () {
     key: "register",
     value: function register() {
       var _this = this;
+
       if (this._registering) {
         logger.debug('Register request in progress...');
         return;
       }
+
       var extraHeaders = this._extraHeaders.slice();
+
       extraHeaders.push("Contact: ".concat(this._contact, ";expires=").concat(this._expires).concat(this._extraContactParams));
       extraHeaders.push("Expires: ".concat(this._expires));
       var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
@@ -19184,106 +22502,118 @@ module.exports = /*#__PURE__*/function () {
           // Discard responses to older REGISTER/un-REGISTER requests.
           if (response.cseq !== _this._cseq) {
             return;
-          }
+          } // Clear registration timer.
 
-          // Clear registration timer.
+
           if (_this._registrationTimer !== null) {
             clearTimeout(_this._registrationTimer);
             _this._registrationTimer = null;
           }
+
           switch (true) {
             case /^1[0-9]{2}$/.test(response.status_code):
               {
                 // Ignore provisional responses.
                 break;
               }
+
             case /^2[0-9]{2}$/.test(response.status_code):
               {
                 _this._registering = false;
+
                 if (!response.hasHeader('Contact')) {
                   logger.debug('no Contact header in response to REGISTER, response ignored');
                   break;
                 }
+
                 var contacts = response.headers['Contact'].reduce(function (a, b) {
                   return a.concat(b.parsed);
-                }, []);
-
-                // Get the Contact pointing to us and update the expires value accordingly.
+                }, []); // Get the Contact pointing to us and update the expires value accordingly.
                 // Try to find a matching Contact using sip.instance and reg-id.
+
                 var contact = contacts.find(function (element) {
                   return _this._sipInstance === element.getParam('+sip.instance') && _this._reg_id === parseInt(element.getParam('reg-id'));
-                });
+                }); // If no match was found using the sip.instance try comparing the URIs.
 
-                // If no match was found using the sip.instance try comparing the URIs.
                 if (!contact) {
                   contact = contacts.find(function (element) {
                     return element.uri.user === _this._ua.contact.uri.user;
                   });
                 }
+
                 if (!contact) {
                   logger.debug('no Contact header pointing to us, response ignored');
                   break;
                 }
+
                 var expires = contact.getParam('expires');
+
                 if (!expires && response.hasHeader('expires')) {
                   expires = response.getHeader('expires');
                 }
+
                 if (!expires) {
                   expires = _this._expires;
                 }
+
                 expires = Number(expires);
                 if (expires < MIN_REGISTER_EXPIRES) expires = MIN_REGISTER_EXPIRES;
-                var timeout = expires > 64 ? expires * 1000 / 2 + Math.floor((expires / 2 - 32) * 1000 * Math.random()) : expires * 1000 - 5000;
-
-                // Re-Register or emit an event before the expiration interval has elapsed.
+                var timeout = expires > 64 ? expires * 1000 / 2 + Math.floor((expires / 2 - 32) * 1000 * Math.random()) : expires * 1000 - 5000; // Re-Register or emit an event before the expiration interval has elapsed.
                 // For that, decrease the expires value. ie: 3 seconds.
+
                 _this._registrationTimer = setTimeout(function () {
-                  _this._registrationTimer = null;
-                  // If there are no listeners for registrationExpiring, renew registration.
+                  _this._registrationTimer = null; // If there are no listeners for registrationExpiring, renew registration.
                   // If there are listeners, let the function listening do the register call.
+
                   if (_this._ua.listeners('registrationExpiring').length === 0) {
                     _this.register();
                   } else {
                     _this._ua.emit('registrationExpiring');
                   }
-                }, timeout);
+                }, timeout); // Save gruu values.
 
-                // Save gruu values.
                 if (contact.hasParam('temp-gruu')) {
                   _this._ua.contact.temp_gruu = contact.getParam('temp-gruu').replace(/"/g, '');
                 }
+
                 if (contact.hasParam('pub-gruu')) {
                   _this._ua.contact.pub_gruu = contact.getParam('pub-gruu').replace(/"/g, '');
                 }
+
                 if (!_this._registered) {
                   _this._registered = true;
+
                   _this._ua.registered({
                     response: response
                   });
                 }
+
                 break;
               }
-
             // Interval too brief RFC3261 10.2.8.
+
             case /^423$/.test(response.status_code):
               {
                 if (response.hasHeader('min-expires')) {
                   // Increase our registration interval to the suggested minimum.
                   _this._expires = Number(response.getHeader('min-expires'));
-                  if (_this._expires < MIN_REGISTER_EXPIRES) _this._expires = MIN_REGISTER_EXPIRES;
+                  if (_this._expires < MIN_REGISTER_EXPIRES) _this._expires = MIN_REGISTER_EXPIRES; // Attempt the registration again immediately.
 
-                  // Attempt the registration again immediately.
                   _this.register();
                 } else {
                   // This response MUST contain a Min-Expires header field.
                   logger.debug('423 response received for REGISTER without Min-Expires');
+
                   _this._registrationFailure(response, CRTC_C.causes.SIP_FAILURE_CODE);
                 }
+
                 break;
               }
+
             default:
               {
                 var cause = Utils.sipErrorCause(response.status_code);
+
                 _this._registrationFailure(response, cause);
               }
           }
@@ -19296,24 +22626,29 @@ module.exports = /*#__PURE__*/function () {
     key: "unregister",
     value: function unregister() {
       var _this2 = this;
+
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
       if (!this._registered) {
         logger.debug('already unregistered');
         return;
       }
-      this._registered = false;
 
-      // Clear the registration timer.
+      this._registered = false; // Clear the registration timer.
+
       if (this._registrationTimer !== null) {
         clearTimeout(this._registrationTimer);
         this._registrationTimer = null;
       }
+
       var extraHeaders = this._extraHeaders.slice();
+
       if (options.all) {
         extraHeaders.push("Contact: *".concat(this._extraContactParams));
       } else {
         extraHeaders.push("Contact: ".concat(this._contact, ";expires=0").concat(this._extraContactParams));
       }
+
       extraHeaders.push('Expires: 0');
       var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
         'to_uri': this._to_uri,
@@ -19336,12 +22671,16 @@ module.exports = /*#__PURE__*/function () {
             case /^1[0-9]{2}$/.test(response.status_code):
               // Ignore provisional responses.
               break;
+
             case /^2[0-9]{2}$/.test(response.status_code):
               _this2._unregistered(response);
+
               break;
+
             default:
               {
                 var cause = Utils.sipErrorCause(response.status_code);
+
                 _this2._unregistered(response, cause);
               }
           }
@@ -19360,12 +22699,15 @@ module.exports = /*#__PURE__*/function () {
     key: "onTransportClosed",
     value: function onTransportClosed() {
       this._registering = false;
+
       if (this._registrationTimer !== null) {
         clearTimeout(this._registrationTimer);
         this._registrationTimer = null;
       }
+
       if (this._registered) {
         this._registered = false;
+
         this._ua.unregistered({});
       }
     }
@@ -19373,12 +22715,15 @@ module.exports = /*#__PURE__*/function () {
     key: "_registrationFailure",
     value: function _registrationFailure(response, cause) {
       this._registering = false;
+
       this._ua.registrationFailed({
         response: response || null,
         cause: cause
       });
+
       if (this._registered) {
         this._registered = false;
+
         this._ua.unregistered({
           response: response || null,
           cause: cause
@@ -19390,66 +22735,77 @@ module.exports = /*#__PURE__*/function () {
     value: function _unregistered(response, cause) {
       this._registering = false;
       this._registered = false;
+
       this._ua.unregistered({
         response: response || null,
         cause: cause || null
       });
     }
   }]);
+
   return Registrator;
 }();
 },{"./Constants":2,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30}],21:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-var Logger = require('./Logger');
-var CRTC_C = require('./Constants');
-var DigestAuthentication = require('./DigestAuthentication');
-var Transactions = require('./Transactions');
-var logger = new Logger('RequestSender');
 
-// Default event handlers.
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+var Logger = require('./Logger');
+
+var CRTC_C = require('./Constants');
+
+var DigestAuthentication = require('./DigestAuthentication');
+
+var Transactions = require('./Transactions');
+
+var logger = new Logger('RequestSender'); // Default event handlers.
+
 var EventHandlers = {
   onRequestTimeout: function onRequestTimeout() {},
   onTransportError: function onTransportError() {},
   onReceiveResponse: function onReceiveResponse() {},
   onAuthenticated: function onAuthenticated() {}
 };
+
 module.exports = /*#__PURE__*/function () {
   function RequestSender(ua, request, eventHandlers) {
     _classCallCheck(this, RequestSender);
+
     this._ua = ua;
     this._eventHandlers = eventHandlers;
     this._method = request.method;
     this._request = request;
     this._auth = null;
     this._challenged = false;
-    this._staled = false;
+    this._staled = false; // Define the undefined handlers.
 
-    // Define the undefined handlers.
     for (var handler in EventHandlers) {
       if (Object.prototype.hasOwnProperty.call(EventHandlers, handler)) {
         if (!this._eventHandlers[handler]) {
           this._eventHandlers[handler] = EventHandlers[handler];
         }
       }
-    }
+    } // If ua is in closing process or even closed just allow sending Bye and ACK.
 
-    // If ua is in closing process or even closed just allow sending Bye and ACK.
+
     if (ua.status === ua.C.STATUS_USER_CLOSED && (this._method !== CRTC_C.BYE || this._method !== CRTC_C.ACK)) {
       this._eventHandlers.onTransportError();
     }
   }
-
   /**
   * Create the client transaction and send the message.
   */
+
+
   _createClass(RequestSender, [{
     key: "send",
     value: function send() {
       var _this = this;
+
       var eventHandlers = {
         onRequestTimeout: function onRequestTimeout() {
           _this._eventHandlers.onRequestTimeout();
@@ -19461,38 +22817,43 @@ module.exports = /*#__PURE__*/function () {
           _this._receiveResponse(response);
         }
       };
+
       switch (this._method) {
         case 'INVITE':
           this.clientTransaction = new Transactions.InviteClientTransaction(this._ua, this._ua.transport, this._request, eventHandlers);
           break;
+
         case 'ACK':
           this.clientTransaction = new Transactions.AckClientTransaction(this._ua, this._ua.transport, this._request, eventHandlers);
           break;
+
         default:
           this.clientTransaction = new Transactions.NonInviteClientTransaction(this._ua, this._ua.transport, this._request, eventHandlers);
-      }
-      // If authorization JWT is present, use it.
+      } // If authorization JWT is present, use it.
+
+
       if (this._ua._configuration.authorization_jwt) {
         this._request.setHeader('Authorization', this._ua._configuration.authorization_jwt);
       }
+
       this.clientTransaction.send();
     }
-
     /**
     * Called from client transaction when receiving a correct response to the request.
     * Authenticate request if needed or pass the response back to the applicant.
     */
+
   }, {
     key: "_receiveResponse",
     value: function _receiveResponse(response) {
       var challenge;
       var authorization_header_name;
       var status_code = response.status_code;
-
       /*
       * Authentication
       * Authenticate once. _challenged_ flag used to avoid infinite authentications.
       */
+
       if ((status_code === 401 || status_code === 407) && (this._ua.configuration.password !== null || this._ua.configuration.ha1 !== null)) {
         // Get and parse the appropriate WWW-Authenticate or Proxy-Authenticate header.
         if (response.status_code === 401) {
@@ -19501,14 +22862,17 @@ module.exports = /*#__PURE__*/function () {
         } else {
           challenge = response.parseHeader('proxy-authenticate');
           authorization_header_name = 'proxy-authorization';
-        }
+        } // Verify it seems a valid challenge.
 
-        // Verify it seems a valid challenge.
+
         if (!challenge) {
           logger.debug("".concat(response.status_code, " with wrong or missing challenge, cannot authenticate"));
+
           this._eventHandlers.onReceiveResponse(response);
+
           return;
         }
+
         if (!this._challenged || !this._staled && challenge.stale === true) {
           if (!this._auth) {
             this._auth = new DigestAuthentication({
@@ -19517,26 +22881,34 @@ module.exports = /*#__PURE__*/function () {
               realm: this._ua.configuration.realm,
               ha1: this._ua.configuration.ha1
             });
-          }
+          } // Verify that the challenge is really valid.
 
-          // Verify that the challenge is really valid.
+
           if (!this._auth.authenticate(this._request, challenge)) {
             this._eventHandlers.onReceiveResponse(response);
+
             return;
           }
-          this._challenged = true;
 
-          // Update ha1 and realm in the UA.
+          this._challenged = true; // Update ha1 and realm in the UA.
+
           this._ua.set('realm', this._auth.get('realm'));
+
           this._ua.set('ha1', this._auth.get('ha1'));
+
           if (challenge.stale) {
             this._staled = true;
           }
+
           this._request = this._request.clone();
           this._request.cseq += 1;
+
           this._request.setHeader('cseq', "".concat(this._request.cseq, " ").concat(this._method));
+
           this._request.setHeader(authorization_header_name, this._auth.toString());
+
           this._eventHandlers.onAuthenticated(this._request);
+
           this.send();
         } else {
           this._eventHandlers.onReceiveResponse(response);
@@ -19546,33 +22918,53 @@ module.exports = /*#__PURE__*/function () {
       }
     }
   }]);
+
   return RequestSender;
 }();
 },{"./Constants":2,"./DigestAuthentication":5,"./Logger":9,"./Transactions":26}],22:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
-function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
-function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
-function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
-function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
-function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
-function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
-function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-var sdp_transform = require('sdp-transform');
-var Logger = require('./Logger');
-var CRTC_C = require('./Constants');
-var Utils = require('./Utils');
-var NameAddrHeader = require('./NameAddrHeader');
-var Grammar = require('./Grammar');
-var logger = new Logger('SIPMessage');
 
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+var sdp_transform = require('sdp-transform');
+
+var Logger = require('./Logger');
+
+var CRTC_C = require('./Constants');
+
+var Utils = require('./Utils');
+
+var NameAddrHeader = require('./NameAddrHeader');
+
+var Grammar = require('./Grammar');
+
+var logger = new Logger('SIPMessage');
 /**
  * -param {String} method request method
  * -param {String} ruri request uri
@@ -19583,52 +22975,51 @@ var logger = new Logger('SIPMessage');
  * -param {Object} [headers] extra headers
  * -param {String} [body]
  */
+
 var OutgoingRequest = /*#__PURE__*/function () {
   function OutgoingRequest(method, ruri, ua, params, extraHeaders, body) {
     _classCallCheck(this, OutgoingRequest);
+
     // Mandatory parameters check.
     if (!method || !ruri || !ua) {
       return null;
     }
+
     params = params || {};
     this.ua = ua;
     this.headers = {};
     this.method = method;
     this.ruri = ruri;
     this.body = body;
-    this.extraHeaders = Utils.cloneArray(extraHeaders);
-
-    // Fill the Common SIP Request Headers.
-
+    this.extraHeaders = Utils.cloneArray(extraHeaders); // Fill the Common SIP Request Headers.
     // Route.
+
     if (params.route_set) {
       this.setHeader('route', params.route_set);
     } else if (ua.configuration.use_preloaded_route) {
       this.setHeader('route', "<".concat(ua.transport.sip_uri, ";lr>"));
-    }
-
-    // Via.
+    } // Via.
     // Empty Via header. Will be filled by the client transaction.
-    this.setHeader('via', '');
 
-    // Max-Forwards.
-    this.setHeader('max-forwards', CRTC_C.MAX_FORWARDS);
 
-    // To
+    this.setHeader('via', ''); // Max-Forwards.
+
+    this.setHeader('max-forwards', CRTC_C.MAX_FORWARDS); // To
+
     var to_uri = params.to_uri || ruri;
     var to_params = params.to_tag ? {
       tag: params.to_tag
     } : null;
     var to_display_name = typeof params.to_display_name !== 'undefined' ? params.to_display_name : null;
     this.to = new NameAddrHeader(to_uri, to_display_name, to_params);
-    this.setHeader('to', this.to.toString());
+    this.setHeader('to', this.to.toString()); // From.
 
-    // From.
     var from_uri = params.from_uri || ua.configuration.uri;
     var from_params = {
       tag: params.from_tag || Utils.newTag()
     };
     var display_name;
+
     if (typeof params.from_display_name !== 'undefined') {
       display_name = params.from_display_name;
     } else if (ua.configuration.display_name) {
@@ -19636,58 +23027,64 @@ var OutgoingRequest = /*#__PURE__*/function () {
     } else {
       display_name = null;
     }
-    this.from = new NameAddrHeader(from_uri, display_name, from_params);
-    this.setHeader('from', this.from.toString());
 
-    // Call-ID.
+    this.from = new NameAddrHeader(from_uri, display_name, from_params);
+    this.setHeader('from', this.from.toString()); // Call-ID.
+
     var call_id = params.call_id || ua.configuration.crtc_id + Utils.createRandomToken(15);
     this.call_id = call_id;
-    this.setHeader('call-id', call_id);
+    this.setHeader('call-id', call_id); // CSeq.
 
-    // CSeq.
     var cseq = params.cseq || Math.floor(Math.random() * 10000);
     this.cseq = cseq;
     this.setHeader('cseq', "".concat(cseq, " ").concat(method));
   }
-
   /**
    * Replace the the given header by the given value.
    * -param {String} name header name
    * -param {String | Array} value header value
    */
+
+
   _createClass(OutgoingRequest, [{
     key: "setHeader",
     value: function setHeader(name, value) {
       // Remove the header from extraHeaders if present.
       var regexp = new RegExp("^\\s*".concat(name, "\\s*:"), 'i');
+
       for (var idx = 0; idx < this.extraHeaders.length; idx++) {
         if (regexp.test(this.extraHeaders[idx])) {
           this.extraHeaders.splice(idx, 1);
         }
       }
+
       this.headers[Utils.headerize(name)] = Array.isArray(value) ? value : [value];
     }
-
     /**
      * Get the value of the given header name at the given position.
      * -param {String} name header name
      * -returns {String|undefined} Returns the specified header, null if header doesn't exist.
      */
+
   }, {
     key: "getHeader",
     value: function getHeader(name) {
       var headers = this.headers[Utils.headerize(name)];
+
       if (headers) {
         if (headers[0]) {
           return headers[0];
         }
       } else {
         var regexp = new RegExp("^\\s*".concat(name, "\\s*:"), 'i');
+
         var _iterator = _createForOfIteratorHelper(this.extraHeaders),
-          _step;
+            _step;
+
         try {
           for (_iterator.s(); !(_step = _iterator.n()).done;) {
             var header = _step.value;
+
             if (regexp.test(header)) {
               return header.substring(header.indexOf(':') + 1).trim();
             }
@@ -19698,22 +23095,25 @@ var OutgoingRequest = /*#__PURE__*/function () {
           _iterator.f();
         }
       }
+
       return;
     }
-
     /**
      * Get the header/s of the given name.
      * -param {String} name header name
      * -returns {Array} Array with all the headers of the specified name.
      */
+
   }, {
     key: "getHeaders",
     value: function getHeaders(name) {
       var headers = this.headers[Utils.headerize(name)];
       var result = [];
+
       if (headers) {
         var _iterator2 = _createForOfIteratorHelper(headers),
-          _step2;
+            _step2;
+
         try {
           for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
             var header = _step2.value;
@@ -19724,14 +23124,18 @@ var OutgoingRequest = /*#__PURE__*/function () {
         } finally {
           _iterator2.f();
         }
+
         return result;
       } else {
         var regexp = new RegExp("^\\s*".concat(name, "\\s*:"), 'i');
+
         var _iterator3 = _createForOfIteratorHelper(this.extraHeaders),
-          _step3;
+            _step3;
+
         try {
           for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
             var _header = _step3.value;
+
             if (regexp.test(_header)) {
               result.push(_header.substring(_header.indexOf(':') + 1).trim());
             }
@@ -19741,15 +23145,16 @@ var OutgoingRequest = /*#__PURE__*/function () {
         } finally {
           _iterator3.f();
         }
+
         return result;
       }
     }
-
     /**
      * Verify the existence of the given header.
      * -param {String} name header name
      * -returns {boolean} true if header with given name exists, false otherwise
      */
+
   }, {
     key: "hasHeader",
     value: function hasHeader(name) {
@@ -19757,11 +23162,14 @@ var OutgoingRequest = /*#__PURE__*/function () {
         return true;
       } else {
         var regexp = new RegExp("^\\s*".concat(name, "\\s*:"), 'i');
+
         var _iterator4 = _createForOfIteratorHelper(this.extraHeaders),
-          _step4;
+            _step4;
+
         try {
           for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
             var header = _step4.value;
+
             if (regexp.test(header)) {
               return true;
             }
@@ -19772,9 +23180,9 @@ var OutgoingRequest = /*#__PURE__*/function () {
           _iterator4.f();
         }
       }
+
       return false;
     }
-
     /**
      * Parse the current body as a SDP and store the resulting object
      * into this.sdp.
@@ -19782,6 +23190,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
      *
      * Returns this.sdp.
      */
+
   }, {
     key: "parseSDP",
     value: function parseSDP(force) {
@@ -19796,10 +23205,12 @@ var OutgoingRequest = /*#__PURE__*/function () {
     key: "toString",
     value: function toString() {
       var msg = "".concat(this.method, " ").concat(this.ruri, " SIP/2.0\r\n");
+
       for (var headerName in this.headers) {
         if (Object.prototype.hasOwnProperty.call(this.headers, headerName)) {
           var _iterator5 = _createForOfIteratorHelper(this.headers[headerName]),
-            _step5;
+              _step5;
+
           try {
             for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
               var headerValue = _step5.value;
@@ -19812,49 +23223,58 @@ var OutgoingRequest = /*#__PURE__*/function () {
           }
         }
       }
+
       var _iterator6 = _createForOfIteratorHelper(this.extraHeaders),
-        _step6;
+          _step6;
+
       try {
         for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
           var header = _step6.value;
           msg += "".concat(header.trim(), "\r\n");
-        }
+        } // Supported.
 
-        // Supported.
       } catch (err) {
         _iterator6.e(err);
       } finally {
         _iterator6.f();
       }
+
       var supported = [];
+
       switch (this.method) {
         case CRTC_C.REGISTER:
           supported.push('path', 'gruu');
           break;
+
         case CRTC_C.INVITE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
+
           if (this.ua.contact.pub_gruu || this.ua.contact.temp_gruu) {
             supported.push('gruu');
           }
+
           supported.push('ice', 'replaces');
           break;
+
         case CRTC_C.UPDATE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
+
           supported.push('ice');
           break;
       }
-      supported.push('outbound');
-      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT;
 
-      // 增加100rel支持, OPTIONS 消息不添加 Supported 头
+      supported.push('outbound');
+      var userAgent = this.ua.configuration.user_agent || CRTC_C.USER_AGENT; // 增加100rel支持, OPTIONS 消息不添加 Supported 头
       // Allow.
+
       msg += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
       this.method !== CRTC_C.OPTIONS && (msg += "Supported: ".concat(supported, ",100rel\r\n"));
       msg += "User-Agent: ".concat(userAgent, "\r\n");
+
       if (this.body) {
         var length = Utils.str_utf8_length(this.body);
         msg += "Content-Length: ".concat(length, "\r\n\r\n");
@@ -19862,6 +23282,7 @@ var OutgoingRequest = /*#__PURE__*/function () {
       } else {
         msg += 'Content-Length: 0\r\n\r\n';
       }
+
       return msg;
     }
   }, {
@@ -19880,18 +23301,25 @@ var OutgoingRequest = /*#__PURE__*/function () {
       return request;
     }
   }]);
+
   return OutgoingRequest;
 }();
+
 var InitialOutgoingInviteRequest = /*#__PURE__*/function (_OutgoingRequest) {
   _inherits(InitialOutgoingInviteRequest, _OutgoingRequest);
+
   var _super = _createSuper(InitialOutgoingInviteRequest);
+
   function InitialOutgoingInviteRequest(ruri, ua, params, extraHeaders, body) {
     var _this;
+
     _classCallCheck(this, InitialOutgoingInviteRequest);
+
     _this = _super.call(this, CRTC_C.INVITE, ruri, ua, params, extraHeaders, body);
     _this.transaction = null;
     return _this;
   }
+
   _createClass(InitialOutgoingInviteRequest, [{
     key: "cancel",
     value: function cancel(reason) {
@@ -19914,11 +23342,14 @@ var InitialOutgoingInviteRequest = /*#__PURE__*/function (_OutgoingRequest) {
       return request;
     }
   }]);
+
   return InitialOutgoingInviteRequest;
 }(OutgoingRequest);
+
 var IncomingMessage = /*#__PURE__*/function () {
   function IncomingMessage() {
     _classCallCheck(this, IncomingMessage);
+
     this.data = null;
     this.headers = null;
     this.method = null;
@@ -19933,11 +23364,12 @@ var IncomingMessage = /*#__PURE__*/function () {
     this.body = null;
     this.sdp = null;
   }
-
   /**
   * Insert a header of the given name and value into the last position of the
   * header array.
   */
+
+
   _createClass(IncomingMessage, [{
     key: "addHeader",
     value: function addHeader(name, value) {
@@ -19945,20 +23377,22 @@ var IncomingMessage = /*#__PURE__*/function () {
         raw: value
       };
       name = Utils.headerize(name);
+
       if (this.headers[name]) {
         this.headers[name].push(header);
       } else {
         this.headers[name] = [header];
       }
     }
-
     /**
      * Get the value of the given header name at the given position.
      */
+
   }, {
     key: "getHeader",
     value: function getHeader(name) {
       var header = this.headers[Utils.headerize(name)];
+
       if (header) {
         if (header[0]) {
           return header[0].raw;
@@ -19967,20 +23401,23 @@ var IncomingMessage = /*#__PURE__*/function () {
         return;
       }
     }
-
     /**
      * Get the header/s of the given name.
      */
+
   }, {
     key: "getHeaders",
     value: function getHeaders(name) {
       var headers = this.headers[Utils.headerize(name)];
       var result = [];
+
       if (!headers) {
         return [];
       }
+
       var _iterator7 = _createForOfIteratorHelper(headers),
-        _step7;
+          _step7;
+
       try {
         for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
           var header = _step7.value;
@@ -19991,18 +23428,18 @@ var IncomingMessage = /*#__PURE__*/function () {
       } finally {
         _iterator7.f();
       }
+
       return result;
     }
-
     /**
      * Verify the existence of the given header.
      */
+
   }, {
     key: "hasHeader",
     value: function hasHeader(name) {
       return this.headers[Utils.headerize(name)] ? true : false;
     }
-
     /**
     * Parse the given header on the given index.
     * -param {String} name header name
@@ -20010,11 +23447,13 @@ var IncomingMessage = /*#__PURE__*/function () {
     * -returns {Object|undefined} Parsed header object, undefined if the header
     *  is not present or in case of a parsing error.
     */
+
   }, {
     key: "parseHeader",
     value: function parseHeader(name) {
       var idx = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
       name = Utils.headerize(name);
+
       if (!this.headers[name]) {
         logger.debug("header \"".concat(name, "\" not present"));
         return;
@@ -20022,16 +23461,20 @@ var IncomingMessage = /*#__PURE__*/function () {
         logger.debug("not so many \"".concat(name, "\" headers present"));
         return;
       }
+
       var header = this.headers[name][idx];
       var value = header.raw;
+
       if (header.parsed) {
         return header.parsed;
-      }
+      } // Substitute '-' by '_' for grammar rule matching.
 
-      // Substitute '-' by '_' for grammar rule matching.
+
       var parsed = Grammar.parse(value, name.replace(/-/g, '_'));
+
       if (parsed === -1) {
         this.headers[name].splice(idx, 1); // delete from headers
+
         logger.debug("error parsing \"".concat(name, "\" header field with value \"").concat(value, "\""));
         return;
       } else {
@@ -20039,7 +23482,6 @@ var IncomingMessage = /*#__PURE__*/function () {
         return parsed;
       }
     }
-
     /**
      * Message Header attribute selector. Alias of parseHeader.
      * -param {String} name header name
@@ -20050,17 +23492,18 @@ var IncomingMessage = /*#__PURE__*/function () {
      * -example
      * message.s('via',3).port
      */
+
   }, {
     key: "s",
     value: function s(name, idx) {
       return this.parseHeader(name, idx);
     }
-
     /**
     * Replace the value of the given header by the value.
     * -param {String} name header name
     * -param {String} value header value
     */
+
   }, {
     key: "setHeader",
     value: function setHeader(name, value) {
@@ -20069,7 +23512,6 @@ var IncomingMessage = /*#__PURE__*/function () {
       };
       this.headers[Utils.headerize(name)] = [header];
     }
-
     /**
      * Parse the current body as a SDP and store the resulting object
      * into this.sdp.
@@ -20077,6 +23519,7 @@ var IncomingMessage = /*#__PURE__*/function () {
      *
      * Returns this.sdp.
      */
+
   }, {
     key: "parseSDP",
     value: function parseSDP(force) {
@@ -20093,14 +23536,20 @@ var IncomingMessage = /*#__PURE__*/function () {
       return this.data;
     }
   }]);
+
   return IncomingMessage;
 }();
+
 var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
   _inherits(IncomingRequest, _IncomingMessage);
+
   var _super2 = _createSuper(IncomingRequest);
+
   function IncomingRequest(ua) {
     var _this2;
+
     _classCallCheck(this, IncomingRequest);
+
     _this2 = _super2.call(this);
     _this2.ua = ua;
     _this2.headers = {};
@@ -20109,7 +23558,6 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
     _this2.server_transaction = null;
     return _this2;
   }
-
   /**
   * Stateful reply.
   * -param {Number} code status code
@@ -20119,29 +23567,34 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
   * -param {Function} [onSuccess] onSuccess callback
   * -param {Function} [onFailure] onFailure callback
   */
+
+
   _createClass(IncomingRequest, [{
     key: "reply",
     value: function reply(code, reason, extraHeaders, body, onSuccess, onFailure) {
-      var supported = [];
-      // for 3PCC notify event
+      var supported = []; // for 3PCC notify event
+
       var allow_events = ['talk', 'hold', 'conference', 'refer', 'check-sync'];
       var to = this.getHeader('To');
       code = code || null;
-      reason = reason || null;
+      reason = reason || null; // Validate code and reason values.
 
-      // Validate code and reason values.
       if (!code || code < 100 || code > 699) {
         throw new TypeError("Invalid status_code: ".concat(code));
       } else if (reason && typeof reason !== 'string' && !(reason instanceof String)) {
         throw new TypeError("Invalid reason_phrase: ".concat(reason));
       }
+
       reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       extraHeaders = Utils.cloneArray(extraHeaders);
       var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
+
       if (this.method === CRTC_C.INVITE && code > 100 && code <= 200) {
         var headers = this.getHeaders('record-route');
+
         var _iterator8 = _createForOfIteratorHelper(headers),
-          _step8;
+            _step8;
+
         try {
           for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
             var header = _step8.value;
@@ -20153,9 +23606,12 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
           _iterator8.f();
         }
       }
+
       var vias = this.getHeaders('via');
+
       var _iterator9 = _createForOfIteratorHelper(vias),
-        _step9;
+          _step9;
+
       try {
         for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
           var via = _step9.value;
@@ -20166,51 +23622,60 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       } finally {
         _iterator9.f();
       }
+
       if (!this.to_tag && code > 100) {
         to += ";tag=".concat(Utils.newTag());
       } else if (this.to_tag && !this.s('to').hasParam('tag')) {
         to += ";tag=".concat(this.to_tag);
       }
+
       response += "To: ".concat(to, "\r\n");
       response += "From: ".concat(this.getHeader('From'), "\r\n");
       response += "Call-ID: ".concat(this.call_id, "\r\n");
       response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
+
       var _iterator10 = _createForOfIteratorHelper(extraHeaders),
-        _step10;
+          _step10;
+
       try {
         for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
           var _header2 = _step10.value;
           response += "".concat(_header2.trim(), "\r\n");
-        }
+        } // Supported.
 
-        // Supported.
       } catch (err) {
         _iterator10.e(err);
       } finally {
         _iterator10.f();
       }
+
       switch (this.method) {
         case CRTC_C.INVITE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
+
           if (this.ua.contact.pub_gruu || this.ua.contact.temp_gruu) {
             supported.push('gruu');
           }
+
           supported.push('ice', 'replaces');
           break;
+
         case CRTC_C.UPDATE:
           if (this.ua.configuration.session_timers) {
             supported.push('timer');
           }
+
           if (body) {
             supported.push('ice');
           }
+
           supported.push('replaces');
       }
-      supported.push('outbound');
 
-      // Allow and Accept.
+      supported.push('outbound'); // Allow and Accept.
+
       if (this.method === CRTC_C.OPTIONS) {
         response += "Allow: ".concat(CRTC_C.ALLOWED_METHODS, "\r\n");
         response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
@@ -20219,10 +23684,11 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       } else if (code === 415) {
         response += "Accept: ".concat(CRTC_C.ACCEPTED_BODY_TYPES, "\r\n");
       }
-      response += "Supported: ".concat(supported, "\r\n");
 
-      // for 3PCC notify event
+      response += "Supported: ".concat(supported, "\r\n"); // for 3PCC notify event
+
       response += "Allow-Events: ".concat(allow_events, "\r\n");
+
       if (body) {
         var length = Utils.str_utf8_length(body);
         response += 'Content-Type: application/sdp\r\n';
@@ -20231,31 +23697,34 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       } else {
         response += "Content-Length: ".concat(0, "\r\n\r\n");
       }
+
       this.server_transaction.receiveResponse(code, response, onSuccess, onFailure);
     }
-
     /**
     * Stateless reply.
     * -param {Number} code status code
     * -param {String} reason reason phrase
     */
+
   }, {
     key: "reply_sl",
     value: function reply_sl() {
       var code = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
       var reason = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-      var vias = this.getHeaders('via');
+      var vias = this.getHeaders('via'); // Validate code and reason values.
 
-      // Validate code and reason values.
       if (!code || code < 100 || code > 699) {
         throw new TypeError("Invalid status_code: ".concat(code));
       } else if (reason && typeof reason !== 'string' && !(reason instanceof String)) {
         throw new TypeError("Invalid reason_phrase: ".concat(reason));
       }
+
       reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
+
       var _iterator11 = _createForOfIteratorHelper(vias),
-        _step11;
+          _step11;
+
       try {
         for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
           var via = _step11.value;
@@ -20266,12 +23735,15 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       } finally {
         _iterator11.f();
       }
+
       var to = this.getHeader('To');
+
       if (!this.to_tag && code > 100) {
         to += ";tag=".concat(Utils.newTag());
       } else if (this.to_tag && !this.s('to').hasParam('tag')) {
         to += ";tag=".concat(this.to_tag);
       }
+
       response += "To: ".concat(to, "\r\n");
       response += "From: ".concat(this.getHeader('From'), "\r\n");
       response += "Call-ID: ".concat(this.call_id, "\r\n");
@@ -20280,22 +23752,30 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       this.transport.send(response);
     }
   }]);
+
   return IncomingRequest;
 }(IncomingMessage);
+
 var IncomingResponse = /*#__PURE__*/function (_IncomingMessage2) {
   _inherits(IncomingResponse, _IncomingMessage2);
+
   var _super3 = _createSuper(IncomingResponse);
+
   function IncomingResponse() {
     var _this3;
+
     _classCallCheck(this, IncomingResponse);
+
     _this3 = _super3.call(this);
     _this3.headers = {};
     _this3.status_code = null;
     _this3.reason_phrase = null;
     return _this3;
   }
+
   return _createClass(IncomingResponse);
 }(IncomingMessage);
+
 module.exports = {
   OutgoingRequest: OutgoingRequest,
   InitialOutgoingInviteRequest: InitialOutgoingInviteRequest,
@@ -20306,10 +23786,12 @@ module.exports = {
 "use strict";
 
 var Logger = require('./Logger');
-var Utils = require('./Utils');
-var Grammar = require('./Grammar');
-var logger = new Logger('Socket');
 
+var Utils = require('./Utils');
+
+var Grammar = require('./Grammar');
+
+var logger = new Logger('Socket');
 /**
  * Interface documentation: https://crtc.net/documentation/$last_version/api/socket/
  *
@@ -20334,30 +23816,33 @@ exports.isSocket = function (socket) {
   if (Array.isArray(socket)) {
     return false;
   }
+
   if (typeof socket === 'undefined') {
     logger.warn('undefined CRTC.Socket instance');
     return false;
-  }
+  } // Check Properties.
 
-  // Check Properties.
+
   try {
     if (!Utils.isString(socket.url)) {
       logger.warn('missing or invalid CRTC.Socket url property');
       throw new Error('Missing or invalid CRTC.Socket url property');
     }
+
     if (!Utils.isString(socket.via_transport)) {
       logger.warn('missing or invalid CRTC.Socket via_transport property');
       throw new Error('Missing or invalid CRTC.Socket via_transport property');
     }
+
     if (Grammar.parse(socket.sip_uri, 'SIP_URI') === -1) {
       logger.warn('missing or invalid CRTC.Socket sip_uri property');
       throw new Error('missing or invalid CRTC.Socket sip_uri property');
     }
   } catch (e) {
     return false;
-  }
+  } // Check Methods.
 
-  // Check Methods.
+
   try {
     ['connect', 'disconnect', 'send'].forEach(function (method) {
       if (!Utils.isFunction(socket[method])) {
@@ -20368,30 +23853,48 @@ exports.isSocket = function (socket) {
   } catch (e) {
     return false;
   }
+
   return true;
 };
 },{"./Grammar":7,"./Logger":9,"./Utils":30}],24:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(getStats, _EventEmitter);
+
   var _super = _createSuper(getStats);
+
   function getStats(pc) {
     var _this;
+
     var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+
     _classCallCheck(this, getStats);
+
     _this = _super.call(this);
     _this._pc = pc;
     _this._delay = delay;
@@ -20452,13 +23955,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         bytesReceived: null
       }
     };
+
     _this.start();
+
     return _this;
   }
+
   _createClass(getStats, [{
     key: "start",
     value: function start() {
       var _this2 = this;
+
       this._statsTimer = setInterval(function () {
         _this2._pc.getStats().then(function (stats) {
           _this2.parseReport(stats);
@@ -20469,14 +23976,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "stop",
     value: function stop() {
       clearInterval(this._statsTimer);
-    }
-
-    // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
+    } // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
     // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
+
   }, {
     key: "parseReport",
     value: function parseReport(stats) {
       var _this3 = this;
+
       stats.forEach(function (report) {
         switch (report.type) {
           case 'remote-inbound-rtp':
@@ -20489,14 +23996,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this3._cStats.audio.packetsSentLost = report['packetsLost'] - (_this3._stats.audio.packetsSentLost ? _this3._stats.audio.packetsSentLost : 0);
               _this3._stats.audio.packetsSentLost = report['packetsLost'];
             }
+
             break;
+
           case 'remote-outbound-rtp':
             if (report.kind === 'video') {
               _this3._stats.video.downlinkRTT = report['roundTripTime'];
             } else if (report.kind === 'audio') {
               _this3._stats.audio.downlinkRTT = report['roundTripTime'];
             }
+
             break;
+
           case 'outbound-rtp':
             if (report.kind === 'video') {
               _this3._cStats.video.packetsSent = report['packetsSent'] - (_this3._stats.video.packetsSent ? _this3._stats.video.packetsSent : 0);
@@ -20513,7 +24024,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this3._stats.audio.packetsSent = report['packetsSent'];
               _this3._stats.audio.bytesSent = report['bytesSent'];
             }
+
             break;
+
           case 'inbound-rtp':
             if (report.kind === 'video') {
               _this3._cStats.video.packetsReceived = report['packetsReceived'] - (_this3._stats.video.packetsReceived ? _this3._stats.video.packetsReceived : 0);
@@ -20534,105 +24047,115 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this3._stats.audio.bytesReceived = report['bytesReceived'];
               _this3._stats.audio.packetsReceivedLost = report['packetsLost'];
             }
+
             break;
+
           default:
             break;
         }
-      });
+      }); // 语音上行丢包率
 
-      // 语音上行丢包率
       if (this._cStats.audio.packetsSent === null) {
         this._stats.audio.uplinkLoss = null;
       } else if (this._cStats.audio.packetsSentLost === null) {
         this._stats.audio.uplinkLoss = null;
       } else {
         var audioUplinkLoss = 0;
+
         if (this._cStats.audio.packetsSent === 0) {
           audioUplinkLoss = 100;
         } else {
           audioUplinkLoss = Math.floor(this._cStats.audio.packetsSentLost * 100 / (this._cStats.audio.packetsSentLost + this._cStats.audio.packetsSent));
         }
+
         if (audioUplinkLoss >= 0) {
           this._stats.audio.uplinkLoss = audioUplinkLoss;
         }
-      }
+      } // 语音上行速率
 
-      // 语音上行速率
+
       if (this._cStats.audio.bytesSent === null) {
         this._stats.audio.uplinkSpeed = null;
       } else {
         this._stats.audio.uplinkSpeed = this._cStats.audio.bytesSent / this._delay * 8;
-      }
+      } // 语音下行丢包率
 
-      // 语音下行丢包率
+
       if (this._cStats.audio.packetsReceived === null) {
         this._stats.audio.downlinkLoss = null;
       } else if (this._cStats.audio.packetsReceivedLost === null) {
         this._stats.audio.downlinkLoss = null;
       } else {
         var audioDownlinkLoss = 0;
+
         if (this._cStats.audio.packetsReceived === 0) {
           audioDownlinkLoss = 100;
         } else {
           audioDownlinkLoss = Math.floor(this._cStats.audio.packetsReceivedLost * 100 / (this._cStats.audio.packetsReceivedLost + this._cStats.audio.packetsReceived));
         }
+
         if (audioDownlinkLoss >= 0) {
           this._stats.audio.downlinkLoss = audioDownlinkLoss;
         }
-      }
+      } // 语音下行速率
 
-      // 语音下行速率
+
       if (this._cStats.audio.bytesReceived === null) {
         this._stats.audio.downlinkSpeed = null;
       } else {
         this._stats.audio.downlinkSpeed = this._cStats.audio.bytesReceived / this._delay * 8;
-      }
+      } // 视频上行丢包率
 
-      // 视频上行丢包率
+
       if (this._cStats.video.packetsSent === null) {
         this._stats.video.uplinkLoss = null;
       } else if (this._cStats.video.packetsSentLost === null) {
         this._stats.video.uplinkLoss = null;
       } else {
         var videoUplinkLoss = 0;
+
         if (this._cStats.video.packetsSent === 0) {
           videoUplinkLoss = 100;
         } else {
           videoUplinkLoss = Math.floor(this._cStats.video.packetsSentLost * 100 / (this._cStats.video.packetsSentLost + this._cStats.video.packetsSent));
         }
+
         if (videoUplinkLoss >= 0) {
           this._stats.video.uplinkLoss = videoUplinkLoss;
         }
-      }
+      } // 视频上行速率
 
-      // 视频上行速率
+
       if (this._cStats.video.bytesSent === null) {
         this._stats.video.uplinkSpeed = null;
       } else {
         this._stats.video.uplinkSpeed = this._cStats.video.bytesSent / this._delay * 8;
-      }
+      } // 视频下行丢包率
 
-      // 视频下行丢包率
+
       if (this._cStats.video.packetsReceived === null || this._cStats.video.packetsReceivedLost === null) {
         this._stats.video.downlinkLoss = null;
       } else {
         var videoDownlinkLoss = 0;
+
         if (this._cStats.video.packetsReceived === 0) {
           videoDownlinkLoss = 100;
         } else {
           videoDownlinkLoss = Math.floor(this._cStats.video.packetsReceivedLost * 100 / (this._cStats.video.packetsReceivedLost + this._cStats.video.packetsReceived));
         }
+
         if (videoDownlinkLoss >= 0) {
           this._stats.video.downlinkLoss = videoDownlinkLoss;
         }
-      }
+      } // 视频下行速率
 
-      // 视频下行速率
+
       if (this._cStats.video.bytesReceived === null) {
         this._stats.video.downlinkSpeed = null;
       } else {
         this._stats.video.downlinkSpeed = this._cStats.video.bytesReceived / this._delay * 8;
       }
+
       function parseStatsReport(report) {
         var rp = {
           transport: {
@@ -20678,17 +24201,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           downlinkLoss: "".concat(rp.audio.downlinkLoss > rp.video.downlinkLoss ? rp.audio.downlinkLoss : rp.video.downlinkLoss, "%")
         };
       }
+
       this.emit('report', parseStatsReport(this._stats));
     }
   }]);
+
   return getStats;
 }(EventEmitter);
 },{"events":33}],25:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
-  T2 = 4000,
-  T4 = 5000;
+    T2 = 4000,
+    T4 = 5000;
 module.exports = {
   T1: T1,
   T2: T2,
@@ -20703,26 +24228,43 @@ module.exports = {
   TIMER_L: 64 * T1,
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
+
 };
 },{}],26:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var SIPMessage = require('./SIPMessage');
+
 var Timers = require('./Timers');
+
 var loggernict = new Logger('NonInviteClientTransaction');
 var loggerict = new Logger('InviteClientTransaction');
 var loggeract = new Logger('AckClientTransaction');
@@ -20743,12 +24285,17 @@ var C = {
   INVITE_CLIENT: 'ict',
   INVITE_SERVER: 'ist'
 };
+
 var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
   _inherits(NonInviteClientTransaction, _EventEmitter);
+
   var _super = _createSuper(NonInviteClientTransaction);
+
   function NonInviteClientTransaction(ua, transport, request, eventHandlers) {
     var _this;
+
     _classCallCheck(this, NonInviteClientTransaction);
+
     _this = _super.call(this);
     _this.type = C.NON_INVITE_CLIENT;
     _this.id = "z9hG4bK".concat(Math.floor(Math.random() * 10000000));
@@ -20758,10 +24305,14 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
     _this.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this.id);
+
     _this.request.setHeader('via', via);
+
     _this.ua.newTransaction(_assertThisInitialized(_this));
+
     return _this;
   }
+
   _createClass(NonInviteClientTransaction, [{
     key: "C",
     get: function get() {
@@ -20777,10 +24328,12 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
     key: "send",
     value: function send() {
       var _this2 = this;
+
       this.stateChanged(C.STATUS_TRYING);
       this.F = setTimeout(function () {
         _this2.timer_F();
       }, Timers.TIMER_F);
+
       if (!this.transport.send(this.request)) {
         this.onTransportError();
       }
@@ -20813,7 +24366,9 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
     key: "receiveResponse",
     value: function receiveResponse(response) {
       var _this3 = this;
+
       var status_code = response.status_code;
+
       if (status_code < 200) {
         switch (this.state) {
           case C.STATUS_TRYING:
@@ -20828,29 +24383,38 @@ var NonInviteClientTransaction = /*#__PURE__*/function (_EventEmitter) {
           case C.STATUS_PROCEEDING:
             this.stateChanged(C.STATUS_COMPLETED);
             clearTimeout(this.F);
+
             if (status_code === 408) {
               this.eventHandlers.onRequestTimeout();
             } else {
               this.eventHandlers.onReceiveResponse(response);
             }
+
             this.K = setTimeout(function () {
               _this3.timer_K();
             }, Timers.TIMER_K);
             break;
+
           case C.STATUS_COMPLETED:
             break;
         }
       }
     }
   }]);
+
   return NonInviteClientTransaction;
 }(EventEmitter);
+
 var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
   _inherits(InviteClientTransaction, _EventEmitter2);
+
   var _super2 = _createSuper(InviteClientTransaction);
+
   function InviteClientTransaction(ua, transport, request, eventHandlers) {
     var _this4;
+
     _classCallCheck(this, InviteClientTransaction);
+
     _this4 = _super2.call(this);
     _this4.type = C.INVITE_CLIENT;
     _this4.id = "z9hG4bK".concat(Math.floor(Math.random() * 10000000));
@@ -20861,10 +24425,14 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     request.transaction = _assertThisInitialized(_this4);
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this4.id);
+
     _this4.request.setHeader('via', via);
+
     _this4.ua.newTransaction(_assertThisInitialized(_this4));
+
     return _this4;
   }
+
   _createClass(InviteClientTransaction, [{
     key: "C",
     get: function get() {
@@ -20880,10 +24448,12 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     key: "send",
     value: function send() {
       var _this5 = this;
+
       this.stateChanged(C.STATUS_CALLING);
       this.B = setTimeout(function () {
         _this5.timer_B();
       }, Timers.TIMER_B);
+
       if (!this.transport.send(this.request)) {
         this.onTransportError();
       }
@@ -20894,31 +24464,33 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
       clearTimeout(this.B);
       clearTimeout(this.D);
       clearTimeout(this.M);
+
       if (this.state !== C.STATUS_ACCEPTED) {
         loggerict.debug("transport error occurred, deleting transaction ".concat(this.id));
         this.eventHandlers.onTransportError();
       }
+
       this.stateChanged(C.STATUS_TERMINATED);
       this.ua.destroyTransaction(this);
-    }
+    } // RFC 6026 7.2.
 
-    // RFC 6026 7.2.
   }, {
     key: "timer_M",
     value: function timer_M() {
       loggerict.debug("Timer M expired for transaction ".concat(this.id));
+
       if (this.state === C.STATUS_ACCEPTED) {
         clearTimeout(this.B);
         this.stateChanged(C.STATUS_TERMINATED);
         this.ua.destroyTransaction(this);
       }
-    }
+    } // RFC 3261 17.1.1.
 
-    // RFC 3261 17.1.1.
   }, {
     key: "timer_B",
     value: function timer_B() {
       loggerict.debug("Timer B expired for transaction ".concat(this.id));
+
       if (this.state === C.STATUS_CALLING) {
         this.stateChanged(C.STATUS_TERMINATED);
         this.ua.destroyTransaction(this);
@@ -20937,6 +24509,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
     key: "sendACK",
     value: function sendACK(response) {
       var _this6 = this;
+
       var ack = new SIPMessage.OutgoingRequest(CRTC_C.ACK, this.request.ruri, this.ua, {
         'route_set': this.request.getHeaders('route'),
         'call_id': this.request.getHeader('call-id'),
@@ -20957,6 +24530,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
       if (this.state !== C.STATUS_PROCEEDING) {
         return;
       }
+
       var cancel = new SIPMessage.OutgoingRequest(CRTC_C.CANCEL, this.request.ruri, this.ua, {
         'route_set': this.request.getHeaders('route'),
         'call_id': this.request.getHeader('call-id'),
@@ -20965,22 +24539,27 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
       cancel.setHeader('from', this.request.getHeader('from'));
       cancel.setHeader('via', this.request.getHeader('via'));
       cancel.setHeader('to', this.request.getHeader('to'));
+
       if (reason) {
         cancel.setHeader('reason', reason);
       }
+
       this.transport.send(cancel);
     }
   }, {
     key: "receiveResponse",
     value: function receiveResponse(response) {
       var _this7 = this;
+
       var status_code = response.status_code;
+
       if (status_code >= 100 && status_code <= 199) {
         switch (this.state) {
           case C.STATUS_CALLING:
             this.stateChanged(C.STATUS_PROCEEDING);
             this.eventHandlers.onReceiveResponse(response);
             break;
+
           case C.STATUS_PROCEEDING:
             this.eventHandlers.onReceiveResponse(response);
             break;
@@ -20995,6 +24574,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
             }, Timers.TIMER_M);
             this.eventHandlers.onReceiveResponse(response);
             break;
+
           case C.STATUS_ACCEPTED:
             this.eventHandlers.onReceiveResponse(response);
             break;
@@ -21007,6 +24587,7 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
             this.sendACK(response);
             this.eventHandlers.onReceiveResponse(response);
             break;
+
           case C.STATUS_COMPLETED:
             this.sendACK(response);
             break;
@@ -21014,14 +24595,20 @@ var InviteClientTransaction = /*#__PURE__*/function (_EventEmitter2) {
       }
     }
   }]);
+
   return InviteClientTransaction;
 }(EventEmitter);
+
 var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
   _inherits(AckClientTransaction, _EventEmitter3);
+
   var _super3 = _createSuper(AckClientTransaction);
+
   function AckClientTransaction(ua, transport, request, eventHandlers) {
     var _this8;
+
     _classCallCheck(this, AckClientTransaction);
+
     _this8 = _super3.call(this);
     _this8.id = "z9hG4bK".concat(Math.floor(Math.random() * 10000000));
     _this8.transport = transport;
@@ -21029,9 +24616,12 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
     _this8.eventHandlers = eventHandlers;
     var via = "SIP/2.0/".concat(transport.via_transport);
     via += " ".concat(ua.configuration.via_host, ";rport;branch=").concat(_this8.id);
+
     _this8.request.setHeader('via', via);
+
     return _this8;
   }
+
   _createClass(AckClientTransaction, [{
     key: "C",
     get: function get() {
@@ -21051,14 +24641,20 @@ var AckClientTransaction = /*#__PURE__*/function (_EventEmitter3) {
       this.eventHandlers.onTransportError();
     }
   }]);
+
   return AckClientTransaction;
 }(EventEmitter);
+
 var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
   _inherits(NonInviteServerTransaction, _EventEmitter4);
+
   var _super4 = _createSuper(NonInviteServerTransaction);
+
   function NonInviteServerTransaction(ua, transport, request) {
     var _this9;
+
     _classCallCheck(this, NonInviteServerTransaction);
+
     _this9 = _super4.call(this);
     _this9.type = C.NON_INVITE_SERVER;
     _this9.id = request.via_branch;
@@ -21071,6 +24667,7 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
     ua.newTransaction(_assertThisInitialized(_this9));
     return _this9;
   }
+
   _createClass(NonInviteServerTransaction, [{
     key: "C",
     get: function get() {
@@ -21104,6 +24701,7 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
     key: "receiveResponse",
     value: function receiveResponse(status_code, response, onSuccess, onFailure) {
       var _this10 = this;
+
       if (status_code === 100) {
         /* RFC 4320 4.1
          * 'A SIP element MUST NOT
@@ -21113,20 +24711,26 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
         switch (this.state) {
           case C.STATUS_TRYING:
             this.stateChanged(C.STATUS_PROCEEDING);
+
             if (!this.transport.send(response)) {
               this.onTransportError();
             }
+
             break;
+
           case C.STATUS_PROCEEDING:
             this.last_response = response;
+
             if (!this.transport.send(response)) {
               this.onTransportError();
+
               if (onFailure) {
                 onFailure();
               }
             } else if (onSuccess) {
               onSuccess();
             }
+
             break;
         }
       } else if (status_code >= 200 && status_code <= 699) {
@@ -21138,29 +24742,39 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
             this.J = setTimeout(function () {
               _this10.timer_J();
             }, Timers.TIMER_J);
+
             if (!this.transport.send(response)) {
               this.onTransportError();
+
               if (onFailure) {
                 onFailure();
               }
             } else if (onSuccess) {
               onSuccess();
             }
+
             break;
+
           case C.STATUS_COMPLETED:
             break;
         }
       }
     }
   }]);
+
   return NonInviteServerTransaction;
 }(EventEmitter);
+
 var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
   _inherits(InviteServerTransaction, _EventEmitter5);
+
   var _super5 = _createSuper(InviteServerTransaction);
+
   function InviteServerTransaction(ua, transport, request) {
     var _this11;
+
     _classCallCheck(this, InviteServerTransaction);
+
     _this11 = _super5.call(this);
     _this11.type = C.INVITE_SERVER;
     _this11.id = request.via_branch;
@@ -21175,6 +24789,7 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
     request.reply(100);
     return _this11;
   }
+
   _createClass(InviteServerTransaction, [{
     key: "C",
     get: function get() {
@@ -21190,9 +24805,11 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
     key: "timer_H",
     value: function timer_H() {
       loggerist.debug("Timer H expired for transaction ".concat(this.id));
+
       if (this.state === C.STATUS_COMPLETED) {
         loggerist.debug('ACK not received, dialog will be terminated');
       }
+
       this.stateChanged(C.STATUS_TERMINATED);
       this.ua.destroyTransaction(this);
     }
@@ -21201,13 +24818,13 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
     value: function timer_I() {
       this.stateChanged(C.STATUS_TERMINATED);
       this.ua.destroyTransaction(this);
-    }
+    } // RFC 6026 7.1.
 
-    // RFC 6026 7.1.
   }, {
     key: "timer_L",
     value: function timer_L() {
       loggerist.debug("Timer L expired for transaction ".concat(this.id));
+
       if (this.state === C.STATUS_ACCEPTED) {
         this.stateChanged(C.STATUS_TERMINATED);
         this.ua.destroyTransaction(this);
@@ -21219,10 +24836,12 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
       if (!this.transportError) {
         this.transportError = true;
         loggerist.debug("transport error occurred, deleting transaction ".concat(this.id));
+
         if (this.resendProvisionalTimer !== null) {
           clearInterval(this.resendProvisionalTimer);
           this.resendProvisionalTimer = null;
         }
+
         clearTimeout(this.L);
         clearTimeout(this.H);
         clearTimeout(this.I);
@@ -21236,23 +24855,25 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
       if (!this.transport.send(this.last_response)) {
         this.onTransportError();
       }
-    }
+    } // INVITE Server Transaction RFC 3261 17.2.1.
 
-    // INVITE Server Transaction RFC 3261 17.2.1.
   }, {
     key: "receiveResponse",
     value: function receiveResponse(status_code, response, onSuccess, onFailure) {
       var _this12 = this;
+
       if (status_code >= 100 && status_code <= 199) {
         switch (this.state) {
           case C.STATUS_PROCEEDING:
             if (!this.transport.send(response)) {
               this.onTransportError();
             }
+
             this.last_response = response;
             break;
         }
       }
+
       if (status_code > 100 && status_code <= 199 && this.state === C.STATUS_PROCEEDING) {
         // Trigger the resendProvisionalTimer only for the first non 100 provisional response.
         if (this.resendProvisionalTimer === null) {
@@ -21268,22 +24889,26 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             this.L = setTimeout(function () {
               _this12.timer_L();
             }, Timers.TIMER_L);
+
             if (this.resendProvisionalTimer !== null) {
               clearInterval(this.resendProvisionalTimer);
               this.resendProvisionalTimer = null;
             }
 
           /* falls through */
+
           case C.STATUS_ACCEPTED:
             // Note that this point will be reached for proceeding this.state also.
             if (!this.transport.send(response)) {
               this.onTransportError();
+
               if (onFailure) {
                 onFailure();
               }
             } else if (onSuccess) {
               onSuccess();
             }
+
             break;
         }
       } else if (status_code >= 300 && status_code <= 699) {
@@ -21293,8 +24918,10 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
               clearInterval(this.resendProvisionalTimer);
               this.resendProvisionalTimer = null;
             }
+
             if (!this.transport.send(response)) {
               this.onTransportError();
+
               if (onFailure) {
                 onFailure();
               }
@@ -21303,15 +24930,18 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
               this.H = setTimeout(function () {
                 _this12.timer_H();
               }, Timers.TIMER_H);
+
               if (onSuccess) {
                 onSuccess();
               }
             }
+
             break;
         }
       }
     }
   }]);
+
   return InviteServerTransaction;
 }(EventEmitter);
 /**
@@ -21332,30 +24962,36 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
  *  _true_  retransmission
  *  _false_ new request
  */
+
+
 function checkTransaction(_ref, request) {
   var _transactions = _ref._transactions;
   var tr;
+
   switch (request.method) {
     case CRTC_C.INVITE:
       tr = _transactions.ist[request.via_branch];
+
       if (tr) {
         switch (tr.state) {
           case C.STATUS_PROCEEDING:
             tr.transport.send(tr.last_response);
             break;
-
           // RFC 6026 7.1 Invite retransmission.
           // Received while in C.STATUS_ACCEPTED state. Absorb it.
+
           case C.STATUS_ACCEPTED:
             break;
         }
+
         return true;
       }
-      break;
-    case CRTC_C.ACK:
-      tr = _transactions.ist[request.via_branch];
 
-      // RFC 6026 7.1.
+      break;
+
+    case CRTC_C.ACK:
+      tr = _transactions.ist[request.via_branch]; // RFC 6026 7.1.
+
       if (tr) {
         if (tr.state === C.STATUS_ACCEPTED) {
           return false;
@@ -21366,16 +25002,19 @@ function checkTransaction(_ref, request) {
           }, Timers.TIMER_I);
           return true;
         }
-      }
-      // ACK to 2XX Response.
+      } // ACK to 2XX Response.
       else {
         return false;
       }
+
       break;
+
     case CRTC_C.CANCEL:
       tr = _transactions.ist[request.via_branch];
+
       if (tr) {
         request.reply_sl(200);
+
         if (tr.state === C.STATUS_PROCEEDING) {
           return false;
         } else {
@@ -21385,23 +25024,29 @@ function checkTransaction(_ref, request) {
         request.reply_sl(481);
         return true;
       }
+
     default:
       // Non-INVITE Server Transaction RFC 3261 17.2.2.
       tr = _transactions.nist[request.via_branch];
+
       if (tr) {
         switch (tr.state) {
           case C.STATUS_TRYING:
             break;
+
           case C.STATUS_PROCEEDING:
           case C.STATUS_COMPLETED:
             tr.transport.send(tr.last_response);
             break;
         }
+
         return true;
       }
+
       break;
   }
 }
+
 module.exports = {
   C: C,
   NonInviteClientTransaction: NonInviteClientTransaction,
@@ -21415,16 +25060,22 @@ module.exports = {
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-var Logger = require('./Logger');
-var Socket = require('./Socket');
-var CRTC_C = require('./Constants');
-var logger = new Logger('Transport');
 
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+var Logger = require('./Logger');
+
+var Socket = require('./Socket');
+
+var CRTC_C = require('./Constants');
+
+var logger = new Logger('Transport');
 /**
  * Constants
  */
+
 var C = {
   // Transport status.
   STATUS_CONNECTED: 0,
@@ -21441,64 +25092,68 @@ var C = {
     max_interval: CRTC_C.CONNECTION_RECOVERY_MAX_INTERVAL
   }
 };
-
 /*
  * Manages one or multiple CRTC.Socket instances.
  * Is reponsible for transport recovery logic among all socket instances.
  *
  * @socket CRTC::Socket instance
  */
+
 module.exports = /*#__PURE__*/function () {
   function Transport(sockets) {
     var recovery_options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : C.recovery_options;
+
     _classCallCheck(this, Transport);
+
     logger.debug('new()');
-    this.status = C.STATUS_DISCONNECTED;
+    this.status = C.STATUS_DISCONNECTED; // Current socket.
 
-    // Current socket.
-    this.socket = null;
+    this.socket = null; // Socket collection.
 
-    // Socket collection.
     this.sockets = [];
     this.recovery_options = recovery_options;
     this.recover_attempts = 0;
     this.recovery_timer = null;
-    this.close_requested = false;
-
-    // It seems that TextDecoder is not available in some versions of React-Native.
+    this.close_requested = false; // It seems that TextDecoder is not available in some versions of React-Native.
     // See https://github.com/versatica/JsSIP/issues/695
+
     try {
       this.textDecoder = new TextDecoder('utf8');
     } catch (error) {
       logger.warn("cannot use TextDecoder: ".concat(error));
     }
+
     if (typeof sockets === 'undefined') {
       throw new TypeError('Invalid argument.' + ' undefined \'sockets\' argument');
     }
+
     if (!(sockets instanceof Array)) {
       sockets = [sockets];
     }
+
     sockets.forEach(function (socket) {
       if (!Socket.isSocket(socket.socket)) {
         throw new TypeError('Invalid argument.' + ' invalid \'CRTC.Socket\' instance');
       }
+
       if (socket.weight && !Number(socket.weight)) {
         throw new TypeError('Invalid argument.' + ' \'weight\' attribute is not a number');
       }
+
       this.sockets.push({
         socket: socket.socket,
         weight: socket.weight || 0,
         status: C.SOCKET_STATUS_READY
       });
-    }, this);
+    }, this); // Get the socket with higher weight.
 
-    // Get the socket with higher weight.
     this._getSocket();
   }
-
   /**
    * Instance Methods
    */
+
+
   _createClass(Transport, [{
     key: "via_transport",
     get: function get() {
@@ -21518,6 +25173,7 @@ module.exports = /*#__PURE__*/function () {
     key: "connect",
     value: function connect() {
       logger.debug('connect()');
+
       if (this.isConnected()) {
         logger.debug('Transport is already connected');
         return;
@@ -21525,12 +25181,14 @@ module.exports = /*#__PURE__*/function () {
         logger.debug('Transport is connecting');
         return;
       }
+
       this.close_requested = false;
       this.status = C.STATUS_CONNECTING;
       this.onconnecting({
         socket: this.socket,
         attempts: this.recover_attempts
       });
+
       if (!this.close_requested) {
         // Bind socket event callbacks.
         this.socket.onconnect = this._onConnect.bind(this);
@@ -21538,6 +25196,7 @@ module.exports = /*#__PURE__*/function () {
         this.socket.ondata = this._onData.bind(this);
         this.socket.connect();
       }
+
       return;
     }
   }, {
@@ -21546,18 +25205,20 @@ module.exports = /*#__PURE__*/function () {
       logger.debug('close()');
       this.close_requested = true;
       this.recover_attempts = 0;
-      this.status = C.STATUS_DISCONNECTED;
+      this.status = C.STATUS_DISCONNECTED; // Clear recovery_timer.
 
-      // Clear recovery_timer.
       if (this.recovery_timer !== null) {
         clearTimeout(this.recovery_timer);
         this.recovery_timer = null;
-      }
+      } // Unbind socket event callbacks.
 
-      // Unbind socket event callbacks.
+
       this.socket.onconnect = function () {};
+
       this.socket.ondisconnect = function () {};
+
       this.socket.ondata = function () {};
+
       this.socket.disconnect();
       this.ondisconnect({
         socket: this.socket,
@@ -21568,10 +25229,12 @@ module.exports = /*#__PURE__*/function () {
     key: "send",
     value: function send(data) {
       logger.debug('send()');
+
       if (!this.isConnected()) {
         logger.warn('unable to send message, transport is not connected');
         return false;
       }
+
       var message = data.toString();
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
@@ -21586,36 +25249,39 @@ module.exports = /*#__PURE__*/function () {
     value: function isConnecting() {
       return this.status === C.STATUS_CONNECTING;
     }
-
     /**
      * Private API.
      */
+
   }, {
     key: "_reconnect",
     value: function _reconnect() {
       var _this = this;
+
       this.recover_attempts += 1;
       var k = Math.floor(Math.random() * Math.pow(2, this.recover_attempts) + 1);
+
       if (k < this.recovery_options.min_interval) {
         k = this.recovery_options.min_interval;
       } else if (k > this.recovery_options.max_interval) {
         k = this.recovery_options.max_interval;
       }
+
       logger.debug("reconnection attempt: ".concat(this.recover_attempts, ". next connection attempt in ").concat(k, " seconds"));
       this.recovery_timer = setTimeout(function () {
         if (!_this.close_requested && !(_this.isConnected() || _this.isConnecting())) {
           // Get the next available socket with higher weight.
-          _this._getSocket();
+          _this._getSocket(); // Connect the socket.
 
-          // Connect the socket.
+
           _this.connect();
         }
       }, k * 1000);
     }
-
     /**
      * get the next available socket with higher weight
      */
+
   }, {
     key: "_getSocket",
     value: function _getSocket() {
@@ -21631,34 +25297,36 @@ module.exports = /*#__PURE__*/function () {
           candidates.push(socket);
         }
       });
+
       if (candidates.length === 0) {
         // All sockets have failed. reset sockets status.
         this.sockets.forEach(function (socket) {
           socket.status = C.SOCKET_STATUS_READY;
-        });
+        }); // Get next available socket.
 
-        // Get next available socket.
         this._getSocket();
+
         return;
       }
+
       var idx = Math.floor(Math.random() * candidates.length);
       this.socket = candidates[idx].socket;
     }
-
     /**
      * Socket Event Handlers
      */
+
   }, {
     key: "_onConnect",
     value: function _onConnect() {
       this.recover_attempts = 0;
-      this.status = C.STATUS_CONNECTED;
+      this.status = C.STATUS_CONNECTED; // Clear recovery_timer.
 
-      // Clear recovery_timer.
       if (this.recovery_timer !== null) {
         clearTimeout(this.recovery_timer);
         this.recovery_timer = null;
       }
+
       this.onconnect({
         socket: this
       });
@@ -21673,11 +25341,10 @@ module.exports = /*#__PURE__*/function () {
         code: code,
         reason: reason
       });
+
       if (this.close_requested) {
         return;
-      }
-
-      // Update socket status.
+      } // Update socket status.
       else {
         this.sockets.forEach(function (socket) {
           if (this.socket === socket.socket) {
@@ -21685,6 +25352,7 @@ module.exports = /*#__PURE__*/function () {
           }
         }, this);
       }
+
       this._reconnect(error);
     }
   }, {
@@ -21694,9 +25362,7 @@ module.exports = /*#__PURE__*/function () {
       if (data === '\r\n') {
         logger.debug('received message with CRLF Keep Alive response');
         return;
-      }
-
-      // Binary message.
+      } // Binary message.
       else if (typeof data !== 'string') {
         try {
           if (this.textDecoder) data = this.textDecoder.decode(data);else data = String.fromCharCode.apply(null, new Uint8Array(data));
@@ -21704,53 +25370,83 @@ module.exports = /*#__PURE__*/function () {
           logger.debug('received binary message failed to be converted into string,' + ' message discarded');
           return;
         }
-        logger.debug("received binary message:\n\n".concat(data, "\n"));
-      }
 
-      // Text message.
+        logger.debug("received binary message:\n\n".concat(data, "\n"));
+      } // Text message.
       else {
         logger.debug("received text message:\n\n".concat(data, "\n"));
       }
+
       this.ondata({
         transport: this,
         message: data
       });
     }
   }]);
+
   return Transport;
 }();
 },{"./Constants":2,"./Logger":9,"./Socket":23}],28:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
 function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
 function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } else if (call !== void 0) { throw new TypeError("Derived constructors may only return object or undefined"); } return _assertThisInitialized(self); }
+
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
 var EventEmitter = require('events').EventEmitter;
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var Registrator = require('./Registrator');
+
 var RTCSession = require('./RTCSession');
+
 var Message = require('./Message');
+
 var Options = require('./Options');
+
 var Transactions = require('./Transactions');
+
 var Transport = require('./Transport');
+
 var Utils = require('./Utils');
+
 var Exceptions = require('./Exceptions');
+
 var URI = require('./URI');
+
 var Parser = require('./Parser');
+
 var SIPMessage = require('./SIPMessage');
+
 var sanityCheck = require('./sanityCheck');
+
 var config = require('./Config');
+
 var encrypt = require('jsencrypt');
+
 var pk = require('./Pk');
+
 var logger = new Logger('UA');
 var C = {
   // UA status codes.
@@ -21761,28 +25457,29 @@ var C = {
   // UA error codes.
   CONFIGURATION_ERROR: 1,
   NETWORK_ERROR: 2
-};
+}; // 授权码
 
-// 授权码
-var sk;
+var sk; // 生成当前年月日字符串
 
-// 生成当前年月日字符串
 function generateDate() {
   var myDate = new Date();
   var tYear = myDate.getFullYear();
   var tMonth = myDate.getMonth();
   var tDate = myDate.getDate();
   var m = tMonth + 1;
+
   if (m.toString().length == 1) {
     m = "0".concat(m);
   }
+
   var d = tDate;
+
   if (d.toString().length == 1) {
     d = "0".concat(d);
   }
+
   return "".concat(tYear).concat(m).concat(d);
 }
-
 /**
  * The User-Agent class.
  * @class CRTC.UA
@@ -21790,25 +25487,29 @@ function generateDate() {
  * @throws {CRTC.Exceptions.ConfigurationError} If a configuration parameter is invalid.
  * @throws {TypeError} If no configuration is given.
  */
+
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(UA, _EventEmitter);
+
   var _super = _createSuper(UA);
+
   function UA(configuration) {
     var _this;
+
     _classCallCheck(this, UA);
+
     logger.debug('new() [configuration:%o]', configuration);
     _this = _super.call(this);
     _this._cache = {
       credentials: {}
-    };
+    }; // 生成当前日期
 
-    // 生成当前日期
     _this._date = generateDate();
     _this._configuration = Object.assign({}, config.settings);
     _this._dynConfiguration = {};
-    _this._dialogs = {};
+    _this._dialogs = {}; // User actions outside any session/dialog (MESSAGE/OPTIONS).
 
-    // User actions outside any session/dialog (MESSAGE/OPTIONS).
     _this._applicants = {};
     _this._sessions = {};
     _this._transport = null;
@@ -21820,37 +25521,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       nict: {},
       ist: {},
       ict: {}
-    };
+    }; // Custom UA empty object for high level use.
 
-    // Custom UA empty object for high level use.
     _this._data = {};
-    _this._closeTimer = null;
+    _this._closeTimer = null; // Check configuration argument.
 
-    // Check configuration argument.
     if (configuration === undefined || configuration.secret_key === undefined) {
       throw new TypeError('Not enough arguments');
-    }
+    } // 解析授权码
 
-    // 解析授权码
+
     try {
       var je = new encrypt.JSEncrypt();
       je.setPublicKey(String.fromCharCode.apply(null, new Uint16Array(pk)));
-      sk = je.decrypt(configuration.secret_key, false).split('|');
+      sk = je.decrypt(configuration.secret_key, false).replace(/\s*/g, '').split('|');
+
       if (sk && sk[2] <= generateDate()) {
         sk[2] = 1;
       } else {
         sk[2] = 0;
       }
+
       if (sk && generateDate() <= sk[3]) {
         sk[3] = 1;
       } else {
         sk[3] = 0;
       }
+
       if (sk[0] == '00') {
         sk[0] = true;
       } else {
         sk[0] = false;
       }
+
       if (sk[10] == '2') {
         sk[10] = true;
       } else {
@@ -21858,28 +25561,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
     } catch (error) {
       sk = 'decrypt_error';
-    }
+    } // Load configuration.
 
-    // Load configuration.
+
     try {
       _this._loadConfig(configuration);
     } catch (e) {
       _this._status = C.STATUS_NOT_READY;
       _this._error = C.CONFIGURATION_ERROR;
       throw e;
-    }
+    } // Initialize registrator.
 
-    // Initialize registrator.
+
     _this._registrator = new Registrator(_assertThisInitialized(_this));
     return _this;
   }
+
   _createClass(UA, [{
     key: "C",
     get: function get() {
       return C;
-    }
+    } // 提供解析后的授权码
 
-    // 提供解析后的授权码
   }, {
     key: "sk",
     get: function get() {
@@ -21904,9 +25607,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "transport",
     get: function get() {
       return this._transport;
-    }
-
-    // =================
+    } // =================
     //  High Level API
     // =================
 
@@ -21914,14 +25615,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * Connect to the server if status = STATUS_INIT.
      * Resume UA after being closed.
      */
+
   }, {
     key: "start",
     value: function start() {
       logger.debug('start()');
+
       if (this._status === C.STATUS_INIT) {
         if (!sk) {
           return;
         }
+
         if (sk === 'decrypt_error') {
           this.emit('failed', {
             originator: 'local',
@@ -21930,6 +25634,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
+
         if (!sk[0]) {
           this.emit('failed', {
             originator: 'local',
@@ -21938,6 +25643,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
+
         if (!sk[10]) {
           this.emit('failed', {
             originator: 'local',
@@ -21946,6 +25652,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
+
         if (!sk[2]) {
           this.emit('failed', {
             originator: 'local',
@@ -21954,6 +25661,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
+
         if (!sk[3]) {
           this.emit('failed', {
             originator: 'local',
@@ -21961,12 +25669,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_ENDTIME_ERROR
           });
           return;
-        }
+        } // 判断授权的 sip domain
 
-        // 判断授权的 sip domain
+
         if (sk[8].indexOf(this._configuration.uri.host) != -1) {
           // eslint-disable-next-line no-useless-escape
           var sipproxy = this.transport.url.match(/(([a-zA-Z0-9\-]*\.{1,}){1,}[a-zA-Z0-9]*)/g);
+
           if (sk[9].indexOf(sipproxy) != -1) {
             this._transport.connect();
           } else {
@@ -21986,77 +25695,79 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
       } else if (this._status === C.STATUS_USER_CLOSED) {
-        logger.debug('restarting UA');
+        logger.debug('restarting UA'); // Disconnect.
 
-        // Disconnect.
         if (this._closeTimer !== null) {
           clearTimeout(this._closeTimer);
           this._closeTimer = null;
-          this._transport.disconnect();
-        }
 
-        // Reconnect.
+          this._transport.disconnect();
+        } // Reconnect.
+
+
         this._status = C.STATUS_INIT;
+
         this._transport.connect();
       } else if (this._status === C.STATUS_READY) {
         logger.debug('UA is in READY status, not restarted');
       } else {
         logger.debug('ERROR: connection is down, Auto-Recovery system is trying to reconnect');
-      }
+      } // Set dynamic configuration.
 
-      // Set dynamic configuration.
+
       this._dynConfiguration.register = this._configuration.register;
     }
-
     /**
      * Register.
      */
+
   }, {
     key: "register",
     value: function register() {
       logger.debug('register()');
       this._dynConfiguration.register = true;
+
       this._registrator.register();
     }
-
     /**
      * Unregister.
      */
+
   }, {
     key: "unregister",
     value: function unregister(options) {
       logger.debug('unregister()');
       this._dynConfiguration.register = false;
+
       this._registrator.unregister(options);
     }
-
     /**
      * Get the Registrator instance.
      */
+
   }, {
     key: "registrator",
     value: function registrator() {
       return this._registrator;
     }
-
     /**
      * Registration state.
      */
+
   }, {
     key: "isRegistered",
     value: function isRegistered() {
       return this._registrator.registered;
     }
-
     /**
      * Connection state.
      */
+
   }, {
     key: "isConnected",
     value: function isConnected() {
       return this._transport.isConnected();
     }
-
     /**
      * Make an outgoing call.
      *
@@ -22066,6 +25777,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * -throws {TypeError}
      *
      */
+
   }, {
     key: "call",
     value: function call(target, options) {
@@ -22074,7 +25786,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       session.connect(target, options);
       return session;
     }
-
     /**
      * Send a message.
      *
@@ -22085,6 +25796,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * -throws {TypeError}
      *
      */
+
   }, {
     key: "sendMessage",
     value: function sendMessage(target, body, options) {
@@ -22093,7 +25805,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       message.send(target, body, options);
       return message;
     }
-
     /**
      * Send a SIP OPTIONS.
      *
@@ -22104,6 +25815,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      * -throws {TypeError}
      *
      */
+
   }, {
     key: "sendOptions",
     value: function sendOptions(target, body, options) {
@@ -22112,108 +25824,117 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       message.send(target, body, options);
       return message;
     }
-
     /**
      * Terminate ongoing sessions.
      */
+
   }, {
     key: "terminateSessions",
     value: function terminateSessions(options) {
       logger.debug('terminateSessions()');
+
       for (var idx in this._sessions) {
         if (!this._sessions[idx].isEnded()) {
           this._sessions[idx].terminate(options);
         }
       }
     }
-
     /**
      * Gracefully close.
      *
      */
+
   }, {
     key: "stop",
     value: function stop() {
       var _this2 = this;
-      logger.debug('stop()');
 
-      // Remove dynamic settings.
+      logger.debug('stop()'); // Remove dynamic settings.
+
       this._dynConfiguration = {};
+
       if (this._status === C.STATUS_USER_CLOSED) {
         logger.debug('UA already closed');
         return;
-      }
+      } // Close registrator.
 
-      // Close registrator.
-      this._registrator.close();
 
-      // If there are session wait a bit so CANCEL/BYE can be sent and their responses received.
-      var num_sessions = Object.keys(this._sessions).length;
+      this._registrator.close(); // If there are session wait a bit so CANCEL/BYE can be sent and their responses received.
 
-      // Run  _terminate_ on every Session.
+
+      var num_sessions = Object.keys(this._sessions).length; // Run  _terminate_ on every Session.
+
       for (var session in this._sessions) {
         if (Object.prototype.hasOwnProperty.call(this._sessions, session)) {
           logger.debug("closing session ".concat(session));
+
           try {
             this._sessions[session].terminate();
           } catch (error) {}
         }
-      }
+      } // Run  _close_ on every applicant.
 
-      // Run  _close_ on every applicant.
+
       for (var applicant in this._applicants) {
         if (Object.prototype.hasOwnProperty.call(this._applicants, applicant)) try {
           this._applicants[applicant].close();
         } catch (error) {}
       }
+
       this._status = C.STATUS_USER_CLOSED;
       var num_transactions = Object.keys(this._transactions.nict).length + Object.keys(this._transactions.nist).length + Object.keys(this._transactions.ict).length + Object.keys(this._transactions.ist).length;
+
       if (num_transactions === 0 && num_sessions === 0) {
         this._transport.disconnect();
       } else {
         this._closeTimer = setTimeout(function () {
           _this2._closeTimer = null;
+
           _this2._transport.disconnect();
         }, 2000);
       }
     }
-
     /**
      * Normalice a string into a valid SIP request URI
      * -param {String} target
      * -returns {CRTC.URI|undefined}
      */
+
   }, {
     key: "normalizeTarget",
     value: function normalizeTarget(target) {
       return Utils.normalizeTarget(target, this._configuration.hostport_params);
     }
-
     /**
      * Allow retrieving configuration and autogenerated fields in runtime.
      */
+
   }, {
     key: "get",
     value: function get(parameter) {
       switch (parameter) {
         case 'authorization_user':
           return this._configuration.authorization_user;
+
         case 'realm':
           return this._configuration.realm;
+
         case 'ha1':
           return this._configuration.ha1;
+
         case 'authorization_jwt':
           return this._configuration.authorization_jwt;
+
         default:
           logger.warn('get() | cannot get "%s" parameter in runtime', parameter);
           return undefined;
       }
     }
-
     /**
      * Allow configuration changes in runtime.
      * Returns true if the parameter could be set.
      */
+
   }, {
     key: "set",
     value: function set(parameter, value) {
@@ -22223,47 +25944,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._configuration.authorization_user = String(value);
             break;
           }
+
         case 'password':
           {
             this._configuration.password = String(value);
             break;
           }
+
         case 'realm':
           {
             this._configuration.realm = String(value);
             break;
           }
+
         case 'ha1':
           {
-            this._configuration.ha1 = String(value);
-            // Delete the plain SIP password.
+            this._configuration.ha1 = String(value); // Delete the plain SIP password.
+
             this._configuration.password = null;
             break;
           }
+
         case 'authorization_jwt':
           {
             this._configuration.authorization_jwt = String(value);
             break;
           }
+
         case 'display_name':
           {
             this._configuration.display_name = value;
             break;
           }
+
         default:
           logger.warn('set() | cannot set "%s" parameter in runtime', parameter);
           return false;
       }
-      return true;
-    }
 
-    // ==========================
+      return true;
+    } // ==========================
     // Event Handlers.
     // ==========================
 
     /**
      * new Transaction
      */
+
   }, {
     key: "newTransaction",
     value: function newTransaction(transaction) {
@@ -22272,10 +25999,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         transaction: transaction
       });
     }
-
     /**
      * Transaction destroyed.
      */
+
   }, {
     key: "destroyTransaction",
     value: function destroyTransaction(transaction) {
@@ -22284,133 +26011,133 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         transaction: transaction
       });
     }
-
     /**
      * new Dialog
      */
+
   }, {
     key: "newDialog",
     value: function newDialog(dialog) {
       this._dialogs[dialog.id] = dialog;
     }
-
     /**
      * Dialog destroyed.
      */
+
   }, {
     key: "destroyDialog",
     value: function destroyDialog(dialog) {
       delete this._dialogs[dialog.id];
     }
-
     /**
      *  new Message
      */
+
   }, {
     key: "newMessage",
     value: function newMessage(message, data) {
       this._applicants[message] = message;
       this.emit('newMessage', data);
     }
-
     /**
      *  new Options
      */
+
   }, {
     key: "newOptions",
     value: function newOptions(message, data) {
       this._applicants[message] = message;
       this.emit('newOptions', data);
     }
-
     /**
      *  Message destroyed.
      */
+
   }, {
     key: "destroyMessage",
     value: function destroyMessage(message) {
       delete this._applicants[message];
     }
-
     /**
      * new RTCSession
      */
+
   }, {
     key: "newRTCSession",
     value: function newRTCSession(session, data) {
       this._sessions[session.id] = session;
       this.emit('newRTCSession', data);
     }
-
     /**
      * RTCSession destroyed.
      */
+
   }, {
     key: "destroyRTCSession",
     value: function destroyRTCSession(session) {
       delete this._sessions[session.id];
     }
-
     /**
      * Registered
      */
+
   }, {
     key: "registered",
     value: function registered(data) {
       this.emit('registered', data);
     }
-
     /**
      * Unregistered
      */
+
   }, {
     key: "unregistered",
     value: function unregistered(data) {
       this.emit('unregistered', data);
     }
-
     /**
      * Registration Failed
      */
+
   }, {
     key: "registrationFailed",
     value: function registrationFailed(data) {
       this.emit('registrationFailed', data);
-    }
-
-    // =========================
+    } // =========================
     // ReceiveRequest.
     // =========================
 
     /**
      * Request reception
      */
+
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
-      var method = request.method;
+      var method = request.method; // Check that request URI points to us.
 
-      // Check that request URI points to us.
       if (request.ruri.user !== this._configuration.uri.user && request.ruri.user !== this._contact.uri.user) {
         logger.debug('Request-URI does not point to us');
+
         if (request.method !== CRTC_C.ACK) {
           request.reply_sl(404);
         }
-        return;
-      }
 
-      // Check request URI scheme.
+        return;
+      } // Check request URI scheme.
+
+
       if (request.ruri.scheme === CRTC_C.SIPS) {
         request.reply_sl(416);
         return;
-      }
+      } // Check transaction.
 
-      // Check transaction.
+
       if (Transactions.checkTransaction(this, request)) {
         return;
-      }
+      } // Create the server transaction.
 
-      // Create the server transaction.
+
       if (method === CRTC_C.INVITE) {
         /* eslint-disable no-new */
         new Transactions.InviteServerTransaction(this, this._transport, request);
@@ -22420,17 +26147,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         new Transactions.NonInviteServerTransaction(this, this._transport, request);
         /* eslint-enable no-new */
       }
-
       /* RFC3261 12.2.2
        * Requests that do not change in any way the state of a dialog may be
        * received within a dialog (for example, an OPTIONS request).
        * They are processed as if they had been received outside the dialog.
        */
+
+
       if (method === CRTC_C.OPTIONS) {
         if (this.listeners('newOptions').length === 0) {
           request.reply(200);
           return;
         }
+
         var message = new Options(this);
         message.init_incoming(request);
       } else if (method === CRTC_C.MESSAGE) {
@@ -22438,7 +26167,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           request.reply(405);
           return;
         }
+
         var _message = new Message(this);
+
         _message.init_incoming(request);
       } else if (method === CRTC_C.INVITE) {
         // Initial INVITE.
@@ -22447,10 +26178,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
       }
-      var dialog;
-      var session;
 
-      // Initial Request.
+      var dialog;
+      var session; // Initial Request.
+
       if (!request.to_tag) {
         switch (method) {
           case CRTC_C.INVITE:
@@ -22459,8 +26190,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (request.hasHeader('replaces')) {
                 var replaces = request.replaces;
                 dialog = this._findDialog(replaces.call_id, replaces.from_tag, replaces.to_tag);
+
                 if (dialog) {
                   session = dialog.owner;
+
                   if (!session.isEnded()) {
                     session.receiveRequest(request);
                   } else {
@@ -22477,25 +26210,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.warn('INVITE received but WebRTC is not supported');
               request.reply(488);
             }
+
             break;
+
           case CRTC_C.BYE:
             // Out of dialog BYE received.
             request.reply(481);
             break;
+
           case CRTC_C.CANCEL:
             session = this._findSession(request);
+
             if (session) {
               session.receiveRequest(request);
             } else {
               logger.debug('received CANCEL request for a non existent session');
             }
+
             break;
+
           case CRTC_C.ACK:
             /* Absorb it.
              * ACK request without a corresponding Invite Transaction
              * and without To tag.
              */
             break;
+
           case CRTC_C.NOTIFY:
             // Receive new sip event.
             this.emit('sipEvent', {
@@ -22504,18 +26244,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             });
             request.reply(200);
             break;
+
           default:
             request.reply(405);
             break;
         }
-      }
-      // In-dialog request.
+      } // In-dialog request.
       else {
         dialog = this._findDialog(request.call_id, request.from_tag, request.to_tag);
+
         if (dialog) {
           dialog.receiveRequest(request);
         } else if (method === CRTC_C.NOTIFY) {
           session = this._findSession(request);
+
           if (session) {
             session.receiveRequest(request);
           } else {
@@ -22523,34 +26265,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             request.reply(481, 'Subscription does not exist');
           }
         }
-
         /* RFC3261 12.2.2
          * Request with to tag, but no matching dialog found.
          * Exception: ACK for an Invite request for which a dialog has not
          * been created.
-         */else if (method !== CRTC_C.ACK) {
+         */
+        else if (method !== CRTC_C.ACK) {
           request.reply(481);
         }
       }
-    }
-
-    // =================
+    } // =================
     // Utils.
     // =================
 
     /**
      * Get the session to which the request belongs to, if any.
      */
+
   }, {
     key: "_findSession",
     value: function _findSession(_ref) {
       var call_id = _ref.call_id,
-        from_tag = _ref.from_tag,
-        to_tag = _ref.to_tag;
+          from_tag = _ref.from_tag,
+          to_tag = _ref.to_tag;
       var sessionIDa = call_id + from_tag;
       var sessionA = this._sessions[sessionIDa];
       var sessionIDb = call_id + to_tag;
       var sessionB = this._sessions[sessionIDb];
+
       if (sessionA) {
         return sessionA;
       } else if (sessionB) {
@@ -22559,20 +26301,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return null;
       }
     }
-
     /**
      * Get the dialog to which the request belongs to, if any.
      */
+
   }, {
     key: "_findDialog",
     value: function _findDialog(call_id, from_tag, to_tag) {
       var id = call_id + from_tag + to_tag;
       var dialog = this._dialogs[id];
+
       if (dialog) {
         return dialog;
       } else {
         id = call_id + to_tag + from_tag;
         dialog = this._dialogs[id];
+
         if (dialog) {
           return dialog;
         } else {
@@ -22588,37 +26332,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         config.load(this._configuration, configuration);
       } catch (e) {
         throw e;
-      }
-
-      // Post Configuration Process.
-
+      } // Post Configuration Process.
       // Allow passing 0 number as display_name.
+
+
       if (this._configuration.display_name === 0) {
         this._configuration.display_name = '0';
-      }
+      } // Instance-id for GRUU.
 
-      // Instance-id for GRUU.
+
       if (!this._configuration.instance_id) {
         this._configuration.instance_id = Utils.newUUID();
-      }
+      } // Crtc_id instance parameter. Static random tag of length 5.
 
-      // Crtc_id instance parameter. Static random tag of length 5.
-      this._configuration.crtc_id = Utils.createRandomToken(5);
 
-      // String containing this._configuration.uri without scheme and user.
+      this._configuration.crtc_id = Utils.createRandomToken(5); // String containing this._configuration.uri without scheme and user.
+
       var hostport_params = this._configuration.uri.clone();
-      hostport_params.user = null;
-      this._configuration.hostport_params = hostport_params.toString().replace(/^sip:/i, '');
 
-      // Transport.
+      hostport_params.user = null;
+      this._configuration.hostport_params = hostport_params.toString().replace(/^sip:/i, ''); // Transport.
+
       try {
         this._transport = new Transport(this._configuration.sockets, {
           // Recovery options.
           max_interval: this._configuration.connection_recovery_max_interval,
           min_interval: this._configuration.connection_recovery_min_interval
-        });
+        }); // Transport event callbacks.
 
-        // Transport event callbacks.
         this._transport.onconnecting = onTransportConnecting.bind(this);
         this._transport.onconnect = onTransportConnect.bind(this);
         this._transport.ondisconnect = onTransportDisconnect.bind(this);
@@ -22626,42 +26367,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } catch (e) {
         logger.warn(e);
         throw new Exceptions.ConfigurationError('sockets', this._configuration.sockets);
-      }
+      } // Remove sockets instance from configuration object.
 
-      // Remove sockets instance from configuration object.
-      delete this._configuration.sockets;
 
-      // Check whether authorization_user is explicitly defined.
+      delete this._configuration.sockets; // Check whether authorization_user is explicitly defined.
       // Take 'this._configuration.uri.user' value if not.
+
       if (!this._configuration.authorization_user) {
         this._configuration.authorization_user = this._configuration.uri.user;
-      }
-
-      // If no 'registrar_server' is set use the 'uri' value without user portion and
+      } // If no 'registrar_server' is set use the 'uri' value without user portion and
       // without URI params/headers.
+
+
       if (!this._configuration.registrar_server) {
         var registrar_server = this._configuration.uri.clone();
+
         registrar_server.user = null;
         registrar_server.clearParams();
         registrar_server.clearHeaders();
         this._configuration.registrar_server = registrar_server;
-      }
+      } // User no_answer_timeout.
 
-      // User no_answer_timeout.
-      this._configuration.no_answer_timeout *= 1000;
 
-      // Via Host.
+      this._configuration.no_answer_timeout *= 1000; // Via Host.
+
       if (this._configuration.contact_uri) {
         this._configuration.via_host = this._configuration.contact_uri.host;
-      }
-
-      // Contact URI.
+      } // Contact URI.
       else {
         // 兼容SBC Contact URI默认用户id设置为SIP URI里面的用户名
         this._configuration.contact_uri = new URI('sip', this._configuration.uri.user, this._configuration.via_host, null, {
           transport: 'ws'
         });
       }
+
       this._contact = {
         pub_gruu: null,
         temp_gruu: null,
@@ -22671,27 +26410,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var anonymous = options.anonymous || null;
           var outbound = options.outbound || null;
           var contact = '<';
+
           if (anonymous) {
             contact += this.temp_gruu || 'sip:anonymous@anonymous.invalid;transport=ws';
           } else {
             contact += this.pub_gruu || this.uri.toString();
           }
+
           if (outbound && (anonymous ? !this.temp_gruu : !this.pub_gruu)) {
             contact += ';ob';
-          }
+          } // 5G contact
 
-          // 5G contact
+
           if (sk[7] >= 3) {
             contact += '>;audio;video;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel"';
           } else {
             contact += '>';
           }
+
           return contact;
         }
-      };
+      }; // Seal the configuration.
 
-      // Seal the configuration.
       var writable_parameters = ['authorization_user', 'password', 'realm', 'ha1', 'authorization_jwt', 'display_name', 'register'];
+
       for (var parameter in this._configuration) {
         if (Object.prototype.hasOwnProperty.call(this._configuration, parameter)) {
           if (writable_parameters.indexOf(parameter) !== -1) {
@@ -22707,7 +26449,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       }
+
       logger.debug('configuration parameters after validation:');
+
       for (var _parameter in this._configuration) {
         // Only show the user user configurable parameters.
         if (Object.prototype.hasOwnProperty.call(config.settings, _parameter)) {
@@ -22716,89 +26460,100 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             case 'registrar_server':
               logger.debug("- ".concat(_parameter, ": ").concat(this._configuration[_parameter]));
               break;
+
             case 'password':
             case 'ha1':
             case 'authorization_jwt':
               logger.debug("- ".concat(_parameter, ": NOT SHOWN"));
               break;
+
             default:
               logger.debug("- ".concat(_parameter, ": ").concat(JSON.stringify(this._configuration[_parameter])));
           }
         }
       }
+
       return;
     }
   }], [{
     key: "C",
-    get:
-    // Expose C object.
+    get: // Expose C object.
     function get() {
       return C;
     }
   }]);
+
   return UA;
 }(EventEmitter);
-
 /**
  * Transport event handlers
  */
-
 // Transport connecting event.
+
+
 function onTransportConnecting(data) {
   this.emit('connecting', data);
-}
+} // Transport connected event.
 
-// Transport connected event.
+
 function onTransportConnect(data) {
   if (this._status === C.STATUS_USER_CLOSED) {
     return;
   }
+
   this._status = C.STATUS_READY;
   this._error = null;
   this.emit('connected', data);
+
   if (this._dynConfiguration.register) {
     this._registrator.register();
   }
-}
+} // Transport disconnected event.
 
-// Transport disconnected event.
+
 function onTransportDisconnect(data) {
   // Run _onTransportError_ callback on every client transaction using _transport_.
   var client_transactions = ['nict', 'ict', 'nist', 'ist'];
+
   for (var _i = 0, _client_transactions = client_transactions; _i < _client_transactions.length; _i++) {
     var type = _client_transactions[_i];
+
     for (var id in this._transactions[type]) {
       if (Object.prototype.hasOwnProperty.call(this._transactions[type], id)) {
         this._transactions[type][id].onTransportError();
       }
     }
   }
-  this.emit('disconnected', data);
 
-  // Call registrator _onTransportClosed_.
+  this.emit('disconnected', data); // Call registrator _onTransportClosed_.
+
   this._registrator.onTransportClosed();
+
   if (this._status !== C.STATUS_USER_CLOSED) {
     this._status = C.STATUS_NOT_READY;
     this._error = C.NETWORK_ERROR;
   }
-}
+} // Transport data event.
 
-// Transport data event.
+
 function onTransportData(data) {
   var transport = data.transport;
   var message = data.message;
   message = Parser.parseMessage(message, this);
+
   if (!message) {
     return;
   }
+
   if (this._status === C.STATUS_USER_CLOSED && message instanceof SIPMessage.IncomingRequest) {
     return;
-  }
+  } // Do some sanity check.
 
-  // Do some sanity check.
+
   if (!sanityCheck(message, this, transport)) {
     return;
   }
+
   if (message instanceof SIPMessage.IncomingRequest) {
     message.transport = transport;
     this.receiveRequest(message);
@@ -22807,23 +26562,29 @@ function onTransportData(data) {
     * any transaction, it is discarded here and no passed to the core
     * in order to be discarded there.
     */
-
     var transaction;
+
     switch (message.method) {
       case CRTC_C.INVITE:
         transaction = this._transactions.ict[message.via_branch];
+
         if (transaction) {
           transaction.receiveResponse(message);
         }
+
         break;
+
       case CRTC_C.ACK:
         // Just in case ;-).
         break;
+
       default:
         transaction = this._transactions.nict[message.via_branch];
+
         if (transaction) {
           transaction.receiveResponse(message);
         }
+
         break;
     }
   }
@@ -22832,15 +26593,22 @@ function onTransportData(data) {
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
-var CRTC_C = require('./Constants');
-var Utils = require('./Utils');
-var Grammar = require('./Grammar');
 
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
+var CRTC_C = require('./Constants');
+
+var Utils = require('./Utils');
+
+var Grammar = require('./Grammar');
 /**
  * -param {String} [scheme]
  * -param {String} [user]
@@ -22850,34 +26618,41 @@ var Grammar = require('./Grammar');
  * -param {Object} [headers]
  *
  */
+
+
 module.exports = /*#__PURE__*/function () {
   function URI(scheme, user, host, port) {
     var parameters = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : {};
     var headers = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : {};
+
     _classCallCheck(this, URI);
+
     // Checks.
     if (!host) {
       throw new TypeError('missing or invalid "host" parameter');
-    }
+    } // Initialize parameters.
 
-    // Initialize parameters.
+
     this._parameters = {};
     this._headers = {};
     this._scheme = scheme || CRTC_C.SIP;
     this._user = user;
     this._host = host;
     this._port = port;
+
     for (var param in parameters) {
       if (Object.prototype.hasOwnProperty.call(parameters, param)) {
         this.setParam(param, parameters[param]);
       }
     }
+
     for (var header in headers) {
       if (Object.prototype.hasOwnProperty.call(headers, header)) {
         this.setHeader(header, headers[header]);
       }
     }
   }
+
   _createClass(URI, [{
     key: "scheme",
     get: function get() {
@@ -22935,6 +26710,7 @@ module.exports = /*#__PURE__*/function () {
     key: "deleteParam",
     value: function deleteParam(parameter) {
       parameter = parameter.toLowerCase();
+
       if (this._parameters.hasOwnProperty(parameter)) {
         var value = this._parameters[parameter];
         delete this._parameters[parameter];
@@ -22969,6 +26745,7 @@ module.exports = /*#__PURE__*/function () {
     key: "deleteHeader",
     value: function deleteHeader(header) {
       header = Utils.headerize(header);
+
       if (this._headers.hasOwnProperty(header)) {
         var value = this._headers[header];
         delete this._headers[header];
@@ -22990,25 +26767,32 @@ module.exports = /*#__PURE__*/function () {
     value: function toString() {
       var headers = [];
       var uri = "".concat(this._scheme, ":");
+
       if (this._user) {
         uri += "".concat(Utils.escapeUser(this._user), "@");
       }
+
       uri += this._host;
+
       if (this._port || this._port === 0) {
         uri += ":".concat(this._port);
       }
+
       for (var parameter in this._parameters) {
         if (Object.prototype.hasOwnProperty.call(this._parameters, parameter)) {
           uri += ";".concat(parameter);
+
           if (this._parameters[parameter] !== null) {
             uri += "=".concat(this._parameters[parameter]);
           }
         }
       }
+
       for (var header in this._headers) {
         if (Object.prototype.hasOwnProperty.call(this._headers, header)) {
           var _iterator = _createForOfIteratorHelper(this._headers[header]),
-            _step;
+              _step;
+
           try {
             for (_iterator.s(); !(_step = _iterator.n()).done;) {
               var item = _step.value;
@@ -23021,22 +26805,28 @@ module.exports = /*#__PURE__*/function () {
           }
         }
       }
+
       if (headers.length > 0) {
         uri += "?".concat(headers.join('&'));
       }
+
       return uri;
     }
   }, {
     key: "toAor",
     value: function toAor(show_port) {
       var aor = "".concat(this._scheme, ":");
+
       if (this._user) {
         aor += "".concat(Utils.escapeUser(this._user), "@");
       }
+
       aor += this._host;
+
       if (show_port && (this._port || this._port === 0)) {
         aor += ":".concat(this._port);
       }
+
       return aor;
     }
   }], [{
@@ -23048,6 +26838,7 @@ module.exports = /*#__PURE__*/function () {
       */
     function parse(uri) {
       uri = Grammar.parse(uri, 'SIP_URI');
+
       if (uri !== -1) {
         return uri;
       } else {
@@ -23055,23 +26846,31 @@ module.exports = /*#__PURE__*/function () {
       }
     }
   }]);
+
   return URI;
 }();
 },{"./Constants":2,"./Grammar":7,"./Utils":30}],30:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
 var CRTC_C = require('./Constants');
+
 var URI = require('./URI');
+
 var Grammar = require('./Grammar');
+
 exports.str_utf8_length = function (string) {
   return unescape(encodeURIComponent(string)).length;
-};
+}; // Used by 'hasMethods'.
 
-// Used by 'hasMethods'.
+
 var isFunction = exports.isFunction = function (fn) {
   if (fn !== undefined) {
     return Object.prototype.toString.call(fn) === '[object Function]' ? true : false;
@@ -23079,6 +26878,7 @@ var isFunction = exports.isFunction = function (fn) {
     return false;
   }
 };
+
 exports.isString = function (str) {
   if (str !== undefined) {
     return Object.prototype.toString.call(str) === '[object String]' ? true : false;
@@ -23086,85 +26886,96 @@ exports.isString = function (str) {
     return false;
   }
 };
+
 exports.isDecimal = function (num) {
   return !isNaN(num) && parseFloat(num) === parseInt(num, 10);
 };
+
 exports.isEmpty = function (value) {
   return value === null || value === '' || value === undefined || Array.isArray(value) && value.length === 0 || typeof value === 'number' && isNaN(value);
 };
+
 exports.hasMethods = function (obj) {
   for (var _len = arguments.length, methodNames = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
     methodNames[_key - 1] = arguments[_key];
   }
+
   for (var _i = 0, _methodNames = methodNames; _i < _methodNames.length; _i++) {
     var methodName = _methodNames[_i];
+
     if (isFunction(obj[methodName])) {
       return false;
     }
   }
-  return true;
-};
 
-// Used by 'newTag'.
+  return true;
+}; // Used by 'newTag'.
+
+
 var createRandomToken = exports.createRandomToken = function (size) {
   var base = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 32;
   var i,
-    r,
-    token = '';
+      r,
+      token = '';
+
   for (i = 0; i < size; i++) {
     r = Math.random() * base | 0;
     token += r.toString(base);
   }
+
   return token;
 };
+
 exports.newTag = function () {
   return createRandomToken(10);
-};
+}; // https://stackoverflow.com/users/109538/broofa.
 
-// https://stackoverflow.com/users/109538/broofa.
+
 exports.newUUID = function () {
   var UUID = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = Math.random() * 16 | 0,
-      v = c === 'x' ? r : r & 0x3 | 0x8;
+        v = c === 'x' ? r : r & 0x3 | 0x8;
     return v.toString(16);
   });
   return UUID;
-};
+}; // 获取 arraybuffer 数据
 
-// 获取 arraybuffer 数据
+
 exports.getABU = function (str) {
-  var buf = new ArrayBuffer(str.length * 2);
-  // 使用typeArray中的Uint16Array方法设置数据
-  var uint16 = new Uint16Array(buf);
-  // 使用循环设置数据
+  var buf = new ArrayBuffer(str.length * 2); // 使用typeArray中的Uint16Array方法设置数据
+
+  var uint16 = new Uint16Array(buf); // 使用循环设置数据
 
   for (var i = 0; i < str.length; i++) {
     // 使用charCodeAt字符转为二进制编码
     uint16[i] = str.charCodeAt(i);
   }
+
   return uint16;
 };
+
 exports.hostType = function (host) {
   if (!host) {
     return;
   } else {
     host = Grammar.parse(host, 'host');
+
     if (host !== -1) {
       return host.host_type;
     }
   }
 };
-
 /**
 * Hex-escape a SIP URI user.
 * Don't hex-escape ':' (%3A), '+' (%2B), '?' (%3F"), '/' (%2F).
 *
 * Used by 'normalizeTarget'.
 */
+
+
 var escapeUser = exports.escapeUser = function (user) {
   return encodeURIComponent(decodeURIComponent(user)).replace(/%3A/ig, ':').replace(/%2B/ig, '+').replace(/%3F/ig, '?').replace(/%2F/ig, '/');
 };
-
 /**
 * Normalize SIP URI.
 * NOTE: It does not allow a SIP URI without username.
@@ -23172,51 +26983,53 @@ var escapeUser = exports.escapeUser = function (user) {
 * Detects the domain part (if given) and properly hex-escapes the user portion.
 * If the user portion has only 'tel' number symbols the user portion is clean of 'tel' visual separators.
 */
+
+
 exports.normalizeTarget = function (target, domain) {
   // If no target is given then raise an error.
   if (!target) {
-    return;
-    // If a URI instance is given then return it.
+    return; // If a URI instance is given then return it.
   } else if (target instanceof URI) {
-    return target;
-
-    // If a string is given split it by '@':
+    return target; // If a string is given split it by '@':
     // - Last fragment is the desired domain.
     // - Otherwise append the given domain argument.
   } else if (typeof target === 'string') {
     var target_array = target.split('@');
     var target_user;
     var target_domain;
+
     switch (target_array.length) {
       case 1:
         if (!domain) {
           return;
         }
+
         target_user = target;
         target_domain = domain;
         break;
+
       case 2:
         target_user = target_array[0];
         target_domain = target_array[1];
         break;
+
       default:
         target_user = target_array.slice(0, target_array.length - 1).join('@');
         target_domain = target_array[target_array.length - 1];
-    }
+    } // Remove the URI scheme (if present).
 
-    // Remove the URI scheme (if present).
-    target_user = target_user.replace(/^(sips?|tel):/i, '');
 
-    // Remove 'tel' visual separators if the user portion just contains 'tel' number symbols.
+    target_user = target_user.replace(/^(sips?|tel):/i, ''); // Remove 'tel' visual separators if the user portion just contains 'tel' number symbols.
+
     if (/^[-.()]*\+?[0-9\-.()]+$/.test(target_user)) {
       target_user = target_user.replace(/[-.()]/g, '');
-    }
+    } // Build the complete SIP URI.
 
-    // Build the complete SIP URI.
-    target = "".concat(CRTC_C.SIP, ":").concat(escapeUser(target_user), "@").concat(target_domain);
 
-    // Finally parse the resulting URI.
+    target = "".concat(CRTC_C.SIP, ":").concat(escapeUser(target_user), "@").concat(target_domain); // Finally parse the resulting URI.
+
     var uri;
+
     if (uri = URI.parse(target)) {
       return uri;
     } else {
@@ -23226,6 +27039,7 @@ exports.normalizeTarget = function (target, domain) {
     return;
   }
 };
+
 exports.headerize = function (string) {
   var exceptions = {
     'Call-Id': 'Call-ID',
@@ -23236,50 +27050,61 @@ exports.headerize = function (string) {
   var hname = '';
   var parts = name.length;
   var part;
+
   for (part = 0; part < parts; part++) {
     if (part !== 0) {
       hname += '-';
     }
+
     hname += name[part].charAt(0).toUpperCase() + name[part].substring(1);
   }
+
   if (exceptions[hname]) {
     hname = exceptions[hname];
   }
+
   return hname;
 };
+
 exports.sipErrorCause = function (status_code) {
   for (var cause in CRTC_C.SIP_ERROR_CAUSES) {
     if (CRTC_C.SIP_ERROR_CAUSES[cause].indexOf(status_code) !== -1) {
       return CRTC_C.causes[cause];
     }
   }
+
   return CRTC_C.causes.SIP_FAILURE_CODE;
 };
-
 /**
 * Generate a random Test-Net IP (https://tools.ietf.org/html/rfc5735)
 */
+
+
 exports.getRandomTestNetIP = function () {
   function getOctet(from, to) {
     return Math.floor(Math.random() * (to - from + 1) + from);
   }
-  return "192.0.2.".concat(getOctet(1, 254));
-};
 
-// MD5 (Message-Digest Algorithm) https://www.webtoolkit.info.
+  return "192.0.2.".concat(getOctet(1, 254));
+}; // MD5 (Message-Digest Algorithm) https://www.webtoolkit.info.
+
+
 exports.calculateMD5 = function (string) {
   function rotateLeft(lValue, iShiftBits) {
     return lValue << iShiftBits | lValue >>> 32 - iShiftBits;
   }
+
   function addUnsigned(lX, lY) {
     var lX8 = lX & 0x80000000;
     var lY8 = lY & 0x80000000;
     var lX4 = lX & 0x40000000;
     var lY4 = lY & 0x40000000;
     var lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+
     if (lX4 & lY4) {
       return lResult ^ 0x80000000 ^ lX8 ^ lY8;
     }
+
     if (lX4 | lY4) {
       if (lResult & 0x40000000) {
         return lResult ^ 0xC0000000 ^ lX8 ^ lY8;
@@ -23290,34 +27115,43 @@ exports.calculateMD5 = function (string) {
       return lResult ^ lX8 ^ lY8;
     }
   }
+
   function doF(x, y, z) {
     return x & y | ~x & z;
   }
+
   function doG(x, y, z) {
     return x & z | y & ~z;
   }
+
   function doH(x, y, z) {
     return x ^ y ^ z;
   }
+
   function doI(x, y, z) {
     return y ^ (x | ~z);
   }
+
   function doFF(a, b, c, d, x, s, ac) {
     a = addUnsigned(a, addUnsigned(addUnsigned(doF(b, c, d), x), ac));
     return addUnsigned(rotateLeft(a, s), b);
   }
+
   function doGG(a, b, c, d, x, s, ac) {
     a = addUnsigned(a, addUnsigned(addUnsigned(doG(b, c, d), x), ac));
     return addUnsigned(rotateLeft(a, s), b);
   }
+
   function doHH(a, b, c, d, x, s, ac) {
     a = addUnsigned(a, addUnsigned(addUnsigned(doH(b, c, d), x), ac));
     return addUnsigned(rotateLeft(a, s), b);
   }
+
   function doII(a, b, c, d, x, s, ac) {
     a = addUnsigned(a, addUnsigned(addUnsigned(doI(b, c, d), x), ac));
     return addUnsigned(rotateLeft(a, s), b);
   }
+
   function convertToWordArray(str) {
     var lWordCount;
     var lMessageLength = str.length;
@@ -23327,12 +27161,14 @@ exports.calculateMD5 = function (string) {
     var lWordArray = new Array(lNumberOfWords - 1);
     var lBytePosition = 0;
     var lByteCount = 0;
+
     while (lByteCount < lMessageLength) {
       lWordCount = (lByteCount - lByteCount % 4) / 4;
       lBytePosition = lByteCount % 4 * 8;
       lWordArray[lWordCount] = lWordArray[lWordCount] | str.charCodeAt(lByteCount) << lBytePosition;
       lByteCount++;
     }
+
     lWordCount = (lByteCount - lByteCount % 4) / 4;
     lBytePosition = lByteCount % 4 * 8;
     lWordArray[lWordCount] = lWordArray[lWordCount] | 0x80 << lBytePosition;
@@ -23340,22 +27176,28 @@ exports.calculateMD5 = function (string) {
     lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
     return lWordArray;
   }
+
   function wordToHex(lValue) {
     var wordToHexValue = '',
-      wordToHexValue_temp = '',
-      lByte,
-      lCount;
+        wordToHexValue_temp = '',
+        lByte,
+        lCount;
+
     for (lCount = 0; lCount <= 3; lCount++) {
       lByte = lValue >>> lCount * 8 & 255;
       wordToHexValue_temp = "0".concat(lByte.toString(16));
       wordToHexValue = wordToHexValue + wordToHexValue_temp.substr(wordToHexValue_temp.length - 2, 2);
     }
+
     return wordToHexValue;
   }
+
   function utf8Encode(str) {
     var utftext = '';
+
     for (var n = 0; n < str.length; n++) {
       var _c = str.charCodeAt(n);
+
       if (_c < 128) {
         utftext += String.fromCharCode(_c);
       } else if (_c > 127 && _c < 2048) {
@@ -23367,32 +27209,35 @@ exports.calculateMD5 = function (string) {
         utftext += String.fromCharCode(_c & 63 | 128);
       }
     }
+
     return utftext;
   }
+
   var x = [];
   var k, AA, BB, CC, DD, a, b, c, d;
   var S11 = 7,
-    S12 = 12,
-    S13 = 17,
-    S14 = 22;
+      S12 = 12,
+      S13 = 17,
+      S14 = 22;
   var S21 = 5,
-    S22 = 9,
-    S23 = 14,
-    S24 = 20;
+      S22 = 9,
+      S23 = 14,
+      S24 = 20;
   var S31 = 4,
-    S32 = 11,
-    S33 = 16,
-    S34 = 23;
+      S32 = 11,
+      S33 = 16,
+      S34 = 23;
   var S41 = 6,
-    S42 = 10,
-    S43 = 15,
-    S44 = 21;
+      S42 = 10,
+      S43 = 15,
+      S44 = 21;
   string = utf8Encode(string);
   x = convertToWordArray(string);
   a = 0x67452301;
   b = 0xEFCDAB89;
   c = 0x98BADCFE;
   d = 0x10325476;
+
   for (k = 0; k < x.length; k += 16) {
     AA = a;
     BB = b;
@@ -23467,22 +27312,27 @@ exports.calculateMD5 = function (string) {
     c = addUnsigned(c, CC);
     d = addUnsigned(d, DD);
   }
+
   var temp = wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
   return temp.toLowerCase();
 };
+
 exports.closeMediaStream = function (stream) {
   if (!stream) {
     return;
-  }
-
-  // Latest spec states that MediaStream has no stop() method and instead must
+  } // Latest spec states that MediaStream has no stop() method and instead must
   // call stop() on every MediaStreamTrack.
+
+
   try {
     var tracks;
+
     if (stream.getTracks) {
       tracks = stream.getTracks();
+
       var _iterator = _createForOfIteratorHelper(tracks),
-        _step;
+          _step;
+
       try {
         for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var track = _step.value;
@@ -23495,11 +27345,14 @@ exports.closeMediaStream = function (stream) {
       }
     } else {
       tracks = stream.getAudioTracks();
+
       var _iterator2 = _createForOfIteratorHelper(tracks),
-        _step2;
+          _step2;
+
       try {
         for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
           var _track = _step2.value;
+
           _track.stop();
         }
       } catch (err) {
@@ -23507,12 +27360,16 @@ exports.closeMediaStream = function (stream) {
       } finally {
         _iterator2.f();
       }
+
       tracks = stream.getVideoTracks();
+
       var _iterator3 = _createForOfIteratorHelper(tracks),
-        _step3;
+          _step3;
+
       try {
         for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
           var _track2 = _step3.value;
+
           _track2.stop();
         }
       } catch (err) {
@@ -23529,14 +27386,15 @@ exports.closeMediaStream = function (stream) {
     }
   }
 };
+
 exports.cloneArray = function (array) {
   return array && array.slice() || [];
 };
+
 exports.cloneObject = function (obj) {
   var fallback = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
   return obj && Object.assign({}, obj) || fallback;
 };
-
 /**
  * 返回摄像头设备列表
  *
@@ -23546,6 +27404,8 @@ exports.cloneObject = function (obj) {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情
  *
  */
+
+
 exports.getCameras = function () {
   var cams = [];
   return Promise.resolve().then(function () {
@@ -23568,16 +27428,18 @@ exports.getCameras = function () {
     return e;
   });
 };
-
 /**
  * 获取 RTCPeerConnection 收发的音视频媒体流
  *
  * @param {RTCPeerConnection} pc - 要操作的 RTCPeerConnection
  * @param {string} type - 'local' 发送的媒体流；'remote' 接收的媒体流
  */
+
+
 exports.getStreams = function (pc, type) {
   var videoStream = new MediaStream();
   var audioStream = new MediaStream();
+
   if (type === 'remote' && RTCPeerConnection.prototype.getReceivers) {
     pc.getReceivers().forEach(function (receiver) {
       if (receiver.track && receiver.track.readyState === 'live') {
@@ -23610,21 +27472,24 @@ exports.getStreams = function (pc, type) {
       }
     });
   }
+
   return {
     audioStream: audioStream,
     videoStream: videoStream
   };
 };
-
 /**
  * 通过 canvas 画布获取视频流
  *
  * @param {MediaStream} stream - 要转换的媒体流
  */
+
+
 exports.getStreamThroughCanvas = function (stream) {
   if (stream.getVideoTracks().length === 0) {
     return;
   }
+
   var video = document.createElement('video');
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
@@ -23635,28 +27500,27 @@ exports.getStreamThroughCanvas = function (stream) {
   video.setAttribute('playsinline', '');
   document.body.append(video);
   document.body.append(canvas);
-  video.srcObject = stream;
+  video.srcObject = stream; // 将视频绘制到画布
 
-  // 将视频绘制到画布
   var drawToCanvas = function drawToCanvas() {
     if (ctx !== null) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       window.requestAnimationFrame(drawToCanvas);
     }
-  };
+  }; // 开始播放视频并设置画布尺寸后开始绘制视频到画布
 
-  // 开始播放视频并设置画布尺寸后开始绘制视频到画布
+
   video.oncanplay = function () {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     video.play();
     drawToCanvas();
   };
+
   var newStream = canvas.captureStream(15);
   var canvasTrack = newStream.getVideoTracks()[0];
-  var trackStop = canvasTrack.stop;
+  var trackStop = canvasTrack.stop; // 视频停止后清理数据
 
-  // 视频停止后清理数据
   canvasTrack.stop = function () {
     trackStop.call(canvasTrack);
     drawToCanvas();
@@ -23667,33 +27531,42 @@ exports.getStreamThroughCanvas = function (stream) {
     video.remove();
     canvas.width = 0;
     canvas.remove();
-  };
+  }; // 合并音频轨道
 
-  // 合并音频轨道
+
   if (stream instanceof MediaStream && stream.getAudioTracks().length !== 0) {
     var audioTrack = stream.getAudioTracks()[0];
     newStream.addTrack(audioTrack);
   }
+
   return newStream;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
 "use strict";
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+
 var Logger = require('./Logger');
+
 var Grammar = require('./Grammar');
+
 var logger = new Logger('WebSocketInterface');
+
 module.exports = /*#__PURE__*/function () {
   function WebSocketInterface(url) {
     _classCallCheck(this, WebSocketInterface);
+
     logger.debug('new() [url:"%s"]', url);
     this._url = url;
     this._sip_uri = null;
     this._via_transport = null;
     this._ws = null;
     var parsed_url = Grammar.parse(url, 'absoluteURI');
+
     if (parsed_url === -1) {
       logger.warn("invalid WebSocket URI: ".concat(url));
       throw new TypeError("Invalid argument: ".concat(url));
@@ -23705,6 +27578,7 @@ module.exports = /*#__PURE__*/function () {
       this._via_transport = parsed_url.scheme.toUpperCase();
     }
   }
+
   _createClass(WebSocketInterface, [{
     key: "via_transport",
     get: function get() {
@@ -23727,6 +27601,7 @@ module.exports = /*#__PURE__*/function () {
     key: "connect",
     value: function connect() {
       logger.debug('connect()');
+
       if (this.isConnected()) {
         logger.debug("WebSocket ".concat(this._url, " is already connected"));
         return;
@@ -23734,10 +27609,13 @@ module.exports = /*#__PURE__*/function () {
         logger.debug("WebSocket ".concat(this._url, " is connecting"));
         return;
       }
+
       if (this._ws) {
         this.disconnect();
       }
+
       logger.debug("connecting to WebSocket ".concat(this._url));
+
       try {
         this._ws = new WebSocket(this._url, 'sip');
         this._ws.binaryType = 'arraybuffer';
@@ -23753,13 +27631,19 @@ module.exports = /*#__PURE__*/function () {
     key: "disconnect",
     value: function disconnect() {
       logger.debug('disconnect()');
+
       if (this._ws) {
         // Unbind websocket event callbacks.
         this._ws.onopen = function () {};
+
         this._ws.onclose = function () {};
+
         this._ws.onmessage = function () {};
+
         this._ws.onerror = function () {};
+
         this._ws.close();
+
         this._ws = null;
       }
     }
@@ -23767,8 +27651,10 @@ module.exports = /*#__PURE__*/function () {
     key: "send",
     value: function send(message) {
       logger.debug('send()');
+
       if (this.isConnected()) {
         this._ws.send(message);
+
         return true;
       } else {
         logger.warn('unable to send message, WebSocket is not open');
@@ -23785,10 +27671,10 @@ module.exports = /*#__PURE__*/function () {
     value: function isConnecting() {
       return this._ws && this._ws.readyState === this._ws.CONNECTING;
     }
-
     /**
      * WebSocket Event Handlers
      */
+
   }, {
     key: "_onOpen",
     value: function _onOpen() {
@@ -23799,12 +27685,14 @@ module.exports = /*#__PURE__*/function () {
     key: "_onClose",
     value: function _onClose(_ref) {
       var wasClean = _ref.wasClean,
-        code = _ref.code,
-        reason = _ref.reason;
+          code = _ref.code,
+          reason = _ref.reason;
       logger.debug("WebSocket ".concat(this._url, " closed"));
+
       if (wasClean === false) {
         logger.debug('WebSocket abrupt disconnection');
       }
+
       this.ondisconnect(!wasClean, code, reason);
     }
   }, {
@@ -23820,42 +27708,50 @@ module.exports = /*#__PURE__*/function () {
       logger.warn("WebSocket ".concat(this._url, " error: "), e);
     }
   }]);
+
   return WebSocketInterface;
 }();
 },{"./Grammar":7,"./Logger":9}],32:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
 var Logger = require('./Logger');
+
 var CRTC_C = require('./Constants');
+
 var SIPMessage = require('./SIPMessage');
+
 var Utils = require('./Utils');
-var logger = new Logger('sanityCheck');
 
-// Checks for requests and responses.
-var all = [minimumHeaders];
+var logger = new Logger('sanityCheck'); // Checks for requests and responses.
 
-// Checks for requests.
-var requests = [rfc3261_8_2_2_1, rfc3261_16_3_4, rfc3261_18_3_request, rfc3261_8_2_2_2];
+var all = [minimumHeaders]; // Checks for requests.
 
-// Checks for responses.
-var responses = [rfc3261_8_1_3_3, rfc3261_18_3_response];
+var requests = [rfc3261_8_2_2_1, rfc3261_16_3_4, rfc3261_18_3_request, rfc3261_8_2_2_2]; // Checks for responses.
 
-// local variables.
+var responses = [rfc3261_8_1_3_3, rfc3261_18_3_response]; // local variables.
+
 var message;
 var ua;
 var transport;
+
 module.exports = function (m, u, t) {
   message = m;
   ua = u;
   transport = t;
+
   var _iterator = _createForOfIteratorHelper(all),
-    _step;
+      _step;
+
   try {
     for (_iterator.s(); !(_step = _iterator.n()).done;) {
       var _check2 = _step.value;
+
       if (_check2() === false) {
         return false;
       }
@@ -23865,12 +27761,15 @@ module.exports = function (m, u, t) {
   } finally {
     _iterator.f();
   }
+
   if (message instanceof SIPMessage.IncomingRequest) {
     var _iterator2 = _createForOfIteratorHelper(requests),
-      _step2;
+        _step2;
+
     try {
       for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
         var check = _step2.value;
+
         if (check() === false) {
           return false;
         }
@@ -23882,10 +27781,12 @@ module.exports = function (m, u, t) {
     }
   } else if (message instanceof SIPMessage.IncomingResponse) {
     var _iterator3 = _createForOfIteratorHelper(responses),
-      _step3;
+        _step3;
+
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
         var _check = _step3.value;
+
         if (_check() === false) {
           return false;
         }
@@ -23895,12 +27796,11 @@ module.exports = function (m, u, t) {
     } finally {
       _iterator3.f();
     }
-  }
+  } // Everything is OK.
 
-  // Everything is OK.
+
   return true;
 };
-
 /*
  * Sanity Check for incoming Messages
  *
@@ -23919,14 +27819,16 @@ module.exports = function (m, u, t) {
  * All:
  *  - Minimum headers in a SIP message
  */
-
 // Sanity Check functions for requests.
+
+
 function rfc3261_8_2_2_1() {
   if (message.s('to').uri.scheme !== 'sip') {
     reply(416);
     return false;
   }
 }
+
 function rfc3261_16_3_4() {
   if (!message.to_tag) {
     if (message.call_id.substr(0, 5) === ua.configuration.crtc_id) {
@@ -23935,38 +27837,40 @@ function rfc3261_16_3_4() {
     }
   }
 }
+
 function rfc3261_18_3_request() {
   var len = Utils.str_utf8_length(message.body);
   var contentLength = message.getHeader('content-length');
+
   if (len < contentLength) {
     reply(400);
     return false;
   }
 }
+
 function rfc3261_8_2_2_2() {
   var fromTag = message.from_tag;
   var call_id = message.call_id;
   var cseq = message.cseq;
-  var tr;
+  var tr; // Accept any in-dialog request.
 
-  // Accept any in-dialog request.
   if (message.to_tag) {
     return;
-  }
+  } // INVITE request.
 
-  // INVITE request.
+
   if (message.method === CRTC_C.INVITE) {
     // If the branch matches the key of any IST then assume it is a retransmission
     // and ignore the INVITE.
     // TODO: we should reply the last response.
     if (ua._transactions.ist[message.via_branch]) {
       return false;
-    }
-    // Otherwise check whether it is a merged request.
+    } // Otherwise check whether it is a merged request.
     else {
       for (var transaction in ua._transactions.ist) {
         if (Object.prototype.hasOwnProperty.call(ua._transactions.ist, transaction)) {
           tr = ua._transactions.ist[transaction];
+
           if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
             reply(482);
             return false;
@@ -23974,22 +27878,18 @@ function rfc3261_8_2_2_2() {
         }
       }
     }
-  }
-
-  // Non INVITE request.
-
+  } // Non INVITE request.
   // If the branch matches the key of any NIST then assume it is a retransmission
   // and ignore the request.
   // TODO: we should reply the last response.
   else if (ua._transactions.nist[message.via_branch]) {
     return false;
-  }
-
-  // Otherwise check whether it is a merged request.
+  } // Otherwise check whether it is a merged request.
   else {
     for (var _transaction in ua._transactions.nist) {
       if (Object.prototype.hasOwnProperty.call(ua._transactions.nist, _transaction)) {
         tr = ua._transactions.nist[_transaction];
+
         if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
           reply(482);
           return false;
@@ -23997,43 +27897,49 @@ function rfc3261_8_2_2_2() {
       }
     }
   }
-}
+} // Sanity Check functions for responses.
 
-// Sanity Check functions for responses.
+
 function rfc3261_8_1_3_3() {
   if (message.getHeaders('via').length > 1) {
     logger.debug('more than one Via header field present in the response, dropping the response');
     return false;
   }
 }
+
 function rfc3261_18_3_response() {
   var len = Utils.str_utf8_length(message.body),
-    contentLength = message.getHeader('content-length');
+      contentLength = message.getHeader('content-length');
+
   if (len < contentLength) {
     logger.debug('message body length is lower than the value in Content-Length header field, dropping the response');
     return false;
   }
-}
+} // Sanity Check functions for requests and responses.
 
-// Sanity Check functions for requests and responses.
+
 function minimumHeaders() {
   var mandatoryHeaders = ['from', 'to', 'call_id', 'cseq', 'via'];
+
   for (var _i = 0, _mandatoryHeaders = mandatoryHeaders; _i < _mandatoryHeaders.length; _i++) {
     var header = _mandatoryHeaders[_i];
+
     if (!message.hasHeader(header)) {
       logger.debug("missing mandatory header field : ".concat(header, ", dropping the response"));
       return false;
     }
   }
-}
+} // Reply.
 
-// Reply.
+
 function reply(status_code) {
   var vias = message.getHeaders('via');
   var to;
   var response = "SIP/2.0 ".concat(status_code, " ").concat(CRTC_C.REASON_PHRASE[status_code], "\r\n");
+
   var _iterator4 = _createForOfIteratorHelper(vias),
-    _step4;
+      _step4;
+
   try {
     for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
       var via = _step4.value;
@@ -24044,10 +27950,13 @@ function reply(status_code) {
   } finally {
     _iterator4.f();
   }
+
   to = message.getHeader('To');
+
   if (!message.to_tag) {
     to += ";tag=".concat(Utils.newTag());
   }
+
   response += "To: ".concat(to, "\r\n");
   response += "From: ".concat(message.getHeader('From'), "\r\n");
   response += "Call-ID: ".concat(message.call_id, "\r\n");
@@ -31626,7 +35535,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -31677,6 +35586,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
