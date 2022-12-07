@@ -1,35 +1,6 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
-/* 对日志的处理 */
-window.CLog = console;
-let consoleHolder = window.CLog;
-
-function debug(bool)
-{
-  if (!bool)
-  {
-    consoleHolder = window.CLog;
-    window.CLog = {};
-    Object.keys(consoleHolder).forEach(function(key)
-    {
-      window.CLog[key] = function()
-      {
-        // 这里可以写自己方法上传到服务器等
-        // eslint-disable-next-line prefer-rest-params
-        consoleHolder.log(arguments);
-      };
-    });
-  }
-  else
-  {
-    window.CLog = consoleHolder;
-  }
-}
-
-debug(false);
-// 结束
-
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
