@@ -1,5 +1,5 @@
 /*
- * CRTC v1.8.2.20221271410
+ * CRTC v1.8.2.20221272138
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2022 
  */
@@ -19714,7 +19714,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var iceGatheringTimer;
           var iceGatherFlag = true;
           _this18._iceReady = false;
-          _this18._iceReady = false;
 
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
@@ -20061,6 +20060,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._remoteToAudio = true;
         this._remoteToVideo = false;
+        this._iceReady = false;
 
         var _iterator7 = _createForOfIteratorHelper(sdp_request.media),
             _step7;
@@ -20069,7 +20069,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
             var m = _step7.value;
 
-            if (m.type == 'audio') {
+            if (m.type !== 'video') {
               continue;
             } // waiting = true;
 

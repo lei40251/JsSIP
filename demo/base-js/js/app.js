@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -27,10 +27,10 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://rtc.vsbc.com:5092/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // sip domain
-const sipDomain = '5g.vsbc.com';
+const sipDomain = 'rtc.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
@@ -46,8 +46,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key')||'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
+  password     : `${account}`,
+  secret_key   : sessionStorage.getItem('secret_key') || 'NgWeion9ur1ciB3hB7NJHEjSSaEFGsR5FZMEinCXYs02HVwQnpPa4QRaNNic2rYHhj9+K17iuXrlu06ZWbKYA/Sp2ZjZEirS9oEHsaesw27LvswciWtz++zXhm7AN2sae/khqztnCbNfpnlRcs58rfIIZjFpqOP3e4QNAWXLBcqptkXXijYK1BLIW4Dsd/e6zDaFekt9OXzrmRebfEeMhKa6N9dmSKYtGIe132wlL8MAN+mRSuXuqkYBXiNwFgNNuOIpQRjXWqhcthzSxP7fXb3ASKRoGhe3yR3ytEbWr6D0fvnI7iWJ/KVGiINaC54TuiT3twIQbqPKN18sV01tUQ=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -538,7 +538,30 @@ ua.on('newRTCSession', function(e)
     getStreams(e.session.connection);
   });
 
+  if (e.session.connection)
+  {
+    e.session.connection.ondatachannel = function(ev)
+    {
+      console.warn('e: ', ev);
+    };
+
+  }
+
   //  ***** DOM 事件绑定 *****
+  document.querySelector('#rtcdatachannel').onclick = function()
+  {
+    sendChannel = e.session.connection.createDataChannel('sendDataChannel');
+    sendChannel.onopen = function()
+    {
+      const readyState = sendChannel.readyState;
+
+      console.warn('rs: ', readyState);
+
+      sendChannel.send('sample text.');
+    };
+
+    e.session.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+  };
 
   /**
    * 音频接听
@@ -905,7 +928,7 @@ function getStreams(pc)
 
   // 本地视频
   localVideo.srcObject = localStream.videoStream;
-  localStream.videoStream.getTracks().length>0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     localVideo.srcObject = null;
@@ -926,7 +949,7 @@ function getStreams(pc)
   }, 100);
   // 远端视频
   remoteVideo.srcObject = remoteStream.videoStream;
-  remoteStream.videoStream.getTracks().length> 0 && remoteStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  remoteStream.videoStream.getTracks().length > 0 && remoteStream.videoStream.getTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     if (!tmpSession)
