@@ -422,15 +422,22 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('notify', function(d)
   {
-    // 3pcc自动接听
+    // 3pcc 取消保持&自动接听
     if (d.event == 'talk')
     {
+      if (e.session.isOnHold().local)
+      {
+        e.session.unhold();
+        setStatus('3pcc unhold');
+
+        return;
+      }
+
       e.session.answer({
         rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
         mediaConstraints    : { audio: true, video: true },
         pcConfig            : pcConfig
       });
-
       setStatus('3pcc answer');
     }
     else if (d.event == 'hold')
