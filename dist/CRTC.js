@@ -1,7 +1,7 @@
 /*
- * CRTC v1.8.2.20221271410
+ * CRTC v1.8.3.20231121743
  * the Javascript WebRTC and SIP library
- * Copyright: 2012-2022 
+ * Copyright: 2012-2023 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
@@ -23883,6 +23883,10 @@ function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.g
 
 var EventEmitter = require('events').EventEmitter;
 
+var Logger = require('./Logger');
+
+var logger = new Logger('Stats');
+
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(getStats, _EventEmitter);
 
@@ -24202,13 +24206,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
       }
 
+      logger.debug(JSON.stringify(this._stats));
       this.emit('report', parseStatsReport(this._stats));
     }
   }]);
 
   return getStats;
 }(EventEmitter);
-},{"events":33}],25:[function(require,module,exports){
+},{"./Logger":9,"events":33}],25:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -35535,7 +35540,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
