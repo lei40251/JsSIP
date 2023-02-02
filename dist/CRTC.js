@@ -1,5 +1,5 @@
 /*
- * CRTC v1.8.3.20231121743
+ * CRTC v1.8.3.2023221015
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -27429,6 +27429,39 @@ exports.getCameras = function () {
       });
     });
     return cams;
+  })["catch"](function (e) {
+    return e;
+  });
+};
+/**
+ * 返回麦克风设备列表
+ *
+ * 该接口不支持在 http 协议下使用，请使用 https 协议部署您的网站
+ * <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#Privacy_and_security"> Privacy and security </a>。<br>
+ * '出于安全的考虑，在用户未授权摄像头或麦克风访问权限前，label 及 deviceId 字段可能都是空的。<br>
+ * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
+ *
+ */
+
+
+exports.getMicrophones = function () {
+  var mics = [];
+  return Promise.resolve().then(function () {
+    return navigator.mediaDevices.enumerateDevices();
+  }).then(function (devices) {
+    return devices.filter(function (dev) {
+      return dev.kind === 'audioinput';
+    });
+  }).then(function (microphones) {
+    microphones.forEach(function (mic, index) {
+      var label = "microphone ".concat(index + 1);
+      mics.push({
+        kind: mic.kind,
+        label: mic.label == '' ? label : mic.label,
+        deviceId: mic.deviceId
+      });
+    });
+    return mics;
   })["catch"](function (e) {
     return e;
   });

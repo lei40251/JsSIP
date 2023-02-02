@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -18,6 +18,9 @@ let needReinvite = false;
 let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
+
+// 兼容部分iOS手机蓝牙问题
+let tmpStream;
 
 // 远端客户端UA
 // let remoteUA;
@@ -47,7 +50,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key')||'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
+  secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -331,7 +334,10 @@ ua.on('newRTCSession', function(e)
   {
     setStatus(`通话建立失败: ${d.cause}`);
 
+    tmpSession = null;
     needReinvite = false;
+
+    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -360,7 +366,10 @@ ua.on('newRTCSession', function(e)
   {
     setStatus('通话结束');
 
+    tmpSession = null;
     needReinvite = false;
+
+    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -498,16 +507,18 @@ ua.on('newRTCSession', function(e)
     * @type {object}
     * @property {string} originator - 'remote'为远端触发，'local'为本端触发
     */
-  e.session.on('confirmed', function(d)
+  e.session.on('confirmed', async function(d)
   {
     setStatus('confirmed');
 
-    if (e.session === tmpSession)
-    {
-      rtcSession.terminate();
-    }
+    // if (e.session === tmpSession)
+    // {
+    //   rtcSession.terminate();
+    // }
 
+    const mics = await CRTC.Utils.getMicrophones();
     // 获取统计信息
+
     stats = new CRTC.getStats(e.session.connection);
     stats.on('report', function(r)
     {
@@ -525,7 +536,8 @@ ua.on('newRTCSession', function(e)
       e.session.unmute({ video: true });
     }, 500);
 
-    if (d.originator === 'local' && navigator.userAgent.indexOf('WeChat') != -1)
+    // 兼容安卓微信Bug及iOS蓝牙问题
+    if (d.originator === 'local' && ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1)))
     {
       navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         .then((stream) =>
@@ -808,13 +820,18 @@ async function call(type)
     return;
   }
 
+  // 兼容安卓微信Bug及iOS蓝牙问题
+  tmpStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+
+  const mics = await CRTC.Utils.getMicrophones();
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
     pcConfig     : pcConfig
   };
 
-  if (navigator.userAgent.indexOf('WeChat') != -1)
+  // 兼容安卓微信Bug及iOS蓝牙问题
+  if ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1))
   {
     // 增加安卓微信呼叫的语音提醒
     const audio = new Audio('./sound/waiting.mp3');
@@ -866,6 +883,7 @@ async function call(type)
   {
     clearInterval(optionsTimer);
   }
+
   optionsTimer = setInterval(() =>
   {
     ua.sendOptions(`sip_ping@${sipDomain}`);
@@ -1052,6 +1070,8 @@ function start()
   window.onbeforeunload = function()
   {
     ua.stop();
+
+    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
   };
 }
 
