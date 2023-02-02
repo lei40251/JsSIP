@@ -147,4 +147,5 @@ data 字段
 |方法名称|说明|
 |-|-|
 |getCameras()|获取可用的摄像头列表|
+|getMicrophones()|获取可用的麦克风列表|
 |getStreams(pc, originator)|获取发送或接收的音视频流；PC: 获取媒体流的RTCPeerConnection；originator: 'local'发送的流,'remote'接收的流；|
