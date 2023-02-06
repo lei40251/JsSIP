@@ -337,7 +337,11 @@ ua.on('newRTCSession', function(e)
     tmpSession = null;
     needReinvite = false;
 
-    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
+    if (tmpStream)
+    {
+      tmpStream.getTracks().forEach((track) => track.stop());
+      tmpStream = null;
+    }
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -369,7 +373,11 @@ ua.on('newRTCSession', function(e)
     tmpSession = null;
     needReinvite = false;
 
-    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
+    if (tmpStream)
+    {
+      tmpStream.getTracks().forEach((track) => track.stop());
+      tmpStream = null;
+    }
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -539,18 +547,32 @@ ua.on('newRTCSession', function(e)
     // 兼容安卓微信Bug及iOS蓝牙问题
     if (d.originator === 'local' && ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1)))
     {
-      navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        .then((stream) =>
+      if (tmpStream)
+      {
+        tmpAudioStream = new MediaStream([ tmpStream.getAudioTracks()[0] ]);
+
+        const sender = e.session.connection.getSenders().find((s) =>
         {
-          tmpAudioStream = stream;
-
-          const sender = e.session.connection.getSenders().find((s) =>
-          {
-            return s.track.kind == 'audio';
-          });
-
-          sender.replaceTrack(stream.getAudioTracks()[0]);
+          return s.track.kind == 'audio';
         });
+
+        sender.replaceTrack(tmpStream.getAudioTracks()[0]);
+      }
+      else
+      {
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then((stream) =>
+          {
+            tmpAudioStream = stream;
+
+            const sender = e.session.connection.getSenders().find((s) =>
+            {
+              return s.track.kind == 'audio';
+            });
+
+            sender.replaceTrack(stream.getAudioTracks()[0]);
+          });
+      }
     }
 
     // 获取媒体流
@@ -821,7 +843,10 @@ async function call(type)
   }
 
   // 兼容安卓微信Bug及iOS蓝牙问题
-  tmpStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+  if (navigator.userAgent.indexOf('iPhone') !=-1)
+  {
+    tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraints });
+  }
 
   const mics = await CRTC.Utils.getMicrophones();
   const options = {
@@ -861,11 +886,22 @@ async function call(type)
 
     if (type === 'video')
     {
-      tmpVideoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-      localStream.addTrack(tmpVideoStream.getVideoTracks()[0]);
+      if (tmpStream)
+      {
+        localStream.addTrack(tmpStream.getVideoTracks()[0]);
+      }
+      else
+      {
+        tmpVideoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        localStream.addTrack(tmpVideoStream.getVideoTracks()[0]);
+      }
     }
 
     options['mediaStream'] = localStream;
+  }
+  else if (tmpStream)
+  {
+    options['mediaStream'] = tmpStream;
   }
   else
   {
@@ -1071,7 +1107,11 @@ function start()
   {
     ua.stop();
 
-    tmpStream && tmpStream.getTracks().forEach((track) => track.stop());
+    if (tmpStream)
+    {
+      tmpStream.getTracks().forEach((track) => track.stop());
+      tmpStream = null;
+    }
   };
 }
 
