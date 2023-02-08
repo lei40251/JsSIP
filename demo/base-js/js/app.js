@@ -649,8 +649,19 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#switchDevice').onclick = function()
   {
-    e.session.switchDevice('camera');
-    setStatus(`switchDevice normal`);
+    e.session.switchDevice('camera')
+      .then((stream) =>
+      {
+        console.warn('st: ', stream);
+        localVideo.srcObject = stream;
+
+        // 兼容不同浏览器安全策略
+        setTimeout(() =>
+        {
+          localVideo.play();
+        }, 100);
+      });
+    setStatus('switchDevice facingMode');
   };
 
   /**
@@ -684,44 +695,62 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 关闭/开启麦克风
+   * 关闭麦克风
    */
   document.querySelector('#muteMic').onclick = function()
   {
-    // 获取麦克风和视频的开关状态
-    const isMuted = e.session.isMuted();
-
-    // 麦克风为关闭状态，则开启麦克风
-    if (isMuted.audio)
-    {
-      e.session.unmute({ audio: true });
-    }
-    // 麦克风为开启状态，则关闭麦克风
-    else
-    {
-      e.session.mute({ audio: true });
-    }
+    console.log('mute: ', e.session.isMuted().audio);
+    // 关闭麦克风
+    e.session.mute({ audio: true });
   };
 
   /**
-   * 关闭/开启视频
+   * 开启麦克风
+   */
+  document.querySelector('#unmuteMic').onclick = function()
+  {
+    console.log('unmute: ', e.session.isMuted().audio);
+    // 开启麦克风
+    e.session.unmute({ audio: true });
+  };
+
+  /**
+   * 关闭视频
    */
   document.querySelector('#muteCam').onclick = function()
   {
-    // 获取麦克风和视频的开关状态
-    const isMuted = e.session.isMuted();
-
-    // 摄像头为关闭状态，则开启摄像头
-    if (isMuted.video)
-    {
-      e.session.unmute({ video: true });
-    }
-    // 摄像头为开启状态，则关闭摄像头
-    else
-    {
-      e.session.mute({ video: true });
-    }
+    // 关闭摄像头
+    e.session.mute({ video: true });
   };
+
+  /**
+   * 开启视频
+   */
+  document.querySelector('#unmuteCam').onclick = function()
+  {
+    // 摄像头为关闭状态，则开启摄像头
+    e.session.unmute({ video: true });
+  };
+
+  // /**
+  //  * 关闭/开启视频
+  //  */
+  // document.querySelector('#muteCam').onclick = function()
+  // {
+  //   // 获取麦克风和视频的开关状态
+  //   const isMuted = e.session.isMuted();
+
+  //   // 摄像头为关闭状态，则开启摄像头
+  //   if (isMuted.video)
+  //   {
+  //     e.session.unmute({ video: true });
+  //   }
+  //   // 摄像头为开启状态，则关闭摄像头
+  //   else
+  //   {
+  //     e.session.mute({ video: true });
+  //   }
+  // };
 
   /**
    * 暂停/恢复通话

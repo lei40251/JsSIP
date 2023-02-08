@@ -31,12 +31,12 @@
         上行分辨率: <span id="upF"></span><br>
         下行分辨率: <span id="downF"></span><br>
       </div>
-      <video muted playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5" class="h-100"
+      <video muted playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
         id="localVideo"></video>
     </div>
     <div class="position-relative h-100">
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">远端视频</p>
-      <video playsinline muted x5-video-player-fullscreen="true" x5-video-player-type="h5" class="h-100"
+      <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
         id="remoteVideo"></video>
       <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
     </div>
@@ -78,7 +78,9 @@
         <div class="col col-12 row">
           <div class="col col-auto mt-3">
             <button class="btn btn-warning" id="muteMic">关闭麦克风</button>
+            <button class="btn btn-success" id="unmuteMic">开启麦克风</button>
             <button class="btn btn-danger" id="muteCam">关闭摄像头</button>
+            <button class="btn btn-success" id="unmuteCam">开启摄像头</button>
           </div>
           <div class="col col-auto mt-3">
             <button class="btn btn-warning" id="hold">保持/取消保持</button>

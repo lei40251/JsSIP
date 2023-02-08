@@ -1,5 +1,5 @@
 /*
- * CRTC v1.8.4.20232894
+ * CRTC v1.8.4.2023281132
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -15483,7 +15483,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function () {
       var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type, deviceId) {
         var _this6 = this;
-        var cameras;
+        var cameras, constraints;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
@@ -15497,7 +15497,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context.next = 13;
+                _context.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
@@ -15515,6 +15515,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (!this._selectedLocalCameras) {
                 this._selectedLocalCameras = 'user';
               }
+              constraints = {
+                audio: false,
+                video: true
+              };
               return _context.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
@@ -15544,10 +15548,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   var did;
                   if (_this6._selectedLocalCameras === 'user') {
                     did = _this6._localCameras[1];
+                    _this6._selectedLocalCameras = _this6._localCameras[1];
                   } else if (_this6._localCameras.indexOf(_this6._selectedLocalCameras) == _this6._localCameras.length - 1) {
                     did = _this6._localCameras[0];
+                    _this6._selectedLocalCameras = _this6._localCameras[0];
                   } else {
-                    _this6._localCameras[_this6._localCameras.indexOf(_this6._selectedLocalCameras) + 1];
+                    did = _this6._localCameras[_this6._localCameras.indexOf(_this6._selectedLocalCameras) + 1];
+                    _this6._selectedLocalCameras = _this6._localCameras[_this6._localCameras.indexOf(_this6._selectedLocalCameras) + 1];
                   }
                   videoConstraints = {
                     deviceId: did
@@ -15564,10 +15571,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 });
                 _this6._localMediaStreamLocallyGenerated = true;
-                return navigator.mediaDevices.getUserMedia({
-                  audio: false,
-                  video: videoConstraints
-                })["catch"](function (error) {
+                constraints.video = videoConstraints;
+                return navigator.mediaDevices.getUserMedia(constraints)["catch"](function (error) {
                   logger.error('emit "getusermediafailed" [error:%o]', error);
                   _this6.emit('getusermediafailed', error);
                   throw new Error('getUserMedia() failed');
@@ -15587,22 +15592,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this6._localMediaStream = stream;
                 // }
 
-                _this6._localMediaStream.getVideoTracks().forEach(function (track) {
-                  var sender = _this6._connection.getSenders().find(function (s) {
-                    return s.track.kind == 'video';
-                  });
-                  sender.replaceTrack(track);
-                  _this6.emit('cameraChanged', {
-                    videoStream: stream
-                  });
+                var videoTrack = stream.getVideoTracks()[0];
+                var sender = _this6._connection.getSenders().find(function (s) {
+                  return s.track.kind == 'video';
                 });
-                return {
-                  stream: stream
-                };
+                sender.replaceTrack(videoTrack);
+                _this6.emit('cameraChanged', {
+                  videoStream: stream
+                });
+                return stream;
               }));
-            case 13:
-              return _context.abrupt("return", false);
             case 14:
+              return _context.abrupt("return", false);
+            case 15:
             case "end":
               return _context.stop();
           }
