@@ -645,6 +645,15 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
+   * 手机端用切换摄像头
+   */
+  document.querySelector('#switchDevice').onclick = function()
+  {
+    e.session.switchDevice('camera');
+    setStatus(`switchDevice normal`);
+  };
+
+  /**
    * 结束通话
    */
   document.querySelector('#cancel').onclick = function()
