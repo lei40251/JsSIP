@@ -38,6 +38,8 @@
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">远端视频</p>
       <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
         id="remoteVideo"></video>
+      <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="hide"
+        id="remoteVideo2"></video>
       <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
     </div>
   </div>
@@ -51,7 +53,7 @@
           <div class="col col-auto row">
             <div class="col col-auto">
               <div class="input-group">
-                <input class="form-control" type="text" value="7104" placeholder="请输入要呼叫的号码" id="callee" />
+                <input class="form-control" type="text" value="7305" placeholder="请输入要呼叫的号码" id="callee" />
                 <button class="btn btn-success" id="call"><i class="bi-mic"></i> 语音外呼</button>
                 <button class="btn btn-primary" id="callVideo"><i class="bi-camera-video"></i> 视频外呼</button>
               </div>
@@ -99,6 +101,12 @@
             <button class="btn btn-secondary" id="formShare"><i class="bi-table"></i> 分享页面元素</button>
             <button class="btn btn-secondary" id="picShare"><i class="bi-image"></i> 分享图片</button>
             <button class="btn btn-secondary" id="videoShare"><i class="bi-play"></i> 分享视频</button>
+          </div>
+          <div class="col col-auto mt-3">
+            <button class="btn btn-secondary" id="screenShareD"><i class="bi-tv"></i> 分享屏幕(D)</button>
+            <button class="btn btn-secondary" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
+            <button class="btn btn-secondary" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>
+            <button class="btn btn-secondary" id="videoShareD"><i class="bi-play"></i> 分享视频(D)</button>
             <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle"></i> 停止分享</button>
           </div>
         </div>
@@ -140,6 +148,15 @@
       src="https://pro.vsbc.com/rtc/dev/static/video.mp4" loop muted style="height: 100%" controls></video>
   </div>
 
+  <!-- <script>
+    // TogetherJS configuration would go here, but we'll talk about that
+    // later
+    TogetherJSConfig_hubBase = "https://togetherjs-hub.glitch.me/"
+  </script>
+  <script src="https://togetherjs.com/togetherjs-min.js"></script>
+  <script>
+    TogetherJS(this)
+  </script> -->
   <script src="./js/eruda.js"></script>
   <script>eruda.init();</script>
   <script src="./js/jquery-3.3.1.min.js"></script>
@@ -170,7 +187,7 @@
     debug(false);
     // 结束
   </script>
-  <script src="../../dist/CRTC.min.js"></script>
+  <script src="../../dist/CRTC.js"></script>
   <script src="./js/app.js"></script>
 </body>
 

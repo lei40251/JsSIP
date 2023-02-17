@@ -30,11 +30,12 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
+const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
 // sip domain
-const sipDomain = '5g.vsbc.com';
-// const sipDomain = 'pro.vsbc.com';
+// const sipDomain = '5g.vsbc.com';
+const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -49,7 +50,8 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  password     : `yl_19${account}`,
+  // password     : `yl_19${account}`,
+  password     : `${account}`,
   secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
 };
 // 媒体约束条件
@@ -215,10 +217,10 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:98 transport-cc\r\n/g, '');
     d.sdp = d.sdp.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
 
-    if (d.originator === 'local')
-    {
-      d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    }
+    // if (d.originator === 'local')
+    // {
+    //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    // }
   });
 
   /**
@@ -354,6 +356,9 @@ ua.on('newRTCSession', function(e)
     stats && stats.stop();
 
     optionsTimer && clearInterval(optionsTimer);
+
+    document.querySelector('#remoteVideo').classList = 'h-100';
+    document.querySelector('#remoteVideo2').classList = 'hide';
   });
 
   /**
@@ -370,7 +375,6 @@ ua.on('newRTCSession', function(e)
   {
     setStatus('通话结束');
 
-    tmpSession = null;
     needReinvite = false;
 
     if (tmpStream)
@@ -383,13 +387,24 @@ ua.on('newRTCSession', function(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    stopStreams();
-
-    // 停止获取统计信息
-    stats && stats.stop();
-
+    if (rtcSession == e.session && Boolean(tmpSession))
+    {
+      stopStreams();
+      getStreams(tmpSession.connection);
+    }
+    else
+    {
+      tmpSession = null;
+      rtcSession = null;
+      // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
+      stopStreams();
+      // 停止获取统计信息
+      stats && stats.stop();
+    }
     optionsTimer && clearInterval(optionsTimer);
+
+    document.querySelector('#remoteVideo').classList = 'h-100';
+    document.querySelector('#remoteVideo2').classList = 'hide';
   });
 
   /**
@@ -478,11 +493,11 @@ ua.on('newRTCSession', function(e)
   {
     if (d.audio)
     {
-      document.querySelector('#muteMic').innerText = '开启麦克风';
+      setStatus('开启麦克风');
     }
     else if (d.video)
     {
-      document.querySelector('#muteCam').innerText = '开启摄像头';
+      setStatus('开启摄像头');
     }
   });
 
@@ -499,11 +514,13 @@ ua.on('newRTCSession', function(e)
   {
     if (d.audio)
     {
-      document.querySelector('#muteMic').innerText = '关闭麦克风';
+      // document.querySelector('#muteMic').innerText = '关闭麦克风';
+      setStatus('关闭麦克风');
     }
     else if (d.video)
     {
-      document.querySelector('#muteCam').innerText = '关闭摄像头';
+      // document.querySelector('#muteCam').innerText = '关闭摄像头';
+      setStatus('关闭摄像头');
     }
   });
 
@@ -577,6 +594,46 @@ ua.on('newRTCSession', function(e)
 
     // 获取媒体流
     getStreams(e.session.connection);
+
+    // // 播放远端的回铃音
+    // e.session.connection && e.session.connection.ontrack = function(event)
+    // {
+    // // 收到远端媒体则设置远端回铃音
+    //   earlyMedia = true;
+
+    //   remoteAudio.srcObject = event.streams[0];
+
+    //   /**
+    //  * 兼容chrome
+    //  * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+    //  * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+    //  */
+    //   remoteAudio.play()
+    //     .catch(() => { });
+    // };
+
+    e.session.connection.ontrack = function(event)
+    {
+      if (event.track.kind !== 'video')
+      {
+        return;
+      }
+
+      if (event.track.readyState == 'live')
+      {
+        document.querySelector('#remoteVideo2').srcObject = event.streams[0];
+        document.querySelector('#remoteVideo2').play();
+
+        document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
+        document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
+      }
+      else
+      {
+        document.querySelector('#remoteVideo').classList = 'h-100';
+        document.querySelector('#remoteVideo2').classList = 'hide';
+      }
+
+    };
   });
 
   //  ***** DOM 事件绑定 *****
@@ -649,18 +706,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#switchDevice').onclick = function()
   {
-    e.session.switchDevice('camera')
-      .then((stream) =>
-      {
-        console.warn('st: ', stream);
-        localVideo.srcObject = stream;
-
-        // 兼容不同浏览器安全策略
-        setTimeout(() =>
-        {
-          localVideo.play();
-        }, 100);
-      });
+    e.session.switchDevice('camera');
     setStatus('switchDevice facingMode');
   };
 
@@ -670,6 +716,13 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#cancel').onclick = function()
   {
     e.session.terminate();
+
+    try
+    {
+      rtcSession.terminate();
+      tmpSession.terminate();
+    }
+    catch (error) { }
   };
 
   /**
@@ -779,7 +832,11 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#screenShare').onclick = function()
   {
-    e.session.share('screen');
+    e.session.share('screen', null, null,);
+  };
+  document.querySelector('#screenShareD').onclick = function()
+  {
+    e.session.share('screen', null, null, true);
   };
 
   /**
@@ -791,13 +848,21 @@ ua.on('newRTCSession', function(e)
   {
     e.session.share('html', '#ele', html2canvas);
   };
+  document.querySelector('#formShareD').onclick = function()
+  {
+    e.session.share('html', '#ele', html2canvas, true);
+  };
 
   /**
    * 分享图片
    */
   document.querySelector('#picShare').onclick = function()
   {
-    e.session.share('pic', '#pic_s');
+    e.session.share('pic', '#pic_s', null);
+  };
+  document.querySelector('#picShareD').onclick = function()
+  {
+    e.session.share('pic', '#pic_s', null, true);
   };
 
   /**
@@ -809,7 +874,16 @@ ua.on('newRTCSession', function(e)
     document.querySelector('#video_s').play()
       .then(() =>
       {
-        e.session.share('video', '#video_s');
+        e.session.share('video', '#video_s', null);
+      });
+  };
+  document.querySelector('#videoShareD').onclick = function()
+  {
+    // 分享视频需要视频在播放状态
+    document.querySelector('#video_s').play()
+      .then(() =>
+      {
+        e.session.share('video', '#video_s', null, true);
       });
   };
 
@@ -958,10 +1032,13 @@ async function call(type)
     clearInterval(optionsTimer);
   }
 
-  optionsTimer = setInterval(() =>
+  if (navigator.userAgent.indexOf('iPhone') != -1)
   {
-    ua.sendOptions(`sip_ping@${sipDomain}`);
-  }, 3000);
+    optionsTimer = setInterval(() =>
+    {
+      ua.sendOptions(`sip_ping@${sipDomain}`);
+    }, 3000);
+  }
 
   // 默认远端无回铃音
   earlyMedia = false;
@@ -969,18 +1046,21 @@ async function call(type)
   // 播放远端的回铃音
   session.connection.ontrack = function(event)
   {
-    // 收到远端媒体则设置远端回铃音
-    earlyMedia = true;
+    if (event.track.kind === 'audio')
+    {
+      // 收到远端媒体则设置远端回铃音
+      earlyMedia = true;
 
-    remoteAudio.srcObject = event.streams[0];
+      remoteAudio.srcObject = event.streams[0];
 
-    /**
-     * 兼容chrome
-     * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-     * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-     */
-    remoteAudio.play()
-      .catch(() => { });
+      /**
+       * 兼容chrome
+       * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+       * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+       */
+      remoteAudio.play()
+        .catch(() => { });
+    }
   };
 
   // 外呼未触发newRTCSession前取消呼叫
