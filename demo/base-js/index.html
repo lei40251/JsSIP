@@ -88,12 +88,6 @@
             <button class="btn btn-warning" id="hold">保持/取消保持</button>
             <button class="btn btn-success" id="switchDevice">切换摄像头（兼容）</button>
           </div>
-          <div class="col col-auto mt-3">
-            <div class="input-group">
-              <input class="form-control" type="text" placeholder="请输入呼转到的号码" value="" id="refer">
-              <button class="btn btn-primary" id="referBtn"><i class="bi-telephone-outbound"></i> 呼转</button>
-            </div>
-          </div>
         </div>
         <div class="col col-12 row">
           <div class="col col-auto mt-3">
@@ -101,13 +95,27 @@
             <button class="btn btn-secondary" id="formShare"><i class="bi-table"></i> 分享页面元素</button>
             <button class="btn btn-secondary" id="picShare"><i class="bi-image"></i> 分享图片</button>
             <button class="btn btn-secondary" id="videoShare"><i class="bi-play"></i> 分享视频</button>
+            <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle"></i> 停止分享</button>
           </div>
           <div class="col col-auto mt-3">
-            <button class="btn btn-secondary" id="screenShareD"><i class="bi-tv"></i> 分享屏幕(D)</button>
-            <button class="btn btn-secondary" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
-            <button class="btn btn-secondary" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>
-            <button class="btn btn-secondary" id="videoShareD"><i class="bi-play"></i> 分享视频(D)</button>
-            <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle"></i> 停止分享</button>
+            <button class="btn btn-info" id="screenShareD"><i class="bi-tv"></i> 分享屏幕(D)</button>
+            <button class="btn btn-info" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
+            <button class="btn btn-info" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>
+            <button class="btn btn-info" id="videoShareD"><i class="bi-play"></i> 分享视频(D)</button>
+          </div>
+        </div>
+        <div class="col col-12 row">
+          <div class="col col-auto mt-3">
+            <div class="input-group">
+              <input class="form-control" type="text" placeholder="请输入呼转到的号码" value="" id="refer">
+              <button class="btn btn-primary" id="referBtn"><i class="bi-telephone-outbound"></i> 呼转</button>
+            </div>
+          </div>
+          <div class="col col-auto mt-3">
+            <div class="input-group">
+              <input type="text" class="form-control" placeholder="请输入要推送的内容" id="info" />
+              <button class="btn btn-primary" id="sendInfo">推送消息</button>
+            </div>
           </div>
         </div>
         <div class="col col-12 row">
@@ -124,12 +132,6 @@
             <button class="btn btn-success">9</button>
             <button class="btn btn-success">*</button>
             <button class="btn btn-success">#</button>
-          </div>
-          <div class="col col-auto mt-3">
-            <div class="input-group mb-3">
-              <input type="text" class="form-control" placeholder="请输入要推送的内容" id="info" />
-              <button class="btn btn-primary" id="sendInfo">推送消息</button>
-            </div>
           </div>
         </div>
       </div>
