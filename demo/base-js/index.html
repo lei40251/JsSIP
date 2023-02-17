@@ -79,10 +79,14 @@
         </div>
         <div class="col col-12 row">
           <div class="col col-auto mt-3">
-            <button class="btn btn-warning" id="muteMic">关闭麦克风</button>
-            <button class="btn btn-success" id="unmuteMic">开启麦克风</button>
-            <button class="btn btn-danger" id="muteCam">关闭摄像头</button>
-            <button class="btn btn-success" id="unmuteCam">开启摄像头</button>
+            <div class="btn-group">
+              <button class="btn btn-warning" id="muteMic"><i class="bi-mic-mute"></i> 关闭</button>
+              <button class="btn btn-success" id="unmuteMic"><i class="bi-mic"></i> 开启</button>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-warning" id="muteCam"><i class="bi-camera-video-off"></i> 关闭</button>
+              <button class="btn btn-success" id="unmuteCam"><i class="bi-camera-video"></i> 开启</button>
+            </div>
           </div>
           <div class="col col-auto mt-3">
             <button class="btn btn-warning" id="hold">保持/取消保持</button>
