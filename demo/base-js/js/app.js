@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -30,12 +30,14 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
-const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
+// const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
+// const signalingUrl = 'wss://vod.sinovancoo.com:5091/wss';
 // sip domain
-// const sipDomain = '5g.vsbc.com';
-const sipDomain = 'pro.vsbc.com';
+const sipDomain = '5g.vsbc.com';
+// const sipDomain = 'pro.vsbc.com';
+// const sipDomain = 'vod.sinovancoo.com';
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -50,9 +52,11 @@ const configuration = {
   // 显示名
   display_name : account,
   // SIP身份验证密码
-  // password     : `yl_19${account}`,
-  password     : `${account}`,
-  secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
+  password     : `yl_19${account}`,
+  // password     : `${account}_Zk!@34`,
+  // secret_key   : 'Dy8yKUMz1BoOTShFjHG6wg9Ez4LMpp2tctjcdg6GO18skAHo1URLeWcPMAMY8NaECsdDwLmEb8EgjORlU76TJN2UgEvTrrmX3bYDThwuRBHaGikKJF9CL5fp/govchBuowuVthtfByrYz1SS026OXlun0EiqBKX7Jg2JbEvgcQsznpb5Ms8vA3OYBsWzRJBX22aXvq6zpCK5re2WxGGROGoopRieevD6pCBc7O9b21/dBsaZc+YOyxH45ZuqWM+e3C4mhtDNoMIcns2ZmaLYItzj7yB+vMLh0NNG/ONH8/q1USqSKg9D903ddgel+r6LWiZPVpbsnBWrjYHPAIgD6Q=='
+  secret_key   : 'tGUEY7b+Tnrx9nRtn463YcssbMKswoiI0txcM+sHKx7HbT8n3KabY3Psx3KCILRE+Jvmr09ytnhCtuvsOlNVngWKI1UAGTKGB8UIwXOTM4i4G4FlzbTXGSuQ+jmxwfzEO2njBMdJS3r9yMce1o7cqRxL3R/y+UnZQTJnyiIOvvZS3lf1o5+ge4oMZTgly0xVaBy9TbyG3PIOgXC/wTH5GrG0IhpDQ8Ez5LLgV3tTAbZHSti0cn6ChUdVaB1n5OsElRhO7iTXLsUwtGDFlHUM6v0OL2bnHIMVaGbI9SpWmppucJGKB5CfU+dora5sjJ0pPhqgGHgqee5mSuD4jz0XoA=='
+  // secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -71,9 +75,9 @@ const pcConfig = {
   //     'credential': 'yl_19cu'
   //   }],
   // iceTransportPolicy: 'relay',
-  bundlePolicy       : 'max-compat',
-  tcpCandidatePolicy : 'disable',
-  IceTransportsType  : 'nohost'
+  // bundlePolicy      : 'max-compat',
+  // tcpCandidatePolicy : 'disable',
+  // IceTransportsType : 'nohost'
 };
 
 // UA 实例
@@ -1024,21 +1028,7 @@ async function call(type)
   }
 
   const callee = document.querySelector('#callee').value;
-  const session = ua.call(`${callee}@${sipDomain}`, options);
-
-  // 兼容iOS
-  if (optionsTimer)
-  {
-    clearInterval(optionsTimer);
-  }
-
-  if (navigator.userAgent.indexOf('iPhone') != -1)
-  {
-    optionsTimer = setInterval(() =>
-    {
-      ua.sendOptions(`sip_ping@${sipDomain}`);
-    }, 3000);
-  }
+  const session = await ua.call(`${callee}@${sipDomain}`, options);
 
   // 默认远端无回铃音
   earlyMedia = false;
@@ -1062,6 +1052,20 @@ async function call(type)
         .catch(() => { });
     }
   };
+
+  // 兼容iOS
+  if (optionsTimer)
+  {
+    clearInterval(optionsTimer);
+  }
+
+  if (navigator.userAgent.indexOf('iPhone') != -1)
+  {
+    optionsTimer = setInterval(() =>
+    {
+      ua.sendOptions(`sip_ping@${sipDomain}`);
+    }, 3000);
+  }
 
   // 外呼未触发newRTCSession前取消呼叫
   document.querySelector('#cancel').onclick = function()
