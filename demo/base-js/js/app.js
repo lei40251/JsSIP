@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -30,14 +30,13 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
-// const signalingUrl = 'wss://vod.sinovancoo.com:5091/wss';
+const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
-const sipDomain = '5g.vsbc.com';
-// const sipDomain = 'pro.vsbc.com';
-// const sipDomain = 'vod.sinovancoo.com';
+// const sipDomain = '5g.vsbc.com';
+const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -53,10 +52,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  // password     : `${account}_Zk!@34`,
-  // secret_key   : 'Dy8yKUMz1BoOTShFjHG6wg9Ez4LMpp2tctjcdg6GO18skAHo1URLeWcPMAMY8NaECsdDwLmEb8EgjORlU76TJN2UgEvTrrmX3bYDThwuRBHaGikKJF9CL5fp/govchBuowuVthtfByrYz1SS026OXlun0EiqBKX7Jg2JbEvgcQsznpb5Ms8vA3OYBsWzRJBX22aXvq6zpCK5re2WxGGROGoopRieevD6pCBc7O9b21/dBsaZc+YOyxH45ZuqWM+e3C4mhtDNoMIcns2ZmaLYItzj7yB+vMLh0NNG/ONH8/q1USqSKg9D903ddgel+r6LWiZPVpbsnBWrjYHPAIgD6Q=='
-  secret_key   : 'tGUEY7b+Tnrx9nRtn463YcssbMKswoiI0txcM+sHKx7HbT8n3KabY3Psx3KCILRE+Jvmr09ytnhCtuvsOlNVngWKI1UAGTKGB8UIwXOTM4i4G4FlzbTXGSuQ+jmxwfzEO2njBMdJS3r9yMce1o7cqRxL3R/y+UnZQTJnyiIOvvZS3lf1o5+ge4oMZTgly0xVaBy9TbyG3PIOgXC/wTH5GrG0IhpDQ8Ez5LLgV3tTAbZHSti0cn6ChUdVaB1n5OsElRhO7iTXLsUwtGDFlHUM6v0OL2bnHIMVaGbI9SpWmppucJGKB5CfU+dora5sjJ0pPhqgGHgqee5mSuD4jz0XoA=='
-  // secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
+  secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -75,9 +71,9 @@ const pcConfig = {
   //     'credential': 'yl_19cu'
   //   }],
   // iceTransportPolicy: 'relay',
-  // bundlePolicy      : 'max-compat',
-  // tcpCandidatePolicy : 'disable',
-  // IceTransportsType : 'nohost'
+  bundlePolicy       : 'max-compat',
+  tcpCandidatePolicy : 'disable',
+  IceTransportsType  : 'nohost'
 };
 
 // UA 实例
@@ -221,10 +217,10 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:98 transport-cc\r\n/g, '');
     d.sdp = d.sdp.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
 
-    // if (d.originator === 'local')
-    // {
-    //   d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    // }
+    if (d.originator === 'local')
+    {
+      d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    }
   });
 
   /**
@@ -298,9 +294,9 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('mode', function(d)
   {
-    console.log('mode: ', d);
     setStatus(`mode: ${d.mode}`);
 
+    stats && stats.reset();
     // 获取媒体流
     getStreams(e.session.connection);
   });
@@ -497,11 +493,11 @@ ua.on('newRTCSession', function(e)
   {
     if (d.audio)
     {
-      setStatus('开启麦克风');
+      setStatus('关闭麦克风');
     }
     else if (d.video)
     {
-      setStatus('开启摄像头');
+      setStatus('关闭摄像头');
     }
   });
 
@@ -518,13 +514,11 @@ ua.on('newRTCSession', function(e)
   {
     if (d.audio)
     {
-      // document.querySelector('#muteMic').innerText = '关闭麦克风';
-      setStatus('关闭麦克风');
+      setStatus('开启麦克风');
     }
     else if (d.video)
     {
-      // document.querySelector('#muteCam').innerText = '关闭摄像头';
-      setStatus('关闭摄像头');
+      setStatus('开启摄像头');
     }
   });
 
@@ -551,11 +545,11 @@ ua.on('newRTCSession', function(e)
     stats = new CRTC.getStats(e.session.connection);
     stats.on('report', function(r)
     {
-      document.querySelector('#upF').innerText = `${r.upFrameWidth}X${r.upFrameHeight}`;
-      document.querySelector('#downF').innerText = `${r.downFrameWidth}X${r.downFrameHeight}`;
-      document.querySelector('#upS').innerText = r.uplinkSpeed;
-      document.querySelector('#downS').innerText = r.downlinkSpeed;
-      document.querySelector('#downL').innerText = r.downlinkLoss;
+      document.querySelector('#upF').innerText = `${r.upFrameWidth || ''} ${r.upFrameHeight || ''}`;
+      document.querySelector('#downF').innerText = `${r.downFrameWidth || ''} ${r.downFrameHeight || ''}`;
+      document.querySelector('#upS').innerText = r.uplinkSpeed || '';
+      document.querySelector('#downS').innerText = r.downlinkSpeed || '';
+      document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
     // 兼容部分手机初始黑屏问题
@@ -599,23 +593,6 @@ ua.on('newRTCSession', function(e)
     // 获取媒体流
     getStreams(e.session.connection);
 
-    // // 播放远端的回铃音
-    // e.session.connection && e.session.connection.ontrack = function(event)
-    // {
-    // // 收到远端媒体则设置远端回铃音
-    //   earlyMedia = true;
-
-    //   remoteAudio.srcObject = event.streams[0];
-
-    //   /**
-    //  * 兼容chrome
-    //  * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-    //  * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-    //  */
-    //   remoteAudio.play()
-    //     .catch(() => { });
-    // };
-
     e.session.connection.ontrack = function(event)
     {
       if (event.track.kind !== 'video')
@@ -623,7 +600,7 @@ ua.on('newRTCSession', function(e)
         return;
       }
 
-      if (event.track.readyState == 'live')
+      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
       {
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
         document.querySelector('#remoteVideo2').play();
@@ -636,7 +613,6 @@ ua.on('newRTCSession', function(e)
         document.querySelector('#remoteVideo').classList = 'h-100';
         document.querySelector('#remoteVideo2').classList = 'hide';
       }
-
     };
   });
 
@@ -692,6 +668,7 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toVideo').onclick = function()
   {
     e.session.upgradeToVideo();
+    stats && stats.reset();
   };
 
   /**
@@ -897,6 +874,12 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#stopShare').onclick = function()
   {
     e.session.unShare();
+
+    setTimeout(() =>
+    {
+      // 获取媒体流
+      getStreams(e.session.connection);
+    }, 300);
   };
 
   /**
@@ -1088,7 +1071,7 @@ function getStreams(pc)
 
   // 本地视频
   localVideo.srcObject = localStream.videoStream;
-  localStream.videoStream.getTracks().length>0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     localVideo.srcObject = null;

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.1.2023221102
+ * CRTC v1.9.1.20232231347
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -15619,10 +15619,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // }
                 // else
                 // {
-                _this7._localMediaStream = stream;
+                // this._localMediaStream = stream;
                 // }
-
+                _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
                 var videoTrack = stream.getVideoTracks()[0];
+                _this7._localMediaStream.addTrack(videoTrack);
                 var sender = _this7._connection.getSenders().find(function (s) {
                   return s.track.kind == 'video';
                 });
@@ -15818,21 +15819,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         throw new Exceptions.InvalidStateError(this._status);
       }
       Utils.closeMediaStream(this._localShareStream);
-
-      // if (dual)
-      // {
-      //   return;
-      // }
-
-      // this._localMediaStream.getVideoTracks().forEach((track) =>
-      // {
-      //   const sender = this._connection.getSenders().find((s) =>
-      //   {
-      //     return s.track.kind == 'video';
-      //   });
-
-      //   sender.replaceTrack(track);
-      // });
     }
 
     /**
@@ -17241,14 +17227,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator7.f();
         }
-        if (!waiting && sdp_request.media.length < 3) {
-          this._localToAudio = true;
-          this._localToVideo = false;
-          nextS.call(this);
-        } else {
-          this._localToAudio = false;
-          this._localToVideo = true;
-          nextS.call(this);
+        if (!waiting) {
+          if (sdp_request.media.length < 3) {
+            this._localToAudio = true;
+            this._localToVideo = false;
+            nextS.call(this);
+          } else {
+            this._localToAudio = false;
+            this._localToVideo = true;
+            nextS.call(this);
+          }
         }
       }
       function sendAnswer(desc) {
@@ -18443,6 +18431,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
         });
+        this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
+          track.stop();
+        });
       }
     }
   }, {
@@ -18476,10 +18467,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var sender = _this34._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              sender.replaceTrack(track);
+              track.readyState === 'live' && sender.replaceTrack(track);
             });
             _this34._localShareStreamLocallyGenerated = false;
-            Utils.closeMediaStream(_this34._localShareStream);
           }
           _this34._localShareStream = null;
           _this34._localShareStreamLocallyGenerated = false;
@@ -20680,6 +20670,48 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "stop",
     value: function stop() {
       clearInterval(this._statsTimer);
+    }
+  }, {
+    key: "reset",
+    value: function reset() {
+      this._stats = {
+        audio: {
+          bytesSent: null,
+          packetsSent: null,
+          packetsSentLost: null,
+          bytesReceived: null,
+          packetsReceived: null,
+          packetsReceivedLost: null,
+          uplinkRTT: null,
+          uplinkLoss: null,
+          uplinkSpeed: null,
+          downlinkRTT: null,
+          downlinkLoss: null,
+          downlinkSpeed: null
+        },
+        video: {
+          packetsSent: null,
+          packetsSentLost: null,
+          packetsReceived: null,
+          packetsReceivedLost: null,
+          bytesSent: null,
+          bytesReceived: null,
+          uplinkRTT: null,
+          uplinkLoss: null,
+          uplinkSpeed: null,
+          downlinkRTT: null,
+          downlinkLoss: null,
+          downlinkSpeed: null,
+          framesEncoded: null,
+          framesDecoded: null,
+          framesSent: null,
+          framesReceived: null,
+          upFrameHeight: null,
+          upFrameWidth: null,
+          downFrameHeight: null,
+          downFrameWidth: null
+        }
+      };
     }
 
     // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
