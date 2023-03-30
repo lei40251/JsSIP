@@ -30,13 +30,13 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 // 信令地址
-// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
-const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
+// const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
-// const sipDomain = '5g.vsbc.com';
-const sipDomain = 'pro.vsbc.com';
+const sipDomain = '5g.vsbc.com';
+// const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -52,7 +52,7 @@ const configuration = {
   display_name : account,
   // SIP身份验证密码
   password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key') || 'aUlG0uUDPyZUIOXNWXSkqMcEbLu6dRRk1iNc2/SpMwk1dwTFWjv0GQ9Z+VLNSwE7wiNE0sI+AL0NNRcFBfBuW5Kdpd2DChvLufNE/TXHmUh8CqJUaSW1uyc0y8D0zbhkQyijK9jj4nNmsW9suMmjDjFShEo5YU4Q3rYj+ywQf33Z8fhOZlmqvM94rFFcKHHhTw+++urYKbHJ4i3IfVqnHdG755wSg2PqYNSjYDZsTNFoqaRefuO9KdxDfGb0kVUnJkdZyyJjnAVlpin9HMFVa00GEmubMJGRbgjG5O0d4O5W6wi/EzEJQ2PZmgwisyMQsMUH5LowWBq5sAtN04ABdw=='
+  secret_key   : sessionStorage.getItem('secret_key') || 'tGUEY7b+Tnrx9nRtn463YcssbMKswoiI0txcM+sHKx7HbT8n3KabY3Psx3KCILRE+Jvmr09ytnhCtuvsOlNVngWKI1UAGTKGB8UIwXOTM4i4G4FlzbTXGSuQ+jmxwfzEO2njBMdJS3r9yMce1o7cqRxL3R/y+UnZQTJnyiIOvvZS3lf1o5+ge4oMZTgly0xVaBy9TbyG3PIOgXC/wTH5GrG0IhpDQ8Ez5LLgV3tTAbZHSti0cn6ChUdVaB1n5OsElRhO7iTXLsUwtGDFlHUM6v0OL2bnHIMVaGbI9SpWmppucJGKB5CfU+dora5sjJ0pPhqgGHgqee5mSuD4jz0XoA=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -932,7 +932,7 @@ document.querySelector('.resume').onclick = function()
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
  */
-async function call(type)
+async function call(type, direction)
 {
   if (!ua.isRegistered())
   {
@@ -953,6 +953,11 @@ async function call(type)
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
     pcConfig     : pcConfig
   };
+
+  if (direction == 'sendonly')
+  {
+    options['rtcOfferConstraints'] ={ offerToReceiveAudio: true, offerToReceiveVideo: false };
+  }
 
   // 兼容安卓微信Bug及iOS蓝牙问题
   if ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1))
@@ -1199,6 +1204,13 @@ function start()
   {
     // 设置当前通话模式为视频模式
     call('video');
+  };
+
+  // 发起视频呼叫
+  document.querySelector('#callVideoSendonly').onclick = function()
+  {
+    // 设置当前通话模式为单向视频模式
+    call('video', 'sendonly');
   };
 
   // 监听系统输入设备变化更新摄像头列表
