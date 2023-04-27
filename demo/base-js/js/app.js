@@ -557,7 +557,7 @@ ua.on('newRTCSession', function(e)
     setTimeout(() =>
     {
       e.session.unmute({ video: true });
-    }, 500);
+    }, 700);
 
     // 兼容安卓微信Bug及iOS蓝牙问题
     if (d.originator === 'local' && ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1)))
@@ -1074,6 +1074,7 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
+  console.log('ls: ', localStream.videoStream);
   // 本地视频
   localVideo.srcObject = localStream.videoStream;
   localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()

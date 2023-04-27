@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.2.2023361044
+ * CRTC v1.9.2.20233311041
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -17701,28 +17701,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
 
-        // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
         // let ua;
 
         // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
-        //   .match(/cpu iphone os (.*?) like mac os/));
+        // .match(/cpu iphone os (.*?) like mac os/));
         // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
         // {
-        //   this._localMediaStream = Utils.getStreamThroughCanvas(stream);
+        _this28._localMediaStream = Utils.getStreamThroughCanvas(mediaStream);
         // }
         // else
         // {
-        _this28._localMediaStream = mediaStream;
+        //   this._localMediaStream = mediaStream;
         // }
 
-        if (mediaStream) {
+        console.warn('this._localMediaStream', _this28._localMediaStream);
+        if (_this28._localMediaStream) {
           // 兼容低版本浏览器不支持addTrack的情况
           if (RTCPeerConnection.prototype.addTrack) {
-            mediaStream.getTracks().forEach(function (track) {
-              _this28._connection.addTrack(track, mediaStream);
+            _this28._localMediaStream.getTracks().forEach(function (track) {
+              _this28._connection.addTrack(track, _this28._localMediaStream);
             });
           } else {
-            _this28._connection.addStream(mediaStream);
+            _this28._connection.addStream(_this28._localMediaStream);
           }
         }
 
@@ -23923,10 +23924,24 @@ exports.getStreamThroughCanvas = function (stream) {
   document.body.append(video);
   document.body.append(canvas);
   video.srcObject = stream;
+  var dur = 1;
+  setInterval(function () {
+    if (dur <= 0) {
+      dur = 3;
+    } else {
+      dur--;
+    }
+  }, 300);
 
   // 将视频绘制到画布
   var drawToCanvas = function drawToCanvas() {
     if (ctx !== null) {
+      if (dur <= 0) {
+        console.warn('clear canvas');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        window.requestAnimationFrame(drawToCanvas);
+        return;
+      }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       window.requestAnimationFrame(drawToCanvas);
     }
