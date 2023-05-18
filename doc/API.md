@@ -127,6 +127,7 @@ options
 |unhold|已恢复暂停的通话 |
 |mode|通话模式变化，如：音频模式切换到视频模式或视频模式切换到音频模式 |
 |cameraChanged|摄像头切换完成后触发 |
+|videoTrackState<sup>3</sup> |本端video状态变化事件，当video状态变化时触发|
 
 标注 1：
 data 字段
@@ -140,6 +141,13 @@ data 字段
 |-|-|
 |originator|接收为"local"，发送为"remote"|
 |info|Info 实例|
+
+标注 3：
+data 字段
+|字段名|说明|
+|-|-|
+|track|视频媒体track，可以获取track实时属性|
+|muted/readyState/label/enabled|muted:一般非主动释放摄像头时该属性会变为true，视频会中断|
 
 ## Module
 

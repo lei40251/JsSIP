@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -359,6 +359,11 @@ ua.on('newRTCSession', function(e)
 
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
+  });
+
+  e.session.on('videoTrackState', function(d)
+  {
+    console.warn('data:', d);
   });
 
   /**

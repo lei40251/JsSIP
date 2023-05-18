@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.2.20233311041
+ * CRTC v1.9.2.2023518917
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14630,6 +14630,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._contact = null;
     _this._from_tag = null;
     _this._to_tag = null;
+    _this._inviteVideoTrackStatsTimer = null;
+    _this._answerVideoTrackStatsTimer = null;
 
     // The RTCPeerConnection instance (public attribute).
     _this._connection = null;
@@ -14988,6 +14990,51 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (stream) {
         // Create a new RTCPeerConnection instance.
         _this2._createRTCConnection(pcConfig, rtcConstraints);
+        var videoTrackStates = new Map();
+        stream.getVideoTracks().forEach(function (track) {
+          _this2._inviteVideoTrackStatsTimer = setInterval(function () {
+            var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+            logger.debug('video track state: %s', JSON.stringify(trackObj));
+            if (videoTrackStates.has(track.id)) {
+              var trackStat = videoTrackStates.get(track.id);
+              if (track.enabled != trackStat.enabled) {
+                trackStat.enabled = track.enabled;
+                _this2.emit('videoTrackState', {
+                  track: track,
+                  enabled: track.enabled
+                });
+              }
+              if (track.readyState != trackStat.readyState) {
+                trackStat.readyState = track.readyState;
+                _this2.emit('videoTrackState', {
+                  track: track,
+                  readyState: track.readyState
+                });
+              }
+              if (track.muted != trackStat.muted) {
+                trackStat.muted = track.muted;
+                _this2.emit('videoTrackState', {
+                  track: track,
+                  muted: track.muted
+                });
+              }
+              if (track.label != trackStat.label) {
+                trackStat.label = track.label;
+                _this2.emit('videoTrackState', {
+                  track: track,
+                  label: track.label
+                });
+              }
+            } else {
+              videoTrackStates.set(track.id, {
+                enabled: track.enabled,
+                readyState: track.readyState,
+                muted: track.muted,
+                label: track.label
+              });
+            }
+          }, 1000);
+        });
 
         // Set internal properties.
         _this2._direction = 'outgoing';
@@ -15334,6 +15381,52 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // }
 
         if (stream) {
+          var videoTrackStates = new Map();
+          stream.getVideoTracks().forEach(function (track) {
+            _this4._answerVideoTrackStatsTimer = setInterval(function () {
+              var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+              logger.debug('video track state: %s', JSON.stringify(trackObj));
+              if (videoTrackStates.has(track.id)) {
+                var trackStat = videoTrackStates.get(track.id);
+                if (track.enabled != trackStat.enabled) {
+                  trackStat.enabled = track.enabled;
+                  _this4.emit('videoTrackState', {
+                    track: track,
+                    enabled: track.enabled
+                  });
+                }
+                if (track.readyState != trackStat.readyState) {
+                  trackStat.readyState = track.readyState;
+                  _this4.emit('videoTrackState', {
+                    track: track,
+                    readyState: track.readyState
+                  });
+                }
+                if (track.muted != trackStat.muted) {
+                  trackStat.muted = track.muted;
+                  _this4.emit('videoTrackState', {
+                    track: track,
+                    muted: track.muted
+                  });
+                }
+                if (track.label != trackStat.label) {
+                  trackStat.label = track.label;
+                  _this4.emit('videoTrackState', {
+                    track: track,
+                    label: track.label
+                  });
+                }
+              } else {
+                videoTrackStates.set(track.id, {
+                  enabled: track.enabled,
+                  readyState: track.readyState,
+                  muted: track.muted,
+                  label: track.label
+                });
+              }
+            }, 1000);
+          });
+
           // 兼容低版本浏览器不支持addTrack的情况
           if (RTCPeerConnection.prototype.addTrack) {
             stream.getTracks().forEach(function (track) {
@@ -17708,14 +17801,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // .match(/cpu iphone os (.*?) like mac os/));
         // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
         // {
-        _this28._localMediaStream = Utils.getStreamThroughCanvas(mediaStream);
+        // this._localMediaStream = Utils.getStreamThroughCanvas(mediaStream);
         // }
         // else
         // {
-        //   this._localMediaStream = mediaStream;
+        _this28._localMediaStream = mediaStream;
         // }
 
-        console.warn('this._localMediaStream', _this28._localMediaStream);
         if (_this28._localMediaStream) {
           // 兼容低版本浏览器不支持addTrack的情况
           if (RTCPeerConnection.prototype.addTrack) {
@@ -18665,6 +18757,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+      if (this._inviteVideoTrackStatsTimer) {
+        clearInterval(this._inviteVideoTrackStatsTimer);
+      }
+      if (this._answerVideoTrackStatsTimer) {
+        clearInterval(this._answerVideoTrackStatsTimer);
+      }
     }
   }, {
     key: "_failed",
@@ -22083,6 +22181,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       throw new TypeError('Not enough arguments');
     }
 
+    // 当前选项卡可见状态切换事件日志
+    try {
+      document.addEventListener('visibilitychange', function () {
+        logger.debug("document visibility change to ".concat(document.visibilityState, ", ").concat(document.hidden));
+      });
+    } catch (error) {}
+
     // 解析授权码
     try {
       var je = new encrypt.JSEncrypt();
@@ -23924,24 +24029,12 @@ exports.getStreamThroughCanvas = function (stream) {
   document.body.append(video);
   document.body.append(canvas);
   video.srcObject = stream;
-  var dur = 1;
-  setInterval(function () {
-    if (dur <= 0) {
-      dur = 3;
-    } else {
-      dur--;
-    }
-  }, 300);
 
   // 将视频绘制到画布
   var drawToCanvas = function drawToCanvas() {
     if (ctx !== null) {
-      if (dur <= 0) {
-        console.warn('clear canvas');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        window.requestAnimationFrame(drawToCanvas);
-        return;
-      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       window.requestAnimationFrame(drawToCanvas);
     }
@@ -23949,8 +24042,6 @@ exports.getStreamThroughCanvas = function (stream) {
 
   // 开始播放视频并设置画布尺寸后开始绘制视频到画布
   video.oncanplay = function () {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
     video.play();
     drawToCanvas();
   };
