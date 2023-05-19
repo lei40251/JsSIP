@@ -64,18 +64,36 @@ const videoConstraints = {
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {
   // TURN 配置
-  // iceServers: [
+  // iceServers : [
   //   {
-  //     'urls': 'turn:webrtc.xxxx.com:60001?transport=udp',
-  //     'username': 'ipcu',
-  //     'credential': 'yl_19cu'
-  //   }],
-  // iceTransportPolicy: 'relay',
+  //     'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
+  //     'username'   : 'ipcu',
+  //     'credential' : 'yl_19cu'
+  //   } ],
+  // iceTransportPolicy : 'public',
   bundlePolicy       : 'max-compat',
   tcpCandidatePolicy : 'disable',
   IceTransportsType  : 'nohost'
 };
 
+
+if (/Android/.test(navigator.userAgent))
+{
+  const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
+
+  if (browserVersion < 85)
+  {
+    console.log('Your Chrome version is lower than 85.');
+    pcConfig['iceServers'] =[
+      {
+        'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
+        'username'   : 'ipcu',
+        'credential' : 'yl_19cu'
+      } ];
+
+    pcConfig['iceTransportPolicy']= 'all';
+  }
+}
 // UA 实例
 const ua = new CRTC.UA(configuration);
 
@@ -221,6 +239,14 @@ ua.on('newRTCSession', function(e)
     {
       d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
     }
+    else if (d.sdp.indexOf('a=mid:0') === -1)
+    {
+      const regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
+      const replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
+      // const newSdp = sdp.replace(regex, replacement);
+
+      d.sdp = d.sdp.replace(regex, replacement);
+    }
   });
 
   /**
@@ -361,9 +387,29 @@ ua.on('newRTCSession', function(e)
     document.querySelector('#remoteVideo2').classList = 'hide';
   });
 
+  e.session.on('icecandidate', function(d)
+  {
+    console.warn('d: ', d);
+    d.ready();
+  });
+
+  /**
+    * videoTrackState
+    *
+    * @fires 视频轨道状态变化时触发
+    *
+    * @type {object}
+    * @property {MediaStreamTrack} track - 触发当前事件的视频轨道
+    * @property {string} properties - 触发当前事件的属性 muted/readyState/enabled/label 等
+    * @property {string/boolean} value - 变化后的值
+    */
   e.session.on('videoTrackState', function(d)
   {
-    console.warn('data:', d);
+    console.warn('videoTrackState: ', d.properties, d.value);
+    // if (d.properties === 'muted')
+    // {
+    setStatus(`videoTrackState ${d.properties} ${d.value}`);
+    // }
   });
 
   /**
