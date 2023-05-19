@@ -239,14 +239,14 @@ ua.on('newRTCSession', function(e)
     {
       d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
     }
-    else if (d.sdp.indexOf('a=mid:0') === -1)
-    {
-      const regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
-      const replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
-      // const newSdp = sdp.replace(regex, replacement);
+    // else if (d.sdp.indexOf('a=mid:0') === -1)
+    // {
+    //   const regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
+    //   const replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
+    //   // const newSdp = sdp.replace(regex, replacement);
 
-      d.sdp = d.sdp.replace(regex, replacement);
-    }
+    //   d.sdp = d.sdp.replace(regex, replacement);
+    // }
   });
 
   /**
@@ -385,12 +385,6 @@ ua.on('newRTCSession', function(e)
 
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
-  });
-
-  e.session.on('icecandidate', function(d)
-  {
-    console.warn('d: ', d);
-    d.ready();
   });
 
   /**
@@ -992,10 +986,18 @@ async function call(type, direction)
     return;
   }
 
-  // 兼容安卓微信Bug及iOS蓝牙问题
-  if (navigator.userAgent.indexOf('iPhone') !=-1)
+  // 兼容安卓微信Bug、iOS蓝牙及iOS 15.1&15.2问题
+  if (/iP(hone|od|ad)/.test(navigator.userAgent))
   {
     tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraints });
+    const version = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+    const majorVersion = parseInt(version[1], 10);
+
+    if (majorVersion === 15 && (version[2] === '1' || version[2] === '2'))
+    {
+      console.log('You are using iOS 15.1 or 15.2');
+      tmpStream = CRTC.Utils.getStreamThroughCanvas(tmpStream);
+    }
   }
 
   const mics = await CRTC.Utils.getMicrophones();

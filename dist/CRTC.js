@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.3.20235191057
+ * CRTC v1.9.3.20235191310
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14995,7 +14995,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         stream.getVideoTracks().forEach(function (track) {
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug('video track state: %s', JSON.stringify(trackObj));
+            logger.debug("video track state: ".concat(JSON.stringify(trackObj)));
             if (videoTrackStates.has(track.id)) {
               var trackStat = videoTrackStates.get(track.id);
               if (track.enabled != trackStat.enabled) {
@@ -15391,7 +15391,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           stream.getVideoTracks().forEach(function (track) {
             _this4._answerVideoTrackStatsTimer = setInterval(function () {
               var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-              logger.debug('video track state: %s', JSON.stringify(trackObj));
+              logger.debug("video track state: ".concat(JSON.stringify(trackObj)));
               if (videoTrackStates.has(track.id)) {
                 var trackStat = videoTrackStates.get(track.id);
                 if (track.enabled != trackStat.enabled) {
@@ -15452,10 +15452,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (_this4._late_sdp) {
           return;
         }
+        var newSdp = _this4._sdpAddMid(request.body);
         var e = {
           originator: 'remote',
           type: 'offer',
-          sdp: request.body
+          sdp: newSdp
         };
         logger.debug('emit "sdp"');
         _this4.emit('sdp', e);
@@ -16464,10 +16465,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 break;
               }
+              var newSdp = this._sdpAddMid(request.body);
               var e = {
                 originator: 'remote',
                 type: 'answer',
-                sdp: request.body
+                sdp: newSdp
               };
               logger.debug('emit "sdp"');
               this.emit('sdp', e);
@@ -16957,18 +16959,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var finished = false;
           var iceCandidateListener;
           var iceGatheringStateListener;
-          // ice 超时设置
-          var iceGatheringDuration = 0;
-          var iceGatheringTimer;
-          var iceGatherFlag = true;
-          _this18._iceReady = false;
           _this18._iceReady = false;
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
             connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
-
-            // 清理 ICE 收集超时定时器
-            clearInterval(iceGatheringTimer);
             finished = true;
             _this18._rtcReady = true;
 
@@ -16985,19 +16979,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           };
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
-
-            // 添加 ice 收集超时控制
-            iceGatheringDuration += 2 * 1000;
-            if (iceGatherFlag) {
-              iceGatherFlag = false;
-              iceGatheringTimer = setInterval(function () {
-                iceGatheringDuration -= 100;
-                if (iceGatheringDuration <= 0) {
+            if (candidate) {
+              // 两秒后如果没有收集结束，则强制结束
+              setTimeout(function () {
+                if (!finished) {
                   ready();
                 }
-              }, 100);
-            }
-            if (candidate) {
+              }, 2000);
               _this18.emit('icecandidate', {
                 candidate: candidate,
                 ready: ready
@@ -17541,10 +17529,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } finally {
         _iterator9.f();
       }
+      var newSdp = this._sdpAddMid(request.body);
       var e = {
         originator: 'remote',
         type: 'offer',
-        sdp: request.body
+        sdp: newSdp
       };
       logger.debug('emit "sdp"');
       this.emit('sdp', e);
@@ -17854,7 +17843,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
         logger.debug('emit "sending" [request:%o]', _this28._request);
-        logger.debug("emit \"sending\" [request:%o]".concat(JSON.stringify(_this28._request)));
+        var cache = [];
+        logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this28._request, function (key, value) {
+          if (_typeof(value) === 'object' && value !== null) {
+            if (cache.indexOf(value) !== -1) {
+              // 移除
+              return;
+            }
+            // 收集所有的值
+            cache.push(value);
+          }
+          return value;
+        })));
 
         // Emit 'sending' so the app can mangle the body before the request is sent.
         _this28.emit('sending', {
@@ -18874,6 +18874,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('mode', {
         mode: mode
       });
+    }
+
+    // sdp 中增加 mid 属性
+  }, {
+    key: "_sdpAddMid",
+    value: function _sdpAddMid(sdp) {
+      if (sdp.indexOf('a=mid:0') === -1) {
+        var regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
+        var replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
+        return sdp.replace(regex, replacement);
+      }
     }
   }], [{
     key: "C",
