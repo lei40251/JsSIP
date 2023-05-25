@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.4.2023524154
+ * CRTC v1.9.4.202352599
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16977,7 +16977,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this18.emit('sdp', e);
             resolve(e.sdp);
           };
-          ready();
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
             if (candidate) {

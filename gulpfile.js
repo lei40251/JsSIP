@@ -166,6 +166,13 @@ gulp.task('zip-dist', function()
     .pipe(gulp.dest('zip/dist/'));
 });
 
+gulp.task('zip-changelog', function()
+{
+  return gulp
+    .src('CHANGELOG.md')
+    .pipe(gulp.dest('zip/'));
+});
+
 gulp.task('zip-doc', function()
 {
   return gulp
@@ -191,7 +198,7 @@ gulp.task('zip-del', function(done)
   del.sync('./zip', done());
 });
 
-gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-doc', 'zip-zip', 'zip-del'));
+gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
 gulp.task('devel', gulp.series('grammar'));
 
