@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.4.20235191717
+ * CRTC v1.9.4.2023524154
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16977,6 +16977,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this18.emit('sdp', e);
             resolve(e.sdp);
           };
+          ready();
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
             if (candidate) {
@@ -17962,10 +17963,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               });
               break;
             }
+            var newSdp = this._sdpAddMid(response.body);
             var e = {
               originator: 'remote',
               type: 'answer',
-              sdp: response.body
+              sdp: newSdp
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', e);
@@ -18041,10 +18043,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             } else {
               this._ontogglemode('video');
             }
+            var _newSdp = this._sdpAddMid(response.body);
             var _e = {
               originator: 'remote',
               type: 'answer',
-              sdp: response.body
+              sdp: _newSdp
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', _e);
@@ -18207,10 +18210,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } finally {
           _iterator11.f();
         }
+        var newSdp = this._sdpAddMid(response.body);
         var e = {
           originator: 'remote',
           type: 'answer',
-          sdp: response.body
+          sdp: newSdp
         };
         logger.debug('emit "sdp"');
         this.emit('sdp', e);
@@ -18385,10 +18389,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator12.f();
           }
+          var newSdp = this._sdpAddMid(response.body);
           var e = {
             originator: 'remote',
             type: 'answer',
-            sdp: response.body
+            sdp: newSdp
           };
           logger.debug('emit "sdp"');
           this.emit('sdp', e);

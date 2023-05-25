@@ -71,11 +71,10 @@ const pcConfig = {
   //     'credential' : 'yl_19cu'
   //   } ],
   // iceTransportPolicy : 'public',
-  bundlePolicy       : 'max-compat',
+  bundlePolicy       : 'balanced',
   tcpCandidatePolicy : 'disable',
   IceTransportsType  : 'nohost'
 };
-
 
 if (/Android/.test(navigator.userAgent))
 {
@@ -92,6 +91,7 @@ if (/Android/.test(navigator.userAgent))
       } ];
 
     pcConfig['iceTransportPolicy']= 'all';
+    pcConfig['iceCandidatePoolSize']= 2;
   }
 }
 // UA 实例
