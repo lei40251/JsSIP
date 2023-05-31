@@ -226,7 +226,7 @@ ua.on('newRTCSession', function(e)
   // 部分场景兼容使用
   e.session.on('sdp', function(d)
   {
-    if (d.originator === 'remote' && d.sdp.indexOf('a=inactive') !== -1)
+    if (d.originator === 'remote' && d.sdp && d.sdp.indexOf('a=inactive') !== -1)
     {
       d.sdp = d.sdp.replace(/m=video \d*/, 'm=video 0');
     }

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.4.202352599
+ * CRTC v1.9.4.202353190
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -18888,6 +18888,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
         var replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
         return sdp.replace(regex, replacement);
+      } else {
+        return sdp;
       }
     }
   }], [{
