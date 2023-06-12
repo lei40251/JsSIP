@@ -51,6 +51,7 @@ options
 | unregistered | 注销时 |
 | registrationFailed | 注册失败时 |
 | newRTCSession<sup>**1**</sup> | 为呼入会话/发出呼叫时 |
+|network-quality<sup>**2**</sup> | 网络状态统计事件 |
 
 > 标注 1：data 字段说明
 
@@ -67,6 +68,15 @@ options
 |session|会话的 CRTC. RTCSession 实例|
 |request|传出 INVITE 请求的实例，可以获取呼叫携带数据，示例：request.getHeader('X-Data')|
 
+> 标注2：data 字段说明
+
+|字段名|说明|
+|-|-|
+|RTT|本端 RTT|
+|uplinkNetworkQuality|本端上行网络质量：<br>0 网络状况未知，表示当前 client 实例还没有建立上行/下行连接 <br>1	网络状况极佳<br>2	网络状况较好3	网络状况一般<br>4	网络状况差<br>5	网络状况极差<br>6	网络连接已断开|
+|uplinkLoss|本端上行丢包率|
+|downlinkNetworkQuality|本端下行网络质量：<br>0 网络状况未知，表示当前 client 实例还没有建立上行/下行连接 <br>1	网络状况极佳<br>2	网络状况较好3	网络状况一般<br>4	网络状况差<br>5	网络状况极差<br>6	网络连接已断开|
+|downlinkLoss|本端下行丢包率|
 ### CRTC.RTCSession
 
 #### 实例方法

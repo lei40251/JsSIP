@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -87,7 +87,7 @@ if (/Android/.test(navigator.userAgent))
       {
         'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
         'username'   : 'ipcu',
-        'credential' : 'yl_19cu'
+        'credential' : 'yl_19c555u'
       } ];
 
     pcConfig['iceTransportPolicy']= 'all';
@@ -588,6 +588,7 @@ ua.on('newRTCSession', function(e)
     // 获取统计信息
 
     stats = new CRTC.getStats(e.session.connection);
+
     stats.on('report', function(r)
     {
       document.querySelector('#upF').innerText = `${r.upFrameWidth || ''} ${r.upFrameHeight || ''}`;
@@ -595,6 +596,16 @@ ua.on('newRTCSession', function(e)
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
       document.querySelector('#downL').innerText = r.downlinkLoss || '';
+    });
+
+    stats.on('network-quality', function(ev)
+    {
+      console.warn('callee: ');
+      console.table(ev);
+
+      const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
+
+      document.querySelector('#NQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
     // 兼容部分手机初始黑屏问题
@@ -1068,6 +1079,7 @@ async function call(type, direction)
     };
   }
 
+  console.warn(options);
   const callee = document.querySelector('#callee').value;
   const session = await ua.call(`${callee}@${sipDomain}`, options);
 

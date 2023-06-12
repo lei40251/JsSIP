@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.4.202353190
+ * CRTC v1.9.6-beta.230608.2023691338
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -17049,7 +17049,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // const direction = m.direction;
 
               if (_this18._localToAudio) {
-                _m.port = 0;
+                if (_m.direction != 'recvonly') {
+                  _m.port = 0;
+                }
                 // m.direction = 'inactive';
                 if (_this18._remoteHold) {
                   _m.port = port;
@@ -20727,6 +20729,7 @@ function _assertThisInitialized(self) { if (self === void 0) { throw new Referen
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
 var EventEmitter = require('events').EventEmitter;
+var Utils = require('./Utils');
 var Logger = require('./Logger');
 var logger = new Logger('Stats');
 module.exports = /*#__PURE__*/function (_EventEmitter) {
@@ -20741,6 +20744,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._delay = delay;
     _this._statsTimer;
     _this._stats = {
+      transport: {
+        RTT: null
+      },
       audio: {
         bytesSent: null,
         packetsSent: null,
@@ -20748,10 +20754,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         bytesReceived: null,
         packetsReceived: null,
         packetsReceivedLost: null,
-        uplinkRTT: null,
+        // uplinkRTT           : null,
         uplinkLoss: null,
         uplinkSpeed: null,
-        downlinkRTT: null,
+        // downlinkRTT         : null,
         downlinkLoss: null,
         downlinkSpeed: null
       },
@@ -20762,10 +20768,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         packetsReceivedLost: null,
         bytesSent: null,
         bytesReceived: null,
-        uplinkRTT: null,
+        // uplinkRTT           : null,
         uplinkLoss: null,
         uplinkSpeed: null,
-        downlinkRTT: null,
+        // downlinkRTT         : null,
         downlinkLoss: null,
         downlinkSpeed: null,
         framesEncoded: null,
@@ -20818,6 +20824,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "reset",
     value: function reset() {
       this._stats = {
+        transport: {
+          RTT: null
+        },
         audio: {
           bytesSent: null,
           packetsSent: null,
@@ -20825,10 +20834,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           bytesReceived: null,
           packetsReceived: null,
           packetsReceivedLost: null,
-          uplinkRTT: null,
+          // uplinkRTT           : null,
           uplinkLoss: null,
           uplinkSpeed: null,
-          downlinkRTT: null,
+          // downlinkRTT         : null,
           downlinkLoss: null,
           downlinkSpeed: null
         },
@@ -20839,10 +20848,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           packetsReceivedLost: null,
           bytesSent: null,
           bytesReceived: null,
-          uplinkRTT: null,
+          // uplinkRTT           : null,
           uplinkLoss: null,
           uplinkSpeed: null,
-          downlinkRTT: null,
+          // downlinkRTT         : null,
           downlinkLoss: null,
           downlinkSpeed: null,
           framesEncoded: null,
@@ -20867,20 +20876,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         switch (report.type) {
           case 'remote-inbound-rtp':
             if (report.kind === 'video') {
-              _this3._stats.video.uplinkRTT = report['roundTripTime'];
               _this3._cStats.video.packetsSentLost = report['packetsLost'] - (_this3._stats.video.packetsSentLost ? _this3._stats.video.packetsSentLost : 0);
               _this3._stats.video.packetsSentLost = report['packetsLost'];
             } else if (report.kind === 'audio') {
-              _this3._stats.audio.uplinkRTT = report['roundTripTime'];
               _this3._cStats.audio.packetsSentLost = report['packetsLost'] - (_this3._stats.audio.packetsSentLost ? _this3._stats.audio.packetsSentLost : 0);
               _this3._stats.audio.packetsSentLost = report['packetsLost'];
             }
             break;
-          case 'remote-outbound-rtp':
-            if (report.kind === 'video') {
-              _this3._stats.video.downlinkRTT = report['roundTripTime'];
-            } else if (report.kind === 'audio') {
-              _this3._stats.audio.downlinkRTT = report['roundTripTime'];
+          case 'candidate-pair':
+            if (report['state'] !== 'succeeded') {
+              break;
+            } else {
+              _this3._stats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']);
             }
             break;
           case 'outbound-rtp':
@@ -21022,7 +21029,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       function parseStatsReport(report) {
         var rp = {
           transport: {
-            uplinkRTT: report.audio.uplinkRTT > report.video.uplinkRTT ? report.audio.uplinkRTT : report.video.uplinkRTT
+            RTT: report.transport.RTT
           },
           audio: {
             bytesSent: report.audio.bytesSent,
@@ -21054,23 +21061,67 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         };
         return {
-          uplinkRTT: rp.transport.uplinkRTT,
+          RTT: rp.transport.RTT,
           upFrameWidth: rp.video.upFrameWidth,
           upFrameHeight: rp.video.upFrameHeight,
           downFrameWidth: rp.video.downFrameWidth,
           downFrameHeight: rp.video.downFrameHeight,
           uplinkSpeed: "".concat(((rp.video.uplinkSpeed + rp.audio.uplinkSpeed) / 1000).toFixed(1), "kbps"),
           downlinkSpeed: "".concat(((rp.video.downlinkSpeed + rp.audio.downlinkSpeed) / 1000).toFixed(1), "kbps"),
-          downlinkLoss: "".concat(rp.audio.downlinkLoss > rp.video.downlinkLoss ? rp.audio.downlinkLoss : rp.video.downlinkLoss, "%")
+          downlinkLoss: "".concat(rp.audio.downlinkLoss > rp.video.downlinkLoss ? rp.audio.downlinkLoss : rp.video.downlinkLoss, "%"),
+          uplinkLoss: "".concat(rp.audio.uplinkLoss > rp.video.uplinkLoss ? rp.audio.uplinkLoss : rp.video.uplinkLoss, "%")
         };
       }
       logger.debug(JSON.stringify(this._stats));
       this.emit('report', parseStatsReport(this._stats));
+      // eslint-disable-next-line no-console
+      console.table(this._stats);
+
+      // 发送网络质量报告
+      var RTT = [];
+      var uplinkLoss = [];
+      var uplinkNetworkQuality = [];
+      var downlinkNetworkQuality = [];
+      var downlinkLoss = [];
+      RTT.push(this._stats.transport.RTT);
+      // eslint-disable-next-line max-len
+      uplinkLoss.push(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss);
+      // eslint-disable-next-line max-len
+      uplinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss, this._stats.transport.RTT));
+
+      // eslint-disable-next-line max-len
+      downlinkLoss.push(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss);
+      // eslint-disable-next-line max-len
+      downlinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss, this._stats.transport.RTT));
+      this._networkQuality = {
+        // eslint-disable-next-line max-len
+        uplinkNetworkQuality: uplinkNetworkQuality.length > 0 ? Math.floor(uplinkNetworkQuality.reduce(function (pre, cur) {
+          return pre + cur;
+        }) / uplinkNetworkQuality.length) || 0 : 0,
+        RTT: RTT.length > 0 ? Math.floor(RTT.reduce(function (pre, cur) {
+          return pre + cur;
+        }) / RTT.length) || 0 : 0,
+        // eslint-disable-next-line max-len
+        uplinkLoss: uplinkLoss.length > 0 ? Math.floor(uplinkLoss.reduce(function (pre, cur) {
+          return pre + cur;
+        }) / uplinkLoss.length) || 0 : 0,
+        // eslint-disable-next-line max-len
+        downlinkNetworkQuality: downlinkNetworkQuality.length > 0 ? Math.floor(downlinkNetworkQuality.reduce(function (pre, cur) {
+          return pre + cur;
+        }) / downlinkNetworkQuality.length) || 0 : 0,
+        // eslint-disable-next-line max-len
+        downlinkLoss: downlinkLoss.length > 0 ? Math.floor(downlinkLoss.reduce(function (pre, cur) {
+          return pre + cur;
+        }) / downlinkLoss.length) || 0 : 0
+      };
+      console.warn('ul: ', uplinkLoss);
+      // logger.debug(`networkQuality: ${JSON.stringify(this._networkQuality)}`);
+      this.emit('network-quality', this._networkQuality);
     }
   }]);
   return getStats;
 }(EventEmitter);
-},{"./Logger":9,"events":33}],25:[function(require,module,exports){
+},{"./Logger":9,"./Utils":30,"events":33}],25:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -24113,6 +24164,16 @@ exports.getStreamThroughCanvas = function (stream) {
     newStream.addTrack(audioTrack);
   }
   return newStream;
+};
+
+/**
+ * 计算网络质量
+ *
+ * 根据丢包率和RTT值计算网络质量值
+ */
+exports.getNetworkQuality = function (loss, rtt) {
+  // eslint-disable-next-line max-len
+  return loss > 40 || rtt > 500 ? 6 : loss > 30 || rtt > 350 ? 5 : loss > 20 || rtt > 200 ? 4 : loss > 10 || rtt > 100 ? 3 : loss > 0 || rtt >= 50 ? 2 : loss >= 0 || rtt < 50 ? 1 : 0;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
 "use strict";
@@ -32043,7 +32104,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.4",
+  "version": "1.9.6-beta.230608",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32094,6 +32155,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
