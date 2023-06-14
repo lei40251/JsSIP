@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.6.20236141425
+ * CRTC v1.9.6.20236141434
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -20944,10 +20944,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           default:
             break;
         }
-        if (data) {
-          logger.debug(data);
-        }
       });
+      if (data) {
+        logger.debug(data);
+      }
 
       // 语音上行丢包率
       if (this._cStats.audio.packetsSent === null) {
