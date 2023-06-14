@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.6-beta.230608.2023691338
+ * CRTC v1.9.6.20236141425
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -20742,6 +20742,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this = _super.call(this);
     _this._pc = pc;
     _this._delay = delay;
+
+    // 多少次getStats后发送完整statsReport
+    _this._count = 5;
     _this._statsTimer;
     _this._stats = {
       transport: {
@@ -20812,13 +20815,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._statsTimer = setInterval(function () {
         _this2._pc.getStats().then(function (stats) {
           _this2.parseReport(stats);
+          if (_this2._count === 0) {
+            _this2.parseReport(stats, true);
+          }
         });
+        _this2._count--;
+        logger.debug("cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
       }, this._delay * 1000);
     }
   }, {
     key: "stop",
     value: function stop() {
       clearInterval(this._statsTimer);
+      this._count = 5;
     }
   }, {
     key: "reset",
@@ -20870,9 +20879,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
   }, {
     key: "parseReport",
-    value: function parseReport(stats) {
+    value: function parseReport(stats, inform) {
       var _this3 = this;
+      var data = null;
       stats.forEach(function (report) {
+        if (inform) {
+          data += JSON.stringify(report);
+        }
         switch (report.type) {
           case 'remote-inbound-rtp':
             if (report.kind === 'video') {
@@ -20930,6 +20943,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
           default:
             break;
+        }
+        if (data) {
+          logger.debug(data);
         }
       });
 
@@ -21074,8 +21090,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       logger.debug(JSON.stringify(this._stats));
       this.emit('report', parseStatsReport(this._stats));
-      // eslint-disable-next-line no-console
-      console.table(this._stats);
 
       // 发送网络质量报告
       var RTT = [];
@@ -21114,8 +21128,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return pre + cur;
         }) / downlinkLoss.length) || 0 : 0
       };
-      console.warn('ul: ', uplinkLoss);
-      // logger.debug(`networkQuality: ${JSON.stringify(this._networkQuality)}`);
+      logger.debug("networkQuality: ".concat(JSON.stringify(this._networkQuality)));
       this.emit('network-quality', this._networkQuality);
     }
   }]);
@@ -32104,7 +32117,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.6-beta.230608",
+  "version": "1.9.6",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32155,5 +32168,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[8])(8)
 });
