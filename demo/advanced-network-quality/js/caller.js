@@ -3,18 +3,16 @@
 
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let callerStats;
-
 let tmpSession;
-
 // 通话统计
 let tmpVideoStream;
-
 // 兼容部分iOS手机蓝牙问题
 let tmpStream;
+let callee;
 
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
@@ -85,7 +83,7 @@ const caller = new CRTC.UA(configuration);
  */
 caller.on('failed', function(data)
 {
-  setStatus(`${data.originator} ${data.message} ${data.cause}`);
+  console.error(`${data.originator} ${data.message} ${data.cause}`);
 });
 
 /**
@@ -98,7 +96,7 @@ caller.on('failed', function(data)
  */
 caller.on('disconnected', function(data)
 {
-  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+  console.error(`信令连接断开: ${data.code} ${data.reason}`);
 });
 
 /**
@@ -110,7 +108,7 @@ caller.on('disconnected', function(data)
  */
 caller.on('connected', function()
 {
-  setStatus('信令已连接');
+  console.log('信令已连接');
 });
 
 /**
@@ -123,7 +121,7 @@ caller.on('connected', function()
  */
 caller.on('registered', function(data)
 {
-  setStatus(`注册成功：${data.response.from.uri.toString()}`);
+  console.log(`注册成功：${data.response.from.uri.toString()}`);
 });
 
 /**
@@ -137,7 +135,7 @@ caller.on('registered', function(data)
  */
 caller.on('registrationFailed', function(data)
 {
-  setStatus(`注册失败${data.cause}`);
+  console.error(`注册失败${data.cause}`);
 });
 
 /**
@@ -153,14 +151,6 @@ caller.on('registrationFailed', function(data)
 caller.on('newRTCSession', function(e)
 {
   console.log('nsession: ', e);
-
-  if (e.originator === 'remote')
-  {
-    // 远端呼入通过 request.mode 判断呼叫是音频还是视频
-    setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
-    // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
-    setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
-  }
 
   // ***** Session 事件回调 *****
 
@@ -183,26 +173,6 @@ caller.on('newRTCSession', function(e)
   });
 
   /**
-    * progress
-    *
-    * @fires 收到或者发出 1xx （>100） 的SIP请求时触发;可以在此设置回铃音或振铃
-    *
-    * @type {object}
-    * @property {string} mode - 'audio'音频模式，'video'视频模式
-    */
-  e.session.on('progress', function(d)
-  {
-    if (d.originator === 'local')
-    {
-      setStatus('收到呼叫，振铃中');
-    }
-    else
-    {
-      setStatus('对方已振铃，请等待接听');
-    }
-  });
-
-  /**
     * failed
     *
     * @fires 建立通话失败触发
@@ -214,7 +184,7 @@ caller.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d)
   {
-    setStatus(`通话建立失败: ${d.cause}`);
+    console.error(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
 
@@ -225,8 +195,8 @@ caller.on('newRTCSession', function(e)
     }
 
     // 输出通话开始时间及通话结束时间
-    setStatus(`start: ${e.session.start_time}`);
-    setStatus(`ended: ${e.session.end_time}`);
+    console.log(`start: ${e.session.start_time}`);
+    console.log(`ended: ${e.session.end_time}`);
 
     // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
     stopStreams();
@@ -247,7 +217,7 @@ caller.on('newRTCSession', function(e)
     */
   e.session.on('ended', function()
   {
-    setStatus('通话结束');
+    console.warn('通话结束');
 
     if (tmpStream)
     {
@@ -256,8 +226,8 @@ caller.on('newRTCSession', function(e)
     }
 
     // 输出通话开始时间及通话结束时间
-    setStatus(`start: ${e.session.start_time}`);
-    setStatus(`ended: ${e.session.end_time}`);
+    console.log(`start: ${e.session.start_time}`);
+    console.log(`ended: ${e.session.end_time}`);
 
     // 停止获取统计信息
     callerStats && callerStats.stop();
@@ -291,7 +261,17 @@ caller.on('newRTCSession', function(e)
     */
   e.session.on('confirmed', async function(d)
   {
-    setStatus('confirmed');
+    // 通话建立后20s统计时间然后结束通话
+    setTimeout(() =>
+    {
+      e.session.terminate();
+
+      try
+      {
+        tmpSession.terminate();
+      }
+      catch (error) { }
+    }, 20000);
 
     const mics = await CRTC.Utils.getMicrophones();
     // 获取统计信息
@@ -299,7 +279,6 @@ caller.on('newRTCSession', function(e)
     callerStats = new CRTC.getStats(e.session.connection);
     callerStats.on('report', function(r)
     {
-      console.table(r);
       document.querySelector('#upF').innerText = `${r.upFrameWidth || ''} ${r.upFrameHeight || ''}`;
       document.querySelector('#downF').innerText = `${r.downFrameWidth || ''} ${r.downFrameHeight || ''}`;
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
@@ -309,22 +288,11 @@ caller.on('newRTCSession', function(e)
 
     callerStats.on('network-quality', function(ev)
     {
-      // console.warn('caller: ');
-      // console.table(ev);
-
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
       document.querySelector('#uNQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
-
       testResult.uplinkNetworkQualities.push(ev.uplinkNetworkQuality);
     });
-
-    // 兼容部分手机初始黑屏问题
-    e.session.mute({ video: true });
-    setTimeout(() =>
-    {
-      e.session.unmute({ video: true });
-    }, 700);
 
     // 兼容安卓微信Bug及iOS蓝牙问题
     if (d.originator === 'local' && ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1)))
@@ -379,22 +347,6 @@ caller.on('newRTCSession', function(e)
       }
     };
   });
-
-  //  ***** DOM 事件绑定 *****
-
-  /**
-   * 结束通话
-   */
-  document.querySelector('#cancel').onclick = function()
-  {
-    e.session.terminate();
-
-    try
-    {
-      tmpSession.terminate();
-    }
-    catch (error) { }
-  };
 });
 
 /**
@@ -403,9 +355,13 @@ caller.on('newRTCSession', function(e)
  */
 async function call(type, direction)
 {
-  if (!caller.isRegistered())
+  if (!caller.isRegistered() || !callee.isRegistered)
   {
-    setStatus('请注册成功后呼叫');
+    console.error('请注册成功后呼叫');
+    setTimeout(() =>
+    {
+      call('video', 'sendonly');
+    }, 100);
 
     return;
   }
@@ -479,14 +435,9 @@ async function call(type, direction)
     };
   }
 
-  const callee = document.querySelector('#callee').value;
-  const session = await caller.call(`${callee}@${sipDomain}`, options);
+  const calleeNo = handleGetQuery('callee');
 
-  // 外呼未触发newRTCSession前取消呼叫
-  document.querySelector('#cancel').onclick = function()
-  {
-    session.terminate();
-  };
+  await caller.call(`${calleeNo}@${sipDomain}`, options);
 }
 
 /**
@@ -505,34 +456,22 @@ function handleGetQuery(name)
 }
 
 /**
- * 输出显示状态
- *
- * @param {string} text - 输出的内容
- */
-function setStatus(text)
-{
-  const statusDom = document.querySelector('#status');
-
-  statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
-}
-
-/**
  * 启动初始化
  */
 function callerStart()
 {
   // 输出SDK版本号
-  setStatus(`SDK Ver: ${CRTC.version}`);
+  console.warn(`SDK Ver: ${CRTC.version}`);
 
   // 启动UA，连接信令服务器并注册
   caller.start();
 
-  // 发起视频呼叫
-  document.querySelector('#callVideoSendonly').onclick = function()
+  // 可以定时发起呼叫、手动发起呼叫、或者判断两个客户都注册成功后发起呼叫
+  setTimeout(() =>
   {
     // 设置当前通话模式为单向视频模式
     call('video', 'sendonly');
-  };
+  }, 1000);
 }
 
 callerStart();

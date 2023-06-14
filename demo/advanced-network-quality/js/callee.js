@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
-CRTC.debug.disable('CRTC:*');
 let calleeStats;
 const calleeAccount = handleGetQuery('callee');
 // 主叫
-const callee = new CRTC.UA({
+
+callee = new CRTC.UA({
   // JsSIP.Socket 实例
   sockets      : new CRTC.WebSocketInterface(signalingUrl),
   // 与 UA 关联的 SIP URI
@@ -32,7 +32,7 @@ const callee = new CRTC.UA({
 callee.on('failed', function(data)
 {
   console.warn('data:', data);
-  setStatus(`${data.originator} ${data.message} ${data.cause}`);
+  console.log(`${data.originator} ${data.message} ${data.cause}`);
 });
 
 /**
@@ -45,7 +45,7 @@ callee.on('failed', function(data)
  */
 callee.on('disconnected', function(data)
 {
-  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+  console.log(`信令连接断开: ${data.code} ${data.reason}`);
 });
 
 /**
@@ -57,7 +57,7 @@ callee.on('disconnected', function(data)
  */
 callee.on('connected', function()
 {
-  setStatus('信令已连接');
+  console.log('信令已连接');
 });
 
 /**
@@ -70,7 +70,7 @@ callee.on('connected', function()
  */
 callee.on('registered', function(data)
 {
-  setStatus(`注册成功：${data.response.from.uri.toString()}`);
+  console.warn(`注册成功：${data.response.from.uri.toString()}`);
 });
 
 /**
@@ -84,7 +84,7 @@ callee.on('registered', function(data)
  */
 callee.on('registrationFailed', function(data)
 {
-  setStatus(`注册失败${data.cause}`);
+  console.error(`注册失败${data.cause}`);
 });
 
 /**
@@ -100,14 +100,6 @@ callee.on('registrationFailed', function(data)
 callee.on('newRTCSession', function(e)
 {
   console.log('nsession: ', e);
-
-  if (e.originator === 'remote')
-  {
-    // 远端呼入通过 request.mode 判断呼叫是音频还是视频
-    setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
-    // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
-    setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
-  }
 
   // ***** Session 事件回调 *****
 
@@ -139,14 +131,15 @@ callee.on('newRTCSession', function(e)
     */
   e.session.on('progress', function(d)
   {
-    if (d.originator === 'local')
+    // 因为中间会有信令传输时间，所以稍延迟
+    setTimeout(() =>
     {
-      setStatus('收到呼叫，振铃中');
-    }
-    else
-    {
-      setStatus('对方已振铃，请等待接听');
-    }
+      e.session.answer({
+        pcConfig     : pcConfig,
+        // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+        extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
+      });
+    }, 200);
   });
 
   /**
@@ -161,7 +154,7 @@ callee.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d)
   {
-    setStatus(`通话建立失败: ${d.cause}`);
+    console.error(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
 
@@ -170,10 +163,6 @@ callee.on('newRTCSession', function(e)
       tmpStream.getTracks().forEach((track) => track.stop());
       tmpStream = null;
     }
-
-    // 输出通话开始时间及通话结束时间
-    setStatus(`start: ${e.session.start_time}`);
-    setStatus(`ended: ${e.session.end_time}`);
 
     // 停止获取统计信息
     calleeStats && calleeStats.stop();
@@ -194,18 +183,11 @@ callee.on('newRTCSession', function(e)
     // 停止获取统计信息
     calleeStats && calleeStats.stop();
 
-    setStatus('通话结束');
-
     if (tmpStream)
     {
       tmpStream.getTracks().forEach((track) => track.stop());
       tmpStream = null;
     }
-
-    // 输出通话开始时间及通话结束时间
-    setStatus(`start: ${e.session.start_time}`);
-    setStatus(`ended: ${e.session.end_time}`);
-    console.warn('thjs');
   });
 
   /**
@@ -218,8 +200,6 @@ callee.on('newRTCSession', function(e)
     */
   e.session.on('confirmed', async function(d)
   {
-    setStatus('confirmed');
-
     const mics = await CRTC.Utils.getMicrophones();
     // 获取统计信息
 
@@ -235,9 +215,6 @@ callee.on('newRTCSession', function(e)
     });
     calleeStats.on('network-quality', function(ev)
     {
-      // console.warn('callee: ');
-      // console.table(ev);
-
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
       document.querySelector('#dNQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
@@ -276,23 +253,6 @@ callee.on('newRTCSession', function(e)
       }
     }
   });
-
-  //  ***** DOM 事件绑定 *****
-
-  /**
-   * 视频接听
-   */
-  document.querySelector('#answerVideo').onclick = function()
-  {
-    e.session.answer({
-      pcConfig     : pcConfig,
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ]
-    });
-
-    setStatus('video answer');
-  };
-
 });
 
 /**
@@ -311,35 +271,6 @@ function handleGetQuery(name)
 }
 
 /**
- * 输出显示状态
- *
- * @param {string} text - 输出的内容
- */
-function setStatus(text)
-{
-  const statusDom = document.querySelector('#status');
-
-  statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
-}
-
-
-/**
  * 启动初始化
  */
-function calleeStart()
-{
-  // 输出SDK版本号
-  setStatus(`SDK Ver: ${CRTC.version}`);
-
-  // 启动UA，连接信令服务器并注册
-  callee.start();
-
-  // 发起视频呼叫
-  document.querySelector('#callVideoSendonly').onclick = function()
-  {
-    // 设置当前通话模式为单向视频模式
-    call('video', 'sendonly');
-  };
-}
-
-calleeStart();
+callee.start();

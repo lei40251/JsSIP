@@ -5,6 +5,7 @@ CHANGELOG
 * 修复单向被叫bug
 * 增加通话中的网络状态统计事件 network-quality, 调整了原来通话状态统计 report事件返回参数
 * 增加通话前网络检测示例
+* 增加了通话开始5秒左右输出一次完整getStats Report
 ### 1.9.5
 
 
