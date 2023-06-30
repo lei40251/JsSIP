@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.6.20236141438
+ * CRTC v1.9.7.20236301424
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14992,51 +14992,55 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // Create a new RTCPeerConnection instance.
         _this2._createRTCConnection(pcConfig, rtcConstraints);
         var videoTrackStates = new Map();
-        stream.getVideoTracks().forEach(function (track) {
+
+        // 音视频轨道属性状态都分别保存日志，视频轨道状态变化触发对应事件
+        stream.getTracks().forEach(function (track) {
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug("video track state: ".concat(JSON.stringify(trackObj)));
-            if (videoTrackStates.has(track.id)) {
-              var trackStat = videoTrackStates.get(track.id);
-              if (track.enabled != trackStat.enabled) {
-                trackStat.enabled = track.enabled;
-                _this2.emit('videoTrackState', {
-                  track: track,
-                  properties: 'enabled',
-                  value: track.enabled
+            logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
+            if (track.kind === 'video') {
+              if (videoTrackStates.has(track.id)) {
+                var trackStat = videoTrackStates.get(track.id);
+                if (track.enabled != trackStat.enabled) {
+                  trackStat.enabled = track.enabled;
+                  _this2.emit('videoTrackState', {
+                    track: track,
+                    properties: 'enabled',
+                    value: track.enabled
+                  });
+                }
+                if (track.readyState != trackStat.readyState) {
+                  trackStat.readyState = track.readyState;
+                  _this2.emit('videoTrackState', {
+                    track: track,
+                    properties: 'readyState',
+                    value: track.readyState
+                  });
+                }
+                if (track.muted != trackStat.muted || track.mute == true) {
+                  trackStat.muted = track.muted;
+                  _this2.emit('videoTrackState', {
+                    track: track,
+                    properties: 'muted',
+                    value: track.muted
+                  });
+                }
+                if (track.label != trackStat.label) {
+                  trackStat.label = track.label;
+                  _this2.emit('videoTrackState', {
+                    track: track,
+                    properties: 'label',
+                    value: track.label
+                  });
+                }
+              } else {
+                videoTrackStates.set(track.id, {
+                  enabled: track.enabled,
+                  readyState: track.readyState,
+                  muted: track.muted,
+                  label: track.label
                 });
               }
-              if (track.readyState != trackStat.readyState) {
-                trackStat.readyState = track.readyState;
-                _this2.emit('videoTrackState', {
-                  track: track,
-                  properties: 'readyState',
-                  value: track.readyState
-                });
-              }
-              if (track.muted != trackStat.muted) {
-                trackStat.muted = track.muted;
-                _this2.emit('videoTrackState', {
-                  track: track,
-                  properties: 'muted',
-                  value: track.muted
-                });
-              }
-              if (track.label != trackStat.label) {
-                trackStat.label = track.label;
-                _this2.emit('videoTrackState', {
-                  track: track,
-                  properties: 'label',
-                  value: track.label
-                });
-              }
-            } else {
-              videoTrackStates.set(track.id, {
-                enabled: track.enabled,
-                readyState: track.readyState,
-                muted: track.muted,
-                label: track.label
-              });
             }
           }, 1000);
         });
@@ -15388,51 +15392,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         if (stream) {
           var videoTrackStates = new Map();
-          stream.getVideoTracks().forEach(function (track) {
+          stream.getTracks().forEach(function (track) {
             _this4._answerVideoTrackStatsTimer = setInterval(function () {
               var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-              logger.debug("video track state: ".concat(JSON.stringify(trackObj)));
-              if (videoTrackStates.has(track.id)) {
-                var trackStat = videoTrackStates.get(track.id);
-                if (track.enabled != trackStat.enabled) {
-                  trackStat.enabled = track.enabled;
-                  _this4.emit('videoTrackState', {
-                    track: track,
-                    properties: 'enabled',
-                    value: track.enabled
+              logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
+              if (track.kind === 'video') {
+                if (videoTrackStates.has(track.id)) {
+                  var trackStat = videoTrackStates.get(track.id);
+                  if (track.enabled != trackStat.enabled) {
+                    trackStat.enabled = track.enabled;
+                    _this4.emit('videoTrackState', {
+                      track: track,
+                      properties: 'enabled',
+                      value: track.enabled
+                    });
+                  }
+                  if (track.readyState != trackStat.readyState) {
+                    trackStat.readyState = track.readyState;
+                    _this4.emit('videoTrackState', {
+                      track: track,
+                      properties: 'readyState',
+                      value: track.readyState
+                    });
+                  }
+                  if (track.muted != trackStat.muted || track.mute == true) {
+                    trackStat.muted = track.muted;
+                    _this4.emit('videoTrackState', {
+                      track: track,
+                      properties: 'muted',
+                      value: track.muted
+                    });
+                  }
+                  if (track.label != trackStat.label) {
+                    trackStat.label = track.label;
+                    _this4.emit('videoTrackState', {
+                      track: track,
+                      properties: 'label',
+                      value: track.label
+                    });
+                  }
+                } else {
+                  videoTrackStates.set(track.id, {
+                    enabled: track.enabled,
+                    readyState: track.readyState,
+                    muted: track.muted,
+                    label: track.label
                   });
                 }
-                if (track.readyState != trackStat.readyState) {
-                  trackStat.readyState = track.readyState;
-                  _this4.emit('videoTrackState', {
-                    track: track,
-                    properties: 'readyState',
-                    value: track.readyState
-                  });
-                }
-                if (track.muted != trackStat.muted) {
-                  trackStat.muted = track.muted;
-                  _this4.emit('videoTrackState', {
-                    track: track,
-                    properties: 'muted',
-                    value: track.muted
-                  });
-                }
-                if (track.label != trackStat.label) {
-                  trackStat.label = track.label;
-                  _this4.emit('videoTrackState', {
-                    track: track,
-                    properties: 'label',
-                    value: track.label
-                  });
-                }
-              } else {
-                videoTrackStates.set(track.id, {
-                  enabled: track.enabled,
-                  readyState: track.readyState,
-                  muted: track.muted,
-                  label: track.label
-                });
               }
             }, 1000);
           });
@@ -32117,7 +32123,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32168,6 +32174,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });

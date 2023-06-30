@@ -133,6 +133,10 @@ options
 | muted | 当本地媒体静音时触发，包括音频静音或视频关闭 |
 | unmuted | 当本地媒体取消静音时触发，包括音频取消静音或打开关闭的视频 |
 | getusermediafailed | 当内部调用 getUserMedia() 失败时触发 |
+| peerconnection:createofferfailed | 当内部调用 createOffer() 失败时触发 |
+| peerconnection:createanswerfailed | 当内部调用 createAnswer() 失败时触发 |
+| peerconnection:setlocaldescriptionfailed | 当内部调用 setLocalDescription() 失败时触发 |
+| peerconnection:setremotedescriptionfailed | 当内部调用 setRemoteDescription() 失败时触发 |
 |hold|通话已暂停 |
 |unhold|已恢复暂停的通话 |
 |mode|通话模式变化，如：音频模式切换到视频模式或视频模式切换到音频模式 |
