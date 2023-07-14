@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.7.20236301424
+ * CRTC v1.9.7.20237141352
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14997,6 +14997,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         stream.getTracks().forEach(function (track) {
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+            logger.debug("".concat(track.kind, " settings: ").concat(JSON.stringify(track.getSettings())));
+            logger.debug("".concat(track.kind, " constraints: ").concat(JSON.stringify(track.getConstraints())));
+            logger.debug("".concat(track.kind, " capabilities: ").concat(JSON.stringify(track.getCapabilities())));
             logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
             if (track.kind === 'video') {
               if (videoTrackStates.has(track.id)) {
@@ -15395,6 +15398,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           stream.getTracks().forEach(function (track) {
             _this4._answerVideoTrackStatsTimer = setInterval(function () {
               var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+              logger.debug("".concat(track.kind, " settings: ").concat(JSON.stringify(track.getSettings())));
+              logger.debug("".concat(track.kind, " constraints: ").concat(JSON.stringify(track.getConstraints())));
+              logger.debug("".concat(track.kind, " capabilities: ").concat(JSON.stringify(track.getCapabilities())));
               logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
               if (track.kind === 'video') {
                 if (videoTrackStates.has(track.id)) {
