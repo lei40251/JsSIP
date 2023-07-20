@@ -1000,7 +1000,13 @@ async function call(type, direction)
   // 兼容安卓微信Bug、iOS蓝牙及iOS 15.1&15.2问题
   if (/iP(hone|od|ad)/.test(navigator.userAgent))
   {
-    tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraints });
+    tmpStream = await navigator.mediaDevices.getUserMedia({ audio : {
+      echoCancellation : {
+        exact                     : true,
+        echoCancellationThreshold : -80 // 调整阈值为-40dB
+      }
+    },
+    video : videoConstraints });
     const version = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
     const majorVersion = parseInt(version[1], 10);
 
@@ -1074,7 +1080,12 @@ async function call(type, direction)
   else
   {
     options['mediaConstraints'] = {
-      audio : true,
+      audio : {
+        echoCancellation : {
+          exact                     : true,
+          echoCancellationThreshold : -40 // 调整阈值为-40dB
+        }
+      },
       video : type === 'video' ? videoConstraints : false
     };
   }
