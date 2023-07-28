@@ -118,6 +118,8 @@ callee.on('newRTCSession', function(e)
     if (d.originator === 'local')
     {
       d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+      d.sdp = d.sdp.replace(/m=video 9/, 'm=video 6666');
+      d.sdp = d.sdp.replace(/m=audio 9/, 'm=audio 6666');
     }
   });
 

@@ -169,6 +169,9 @@ caller.on('newRTCSession', function(e)
     if (d.originator === 'local')
     {
       d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+
+      d.sdp = d.sdp.replace(/m=video 9/, 'm=video 9999');
+      d.sdp = d.sdp.replace(/m=audio 9/, 'm=audio 9999');
     }
   });
 
@@ -366,19 +369,19 @@ async function call(type, direction)
     return;
   }
 
-  // 兼容安卓微信Bug、iOS蓝牙及iOS 15.1&15.2问题
-  if (/iP(hone|od|ad)/.test(navigator.userAgent))
-  {
-    tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraints });
-    const version = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-    const majorVersion = parseInt(version[1], 10);
+  // // 兼容安卓微信Bug、iOS蓝牙及iOS 15.1&15.2问题
+  // if (/iP(hone|od|ad)/.test(navigator.userAgent))
+  // {
+  //   tmpStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraints });
+  //   const version = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+  //   const majorVersion = parseInt(version[1], 10);
 
-    if (majorVersion === 15 && (version[2] === '1' || version[2] === '2'))
-    {
-      console.log('You are using iOS 15.1 or 15.2');
-      tmpStream = CRTC.Utils.getStreamThroughCanvas(tmpStream);
-    }
-  }
+  //   if (majorVersion === 15 && (version[2] === '1' || version[2] === '2'))
+  //   {
+  //     console.log('You are using iOS 15.1 or 15.2');
+  //     tmpStream = CRTC.Utils.getStreamThroughCanvas(tmpStream);
+  //   }
+  // }
 
   const mics = await CRTC.Utils.getMicrophones();
   const options = {
@@ -392,50 +395,83 @@ async function call(type, direction)
     options['rtcOfferConstraints'] ={ offerToReceiveAudio: false, offerToReceiveVideo: false };
   }
 
-  // 兼容安卓微信Bug及iOS蓝牙问题
-  if ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1))
-  {
-    // 增加安卓微信呼叫的语音提醒
-    const audio = new Audio('./sound/waiting.mp3');
-    const localStream = new MediaStream();
-    const audioCtx = new AudioContext();
-    const destination = audioCtx.createMediaStreamDestination();
-    const source = audioCtx.createMediaElementSource(audio);
+  // // 兼容安卓微信Bug及iOS蓝牙问题
+  // if ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1))
+  // {
+  //   // 增加安卓微信呼叫的语音提醒
+  //   const audio = new Audio('./sound/waiting.mp3');
+  //   const localStream = new MediaStream();
+  //   const audioCtx = new AudioContext();
+  //   const destination = audioCtx.createMediaStreamDestination();
+  //   const source = audioCtx.createMediaElementSource(audio);
 
-    audio.loop = true;
-    audio.crossOrigin = 'anonymous';
-    audio.play().catch((e) => { console.log(e); });
-    source.connect(destination);
-    localStream.addTrack(destination.stream.getAudioTracks()[0]);
+  //   audio.loop = true;
+  //   audio.crossOrigin = 'anonymous';
+  //   audio.play().catch((e) => { console.log(e); });
+  //   source.connect(destination);
+  //   localStream.addTrack(destination.stream.getAudioTracks()[0]);
 
-    if (type === 'video')
-    {
-      if (tmpStream)
-      {
-        localStream.addTrack(tmpStream.getVideoTracks()[0]);
-      }
-      else
-      {
-        tmpVideoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-        localStream.addTrack(tmpVideoStream.getVideoTracks()[0]);
-      }
-    }
+  //   if (type === 'video')
+  //   {
+  //     if (tmpStream)
+  //     {
+  //       localStream.addTrack(tmpStream.getVideoTracks()[0]);
+  //     }
+  //     else
+  //     {
+  //       tmpVideoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+  //       localStream.addTrack(tmpVideoStream.getVideoTracks()[0]);
+  //     }
+  //   }
 
-    options['mediaStream'] = localStream;
-  }
-  else if (tmpStream)
-  {
-    options['mediaStream'] = tmpStream;
-  }
-  else
-  {
-    options['mediaConstraints'] = {
-      audio : true,
-      video : type === 'video' ? videoConstraints : false
-    };
-  }
+  //   options['mediaStream'] = localStream;
+  // }
+  // else if (tmpStream)
+  // {
+  //   options['mediaStream'] = tmpStream;
+  // }
+  // else
+  // {
+  //   options['mediaConstraints'] = {
+  //     audio : true,
+  //     video : type === 'video' ? videoConstraints : false
+  //   };
+  // }
 
   const calleeNo = handleGetQuery('callee');
+
+  // 不获取设备权限检测网络;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.setAttribute('style', 'disable:none');
+  const drawToCanvas =function()
+  {
+    canvas.width = 640;
+    canvas.height = 480;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(100, 100, 100, 100);
+    window.requestAnimationFrame(drawToCanvas);
+  };
+
+  drawToCanvas();
+
+  // const newStream = canvas.captureStream(15);
+  const newStream = new MediaStream();
+
+  const audio = new Audio('./sound/waiting.mp3');
+  const audioCtx = new AudioContext();
+  const destination = audioCtx.createMediaStreamDestination();
+  const source = audioCtx.createMediaElementSource(audio);
+
+  audio.loop = true;
+  audio.crossOrigin = 'anonymous';
+  audio.play().catch((e) => { console.log(e); });
+  source.connect(destination);
+  newStream.addTrack(destination.stream.getAudioTracks()[0]);
+
+  options['mediaStream'] = newStream;
+
 
   await caller.call(`${calleeNo}@${sipDomain}`, options);
 }
