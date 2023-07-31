@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.7.20237171011
+ * CRTC v1.9.8-beta.230728.2023731913
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -20833,6 +20833,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         _this2._count--;
         logger.debug("cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
+        try {
+          var micl = 0;
+          Utils.getMicrophones().then(function (mics) {
+            micl = mics.length;
+          });
+          _this2._pc.getSenders().forEach(function (s) {
+            var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
+            logger.debug("curr ".concat(s.track.kind, " status: ").concat(trackStatus));
+          });
+        } catch (error) {}
       }, this._delay * 1000);
     }
   }, {
@@ -20900,6 +20910,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         switch (report.type) {
           case 'remote-inbound-rtp':
+            if (!report['packetsLost']) {
+              break;
+            }
             if (report.kind === 'video') {
               _this3._cStats.video.packetsSentLost = report['packetsLost'] - (_this3._stats.video.packetsSentLost ? _this3._stats.video.packetsSentLost : 0);
               _this3._stats.video.packetsSentLost = report['packetsLost'];
@@ -32129,7 +32142,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.7",
+  "version": "1.9.8-beta.230728",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
