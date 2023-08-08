@@ -1,6 +1,7 @@
 CHANGELOG
 =========
-
+### 1.9.8
+* 新增ua.start()调用后5秒信令连接未建立事件
 ### 1.9.7
 
 * videoTrackState 因为muted属性变化的触发条件，改为muted变化或者muted == true

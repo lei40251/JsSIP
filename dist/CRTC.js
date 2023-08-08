@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.8-beta.230728.2023731913
+ * CRTC v1.9.8-beta.230808.2023881052
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -22408,6 +22408,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "start",
     value: function start() {
+      var _this2 = this;
       logger.debug('start()');
       if (this._status === C.STATUS_INIT) {
         if (!sk) {
@@ -22460,6 +22461,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var sipproxy = this.transport.url.match(/(([a-zA-Z0-9\-]*\.{1,}){1,}[a-zA-Z0-9]*)/g);
           if (sk[9].indexOf(sipproxy) != -1) {
             this._transport.connect();
+
+            // 开始连接5秒后，如果未连接成功则触发failed事件
+            setTimeout(function () {
+              if (!_this2.isConnected()) {
+                _this2.emit('connectFailed', {
+                  originator: 'local',
+                  message: CRTC_C.causes.CONNECTION_ERROR
+                });
+              }
+            }, 5000);
           } else {
             this.emit('failed', {
               originator: 'local',
@@ -22626,7 +22637,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "stop",
     value: function stop() {
-      var _this2 = this;
+      var _this3 = this;
       logger.debug('stop()');
 
       // Remove dynamic settings.
@@ -22664,8 +22675,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._transport.disconnect();
       } else {
         this._closeTimer = setTimeout(function () {
-          _this2._closeTimer = null;
-          _this2._transport.disconnect();
+          _this3._closeTimer = null;
+          _this3._transport.disconnect();
         }, 2000);
       }
     }
@@ -32142,7 +32153,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.8-beta.230728",
+  "version": "1.9.8-beta.230808",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
