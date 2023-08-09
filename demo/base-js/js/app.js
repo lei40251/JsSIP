@@ -45,14 +45,15 @@ const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
-  sockets      : socket,
+  sockets        : socket,
   // 与 UA 关联的 SIP URI
-  uri          : `sip:${account}@${sipDomain}`,
+  uri            : `sip:${account}@${sipDomain}`,
   // 显示名
-  display_name : account,
+  display_name   : account,
   // SIP身份验证密码
-  password     : `yl_19${account}`,
-  secret_key   : sessionStorage.getItem('secret_key') || 'dhrrsY0tGw0VGSos+3lLLiZJK7hPe10zmSKueyNMS7Ig5PnThG0EYrLGx4mYmE2j23jAVexrZLTjZQL1ytosFN5EU1t95eyn38+t3KTZV4jSPCD2iidEXtOi6GuaB73na/5jH4wkobyOMpaZCKK5SNl2yDhaU8qbXMtnG1b0ezWd+ROcsC4WPh8O0HHk42VWhEnzXVp0k9KAn+idsO2536CZ4uIPPT244Z7aC1QPL0Y5Vj54oJrB3C54wbkouWd9s+MDIm3BzewBnf3ogSLGIlrN85Y7U5PnBERpeb0JXKi8pGGY40fS3EUJxi7zRPRrdGuzrAMgFiOBRTfqz+sWuQ=='
+  password       : `yl_19${account}`,
+  session_timers : false,
+  secret_key     : sessionStorage.getItem('secret_key') || 'dhrrsY0tGw0VGSos+3lLLiZJK7hPe10zmSKueyNMS7Ig5PnThG0EYrLGx4mYmE2j23jAVexrZLTjZQL1ytosFN5EU1t95eyn38+t3KTZV4jSPCD2iidEXtOi6GuaB73na/5jH4wkobyOMpaZCKK5SNl2yDhaU8qbXMtnG1b0ezWd+ROcsC4WPh8O0HHk42VWhEnzXVp0k9KAn+idsO2536CZ4uIPPT244Z7aC1QPL0Y5Vj54oJrB3C54wbkouWd9s+MDIm3BzewBnf3ogSLGIlrN85Y7U5PnBERpeb0JXKi8pGGY40fS3EUJxi7zRPRrdGuzrAMgFiOBRTfqz+sWuQ=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -670,7 +671,115 @@ ua.on('newRTCSession', function(e)
         document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
+
+    // 接通后开始判断视频轨道是否异常
+    pc = e.session.connection;
+    checkVideoTrackMuted();
+
   });
+
+  // **** 切后台替换视频轨道 ****
+  let pc;
+  let drawing;
+  let canvas;
+  let ctx;
+
+  // 将临时的 canvas 视频恢复为摄像头 videoTrack
+  function replaceCanvasToVideo()
+  {
+    // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头流替换
+    navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })
+      .then((stream) =>
+      {
+        pc.getSenders().forEach((sender) =>
+        {
+          if (sender.track.kind == 'video')
+          {
+            window.cancelAnimationFrame(drawing);
+            ctx.clearRect(0, 0, 640, 480);
+            // 替换视频轨道
+            sender.replaceTrack(stream.getVideoTracks()[0]);
+            // 本地播放本地视频轨道
+            localVideo.srcObject = stream;
+            stream.getVideoTracks()[0].addEventListener('mute', replaceVideoToCanvas);
+            stream.getVideoTracks()[0].addEventListener('ended', replaceVideoToCanvas);
+          }
+        });
+      })
+      .catch((ev) =>
+      {
+        console.log('ev: ', ev);
+        replaceCanvasToVideo();
+      });
+  }
+
+  // 先将原来 videoTrack 替换为 canvas 视频，并关闭原来 videoTrack
+  function replaceVideoToCanvas()
+  {
+    // 判断是否在通话中
+    if (!e.session.isEstablished())
+    {
+      return;
+    }
+    this.removeEventListener('mute', replaceVideoToCanvas);
+    this.removeEventListener('ended', replaceVideoToCanvas);
+
+    canvas = document.createElement('canvas');
+    canvas.setAttribute('style', 'disable:none');
+    ctx = canvas.getContext('2d');
+
+    const drawToCanvas =function()
+    {
+      canvas.width = 640;
+      canvas.height = 480;
+      ctx.fillStyle = 'green';
+      ctx.fillRect(0, 0, 640, 480);
+      drawing = window.requestAnimationFrame(drawToCanvas);
+    };
+
+    drawToCanvas();
+
+    const newStream = canvas.captureStream(15);
+
+    pc.getSenders().forEach((sender) =>
+    {
+      if (sender.track&&sender.track.kind == 'video')
+      {
+        // 释放摄像头
+        sender.track.stop();
+        // 替换视频轨道
+        sender.replaceTrack(newStream.getVideoTracks()[0]);
+        // 本地播放本地视频轨道
+        localVideo.srcObject = newStream;
+        // 开始尝试获取摄像头媒体并恢复
+        replaceCanvasToVideo();
+      }
+    });
+  }
+
+  // 检查视频轨道是否异常并处理
+  function checkVideoTrackMuted()
+  {
+    // 先判断现在PC里面是否是 muted 正常视频
+    pc.getSenders().forEach((sender) =>
+    {
+      if (sender.track.kind == 'video')
+      {
+        if (sender.track.muted)
+        {
+          replaceVideoToCanvas.call(sender.track, pc);
+        }
+        else
+        {
+          // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
+          // mute 事件触发替换视频流为临时视频，并释放摄像头
+          sender.track.addEventListener('mute', replaceVideoToCanvas);
+          sender.track.addEventListener('ended', replaceVideoToCanvas);
+        }
+      }
+    });
+  }
+
 
   //  ***** DOM 事件绑定 *****
 
@@ -1268,6 +1377,15 @@ function start()
 
   // 启动UA，连接信令服务器并注册
   ua.start();
+
+  setTimeout(() =>
+  {
+    if (!ua.isConnected() || !ua.isRegistered())
+    {
+      ua.stop();
+      console.log('网络连接异常或未注册成功');
+    }
+  }, 10000);
 
   // 发起音频呼叫
   document.querySelector('#call').onclick = function()
