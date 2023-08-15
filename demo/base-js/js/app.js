@@ -1207,24 +1207,24 @@ async function call(type, direction)
   earlyMedia = false;
 
   // 播放远端的回铃音
-  session.connection.ontrack = function(event)
-  {
-    if (event.track.kind === 'audio')
-    {
-      // 收到远端媒体则设置远端回铃音
-      earlyMedia = true;
+  // session.connection.ontrack = function(event)
+  // {
+  //   if (event.track.kind === 'audio')
+  //   {
+  //     // 收到远端媒体则设置远端回铃音
+  //     earlyMedia = true;
 
-      remoteAudio.srcObject = event.streams[0];
+  //     remoteAudio.srcObject = event.streams[0];
 
-      /**
-       * 兼容chrome
-       * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-       * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-       */
-      remoteAudio.play()
-        .catch(() => { });
-    }
-  };
+  //     /**
+  //      * 兼容chrome
+  //      * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+  //      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+  //      */
+  //     remoteAudio.play()
+  //       .catch(() => { });
+  //   }
+  // };
 
   // 兼容iOS
   if (optionsTimer)
@@ -1269,21 +1269,21 @@ function getStreams(pc)
   });
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
-  setTimeout(() =>
-  {
-    remoteAudio.srcObject = remoteStream.audioStream;
+  // setTimeout(() =>
+  // {
+  //   remoteAudio.srcObject = remoteStream.audioStream;
 
-    /**
-     * 兼容chrome
-     * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-     * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-     */
-    remoteAudio.play()
-      .catch(() => { });
-  }, 100);
+  //   /**
+  //    * 兼容chrome
+  //    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+  //    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+  //    */
+  //   remoteAudio.play()
+  //     .catch(() => { });
+  // }, 100);
   // 远端视频
-  remoteVideo.srcObject = remoteStream.videoStream;
-  remoteStream.videoStream.getTracks().length> 0 && remoteStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  remoteVideo.srcObject = remoteStream.mediaStream;
+  remoteStream.videoStream.getVideoTracks().length> 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     if (!tmpSession)
@@ -1297,7 +1297,11 @@ function getStreams(pc)
    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
-  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+  // Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
+  //   .then(() => { })
+  //   .catch(() => { });
+
+  Promise.all([ localVideo.play(), remoteVideo.play() ])
     .then(() => { })
     .catch(() => { });
 }

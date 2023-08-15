@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.8-beta.230808.2023881052
+ * CRTC v1.9.8.20238151631
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14997,10 +14997,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         stream.getTracks().forEach(function (track) {
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug("".concat(track.kind, " settings: ").concat(JSON.stringify(track.getSettings())));
-            logger.debug("".concat(track.kind, " constraints: ").concat(JSON.stringify(track.getConstraints())));
-            logger.debug("".concat(track.kind, " capabilities: ").concat(JSON.stringify(track.getCapabilities())));
-            logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
+            logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
             if (track.kind === 'video') {
               if (videoTrackStates.has(track.id)) {
                 var trackStat = videoTrackStates.get(track.id);
@@ -18802,6 +18799,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+
+      // 停止全部统计信息事件
+      window.CRTCStats = 'stop';
       if (this._inviteVideoTrackStatsTimer) {
         clearInterval(this._inviteVideoTrackStatsTimer);
       }
@@ -18821,6 +18821,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+
+      // 停止全部统计信息事件
+      window.CRTCStats = 'stop';
       this._close();
       logger.debug('emit "failed"');
       this.emit('failed', {
@@ -20749,7 +20752,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   var _super = _createSuper(getStats);
   function getStats(pc) {
     var _this;
-    var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
     _classCallCheck(this, getStats);
     _this = _super.call(this);
     _this._pc = pc;
@@ -20825,6 +20828,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function start() {
       var _this2 = this;
       this._statsTimer = setInterval(function () {
+        // 全局停止统计信息输出
+        if (window.CRTCStats === 'stop') {
+          clearInterval(_this2._statsTimer);
+          return;
+        }
         _this2._pc.getStats().then(function (stats) {
           _this2.parseReport(stats);
           if (_this2._count === 0) {
@@ -22572,6 +22580,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "call",
     value: function call(target, options) {
       logger.debug('call()');
+
+      // 初始化统计信息参数
+      window.CRTCStats = 'start';
       var session = new RTCSession(this);
       return session.connect(target, options).then(function () {
         return session;
@@ -24116,9 +24127,12 @@ exports.getMicrophones = function () {
 exports.getStreams = function (pc, type) {
   var videoStream = new MediaStream();
   var audioStream = new MediaStream();
+  var mediaStream = new MediaStream();
+  var result;
   if (type === 'remote' && RTCPeerConnection.prototype.getReceivers) {
     pc.getReceivers().forEach(function (receiver) {
       if (receiver.track && receiver.track.readyState === 'live') {
+        mediaStream.addTrack(receiver.track);
         if (receiver.track.kind === 'audio') {
           audioStream.addTrack(receiver.track);
         } else {
@@ -24126,6 +24140,11 @@ exports.getStreams = function (pc, type) {
         }
       }
     });
+    result = {
+      audioStream: audioStream,
+      videoStream: videoStream,
+      mediaStream: mediaStream
+    };
   } else if (type === 'local' && RTCPeerConnection.prototype.getSenders) {
     pc.getSenders().forEach(function (sender) {
       if (sender.track && sender.track.readyState === 'live') {
@@ -24136,10 +24155,15 @@ exports.getStreams = function (pc, type) {
         }
       }
     });
+    result = {
+      audioStream: audioStream,
+      videoStream: videoStream
+    };
   } else {
     var stream = pc.getRemoteStreams()[0];
     stream.getTracks().forEach(function (track) {
       if (track.readyState === 'live') {
+        mediaStream.addTrack(track);
         if (track.kind === 'audio') {
           audioStream.addTrack(track);
         } else {
@@ -24147,11 +24171,13 @@ exports.getStreams = function (pc, type) {
         }
       }
     });
+    result = {
+      audioStream: audioStream,
+      videoStream: videoStream,
+      mediaStream: mediaStream
+    };
   }
-  return {
-    audioStream: audioStream,
-    videoStream: videoStream
-  };
+  return result;
 };
 
 /**
@@ -32153,7 +32179,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.8-beta.230808",
+  "version": "1.9.8",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
