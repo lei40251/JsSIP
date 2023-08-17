@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.9.20238151633
+ * CRTC v1.9.9.2023817940
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16187,12 +16187,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('mute()');
       var audioMuted = false,
         videoMuted = false;
-      if (this._audioMuted === false && options.audio) {
+      if (options.audio) {
         audioMuted = true;
         this._audioMuted = true;
         this._toggleMuteAudio(true);
       }
-      if (this._videoMuted === false && options.video) {
+      if (options.video) {
         videoMuted = true;
         this._videoMuted = true;
         this._toggleMuteVideo(true);
@@ -16218,14 +16218,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('unmute()');
       var audioUnMuted = false,
         videoUnMuted = false;
-      if (this._audioMuted === true && options.audio) {
+      if (options.audio) {
         audioUnMuted = true;
         this._audioMuted = false;
         if (this._localHold === false) {
           this._toggleMuteAudio(false);
         }
       }
-      if (this._videoMuted === true && options.video) {
+      if (options.video) {
         videoUnMuted = true;
         this._videoMuted = false;
         if (this._localHold === false) {
