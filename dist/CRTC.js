@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.11.2023818939
+ * CRTC v1.9.12-beta.230818.20238181029
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14995,9 +14995,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 音视频轨道属性状态都分别保存日志，视频轨道状态变化触发对应事件
         stream.getTracks().forEach(function (track) {
+          var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+          logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
-            var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
             if (track.kind === 'video') {
               if (videoTrackStates.has(track.id)) {
                 var trackStat = videoTrackStates.get(track.id);
@@ -15357,7 +15357,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (!mediaConstraints.video) {
             _this4._localToAudio = true;
           }
-          return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+          var MediaStream = navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
             if (_this4._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -15368,6 +15368,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this4.emit('getusermediafailed', error);
             throw new Error('getUserMedia() failed');
           });
+
+          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+          var ua;
+          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+            return Utils.getStreamThroughCanvas(MediaStream);
+          } else {
+            return MediaStream;
+          }
         }
       })
       // Attach MediaStream to RTCPeerconnection.
@@ -15375,27 +15384,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-
-        // // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        // let ua;
-
-        // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
-        //   .match(/cpu iphone os (.*?) like mac os/));
-        // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
-        // {
-        //   this._localMediaStream = Utils.getStreamThroughCanvas(stream);
-        // }
-        // else
-        // {
         _this4._localMediaStream = stream;
-        // }
-
         if (stream) {
           var videoTrackStates = new Map();
           stream.getTracks().forEach(function (track) {
+            var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
+            logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
             _this4._answerVideoTrackStatsTimer = setInterval(function () {
-              var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-              logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
               if (track.kind === 'video') {
                 if (videoTrackStates.has(track.id)) {
                   var trackStat = videoTrackStates.get(track.id);
@@ -20750,13 +20745,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   function getStats(pc) {
     var _this;
     var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
+    var interval = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
     _classCallCheck(this, getStats);
     _this = _super.call(this);
     _this._pc = pc;
     _this._delay = delay;
+    _this._interval = interval;
 
     // 多少次getStats后发送完整statsReport
-    _this._count = 5;
+    _this._count = _this._interval;
     _this._statsTimer;
     _this._stats = {
       transport: {
@@ -20833,22 +20830,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this2._pc.getStats().then(function (stats) {
           _this2.parseReport(stats);
           if (_this2._count === 0) {
+            // 第二次开始间隔5-10次输出一次完整report
+            _this2._count = _this2._interval + (Math.random() * 5 | 0);
             _this2.parseReport(stats, true);
           }
+          _this2._count--;
         });
-        _this2._count--;
-        logger.debug("cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
+        logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
         var micl = 0;
-        try {
-          Utils.getMicrophones().then(function (mics) {
-            micl = mics.length;
-          });
-        } catch (error) {
-          logger.error(error);
-        }
+        Utils.getMicrophones().then(function (mics) {
+          micl = mics.length;
+        })["catch"](function (e) {
+          logger.error(e);
+        });
         _this2._pc.getSenders().forEach(function (s) {
           var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
-          logger.debug("curr ".concat(s.track.kind, " status: ").concat(trackStatus));
+          logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus, " ***** settings: ").concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities())));
         });
       }, this._delay * 1000);
     }
@@ -32178,7 +32175,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.11",
+  "version": "1.9.12-beta.230818",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32229,6 +32226,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
