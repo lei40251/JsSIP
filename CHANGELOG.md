@@ -1,5 +1,7 @@
 CHANGELOG
 =========
+### 1.9.10
+* session.mute() & session.unmute() 两个方法去掉判断当前状态，改为直接执行设置
 ### 1.9.9
 * getStreams 新增响应参数 mediaStream，包含远端媒体音频及视频
 * 新增通话结束自动释放媒体统计报告定时器

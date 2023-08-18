@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.9.2023817940
+ * CRTC v1.9.10.2023818937
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14997,7 +14997,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         stream.getTracks().forEach(function (track) {
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-            logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
+            logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
             if (track.kind === 'video') {
               if (videoTrackStates.has(track.id)) {
                 var trackStat = videoTrackStates.get(track.id);
@@ -15395,10 +15395,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           stream.getTracks().forEach(function (track) {
             _this4._answerVideoTrackStatsTimer = setInterval(function () {
               var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-              logger.debug("".concat(track.kind, " settings: ").concat(JSON.stringify(track.getSettings())));
-              logger.debug("".concat(track.kind, " constraints: ").concat(JSON.stringify(track.getConstraints())));
-              logger.debug("".concat(track.kind, " capabilities: ").concat(JSON.stringify(track.getCapabilities())));
-              logger.debug("".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj)));
+              logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
               if (track.kind === 'video') {
                 if (videoTrackStates.has(track.id)) {
                   var trackStat = videoTrackStates.get(track.id);
@@ -20841,16 +20838,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         _this2._count--;
         logger.debug("cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
+        var micl = 0;
         try {
-          var micl = 0;
           Utils.getMicrophones().then(function (mics) {
             micl = mics.length;
           });
-          _this2._pc.getSenders().forEach(function (s) {
-            var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
-            logger.debug("curr ".concat(s.track.kind, " status: ").concat(trackStatus));
-          });
-        } catch (error) {}
+        } catch (error) {
+          logger.error(error);
+        }
+        _this2._pc.getSenders().forEach(function (s) {
+          var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
+          logger.debug("curr ".concat(s.track.kind, " status: ").concat(trackStatus));
+        });
       }, this._delay * 1000);
     }
   }, {
@@ -32179,7 +32178,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.9",
+  "version": "1.9.10",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
