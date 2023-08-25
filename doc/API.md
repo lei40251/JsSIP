@@ -141,6 +141,7 @@ options
 | muted | 当本地媒体静音时触发，包括音频静音或视频关闭 |
 | unmuted | 当本地媒体取消静音时触发，包括音频取消静音或打开关闭的视频 |
 | getusermediafailed | 当内部调用 getUserMedia() 失败时触发 |
+|peerconnection:iceConnectionState|iceconnectionstatechange事件触发，[参考链接](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/iceConnectionState)|
 | peerconnection:createofferfailed | 当内部调用 createOffer() 失败时触发 |
 | peerconnection:createanswerfailed | 当内部调用 createAnswer() 失败时触发 |
 | peerconnection:setlocaldescriptionfailed | 当内部调用 setLocalDescription() 失败时触发 |

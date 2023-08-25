@@ -343,6 +343,19 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
+    * peerconnection:iceConnectionState
+    *
+    * 反应当前的媒体连接状态变化，如果checking后长时间没有connected则说明媒体异常
+    *
+    * @fires iceconnectionstatechange事件触发
+    *
+    */
+  e.session.on('peerconnection:iceConnectionState', (d) =>
+  {
+    console.warn('iceConnectionState: ', d);
+  });
+
+  /**
     * failed
     *
     * @fires 建立通话失败触发

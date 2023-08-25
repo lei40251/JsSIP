@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.12-beta.230825.2023825932
+ * CRTC v1.9.12-beta.230825.2023825124
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16781,6 +16781,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
       this._connection.addEventListener('iceconnectionstatechange', function () {
         var state = _this17._connection.iceConnectionState;
+        _this17.emit('peerconnection:iceConnectionState', state);
+        logger.warn("emit \"peerconnection:iceConnectionState\" ".concat(state));
 
         // 成功连接过
         if (state === 'connected') {
@@ -22591,7 +22593,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "call",
     value: function call(target, options) {
-      logger.debug('call()');
+      logger.debug("call() target:".concat(target, " options:").concat(JSON.stringify(options)));
 
       // 初始化统计信息参数
       window.CRTCStats = 'start';
