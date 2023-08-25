@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.12-beta.230818.20238181029
+ * CRTC v1.9.12-beta.230825.2023825932
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16776,17 +16776,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
       var _this17 = this;
+      // 是否成功连接过
+      var successfullyConnected = false;
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
       this._connection.addEventListener('iceconnectionstatechange', function () {
         var state = _this17._connection.iceConnectionState;
 
+        // 成功连接过
+        if (state === 'connected') {
+          successfullyConnected = true;
+        }
+
+        // 如果没有成功连接过，挂断通话；成功连接过则重新协商
         // TODO: Do more with different states.
-        if (state === 'failed') {
-          // this.terminate({
-          //   cause         : CRTC_C.causes.RTP_TIMEOUT,
-          //   status_code   : 408,
-          //   reason_phrase : CRTC_C.causes.RTP_TIMEOUT
-          // });
+        if (state === 'failed' && !successfullyConnected) {
+          _this17.terminate({
+            cause: CRTC_C.causes.RTP_TIMEOUT,
+            status_code: 408,
+            reason_phrase: CRTC_C.causes.RTP_TIMEOUT
+          });
+        } else if (successfullyConnected) {
           // RTCPeerConnection failed断开后启动重新协商
           _this17.renegotiate({
             rtcOfferConstraints: {
@@ -16998,6 +17007,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
             if (connection.iceGatheringState === 'complete' && !finished) {
               ready();
+            }
+
+            // 超时自动ready
+            if (connection.iceGatheringState === 'gathering') {
+              setTimeout(function () {
+                ready();
+              }, 5000);
             }
           });
         });
@@ -32175,7 +32191,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.12-beta.230818",
+  "version": "1.9.12-beta.230825",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

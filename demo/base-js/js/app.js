@@ -64,14 +64,6 @@ const videoConstraints = {
 
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {
-  // TURN 配置
-  // iceServers : [
-  //   {
-  //     'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
-  //     'username'   : 'ipcu',
-  //     'credential' : 'yl_19cu'
-  //   } ],
-  // iceTransportPolicy : 'public',
   bundlePolicy       : 'balanced',
   tcpCandidatePolicy : 'disable',
   IceTransportsType  : 'nohost'
@@ -84,11 +76,12 @@ if (/Android/.test(navigator.userAgent))
   if (browserVersion < 85)
   {
     console.log('Your Chrome version is lower than 85.');
+    // TURN 配置
     pcConfig['iceServers'] =[
       {
         'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
         'username'   : 'ipcu',
-        'credential' : 'yl_19c555u'
+        'credential' : 'yl_19cu'
       } ];
 
     pcConfig['iceTransportPolicy']= 'all';
