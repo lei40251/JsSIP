@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.12-beta.230825.2023825124
+ * CRTC v1.9.12.20238251626
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16791,19 +16791,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 如果没有成功连接过，挂断通话；成功连接过则重新协商
         // TODO: Do more with different states.
-        if (state === 'failed' && !successfullyConnected) {
-          _this17.terminate({
-            cause: CRTC_C.causes.RTP_TIMEOUT,
-            status_code: 408,
-            reason_phrase: CRTC_C.causes.RTP_TIMEOUT
-          });
-        } else if (successfullyConnected) {
-          // RTCPeerConnection failed断开后启动重新协商
-          _this17.renegotiate({
-            rtcOfferConstraints: {
-              iceRestart: true
-            }
-          });
+        if (state === 'failed' || state === 'disconnected') {
+          if (!successfullyConnected) {
+            _this17.terminate({
+              cause: CRTC_C.causes.RTP_TIMEOUT,
+              status_code: 408,
+              reason_phrase: CRTC_C.causes.RTP_TIMEOUT
+            });
+          } else {
+            // RTCPeerConnection failed断开后启动重新协商
+            _this17.renegotiate({
+              rtcOfferConstraints: {
+                iceRestart: true
+              }
+            });
+          }
         }
       });
       logger.debug('emit "peerconnection"');
@@ -17349,7 +17351,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         if (!waiting) {
           if (sdp_request.media.length < 3) {
-            this._localToAudio = true;
+            // 自动响应的时候不改变这个参数，改变就变成音频模式了
+            // this._localToAudio = true;
             this._localToVideo = false;
             nextS.call(this);
           } else {
@@ -32193,7 +32196,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.12-beta.230825",
+  "version": "1.9.12",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32244,5 +32247,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[8])(8)
 });
