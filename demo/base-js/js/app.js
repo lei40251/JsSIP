@@ -644,115 +644,7 @@ ua.on('newRTCSession', function(e)
         document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
-
-    // 接通后开始判断视频轨道是否异常
-    pc = e.session.connection;
-    checkVideoTrackMuted();
-
   });
-
-  // **** 切后台替换视频轨道 ****
-  let pc;
-  let drawing;
-  let canvas;
-  let ctx;
-
-  // 将临时的 canvas 视频恢复为摄像头 videoTrack
-  function replaceCanvasToVideo()
-  {
-    // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头流替换
-    navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints })
-      .then((stream) =>
-      {
-        pc.getSenders().forEach((sender) =>
-        {
-          if (sender.track.kind == 'video')
-          {
-            window.cancelAnimationFrame(drawing);
-            ctx.clearRect(0, 0, 640, 480);
-            // 替换视频轨道
-            sender.replaceTrack(stream.getVideoTracks()[0]);
-            // 本地播放本地视频轨道
-            localVideo.srcObject = stream;
-            stream.getVideoTracks()[0].addEventListener('mute', replaceVideoToCanvas);
-            stream.getVideoTracks()[0].addEventListener('ended', replaceVideoToCanvas);
-          }
-        });
-      })
-      .catch((ev) =>
-      {
-        console.log('ev: ', ev);
-        replaceCanvasToVideo();
-      });
-  }
-
-  // 先将原来 videoTrack 替换为 canvas 视频，并关闭原来 videoTrack
-  function replaceVideoToCanvas()
-  {
-    // 判断是否在通话中
-    if (!e.session.isEstablished())
-    {
-      return;
-    }
-    this.removeEventListener('mute', replaceVideoToCanvas);
-    this.removeEventListener('ended', replaceVideoToCanvas);
-
-    canvas = document.createElement('canvas');
-    canvas.setAttribute('style', 'disable:none');
-    ctx = canvas.getContext('2d');
-
-    const drawToCanvas =function()
-    {
-      canvas.width = 640;
-      canvas.height = 480;
-      ctx.fillStyle = 'green';
-      ctx.fillRect(0, 0, 640, 480);
-      drawing = window.requestAnimationFrame(drawToCanvas);
-    };
-
-    drawToCanvas();
-
-    const newStream = canvas.captureStream(15);
-
-    pc.getSenders().forEach((sender) =>
-    {
-      if (sender.track&&sender.track.kind == 'video')
-      {
-        // 释放摄像头
-        sender.track.stop();
-        // 替换视频轨道
-        sender.replaceTrack(newStream.getVideoTracks()[0]);
-        // 本地播放本地视频轨道
-        localVideo.srcObject = newStream;
-        // 开始尝试获取摄像头媒体并恢复
-        replaceCanvasToVideo();
-      }
-    });
-  }
-
-  // 检查视频轨道是否异常并处理
-  function checkVideoTrackMuted()
-  {
-    // 先判断现在PC里面是否是 muted 正常视频
-    pc.getSenders().forEach((sender) =>
-    {
-      if (sender.track.kind == 'video')
-      {
-        if (sender.track.muted)
-        {
-          replaceVideoToCanvas.call(sender.track, pc);
-        }
-        else
-        {
-          // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
-          // mute 事件触发替换视频流为临时视频，并释放摄像头
-          sender.track.addEventListener('mute', replaceVideoToCanvas);
-          sender.track.addEventListener('ended', replaceVideoToCanvas);
-        }
-      }
-    });
-  }
-
 
   //  ***** DOM 事件绑定 *****
 
@@ -903,26 +795,6 @@ ua.on('newRTCSession', function(e)
     // 摄像头为关闭状态，则开启摄像头
     e.session.unmute({ video: true });
   };
-
-  // /**
-  //  * 关闭/开启视频
-  //  */
-  // document.querySelector('#muteCam').onclick = function()
-  // {
-  //   // 获取麦克风和视频的开关状态
-  //   const isMuted = e.session.isMuted();
-
-  //   // 摄像头为关闭状态，则开启摄像头
-  //   if (isMuted.video)
-  //   {
-  //     e.session.unmute({ video: true });
-  //   }
-  //   // 摄像头为开启状态，则关闭摄像头
-  //   else
-  //   {
-  //     e.session.mute({ video: true });
-  //   }
-  // };
 
   /**
    * 暂停/恢复通话
@@ -1079,27 +951,6 @@ async function call(type, direction)
     return;
   }
 
-  // 兼容安卓微信Bug、iOS蓝牙及iOS 15.1&15.2问题
-  if (/iP(hone|od|ad)/.test(navigator.userAgent))
-  {
-    tmpStream = await navigator.mediaDevices.getUserMedia({ audio : {
-      echoCancellation : {
-        exact                     : true,
-        echoCancellationThreshold : -80 // 调整阈值为-40dB
-      }
-    },
-    video : videoConstraints });
-    const version = navigator.userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-    const majorVersion = parseInt(version[1], 10);
-
-    if (majorVersion === 15 && (version[2] === '1' || version[2] === '2'))
-    {
-      console.log('You are using iOS 15.1 or 15.2');
-      tmpStream = CRTC.Utils.getStreamThroughCanvas(tmpStream);
-    }
-  }
-
-  const mics = await CRTC.Utils.getMicrophones();
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
@@ -1111,66 +962,15 @@ async function call(type, direction)
     options['rtcOfferConstraints'] ={ offerToReceiveAudio: true, offerToReceiveVideo: false };
   }
 
-  // 兼容安卓微信Bug及iOS蓝牙问题
-  if ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1))
-  {
-    // 增加安卓微信呼叫的语音提醒
-    const audio = new Audio('./sound/waiting.mp3');
-    const localStream = new MediaStream();
-    const audioCtx = new AudioContext();
-    const destination = audioCtx.createMediaStreamDestination();
-    const source = audioCtx.createMediaElementSource(audio);
-
-    // 兼容自动播放bug的
-    // const source = audioCtx.createBufferSource();
-
-    // await fetch('./sound/waiting.mp3').then((res) => res.arrayBuffer())
-    //   .then((res) => { return audioCtx.decodeAudioData(res); })
-    //   .then((res) =>
-    //   {
-    //     source.buffer=res;
-    //     source.loop = true;
-    //     source.connect(destination);
-    //     source.start();
-    //   });
-
-    audio.loop = true;
-    audio.crossOrigin = 'anonymous';
-    audio.play().catch((e) => { console.log(e); });
-    source.connect(destination);
-    localStream.addTrack(destination.stream.getAudioTracks()[0]);
-
-    if (type === 'video')
-    {
-      if (tmpStream)
-      {
-        localStream.addTrack(tmpStream.getVideoTracks()[0]);
+  options['mediaConstraints'] = {
+    audio : {
+      echoCancellation : {
+        exact                     : true,
+        echoCancellationThreshold : -40 // 调整阈值为-40dB
       }
-      else
-      {
-        tmpVideoStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
-        localStream.addTrack(tmpVideoStream.getVideoTracks()[0]);
-      }
-    }
-
-    options['mediaStream'] = localStream;
-  }
-  else if (tmpStream)
-  {
-    options['mediaStream'] = tmpStream;
-  }
-  else
-  {
-    options['mediaConstraints'] = {
-      audio : {
-        echoCancellation : {
-          exact                     : true,
-          echoCancellationThreshold : -40 // 调整阈值为-40dB
-        }
-      },
-      video : type === 'video' ? videoConstraints : false
-    };
-  }
+    },
+    video : type === 'video' ? videoConstraints : false
+  };
 
   console.warn(options);
   const callee = document.querySelector('#callee').value;
@@ -1180,24 +980,24 @@ async function call(type, direction)
   earlyMedia = false;
 
   // 播放远端的回铃音
-  // session.connection.ontrack = function(event)
-  // {
-  //   if (event.track.kind === 'audio')
-  //   {
-  //     // 收到远端媒体则设置远端回铃音
-  //     earlyMedia = true;
+  session.connection.ontrack = function(event)
+  {
+    if (event.track.kind === 'audio')
+    {
+      // 收到远端媒体则设置远端回铃音
+      earlyMedia = true;
 
-  //     remoteAudio.srcObject = event.streams[0];
+      remoteAudio.srcObject = event.streams[0];
 
-  //     /**
-  //      * 兼容chrome
-  //      * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-  //      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-  //      */
-  //     remoteAudio.play()
-  //       .catch(() => { });
-  //   }
-  // };
+      /**
+       * 兼容chrome
+       * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+       * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+       */
+      remoteAudio.play()
+        .catch(() => { });
+    }
+  };
 
   // 兼容iOS
   if (optionsTimer)
@@ -1242,18 +1042,18 @@ function getStreams(pc)
   });
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
-  // setTimeout(() =>
-  // {
-  //   remoteAudio.srcObject = remoteStream.audioStream;
+  setTimeout(() =>
+  {
+    remoteAudio.srcObject = remoteStream.audioStream;
 
-  //   /**
-  //    * 兼容chrome
-  //    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-  //    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-  //    */
-  //   remoteAudio.play()
-  //     .catch(() => { });
-  // }, 100);
+    /**
+     * 兼容chrome
+     * https://developer.chrome.com/blog/play-request-was-interrupted/#error
+     * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
+     */
+    remoteAudio.play()
+      .catch(() => { });
+  }, 100);
   // 远端视频
   remoteVideo.srcObject = remoteStream.mediaStream;
   remoteStream.videoStream.getVideoTracks().length> 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
@@ -1270,13 +1070,13 @@ function getStreams(pc)
    * https://developer.chrome.com/blog/play-request-was-interrupted/#error
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
-  // Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
-  //   .then(() => { })
-  //   .catch(() => { });
-
-  Promise.all([ localVideo.play(), remoteVideo.play() ])
+  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() => { })
     .catch(() => { });
+
+  // Promise.all([ localVideo.play(), remoteVideo.play() ])
+  //   .then(() => { })
+  //   .catch(() => { });
 }
 
 function stopStreams(type)

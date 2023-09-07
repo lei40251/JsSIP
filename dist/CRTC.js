@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230907.2023971650
+ * CRTC v1.9.13-beta.230907.2023972222
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14661,6 +14661,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._localMediaStreamLocallyGenerated = false;
     // 是否替换过音频轨道
     _this._replaceAudioTrack = false;
+    // 初始 invite 的媒体约束参数
+    _this._inviteMediaConstraints = null;
+    // 恢复摄像头轨道用
+    _this._restoreCameraTrackCanvas = null;
+    _this._restoreCameraTrackCtx = null;
+    _this._restoreCameraTrackDraw = null;
 
     // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareRTPSender = null;
@@ -14861,17 +14867,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('connect()');
       var originalTarget = target;
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
-      var extraHeaders = Utils.cloneArray(options.extraHeaders);
-      var mediaConstraints = Utils.cloneObject(options.mediaConstraints, {
-        audio: true,
-        video: true
-      });
       var mediaStream = options.mediaStream || null;
       var pcConfig = Utils.cloneObject(options.pcConfig, {
         iceServers: []
       });
       var rtcConstraints = options.rtcConstraints || null;
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
+      var extraHeaders = Utils.cloneArray(options.extraHeaders);
+      this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
+        audio: true,
+        video: true
+      });
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       this._data = options.data || this._data;
@@ -14972,14 +14978,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return mediaStream;
         }
         // Request for user media access.
-        else if (mediaConstraints.audio || mediaConstraints.video) {
+        else if (_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video) {
           _this2._localMediaStreamLocallyGenerated = true;
 
           // 判断授权是否包含视频
           if (Number(_this2._ua.sk[7]) < 1) {
-            delete mediaConstraints.video;
+            delete _this2._inviteMediaConstraints.video;
           }
-          var mStream = navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+          var currMediaConstraints;
+
+          // 兼容安卓微信Bug，开始不获取麦克风媒体
+          if (navigator.userAgent.indexOf('WeChat') != -1) {
+            currMediaConstraints = {
+              audio: false,
+              video: _this2._inviteMediaConstraints.video || false
+            };
+          } else {
+            currMediaConstraints = _this2._inviteMediaConstraints;
+          }
+          var mStream = navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
             if (_this2._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -15066,7 +15083,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           initCallback(_this2);
         }
         _this2._newRTCSession('local', _this2._request);
-        _this2._sendInitialRequest(mediaConstraints, rtcOfferConstraints, stream);
+        _this2._sendInitialRequest(rtcOfferConstraints, stream);
       });
     }
   }, {
@@ -17820,7 +17837,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      */
   }, {
     key: "_sendInitialRequest",
-    value: function _sendInitialRequest(mediaConstraints, rtcOfferConstraints, mediaStream) {
+    value: function _sendInitialRequest(rtcOfferConstraints, mediaStream) {
       var _this28 = this;
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
@@ -17841,7 +17858,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
       Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-        var sendStream, mics, audio, audioCtx, destination, source;
+        var sendStream, mics;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
@@ -17860,19 +17877,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               mics = _context2.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                // 增加安卓微信呼叫的语音提醒
-                // const audio = new Audio('./sound/waiting.mp3');
-                audio = new Audio();
-                audioCtx = new AudioContext();
-                destination = audioCtx.createMediaStreamDestination();
-                source = audioCtx.createMediaElementSource(audio);
-                audio.loop = true;
-                audio.crossOrigin = 'anonymous';
-                audio.play()["catch"](function (error) {
-                  logger.error("new Audio() error: ".concat(JSON.stringify(error)));
-                });
-                source.connect(destination);
-                sendStream.addTrack(destination.stream.getAudioTracks()[0]);
+                sendStream.addTrack(_this28._generateAnEmptyAudioTrack());
                 sendStream.addTrack(mediaStream.getVideoTracks()[0]);
                 _this28._replaceAudioTrack = true;
               } else {
@@ -18130,13 +18135,46 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this29._connection.setRemoteDescription(_answer).then(function () {
-                // Handle Session Timers.
-                _this29._handleSessionTimersInIncomingResponse(response);
-                _this29._accepted('remote', response);
-                _this29.sendRequest(CRTC_C.ACK);
-                _this29._confirmed('local', null);
-              })["catch"](function (error) {
+              _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+                var mics, sender;
+                return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+                  while (1) switch (_context3.prev = _context3.next) {
+                    case 0:
+                      // Handle Session Timers.
+                      _this29._handleSessionTimersInIncomingResponse(response);
+                      _this29._accepted('remote', response);
+                      _this29.sendRequest(CRTC_C.ACK);
+                      _this29._confirmed('local', null);
+
+                      // 兼容安卓微信Bug及iOS蓝牙问题
+                      _context3.next = 6;
+                      return Utils.getMicrophones();
+                    case 6:
+                      mics = _context3.sent;
+                      if (_this29._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+                        navigator.mediaDevices.getUserMedia({
+                          audio: _this29._inviteMediaConstraints.audio || true,
+                          video: false
+                        }).then(function (stream) {
+                          var sender = _e.session.connection.getSenders().find(function (s) {
+                            return s.track.kind == 'audio';
+                          });
+                          sender.replaceTrack(stream.getAudioTracks()[0]);
+                        });
+                      } else if (_this29._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                        if (_this29._localMediaStream) {
+                          sender = _e.session.connection.getSenders().find(function (s) {
+                            return s.track.kind == 'audio';
+                          });
+                          sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]);
+                        }
+                      }
+                    case 8:
+                    case "end":
+                      return _context3.stop();
+                  }
+                }, _callee3);
+              })))["catch"](function (error) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
@@ -18834,6 +18872,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _confirmed(originator, ack) {
       logger.debug('session confirmed');
       this._is_confirmed = true;
+
+      // 如果是SDK调用媒体设备，则启动媒体状态监测
+      this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
       logger.debug('emit "confirmed"');
       this.emit('confirmed', {
         originator: originator,
@@ -18907,9 +18948,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref6) {
-      var audio = _ref6.audio,
-        video = _ref6.video;
+    value: function _onmute(_ref7) {
+      var audio = _ref7.audio,
+        video = _ref7.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -18920,9 +18961,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref7) {
-      var audio = _ref7.audio,
-        video = _ref7.video;
+    value: function _onunmute(_ref8) {
+      var audio = _ref8.audio,
+        video = _ref8.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
@@ -18961,6 +19002,224 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } else {
         return sdp;
       }
+    }
+
+    /**
+     * 生成一个空的音频轨道
+     */
+  }, {
+    key: "_generateAnEmptyAudioTrack",
+    value: function _generateAnEmptyAudioTrack() {
+      // 增加安卓微信呼叫的语音提醒
+      // const audio = new Audio('./sound/waiting.mp3');
+      var audio = new Audio();
+      var audioCtx = new AudioContext();
+      var destination = audioCtx.createMediaStreamDestination();
+      var source = audioCtx.createMediaElementSource(audio);
+      audio.loop = true;
+      audio.crossOrigin = 'anonymous';
+      audio.play()["catch"](function (error) {
+        logger.error("new Audio() error: ".concat(JSON.stringify(error)));
+      });
+      source.connect(destination);
+      return destination.stream.getAudioTracks()[0];
+    }
+
+    /**
+     * 将临时的canvas视频恢复为麦克风videoTrack
+     */
+  }, {
+    key: "_replaceAudioToMic",
+    value: function _replaceAudioToMic() {
+      var _this36 = this;
+      // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
+      navigator.mediaDevices.getUserMedia({
+        audio: this._inviteMediaConstraints.audio || true,
+        video: false
+      }).then(function (stream) {
+        _this36._connection.getSenders().forEach(function (sender) {
+          if (sender.track.kind == 'audio') {
+            // 替换音频轨道
+            sender.replaceTrack(stream.getAudioTracks()[0]);
+
+            // 本地播放本地音频轨道
+            _this36._localMediaStream.removeTrack(_this36._localMediaStream.getAudioTracks()[0]);
+            _this36._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+
+            // 触发本地媒体更新事件
+            _this36.emit('localMediastreamUpdate', _this36._localMediaStream);
+
+            // 继续监听mute和ended事件
+            stream.getAudioTracks()[0].addEventListener('mute', _this36._replaceMicToAudio);
+            stream.getAudioTracks()[0].addEventListener('ended', _this36._replaceMicToAudio);
+          }
+        });
+      })["catch"](function (error) {
+        // 获取麦克风失败，重新获取
+        logger.error("replaceAudioToMic error: ".concat(JSON.stringify(error)));
+        _this36._replaceAudioToMic();
+      });
+    }
+
+    /**
+     * 先将原来videoTrack替换为canvas视频，并关闭原来videoTrack
+     */
+  }, {
+    key: "_replaceMicToAudio",
+    value: function _replaceMicToAudio() {
+      var _this37 = this;
+      // 判断是否在通话中
+      if (!this.isEstablished()) {
+        return;
+      }
+      this._connection.getSenders().forEach(function (sender) {
+        if (sender.track && sender.track.kind == 'audio') {
+          // TODO: 可能多次触发事件
+          // 清除事件绑定
+          sender.track.removeEventListener('mute', _this37._replaceMicToAudio);
+          sender.track.removeEventListener('ended', _this37._replaceMicToAudio);
+
+          // 释放摄像头
+          sender.track.stop();
+
+          // 替换视频轨道
+          sender.replaceTrack(_this37._generateAnEmptyAudioTrack());
+
+          // 本地播放本地视频轨道
+          _this37._localMediaStream.removeTrack(_this37._localMediaStream.getVideoTracks()[0]);
+          _this37._localMediaStream.addTrack(_this37._generateAnEmptyAudioTrack());
+
+          // 触发本地媒体更新事件
+          _this37.emit('localMediastreamUpdate', _this37._localMediaStream);
+
+          // 开始尝试获取麦克风体并恢复
+          _this37._replaceAudioToMic();
+        }
+      });
+    }
+
+    /**
+     * 将临时的canvas视频恢复为摄像头videoTrack
+     */
+  }, {
+    key: "_replaceCanvasToVideo",
+    value: function _replaceCanvasToVideo() {
+      var _this38 = this;
+      // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
+      navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: this._inviteMediaConstraints.video || true
+      }).then(function (stream) {
+        _this38._connection.getSenders().forEach(function (sender) {
+          if (sender.track.kind == 'video') {
+            // 停止绘制并清空画布
+            window.cancelAnimationFrame(_this38._restoreCameraTrackDraw);
+            _this38._restoreCameraTrackCtx.clearRect(0, 0, _this38._inviteMediaConstraints.width || 640, _this38._inviteMediaConstraints.height || 480);
+
+            // 替换视频轨道
+            sender.replaceTrack(stream.getVideoTracks()[0]);
+
+            // 本地播放本地视频轨道
+            _this38._localMediaStream.removeTrack(_this38._localMediaStream.getVideoTracks()[0]);
+            _this38._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+
+            // 触发本地媒体更新事件
+            _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
+
+            // 继续监听mute和ended事件
+            sender.track.addEventListener('mute', _this38._replaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this38._replaceVideoToCanvas);
+          }
+        });
+      })["catch"](function (error) {
+        // 获取摄像头失败，重新获取
+        logger.error("replaceCanvasToVideo error: ".concat(JSON.stringify(error)));
+        _this38._replaceCanvasToVideo();
+      });
+    }
+
+    /**
+     * 先将原来videoTrack替换为canvas视频，并关闭原来videoTrack
+     */
+  }, {
+    key: "_replaceVideoToCanvas",
+    value: function _replaceVideoToCanvas() {
+      var _this39 = this;
+      // 判断是否在通话中
+      if (!this.isEstablished()) {
+        return;
+      }
+
+      // 创建画布
+      this._restoreCameraTrackCanvas = document.createElement('canvas');
+      this._restoreCameraTrackCanvas.setAttribute('style', 'disable:none');
+      this._restoreCameraTrackCtx = this._restoreCameraTrackCanvas.getContext('2d');
+
+      // 开始绘制纯色
+      var drawToCanvas = function drawToCanvas() {
+        this._restoreCameraTrackCanvas.width = this._inviteMediaConstraints.width || 640;
+        this._restoreCameraTrackCanvas.height = this._inviteMediaConstraints.height || 480;
+        this._restoreCameraTrackCtx.fillStyle = 'blue';
+        this._restoreCameraTrackCtx.fillRect(0, 0, this._inviteMediaConstraints.width || 640, this._inviteMediaConstraints.height || 480);
+        this._restoreCameraTrackDraw = window.requestAnimationFrame(drawToCanvas);
+      };
+      drawToCanvas();
+
+      // 从画布获取15fps视频流
+      var newStream = this._restoreCameraTrackCanvas.captureStream(15);
+      this._connection.getSenders().forEach(function (sender) {
+        if (sender.track && sender.track.kind == 'video') {
+          // TODO: 可能多次触发事件
+          // 清除事件绑定
+          sender.track.removeEventListener('mute', _this39._replaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this39._replaceVideoToCanvas);
+
+          // 释放摄像头
+          sender.track.stop();
+          // 替换视频轨道
+          sender.replaceTrack(newStream.getVideoTracks()[0]);
+          // 本地播放本地视频轨道
+          _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
+          _this39._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          // 触发本地媒体更新事件
+          _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+          // 开始尝试获取摄像头媒体并恢复
+          _this39._replaceCanvasToVideo();
+        }
+      });
+    }
+
+    /**
+     * 检查媒体轨道是否异常并处理
+     */
+  }, {
+    key: "_checkMediaStreamStatus",
+    value: function _checkMediaStreamStatus() {
+      var _this40 = this;
+      // 先判断现在PC里面的媒体是否已经是muted
+      this._connection.getSenders().forEach(function (sender) {
+        // 视频轨道
+        if (sender.track.kind === 'video') {
+          if (sender.track.muted) {
+            _this40._replaceVideoToCanvas.call(sender.track, _this40._connection);
+          } else {
+            // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
+            // mute 事件触发替换视频流为临时视频，并释放摄像头
+            sender.track.addEventListener('mute', _this40._replaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this40._replaceVideoToCanvas);
+          }
+        }
+        // 音频轨道
+        else if (sender.track.kind === 'audio') {
+          if (sender.track.muted) {
+            _this40._replaceMicToAudio.call(sender.track, _this40._connection);
+          } else {
+            // mute 事件触发替换视频流为临时空音频，并释放麦克风
+            sender.track.addEventListener('mute', _this40._replaceMicToAudio);
+            sender.track.addEventListener('ended', _this40._replaceMicToAudio);
+          }
+        }
+      });
     }
   }], [{
     key: "C",
