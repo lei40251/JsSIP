@@ -19,9 +19,6 @@ let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
 
-// 兼容部分iOS手机蓝牙问题
-let tmpStream;
-
 // 远端客户端UA
 // let remoteUA;
 
@@ -57,8 +54,8 @@ const configuration = {
 };
 // 媒体约束条件
 const videoConstraints = {
-  width     : { ideal: 640 },
-  height    : { ideal: 480 },
+  width     : 640,
+  height    : 480,
   frameRate : 15
 };
 
@@ -122,7 +119,6 @@ ua.on('disconnected', function(data)
   needReinvite = true;
   setStatus(`信令连接断开: ${data.code} ${data.reason}`);
 });
-
 
 /**
  * connected
@@ -212,11 +208,6 @@ ua.on('newRTCSession', function(e)
     d.accept();
   });
 
-  // e.session.on('accepted', function(d)
-  // {
-  //   remoteUA = d.response.getHeader('x-ua');
-  // });
-
   // 部分场景兼容使用
   e.session.on('sdp', function(d)
   {
@@ -233,14 +224,6 @@ ua.on('newRTCSession', function(e)
     {
       d.sdp = d.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
     }
-    // else if (d.sdp.indexOf('a=mid:0') === -1)
-    // {
-    //   const regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
-    //   const replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
-    //   // const newSdp = sdp.replace(regex, replacement);
-
-    //   d.sdp = d.sdp.replace(regex, replacement);
-    // }
   });
 
   /**
@@ -372,12 +355,6 @@ ua.on('newRTCSession', function(e)
     tmpSession = null;
     needReinvite = false;
 
-    if (tmpStream)
-    {
-      tmpStream.getTracks().forEach((track) => track.stop());
-      tmpStream = null;
-    }
-
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
@@ -428,12 +405,6 @@ ua.on('newRTCSession', function(e)
     setStatus('通话结束');
 
     needReinvite = false;
-
-    if (tmpStream)
-    {
-      tmpStream.getTracks().forEach((track) => track.stop());
-      tmpStream = null;
-    }
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -582,7 +553,7 @@ ua.on('newRTCSession', function(e)
     * @type {object}
     * @property {string} originator - 'remote'为远端触发，'local'为本端触发
     */
-  e.session.on('confirmed', async function(d)
+  e.session.on('confirmed', async function()
   {
     setStatus('confirmed');
 
@@ -605,9 +576,6 @@ ua.on('newRTCSession', function(e)
 
     stats.on('network-quality', function(ev)
     {
-      console.warn('callee: ');
-      console.table(ev);
-
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
       document.querySelector('#NQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
@@ -963,16 +931,12 @@ async function call(type, direction)
   }
 
   options['mediaConstraints'] = {
-    audio : {
-      echoCancellation : {
-        exact                     : true,
-        echoCancellationThreshold : -40 // 调整阈值为-40dB
-      }
-    },
+    audio : true,
     video : type === 'video' ? videoConstraints : false
   };
 
   console.warn(options);
+
   const callee = document.querySelector('#callee').value;
   const session = await ua.call(`${callee}@${sipDomain}`, options);
 
@@ -1032,7 +996,6 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  console.log('ls: ', localStream.videoStream);
   // 本地视频
   localVideo.srcObject = localStream.videoStream;
   localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
@@ -1073,10 +1036,6 @@ function getStreams(pc)
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() => { })
     .catch(() => { });
-
-  // Promise.all([ localVideo.play(), remoteVideo.play() ])
-  //   .then(() => { })
-  //   .catch(() => { });
 }
 
 function stopStreams(type)
@@ -1195,12 +1154,6 @@ function start()
   window.onbeforeunload = function()
   {
     ua.stop();
-
-    if (tmpStream)
-    {
-      tmpStream.getTracks().forEach((track) => track.stop());
-      tmpStream = null;
-    }
   };
 }
 
