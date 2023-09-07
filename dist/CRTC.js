@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230907.202397121
+ * CRTC v1.9.13-beta.230907.2023971650
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -14659,6 +14659,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // Local MediaStream.
     _this._localMediaStream = null;
     _this._localMediaStreamLocallyGenerated = false;
+    // 是否替换过音频轨道
+    _this._replaceAudioTrack = false;
 
     // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareRTPSender = null;
@@ -17838,43 +17840,67 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(function () {
-        if (_this28._status === C.STATUS_TERMINATED) {
-          throw new Error('terminated');
-        }
+      Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+        var sendStream, mics, audio, audioCtx, destination, source;
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
+            case 0:
+              if (!(_this28._status === C.STATUS_TERMINATED)) {
+                _context2.next = 2;
+                break;
+              }
+              throw new Error('terminated');
+            case 2:
+              _this28._localMediaStream = mediaStream;
+              _this28._replaceAudioTrack = false;
+              sendStream = new MediaStream();
+              _context2.next = 7;
+              return Utils.getMicrophones();
+            case 7:
+              mics = _context2.sent;
+              // 兼容安卓微信Bug及iOS蓝牙问题
+              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                // 增加安卓微信呼叫的语音提醒
+                // const audio = new Audio('./sound/waiting.mp3');
+                audio = new Audio();
+                audioCtx = new AudioContext();
+                destination = audioCtx.createMediaStreamDestination();
+                source = audioCtx.createMediaElementSource(audio);
+                audio.loop = true;
+                audio.crossOrigin = 'anonymous';
+                audio.play()["catch"](function (error) {
+                  logger.error("new Audio() error: ".concat(JSON.stringify(error)));
+                });
+                source.connect(destination);
+                sendStream.addTrack(destination.stream.getAudioTracks()[0]);
+                sendStream.addTrack(mediaStream.getVideoTracks()[0]);
+                _this28._replaceAudioTrack = true;
+              } else {
+                sendStream = mediaStream;
+              }
+              if (sendStream) {
+                // 兼容低版本浏览器不支持addTrack的情况
+                if (RTCPeerConnection.prototype.addTrack) {
+                  sendStream.getTracks().forEach(function (track) {
+                    _this28._connection.addTrack(track, sendStream);
+                  });
+                } else {
+                  _this28._connection.addStream(sendStream);
+                }
+              }
 
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        // let ua;
-
-        // navigator.userAgent && (ua = navigator.userAgent.toLowerCase()
-        // .match(/cpu iphone os (.*?) like mac os/));
-        // if ((ua && ua[1]) && (ua[1].includes('15_1') || ua[1].includes('15_2')))
-        // {
-        // this._localMediaStream = Utils.getStreamThroughCanvas(mediaStream);
-        // }
-        // else
-        // {
-        _this28._localMediaStream = mediaStream;
-        // }
-
-        if (_this28._localMediaStream) {
-          // 兼容低版本浏览器不支持addTrack的情况
-          if (RTCPeerConnection.prototype.addTrack) {
-            _this28._localMediaStream.getTracks().forEach(function (track) {
-              _this28._connection.addTrack(track, _this28._localMediaStream);
-            });
-          } else {
-            _this28._connection.addStream(_this28._localMediaStream);
+              // TODO: should this be triggered here?
+              _this28._connecting(_this28._request);
+              return _context2.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+                _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+                throw error;
+              }));
+            case 12:
+            case "end":
+              return _context2.stop();
           }
-        }
-
-        // TODO: should this be triggered here?
-        _this28._connecting(_this28._request);
-        return _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-          _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
-          throw error;
-        });
-      }).then(function (desc) {
+        }, _callee2);
+      }))).then(function (desc) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
@@ -18881,9 +18907,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref5) {
-      var audio = _ref5.audio,
-        video = _ref5.video;
+    value: function _onmute(_ref6) {
+      var audio = _ref6.audio,
+        video = _ref6.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -18894,9 +18920,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref6) {
-      var audio = _ref6.audio,
-        video = _ref6.video;
+    value: function _onunmute(_ref7) {
+      var audio = _ref7.audio,
+        video = _ref7.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');

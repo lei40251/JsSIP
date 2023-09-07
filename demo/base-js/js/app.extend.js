@@ -591,7 +591,9 @@ ua.on('newRTCSession', function(e)
     //   rtcSession.terminate();
     // }
 
+    const mics = await CRTC.Utils.getMicrophones();
     // 获取统计信息
+
     stats = new CRTC.getStats(e.session.connection);
 
     stats.on('report', function(r)
@@ -619,6 +621,37 @@ ua.on('newRTCSession', function(e)
     {
       e.session.unmute({ video: true });
     }, 700);
+
+    // 兼容安卓微信Bug及iOS蓝牙问题
+    if (d.originator === 'local' && ((navigator.userAgent.indexOf('WeChat') != -1) || (navigator.userAgent.indexOf('iPhone') !=-1 && mics.length > 1)))
+    {
+      if (tmpStream)
+      {
+        tmpAudioStream = new MediaStream([ tmpStream.getAudioTracks()[0] ]);
+
+        const sender = e.session.connection.getSenders().find((s) =>
+        {
+          return s.track.kind == 'audio';
+        });
+
+        sender.replaceTrack(tmpStream.getAudioTracks()[0]);
+      }
+      else
+      {
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then((stream) =>
+          {
+            tmpAudioStream = stream;
+
+            const sender = e.session.connection.getSenders().find((s) =>
+            {
+              return s.track.kind == 'audio';
+            });
+
+            sender.replaceTrack(stream.getAudioTracks()[0]);
+          });
+      }
+    }
 
     // 获取媒体流
     getStreams(e.session.connection);
