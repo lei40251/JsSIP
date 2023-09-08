@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230907.2023972222
+ * CRTC v1.9.13-beta.230908.202398959
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -22378,6 +22378,11 @@ module.exports = /*#__PURE__*/function () {
         return false;
       }
       var message = data.toString();
+
+      // 统一修改发出的SDP
+      message = message.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
+      message = message.replace(/42e01f/, '42c01e');
+      message = message.replace(/a=group:BUNDLE.*\r\n/, '');
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
     }
@@ -22516,6 +22521,11 @@ module.exports = /*#__PURE__*/function () {
       else {
         logger.debug("received text message:\n\n".concat(data, "\n"));
       }
+
+      // 统一修改收到的SDP
+      data = data.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
+      data.indexOf('a=inactive') !== -1 && (data = data.replace(/m=video \d*/, 'm=video 0'));
+      logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,
         message: data
@@ -32495,7 +32505,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.13-beta.230907",
+  "version": "1.9.13-beta.230908",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
