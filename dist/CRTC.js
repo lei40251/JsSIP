@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230908.2023981557
+ * CRTC v1.9.13-beta.230908.2023981734
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -19039,6 +19039,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (stream) {
         _this36._connection.getSenders().forEach(function (sender) {
           if (sender.track.kind == 'audio') {
+            // 保持媒体的muted状态
+            stream.getAudioTracks()[0].enabled = _this36.isMuted().audio;
+
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
@@ -19115,7 +19118,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // 停止绘制并清空画布
             window.cancelAnimationFrame(_this38._restoreCameraTrackDraw);
             _this38._restoreCameraTrackCtx.clearRect(0, 0, _this38._inviteMediaConstraints.width || 640, _this38._inviteMediaConstraints.height || 480);
-
+            // 保持媒体的muted状态
+            stream.getVideoTracks()[0].enabled = _this38.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
@@ -19195,28 +19199,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this40 = this;
+      var _this41 = this;
+      var timer = null;
+
+      // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
+      navigator.mediaDevices.ondevicechange = function () {
+        if (timer) {
+          clearTimeout(timer);
+        }
+        timer = setTimeout(function () {
+          var _this40 = this;
+          timer = null;
+
+          // 如果设备变化则替换轨道流
+          this._connection.getSenders().forEach(function (sender) {
+            // 视频轨道
+            if (sender.track.kind === 'video') {
+              _this40._replaceVideoToCanvas.call(sender.track, _this40._connection);
+            }
+            // 音频轨道
+            else if (sender.track.kind === 'audio') {
+              _this40._replaceMicToAudio.call(sender.track, _this40._connection);
+            }
+          });
+        }, 300);
+      };
+
       // 先判断现在PC里面的媒体是否已经是muted
       this._connection.getSenders().forEach(function (sender) {
         // 视频轨道
         if (sender.track.kind === 'video') {
           if (sender.track.muted) {
-            _this40._replaceVideoToCanvas.call(sender.track, _this40._connection);
+            _this41._replaceVideoToCanvas.call(sender.track, _this41._connection);
           } else {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this40._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this40._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this41._replaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this41._replaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track.kind === 'audio') {
           if (sender.track.muted) {
-            _this40._replaceMicToAudio.call(sender.track, _this40._connection);
+            _this41._replaceMicToAudio.call(sender.track, _this41._connection);
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this40._replaceMicToAudio);
-            sender.track.addEventListener('ended', _this40._replaceMicToAudio);
+            sender.track.addEventListener('mute', _this41._replaceMicToAudio);
+            sender.track.addEventListener('ended', _this41._replaceMicToAudio);
           }
         }
       });
