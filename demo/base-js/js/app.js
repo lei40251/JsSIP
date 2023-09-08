@@ -10,8 +10,6 @@ CRTC.debug.enable('CRTC:*');
 let stats;
 // 是否存在远端回铃音
 let earlyMedia = false;
-let tmpAudioStream;
-let tmpVideoStream;
 // 断线重连
 let rtcSession;
 let needReinvite = false;
@@ -60,11 +58,7 @@ const videoConstraints = {
 };
 
 // RTCPeerConnection 的 RTCConfiguration 对象
-const pcConfig = {
-  bundlePolicy       : 'balanced',
-  tcpCandidatePolicy : 'disable',
-  IceTransportsType  : 'nohost'
-};
+const pcConfig = {};
 
 if (/Android/.test(navigator.userAgent))
 {
@@ -252,9 +246,9 @@ ua.on('newRTCSession', function(e)
    */
   e.session.on('hold', function(d)
   {
-    setStatus(`${d.originator}hold`);
+    setStatus(`${d.originator} hold`);
     // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    stopStreams('hold');
+    stopStreams();
   });
 
   /**
@@ -269,7 +263,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('unhold', function(d)
   {
-    setStatus(`${d.originator}unhold`);
+    setStatus(`${d.originator} unhold`);
 
     // 获取媒体流
     getStreams(e.session.connection);
@@ -373,11 +367,8 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('videoTrackState', function(d)
   {
-    console.warn('videoTrackState: ', d.properties, d.value);
-    // if (d.properties === 'muted')
-    // {
-    setStatus(`videoTrackState ${d.properties} ${d.value}`);
-    // }
+    // 视频轨道状态
+    setStatus(`VTState ${d.properties} ${d.value}`);
   });
 
   /**
@@ -1028,20 +1019,12 @@ function getStreams(pc)
     .catch(() => { });
 }
 
-function stopStreams(type)
+function stopStreams()
 {
   // 停止媒体流，这里可以切换页面UI
   remoteVideo.srcObject = null;
   remoteAudio.srcObject = null;
   localVideo.srcObject = null;
-  type !== 'hold' && tmpAudioStream && tmpAudioStream.getTracks().forEach((track) =>
-  {
-    track.stop();
-  });
-  type !== 'hold' && tmpVideoStream && tmpVideoStream.getTracks().forEach((track) =>
-  {
-    track.stop();
-  });
 }
 
 /**
