@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230908.2023981759
+ * CRTC v1.9.13-beta.230908.20239271527
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -293,7 +293,7 @@ module.exports = {
     INCOMPATIBLE_SDP: 'Incompatible SDP',
     MISSING_SDP: 'Missing SDP',
     AUTHENTICATION_ERROR: 'Authentication Error',
-    // Session error causes.
+    // Session error causes.git log
     BYE: 'Terminated',
     WEBRTC_ERROR: 'WebRTC Error',
     CANCELED: 'Canceled',
@@ -19027,7 +19027,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
-     * 将临时的canvas视频恢复为麦克风videoTrack
+     * 将临时的音频恢复为麦克风audioTrack
      */
   }, {
     key: "_replaceAudioToMic",
@@ -19039,7 +19039,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         video: false
       }).then(function (stream) {
         _this36._connection.getSenders().forEach(function (sender) {
-          if (sender.track.kind == 'audio') {
+          if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
             stream.getAudioTracks()[0].enabled = _this36.isMuted().audio;
 
@@ -19066,7 +19066,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
-     * 先将原来videoTrack替换为canvas视频，并关闭原来videoTrack
+     * 先将原来麦克风audioTrack替换为audio音频，并关闭原来audioTrack释放麦克风
      */
   }, {
     key: "_replaceMicToAudio",
@@ -19083,13 +19083,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sender.track.removeEventListener('mute', _this37._replaceMicToAudio);
           sender.track.removeEventListener('ended', _this37._replaceMicToAudio);
 
-          // 释放摄像头
+          // 释放麦克风
           sender.track.stop();
 
-          // 替换视频轨道
+          // 替换音频轨道
           sender.replaceTrack(_this37._generateAnEmptyAudioTrack());
 
-          // 本地播放本地视频轨道
+          // 本地播放本地音频轨道
           _this37._localMediaStream.removeTrack(_this37._localMediaStream.getVideoTracks()[0]);
           _this37._localMediaStream.addTrack(_this37._generateAnEmptyAudioTrack());
 
@@ -19115,7 +19115,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
         _this38._connection.getSenders().forEach(function (sender) {
-          if (sender.track.kind == 'video') {
+          if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
             window.cancelAnimationFrame(_this38._restoreCameraTrackDraw);
             _this38._restoreCameraTrackCtx.clearRect(0, 0, _this38._inviteMediaConstraints.width || 640, _this38._inviteMediaConstraints.height || 480);
@@ -19162,11 +19162,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 开始绘制纯色
       var drawToCanvas = function drawToCanvas() {
-        this._restoreCameraTrackCanvas.width = this._inviteMediaConstraints.width || 640;
-        this._restoreCameraTrackCanvas.height = this._inviteMediaConstraints.height || 480;
-        this._restoreCameraTrackCtx.fillStyle = 'blue';
-        this._restoreCameraTrackCtx.fillRect(0, 0, this._inviteMediaConstraints.width || 640, this._inviteMediaConstraints.height || 480);
-        this._restoreCameraTrackDraw = window.requestAnimationFrame(drawToCanvas);
+        _this39._restoreCameraTrackCanvas.width = _this39._inviteMediaConstraints.width || 640;
+        _this39._restoreCameraTrackCanvas.height = _this39._inviteMediaConstraints.height || 480;
+        _this39._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this39._restoreCameraTrackCtx.fillRect(0, 0, _this39._inviteMediaConstraints.width || 640, _this39._inviteMediaConstraints.height || 480);
+        _this39._restoreCameraTrackDraw = window.requestAnimationFrame(drawToCanvas);
       };
       drawToCanvas();
 
@@ -19200,7 +19200,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this41 = this;
+      var _this40 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -19209,18 +19209,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           clearTimeout(timer);
         }
         timer = setTimeout(function () {
-          var _this40 = this;
           timer = null;
 
           // 如果设备变化则替换轨道流
-          this._connection.getSenders().forEach(function (sender) {
+          _this40._connection.getSenders().forEach(function (sender) {
             // 视频轨道
-            if (sender.track.kind === 'video') {
-              _this40._replaceVideoToCanvas.call(sender.track, _this40._connection);
+            if (sender.track && sender.track.kind === 'video') {
+              _this40._replaceVideoToCanvas.call(sender.track);
             }
             // 音频轨道
-            else if (sender.track.kind === 'audio') {
-              _this40._replaceMicToAudio.call(sender.track, _this40._connection);
+            else if (sender.track && sender.track.kind === 'audio') {
+              _this40._replaceMicToAudio.call(sender.track);
             }
           });
         }, 300);
@@ -19229,24 +19228,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 先判断现在PC里面的媒体是否已经是muted
       this._connection.getSenders().forEach(function (sender) {
         // 视频轨道
-        if (sender.track.kind === 'video') {
-          if (sender.track.muted) {
-            _this41._replaceVideoToCanvas.call(sender.track, _this41._connection);
+        if (sender.track && sender.track.kind === 'video') {
+          if (sender.track && sender.track.muted) {
+            _this40._replaceVideoToCanvas.call(sender.track);
           } else {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this41._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this41._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this40._replaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this40._replaceVideoToCanvas);
           }
         }
         // 音频轨道
-        else if (sender.track.kind === 'audio') {
-          if (sender.track.muted) {
-            _this41._replaceMicToAudio.call(sender.track, _this41._connection);
+        else if (sender.track && sender.track.kind === 'audio') {
+          if (sender.track && sender.track.muted) {
+            _this40._replaceMicToAudio.call(sender.track);
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this41._replaceMicToAudio);
-            sender.track.addEventListener('ended', _this41._replaceMicToAudio);
+            sender.track.addEventListener('mute', _this40._replaceMicToAudio);
+            sender.track.addEventListener('ended', _this40._replaceMicToAudio);
           }
         }
       });
@@ -21202,22 +21201,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return Utils.getMicrophones().length;
             case 9:
               micl = _context.sent;
-              _context.next = 15;
-              break;
-            case 12:
-              _context.prev = 12;
-              _context.t0 = _context["catch"](6);
-              logger.error("getMicrophones error ".concat(JSON.stringify(_context.t0)));
-            case 15:
               _this2._pc.getSenders().forEach(function (s) {
                 var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
                 logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus, " ***** settings: ").concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities())));
               });
+              _context.next = 16;
+              break;
+            case 13:
+              _context.prev = 13;
+              _context.t0 = _context["catch"](6);
+              logger.error("getMicrophones or others error ".concat(JSON.stringify(_context.t0)));
             case 16:
             case "end":
               return _context.stop();
           }
-        }, _callee, null, [[6, 12]]);
+        }, _callee, null, [[6, 13]]);
       })), this._delay * 1000);
     }
   }, {
@@ -21511,23 +21509,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // eslint-disable-next-line max-len
         uplinkNetworkQuality: uplinkNetworkQuality.length > 0 ? Math.floor(uplinkNetworkQuality.reduce(function (pre, cur) {
           return pre + cur;
-        }) / uplinkNetworkQuality.length) || 0 : 0,
+        }) / uplinkNetworkQuality.length) || 0 : null,
         RTT: RTT.length > 0 ? Math.floor(RTT.reduce(function (pre, cur) {
           return pre + cur;
-        }) / RTT.length) || 0 : 0,
+        }) / RTT.length) || 0 : null,
         // eslint-disable-next-line max-len
         uplinkLoss: uplinkLoss.length > 0 ? Math.floor(uplinkLoss.reduce(function (pre, cur) {
           return pre + cur;
-        }) / uplinkLoss.length) || 0 : 0,
+        }) / uplinkLoss.length) || null : null,
         // eslint-disable-next-line max-len
         downlinkNetworkQuality: downlinkNetworkQuality.length > 0 ? Math.floor(downlinkNetworkQuality.reduce(function (pre, cur) {
           return pre + cur;
-        }) / downlinkNetworkQuality.length) || 0 : 0,
+        }) / downlinkNetworkQuality.length) || 0 : null,
         // eslint-disable-next-line max-len
         downlinkLoss: downlinkLoss.length > 0 ? Math.floor(downlinkLoss.reduce(function (pre, cur) {
           return pre + cur;
-        }) / downlinkLoss.length) || 0 : 0
+        }) / downlinkLoss.length) || null : null
       };
+      console.warn('nq: ', JSON.stringify(this._networkQuality));
       logger.debug("networkQuality: ".concat(JSON.stringify(this._networkQuality)));
       this.emit('network-quality', this._networkQuality);
     }
@@ -24624,6 +24623,10 @@ exports.getStreamThroughCanvas = function (stream) {
  * 根据丢包率和RTT值计算网络质量值
  */
 exports.getNetworkQuality = function (loss, rtt) {
+  if (!loss && !rtt) {
+    return 6;
+  }
+
   // eslint-disable-next-line max-len
   return loss > 40 || rtt > 500 ? 6 : loss > 30 || rtt > 350 ? 5 : loss > 20 || rtt > 200 ? 4 : loss > 10 || rtt > 100 ? 3 : loss > 0 || rtt >= 50 ? 2 : loss >= 0 || rtt < 50 ? 1 : 0;
 };
