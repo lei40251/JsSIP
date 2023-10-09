@@ -1,5 +1,5 @@
 /*
- * CRTC v1.9.13-beta.230908.20239271527
+ * CRTC v1.9.13-beta.230927.20231091532
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -293,7 +293,7 @@ module.exports = {
     INCOMPATIBLE_SDP: 'Incompatible SDP',
     MISSING_SDP: 'Missing SDP',
     AUTHENTICATION_ERROR: 'Authentication Error',
-    // Session error causes.git log
+    // Session error causes.
     BYE: 'Terminated',
     WEBRTC_ERROR: 'WebRTC Error',
     CANCELED: 'Canceled',
@@ -32559,7 +32559,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.9.13-beta.230908",
+  "version": "1.9.13-beta.230927",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
