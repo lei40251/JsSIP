@@ -3,5 +3,10 @@
     "crtc"
   ],
   "liveServer.settings.port": 5504,
-  "commentTranslate.source": "Google"
+  "commentTranslate.source": "Google",
+  "clangd.arguments": [
+    "\"--compile-commands-dir=${workspaceFolder}/build\"",
+    "\"--query-driver=/usr/bin/clang,/usr/bin/c++\"",
+    "\"--header-insertion=never\""
+  ]
 }

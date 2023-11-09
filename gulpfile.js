@@ -184,7 +184,7 @@ gulp.task('zip-zip', function()
 {
   return gulp
     .src('zip/**')
-    .pipe(zip(`CRTC_Web_SDK_${ PKG.version }.zip`))
+    .pipe(zip(`CRTC_SDK_Web_Release_${ PKG.version }.zip`))
     .pipe(gulp.dest('./SDK_zip/'));
 });
 
