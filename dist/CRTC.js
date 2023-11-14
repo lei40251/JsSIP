@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.1-beta.20231113.202311131722
+ * CRTC v1.10.1.202311141026
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16851,7 +16851,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 如果没有成功连接过，挂断通话；成功连接过则重新协商
         // TODO: Do more with different states.
         if (state === 'failed' || state === 'disconnected') {
-          console.warn('s: ', state, successfullyConnected);
           if (!successfullyConnected) {
             self.terminate({
               cause: CRTC_C.causes.RTP_TIMEOUT,
@@ -16859,8 +16858,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
           } else {
-            console.warn('tc: ', _this17._ua.isConnected());
-            console.warn('self: ', self);
             // RTCPeerConnection failed断开后启动重新协商
             self.renegotiate({
               rtcOfferConstraints: {
@@ -18236,7 +18233,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var _this30 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
-      console.warn('reinvite()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
@@ -18265,7 +18261,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         logger.debug('emit "sdp"');
         _this30.emit('sdp', e);
-        console.warn('srs.');
         _this30.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
@@ -22586,7 +22581,6 @@ module.exports = /*#__PURE__*/function () {
           }
         }, this);
       }
-      console.warn('reconnect.');
       this._reconnect(error);
     }
   }, {
@@ -32612,7 +32606,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.1-beta.20231113",
+  "version": "1.10.1",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32663,5 +32657,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[8])(8)
 });
