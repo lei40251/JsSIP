@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.0.20231091547
+ * CRTC v1.10.1-beta.20231113.202311131722
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -16804,9 +16804,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
       var _this17 = this;
+      var self = this;
+
       // 是否成功连接过
       var successfullyConnected = false;
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
+      this._connection.onconnectionstatechange = function () {
+        switch (_this17._connection.connectionState) {
+          case 'connecting':
+            // 如果是第一次连接，并且5秒后依然是connecting状态则重新协商
+            if (!successfullyConnected) {
+              setTimeout(function () {
+                if (self._connection.connectionState === 'connecting') {
+                  self.renegotiate({
+                    rtcOfferConstraints: {
+                      iceRestart: true
+                    }
+                  });
+                }
+              }, 5000);
+            }
+            break;
+          case 'connected':
+            // 媒体接通后，如果信令重连媒体会重新协商
+            window.addEventListener('setItemEvent', function (e) {
+              if (e.key === 'needReinvite' && e.newValue === 1) {
+                sessionStorage.removeItem('needReinvite');
+                self.renegotiate();
+              }
+            });
+            break;
+          default:
+            break;
+        }
+      };
       this._connection.addEventListener('iceconnectionstatechange', function () {
         var state = _this17._connection.iceConnectionState;
         _this17.emit('peerconnection:iceConnectionState', state);
@@ -16820,15 +16851,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 如果没有成功连接过，挂断通话；成功连接过则重新协商
         // TODO: Do more with different states.
         if (state === 'failed' || state === 'disconnected') {
+          console.warn('s: ', state, successfullyConnected);
           if (!successfullyConnected) {
-            _this17.terminate({
+            self.terminate({
               cause: CRTC_C.causes.RTP_TIMEOUT,
               status_code: 408,
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
           } else {
+            console.warn('tc: ', _this17._ua.isConnected());
+            console.warn('self: ', self);
             // RTCPeerConnection failed断开后启动重新协商
-            _this17.renegotiate({
+            self.renegotiate({
               rtcOfferConstraints: {
                 iceRestart: true
               }
@@ -18202,6 +18236,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var _this30 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
+      console.warn('reinvite()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
@@ -18230,6 +18265,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         logger.debug('emit "sdp"');
         _this30.emit('sdp', e);
+        console.warn('srs.');
         _this30.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
@@ -21526,7 +21562,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return pre + cur;
         }) / downlinkLoss.length) || null : null
       };
-      console.warn('nq: ', JSON.stringify(this._networkQuality));
       logger.debug("networkQuality: ".concat(JSON.stringify(this._networkQuality)));
       this.emit('network-quality', this._networkQuality);
     }
@@ -22511,6 +22546,12 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_onConnect",
     value: function _onConnect() {
+      // 信令连接成功，如果重试次数不为零则为重连，延迟1秒后调用reinvite
+      if (this.recover_attempts !== 0) {
+        setTimeout(function () {
+          sessionStorage.setItem('needReinvite', 1);
+        }, 1000);
+      }
       this.recover_attempts = 0;
       this.status = C.STATUS_CONNECTED;
 
@@ -22545,6 +22586,7 @@ module.exports = /*#__PURE__*/function () {
           }
         }, this);
       }
+      console.warn('reconnect.');
       this._reconnect(error);
     }
   }, {
@@ -22649,6 +22691,17 @@ function generateDate() {
   }
   return "".concat(tYear).concat(m).concat(d);
 }
+var orignalSetItem = sessionStorage.setItem;
+sessionStorage.setItem = function (key) {
+  var setItemEvent = new Event('setItemEvent');
+  setItemEvent.key = key;
+  for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    newValue[_key - 1] = arguments[_key];
+  }
+  setItemEvent.newValue = newValue[0];
+  window.dispatchEvent(setItemEvent);
+  orignalSetItem.apply(this, [key].concat(newValue));
+};
 
 /**
  * The User-Agent class.
@@ -32559,7 +32612,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.0",
+  "version": "1.10.1-beta.20231113",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32610,6 +32663,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });

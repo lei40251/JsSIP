@@ -115,24 +115,6 @@ ua.on('disconnected', function(data)
 });
 
 /**
- * connected
- *
- * @fires 信令连接尝试(或自动重新尝试)成功时触发
- *
- * @type {object}
- */
-ua.on('connected', function()
-{
-  if (needReinvite)
-  {
-    rtcSession && rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-
-    setStatus('reinvite');
-  }
-  setStatus('信令已连接');
-});
-
-/**
  * registered
  *
  * @fires 用户注册成功后触发
@@ -940,8 +922,6 @@ async function call(type, direction)
     },
     video : type === 'video' ? videoConstraints : false
   };
-
-  console.warn(options);
 
   const callee = document.querySelector('#callee').value;
   const session = await ua.call(`${callee}@${sipDomain}`, options);
