@@ -24,6 +24,8 @@ const localVideo = document.querySelector('#localVideo');
 const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
+const cusMediaStream = new MediaStream();
+
 // 信令地址
 const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
@@ -335,6 +337,8 @@ ua.on('newRTCSession', function(e)
 
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
+
+    cusMediaStream.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -391,6 +395,8 @@ ua.on('newRTCSession', function(e)
 
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
+
+    cusMediaStream.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -603,7 +609,7 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: false }
+      rtcOfferConstraints : { offerToReceiveAudio: true }
     });
 
     setStatus('audio answer');
@@ -775,7 +781,8 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#screenShare').onclick = function()
   {
-    e.session.share('screen', null, null,);
+    e.session.share('screen', null, null,)
+      .then((stream) => { document.querySelector('#screen').srcObject=stream; });
   };
   document.querySelector('#screenShareD').onclick = function()
   {
@@ -923,7 +930,25 @@ async function call(type, direction)
     video : type === 'video' ? videoConstraints : false
   };
 
+  if (type=== 'screen')
+  {
+    await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      .then(async(stream) =>
+      {
+        await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false })
+          .then((audioStream) =>
+          {
+            cusMediaStream.addTrack(stream.getVideoTracks()[0]);
+            cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
+            delete options['mediaConstraints'];
+            options['mediaStream']=cusMediaStream;
+          });
+      });
+  }
+
   const callee = document.querySelector('#callee').value;
+
+  console.log('op: ', options);
   const session = await ua.call(`${callee}@${sipDomain}`, options);
 
   // 默认远端无回铃音
@@ -1105,7 +1130,14 @@ function start()
   document.querySelector('#call').onclick = function()
   {
     // 设置当前通话模式为音频模式
-    call();
+    call('screen');
+  };
+
+  // 发起共享桌面视频呼叫
+  document.querySelector('#callScreen').onclick = function()
+  {
+    // 设置当前通话模式为视频模式
+    call('screen', 'sendonly');
   };
 
   // 发起视频呼叫

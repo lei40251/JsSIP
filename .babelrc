@@ -1,4 +1,10 @@
 {
-	"plugins": [],
-	"presets": [ "@babel/env" ]
+  "plugins": [
+    "@babel/plugin-transform-block-scoping"
+  ],
+  "presets": [
+    [
+      "@babel/env"
+    ]
+  ]
 }

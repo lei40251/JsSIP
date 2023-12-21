@@ -34,6 +34,8 @@
       </div>
       <video muted playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
         id="localVideo"></video>
+      <video style="position: absolute;left:0 ;top: 0;width: 45%;" muted playsinline x5-video-player-fullscreen="true"
+        autoplay x5-video-player-type="h5" id="screen"></video>
     </div>
     <div class="position-relative h-100">
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">远端视频</p>
@@ -59,6 +61,7 @@
                 <input class="form-control" type="text" value="7105" placeholder="请输入要呼叫的号码" id="callee" />
                 <button class="btn btn-success" id="call"><i class="bi-mic"></i> 语音外呼</button>
                 <button class="btn btn-primary" id="callVideo"><i class="bi-camera-video"></i> 视频外呼</button>
+                <button class="btn btn-warning" id="callScreen"><i class="bi-arrows-fullscreen"></i> 共享桌面外呼</button>
               </div>
             </div>
             <div class="col col-auto">
@@ -105,7 +108,7 @@
             <button class="btn btn-secondary" id="videoShare"><i class="bi-play"></i> 分享视频</button>
             <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle"></i> 停止分享</button>
           </div>
-          <div class="col col-auto mt-3">
+          <div class="col col-auto mt-3 hide">
             <button class="btn btn-info" id="screenShareD"><i class="bi-tv"></i> 分享屏幕(D)</button>
             <button class="btn btn-info" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
             <button class="btn btn-info" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>

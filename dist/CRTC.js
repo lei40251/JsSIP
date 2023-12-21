@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.1.202311141026
+ * CRTC v1.10.2-beta.20231220.202312211452
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -246,9 +246,9 @@ exports.load = function (dst, src) {
   }
 
   // Check Optional parameters.
-  for (var _parameter in checks.optional) {
-    if (src.hasOwnProperty(_parameter)) {
-      var _value = src[_parameter];
+  for (var _parameter2 in checks.optional) {
+    if (src.hasOwnProperty(_parameter2)) {
+      var _value = src[_parameter2];
 
       /* If the parameter value is null, empty string, undefined, empty array
        * or it's a number with NaN value, then apply its default value.
@@ -256,11 +256,11 @@ exports.load = function (dst, src) {
       if (Utils.isEmpty(_value)) {
         continue;
       }
-      var _checked_value = checks.optional[_parameter](_value);
+      var _checked_value = checks.optional[_parameter2](_value);
       if (_checked_value !== undefined) {
-        dst[_parameter] = _checked_value;
+        dst[_parameter2] = _checked_value;
       } else {
-        throw new Exceptions.ConfigurationError(_parameter, _value);
+        throw new Exceptions.ConfigurationError(_parameter2, _value);
       }
     }
   }
@@ -15908,7 +15908,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._localShareStreamLocallyGenerated = true;
 
         // 分享屏幕 默认帧率 5
-        navigator.mediaDevices.getDisplayMedia({
+        return navigator.mediaDevices.getDisplayMedia({
           video: {
             frameRate: 5
           }
@@ -15933,6 +15933,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sender.replaceTrack(track);
             }
           });
+          return stream;
         })["catch"](function (error) {
           logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
           logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
@@ -21205,7 +21206,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function start() {
       var _this2 = this;
       this._statsTimer = setInterval( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-        var micl;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
@@ -21226,27 +21226,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2._count--;
               });
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
-              micl = 0;
-              _context.prev = 6;
-              _context.next = 9;
-              return Utils.getMicrophones().length;
-            case 9:
-              micl = _context.sent;
-              _this2._pc.getSenders().forEach(function (s) {
-                var trackStatus = "micl: ".concat(micl, ",id: ").concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state, ";");
-                logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus, " ***** settings: ").concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities())));
-              });
-              _context.next = 16;
-              break;
-            case 13:
-              _context.prev = 13;
-              _context.t0 = _context["catch"](6);
-              logger.error("getMicrophones or others error ".concat(JSON.stringify(_context.t0)));
-            case 16:
+              try {
+                _this2._pc.getSenders().forEach(function (s) {
+                  var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
+                  logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
+                  logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities())));
+                });
+              } catch (error) {
+                logger.error(error.toString());
+              }
+            case 6:
             case "end":
               return _context.stop();
           }
-        }, _callee, null, [[6, 13]]);
+        }, _callee);
       })), this._delay * 1000);
     }
   }, {
@@ -23645,21 +23638,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
       logger.debug('configuration parameters after validation:');
-      for (var _parameter in this._configuration) {
+      for (var _parameter2 in this._configuration) {
         // Only show the user user configurable parameters.
-        if (Object.prototype.hasOwnProperty.call(config.settings, _parameter)) {
-          switch (_parameter) {
+        if (Object.prototype.hasOwnProperty.call(config.settings, _parameter2)) {
+          switch (_parameter2) {
             case 'uri':
             case 'registrar_server':
-              logger.debug("- ".concat(_parameter, ": ").concat(this._configuration[_parameter]));
+              logger.debug("- ".concat(_parameter2, ": ").concat(this._configuration[_parameter2]));
               break;
             case 'password':
             case 'ha1':
             case 'authorization_jwt':
-              logger.debug("- ".concat(_parameter, ": NOT SHOWN"));
+              logger.debug("- ".concat(_parameter2, ": NOT SHOWN"));
               break;
             default:
-              logger.debug("- ".concat(_parameter, ": ").concat(JSON.stringify(this._configuration[_parameter])));
+              logger.debug("- ".concat(_parameter2, ": ").concat(JSON.stringify(this._configuration[_parameter2])));
           }
         }
       }
@@ -24967,9 +24960,9 @@ function rfc3261_8_2_2_2() {
 
   // Otherwise check whether it is a merged request.
   else {
-    for (var _transaction in ua._transactions.nist) {
-      if (Object.prototype.hasOwnProperty.call(ua._transactions.nist, _transaction)) {
-        tr = ua._transactions.nist[_transaction];
+    for (var _transaction2 in ua._transactions.nist) {
+      if (Object.prototype.hasOwnProperty.call(ua._transactions.nist, _transaction2)) {
+        tr = ua._transactions.nist[_transaction2];
         if (tr.request.from_tag === fromTag && tr.request.call_id === call_id && tr.request.cseq === cseq) {
           reply(482);
           return false;
@@ -32606,7 +32599,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.1",
+  "version": "1.10.2-beta.20231220",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32629,9 +32622,11 @@ module.exports={
   },
   "devDependencies": {
     "@babel/core": "^7.13.10",
+    "@babel/plugin-transform-block-scoping": "^7.23.4",
     "@babel/preset-env": "^7.13.10",
     "ansi-colors": "^3.2.4",
     "browserify": "^16.5.1",
+    "core-js": "^3.33.3",
     "del": "^6.1.1",
     "eslint": "^5.16.0",
     "fancy-log": "^1.3.3",
@@ -32657,6 +32652,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });

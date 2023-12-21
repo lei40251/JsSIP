@@ -1,6 +1,5 @@
 /* eslint-disable strict */
 'use strict';
-/* eslint-enable strict */
 
 const fs = require('fs');
 const path = require('path');
@@ -64,6 +63,14 @@ gulp.task('babel', function()
     .pipe(gulp.dest('lib-es5'));
 });
 
+gulp.task('babel1', function()
+{
+  return gulp
+    .src([ `dist/${ PKG.title }.js` ])
+    .pipe(babel())
+    .pipe(gulp.dest('dist/b/'));
+});
+
 gulp.task('browserify', function()
 {
   return browserify(
@@ -91,7 +98,7 @@ gulp.task('browserify', function()
 
 gulp.task('uglify', function()
 {
-  const src = `dist/${ PKG.title }.js`;
+  const src = `dist/b/${ PKG.title }.js`;
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
@@ -198,10 +205,15 @@ gulp.task('zip-del', function(done)
   del.sync('./zip', done());
 });
 
+gulp.task('tmp-del', function(done)
+{
+  del.sync('./dist/b', done());
+});
+
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
 gulp.task('devel', gulp.series('grammar'));
 
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify'));
+gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'babel1', 'uglify', 'tmp-del'));
 
 gulp.task('default', gulp.series('dist'));
