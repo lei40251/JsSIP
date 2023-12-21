@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.2-beta.20231220.202312211452
+ * CRTC v1.10.2.202312211456
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -32599,7 +32599,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.2-beta.20231220",
+  "version": "1.10.2",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32652,5 +32652,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[8])(8)
 });
