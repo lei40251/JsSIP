@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.2.202312211456
+ * CRTC v1.10.3-beta.231222.202312221557
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2023 
  */
@@ -15025,7 +15025,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 音视频轨道属性状态都分别保存日志，视频轨道状态变化触发对应事件
         stream.getTracks().forEach(function (track) {
           var trackObj = "id:".concat(track.id, " enabled:").concat(track.enabled, " readyState:").concat(track.readyState, " muted:").concat(track.muted, " label:").concat(track.label);
-          logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities())));
+          logger.debug("local ".concat(track.kind, " track state: ").concat(JSON.stringify(trackObj), " ***** settings: ").concat(JSON.stringify(track.getSettings()), " ***** constraints: ").concat(JSON.stringify(track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(track.getCapabilities ? track.getCapabilities() : {})));
           _this2._inviteVideoTrackStatsTimer = setInterval(function () {
             if (track.kind === 'video') {
               if (videoTrackStates.has(track.id)) {
@@ -21230,7 +21230,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2._pc.getSenders().forEach(function (s) {
                   var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
                   logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
-                  logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities())));
+                  logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
                 });
               } catch (error) {
                 logger.error(error.toString());
@@ -32599,7 +32599,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.2",
+  "version": "1.10.3-beta.231222",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32652,6 +32652,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
