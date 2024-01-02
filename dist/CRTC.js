@@ -1,7 +1,7 @@
 /*
- * CRTC v1.10.3-beta.231222.202312221557
+ * CRTC v1.10.3-beta.231222.2024121423
  * the Javascript WebRTC and SIP library
- * Copyright: 2012-2023 
+ * Copyright: 2012-2024 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
@@ -14560,12 +14560,12 @@ module.exports = pk;
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
-function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == _typeof(value) && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator["return"] && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, "catch": function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
-function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
-function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == _typeof(value) && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator["return"] && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, "catch": function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
@@ -14969,55 +14969,81 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._request = new SIPMessage.InitialOutgoingInviteRequest(target, this._ua, requestParams, extraHeaders);
       this._id = this._request.call_id + this._from_tag;
+      this._replaceAudioTrack = false;
 
       // 适配浏览器M79以后Chrome默认使用mDNS主机名隐藏WebRTC暴露的本地IP
       return Promise.resolve()
       // Get a stream if required.
-      .then(function () {
-        // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
-        if (mediaStream) {
-          return mediaStream;
-        }
-        // Request for user media access.
-        else if (_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video) {
-          _this2._localMediaStreamLocallyGenerated = true;
+      .then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var currMediaConstraints, mStream, sendStream, mics, ua;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              if (!mediaStream) {
+                _context.next = 4;
+                break;
+              }
+              return _context.abrupt("return", mediaStream);
+            case 4:
+              if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
+                _context.next = 20;
+                break;
+              }
+              _this2._localMediaStreamLocallyGenerated = true;
 
-          // 判断授权是否包含视频
-          if (Number(_this2._ua.sk[7]) < 1) {
-            delete _this2._inviteMediaConstraints.video;
-          }
-          var currMediaConstraints;
+              // 判断授权是否包含视频
+              if (Number(_this2._ua.sk[7]) < 1) {
+                delete _this2._inviteMediaConstraints.video;
+              }
+              // 兼容安卓微信Bug，开始不获取麦克风媒体
+              if (navigator.userAgent.indexOf('WeChat') != -1) {
+                currMediaConstraints = {
+                  audio: false,
+                  video: _this2._inviteMediaConstraints.video || false
+                };
+              } else {
+                currMediaConstraints = _this2._inviteMediaConstraints;
+              }
+              mStream = navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
+                if (_this2._status === C.STATUS_TERMINATED) {
+                  throw new Error('terminated');
+                }
+                _this2._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+                logger.warn('emit "getusermediafailed" [error:%o]', error);
+                logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                _this2.emit('getusermediafailed', error);
+                throw error;
+              });
+              sendStream = new MediaStream();
+              _context.next = 12;
+              return Utils.getMicrophones();
+            case 12:
+              mics = _context.sent;
+              // 兼容安卓微信Bug及iOS蓝牙问题
+              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
+                sendStream.addTrack(mediaStream.getVideoTracks()[0]);
+                _this2._replaceAudioTrack = true;
+              } else {
+                sendStream = mStream;
+              }
 
-          // 兼容安卓微信Bug，开始不获取麦克风媒体
-          if (navigator.userAgent.indexOf('WeChat') != -1) {
-            currMediaConstraints = {
-              audio: false,
-              video: _this2._inviteMediaConstraints.video || false
-            };
-          } else {
-            currMediaConstraints = _this2._inviteMediaConstraints;
-          }
-          var mStream = navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
-            if (_this2._status === C.STATUS_TERMINATED) {
-              throw new Error('terminated');
-            }
-            _this2._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
-            logger.warn('emit "getusermediafailed" [error:%o]', error);
-            logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this2.emit('getusermediafailed', error);
-            throw error;
-          });
+              // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
 
-          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-          var ua;
-          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-            return Utils.getStreamThroughCanvas(mStream);
-          } else {
-            return mStream;
+              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
+                _context.next = 19;
+                break;
+              }
+              return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
+            case 19:
+              return _context.abrupt("return", sendStream);
+            case 20:
+            case "end":
+              return _context.stop();
           }
-        }
-      }).then(function (stream) {
+        }, _callee);
+      }))).then(function (stream) {
         // Create a new RTCPeerConnection instance.
         _this2._createRTCConnection(pcConfig, rtcConstraints);
         var videoTrackStates = new Map();
@@ -15652,33 +15678,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchDevice",
     value: function () {
-      var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type, deviceId) {
+      var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(type, deviceId) {
         var _this7 = this;
         var cameras, constraints;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
             case 0:
               logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context.next = 3;
+                _context2.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context.next = 14;
+                _context2.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context.next = 9;
+                _context2.next = 9;
                 break;
               }
-              _context.next = 7;
+              _context2.next = 7;
               return Utils.getCameras();
             case 7:
-              cameras = _context.sent;
+              cameras = _context2.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
@@ -15690,7 +15716,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context.abrupt("return", Promise.resolve().then(function () {
+              return _context2.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
@@ -15769,12 +15795,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return stream;
               }));
             case 14:
-              return _context.abrupt("return", false);
+              return _context2.abrupt("return", false);
             case 15:
             case "end":
-              return _context.stop();
+              return _context2.stop();
           }
-        }, _callee, this);
+        }, _callee2, this);
       }));
       function switchDevice(_x, _x2) {
         return _switchDevice.apply(this, arguments);
@@ -16034,8 +16060,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var dialog = this._dialog;
 
             // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref) {
-              var method = _ref.method;
+            this.receiveRequest = function (_ref2) {
+              var method = _ref2.method;
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
@@ -17745,17 +17771,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return false;
         }
         var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref2) {
-          var response = _ref2.response;
-          notifier.notify(response.status_code, response.reason_phrase);
-        });
-        session.on('accepted', function (_ref3) {
+        session.on('progress', function (_ref3) {
           var response = _ref3.response;
           notifier.notify(response.status_code, response.reason_phrase);
         });
-        session.on('_failed', function (_ref4) {
-          var message = _ref4.message,
-            cause = _ref4.cause;
+        session.on('accepted', function (_ref4) {
+          var response = _ref4.response;
+          notifier.notify(response.status_code, response.reason_phrase);
+        });
+        session.on('_failed', function (_ref5) {
+          var message = _ref5.message,
+            cause = _ref5.cause;
           if (message) {
             notifier.notify(message.status_code, message.reason_phrase);
           } else {
@@ -17890,54 +17916,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-        var sendStream, mics;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+      Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
             case 0:
               if (!(_this28._status === C.STATUS_TERMINATED)) {
-                _context2.next = 2;
+                _context3.next = 2;
                 break;
               }
               throw new Error('terminated');
             case 2:
               _this28._localMediaStream = mediaStream;
-              _this28._replaceAudioTrack = false;
-              sendStream = new MediaStream();
-              _context2.next = 7;
-              return Utils.getMicrophones();
-            case 7:
-              mics = _context2.sent;
-              // 兼容安卓微信Bug及iOS蓝牙问题
-              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                sendStream.addTrack(_this28._generateAnEmptyAudioTrack());
-                sendStream.addTrack(mediaStream.getVideoTracks()[0]);
-                _this28._replaceAudioTrack = true;
-              } else {
-                sendStream = mediaStream;
-              }
-              if (sendStream) {
+              if (_this28._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
-                  sendStream.getTracks().forEach(function (track) {
-                    _this28._connection.addTrack(track, sendStream);
+                  _this28._localMediaStream.getTracks().forEach(function (track) {
+                    _this28._connection.addTrack(track, _this28._localMediaStream);
                   });
                 } else {
-                  _this28._connection.addStream(sendStream);
+                  _this28._connection.addStream(_this28._localMediaStream);
                 }
               }
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
-              return _context2.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+              return _context3.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
-            case 12:
+            case 6:
             case "end":
-              return _context2.stop();
+              return _context3.stop();
           }
-        }, _callee2);
+        }, _callee3);
       }))).then(function (desc) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -18168,10 +18179,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+              _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-                  while (1) switch (_context3.prev = _context3.next) {
+                return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+                  while (1) switch (_context4.prev = _context4.next) {
                     case 0:
                       // Handle Session Timers.
                       _this29._handleSessionTimersInIncomingResponse(response);
@@ -18180,23 +18191,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this29._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context3.next = 6;
+                      _context4.next = 6;
                       return Utils.getMicrophones();
                     case 6:
-                      mics = _context3.sent;
+                      mics = _context4.sent;
                       if (_this29._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this29._inviteMediaConstraints.audio || true,
                           video: false
                         }).then(function (stream) {
-                          var sender = _e.session.connection.getSenders().find(function (s) {
+                          var sender = _this29._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           sender.replaceTrack(stream.getAudioTracks()[0]);
                         });
                       } else if (_this29._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                         if (_this29._localMediaStream) {
-                          sender = _e.session.connection.getSenders().find(function (s) {
+                          sender = _this29._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]);
@@ -18204,9 +18215,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       }
                     case 8:
                     case "end":
-                      return _context3.stop();
+                      return _context4.stop();
                   }
-                }, _callee3);
+                }, _callee4);
               })))["catch"](function (error) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -18981,9 +18992,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref7) {
-      var audio = _ref7.audio,
-        video = _ref7.video;
+    value: function _onmute(_ref8) {
+      var audio = _ref8.audio,
+        video = _ref8.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -18994,9 +19005,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref8) {
-      var audio = _ref8.audio,
-        video = _ref8.video;
+    value: function _onunmute(_ref9) {
+      var audio = _ref9.audio,
+        video = _ref9.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
