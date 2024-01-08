@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.3-beta.231222.2024121432
+ * CRTC v1.10.4-beta.240108.2024181251
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -16986,10 +16986,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (_this18._ua.sk[7] >= 3) {
               delete media.ext;
               if (media.type === 'video') {
-                media.ext = [{
-                  value: 13,
-                  uri: 'urn:3gpp:video-orientation'
-                }];
+                // media.ext = [ { value: 13, uri: 'urn:3gpp:video-orientation' } ];
                 media.invalid = [{
                   value: 'tcap:1 RTP/AVPF'
                 }, {
@@ -22309,6 +22306,7 @@ function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input ==
 var Logger = require('./Logger');
 var Socket = require('./Socket');
 var CRTC_C = require('./Constants');
+var Utils = require('./Utils');
 var logger = new Logger('Transport');
 
 /**
@@ -22464,9 +22462,11 @@ module.exports = /*#__PURE__*/function () {
       var message = data.toString();
 
       // 统一修改发出的SDP
-      message = message.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
       message = message.replace(/42e01f/, '42c01e');
       message = message.replace(/a=group:BUNDLE.*\r\n/, '');
+
+      // 修复修改SDP后的Header头
+      message = Utils.fixContentLength(message);
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
     }
@@ -22613,8 +22613,11 @@ module.exports = /*#__PURE__*/function () {
       }
 
       // 统一修改收到的SDP
-      data = data.replace(/a=extmap:7 urn:3gpp:video-orientation/, 'a=extmap:13 urn:3gpp:video-orientation');
-      data.indexOf('a=inactive') !== -1 && (data = data.replace(/m=video \d*/, 'm=video 0'));
+      if (data.indexOf('a=inactive') !== -1) {
+        data = data.replace(/m=video \d*/, 'm=video 0');
+        // 修复修改SDP后的Header头
+        data = Utils.fixContentLength(data);
+      }
       logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,
@@ -22624,7 +22627,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Transport;
 }();
-},{"./Constants":2,"./Logger":9,"./Socket":23}],28:[function(require,module,exports){
+},{"./Constants":2,"./Logger":9,"./Socket":23,"./Utils":30}],28:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24680,6 +24683,23 @@ exports.getNetworkQuality = function (loss, rtt) {
 
   // eslint-disable-next-line max-len
   return loss > 40 || rtt > 500 ? 6 : loss > 30 || rtt > 350 ? 5 : loss > 20 || rtt > 200 ? 4 : loss > 10 || rtt > 100 ? 3 : loss > 0 || rtt >= 50 ? 2 : loss >= 0 || rtt < 50 ? 1 : 0;
+};
+
+/**
+ * 修正SDP修改后信令Header里面的内容长度值
+ */
+exports.fixContentLength = function (data) {
+  try {
+    // 使用正则表达式获取 v=0 开始到字符串结束的部分
+    var sdpContent = data.match(/v=0[\s\S]*/)[0];
+    // 计算SDP内容的长度
+    var contentLength = sdpContent.length.toString();
+
+    // 替换原始字符串中的Content-Length
+    return data.replace(/Content-Length: \d+/, "Content-Length: ".concat(contentLength));
+  } catch (error) {
+    return data;
+  }
 };
 },{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
 "use strict";
@@ -32610,7 +32630,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.3-beta.231222",
+  "version": "1.10.4-beta.240108",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

@@ -50,7 +50,7 @@ const configuration = {
   // SIP身份验证密码
   password       : `yl_19${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'dhrrsY0tGw0VGSos+3lLLiZJK7hPe10zmSKueyNMS7Ig5PnThG0EYrLGx4mYmE2j23jAVexrZLTjZQL1ytosFN5EU1t95eyn38+t3KTZV4jSPCD2iidEXtOi6GuaB73na/5jH4wkobyOMpaZCKK5SNl2yDhaU8qbXMtnG1b0ezWd+ROcsC4WPh8O0HHk42VWhEnzXVp0k9KAn+idsO2536CZ4uIPPT244Z7aC1QPL0Y5Vj54oJrB3C54wbkouWd9s+MDIm3BzewBnf3ogSLGIlrN85Y7U5PnBERpeb0JXKi8pGGY40fS3EUJxi7zRPRrdGuzrAMgFiOBRTfqz+sWuQ=='
+  secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -1130,7 +1130,7 @@ function start()
   document.querySelector('#call').onclick = function()
   {
     // 设置当前通话模式为音频模式
-    call('screen');
+    call();
   };
 
   // 发起共享桌面视频呼叫
