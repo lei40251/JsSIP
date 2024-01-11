@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.4-beta.240108.20241111622
+ * CRTC v1.10.4.20241111728
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -14986,7 +14986,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _context.abrupt("return", mediaStream);
             case 4:
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 22;
+                _context.next = 24;
                 break;
               }
               _this2._localMediaStreamLocallyGenerated = true;
@@ -14995,7 +14995,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (Number(_this2._ua.sk[7]) < 1) {
                 delete _this2._inviteMediaConstraints.video;
               }
-              // 兼容安卓微信Bug，开始不获取麦克风媒体
+              mStream = new MediaStream(); // 兼容安卓微信Bug，开始不获取麦克风媒体
               if (navigator.userAgent.indexOf('WeChat') != -1) {
                 currMediaConstraints = {
                   audio: false,
@@ -15004,7 +15004,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
-              _context.next = 10;
+              if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
+                _context.next = 13;
+                break;
+              }
+              _context.next = 12;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -15015,17 +15019,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2.emit('getusermediafailed', error);
                 throw error;
               });
-            case 10:
+            case 12:
               mStream = _context.sent;
+            case 13:
               sendStream = new MediaStream();
-              _context.next = 14;
+              _context.next = 16;
               return Utils.getMicrophones();
-            case 14:
+            case 16:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                 sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
-                sendStream.addTrack(mStream.getVideoTracks()[0]);
+                mStream.getVideoTracks().length > 0 && sendStream.addTrack(mStream.getVideoTracks()[0]);
                 _this2._replaceAudioTrack = true;
               } else {
                 sendStream = mStream;
@@ -15035,13 +15040,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 21;
+                _context.next = 23;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 21:
+            case 23:
               return _context.abrupt("return", sendStream);
-            case 22:
+            case 24:
             case "end":
               return _context.stop();
           }
@@ -32654,7 +32659,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.4-beta.240108",
+  "version": "1.10.4",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32707,5 +32712,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[8])(8)
 });
