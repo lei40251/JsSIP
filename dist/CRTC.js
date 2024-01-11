@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.4-beta.240108.202418157
+ * CRTC v1.10.4-beta.240108.20241111622
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -14986,7 +14986,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _context.abrupt("return", mediaStream);
             case 4:
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 20;
+                _context.next = 22;
                 break;
               }
               _this2._localMediaStreamLocallyGenerated = true;
@@ -15004,7 +15004,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
-              mStream = navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
+              _context.next = 10;
+              return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
                 }
@@ -15014,15 +15015,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2.emit('getusermediafailed', error);
                 throw error;
               });
+            case 10:
+              mStream = _context.sent;
               sendStream = new MediaStream();
-              _context.next = 12;
+              _context.next = 14;
               return Utils.getMicrophones();
-            case 12:
+            case 14:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                 sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
-                sendStream.addTrack(mediaStream.getVideoTracks()[0]);
+                sendStream.addTrack(mStream.getVideoTracks()[0]);
                 _this2._replaceAudioTrack = true;
               } else {
                 sendStream = mStream;
@@ -15032,13 +15035,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 19;
+                _context.next = 21;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 19:
+            case 21:
               return _context.abrupt("return", sendStream);
-            case 20:
+            case 22:
             case "end":
               return _context.stop();
           }
@@ -15389,51 +15392,64 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._createRTCConnection(pcConfig, rtcConstraints);
       Promise.resolve()
       // Handle local MediaStream.
-      .then(function () {
-        // A local MediaStream is given, use it.
-        if (mediaStream) {
-          return mediaStream;
-        }
+      .then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+        var mStream, ua;
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
+            case 0:
+              if (!mediaStream) {
+                _context2.next = 4;
+                break;
+              }
+              return _context2.abrupt("return", mediaStream);
+            case 4:
+              if (!(mediaConstraints.audio || mediaConstraints.video)) {
+                _context2.next = 17;
+                break;
+              }
+              _this4._localMediaStreamLocallyGenerated = true;
 
-        // Audio and/or video requested, prompt getUserMedia.
-        else if (mediaConstraints.audio || mediaConstraints.video) {
-          _this4._localMediaStreamLocallyGenerated = true;
+              // 判断授权是否包含视频
+              if (Number(_this4._ua.sk[7]) < 1) {
+                delete mediaConstraints.video;
+              }
 
-          // 判断授权是否包含视频
-          if (Number(_this4._ua.sk[7]) < 1) {
-            delete mediaConstraints.video;
+              /**
+               * 音视频切换相关
+               * 判断是视频接听还是音频接听
+               * @author: lei
+               */
+              if (!mediaConstraints.video) {
+                _this4._localToAudio = true;
+              }
+              _context2.next = 10;
+              return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+                if (_this4._status === C.STATUS_TERMINATED) {
+                  throw new Error('terminated');
+                }
+                request.reply(480);
+                _this4._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+                logger.warn('emit "getusermediafailed" [error:%o]', error);
+                logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                _this4.emit('getusermediafailed', error);
+                throw new Error('getUserMedia() failed');
+              });
+            case 10:
+              mStream = _context2.sent;
+              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
+                _context2.next = 16;
+                break;
+              }
+              return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
+            case 16:
+              return _context2.abrupt("return", mStream);
+            case 17:
+            case "end":
+              return _context2.stop();
           }
-
-          /**
-           * 音视频切换相关
-           * 判断是视频接听还是音频接听
-           * @author: lei
-           */
-          if (!mediaConstraints.video) {
-            _this4._localToAudio = true;
-          }
-          var mStream = navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
-            if (_this4._status === C.STATUS_TERMINATED) {
-              throw new Error('terminated');
-            }
-            request.reply(480);
-            _this4._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
-            logger.warn('emit "getusermediafailed" [error:%o]', error);
-            logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this4.emit('getusermediafailed', error);
-            throw new Error('getUserMedia() failed');
-          });
-
-          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-          var ua;
-          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-            return Utils.getStreamThroughCanvas(mStream);
-          } else {
-            return mStream;
-          }
-        }
-      })
+        }, _callee2);
+      })))
       // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
         if (_this4._status === C.STATUS_TERMINATED) {
@@ -15678,33 +15694,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchDevice",
     value: function () {
-      var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(type, deviceId) {
+      var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(type, deviceId) {
         var _this7 = this;
         var cameras, constraints;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
             case 0:
               logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context2.next = 3;
+                _context3.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context2.next = 14;
+                _context3.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context2.next = 9;
+                _context3.next = 9;
                 break;
               }
-              _context2.next = 7;
+              _context3.next = 7;
               return Utils.getCameras();
             case 7:
-              cameras = _context2.sent;
+              cameras = _context3.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
@@ -15716,7 +15732,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context2.abrupt("return", Promise.resolve().then(function () {
+              return _context3.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
@@ -15795,12 +15811,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return stream;
               }));
             case 14:
-              return _context2.abrupt("return", false);
+              return _context3.abrupt("return", false);
             case 15:
             case "end":
-              return _context2.stop();
+              return _context3.stop();
           }
-        }, _callee2, this);
+        }, _callee3, this);
       }));
       function switchDevice(_x, _x2) {
         return _switchDevice.apply(this, arguments);
@@ -16060,8 +16076,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var dialog = this._dialog;
 
             // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref2) {
-              var method = _ref2.method;
+            this.receiveRequest = function (_ref3) {
+              var method = _ref3.method;
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
@@ -17776,17 +17792,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return false;
         }
         var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref3) {
-          var response = _ref3.response;
-          notifier.notify(response.status_code, response.reason_phrase);
-        });
-        session.on('accepted', function (_ref4) {
+        session.on('progress', function (_ref4) {
           var response = _ref4.response;
           notifier.notify(response.status_code, response.reason_phrase);
         });
-        session.on('_failed', function (_ref5) {
-          var message = _ref5.message,
-            cause = _ref5.cause;
+        session.on('accepted', function (_ref5) {
+          var response = _ref5.response;
+          notifier.notify(response.status_code, response.reason_phrase);
+        });
+        session.on('_failed', function (_ref6) {
+          var message = _ref6.message,
+            cause = _ref6.cause;
           if (message) {
             notifier.notify(message.status_code, message.reason_phrase);
           } else {
@@ -17921,12 +17937,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+      Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
             case 0:
               if (!(_this28._status === C.STATUS_TERMINATED)) {
-                _context3.next = 2;
+                _context4.next = 2;
                 break;
               }
               throw new Error('terminated');
@@ -17945,15 +17961,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
-              return _context3.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+              return _context4.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
             case 6:
             case "end":
-              return _context3.stop();
+              return _context4.stop();
           }
-        }, _callee3);
+        }, _callee4);
       }))).then(function (desc) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -18184,10 +18200,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+              _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-                  while (1) switch (_context4.prev = _context4.next) {
+                return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+                  while (1) switch (_context5.prev = _context5.next) {
                     case 0:
                       // Handle Session Timers.
                       _this29._handleSessionTimersInIncomingResponse(response);
@@ -18196,10 +18212,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this29._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context4.next = 6;
+                      _context5.next = 6;
                       return Utils.getMicrophones();
                     case 6:
-                      mics = _context4.sent;
+                      mics = _context5.sent;
                       if (_this29._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this29._inviteMediaConstraints.audio || true,
@@ -18220,9 +18236,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       }
                     case 8:
                     case "end":
-                      return _context4.stop();
+                      return _context5.stop();
                   }
-                }, _callee4);
+                }, _callee5);
               })))["catch"](function (error) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -18997,9 +19013,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref8) {
-      var audio = _ref8.audio,
-        video = _ref8.video;
+    value: function _onmute(_ref9) {
+      var audio = _ref9.audio,
+        video = _ref9.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -19010,9 +19026,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref9) {
-      var audio = _ref9.audio,
-        video = _ref9.video;
+    value: function _onunmute(_ref10) {
+      var audio = _ref10.audio,
+        video = _ref10.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
