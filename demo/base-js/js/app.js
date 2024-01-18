@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -935,14 +935,12 @@ async function call(type, direction)
     await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
       .then(async(stream) =>
       {
-        await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false })
-          .then((audioStream) =>
-          {
-            cusMediaStream.addTrack(stream.getVideoTracks()[0]);
-            cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
-            delete options['mediaConstraints'];
-            options['mediaStream']=cusMediaStream;
-          });
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false });
+
+        cusMediaStream.addTrack(stream.getVideoTracks()[0]);
+        cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
+        delete options['mediaConstraints'];
+        options['mediaStream']=cusMediaStream;
       });
   }
 
