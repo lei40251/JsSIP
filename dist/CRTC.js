@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.5-beta.240118.20241181113
+ * CRTC v1.10.5-beta.240202.2024221510
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -14669,6 +14669,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._restoreCameraTrackCtx = null;
     _this._restoreCameraTrackDraw = null;
 
+    // 定制模式
+    _this._customizedMode = null;
+
     // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareRTPSender = null;
     _this._localShareStream = null;
@@ -14878,6 +14881,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
+
+      // 定制模式
+      this._customizedMode = options.cMode;
       this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
         audio: true,
         video: true
@@ -16884,7 +16890,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this._canSend = true;
                 sessionStorage.removeItem('needReinvite');
                 self.renegotiate();
-                console.warn('bbbbbbbbbbbbbb');
                 setTimeout(function () {
                   _this18._canSend = false;
                 }, 2000);
@@ -16916,7 +16921,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             });
           } else if (!_this17._canSend) {
             _this17._canSend = true;
-            console.warn('aaa: ', new Date());
             // RTCPeerConnection failed断开后启动重新协商
             self.renegotiate({
               rtcOfferConstraints: {
@@ -16978,7 +16982,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1) {
                   lowH264 = true;
                 }
-                if (fmtp.config.indexOf('packetization-mode=0') !== -1 || fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
+                if (fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
+                  delH264Payload.push(fmtp.payload);
+                }
+
+                // paphone 定制过滤掉 packetization-mode=1 的payload
+                if (_this19._customizedMode === 'paphone' && fmtp.config.indexOf('packetization-mode=1') !== -1) {
                   delH264Payload.push(fmtp.payload);
                 }
               });
@@ -17059,6 +17068,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
+        desc.sdp = desc.sdp.replace(/108/g, '124');
+        _this19._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this19._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -24743,6 +24754,27 @@ exports.fixContentLength = function (data) {
   } catch (error) {
     return data;
   }
+};
+
+/**
+ * 兼容 payload
+ * paphone 移动端呼叫 payload 124
+ */
+exports.compatiblePayload = function (sdp) {
+  var newPayload = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 124;
+  // 分割SDP为单独的行
+  var lines = sdp.split(/\n/g);
+  // 取得浏览器生成的payload
+  var currPayload = sdp.match(/a=fmtp:(\d+) .*packetization-mode=0/)[1];
+  // 替换对应行的payload
+  var updatedLines = lines.map(function (line) {
+    if (line.includes(":".concat(currPayload, " ")) || line.includes("=".concat(currPayload)) || line.includes(" ".concat(currPayload, " "))) {
+      line = line.replace(new RegExp("=".concat(currPayload, "(\\D|$| |;)")), "=".concat(newPayload, "$1")).replace(new RegExp(":".concat(currPayload, "( |;)")), ":".concat(newPayload, "$1")).replace(new RegExp("(m=video.* )".concat(currPayload, " ")), "$1".concat(newPayload, " "));
+    }
+    return line;
+  });
+  var newSdp = updatedLines.join('\n');
+  return newSdp;
 };
 },{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
 "use strict";
@@ -32673,7 +32705,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.5-beta.240118",
+  "version": "1.10.5-beta.240202",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
