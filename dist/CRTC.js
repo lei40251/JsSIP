@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.5-beta.240202.2024221522
+ * CRTC v1.10.5-beta.240202.20242221654
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -17068,7 +17068,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
-        desc.sdp = desc.sdp.replace(/108/g, '124');
         _this19._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this19._rtcReady = true;
@@ -24731,7 +24730,7 @@ exports.getStreamThroughCanvas = function (stream) {
  * 根据丢包率和RTT值计算网络质量值
  */
 exports.getNetworkQuality = function (loss, rtt) {
-  if (!loss && !rtt) {
+  if (!loss || !rtt) {
     return 6;
   }
 
