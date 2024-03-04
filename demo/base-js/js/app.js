@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -27,14 +27,14 @@ const remoteAudio = document.querySelector('#remoteAudio');
 const cusMediaStream = new MediaStream();
 
 // 信令地址
-// const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
-// const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
-const sipDomain = '5g.vsbc.com';
+const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
+// const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
@@ -50,10 +50,10 @@ const configuration = {
   // 显示名
   display_name   : account,
   // SIP身份验证密码
-  password       : `yl_19${account}`,
+  password       : `${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
-  // secret_key     : sessionStorage.getItem('secret_key') || 'k9DeV49VAVbnIczsTygC1Jlft2Uc+YGeCM6ZL+aQXe7FXbjfpbr0roquizmX+d2NLri35/h57EJQkPRsi3V4ujZ3IVr3Kbbf03LDrqJdhoUw5Xr7GMXZlFZJd11rzET7JAh7O8RLyWOsza219QvjNCv4Lk97lxTKs6VDc8NMBmH3z0XQ41SIXI6X/4IiI/Zfpf3W3h7exFSnYiCvA/rij/sWgL6kRv+sEOuqddk1h1YAsk/NLpGcBEFq+3OwP7j8w5jxGQQJ5U8R5e8rF8gCLlOPyfmKZmaOOpyTrKn831He6pbna6s1p/TAOQdUTjRX+1biY810CdMdFaOmrt0qWw=='
+  // secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
+  secret_key     : sessionStorage.getItem('secret_key') || 'k9DeV49VAVbnIczsTygC1Jlft2Uc+YGeCM6ZL+aQXe7FXbjfpbr0roquizmX+d2NLri35/h57EJQkPRsi3V4ujZ3IVr3Kbbf03LDrqJdhoUw5Xr7GMXZlFZJd11rzET7JAh7O8RLyWOsza219QvjNCv4Lk97lxTKs6VDc8NMBmH3z0XQ41SIXI6X/4IiI/Zfpf3W3h7exFSnYiCvA/rij/sWgL6kRv+sEOuqddk1h1YAsk/NLpGcBEFq+3OwP7j8w5jxGQQJ5U8R5e8rF8gCLlOPyfmKZmaOOpyTrKn831He6pbna6s1p/TAOQdUTjRX+1biY810CdMdFaOmrt0qWw=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -193,9 +193,14 @@ ua.on('newRTCSession', function(e)
   e.session.on('sdp', function(d)
   {
     // 呼叫VoLTE手机号需要
-    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
-    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
+    // d.sdp = d.sdp.replace('a=rtcp-fb:* nack\r\n', '');
+    // d.sdp = d.sdp.replace(/a=rtcp-fb.*\r\n/g, '');
+
+    d.sdp = d.sdp.replace('a=rtcp-fb:* nack', 'a=rtcp-fb:124 goog-remb\r\na=rtcp-fb:124 transport-cc\r\na=rtcp-fb:124 ccm fir\r\na=rtcp-fb:* nack');
+    console.warn('d.sdp: ', d.sdp);
     d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;\r\n/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42c01e\r\n');
   });
 
