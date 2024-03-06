@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.6.beta-240304.202434917
+ * CRTC v1.10.6.beta-240306.2024361634
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -16418,7 +16418,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('renegotiate()');
+      var changeViaHost = {};
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
+      try {
+        options.changeViaHost && (changeViaHost = {
+          changeViaHost: true
+        });
+      } catch (error) {}
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
         return false;
       }
@@ -16451,6 +16457,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._sendReinvite({
           eventHandlers: eventHandlers,
           rtcOfferConstraints: rtcOfferConstraints,
+          changeViaHost: changeViaHost,
           extraHeaders: options.extraHeaders
         });
       }
@@ -16888,7 +16895,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (e.key === 'needReinvite' && e.newValue === 1 && !this._canSend) {
                 this._canSend = true;
                 sessionStorage.removeItem('needReinvite');
-                self.renegotiate();
+                self.renegotiate({
+                  changeViaHost: true
+                });
                 setTimeout(function () {
                   _this18._canSend = false;
                 }, 2000);
@@ -18298,7 +18307,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var eventHandlers = Utils.cloneObject(options.eventHandlers);
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
+
+      // extraHeaders.push(`Contact: ${this._contact}`);
 
       // 5G Headers
       if (this._ua.sk[7] >= 3) {
@@ -18322,6 +18332,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
         logger.debug('emit "sdp"');
         _this31.emit('sdp', e);
+
+        // 新增reinvite时更新via_host
+        options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
+        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
         _this31.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
@@ -21364,6 +21378,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       stats.forEach(function (report) {
         if (inform) {
           data += JSON.stringify(report);
+          return;
         }
         switch (report.type) {
           case 'remote-inbound-rtp':
@@ -21429,6 +21444,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
       if (data) {
         logger.debug(data);
+        return;
       }
 
       // 语音上行丢包率
@@ -21600,7 +21616,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // eslint-disable-next-line max-len
         uplinkLoss: uplinkLoss.length > 0 ? Math.floor(uplinkLoss.reduce(function (pre, cur) {
           return pre + cur;
-        }) / uplinkLoss.length) || null : null,
+        }) / uplinkLoss.length) || 0 : null,
         // eslint-disable-next-line max-len
         downlinkNetworkQuality: downlinkNetworkQuality.length > 0 ? Math.floor(downlinkNetworkQuality.reduce(function (pre, cur) {
           return pre + cur;
@@ -21608,7 +21624,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // eslint-disable-next-line max-len
         downlinkLoss: downlinkLoss.length > 0 ? Math.floor(downlinkLoss.reduce(function (pre, cur) {
           return pre + cur;
-        }) / downlinkLoss.length) || null : null
+        }) / downlinkLoss.length) || 0 : null
       };
       logger.debug("networkQuality: ".concat(JSON.stringify(this._networkQuality)));
       this.emit('network-quality', this._networkQuality);
@@ -23246,6 +23262,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._configuration.display_name = value;
             break;
           }
+
+        // 新增可修改via_host
+        case 'via_host':
+          {
+            this._configuration.via_host = value;
+            this._configuration.contact_uri = new URI('sip', this._configuration.uri.user, this._configuration.via_host, null, {
+              transport: 'ws'
+            });
+            this._contact.uri = this._configuration.contact_uri;
+            break;
+          }
         default:
           logger.warn('set() | cannot set "%s" parameter in runtime', parameter);
           return false;
@@ -23687,7 +23714,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       };
 
       // Seal the configuration.
-      var writable_parameters = ['authorization_user', 'password', 'realm', 'ha1', 'authorization_jwt', 'display_name', 'register'];
+      var writable_parameters = ['authorization_user', 'password', 'realm', 'ha1', 'authorization_jwt', 'display_name', 'register', 'via_host', 'contact_uri'];
       for (var parameter in this._configuration) {
         if (Object.prototype.hasOwnProperty.call(this._configuration, parameter)) {
           if (writable_parameters.indexOf(parameter) !== -1) {
@@ -24729,7 +24756,7 @@ exports.getStreamThroughCanvas = function (stream) {
  * 根据丢包率和RTT值计算网络质量值
  */
 exports.getNetworkQuality = function (loss, rtt) {
-  if (!loss || !rtt) {
+  if (!loss && !rtt) {
     return 6;
   }
 
@@ -32703,7 +32730,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.6.beta-240304",
+  "version": "1.10.6.beta-240306",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
