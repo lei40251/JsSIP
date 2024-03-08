@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.6.beta-240306.2024361634
+ * CRTC v1.10.6.beta-240308.202438854
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -19321,11 +19321,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this41._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this41._replaceVideoToCanvas.call(sender.track);
+              _this41._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this41._replaceMicToAudio.call(sender.track);
+              _this41._replaceMicToAudio();
             }
           });
         }, 300);
@@ -19336,7 +19336,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 视频轨道
         if (sender.track && sender.track.kind === 'video') {
           if (sender.track && sender.track.muted) {
-            _this41._replaceVideoToCanvas.call(sender.track);
+            _this41._replaceVideoToCanvas();
           } else {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
@@ -19347,7 +19347,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this41._replaceMicToAudio.call(sender.track);
+            _this41._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
             sender.track.addEventListener('mute', _this41._replaceMicToAudio);
@@ -32730,7 +32730,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.6.beta-240306",
+  "version": "1.10.6.beta-240308",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
