@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.6.beta-240308.202438854
+ * CRTC v1.10.6.beta-240308.20243121436
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -15004,7 +15004,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 delete _this2._inviteMediaConstraints.video;
               }
               mStream = new MediaStream(); // 兼容安卓微信Bug，开始不获取麦克风媒体
-              if (navigator.userAgent.indexOf('WeChat') != -1) {
+              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1) {
                 currMediaConstraints = {
                   audio: false,
                   video: _this2._inviteMediaConstraints.video || false
@@ -15036,7 +15036,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             case 16:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
-              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                 sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
                 mStream.getVideoTracks().length > 0 && sendStream.addTrack(mStream.getVideoTracks()[0]);
                 _this2._replaceAudioTrack = true;
@@ -17077,6 +17077,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         _this19._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
+
+        // 修改为只支持 42c01e
+        desc.sdp = desc.sdp.replace(/42e01f/g, '42c01e');
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this19._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -18253,7 +18256,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       return Utils.getMicrophones();
                     case 6:
                       mics = _context5.sent;
-                      if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+                      if (_this30._replaceAudioTrack && (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1)) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this30._inviteMediaConstraints.audio || true,
                           video: false
@@ -22530,7 +22533,6 @@ module.exports = /*#__PURE__*/function () {
       var message = data.toString();
 
       // 统一修改发出的SDP
-      message = message.replace(/42e01f/, '42c01e');
       message = message.replace(/a=group:BUNDLE.*\r\n/, '');
 
       // 修复修改SDP后的Header头

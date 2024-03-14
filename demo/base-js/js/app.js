@@ -4,7 +4,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -194,12 +194,9 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
-    // d.sdp = d.sdp.replace('a=rtcp-fb:* nack\r\n', '');
-    // d.sdp = d.sdp.replace(/a=rtcp-fb.*\r\n/g, '');
-
-    d.sdp = d.sdp.replace('a=rtcp-fb:* nack', 'a=rtcp-fb:124 goog-remb\r\na=rtcp-fb:124 transport-cc\r\na=rtcp-fb:124 ccm fir\r\na=rtcp-fb:* nack');
-    d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;\r\n/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42c01e\r\n');
+    d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42c01e');
   });
+
 
   /**
     * progress
@@ -917,8 +914,8 @@ async function call(type, direction)
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-    pcConfig     : pcConfig
-    // cMode        : 'paphone'
+    pcConfig     : pcConfig,
+    cMode        : 'paphone'
   };
 
   if (direction == 'sendonly')
