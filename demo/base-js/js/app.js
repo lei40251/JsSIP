@@ -914,8 +914,8 @@ async function call(type, direction)
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-    pcConfig     : pcConfig,
-    cMode        : 'paphone'
+    pcConfig     : pcConfig
+    // cMode        : 'paphone'
   };
 
   if (direction == 'sendonly')
@@ -1109,7 +1109,7 @@ function updateDevices()
 function start()
 {
   // 输出SDK版本号
-  setStatus(`SDK Ver: ${CRTC.version}`);
+  setStatus(`${CRTC.version}`);
 
   // 更新摄像头下拉列表
   updateDevices();
