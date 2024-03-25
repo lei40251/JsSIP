@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.7.2024320851
+ * CRTC v1.10.8-beta.240325.20243251718
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -17750,6 +17750,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 适配 100rel 调整 hold 的判断
         if (_this24._remoteToVideo && _this24._notHold && !hasVideo) {
+          if (!_this24._localMediaStreamLocallyGenerated) {
+            return false;
+          }
           return navigator.mediaDevices.getUserMedia({
             video: true
           })["catch"](function (error) {
@@ -17782,6 +17785,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           });
           _this24._iceReady = false;
+        } else {
+          // 兼容低版本浏览器不支持addTrack的情况
+          // eslint-disable-next-line no-lonely-if
+          if (RTCPeerConnection.prototype.addTrack) {
+            _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+          } else {
+            _this24._connection.addStream(_this24._localMediaStream);
+          }
         }
       })
       // Create local description.
@@ -32743,7 +32754,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.7",
+  "version": "1.10.8-beta.240325",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32796,6 +32807,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[8])(8)
 });
