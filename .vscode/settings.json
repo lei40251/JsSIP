@@ -2,7 +2,7 @@
   "cSpell.words": [
     "crtc"
   ],
-  "liveServer.settings.port": 5574,
+  "liveServer.settings.port": 5838,
   "commentTranslate.source": "Google",
   "clangd.arguments": [
     "\"--compile-commands-dir=${workspaceFolder}/build\"",

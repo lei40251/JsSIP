@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.8-beta.240325.20243251718
+ * CRTC v1.10.8-beta.240510.20245101121
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -17230,7 +17230,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
 
                 _this18._ontogglemode('audio');
-              } else {
+              } else if (!_this18._remoteToAudio) {
                 _this18._ontogglemode('video');
               }
             }
@@ -24813,8 +24813,13 @@ exports.compatiblePayload = function (sdp) {
   var newPayload = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 124;
   // 分割SDP为单独的行
   var lines = sdp.split(/\n/g);
+
   // 取得浏览器生成的payload
-  var currPayload = sdp.match(/a=fmtp:(\d+) .*packetization-mode=0/)[1];
+  var currPayload = sdp.match(/a=fmtp:(\d+) .*packetization-mode=0/) ? sdp.match(/a=fmtp:(\d+) .*packetization-mode=0/)[1] : '';
+  if (!currPayload) {
+    return sdp;
+  }
+
   // 替换对应行的payload
   var updatedLines = lines.map(function (line) {
     if (line.includes(":".concat(currPayload, " ")) || line.includes("=".concat(currPayload)) || line.includes(" ".concat(currPayload, " "))) {
@@ -32754,7 +32759,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.8-beta.240325",
+  "version": "1.10.8-beta.240510",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

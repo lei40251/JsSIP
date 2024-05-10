@@ -1,10 +1,11 @@
+/* eslint-disable max-len */
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -16,6 +17,8 @@ let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
 
+let payload;
+
 // 远端客户端UA
 // let remoteUA;
 
@@ -26,14 +29,14 @@ const remoteAudio = document.querySelector('#remoteAudio');
 const cusMediaStream = new MediaStream();
 
 // 信令地址
-// const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
-// const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
-const sipDomain = '5g.vsbc.com';
+const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
+// const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
@@ -51,8 +54,8 @@ const configuration = {
   // SIP身份验证密码
   password       : `yl_19${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
-  // secret_key     : sessionStorage.getItem('secret_key') || 'k9DeV49VAVbnIczsTygC1Jlft2Uc+YGeCM6ZL+aQXe7FXbjfpbr0roquizmX+d2NLri35/h57EJQkPRsi3V4ujZ3IVr3Kbbf03LDrqJdhoUw5Xr7GMXZlFZJd11rzET7JAh7O8RLyWOsza219QvjNCv4Lk97lxTKs6VDc8NMBmH3z0XQ41SIXI6X/4IiI/Zfpf3W3h7exFSnYiCvA/rij/sWgL6kRv+sEOuqddk1h1YAsk/NLpGcBEFq+3OwP7j8w5jxGQQJ5U8R5e8rF8gCLlOPyfmKZmaOOpyTrKn831He6pbna6s1p/TAOQdUTjRX+1biY810CdMdFaOmrt0qWw=='
+  // secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
+  secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
 };
 // 媒体约束条件
 const videoConstraints = {
@@ -194,9 +197,28 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
-    d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42c01e');
-  });
+    if (d.originator==='local')
+    {
+      // 保存浏览器默认payload
+      const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
 
+      payload || (payload = d.sdp.match(payloadRegex)[1]);
+
+      const newPayloadRegex = new RegExp(payload, 'g');
+
+      // 将sdp的默认payload改为420D0D
+      d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
+      d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
+    }
+    else if (d.originator==='remote')
+    {
+      // 适配paphone
+      d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
+      // 适配CRTC
+      d.sdp = d.sdp.replace(/420D0D/g, payload);
+    }
+
+  });
 
   /**
     * progress
@@ -913,9 +935,9 @@ async function call(type, direction)
 
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
+    cMode        : 'paphone',
     pcConfig     : pcConfig
-    // cMode        : 'paphone'
   };
 
   if (direction == 'sendonly')
