@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.8-beta.240510.20245101121
+ * CRTC v1.10.9-beta.241017.20241017167
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2024 
  */
@@ -14737,6 +14737,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 适配 100rel 调整reinvite的hold判断
     _this._notHold = true;
 
+    // 是否是自定义媒体流模式
+    _this._customMediaStream = false;
+
     // Session Timers (RFC 4028).
     _this._sessionTimers = {
       enabled: _this._ua.configuration.session_timers,
@@ -15003,15 +15006,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
               if (!mediaStream) {
-                _context.next = 4;
+                _context.next = 5;
                 break;
               }
+              // 自定义媒体流模式
+              _this2._customMediaStream = true;
               return _context.abrupt("return", mediaStream);
-            case 4:
+            case 5:
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 24;
+                _context.next = 26;
                 break;
               }
+              // 非自定义媒体流模式
+              _this2._customMediaStream = false;
               _this2._localMediaStreamLocallyGenerated = true;
 
               // 判断授权是否包含视频
@@ -15028,10 +15035,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 13;
+                _context.next = 15;
                 break;
               }
-              _context.next = 12;
+              _context.next = 14;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -15042,13 +15049,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2.emit('getusermediafailed', error);
                 throw error;
               });
-            case 12:
+            case 14:
               mStream = _context.sent;
-            case 13:
+            case 15:
               sendStream = new MediaStream();
-              _context.next = 16;
+              _context.next = 18;
               return Utils.getMicrophones();
-            case 16:
+            case 18:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
@@ -15063,13 +15070,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 23;
+                _context.next = 25;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 23:
+            case 25:
               return _context.abrupt("return", sendStream);
-            case 24:
+            case 26:
             case "end":
               return _context.stop();
           }
@@ -16998,7 +17005,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var delH264Payload = [];
               var payloads = media.payloads.split(' ');
               media.fmtp.forEach(function (fmtp) {
-                if (fmtp.config.indexOf('profile-level-id=42e0') !== -1) {
+                if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
                   lowH264 = true;
                 }
                 if (fmtp.config.indexOf('packetization-mode') !== -1 && fmtp.config.indexOf('profile-level-id=42') === -1) {
@@ -17166,7 +17173,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // 超时自动ready
             if (connection.iceGatheringState === 'gathering') {
               setTimeout(function () {
-                ready();
+                !finished && ready();
               }, 5000);
             }
           });
@@ -17749,7 +17756,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
 
         // 适配 100rel 调整 hold 的判断
-        if (_this24._remoteToVideo && _this24._notHold && !hasVideo) {
+        if (_this24._remoteToVideo && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
           if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
@@ -17784,16 +17791,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this24._connection.addStream(stream);
             }
           });
-          _this24._iceReady = false;
         } else {
           // 兼容低版本浏览器不支持addTrack的情况
           // eslint-disable-next-line no-lonely-if
           if (RTCPeerConnection.prototype.addTrack) {
-            _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+            if (_this24._localMediaStream.getVideoTracks()[0]) {
+              var videoTrack = _this24._localMediaStream.getVideoTracks()[0];
+              var senders = _this24._connection.getSenders();
+              var trackAlreadyAdded = senders.some(function (sender) {
+                return sender.track === videoTrack;
+              });
+              if (!trackAlreadyAdded) {
+                _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+              } else {
+                logger.warn('Track is already added to the peer connection.');
+              }
+            }
           } else {
             _this24._connection.addStream(_this24._localMediaStream);
           }
         }
+        _this24._iceReady = false;
       })
       // Create local description.
       .then(function () {
@@ -18171,7 +18189,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              return _this29._connection.setRemoteDescription(answer);
+              _this29._connection.setRemoteDescription(answer);
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
@@ -18785,7 +18803,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
-      if (mode === 'audio') {
+      if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
         });
@@ -32759,7 +32777,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.8-beta.240510",
+  "version": "1.10.9-beta.241017",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
