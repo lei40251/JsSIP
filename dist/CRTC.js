@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.241017.2025161148
+ * CRTC v1.10.9-beta.250106.2025161453
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -15609,7 +15609,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
         if (!mediaConstraints.video) {
-          desc = desc.replace(/m=video \d+/, 'm=video 0');
+          desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
         }
         _this4._handleSessionTimersInIncomingRequest(request, extraHeaders);
         request.reply(200, null, extraHeaders, desc, function () {
@@ -32780,7 +32780,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.241017",
+  "version": "1.10.9-beta.250106",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
