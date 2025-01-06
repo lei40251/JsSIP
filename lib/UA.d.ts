@@ -122,6 +122,7 @@ export interface UAEventMap {
   connecting: UAConnectingListener;
   connected: ConnectedListener;
   disconnected: DisconnectedListener;
+  failed: AnyListener;
   registered: RegisteredListener;
   unregistered: UnRegisteredListener;
   registrationFailed: RegistrationFailedListener;

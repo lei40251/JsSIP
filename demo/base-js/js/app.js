@@ -54,7 +54,7 @@ const configuration = {
   // SIP身份验证密码
   password       : `yl_19${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'pgw7y6hplSatJKxQxQJ/+HfSI3xFw2yBdbesYT7c/BlcsY3izD2vqpdKyXc2/gHsG9b3DSZgXsSXdYD9FUV6srzR/qFvgOqnQroHIcDvfcUuGeWM19h4eJTlPSE5x5Msqc5EIDy2mnzYw1b8tW59lzSaARFmUDJ5zCwYVdJlcvql/pf0JIX4zFizdqX54lzO9lqMUZriLYBj5Mcz42GMUWHLu3dVSczXP9ivuM0N0kQKz9t3YFCLlD2llgI/sOCRoowi4X8/LdP3kK7vN717kAQ2OIqPkA75PKFKdci0kw48/BtkQ573Hy+UB4pjQIsEU/pbqzYweidaSG2eByM2RQ=='
+  secret_key     : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA=='
   // secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
 };
 // 媒体约束条件
