@@ -1,0 +1,28 @@
+
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.hide {
+    display: none !important;
+}
+
+.cav {
+    position: fixed;
+    left: 0;
+    top: 0;
+}
+
+video {
+    display: block;
+    max-width: 100%;
+    max-height: 90%;
+}
+
+#large span {
+    display: none;
+}
