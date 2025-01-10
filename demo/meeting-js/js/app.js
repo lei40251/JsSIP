@@ -59,22 +59,22 @@ const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
 const configuration = {
   // JsSIP.Socket 实例
-  sockets: socket,
+  sockets        : socket,
   // 与 UA 关联的 SIP URI
-  uri: `sip:${account}@${sipDomain}`,
+  uri            : `sip:${account}@${sipDomain}`,
   // 显示名
-  display_name: display || account,
+  display_name   : display || account,
   // SIP身份验证密码
-  password: `yl_19${account}`,
-  session_timers: false,
-  secret_key: sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA=='
+  password       : `yl_19${account}`,
+  session_timers : false,
+  secret_key     : sessionStorage.getItem('secret_key') || 'fRahTcdzG56dS4JukJiFYaBdKus72vKNuTU9bAgYmJDqc7fL+5n8vbYlBz/7VZ0/HrX5un7NBPhs7U+dPl1KAqi/OKk8EwnQgMFr4jdITmpYPavfQXixCW3nM/nBMq5YbdsXSehsW611XHHW3dzl+H9m7yw7iRGAdlnu2bDZ2zrDXLBYNYYmGZFTmS4VeVrq9usO8Q9kNeSqG4Fgl31it5mpZEXJzLIHBfUlP9zkuF/PZX3ldZerPtXqrSwTnl+E6mi9GZjyAD3O/z1tMEdMJvWJDkM5/0Rh/9ly1mHUXfIy+zAMjrahRLAJ7hchZeySsWIghc13/EB7j9S/4wG6YQ=='
   // secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
 };
 // 媒体约束条件
 const videoConstraints = {
-  width: 640,
-  height: 480,
-  frameRate: 15
+  width     : 640,
+  height    : 480,
+  frameRate : 15
 };
 
 // RTCPeerConnection 的 RTCConfiguration 对象
@@ -90,9 +90,9 @@ if (/Android/.test(navigator.userAgent))
     // TURN 配置
     pcConfig['iceServers'] = [
       {
-        'urls': 'turn:5g.vsbc.com:60000?transport=udp',
-        'username': 'ipcu',
-        'credential': 'yl_19cu'
+        'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
+        'username'   : 'ipcu',
+        'credential' : 'yl_19cu'
       } ];
 
     pcConfig['iceTransportPolicy'] = 'all';
@@ -148,7 +148,7 @@ ua.on('registered', function(data)
   setTimeout(() =>
   {
     document.title = `加入房间:  ${room}`;
-    call('video');
+    room && call('video');
   }, 500);
 });
 
@@ -527,16 +527,16 @@ ua.on('newRTCSession', function(e)
       }
 
       e.session.answer({
-        rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: true },
-        mediaConstraints: {
-          audio:
+        rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+        mediaConstraints    : {
+          audio :
             {
-              sampleRate: 48000,
-              channelCount: 1
+              sampleRate   : 48000,
+              channelCount : 1
             },
-          video: true
+          video : true
         },
-        pcConfig: pcConfig
+        pcConfig : pcConfig
       });
       setStatus('3pcc answer');
     }
@@ -622,11 +622,12 @@ ua.on('newRTCSession', function(e)
 
     stats.on('report', function(r)
     {
-      document.querySelector('#upF').innerText = `${r.upFrameWidth || ''} ${r.upFrameHeight || ''}`;
-      document.querySelector('#downF').innerText = `${r.downFrameWidth || ''} ${r.downFrameHeight || ''}`;
+      console.warn('a: ', r);
+      document.querySelector('#upF').innerText = `${r.upFrameWidth || ''}*${r.upFrameHeight || ''} ${r.upFramesPerSecond || ''}fps`;
+      document.querySelector('#downF').innerText = `${r.downFrameWidth || ''}*${r.downFrameHeight || ''} ${r.downFramesPerSecond || ''}fps`;
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
-      document.querySelector('#downL').innerText = r.downlinkLoss || '';
+      // document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
     stats.on('network-quality', function(ev)
@@ -684,18 +685,18 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answer').onclick = function()
   {
     e.session.answer({
-      mediaConstraints: {
-        audio:
+      mediaConstraints : {
+        audio :
           {
-            sampleRate: 48000,
-            channelCount: 1
+            sampleRate   : 48000,
+            channelCount : 1
           },
-        video: false
+        video : false
       },
-      pcConfig: pcConfig,
+      pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders: [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints: { offerToReceiveAudio: true }
+      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true }
     });
 
     setStatus('audio answer');
@@ -707,18 +708,18 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#answerVideo').onclick = function()
   {
     e.session.answer({
-      mediaConstraints: {
-        audio:
+      mediaConstraints : {
+        audio :
           {
-            sampleRate: 48000,
-            channelCount: 1
+            sampleRate   : 48000,
+            channelCount : 1
           },
-        video: videoConstraints
+        video : videoConstraints
       },
-      pcConfig: pcConfig,
+      pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders: [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints: { offerToReceiveAudio: true, offerToReceiveVideo: true }
+      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true }
     });
 
     setStatus('video answer');
@@ -782,7 +783,8 @@ ua.on('newRTCSession', function(e)
     {
       rtcSession.terminate();
       tmpSession.terminate();
-    } catch (error)
+    }
+    catch (error)
     {
     }
   };
@@ -794,31 +796,31 @@ ua.on('newRTCSession', function(e)
   {
     // 转接过程中的事件
     const eventHandlers = {
-      'progress': function(data)
+      'progress' : function(data)
       {
         console.log('progress', data);
       },
-      'failed': function()
+      'failed' : function()
       {
         if (e.session.isOnHold().local)
         {
           e.session.unhold();
         }
       },
-      'accepted': function(data)
+      'accepted' : function(data)
       {
         console.log('accept', data);
         e.session.terminate();
       },
-      'trying': function(data)
+      'trying' : function(data)
       {
         console.log('trying', data);
       },
-      'requestSucceeded': function(data)
+      'requestSucceeded' : function(data)
       {
         console.log('requestSucceeded', data);
       },
-      'requestFailed': function()
+      'requestFailed' : function()
       {
         if (e.session.isOnHold().local)
         {
@@ -830,7 +832,7 @@ ua.on('newRTCSession', function(e)
     // 暂停前一个通话，开始转接
     e.session.hold();
     e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
-      eventHandlers: eventHandlers
+      eventHandlers : eventHandlers
     });
   };
 
@@ -1037,9 +1039,9 @@ async function call(type, direction)
 
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders: [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
+    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
-    pcConfig: pcConfig
+    pcConfig     : pcConfig
   };
 
   if (direction == 'sendonly')
@@ -1048,12 +1050,12 @@ async function call(type, direction)
   }
 
   options['mediaConstraints'] = {
-    audio:
+    audio :
       {
-        sampleRate: 48000,
-        channelCount: 1
+        sampleRate   : 48000,
+        channelCount : 1
       },
-    video: type === 'video' ? videoConstraints : false
+    video : type === 'video' ? videoConstraints : false
   };
 
   if (type === 'screen')
@@ -1062,8 +1064,8 @@ async function call(type, direction)
       .then(async(stream) =>
       {
         const audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: options['mediaConstraints'].audio,
-          video: false
+          audio : options['mediaConstraints'].audio,
+          video : false
         });
 
         cusMediaStream.addTrack(stream.getVideoTracks()[0]);
@@ -1362,6 +1364,94 @@ document.getElementById('small')
     largeText.innerHTML = smallText.innerHTML;
     smallText.innerHTML = tempContent;
   });
+
+function isMobile()
+{
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+if (isMobile())
+{
+  console.log('这是一个移动设备 📱');
+  document.querySelector('#screenShare').style.display = 'none';
+}
+else
+{
+  // console.log("这是一个桌面设备 🖥️");
+}
+
+function setConstraints(key)
+{
+  let stream = localVideo.srcObject;
+
+  const screenStream = document.querySelector('#screen').srcObject;
+
+  if (screenStream)
+  {
+    screenStream.getVideoTracks()
+      .forEach((track) =>
+      {
+        if (track.readyState === 'live')
+        {
+          stream = screenStream;
+        }
+      });
+  }
+
+  const constraints = {
+    p480a : {
+      width     : 640,
+      height    : 480,
+      frameRate : 5
+    },
+    p720a : {
+      width     : 1280,
+      height    : 720,
+      frameRate : 5
+    },
+    p1080a : {
+      width     : 1920,
+      height    : 1080,
+      frameRate : 5
+    },
+    p480b : {
+      width     : 640,
+      height    : 480,
+      frameRate : 15
+    },
+    p720b : {
+      width     : 1280,
+      height    : 720,
+      frameRate : 15
+    },
+    p1080b : {
+      width     : 1920,
+      height    : 1080,
+      frameRate : 15
+    },
+    p480c : {
+      width     : 640,
+      height    : 480,
+      frameRate : 30
+    },
+    p720c : {
+      width     : 1280,
+      height    : 720,
+      frameRate : 30
+    },
+    p1080c : {
+      width     : 1920,
+      height    : 1080,
+      frameRate : 30
+    }
+  };
+
+  stream.getVideoTracks()
+    .forEach((track) =>
+    {
+      track.applyConstraints(constraints[key]);
+    });
+}
 
 
 start();

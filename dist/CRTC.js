@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250106.2025161453
+ * CRTC v1.10.9-beta.250110.20251101444
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -21294,6 +21294,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         framesDecoded: null,
         framesSent: null,
         framesReceived: null,
+        upFramesPerSecond: null,
+        downFramesPerSecond: null,
         upFrameHeight: null,
         upFrameWidth: null,
         downFrameHeight: null,
@@ -21406,6 +21408,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           framesDecoded: null,
           framesSent: null,
           framesReceived: null,
+          upFramesPerSecond: null,
+          downFramesPerSecond: null,
           upFrameHeight: null,
           upFrameWidth: null,
           downFrameHeight: null,
@@ -21456,6 +21460,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this3._stats.video.upFrameWidth = report['frameWidth'];
               _this3._stats.video.framesEncoded = report['framesEncoded'];
               _this3._stats.video.framesSent = report['framesSent'];
+              _this3._stats.video.upFramesPerSecond = report['framesPerSecond'];
             } else if (report.kind === 'audio') {
               _this3._cStats.audio.packetsSent = report['packetsSent'] - (_this3._stats.audio.packetsSent ? _this3._stats.audio.packetsSent : 0);
               _this3._cStats.audio.bytesSent = report['bytesSent'] - (_this3._stats.audio.bytesSent ? _this3._stats.audio.bytesSent : 0);
@@ -21475,6 +21480,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this3._stats.video.downFrameWidth = report['frameWidth'];
               _this3._stats.video.framesDecoded = report['framesDecoded'];
               _this3._stats.video.framesReceived = report['framesReceived'];
+              _this3._stats.video.downFramesPerSecond = report['framesPerSecond'];
             } else if (report.kind === 'audio') {
               _this3._cStats.audio.packetsReceived = report['packetsReceived'] - (_this3._stats.audio.packetsReceived ? _this3._stats.audio.packetsReceived : 0);
               _this3._cStats.audio.bytesReceived = report['bytesReceived'] - (_this3._stats.audio.bytesReceived ? _this3._stats.audio.bytesReceived : 0);
@@ -21614,6 +21620,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             packetsReceived: report.video.packetsReceived,
             framesReceived: report.video.framesReceived,
             framesDecoded: report.video.framesDecoded,
+            upFramesPerSecond: report.video.upFramesPerSecond,
+            downFramesPerSecond: report.video.downFramesPerSecond,
             downFrameWidth: report.video.downFrameWidth,
             downFrameHeight: report.video.downFrameHeight,
             downlinkLoss: report.video.downlinkLoss,
@@ -21624,6 +21632,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           RTT: rp.transport.RTT,
           upFrameWidth: rp.video.upFrameWidth,
           upFrameHeight: rp.video.upFrameHeight,
+          upFramesPerSecond: rp.video.upFramesPerSecond,
+          downFramesPerSecond: rp.video.downFramesPerSecond,
           downFrameWidth: rp.video.downFrameWidth,
           downFrameHeight: rp.video.downFrameHeight,
           uplinkSpeed: "".concat(((rp.video.uplinkSpeed + rp.audio.uplinkSpeed) / 1000).toFixed(1), "kbps"),
@@ -32780,7 +32790,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250106",
+  "version": "1.10.9-beta.250110",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
