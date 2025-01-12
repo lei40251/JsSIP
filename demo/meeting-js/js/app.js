@@ -148,7 +148,7 @@ ua.on('registered', function(data)
   setTimeout(() =>
   {
     document.title = `加入房间:  ${room}`;
-    room && call('video');
+    rtcSession || (room && call('video'));
   }, 500);
 });
 
