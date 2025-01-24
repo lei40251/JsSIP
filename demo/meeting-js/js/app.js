@@ -29,6 +29,66 @@ const remoteAudio = document.querySelector('#remoteAudio');
 
 const cusMediaStream = new MediaStream();
 
+const constraints = {
+  p480a : {
+    width     : 640,
+    height    : 480,
+    frameRate : 5
+  },
+  p720a : {
+    width     : 1280,
+    height    : 720,
+    frameRate : 5
+  },
+  p1080a : {
+    width     : 1920,
+    height    : 1080,
+    frameRate : 5
+  },
+  p480b : {
+    width     : 640,
+    height    : 480,
+    frameRate : 15
+  },
+  p720b : {
+    width     : 1280,
+    height    : 720,
+    frameRate : 15
+  },
+  p1080b : {
+    width     : 1920,
+    height    : 1080,
+    frameRate : 15
+  },
+  p480c : {
+    width     : 640,
+    height    : 480,
+    frameRate : 30
+  },
+  p720c : {
+    width     : 1280,
+    height    : 720,
+    frameRate : 30
+  },
+  p1080c : {
+    width     : 1920,
+    height    : 1080,
+    frameRate : 30
+  }
+};
+
+const maxB = {
+  p480a  : 900,
+  p720a  : 1500,
+  p1080a : 2000,
+  p480b  : 900,
+  p720b  : 1500,
+  p1080b : 2000,
+  p480c  : 900,
+  p720c  : 1500,
+  p1080c : 2000
+};
+
 let dropdownSwitchCam;
 
 // 信令地址
@@ -46,6 +106,8 @@ const sipDomain = '5g.vsbc.com';
 const account = handleGetQuery('caller');
 const display = handleGetQuery('display');
 const room = handleGetQuery('room');
+
+const resolution = handleGetQuery('resolution') || 'p480b';
 
 document.title = `房间号:  ${room}`;
 
@@ -71,20 +133,16 @@ const configuration = {
   // secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
 };
 // 媒体约束条件
-const videoConstraints = {
-  width     : 640,
-  height    : 480,
-  frameRate : 15
-};
+const videoConstraints = constraints[resolution];
 
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
-if (/Android/.test(navigator.userAgent))
+if (/Android/.test(navigator.userAgent)) 
 {
   const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
 
-  if (browserVersion < 85)
+  if (browserVersion < 85) 
   {
     console.log('Your Chrome version is lower than 85.');
     // TURN 配置
@@ -114,7 +172,7 @@ const ua = new CRTC.UA(configuration);
  * @property {string} message - 错误说明
  * @property {string} cause - 错误原因
  */
-ua.on('failed', function(data)
+ua.on('failed', function(data) 
 {
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
@@ -128,7 +186,7 @@ ua.on('failed', function(data)
  * @type {object}
  * @property {boolean} error - 连接是否因为错误而断开
  */
-ua.on('disconnected', function(data)
+ua.on('disconnected', function(data) 
 {
   setStatus(`信令连接断开: ${data.code} ${data.reason}`);
 });
@@ -141,11 +199,11 @@ ua.on('disconnected', function(data)
  * @type {object}
  * @property {object} response - 注册的响应实例
  */
-ua.on('registered', function(data)
+ua.on('registered', function(data) 
 {
   setStatus(`注册成功：${data.response.from.uri.toString()}`);
 
-  setTimeout(() =>
+  setTimeout(() => 
   {
     document.title = `加入房间:  ${room}`;
     rtcSession || (room && call('video'));
@@ -161,7 +219,7 @@ ua.on('registered', function(data)
  * @property {object} response - 注册的响应实例
  * @property {string} cause - 注册失败原因
  */
-ua.on('registrationFailed', function(data)
+ua.on('registrationFailed', function(data) 
 {
   setStatus(`注册失败${data.cause}`);
 });
@@ -176,24 +234,24 @@ ua.on('registrationFailed', function(data)
  * @property {object} session - 通话的session实例
  * @property {object} request - 本端或远端的请求对象，远端呼入可以在此获取随路数据，呼叫模式等
  */
-ua.on('newRTCSession', function(e)
+ua.on('newRTCSession', function(e) 
 {
   console.log('nsession: ', e);
 
-  if (tmpSession)
+  if (tmpSession) 
   {
     e.session.terminate({ status_code: 486 });
   }
-  else if (!rtcSession)
+  else if (!rtcSession) 
   {
     rtcSession = e.session;
   }
-  else
+  else 
   {
     tmpSession = e.session;
   }
 
-  if (e.originator === 'remote')
+  if (e.originator === 'remote') 
   {
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
@@ -203,20 +261,20 @@ ua.on('newRTCSession', function(e)
 
   // ***** Session 事件回调 *****
 
-  e.session.on('refer', function(d)
+  e.session.on('refer', function(d) 
   {
     console.log('refer');
     d.accept();
   });
 
   // 部分场景兼容使用
-  e.session.on('sdp', function(d)
+  e.session.on('sdp', function(d) 
   {
     // 呼叫VoLTE手机号需要
     // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
     // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
-    if (d.originator === 'local')
+    if (d.originator === 'local') 
     {
       // 保存浏览器默认payload
       // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
@@ -230,11 +288,14 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
       const match = d.sdp.match(/c=IN.*\r\n/);
 
+      d.sdp = d.sdp.replace(/42c01e/g, '428028');
+      d.sdp = d.sdp.replace('b=AS:960', 'b=AS:2048');
+
       d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
 
       // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
     }
-    else if (d.originator === 'remote')
+    else if (d.originator === 'remote') 
     {
       // // 适配paphone
       // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
@@ -259,16 +320,16 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} mode - 'audio'音频模式，'video'视频模式
    */
-  e.session.on('progress', function(d)
+  e.session.on('progress', function(d) 
   {
-    if (d.originator === 'local')
+    if (d.originator === 'local') 
     {
       setStatus('收到呼叫，振铃中');
     }
-    else
+    else 
     {
       // 如果不存在远端铃声，可以播放本地铃声
-      if (!earlyMedia)
+      if (!earlyMedia) 
       {
         // 可以播放本地铃声
       }
@@ -285,7 +346,7 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
    */
-  e.session.on('hold', function(d)
+  e.session.on('hold', function(d) 
   {
     setStatus(`${d.originator} hold`);
     // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
@@ -302,7 +363,7 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
    */
-  e.session.on('unhold', function(d)
+  e.session.on('unhold', function(d) 
   {
     setStatus(`${d.originator} unhold`);
 
@@ -320,17 +381,17 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} mode - 'audio'音频模式，'video'视频模式
    */
-  e.session.on('mode', function(d)
+  e.session.on('mode', function(d) 
   {
     setStatus(`mode: ${d.mode}`);
 
-    if (d.mode == 'video')
+    if (d.mode == 'video') 
     {
       // 兼容部分手机初始黑屏问题
-      setTimeout(() =>
+      setTimeout(() => 
       {
         e.session.mute({ video: true });
-        setTimeout(() =>
+        setTimeout(() => 
         {
           e.session.unmute({ video: true });
         }, 300);
@@ -352,12 +413,12 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} videoStream - 切换后的视频流
    */
-  e.session.on('cameraChanged', function(d)
+  e.session.on('cameraChanged', function(d) 
   {
     localVideo.srcObject = d.videoStream;
 
     // 兼容不同浏览器安全策略
-    setTimeout(() =>
+    setTimeout(() => 
     {
       localVideo.play();
     }, 100);
@@ -371,7 +432,7 @@ ua.on('newRTCSession', function(e)
    * @fires iceconnectionstatechange事件触发
    *
    */
-  e.session.on('peerconnection:iceConnectionState', (d) =>
+  e.session.on('peerconnection:iceConnectionState', (d) => 
   {
     console.warn('iceConnectionState: ', d);
   });
@@ -386,7 +447,7 @@ ua.on('newRTCSession', function(e)
    * @property {string} message - originator 为 'remote' 时输出失败信息
    * @property {string} cause - 失败原因
    */
-  e.session.on('failed', function(d)
+  e.session.on('failed', function(d) 
   {
     setStatus(`通话建立失败: ${d.cause}`);
 
@@ -421,7 +482,7 @@ ua.on('newRTCSession', function(e)
    * @property {string} properties - 触发当前事件的属性 muted/readyState/enabled/label 等
    * @property {string/boolean} value - 变化后的值
    */
-  e.session.on('videoTrackState', function(d)
+  e.session.on('videoTrackState', function(d) 
   {
     // 视频轨道状态
     setStatus(`VTState ${d.properties} ${d.value}`);
@@ -437,7 +498,7 @@ ua.on('newRTCSession', function(e)
    * @property {string} message - originator 为 'remote' 时输出失败信息
    * @property {string} cause - 结束原因
    */
-  e.session.on('ended', function()
+  e.session.on('ended', function() 
   {
     setStatus('通话结束');
 
@@ -445,12 +506,12 @@ ua.on('newRTCSession', function(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    if (rtcSession == e.session && Boolean(tmpSession))
+    if (rtcSession == e.session && Boolean(tmpSession)) 
     {
       stopStreams();
       getStreams(tmpSession.connection);
     }
-    else
+    else 
     {
       tmpSession = null;
       rtcSession = null;
@@ -477,7 +538,7 @@ ua.on('newRTCSession', function(e)
    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
    * @property {object} dtmf - DTMF 对象
    */
-  e.session.on('newDTMF', function(d)
+  e.session.on('newDTMF', function(d) 
   {
     // 输出 INFO 模式的 DTMF
     setStatus(`${d.originator} DTMF:${d.dtmf.tone}`);
@@ -492,13 +553,13 @@ ua.on('newRTCSession', function(e)
    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
    * @property {object} info - INFO 对象
    */
-  e.session.on('newInfo', function(d)
+  e.session.on('newInfo', function(d) 
   {
-    if (d.originator === 'remote')
+    if (d.originator === 'remote') 
     {
       setStatus(`收到新消息：${d.info.body}`);
     }
-    else if (d.originator === 'local')
+    else if (d.originator === 'local') 
     {
       setStatus(`发出消息：${d.info.body}`);
     }
@@ -513,12 +574,12 @@ ua.on('newRTCSession', function(e)
    * @property {string} event - 'talk'，'hold'
    * @property {object} request - 请求对象
    */
-  e.session.on('notify', function(d)
+  e.session.on('notify', function(d) 
   {
     // 3pcc 取消保持&自动接听
-    if (d.event == 'talk')
+    if (d.event == 'talk') 
     {
-      if (e.session.isOnHold().local)
+      if (e.session.isOnHold().local) 
       {
         e.session.unhold();
         setStatus('3pcc unhold');
@@ -530,17 +591,17 @@ ua.on('newRTCSession', function(e)
         rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
         mediaConstraints    : {
           audio :
-            {
-              sampleRate   : 48000,
-              channelCount : 1
-            },
+          {
+            sampleRate   : 48000,
+            channelCount : 1
+          },
           video : true
         },
         pcConfig : pcConfig
       });
       setStatus('3pcc answer');
     }
-    else if (d.event == 'hold')
+    else if (d.event == 'hold') 
     {
       e.session.hold();
       setStatus('3pcc hold');
@@ -557,15 +618,15 @@ ua.on('newRTCSession', function(e)
    * @property {boolean} audio - 判断是否音频被开启
    * @property {boolean} video - 判断是否视频被开启
    */
-  e.session.on('muted', function(d)
+  e.session.on('muted', function(d) 
   {
-    if (d.audio)
+    if (d.audio) 
     {
       setStatus('关闭麦克风');
       document.querySelector('#muteMic').style.display = 'none';
       document.querySelector('#unmuteMic').style.display = 'block';
     }
-    else if (d.video)
+    else if (d.video) 
     {
       setStatus('关闭摄像头');
       document.querySelector('#muteCam').style.display = 'none';
@@ -582,15 +643,15 @@ ua.on('newRTCSession', function(e)
    * @property {boolean} audio - 判断是否音频被关闭
    * @property {boolean} video - 判断是否视频被关闭
    */
-  e.session.on('unmuted', function(d)
+  e.session.on('unmuted', function(d) 
   {
-    if (d.audio)
+    if (d.audio) 
     {
       setStatus('开启麦克风');
       document.querySelector('#muteMic').style.display = 'block';
       document.querySelector('#unmuteMic').style.display = 'none';
     }
-    else if (d.video)
+    else if (d.video) 
     {
       setStatus('开启摄像头');
       document.querySelector('#muteCam').style.display = 'block';
@@ -606,7 +667,7 @@ ua.on('newRTCSession', function(e)
    * @type {object}
    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
    */
-  e.session.on('confirmed', async function(d)
+  e.session.on('confirmed', async function(d) 
   {
     setStatus('confirmed');
 
@@ -617,10 +678,11 @@ ua.on('newRTCSession', function(e)
     //   rtcSession.terminate();
     // }
 
+    setParams('p480b');
+
     // 获取统计信息
     stats = new CRTC.getStats(e.session.connection);
-
-    stats.on('report', function(r)
+    stats.on('report', function(r) 
     {
       console.warn('a: ', r);
       document.querySelector('#upF').innerText = `${r.upFrameWidth || ''}*${r.upFrameHeight || ''} ${r.upFramesPerSecond || ''}fps`;
@@ -630,20 +692,20 @@ ua.on('newRTCSession', function(e)
       // document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
-    stats.on('network-quality', function(ev)
+    stats.on('network-quality', function(ev) 
     {
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
       document.querySelector('#NQ').innerText = `Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
-    if (d.originator === 'local')
+    if (d.originator === 'local') 
     {
       // 兼容部分手机初始黑屏问题
-      setTimeout(() =>
+      setTimeout(() => 
       {
         e.session.mute({ video: true });
-        setTimeout(() =>
+        setTimeout(() => 
         {
           e.session.unmute({ video: true });
         }, 300);
@@ -653,14 +715,14 @@ ua.on('newRTCSession', function(e)
     // 获取媒体流
     getStreams(e.session.connection);
 
-    e.session.connection.ontrack = function(event)
+    e.session.connection.ontrack = function(event) 
     {
-      if (event.track.kind !== 'video')
+      if (event.track.kind !== 'video') 
       {
         return;
       }
 
-      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
+      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id) 
       {
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
         document.querySelector('#remoteVideo2')
@@ -669,7 +731,7 @@ ua.on('newRTCSession', function(e)
         document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
         document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
       }
-      else
+      else 
       {
         document.querySelector('#remoteVideo').classList = 'h-100';
         document.querySelector('#remoteVideo2').classList = 'hide';
@@ -682,15 +744,15 @@ ua.on('newRTCSession', function(e)
   /**
    * 音频接听
    */
-  document.querySelector('#answer').onclick = function()
+  document.querySelector('#answer').onclick = function() 
   {
     e.session.answer({
       mediaConstraints : {
         audio :
-          {
-            sampleRate   : 48000,
-            channelCount : 1
-          },
+        {
+          sampleRate   : 48000,
+          channelCount : 1
+        },
         video : false
       },
       pcConfig            : pcConfig,
@@ -705,15 +767,15 @@ ua.on('newRTCSession', function(e)
   /**
    * 视频接听
    */
-  document.querySelector('#answerVideo').onclick = function()
+  document.querySelector('#answerVideo').onclick = function() 
   {
     e.session.answer({
       mediaConstraints : {
         audio :
-          {
-            sampleRate   : 48000,
-            channelCount : 1
-          },
+        {
+          sampleRate   : 48000,
+          channelCount : 1
+        },
         video : videoConstraints
       },
       pcConfig            : pcConfig,
@@ -730,7 +792,7 @@ ua.on('newRTCSession', function(e)
    *
    * 切换会触发 session 的 mode 事件回调
    */
-  document.querySelector('#toAudio').onclick = function()
+  document.querySelector('#toAudio').onclick = function() 
   {
     e.session.demoteToAudio();
   };
@@ -740,7 +802,7 @@ ua.on('newRTCSession', function(e)
    *
    * 切换会触发 session 的 mode 事件回调
    */
-  document.querySelector('#toVideo').onclick = function()
+  document.querySelector('#toVideo').onclick = function() 
   {
     e.session.upgradeToVideo();
     stats && stats.reset();
@@ -751,13 +813,13 @@ ua.on('newRTCSession', function(e)
    *
    * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
    */
-  document.querySelector('#cameras').onchange = function()
+  document.querySelector('#cameras').onchange = function() 
   {
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
 
-  dropdownSwitchCam = (deviceId) =>
+  dropdownSwitchCam = (deviceId) => 
   {
     e.session.switchDevice('camera', deviceId);
     setStatus(`switchDevice${deviceId}`);
@@ -766,7 +828,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 手机端用切换摄像头
    */
-  document.querySelector('#switchDevice').onclick = function()
+  document.querySelector('#switchDevice').onclick = function() 
   {
     e.session.switchDevice('camera');
     setStatus('switchDevice facingMode');
@@ -775,16 +837,16 @@ ua.on('newRTCSession', function(e)
   /**
    * 结束通话
    */
-  document.querySelector('#cancel').onclick = function()
+  document.querySelector('#cancel').onclick = function() 
   {
     e.session.terminate();
 
-    try
+    try 
     {
       rtcSession.terminate();
       tmpSession.terminate();
     }
-    catch (error)
+    catch (error) 
     {
     }
   };
@@ -792,37 +854,37 @@ ua.on('newRTCSession', function(e)
   /**
    * 呼叫盲转
    */
-  document.querySelector('#referBtn').onclick = function()
+  document.querySelector('#referBtn').onclick = function() 
   {
     // 转接过程中的事件
     const eventHandlers = {
-      'progress' : function(data)
+      'progress' : function(data) 
       {
         console.log('progress', data);
       },
-      'failed' : function()
+      'failed' : function() 
       {
-        if (e.session.isOnHold().local)
+        if (e.session.isOnHold().local) 
         {
           e.session.unhold();
         }
       },
-      'accepted' : function(data)
+      'accepted' : function(data) 
       {
         console.log('accept', data);
         e.session.terminate();
       },
-      'trying' : function(data)
+      'trying' : function(data) 
       {
         console.log('trying', data);
       },
-      'requestSucceeded' : function(data)
+      'requestSucceeded' : function(data) 
       {
         console.log('requestSucceeded', data);
       },
-      'requestFailed' : function()
+      'requestFailed' : function() 
       {
-        if (e.session.isOnHold().local)
+        if (e.session.isOnHold().local) 
         {
           e.session.unhold();
         }
@@ -839,7 +901,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 关闭麦克风
    */
-  document.querySelector('#muteMic').onclick = function()
+  document.querySelector('#muteMic').onclick = function() 
   {
     console.log('mute: ', e.session.isMuted().audio);
     // 关闭麦克风
@@ -849,7 +911,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 开启麦克风
    */
-  document.querySelector('#unmuteMic').onclick = function()
+  document.querySelector('#unmuteMic').onclick = function() 
   {
     console.log('unmute: ', e.session.isMuted().audio);
     // 开启麦克风
@@ -859,7 +921,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 关闭视频
    */
-  document.querySelector('#muteCam').onclick = function()
+  document.querySelector('#muteCam').onclick = function() 
   {
     // 关闭摄像头
     e.session.mute({ video: true });
@@ -868,7 +930,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 开启视频
    */
-  document.querySelector('#unmuteCam').onclick = function()
+  document.querySelector('#unmuteCam').onclick = function() 
   {
     // 摄像头为关闭状态，则开启摄像头
     e.session.unmute({ video: true });
@@ -877,19 +939,19 @@ ua.on('newRTCSession', function(e)
   /**
    * 暂停/恢复通话
    */
-  document.querySelector('#hold').onclick = function()
+  document.querySelector('#hold').onclick = function() 
   {
     // 获取通话中本端和远端是否是暂停状态
     const isHold = e.session.isOnHold();
 
     // 本端暂停才可以执行恢复方法
-    if (isHold.local)
+    if (isHold.local) 
     {
       // 恢复通话
       e.session.unhold();
     }
     // 本地和远端都未暂停才可以执行暂停方法
-    else if (!isHold.remote)
+    else if (!isHold.remote) 
     {
       // 暂停通话
       e.session.hold();
@@ -899,15 +961,15 @@ ua.on('newRTCSession', function(e)
   /**
    * 分享屏幕
    */
-  document.querySelector('#screenShare').onclick = function()
+  document.querySelector('#screenShare').onclick = function() 
   {
     e.session.share('screen', null, null)
-      .then((stream) =>
+      .then((stream) => 
       {
         document.querySelector('#screen').srcObject = stream;
       });
   };
-  document.querySelector('#screenShareD').onclick = function()
+  document.querySelector('#screenShareD').onclick = function() 
   {
     e.session.share('screen', null, null, true);
   };
@@ -917,11 +979,11 @@ ua.on('newRTCSession', function(e)
    *
    * 分享页面元素依赖 html2canvas.js
    */
-  document.querySelector('#formShare').onclick = function()
+  document.querySelector('#formShare').onclick = function() 
   {
     e.session.share('html', '#ele', html2canvas);
   };
-  document.querySelector('#formShareD').onclick = function()
+  document.querySelector('#formShareD').onclick = function() 
   {
     e.session.share('html', '#ele', html2canvas, true);
   };
@@ -929,11 +991,11 @@ ua.on('newRTCSession', function(e)
   /**
    * 分享图片
    */
-  document.querySelector('#picShare').onclick = function()
+  document.querySelector('#picShare').onclick = function() 
   {
     e.session.share('pic', '#pic_s', null);
   };
-  document.querySelector('#picShareD').onclick = function()
+  document.querySelector('#picShareD').onclick = function() 
   {
     e.session.share('pic', '#pic_s', null, true);
   };
@@ -941,22 +1003,22 @@ ua.on('newRTCSession', function(e)
   /**
    * 分享视频
    */
-  document.querySelector('#videoShare').onclick = function()
+  document.querySelector('#videoShare').onclick = function() 
   {
     // 分享视频需要视频在播放状态
     document.querySelector('#video_s')
       .play()
-      .then(() =>
+      .then(() => 
       {
         e.session.share('video', '#video_s', null);
       });
   };
-  document.querySelector('#videoShareD').onclick = function()
+  document.querySelector('#videoShareD').onclick = function() 
   {
     // 分享视频需要视频在播放状态
     document.querySelector('#video_s')
       .play()
-      .then(() =>
+      .then(() => 
       {
         e.session.share('video', '#video_s', null, true);
       });
@@ -965,11 +1027,11 @@ ua.on('newRTCSession', function(e)
   /**
    * 停止分享
    */
-  document.querySelector('#stopShare').onclick = function()
+  document.querySelector('#stopShare').onclick = function() 
   {
     e.session.unShare();
 
-    setTimeout(() =>
+    setTimeout(() => 
     {
       // 获取媒体流
       getStreams(e.session.connection);
@@ -979,7 +1041,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 发送 DTMF
    */
-  document.querySelector('#dtmf').onclick = function(d)
+  document.querySelector('#dtmf').onclick = function(d) 
   {
     const options = { 'transportType': 'RFC2833' };
 
@@ -989,7 +1051,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 通话种推送消息
    */
-  document.querySelector('#sendInfo').onclick = function()
+  document.querySelector('#sendInfo').onclick = function() 
   {
     // 注意： contentType 必填，一般用 text/plain 发送字符串
     e.session.sendInfo('text/plain', document.querySelector('#info').value);
@@ -998,7 +1060,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 对远端媒体截图
    */
-  document.querySelector('#capture').onclick = function()
+  document.querySelector('#capture').onclick = function() 
   {
     const canvas = document.getElementById('captureView');
     const ctx = canvas.getContext('2d');
@@ -1017,7 +1079,7 @@ ua.on('newRTCSession', function(e)
 });
 
 // 部分场景视频卡死需要重新播放
-document.querySelector('.resume').onclick = function()
+document.querySelector('.resume').onclick = function() 
 {
   document.querySelectorAll('video')
     .forEach((video) => video.play()
@@ -1028,9 +1090,9 @@ document.querySelector('.resume').onclick = function()
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
  */
-async function call(type, direction)
+async function call(type, direction) 
 {
-  if (!ua.isRegistered())
+  if (!ua.isRegistered()) 
   {
     setStatus('请注册成功后呼叫');
 
@@ -1044,24 +1106,24 @@ async function call(type, direction)
     pcConfig     : pcConfig
   };
 
-  if (direction == 'sendonly')
+  if (direction == 'sendonly') 
   {
     options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
   }
 
   options['mediaConstraints'] = {
     audio :
-      {
-        sampleRate   : 48000,
-        channelCount : 1
-      },
+    {
+      sampleRate   : 48000,
+      channelCount : 1
+    },
     video : type === 'video' ? videoConstraints : false
   };
 
-  if (type === 'screen')
+  if (type === 'screen') 
   {
     await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      .then(async(stream) =>
+      .then(async(stream) => 
       {
         const audioStream = await navigator.mediaDevices.getUserMedia({
           audio : options['mediaConstraints'].audio,
@@ -1075,7 +1137,7 @@ async function call(type, direction)
       });
   }
 
-  if (navigator.userAgent.indexOf('ArkWeb') != -1)
+  if (navigator.userAgent.indexOf('ArkWeb') != -1) 
   {
     const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
 
@@ -1093,9 +1155,9 @@ async function call(type, direction)
   earlyMedia = false;
 
   // 播放远端的回铃音
-  session.connection.ontrack = function(event)
+  session.connection.ontrack = function(event) 
   {
-    if (event.track.kind === 'audio')
+    if (event.track.kind === 'audio') 
     {
       // 收到远端媒体则设置远端回铃音
       earlyMedia = true;
@@ -1108,34 +1170,34 @@ async function call(type, direction)
        * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
        */
       remoteAudio.play()
-        .catch(() =>
+        .catch(() => 
         {
         });
     }
   };
 
   // 兼容iOS
-  if (optionsTimer)
+  if (optionsTimer) 
   {
     clearInterval(optionsTimer);
   }
 
-  if (navigator.userAgent.indexOf('iPhone') != -1)
+  if (navigator.userAgent.indexOf('iPhone') != -1) 
   {
-    optionsTimer = setInterval(() =>
+    optionsTimer = setInterval(() => 
     {
       ua.sendOptions(`sip_ping@${sipDomain}`);
     }, 3000);
   }
 
   // 外呼未触发newRTCSession前取消呼叫
-  document.querySelector('#cancel').onclick = function()
+  document.querySelector('#cancel').onclick = function() 
   {
     session.terminate();
   };
 }
 
-function generateAnEmptyAudioTrack()
+function generateAnEmptyAudioTrack() 
 {
   // 增加安卓微信呼叫的语音提醒
   // const audio = new Audio('./sound/waiting.mp3');
@@ -1147,7 +1209,7 @@ function generateAnEmptyAudioTrack()
   audio.loop = true;
   audio.crossOrigin = 'anonymous';
   audio.play()
-    .catch((error) =>
+    .catch((error) => 
     {
       logger.error(`new Audio() error: ${JSON.stringify(error)}`);
     });
@@ -1161,7 +1223,7 @@ function generateAnEmptyAudioTrack()
  *
  * @param {RTCPeerConnection} pc 用户获取媒体流的 RTCPeerConnection 对象
  */
-function getStreams(pc)
+function getStreams(pc) 
 {
   // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
@@ -1170,14 +1232,14 @@ function getStreams(pc)
 
   // 本地视频
   localVideo.srcObject = localStream.videoStream;
-  localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function() 
   {
     // 特殊情况下清理页面残留的video黑框
     localVideo.srcObject = null;
   });
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
-  setTimeout(() =>
+  setTimeout(() => 
   {
     remoteAudio.srcObject = remoteStream.audioStream;
 
@@ -1187,16 +1249,16 @@ function getStreams(pc)
      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
      */
     remoteAudio.play()
-      .catch(() =>
+      .catch(() => 
       {
       });
   }, 100);
   // 远端视频
   remoteVideo.srcObject = remoteStream.mediaStream;
-  remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
+  remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function() 
   {
     // 特殊情况下清理页面残留的video黑框
-    if (!tmpSession)
+    if (!tmpSession) 
     {
       remoteVideo.srcObject = null;
     }
@@ -1208,15 +1270,15 @@ function getStreams(pc)
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
-    .then(() =>
+    .then(() => 
     {
     })
-    .catch(() =>
+    .catch(() => 
     {
     });
 }
 
-function stopStreams()
+function stopStreams() 
 {
   // 停止媒体流，这里可以切换页面UI
   remoteVideo.srcObject = null;
@@ -1229,7 +1291,7 @@ function stopStreams()
  *
  * @param {string} name - 参数名，区分大小写
  */
-function handleGetQuery(name)
+function handleGetQuery(name) 
 {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
   const r = window.location.search.substr(1)
@@ -1245,7 +1307,7 @@ function handleGetQuery(name)
  *
  * @param {string} text - 输出的内容
  */
-function setStatus(text)
+function setStatus(text) 
 {
   const statusDom = document.querySelector('#status');
 
@@ -1255,15 +1317,15 @@ function setStatus(text)
 /**
  * 更新摄像头下拉列表
  */
-function updateDevices()
+function updateDevices() 
 {
   CRTC.Utils.getCameras()
-    .then((cameras) =>
+    .then((cameras) => 
     {
       let option = '<option selected value="">请选择切换摄像头</option>';
       let menus = '';
 
-      cameras.forEach((device) =>
+      cameras.forEach((device) => 
       {
         option += `<option value="${device.deviceId}">${device.label}</option>`;
         menus += `<li onclick="dropdownSwitchCam('${device.deviceId}')"><a class="dropdown-item" href="#">${device.label}</a></li>`;
@@ -1277,7 +1339,7 @@ function updateDevices()
 /**
  * 启动初始化
  */
-function start()
+function start() 
 {
   // 输出SDK版本号
   setStatus(`${CRTC.version}`);
@@ -1288,9 +1350,9 @@ function start()
   // 启动UA，连接信令服务器并注册
   ua.start();
 
-  setTimeout(() =>
+  setTimeout(() => 
   {
-    if (!ua.isConnected() || !ua.isRegistered())
+    if (!ua.isConnected() || !ua.isRegistered()) 
     {
       ua.stop();
       console.log('网络连接异常或未注册成功');
@@ -1298,48 +1360,48 @@ function start()
   }, 10000);
 
   // 发起音频呼叫
-  document.querySelector('#call').onclick = function()
+  document.querySelector('#call').onclick = function() 
   {
     // 设置当前通话模式为音频模式
     call();
   };
 
   // 发起共享桌面视频呼叫
-  document.querySelector('#callScreen').onclick = function()
+  document.querySelector('#callScreen').onclick = function() 
   {
     // 设置当前通话模式为视频模式
     call('screen', 'sendonly');
   };
 
   // 发起视频呼叫
-  document.querySelector('#callVideo').onclick = function()
+  document.querySelector('#callVideo').onclick = function() 
   {
     // 设置当前通话模式为视频模式
     call('video');
   };
 
   // 发起视频呼叫
-  document.querySelector('#callVideoSendonly').onclick = function()
+  document.querySelector('#callVideoSendonly').onclick = function() 
   {
     // 设置当前通话模式为单向视频模式
     call('video', 'sendonly');
   };
 
   // 监听系统输入设备变化更新摄像头列表
-  navigator.mediaDevices.addEventListener('devicechange', () =>
+  navigator.mediaDevices.addEventListener('devicechange', () => 
   {
     updateDevices();
   });
 
   // 页面刷新 终止会话，注销ua
-  window.onbeforeunload = function()
+  window.onbeforeunload = function() 
   {
     ua.stop();
   };
 }
 
 document.getElementById('small')
-  .addEventListener('click', function()
+  .addEventListener('click', function() 
   {
     // 获取 small 和 large div 的元素
     const smallDiv = document.getElementById('small');
@@ -1365,89 +1427,64 @@ document.getElementById('small')
     smallText.innerHTML = tempContent;
   });
 
-function isMobile()
+function isMobile() 
 {
   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-if (isMobile())
+if (isMobile()) 
 {
   console.log('这是一个移动设备 📱');
   document.querySelector('#screenShare').style.display = 'none';
 }
-else
+else 
 {
   // console.log("这是一个桌面设备 🖥️");
 }
 
-function setConstraints(key)
+function setParams(key) 
+{
+  const senders = rtcSession.connection.getSenders();
+
+  senders.forEach((sender) => 
+  {
+    const parameters = sender.getParameters();
+
+    if (sender.track && sender.track.kind === 'video') 
+    {
+      parameters.encodings[0].maxBitrate = maxB[key] * 1000;
+      sender.setParameters(parameters);
+    }
+    else if (sender.track && sender.track.kind === 'audio') 
+    {
+      parameters.encodings[0].maxBitrate = 128 * 1000;
+      sender.setParameters(parameters);
+    }
+  });
+}
+
+function setConstraints(key) 
 {
   let stream = localVideo.srcObject;
 
   const screenStream = document.querySelector('#screen').srcObject;
 
-  if (screenStream)
+  if (screenStream) 
   {
     screenStream.getVideoTracks()
-      .forEach((track) =>
+      .forEach((track) => 
       {
-        if (track.readyState === 'live')
+        if (track.readyState === 'live') 
         {
           stream = screenStream;
         }
       });
   }
 
-  const constraints = {
-    p480a : {
-      width     : 640,
-      height    : 480,
-      frameRate : 5
-    },
-    p720a : {
-      width     : 1280,
-      height    : 720,
-      frameRate : 5
-    },
-    p1080a : {
-      width     : 1920,
-      height    : 1080,
-      frameRate : 5
-    },
-    p480b : {
-      width     : 640,
-      height    : 480,
-      frameRate : 15
-    },
-    p720b : {
-      width     : 1280,
-      height    : 720,
-      frameRate : 15
-    },
-    p1080b : {
-      width     : 1920,
-      height    : 1080,
-      frameRate : 15
-    },
-    p480c : {
-      width     : 640,
-      height    : 480,
-      frameRate : 30
-    },
-    p720c : {
-      width     : 1280,
-      height    : 720,
-      frameRate : 30
-    },
-    p1080c : {
-      width     : 1920,
-      height    : 1080,
-      frameRate : 30
-    }
-  };
+  setParams(key);
 
   stream.getVideoTracks()
-    .forEach((track) =>
+    .forEach((track) => 
     {
       track.applyConstraints(constraints[key]);
     });
