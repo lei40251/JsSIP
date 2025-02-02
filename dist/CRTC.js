@@ -1,10 +1,3187 @@
 /*
- * CRTC v1.10.9-beta.250111.2025111238
+ * CRTC v1.10.9-beta.250128.20251282119
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+"use strict";
+
+/**
+ * bfcp-lib: A simple library for BFCP protocol
+ * @module bfcp-lib
+ */
+
+var User = require('./lib/user/user.js');
+var Primitive = require('./lib/messages/primitive.js');
+var RequestStatusValue = require('./lib/messages/requestStatusValue.js');
+var AttributeName = require('./lib/attributes/name.js');
+var BFCPLib = {
+  'User': User,
+  'Primitive': Primitive,
+  'RequestStatusValue': RequestStatusValue,
+  'AttributeName': AttributeName
+};
+module.exports = BFCPLib;
+},{"./lib/attributes/name.js":9,"./lib/messages/primitive.js":26,"./lib/messages/requestStatusValue.js":27,"./lib/user/user.js":30}],2:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Complements = require('../parser/complements.js');
+var Format = require('./format.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * Attribute class is a abstraction of the Attribute as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib
+ */
+var Attribute = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Attribute.Type}   type    Attribute Type
+   * @param {bfcp-lib.Attribute.Length} length  Attribute length in octets
+   * @param {bfcp-lib.Attribute.Format} format  Attribute format
+   * @param {Object}                    content The attribute content, which
+   *  can be an Integer, or other attributes, depending of the format
+   */
+  function Attribute(type, length, format, content) {
+    _classCallCheck(this, Attribute);
+    this._type = type;
+    this._length = length;
+    this._format = format;
+    this._content = content;
+  }
+
+  /**
+   * Gets the Type of the Attribute
+   * @return {bfcp-lib.Attribute.Type} The Type
+   * @public
+   */
+  return _createClass(Attribute, [{
+    key: "type",
+    get: function get() {
+      return this._type;
+    },
+    set: function set(type) {
+      this._type = type;
+    }
+
+    /**
+     * Gets the Length of the Attribute
+     * @return {bfcp-lib.Attribute.Length} The Length in octets
+     * @public
+     */
+  }, {
+    key: "length",
+    get: function get() {
+      return this._length;
+    },
+    set: function set(length) {
+      this._length = length;
+    }
+
+    /**
+     * Gets the Format of the Attribute
+     * @return {bfcp-lib.Attribute.Format} The Format
+     * @public
+     */
+  }, {
+    key: "format",
+    get: function get() {
+      return this._format;
+    },
+    set: function set(format) {
+      this._format = format;
+    }
+
+    /**
+     * Gets the content of the Attribute, which can be an Integer or other
+     * Attributes, depending on the format
+     * @return {Object} The content
+     * @public
+     */
+  }, {
+    key: "content",
+    get: function get() {
+      return this._content;
+    },
+    set: function set(content) {
+      this._content = content;
+    }
+
+    /**
+     * Encodes this Attribute instance from object oriented format to the binary
+     * format.
+     * @return {String} Binary string representing the BFCP Attribute
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var type = Complements.complementBinary(this.type.toString(2), 7);
+      var m = '0';
+      var length = Complements.complementBinary(this.length.toString(2), 8);
+      var content = null;
+      switch (this.format) {
+        case Format.Unsigned16:
+          content = Complements.complementBinary(this.content.toString(2), 16);
+          break;
+        case Format.Grouped:
+          content = this._encodeGroupedAttributeContent();
+          break;
+        case Format.OctetString:
+          content = this._encodeOctetStringContent();
+          break;
+        case Format.OctetString16:
+          content = this._encodeOctetString16Content();
+          break;
+        default:
+          throw new Error("I can't encode this attribute. Format unknown.");
+      }
+      return Complements.complementPadding(type + m + length + content);
+    }
+
+    /**
+     * Encodes the Grouped type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeGroupedAttributeContent",
+    value: function _encodeGroupedAttributeContent() {
+      var newContent = '';
+      var _iterator = _createForOfIteratorHelper(this.content),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var attribute = _step.value;
+          if (attribute instanceof Attribute) {
+            newContent = newContent + attribute.encode();
+          } else if (typeof attribute === 'string' || typeof attribute === 'number') {
+            newContent = newContent + Complements.complementBinary(attribute.toString(2), 16);
+          } else {
+            throw new Error('Unknown attribute!');
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      return newContent;
+    }
+
+    /**
+     * Encodes the OctetString type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeOctetStringContent",
+    value: function _encodeOctetStringContent() {
+      var newContent = '';
+      switch (this.type) {
+        case Type.SupportedAttributes:
+          var _iterator2 = _createForOfIteratorHelper(this.content),
+            _step2;
+          try {
+            for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+              var attributeType = _step2.value;
+              newContent = "".concat(newContent + Complements.complementBinary(attributeType.toString(2), 7), "0");
+            }
+          } catch (err) {
+            _iterator2.e(err);
+          } finally {
+            _iterator2.f();
+          }
+          return newContent;
+        case Type.SupportedPrimitives:
+          var _iterator3 = _createForOfIteratorHelper(this.content),
+            _step3;
+          try {
+            for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+              var primitiveType = _step3.value;
+              newContent = newContent + Complements.complementBinary(primitiveType.toString(2), 8);
+            }
+          } catch (err) {
+            _iterator3.e(err);
+          } finally {
+            _iterator3.f();
+          }
+          return newContent;
+        default:
+          throw new Error("I can't encode this octet string attribute. Type unknown.");
+      }
+    }
+
+    /**
+     * Encodes the OctetString16 type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeOctetString16Content",
+    value: function _encodeOctetString16Content() {
+      switch (this.type) {
+        case Type.RequestStatus:
+          {
+            var requestStatus = Complements.complementBinary(this.content[0].toString(2), 8);
+            var queuePosition = Complements.complementBinary(this.content[1].toString(2), 8);
+            return requestStatus + queuePosition;
+          }
+        default:
+          throw new Error("I can't encode this octet string 16 attribute. Type unknown.");
+      }
+    }
+  }]);
+}();
+module.exports = Attribute;
+},{"../parser/complements.js":28,"./format.js":7,"./type.js":13}],3:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorId class is a abstraction of the FloorId attribute
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.2
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorId = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorId The floor id
+   */
+  function FloorId(floorId) {
+    _classCallCheck(this, FloorId);
+    return _callSuper(this, FloorId, [Type.FloorId, Length.FloorId, Format.Unsigned16, floorId]);
+  }
+  _inherits(FloorId, _Attribute);
+  return _createClass(FloorId);
+}(Attribute);
+module.exports = FloorId;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],4:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestId class is a abstraction of the FloorRequestId attribute
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.3
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestId = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorRequestId The floor request id
+   */
+  function FloorRequestId(floorRequestId) {
+    _classCallCheck(this, FloorRequestId);
+    return _callSuper(this, FloorRequestId, [Type.FloorRequestId, Length.FloorRequestId, Format.Unsigned16, floorRequestId]);
+  }
+  _inherits(FloorRequestId, _Attribute);
+  return _createClass(FloorRequestId);
+}(Attribute);
+module.exports = FloorRequestId;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],5:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var FloorRequestStatus = require('./floorRequestStatus.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestInformation class is a abstraction of the FloorRequestInformation
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.15
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestInformation = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {Integer} requestStatus  The request status
+   */
+  function FloorRequestInformation(floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestInformation);
+    var content = [];
+    content.push(floorRequestId);
+    content.push(new FloorRequestStatus(floorId, requestStatus));
+    return _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
+  }
+  _inherits(FloorRequestInformation, _Attribute);
+  return _createClass(FloorRequestInformation);
+}(Attribute);
+module.exports = FloorRequestInformation;
+},{"./attribute.js":2,"./floorRequestStatus.js":6,"./format.js":7,"./length.js":8,"./type.js":13}],6:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var RequestStatus = require('./requestStatus.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatus class is a abstraction of the FloorRequestStatus
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.17
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestStatus = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorId       The floor id
+   * @param {Integer} requestStatus The request status
+   */
+  function FloorRequestStatus(floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestStatus);
+    var content = [];
+    content.push(floorId);
+    content.push(new RequestStatus(requestStatus));
+    return _callSuper(this, FloorRequestStatus, [Type.FloorRequestStatus, Length.FloorRequestStatus, Format.Grouped, content]);
+  }
+  _inherits(FloorRequestStatus, _Attribute);
+  return _createClass(FloorRequestStatus);
+}(Attribute);
+module.exports = FloorRequestStatus;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./requestStatus.js":10,"./type.js":13}],7:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Format class is a abstraction of the attribute Format as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Format = /*#__PURE__*/function () {
+  function Format() {
+    _classCallCheck(this, Format);
+  }
+  return _createClass(Format, null, [{
+    key: "Unsigned16",
+    get:
+    /**
+     * Gets Unsigned16 Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+    function get() {
+      return 'Unsigned16';
+    }
+
+    /**
+     * Gets OctetString16 Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OctetString16",
+    get: function get() {
+      return 'OctetString16';
+    }
+
+    /**
+     * Gets OctetString Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OctetString",
+    get: function get() {
+      return 'OctetString';
+    }
+
+    /**
+     * Gets Grouped Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Grouped",
+    get: function get() {
+      return 'Grouped';
+    }
+  }]);
+}();
+module.exports = Format;
+},{}],8:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Length class is a abstract representation of the attributes length as
+ * defined in the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Length = /*#__PURE__*/function () {
+  function Length() {
+    _classCallCheck(this, Length);
+  }
+  return _createClass(Length, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 4;
+    }
+
+    /**
+     * Gets FloorId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets FloorRequestId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets Priority Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets RequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets ErrorCode Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets ErrorInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets StatusInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets SupportedAttributes Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets SupportedPrimitives Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets UserDisplayName Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets UserUri Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets BeneficiaryInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorRequestInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets RequestedByInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 16;
+    }
+
+    /**
+     * Gets FloorRequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets OverallRequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 18;
+    }
+  }]);
+}();
+module.exports = Length;
+},{}],9:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Name class is a abstraction of the attribute Names
+ * @memberof bfcp-lib.Name
+ * @static
+ */
+var Name = /*#__PURE__*/function () {
+  function Name() {
+    _classCallCheck(this, Name);
+  }
+  return _createClass(Name, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+    function get() {
+      return 'BeneficiaryId';
+    }
+
+    /**
+     * Gets FloorId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 'FloorId';
+    }
+
+    /**
+     * Gets FloorRequestId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 'FloorRequestId';
+    }
+
+    /**
+     * Gets Priority Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 'Priority';
+    }
+
+    /**
+     * Gets RequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 'RequestStatus';
+    }
+
+    /**
+     * Gets ErrorCode Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 'ErrorCode';
+    }
+
+    /**
+     * Gets ErrorInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 'ErrorInfo';
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 'ParticipantProvidedInfo';
+    }
+
+    /**
+     * Gets StatusInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 'StatusInfo';
+    }
+
+    /**
+     * Gets SupportedAttributes Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 'SupportedAttributes';
+    }
+
+    /**
+     * Gets SupportedPrimitives Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 'SupportedPrimitives';
+    }
+
+    /**
+     * Gets UserDisplayName Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 'UserDisplayName';
+    }
+
+    /**
+     * Gets UserUri Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 'UserUri';
+    }
+
+    /**
+     * Gets BeneficiaryInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 'BeneficiaryInformation';
+    }
+
+    /**
+     * Gets FloorRequestInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 'FloorRequestInformation';
+    }
+
+    /**
+     * Gets RequestedByInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 'RequestedByInformation';
+    }
+
+    /**
+     * Gets FloorRequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 'FloorRequestStatus';
+    }
+
+    /**
+     * Gets OverallRequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 'OverallRequestStatus';
+    }
+  }]);
+}();
+module.exports = Name;
+},{}],10:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * RequestStatus class is a abstraction of the RequestStatus attribute as
+ * defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.5
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var RequestStatus = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} requestStatus The request status
+   * @param {Integer} queuePosition The queue position
+   */
+  function RequestStatus(requestStatus, queuePosition) {
+    _classCallCheck(this, RequestStatus);
+    if (queuePosition == null || queuePosition == undefined) {
+      queuePosition = 0;
+    }
+    var content = [requestStatus, queuePosition];
+    return _callSuper(this, RequestStatus, [Type.RequestStatus, Length.RequestStatus, Format.OctetString16, content]);
+  }
+  _inherits(RequestStatus, _Attribute);
+  return _createClass(RequestStatus);
+}(Attribute);
+module.exports = RequestStatus;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],11:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * SupportedAttributes class is a abstraction of the SupportedAttributes
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.10
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var SupportedAttributes = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Attribute.Type[]} attributes A Attribute Type list
+   * representing the supported attributes
+   */
+  function SupportedAttributes(attributes) {
+    _classCallCheck(this, SupportedAttributes);
+    var supAttributes = [];
+    if (!attributes || attributes == undefined) {
+      supAttributes = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.SupportedPrimitives, Type.SupportedAttributes];
+    } else {
+      supAttributes = attributes;
+    }
+    var length = supAttributes.length + Length.SupportedAttributes;
+    return _callSuper(this, SupportedAttributes, [Type.SupportedAttributes, length, Format.OctetString, supAttributes]);
+  }
+  _inherits(SupportedAttributes, _Attribute);
+  return _createClass(SupportedAttributes);
+}(Attribute);
+module.exports = SupportedAttributes;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],12:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Primitive = require('../messages/primitive.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * SupportedPrimitives class is a abstraction of the SupportedPrimitives
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.11
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var SupportedPrimitives = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.Primitive} primitives A Message Primitive list
+   * representing the supported primitives (messages)
+   */
+  function SupportedPrimitives(primitives) {
+    _classCallCheck(this, SupportedPrimitives);
+    var supPrimitives = [];
+    if (!primitives || primitives == undefined) {
+      supPrimitives = [Primitive.Hello, Primitive.HelloAck];
+    } else {
+      supPrimitives = primitives;
+    }
+    var length = supPrimitives.length + Length.SupportedPrimitives;
+    return _callSuper(this, SupportedPrimitives, [Type.SupportedPrimitives, length, Format.OctetString, supPrimitives]);
+  }
+  _inherits(SupportedPrimitives, _Attribute);
+  return _createClass(SupportedPrimitives);
+}(Attribute);
+module.exports = SupportedPrimitives;
+},{"../messages/primitive.js":26,"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],13:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Type class is a abstraction of the Attribute Type as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Type = /*#__PURE__*/function () {
+  function Type() {
+    _classCallCheck(this, Type);
+  }
+  return _createClass(Type, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets FloorRequestId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Priority Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets RequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets ErrorCode Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets ErrorInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets StatusInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets SupportedAttributes Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 10;
+    }
+
+    /**
+     * Gets SupportedPrimitives Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 11;
+    }
+
+    /**
+     * Gets UserDisplayName Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets UserUri Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets BeneficiaryInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorRequestInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 15;
+    }
+
+    /**
+     * Gets RequestedByInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 16;
+    }
+
+    /**
+     * Gets FloorRequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 17;
+    }
+
+    /**
+     * Gets OverallRequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 18;
+    }
+  }]);
+}();
+module.exports = Type;
+},{}],14:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Complements = require('../parser/complements.js');
+
+/**
+ * @classdesc
+ * CommonHeader class is a abstraction of the CommonHeader as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ */
+var CommonHeader = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.Primitive} primitive     The Message Primitive
+   * @param {Integer}                    payloadLength The length of the message
+   *                                                   in 4-octet, excluding the CommonHeader
+   * @param {Integer}                    conferenceId  The conference id
+   * @param {Integer}                    transactionId The transaction id
+   * @param {Integer}                    userId        The user id
+   */
+  function CommonHeader(primitive, payloadLength, conferenceId, transactionId, userId) {
+    _classCallCheck(this, CommonHeader);
+    this._primitive = primitive;
+    this._payloadLength = payloadLength;
+    this._conferenceId = conferenceId;
+    this._transactionId = transactionId;
+    this._userId = userId;
+  }
+
+  /**
+   * Gets the message primitive
+   * @return {bfcp-lib.Message.Primitive} Message Primitive
+   * @public
+   */
+  return _createClass(CommonHeader, [{
+    key: "primitive",
+    get: function get() {
+      return this._primitive;
+    },
+    set: function set(primitive) {
+      this._primitive = primitive;
+    }
+
+    /**
+     * Gets the message length in 4-octet (32 bits), excluding the commonHeader
+     * @return {Integer} The message length
+     * @public
+     */
+  }, {
+    key: "payloadLength",
+    get: function get() {
+      return this._payloadLength;
+    },
+    set: function set(payloadLength) {
+      this._payloadLength = payloadLength;
+    }
+
+    /**
+     * Gets the conference id
+     * @return {Integer} Conference id
+     * @public
+     */
+  }, {
+    key: "conferenceId",
+    get: function get() {
+      return this._conferenceId;
+    },
+    set: function set(conferenceId) {
+      this._conferenceId = conferenceId;
+    }
+
+    /**
+     * Gets the transaction id
+     * @return {Integer} Transaction id
+     * @public
+     */
+  }, {
+    key: "transactionId",
+    get: function get() {
+      return this._transactionId;
+    },
+    set: function set(transactionId) {
+      this._transactionId = transactionId;
+    }
+
+    /**
+     * Gets the user id
+     * @return {Integer} User id
+     * @public
+     */
+  }, {
+    key: "userId",
+    get: function get() {
+      return this._userId;
+    },
+    set: function set(userId) {
+      this._userId = userId;
+    }
+
+    /**
+     * Encodes this CommonHeader instance from object oriented format to the
+     * binary format.
+     * @return {String} Binary string representing the BFCP CommonHeader
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var ver = '001';
+      var reserved = '00000';
+      var primitive = Complements.complementBinary(this.primitive.toString(2), 8);
+      var payloadLength = Complements.complementBinary(this.payloadLength.toString(2), 16);
+      var conferenceId = Complements.complementBinary(this.conferenceId.toString(2), 32);
+      var transactionId = Complements.complementBinary(this.transactionId.toString(2), 16);
+      var userId = Complements.complementBinary(this.userId.toString(2), 16);
+      return ver + reserved + primitive + payloadLength + conferenceId + transactionId + userId;
+    }
+  }]);
+}();
+module.exports = CommonHeader;
+},{"../parser/complements.js":28}],15:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorQuery class is a abstraction of the FloorQuery Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.7
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorQuery = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorQuery(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorQuery);
+    return _callSuper(this, FloorQuery, [new CommonHeader(Primitive.FloorQuery, PayloadLength.FloorQuery, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorQuery, _Message);
+  return _createClass(FloorQuery);
+}(Message);
+module.exports = FloorQuery;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],16:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestId = require('../attributes/floorRequestId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRelease class is a abstraction of the FloorRelease Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.2
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRelease = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorRequestId The floor request id
+   */
+  function FloorRelease(conferenceId, transactionId, userId, floorRequestId) {
+    _classCallCheck(this, FloorRelease);
+    return _callSuper(this, FloorRelease, [new CommonHeader(Primitive.FloorRelease, PayloadLength.FloorRelease, conferenceId, transactionId, userId), [new FloorRequestId(floorRequestId)]]);
+  }
+  _inherits(FloorRelease, _Message);
+  return _createClass(FloorRelease);
+}(Message);
+module.exports = FloorRelease;
+},{"../attributes/floorRequestId.js":4,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],17:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequest class is a abstraction of the FloorRequest Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.1
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequest = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorRequest(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorRequest);
+    return _callSuper(this, FloorRequest, [new CommonHeader(Primitive.FloorRequest, PayloadLength.FloorRequest, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorRequest, _Message);
+  return _createClass(FloorRequest);
+}(Message);
+module.exports = FloorRequest;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],18:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatus class is a abstraction of the FloorRequestStatus Message
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.4
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequestStatus = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integet} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+   */
+  function FloorRequestStatus(conferenceId, transactionId, userId, floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestStatus);
+    return _callSuper(this, FloorRequestStatus, [new CommonHeader(Primitive.FloorRequestStatus, PayloadLength.FloorRequestStatus, conferenceId, transactionId, userId), [new FloorRequestInformation(floorRequestId, floorId, requestStatus)]]);
+  }
+  _inherits(FloorRequestStatus, _Message);
+  return _createClass(FloorRequestStatus);
+}(Message);
+module.exports = FloorRequestStatus;
+},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],19:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatusAck class is a abstraction of the FloorRequestStatusAck Message
+ * extended from the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequestStatusAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorRequestStatusAck(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorRequestStatusAck);
+    return _callSuper(this, FloorRequestStatusAck, [new CommonHeader(Primitive.FloorRequestStatusAck, PayloadLength.FloorRequestStatusAck, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorRequestStatusAck, _Message);
+  return _createClass(FloorRequestStatusAck);
+}(Message);
+module.exports = FloorRequestStatusAck;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],20:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorStatus class is a abstraction of the FloorStatus Message
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.8
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorStatus = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integet} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+   */
+  function FloorStatus(conferenceId, transactionId, userId, floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorStatus);
+    return _callSuper(this, FloorStatus, [new CommonHeader(Primitive.FloorStatus, PayloadLength.FloorStatus, conferenceId, transactionId, userId), [new FloorRequestInformation(floorRequestId, floorId, requestStatus)]]);
+  }
+  _inherits(FloorStatus, _Message);
+  return _createClass(FloorStatus);
+}(Message);
+module.exports = FloorStatus;
+},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],21:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorStatusAck class is a abstraction of the FloorStatusAck Message
+ * extended from the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorStatusAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorStatusAck(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorStatusAck);
+    return _callSuper(this, FloorStatusAck, [new CommonHeader(Primitive.FloorStatusAck, PayloadLength.FloorStatusAck, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorStatusAck, _Message);
+  return _createClass(FloorStatusAck);
+}(Message);
+module.exports = FloorStatusAck;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],22:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * Hello class is a abstraction of the Hello Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.11
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var Hello = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId  The conference id
+   * @param {Integer} transactionId The transaction id
+   * @param {Integer} userId        The user id
+   * @param {Integer} floorId       The floor id
+   */
+  function Hello(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, Hello);
+    return _callSuper(this, Hello, [new CommonHeader(Primitive.Hello, PayloadLength.Hello, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(Hello, _Message);
+  return _createClass(Hello);
+}(Message);
+module.exports = Hello;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],23:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
+var SupportedAttributes = require('../attributes/supportedAttributes.js');
+
+/**
+ * @classdesc
+ * HelloAck class is a abstraction of the HelloAck Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.12
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var HelloAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId  The conference id
+   * @param {Integer} transactionId The transaction id
+   * @param {Integer} userId        The user id
+   */
+  function HelloAck(conferenceId, transactionId, userId) {
+    _classCallCheck(this, HelloAck);
+    return _callSuper(this, HelloAck, [new CommonHeader(Primitive.HelloAck, PayloadLength.HelloAck, conferenceId, transactionId, userId), [new SupportedPrimitives(), new SupportedAttributes()]]);
+  }
+  _inherits(HelloAck, _Message);
+  return _createClass(HelloAck);
+}(Message);
+module.exports = HelloAck;
+},{"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],24:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Message class is a abstraction of the Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3
+ * @memberof bfcp-lib
+ */
+var Message = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.CommonHeader} commonHeader The message common header
+   * @param {bfcp-lib.Attribute[]}  attributes   The message list of attributes
+   */
+  function Message(commonHeader, attributes) {
+    _classCallCheck(this, Message);
+    this._commonHeader = commonHeader;
+    this._attributes = attributes;
+  }
+
+  /**
+   * Gets the Message CommonHeader
+   * @return {bfcp-lib.Message.CommonHeader} The CommonHeader object
+   * @public
+   */
+  return _createClass(Message, [{
+    key: "commonHeader",
+    get: function get() {
+      return this._commonHeader;
+    },
+    set: function set(commonHeader) {
+      this._commonHeader = commonHeader;
+    }
+
+    /**
+     * Gets the Message attributes
+     * @return {bfcp-lib.Attribute[]} The Attributes List
+     * @public
+     */
+  }, {
+    key: "attributes",
+    get: function get() {
+      return this._attributes;
+    },
+    set: function set(attributes) {
+      this._attributes = attributes;
+    }
+
+    /**
+     * Gets the message attribute that contains the name received. If this
+     * message haven't this attribute, returns null.
+     * @param  {bfcp-lib.Attribute.Name} attributeName The attribute Name
+     * @return {bfcp-lib.Attribute}      The attribute
+     * @public
+     */
+  }, {
+    key: "getAttribute",
+    value: function getAttribute(attributeName) {
+      var _iterator = _createForOfIteratorHelper(this.attributes),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var attribute = _step.value;
+          if (attribute.constructor.name == attributeName) {
+            return attribute;
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      return null;
+    }
+
+    /**
+     * Encodes this Message instance from object oriented format to the binary
+     * format.This process envolve encode the CommonHeader and all attributes.
+     * @return {String} Binary string representing the BFCP Message
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var commonHeader = this.commonHeader.encode();
+      var attributes = '';
+      var _iterator2 = _createForOfIteratorHelper(this.attributes),
+        _step2;
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var attribute = _step2.value;
+          attributes = attributes + attribute.encode();
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+      var message = commonHeader + attributes;
+      var size = message.length / 8;
+      var octets = [];
+      for (var i = 0; i < size; i++) {
+        octets.push(parseInt(message.substring(0 + 8 * i, 8 + 8 * i), 2));
+      }
+      return octets;
+    }
+  }]);
+}();
+module.exports = Message;
+},{}],25:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * PayloadLength class is a abstraction of the Message Payload Length as defined in
+ * the RFCP 4582 - BFCP, in 4-octets units
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var PayloadLength = /*#__PURE__*/function () {
+  function PayloadLength() {
+    _classCallCheck(this, PayloadLength);
+  }
+  return _createClass(PayloadLength, null, [{
+    key: "FloorRequest",
+    get:
+    /**
+     * Gets FloorRequest payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRelease payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRelease",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRequestQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorRequestStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets UserQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets UserStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserStatus",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets ChairAction payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairAction",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets ChairActionAck payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairActionAck",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets Hello payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Hello",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets HelloAck payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "HelloAck",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Error payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Error",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorRequestStatusAck payload length
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatusAck",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorStatusAck payload length
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatusAck",
+    get: function get() {
+      return 1;
+    }
+  }]);
+}();
+module.exports = PayloadLength;
+},{}],26:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Primitive class is a abstraction of the Message Primitive as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var Primitive = /*#__PURE__*/function () {
+  function Primitive() {
+    _classCallCheck(this, Primitive);
+  }
+  return _createClass(Primitive, null, [{
+    key: "FloorRequest",
+    get:
+    /**
+     * Gets FloorRequest Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRelease Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRelease",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets FloorRequestQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestQuery",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets FloorRequestStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets UserQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserQuery",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets UserStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserStatus",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets FloorQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorQuery",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets FloorStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatus",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets ChairAction Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairAction",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets ChairActionAck Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairActionAck",
+    get: function get() {
+      return 10;
+    }
+
+    /**
+     * Gets Hello Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Hello",
+    get: function get() {
+      return 11;
+    }
+
+    /**
+     * Gets HelloAck Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "HelloAck",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets Error Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Error",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets FloorRequestStatusAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatusAck",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorStatusAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatusAck",
+    get: function get() {
+      return 16;
+    }
+  }]);
+}();
+module.exports = Primitive;
+},{}],27:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * RequestStatusValue class is a abstraction of the Message Request Status as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.5
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var RequestStatusValue = /*#__PURE__*/function () {
+  function RequestStatusValue() {
+    _classCallCheck(this, RequestStatusValue);
+  }
+  return _createClass(RequestStatusValue, null, [{
+    key: "Pending",
+    get:
+    /**
+     * Gets Pending value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets Accepted value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Accepted",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets Granted value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Granted",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Denied value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Denied",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets Cancelled value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Cancelled",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets Released value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Released",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets Revoked value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Revoked",
+    get: function get() {
+      return 7;
+    }
+  }]);
+}();
+module.exports = RequestStatusValue;
+},{}],28:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Complements class is a static class to handle string (binary) operations of
+ * complement (used to make a formated binary string from a not formated one).
+ * @memberof bfcp-lib
+ * @static
+ */
+var Complements = /*#__PURE__*/function () {
+  function Complements() {
+    _classCallCheck(this, Complements);
+  }
+  return _createClass(Complements, null, [{
+    key: "complementBinary",
+    value:
+    /**
+     * Complements the binary string with '0' at it begin until have reached the
+     * necessary string length.
+     * @param  {String}  binary The binary string
+     * @param  {Integer} length The necessary length
+     * @return {String}         The binary string with the correct length
+     * @static
+     * @public
+     */
+    function complementBinary(binary, length) {
+      var complement = length - binary.length;
+      if (complement <= 0) {
+        return binary;
+      }
+      var complementString = '0'.repeat(complement);
+      return complementString + binary;
+    }
+
+    /**
+     * Complements the binary string with 8 bits of '0' at it end have reached
+     * the 32bits format. (padding)
+     * @param  {String} content The binary string
+     * @return {String}         The binary string with the correct format
+     * @static
+     * @public
+     */
+  }, {
+    key: "complementPadding",
+    value: function complementPadding(content) {
+      while (content.length < 100000 && content.length % 32 != 0) {
+        content = "".concat(content, "00000000");
+      }
+      return content;
+    }
+  }]);
+}();
+module.exports = Complements;
+},{}],29:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var FloorRequest = require('../messages/floorRequest.js');
+var FloorRelease = require('../messages/floorRelease.js');
+var FloorRequestStatusMsg = require('../messages/floorRequestStatus.js');
+var FloorStatus = require('../messages/floorStatus.js');
+var Hello = require('../messages/hello.js');
+var HelloAck = require('../messages/helloAck.js');
+var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
+var FloorStatusAck = require('../messages/floorStatusAck.js');
+var FloorQuery = require('../messages/floorQuery.js');
+var AttributeType = require('../attributes/type.js');
+var FloorId = require('../attributes/floorId.js');
+var FloorRequestId = require('../attributes/floorRequestId.js');
+var FloorRequestStatusAtr = require('../attributes/floorRequestStatus.js');
+var SupportedAttributes = require('../attributes/supportedAttributes.js');
+var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Primitive = require('../messages/primitive.js');
+var CommonHeader = require('../messages/commonHeader.js');
+var Complements = require('../parser/complements.js');
+var RequestStatus = require('../attributes/requestStatus.js');
+
+/**
+ * @classdesc
+ * Parser class is a static class to handle all the operations needed to parse
+ * a binary string (BFCP Message) to the correspondent Object Oriented instance.
+ * @memberof bfcp-lib
+ * @static
+ */
+var Parser = /*#__PURE__*/function () {
+  function Parser() {
+    _classCallCheck(this, Parser);
+  }
+  return _createClass(Parser, null, [{
+    key: "_parseCommonHeader",
+    value:
+    /**
+     * Parses the CommonHeader bits of the message to a CommonHeader Object.
+     * @param  {String} commonHeader Binary string representing the CommonHeader
+     * @return {bfcp-lib.Message.CommonHeader} The CommonHeader object
+     * @static
+     * @private
+     */
+    function _parseCommonHeader(commonHeader) {
+      var primitive = parseInt(commonHeader.substring(8, 16), 2);
+      var payloadLength = parseInt(commonHeader.substring(16, 32), 2);
+      var conferenceId = parseInt(commonHeader.substring(32, 64), 2);
+      var transactionId = parseInt(commonHeader.substring(64, 80), 2);
+      var userId = parseInt(commonHeader.substring(80, 96), 2);
+      return new CommonHeader(primitive, payloadLength, conferenceId, transactionId, userId);
+    }
+
+    /**
+     * Parses the Attributes bits of the message to a Attribute list object.
+     * @param  {String} attributes Binary string representing the Attributes
+     * @return {bfcp-lib.Attribute[]} The Attribute list object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseAttributes",
+    value: function _parseAttributes(attributes) {
+      var attributeList = [];
+      while (attributes != '') {
+        var type = parseInt(attributes.substring(0, 7), 2);
+        var length = parseInt(attributes.substring(8, 16), 2);
+        var attribute = attributes.substring(0, length * 8);
+        // let content;
+
+        switch (type) {
+          case AttributeType.FloorId:
+            attributeList.push(Parser._parseFloorId(attribute.substring(16)));
+            break;
+          case AttributeType.SupportedAttributes:
+            attributeList.push(Parser._parseSupportedAttributes(attribute.substring(16)));
+            break;
+          case AttributeType.SupportedPrimitives:
+            attributeList.push(Parser._parseSupportedPrimitives(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestStatus:
+            attributeList.push(Parser._parseFloorRequestStatus(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestInformation:
+            attributeList.push(Parser._parseFloorRequestInformation(attribute.substring(16)));
+            break;
+          case AttributeType.RequestStatus:
+            attributeList.push(Parser._parseRequestStatus(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestId:
+            attributeList.push(Parser._parseFloorRequestId(attribute.substring(16)));
+            break;
+          default:
+            throw new Error('I cant parse this attribute!');
+        }
+        var size = length * 8;
+        while (size % 32 != 0) {
+          size = size + 8;
+        }
+        attributes = attributes.substring(size);
+      }
+      return attributeList;
+    }
+
+    /**
+     * Parses the FloorID bits of the message to a FloorId Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorId} FloorId object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorId",
+    value: function _parseFloorId(content) {
+      return new FloorId(parseInt(content, 2));
+    }
+
+    /**
+     * Parses the SupportedAttributes bits of the message to a
+     * SupportedAttributes Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.SupportedAttributes} SupportedAttributes object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseSupportedAttributes",
+    value: function _parseSupportedAttributes(content) {
+      var attributeTypes = [];
+      for (var i = 1; i < content.length / 8 + 1; i++) {
+        var binType = content.substring(8 * (i - 1), 8 * i);
+        attributeTypes.push(parseInt(binType.substring(0, 7), 2));
+      }
+      return new SupportedAttributes(attributeTypes);
+    }
+
+    /**
+     * Parses the SupportedPrimitives bits of the message to a
+     * SupportedPrimitives Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.SupportedPrimitives} SupportedPrimitives object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseSupportedPrimitives",
+    value: function _parseSupportedPrimitives(content) {
+      var primitives = [];
+      for (var i = 1; i < content.length / 8 + 1; i++) {
+        var binPrimitive = content.substring(8 * (i - 1), 8 * i);
+        primitives.push(parseInt(binPrimitive, 2));
+      }
+      return new SupportedPrimitives(primitives);
+    }
+
+    /**
+     * Parses the FloorRequestStatus bits of the message to a
+     * FloorRequestStatus Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestStatus} FloorRequestStatus object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestStatus",
+    value: function _parseFloorRequestStatus(content) {
+      return new FloorRequestStatusAtr(parseInt(content, 2));
+    }
+
+    /**
+     * Parses the FloorRequestInformation bits of the message to a
+     * FloorRequestInformation Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestInformation} FloorRequestInformation object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestInformation",
+    value: function _parseFloorRequestInformation(content) {
+      return new FloorRequestInformation(parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
+    }
+
+    /**
+     * Parses the RequestStatus bits of the message to a RequestStatus Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.RequestStatus} RequestStatus object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseRequestStatus",
+    value: function _parseRequestStatus(content) {
+      return new RequestStatus(parseInt(content.substring(0, 8), 2), parseInt(content.substring(8, 16), 2));
+    }
+
+    /**
+     * Parses the FloorRequestId bits of the message to a FloorRequestId Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestId} FloorRequestId object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestId",
+    value: function _parseFloorRequestId(content) {
+      return new FloorRequestId(parseInt(content.substring(0, 16), 2));
+    }
+
+    /**
+     * Parses an BFCP Message as received in a TCP/UDP socket to a Object Oriented
+     * BFCP Message. Must receive the message as a Buffer, like when it arrives
+     * from the TCP/UDP socket.
+     * @param  {Buffer} message The buffered Message
+     * @return {bfcp-lib.Message} Object Oriented BFCP Message
+     * @throws Will throw an Error if the Message couldn't be parsed.
+     */
+  }, {
+    key: "parseMessage",
+    value: function parseMessage(message) {
+      try {
+        var binaryMessage = '';
+        var _iterator = _createForOfIteratorHelper(message),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var value = _step.value;
+            binaryMessage = binaryMessage + Complements.complementBinary(value.toString(2), 8);
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+        var commonHeader = Parser._parseCommonHeader(binaryMessage.substring(0, 96));
+        var attributes = Parser._parseAttributes(binaryMessage.substring(96));
+        switch (commonHeader.primitive) {
+          case Primitive.Hello:
+            {
+              var hello = new Hello();
+              hello.commonHeader = commonHeader;
+              hello.attributes = attributes;
+              return hello;
+            }
+          case Primitive.HelloAck:
+            {
+              var helloAck = new HelloAck();
+              helloAck.commonHeader = commonHeader;
+              helloAck.attributes = attributes;
+              return helloAck;
+            }
+          case Primitive.FloorRequest:
+            {
+              var floorRequest = new FloorRequest();
+              floorRequest.commonHeader = commonHeader;
+              floorRequest.attributes = attributes;
+              return floorRequest;
+            }
+          case Primitive.FloorRequestStatus:
+            {
+              var floorRequestStatus = new FloorRequestStatusMsg();
+              floorRequestStatus.commonHeader = commonHeader;
+              floorRequestStatus.attributes = attributes;
+              return floorRequestStatus;
+            }
+          case Primitive.FloorRelease:
+            {
+              var floorRelease = new FloorRelease();
+              floorRelease.commonHeader = commonHeader;
+              floorRelease.attributes = attributes;
+              return floorRelease;
+            }
+          case Primitive.FloorStatus:
+            {
+              var floorStatus = new FloorStatus();
+              floorStatus.commonHeader = commonHeader;
+              floorStatus.attributes = attributes;
+              return floorStatus;
+            }
+          case Primitive.FloorRequestStatusAck:
+            {
+              var floorRequestStatusAck = new FloorRequestStatusAck();
+              floorRequestStatusAck.commonHeader = commonHeader;
+              floorRequestStatusAck.attributes = attributes;
+              return floorRequestStatusAck;
+            }
+          case Primitive.FloorStatusAck:
+            {
+              var floorStatusAck = new FloorStatusAck();
+              floorStatusAck.commonHeader = commonHeader;
+              floorStatusAck.attributes = attributes;
+              return floorStatusAck;
+            }
+          case Primitive.FloorQuery:
+            {
+              var floorQuery = new FloorQuery();
+              floorQuery.commonHeader = commonHeader;
+              floorQuery.attributes = attributes;
+              return floorQuery;
+            }
+          default:
+            throw new Error("I can't decode this message. Unknown primitive.");
+        }
+      } catch (error) {
+        throw new Error('Problem parsing message. ', error);
+      }
+    }
+  }]);
+}();
+module.exports = Parser;
+},{"../attributes/floorId.js":3,"../attributes/floorRequestId.js":4,"../attributes/floorRequestInformation.js":5,"../attributes/floorRequestStatus.js":6,"../attributes/requestStatus.js":10,"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"../attributes/type.js":13,"../messages/commonHeader.js":14,"../messages/floorQuery.js":15,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../parser/complements.js":28}],30:[function(require,module,exports){
+(function (Buffer){(function (){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var FloorRequestStatus = require('../messages/floorRequestStatus.js');
+var FloorStatus = require('../messages/floorStatus.js');
+var Primitive = require('../messages/primitive.js');
+var HelloAck = require('../messages/helloAck.js');
+var RequestStatusValue = require('../messages/requestStatusValue.js');
+var Parser = require('../parser/parser.js');
+var AttrName = require('../attributes/name.js');
+
+/**
+ * @classdesc
+ * This class is a abstract representation of a User in the BFCP environment,
+ * and is used as the primary interface to this library. A User receive and
+ * returns BFCP messages totally in the binary form, as like when receiving
+ * from TCP/UDP sockets, so the application who utilize it doesn't need to
+ * know anything about the codification and decodification of BFCP messages.
+ * @memberof bfcp-lib
+ */
+var User = /*#__PURE__*/function () {
+  /**
+   * @param {String} userId       A string representing the User ID
+   * @param {String} conferenceId A string representing the Conference ID
+   * @constructor
+   */
+  function User(userId, conferenceId) {
+    _classCallCheck(this, User);
+    this._userId = parseInt(userId);
+    this._conferenceId = parseInt(conferenceId);
+    this._currentMessage = null;
+    this._currentTransactionId = 0;
+    this._floorRequestId = 0;
+  }
+
+  /**
+   * Gets the User ID
+   * @return {Integer} User ID
+   */
+  return _createClass(User, [{
+    key: "userId",
+    get: function get() {
+      return this._userId;
+    },
+    set: function set(userId) {
+      this._userId = userId;
+    }
+
+    /**
+     * Gets the Conference ID
+     * @return {Integer} Conference ID
+     */
+  }, {
+    key: "conferenceId",
+    get: function get() {
+      return this._conferenceId;
+    },
+    set: function set(conferenceId) {
+      this._conferenceId = conferenceId;
+    }
+
+    /**
+     * Gets the current message
+     * @return {bfcp-lib.Message} This User last message received by the method
+     * 'receiveMessage'
+     */
+  }, {
+    key: "currentMessage",
+    get: function get() {
+      return this._currentMessage;
+    },
+    set: function set(currentMessage) {
+      this._currentMessage = currentMessage;
+    }
+
+    /**
+     * Gets the current transaction id
+     * @return {Integer} Current transaction id
+     */
+  }, {
+    key: "currentTransactionId",
+    get: function get() {
+      return this._currentTransactionId;
+    },
+    set: function set(currentTransactionId) {
+      this._currentTransactionId = currentTransactionId;
+    }
+
+    /**
+     * Gets the wanted floor id
+     * @return {Integer} This user last wanted floor id received by a
+     * FloorRequest Message
+     */
+  }, {
+    key: "wantedFloorId",
+    get: function get() {
+      return this._wantedFloorId;
+    },
+    set: function set(wantedFloorId) {
+      this._wantedFloorId = wantedFloorId;
+    }
+
+    /**
+     * Gets the actual floor request id
+     * @return {Integer} Floor request id
+     * @static
+     */
+  }, {
+    key: "receiveMessage",
+    value:
+    /**
+     * Receives a buffered message, parses it to a BFCP Message Object,
+     * sets it as the current message and returns it.
+     * @param  {Buffer} message The buffered Message
+     * @return {bfcp-lib.Message} The BFCP Message Object
+     * @public
+     */
+    function receiveMessage(message) {
+      try {
+        var bfcpMessage = Parser.parseMessage(message);
+        this.currentMessage = bfcpMessage;
+        return bfcpMessage;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    /**
+     * Gets a buffered HelloAck message
+     * @param  {bfcp-lib.Message.Hello} helloMessage The Hello message that the HelloAck
+     * will respond to.
+     * @return {bfcp-lib.Message.HelloAck}  The HelloAck buffered message
+     * @public
+     */
+  }, {
+    key: "helloAckMessage",
+    value: function helloAckMessage(helloMessage) {
+      var helloAck = new HelloAck(this.conferenceId, helloMessage.commonHeader.transactionId, this.userId);
+      return Buffer.from(helloAck.encode());
+    }
+
+    /**
+     * Gets a buffered FloorRequestStatus message
+     * @param  {bfcp-lib.Message.FloorRequest | bfcp-lib.Message.FloorRelease} message
+     * The FloorRequest or Release message that the FloorRequestStatus will respond to.
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorRequestStatus} The FloorRequestStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorRequestStatusMessage",
+    value: function floorRequestStatusMessage(message, floorId, requestStatus) {
+      var floorRequestId;
+      if (message.commonHeader.primitive == Primitive.FloorRequest) {
+        if (requestStatus == RequestStatusValue.Granted) {
+          User.incFloorRequestId();
+        }
+        floorRequestId = User.getFloorRequestId();
+      } else {
+        floorRequestId = message.getAttribute(AttrName.FloorRequestId).content;
+      }
+      // eslint-disable-next-line max-len
+      var floorRequestStatus = new FloorRequestStatus(this.conferenceId, message.commonHeader.transactionId, this.userId, floorRequestId, floorId, requestStatus);
+      return Buffer.from(floorRequestStatus.encode());
+    }
+
+    /**
+     * Gets a buffered FloorStatus message
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorStatus} The FloorStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorStatusMessage",
+    value: function floorStatusMessage(floorId, requestStatus) {
+      if (this.currentMessage) {
+        if (this.currentMessage.commonHeader.transactionId > this.currentTransactionId) {
+          this.currentTransactionId = this.currentMessage.commonHeader.transactionId;
+        }
+      }
+      this.currentTransactionId++;
+      var floorStatus = new FloorStatus(this.conferenceId, this.currentTransactionId, this.userId, User.getFloorRequestId(), floorId, requestStatus);
+      return Buffer.from(floorStatus.encode());
+    }
+  }], [{
+    key: "getFloorRequestId",
+    value: function getFloorRequestId() {
+      return this.FloorRequestId;
+    }
+
+    /**
+     * Increments the actual floor request id
+     */
+  }, {
+    key: "incFloorRequestId",
+    value: function incFloorRequestId() {
+      this.FloorRequestId++;
+    }
+
+    // 将十六进制字符串转换为 Uint8Array
+  }, {
+    key: "hexStringToUint8Array",
+    value: function hexStringToUint8Array(hexString) {
+      // 去掉空格和换行符
+      hexString = hexString.replace(/\s+/g, '');
+
+      // 检查长度是否为偶数
+      if (hexString.length % 2 !== 0) {
+        throw new Error('Invalid hex string length.');
+      }
+
+      // 将十六进制字符串转换为 Uint8Array
+      var length = hexString.length / 2;
+      var uint8Array = new Uint8Array(length);
+      for (var i = 0; i < length; i++) {
+        var _byte = hexString.substr(i * 2, 2);
+        uint8Array[i] = parseInt(_byte, 16);
+      }
+      return uint8Array; // 返回 Uint8Array，而不是二进制字符串
+    }
+  }, {
+    key: "base64ToUint8Array",
+    value: function base64ToUint8Array(base64String) {
+      // 去掉空格和换行符
+      base64String = base64String.replace(/\s+/g, '');
+
+      // 使用 atob 解码 Base64 字符串
+      var binaryString = atob(base64String);
+
+      // 将二进制字符串转换为 Uint8Array
+      var length = binaryString.length;
+      var uint8Array = new Uint8Array(length);
+      for (var i = 0; i < length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i); // 获取每个字符的 ASCII 码
+      }
+      return uint8Array;
+    }
+  }]);
+}();
+User.FloorRequestId = 0;
+module.exports = User;
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"../attributes/name.js":9,"../messages/floorRequestStatus.js":18,"../messages/floorStatus.js":20,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -265,7 +3442,7 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":23,"./URI":29,"./Utils":30}],2:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":53,"./URI":59,"./Utils":60}],32:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -464,7 +3641,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":43}],3:[function(require,module,exports){
+},{"../package.json":76}],33:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -743,7 +3920,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./Logger":9,"./SIPMessage":22,"./Transactions":26,"./Utils":30}],4:[function(require,module,exports){
+},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":52,"./Transactions":56,"./Utils":60}],34:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -854,7 +4031,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Constants":2,"../RequestSender":21,"../Transactions":26}],5:[function(require,module,exports){
+},{"../Constants":32,"../RequestSender":51,"../Transactions":56}],35:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -1047,7 +4224,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Logger":9,"./Utils":30}],6:[function(require,module,exports){
+},{"./Logger":39,"./Utils":60}],36:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -1127,7 +4304,7 @@ module.exports = {
   NotSupportedError: NotSupportedError,
   NotReadyError: NotReadyError
 };
-},{}],7:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -13535,7 +16712,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":11,"./URI":29}],8:[function(require,module,exports){
+},{"./NameAddrHeader":41,"./URI":59}],38:[function(require,module,exports){
 "use strict";
 
 var pkg = require('../package.json');
@@ -13549,6 +16726,7 @@ var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
+var BFCPLib = require('./BFCP');
 debug('version %s', pkg.version);
 (function () {
   if (typeof window.CustomEvent === 'function') return;
@@ -13570,6 +16748,7 @@ debug('version %s', pkg.version);
  * Expose the CRTC module.
  */
 module.exports = {
+  BFCPLib: BFCPLib,
   C: C,
   Exceptions: Exceptions,
   Utils: Utils,
@@ -13588,7 +16767,7 @@ module.exports = {
     return pkg.version;
   }
 };
-},{"../package.json":43,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":11,"./Stats":24,"./UA":28,"./URI":29,"./Utils":30,"./WebSocketInterface":31,"debug":34}],9:[function(require,module,exports){
+},{"../package.json":76,"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -13637,7 +16816,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"debug":34}],10:[function(require,module,exports){
+},{"debug":66}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -13899,7 +17078,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./URI":29,"./Utils":30,"events":33}],11:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./URI":59,"./Utils":60,"events":64}],41:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -14019,7 +17198,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Grammar":7,"./URI":29}],12:[function(require,module,exports){
+},{"./Grammar":37,"./URI":59}],42:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -14274,7 +17453,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30,"events":33}],13:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./Utils":60,"events":64}],43:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -14549,14 +17728,14 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./Logger":9,"./SIPMessage":22}],14:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./SIPMessage":52}],44:[function(require,module,exports){
 "use strict";
 
 // 密钥
 // eslint-disable-next-line max-len
 var pk = [45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45];
 module.exports = pk;
-},{}],15:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19391,7 +22570,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./Logger":9,"./RTCSession/DTMF":16,"./RTCSession/Info":17,"./RTCSession/ReferNotifier":18,"./RTCSession/ReferSubscriber":19,"./RequestSender":21,"./SIPMessage":22,"./Timers":25,"./Transactions":26,"./URI":29,"./Utils":30,"events":33,"sdp-transform":40}],16:[function(require,module,exports){
+},{"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":46,"./RTCSession/Info":47,"./RTCSession/ReferNotifier":48,"./RTCSession/ReferSubscriber":49,"./RequestSender":51,"./SIPMessage":52,"./Timers":55,"./Transactions":56,"./URI":59,"./Utils":60,"events":64,"sdp-transform":73}],46:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19558,7 +22737,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Logger":9,"../Utils":30,"events":33}],17:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":60,"events":64}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19667,7 +22846,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":30,"events":33}],18:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":60,"events":64}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19724,7 +22903,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Constants":2,"../Logger":9}],19:[function(require,module,exports){
+},{"../Constants":32,"../Logger":39}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19880,7 +23059,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Logger":9,"../Utils":30,"events":33}],20:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":60,"events":64}],50:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -20212,7 +23391,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":2,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30}],21:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./Utils":60}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -20364,7 +23543,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Logger":9,"./Transactions":26}],22:[function(require,module,exports){
+},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":56}],52:[function(require,module,exports){
 "use strict";
 
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
@@ -21113,7 +24292,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./Logger":9,"./NameAddrHeader":11,"./Utils":30,"sdp-transform":40}],23:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":41,"./Utils":60,"sdp-transform":73}],53:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -21181,7 +24360,7 @@ exports.isSocket = function (socket) {
   }
   return true;
 };
-},{"./Grammar":7,"./Logger":9,"./Utils":30}],24:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./Utils":60}],54:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -21647,7 +24826,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Logger":9,"./Utils":30,"events":33}],25:[function(require,module,exports){
+},{"./Logger":39,"./Utils":60,"events":64}],55:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -21668,7 +24847,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],26:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -22368,7 +25547,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./Logger":9,"./SIPMessage":22,"./Timers":25,"events":33}],27:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":52,"./Timers":55,"events":64}],57:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -22699,7 +25878,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":2,"./Logger":9,"./Socket":23,"./Utils":30}],28:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Socket":53,"./Utils":60}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -23853,7 +27032,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Logger":9,"./Message":10,"./Options":12,"./Parser":13,"./Pk":14,"./RTCSession":15,"./Registrator":20,"./SIPMessage":22,"./Transactions":26,"./Transport":27,"./URI":29,"./Utils":30,"./sanityCheck":32,"events":33,"jsencrypt":36}],29:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":42,"./Parser":43,"./Pk":44,"./RTCSession":45,"./Registrator":50,"./SIPMessage":52,"./Transactions":56,"./Transport":57,"./URI":59,"./Utils":60,"./sanityCheck":62,"events":64,"jsencrypt":69}],59:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24084,7 +27263,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":2,"./Grammar":7,"./Utils":30}],30:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Utils":60}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24807,7 +27986,7 @@ exports.compatiblePayload = function (sdp) {
   var newSdp = updatedLines.join('\n');
   return newSdp;
 };
-},{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./URI":59}],61:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24955,7 +28134,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Grammar":7,"./Logger":9}],32:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39}],62:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -25164,7 +28343,159 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./Logger":9,"./SIPMessage":22,"./Utils":30}],33:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":52,"./Utils":60}],63:[function(require,module,exports){
+'use strict'
+
+exports.byteLength = byteLength
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
+
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
+}
+
+// Support decoding URL-safe base64 strings, as Node.js does.
+// See: https://en.wikipedia.org/wiki/Base64#URL_applications
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
+
+function getLens (b64) {
+  var len = b64.length
+
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
+  }
+
+  // Trim off extra bytes after placeholder bytes are found
+  // See: https://github.com/beatgammit/base64-js/issues/42
+  var validLen = b64.indexOf('=')
+  if (validLen === -1) validLen = len
+
+  var placeHoldersLen = validLen === len
+    ? 0
+    : 4 - (validLen % 4)
+
+  return [validLen, placeHoldersLen]
+}
+
+// base64 is 4/3 + up to two characters of the original data
+function byteLength (b64) {
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function _byteLength (b64, validLen, placeHoldersLen) {
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function toByteArray (b64) {
+  var tmp
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+
+  var arr = new Arr(_byteLength(b64, validLen, placeHoldersLen))
+
+  var curByte = 0
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  var len = placeHoldersLen > 0
+    ? validLen - 4
+    : validLen
+
+  var i
+  for (i = 0; i < len; i += 4) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 18) |
+      (revLookup[b64.charCodeAt(i + 1)] << 12) |
+      (revLookup[b64.charCodeAt(i + 2)] << 6) |
+      revLookup[b64.charCodeAt(i + 3)]
+    arr[curByte++] = (tmp >> 16) & 0xFF
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 2) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 2) |
+      (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 1) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 10) |
+      (revLookup[b64.charCodeAt(i + 1)] << 4) |
+      (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] +
+    lookup[num >> 12 & 0x3F] +
+    lookup[num >> 6 & 0x3F] +
+    lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp =
+      ((uint8[i] << 16) & 0xFF0000) +
+      ((uint8[i + 1] << 8) & 0xFF00) +
+      (uint8[i + 2] & 0xFF)
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 2] +
+      lookup[(tmp << 4) & 0x3F] +
+      '=='
+    )
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 10] +
+      lookup[(tmp >> 4) & 0x3F] +
+      lookup[(tmp << 2) & 0x3F] +
+      '='
+    )
+  }
+
+  return parts.join('')
+}
+
+},{}],64:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -25689,7 +29020,1788 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],34:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
+(function (Buffer){(function (){
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <https://feross.org>
+ * @license  MIT
+ */
+/* eslint-disable no-proto */
+
+'use strict'
+
+var base64 = require('base64-js')
+var ieee754 = require('ieee754')
+
+exports.Buffer = Buffer
+exports.SlowBuffer = SlowBuffer
+exports.INSPECT_MAX_BYTES = 50
+
+var K_MAX_LENGTH = 0x7fffffff
+exports.kMaxLength = K_MAX_LENGTH
+
+/**
+ * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Print warning and recommend using `buffer` v4.x which has an Object
+ *               implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * We report that the browser does not support typed arrays if the are not subclassable
+ * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
+ * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
+ * for __proto__ and has a buggy typed array implementation.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
+
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
+  console.error(
+    'This browser lacks typed array (Uint8Array) support which is required by ' +
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
+}
+
+function typedArraySupport () {
+  // Can typed array instances can be augmented?
+  try {
+    var arr = new Uint8Array(1)
+    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function () { return 42 } }
+    return arr.foo() === 42
+  } catch (e) {
+    return false
+  }
+}
+
+Object.defineProperty(Buffer.prototype, 'parent', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.buffer
+  }
+})
+
+Object.defineProperty(Buffer.prototype, 'offset', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.byteOffset
+  }
+})
+
+function createBuffer (length) {
+  if (length > K_MAX_LENGTH) {
+    throw new RangeError('The value "' + length + '" is invalid for option "size"')
+  }
+  // Return an augmented `Uint8Array` instance
+  var buf = new Uint8Array(length)
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+/**
+ * The Buffer constructor returns instances of `Uint8Array` that have their
+ * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
+ * `Uint8Array`, so the returned instances will have all the node `Buffer` methods
+ * and the `Uint8Array` methods. Square bracket notation works as expected -- it
+ * returns a single octet.
+ *
+ * The `Uint8Array` prototype remains unmodified.
+ */
+
+function Buffer (arg, encodingOrOffset, length) {
+  // Common case.
+  if (typeof arg === 'number') {
+    if (typeof encodingOrOffset === 'string') {
+      throw new TypeError(
+        'The "string" argument must be of type string. Received type number'
+      )
+    }
+    return allocUnsafe(arg)
+  }
+  return from(arg, encodingOrOffset, length)
+}
+
+// Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+if (typeof Symbol !== 'undefined' && Symbol.species != null &&
+    Buffer[Symbol.species] === Buffer) {
+  Object.defineProperty(Buffer, Symbol.species, {
+    value: null,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  })
+}
+
+Buffer.poolSize = 8192 // not used by this implementation
+
+function from (value, encodingOrOffset, length) {
+  if (typeof value === 'string') {
+    return fromString(value, encodingOrOffset)
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return fromArrayLike(value)
+  }
+
+  if (value == null) {
+    throw TypeError(
+      'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+      'or Array-like Object. Received type ' + (typeof value)
+    )
+  }
+
+  if (isInstance(value, ArrayBuffer) ||
+      (value && isInstance(value.buffer, ArrayBuffer))) {
+    return fromArrayBuffer(value, encodingOrOffset, length)
+  }
+
+  if (typeof value === 'number') {
+    throw new TypeError(
+      'The "value" argument must not be of type number. Received type number'
+    )
+  }
+
+  var valueOf = value.valueOf && value.valueOf()
+  if (valueOf != null && valueOf !== value) {
+    return Buffer.from(valueOf, encodingOrOffset, length)
+  }
+
+  var b = fromObject(value)
+  if (b) return b
+
+  if (typeof Symbol !== 'undefined' && Symbol.toPrimitive != null &&
+      typeof value[Symbol.toPrimitive] === 'function') {
+    return Buffer.from(
+      value[Symbol.toPrimitive]('string'), encodingOrOffset, length
+    )
+  }
+
+  throw new TypeError(
+    'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+    'or Array-like Object. Received type ' + (typeof value)
+  )
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(value, encodingOrOffset, length)
+}
+
+// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
+// https://github.com/feross/buffer/pull/148
+Buffer.prototype.__proto__ = Uint8Array.prototype
+Buffer.__proto__ = Uint8Array
+
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be of type number')
+  } else if (size < 0) {
+    throw new RangeError('The value "' + size + '" is invalid for option "size"')
+  }
+}
+
+function alloc (size, fill, encoding) {
+  assertSize(size)
+  if (size <= 0) {
+    return createBuffer(size)
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string'
+      ? createBuffer(size).fill(fill, encoding)
+      : createBuffer(size).fill(fill)
+  }
+  return createBuffer(size)
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(size, fill, encoding)
+}
+
+function allocUnsafe (size) {
+  assertSize(size)
+  return createBuffer(size < 0 ? 0 : checked(size) | 0)
+}
+
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(size)
+}
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(size)
+}
+
+function fromString (string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8'
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('Unknown encoding: ' + encoding)
+  }
+
+  var length = byteLength(string, encoding) | 0
+  var buf = createBuffer(length)
+
+  var actual = buf.write(string, encoding)
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    buf = buf.slice(0, actual)
+  }
+
+  return buf
+}
+
+function fromArrayLike (array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
+  var buf = createBuffer(length)
+  for (var i = 0; i < length; i += 1) {
+    buf[i] = array[i] & 255
+  }
+  return buf
+}
+
+function fromArrayBuffer (array, byteOffset, length) {
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('"offset" is outside of buffer bounds')
+  }
+
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('"length" is outside of buffer bounds')
+  }
+
+  var buf
+  if (byteOffset === undefined && length === undefined) {
+    buf = new Uint8Array(array)
+  } else if (length === undefined) {
+    buf = new Uint8Array(array, byteOffset)
+  } else {
+    buf = new Uint8Array(array, byteOffset, length)
+  }
+
+  // Return an augmented `Uint8Array` instance
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+function fromObject (obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0
+    var buf = createBuffer(len)
+
+    if (buf.length === 0) {
+      return buf
+    }
+
+    obj.copy(buf, 0, 0, len)
+    return buf
+  }
+
+  if (obj.length !== undefined) {
+    if (typeof obj.length !== 'number' || numberIsNaN(obj.length)) {
+      return createBuffer(0)
+    }
+    return fromArrayLike(obj)
+  }
+
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return fromArrayLike(obj.data)
+  }
+}
+
+function checked (length) {
+  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
+  // length is NaN (which is otherwise coerced to zero.)
+  if (length >= K_MAX_LENGTH) {
+    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
+                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
+  }
+  return length | 0
+}
+
+function SlowBuffer (length) {
+  if (+length != length) { // eslint-disable-line eqeqeq
+    length = 0
+  }
+  return Buffer.alloc(+length)
+}
+
+Buffer.isBuffer = function isBuffer (b) {
+  return b != null && b._isBuffer === true &&
+    b !== Buffer.prototype // so Buffer.isBuffer(Buffer.prototype) will be false
+}
+
+Buffer.compare = function compare (a, b) {
+  if (isInstance(a, Uint8Array)) a = Buffer.from(a, a.offset, a.byteLength)
+  if (isInstance(b, Uint8Array)) b = Buffer.from(b, b.offset, b.byteLength)
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
+    throw new TypeError(
+      'The "buf1", "buf2" arguments must be one of type Buffer or Uint8Array'
+    )
+  }
+
+  if (a === b) return 0
+
+  var x = a.length
+  var y = b.length
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i]
+      y = b[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+Buffer.isEncoding = function isEncoding (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'latin1':
+    case 'binary':
+    case 'base64':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.concat = function concat (list, length) {
+  if (!Array.isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers')
+  }
+
+  if (list.length === 0) {
+    return Buffer.alloc(0)
+  }
+
+  var i
+  if (length === undefined) {
+    length = 0
+    for (i = 0; i < list.length; ++i) {
+      length += list[i].length
+    }
+  }
+
+  var buffer = Buffer.allocUnsafe(length)
+  var pos = 0
+  for (i = 0; i < list.length; ++i) {
+    var buf = list[i]
+    if (isInstance(buf, Uint8Array)) {
+      buf = Buffer.from(buf)
+    }
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers')
+    }
+    buf.copy(buffer, pos)
+    pos += buf.length
+  }
+  return buffer
+}
+
+function byteLength (string, encoding) {
+  if (Buffer.isBuffer(string)) {
+    return string.length
+  }
+  if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
+    return string.byteLength
+  }
+  if (typeof string !== 'string') {
+    throw new TypeError(
+      'The "string" argument must be one of type string, Buffer, or ArrayBuffer. ' +
+      'Received type ' + typeof string
+    )
+  }
+
+  var len = string.length
+  var mustMatch = (arguments.length > 2 && arguments[2] === true)
+  if (!mustMatch && len === 0) return 0
+
+  // Use a for loop to avoid recursion
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'latin1':
+      case 'binary':
+        return len
+      case 'utf8':
+      case 'utf-8':
+        return utf8ToBytes(string).length
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2
+      case 'hex':
+        return len >>> 1
+      case 'base64':
+        return base64ToBytes(string).length
+      default:
+        if (loweredCase) {
+          return mustMatch ? -1 : utf8ToBytes(string).length // assume utf8
+        }
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+Buffer.byteLength = byteLength
+
+function slowToString (encoding, start, end) {
+  var loweredCase = false
+
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return ''
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length
+  }
+
+  if (end <= 0) {
+    return ''
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0
+  start >>>= 0
+
+  if (end <= start) {
+    return ''
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  while (true) {
+    switch (encoding) {
+      case 'hex':
+        return hexSlice(this, start, end)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Slice(this, start, end)
+
+      case 'ascii':
+        return asciiSlice(this, start, end)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Slice(this, start, end)
+
+      case 'base64':
+        return base64Slice(this, start, end)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return utf16leSlice(this, start, end)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = (encoding + '').toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+// This property is used by `Buffer.isBuffer` (and the `is-buffer` npm package)
+// to detect a Buffer instance. It's not possible to use `instanceof Buffer`
+// reliably in a browserify context because there could be multiple different
+// copies of the 'buffer' package in use. This method works even for Buffer
+// instances that were created from another copy of the `buffer` package.
+// See: https://github.com/feross/buffer/issues/154
+Buffer.prototype._isBuffer = true
+
+function swap (b, n, m) {
+  var i = b[n]
+  b[n] = b[m]
+  b[m] = i
+}
+
+Buffer.prototype.swap16 = function swap16 () {
+  var len = this.length
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits')
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1)
+  }
+  return this
+}
+
+Buffer.prototype.swap32 = function swap32 () {
+  var len = this.length
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits')
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3)
+    swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
+Buffer.prototype.swap64 = function swap64 () {
+  var len = this.length
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits')
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7)
+    swap(this, i + 1, i + 6)
+    swap(this, i + 2, i + 5)
+    swap(this, i + 3, i + 4)
+  }
+  return this
+}
+
+Buffer.prototype.toString = function toString () {
+  var length = this.length
+  if (length === 0) return ''
+  if (arguments.length === 0) return utf8Slice(this, 0, length)
+  return slowToString.apply(this, arguments)
+}
+
+Buffer.prototype.toLocaleString = Buffer.prototype.toString
+
+Buffer.prototype.equals = function equals (b) {
+  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
+  if (this === b) return true
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.inspect = function inspect () {
+  var str = ''
+  var max = exports.INSPECT_MAX_BYTES
+  str = this.toString('hex', 0, max).replace(/(.{2})/g, '$1 ').trim()
+  if (this.length > max) str += ' ... '
+  return '<Buffer ' + str + '>'
+}
+
+Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
+  if (isInstance(target, Uint8Array)) {
+    target = Buffer.from(target, target.offset, target.byteLength)
+  }
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError(
+      'The "target" argument must be one of type Buffer or Uint8Array. ' +
+      'Received type ' + (typeof target)
+    )
+  }
+
+  if (start === undefined) {
+    start = 0
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0
+  }
+  if (thisStart === undefined) {
+    thisStart = 0
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index')
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0
+  }
+  if (thisStart >= thisEnd) {
+    return -1
+  }
+  if (start >= end) {
+    return 1
+  }
+
+  start >>>= 0
+  end >>>= 0
+  thisStart >>>= 0
+  thisEnd >>>= 0
+
+  if (this === target) return 0
+
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
+
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i]
+      y = targetCopy[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
+  byteOffset = +byteOffset // Coerce to Number.
+  if (numberIsNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : (buffer.length - 1)
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1
+    else byteOffset = buffer.length - 1
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0
+    else return -1
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding)
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
+  } else if (typeof val === 'number') {
+    val = val & 0xFF // Search for a byte value [0-255]
+    if (typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
+      }
+    }
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+  }
+
+  throw new TypeError('val must be string, number or Buffer')
+}
+
+function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase()
+    if (encoding === 'ucs2' || encoding === 'ucs-2' ||
+        encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1
+      }
+      indexSize = 2
+      arrLength /= 2
+      valLength /= 2
+      byteOffset /= 2
+    }
+  }
+
+  function read (buf, i) {
+    if (indexSize === 1) {
+      return buf[i]
+    } else {
+      return buf.readUInt16BE(i * indexSize)
+    }
+  }
+
+  var i
+  if (dir) {
+    var foundIndex = -1
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex
+        foundIndex = -1
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
+    }
+  }
+
+  return -1
+}
+
+Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true)
+}
+
+Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false)
+}
+
+function hexWrite (buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  var strLen = string.length
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16)
+    if (numberIsNaN(parsed)) return i
+    buf[offset + i] = parsed
+  }
+  return i
+}
+
+function utf8Write (buf, string, offset, length) {
+  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+function asciiWrite (buf, string, offset, length) {
+  return blitBuffer(asciiToBytes(string), buf, offset, length)
+}
+
+function latin1Write (buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length)
+}
+
+function base64Write (buf, string, offset, length) {
+  return blitBuffer(base64ToBytes(string), buf, offset, length)
+}
+
+function ucs2Write (buf, string, offset, length) {
+  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+Buffer.prototype.write = function write (string, offset, length, encoding) {
+  // Buffer#write(string)
+  if (offset === undefined) {
+    encoding = 'utf8'
+    length = this.length
+    offset = 0
+  // Buffer#write(string, encoding)
+  } else if (length === undefined && typeof offset === 'string') {
+    encoding = offset
+    length = this.length
+    offset = 0
+  // Buffer#write(string, offset[, length][, encoding])
+  } else if (isFinite(offset)) {
+    offset = offset >>> 0
+    if (isFinite(length)) {
+      length = length >>> 0
+      if (encoding === undefined) encoding = 'utf8'
+    } else {
+      encoding = length
+      length = undefined
+    }
+  } else {
+    throw new Error(
+      'Buffer.write(string, encoding, offset[, length]) is no longer supported'
+    )
+  }
+
+  var remaining = this.length - offset
+  if (length === undefined || length > remaining) length = remaining
+
+  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
+    throw new RangeError('Attempt to write outside buffer bounds')
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'hex':
+        return hexWrite(this, string, offset, length)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Write(this, string, offset, length)
+
+      case 'ascii':
+        return asciiWrite(this, string, offset, length)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Write(this, string, offset, length)
+
+      case 'base64':
+        // Warning: maxLength not taken into account in base64Write
+        return base64Write(this, string, offset, length)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return ucs2Write(this, string, offset, length)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+Buffer.prototype.toJSON = function toJSON () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+function base64Slice (buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+function utf8Slice (buf, start, end) {
+  end = Math.min(buf.length, end)
+  var res = []
+
+  var i = start
+  while (i < end) {
+    var firstByte = buf[i]
+    var codePoint = null
+    var bytesPerSequence = (firstByte > 0xEF) ? 4
+      : (firstByte > 0xDF) ? 3
+        : (firstByte > 0xBF) ? 2
+          : 1
+
+    if (i + bytesPerSequence <= end) {
+      var secondByte, thirdByte, fourthByte, tempCodePoint
+
+      switch (bytesPerSequence) {
+        case 1:
+          if (firstByte < 0x80) {
+            codePoint = firstByte
+          }
+          break
+        case 2:
+          secondByte = buf[i + 1]
+          if ((secondByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0x1F) << 0x6 | (secondByte & 0x3F)
+            if (tempCodePoint > 0x7F) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 3:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | (thirdByte & 0x3F)
+            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 4:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          fourthByte = buf[i + 3]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | (fourthByte & 0x3F)
+            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
+              codePoint = tempCodePoint
+            }
+          }
+      }
+    }
+
+    if (codePoint === null) {
+      // we did not generate a valid codePoint so insert a
+      // replacement char (U+FFFD) and advance only 1 byte
+      codePoint = 0xFFFD
+      bytesPerSequence = 1
+    } else if (codePoint > 0xFFFF) {
+      // encode to utf16 (surrogate pair dance)
+      codePoint -= 0x10000
+      res.push(codePoint >>> 10 & 0x3FF | 0xD800)
+      codePoint = 0xDC00 | codePoint & 0x3FF
+    }
+
+    res.push(codePoint)
+    i += bytesPerSequence
+  }
+
+  return decodeCodePointsArray(res)
+}
+
+// Based on http://stackoverflow.com/a/22747272/680742, the browser with
+// the lowest limit is Chrome, with 0x10000 args.
+// We go 1 magnitude less, for safety
+var MAX_ARGUMENTS_LENGTH = 0x1000
+
+function decodeCodePointsArray (codePoints) {
+  var len = codePoints.length
+  if (len <= MAX_ARGUMENTS_LENGTH) {
+    return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
+  }
+
+  // Decode in chunks to avoid "call stack size exceeded".
+  var res = ''
+  var i = 0
+  while (i < len) {
+    res += String.fromCharCode.apply(
+      String,
+      codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+    )
+  }
+  return res
+}
+
+function asciiSlice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i] & 0x7F)
+  }
+  return ret
+}
+
+function latin1Slice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+function hexSlice (buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + (bytes[i + 1] * 256))
+  }
+  return res
+}
+
+Buffer.prototype.slice = function slice (start, end) {
+  var len = this.length
+  start = ~~start
+  end = end === undefined ? len : ~~end
+
+  if (start < 0) {
+    start += len
+    if (start < 0) start = 0
+  } else if (start > len) {
+    start = len
+  }
+
+  if (end < 0) {
+    end += len
+    if (end < 0) end = 0
+  } else if (end > len) {
+    end = len
+  }
+
+  if (end < start) end = start
+
+  var newBuf = this.subarray(start, end)
+  // Return an augmented `Uint8Array` instance
+  newBuf.__proto__ = Buffer.prototype
+  return newBuf
+}
+
+/*
+ * Need to make sure that buffer isn't trying to write out of bounds.
+ */
+function checkOffset (offset, ext, length) {
+  if ((offset % 1) !== 0 || offset < 0) throw new RangeError('offset is not uint')
+  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
+}
+
+Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    checkOffset(offset, byteLength, this.length)
+  }
+
+  var val = this[offset + --byteLength]
+  var mul = 1
+  while (byteLength > 0 && (mul *= 0x100)) {
+    val += this[offset + --byteLength] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  return this[offset]
+}
+
+Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return this[offset] | (this[offset + 1] << 8)
+}
+
+Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return (this[offset] << 8) | this[offset + 1]
+}
+
+Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return ((this[offset]) |
+      (this[offset + 1] << 8) |
+      (this[offset + 2] << 16)) +
+      (this[offset + 3] * 0x1000000)
+}
+
+Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] * 0x1000000) +
+    ((this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    this[offset + 3])
+}
+
+Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var i = byteLength
+  var mul = 1
+  var val = this[offset + --i]
+  while (i > 0 && (mul *= 0x100)) {
+    val += this[offset + --i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  if (!(this[offset] & 0x80)) return (this[offset])
+  return ((0xff - this[offset] + 1) * -1)
+}
+
+Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset] | (this[offset + 1] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset + 1] | (this[offset] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset]) |
+    (this[offset + 1] << 8) |
+    (this[offset + 2] << 16) |
+    (this[offset + 3] << 24)
+}
+
+Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] << 24) |
+    (this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    (this[offset + 3])
+}
+
+Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, true, 23, 4)
+}
+
+Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, false, 23, 4)
+}
+
+Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, true, 52, 8)
+}
+
+Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, false, 52, 8)
+}
+
+function checkInt (buf, value, offset, ext, max, min) {
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance')
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+}
+
+Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var mul = 1
+  var i = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset + 3] = (value >>> 24)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 1] = (value >>> 8)
+  this[offset] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = 0
+  var mul = 1
+  var sub = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  var sub = 0
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
+  if (value < 0) value = 0xff + value + 1
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 3] = (value >>> 24)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  if (value < 0) value = 0xffffffff + value + 1
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+function checkIEEE754 (buf, value, offset, ext, max, min) {
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+  if (offset < 0) throw new RangeError('Index out of range')
+}
+
+function writeFloat (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function writeFloatLE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, false, noAssert)
+}
+
+function writeDouble (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function writeDoubleLE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, false, noAssert)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function copy (target, targetStart, start, end) {
+  if (!Buffer.isBuffer(target)) throw new TypeError('argument should be a Buffer')
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (targetStart >= target.length) targetStart = target.length
+  if (!targetStart) targetStart = 0
+  if (end > 0 && end < start) end = start
+
+  // Copy 0 bytes; we're done
+  if (end === start) return 0
+  if (target.length === 0 || this.length === 0) return 0
+
+  // Fatal error conditions
+  if (targetStart < 0) {
+    throw new RangeError('targetStart out of bounds')
+  }
+  if (start < 0 || start >= this.length) throw new RangeError('Index out of range')
+  if (end < 0) throw new RangeError('sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length) end = this.length
+  if (target.length - targetStart < end - start) {
+    end = target.length - targetStart + start
+  }
+
+  var len = end - start
+
+  if (this === target && typeof Uint8Array.prototype.copyWithin === 'function') {
+    // Use built-in when available, missing from IE11
+    this.copyWithin(targetStart, start, end)
+  } else if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (var i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else {
+    Uint8Array.prototype.set.call(
+      target,
+      this.subarray(start, end),
+      targetStart
+    )
+  }
+
+  return len
+}
+
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill (val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start
+      start = 0
+      end = this.length
+    } else if (typeof end === 'string') {
+      encoding = end
+      end = this.length
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string')
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding)
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if ((encoding === 'utf8' && code < 128) ||
+          encoding === 'latin1') {
+        // Fast path: If `val` fits into a single byte, use that numeric value.
+        val = code
+      }
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255
+  }
+
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index')
+  }
+
+  if (end <= start) {
+    return this
+  }
+
+  start = start >>> 0
+  end = end === undefined ? this.length : end >>> 0
+
+  if (!val) val = 0
+
+  var i
+  if (typeof val === 'number') {
+    for (i = start; i < end; ++i) {
+      this[i] = val
+    }
+  } else {
+    var bytes = Buffer.isBuffer(val)
+      ? val
+      : Buffer.from(val, encoding)
+    var len = bytes.length
+    if (len === 0) {
+      throw new TypeError('The value "' + val +
+        '" is invalid for argument "value"')
+    }
+    for (i = 0; i < end - start; ++i) {
+      this[i + start] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
+
+function base64clean (str) {
+  // Node takes equal signs as end of the Base64 encoding
+  str = str.split('=')[0]
+  // Node strips out invalid characters like \n and \t from the string, base64-js does not
+  str = str.trim().replace(INVALID_BASE64_RE, '')
+  // Node converts strings with length < 2 to ''
+  if (str.length < 2) return ''
+  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
+  while (str.length % 4 !== 0) {
+    str = str + '='
+  }
+  return str
+}
+
+function toHex (n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+function utf8ToBytes (string, units) {
+  units = units || Infinity
+  var codePoint
+  var length = string.length
+  var leadSurrogate = null
+  var bytes = []
+
+  for (var i = 0; i < length; ++i) {
+    codePoint = string.charCodeAt(i)
+
+    // is surrogate component
+    if (codePoint > 0xD7FF && codePoint < 0xE000) {
+      // last char was a lead
+      if (!leadSurrogate) {
+        // no lead yet
+        if (codePoint > 0xDBFF) {
+          // unexpected trail
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        } else if (i + 1 === length) {
+          // unpaired lead
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        }
+
+        // valid lead
+        leadSurrogate = codePoint
+
+        continue
+      }
+
+      // 2 leads in a row
+      if (codePoint < 0xDC00) {
+        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+        leadSurrogate = codePoint
+        continue
+      }
+
+      // valid surrogate pair
+      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
+    } else if (leadSurrogate) {
+      // valid bmp char, but last char was a lead
+      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+    }
+
+    leadSurrogate = null
+
+    // encode utf8
+    if (codePoint < 0x80) {
+      if ((units -= 1) < 0) break
+      bytes.push(codePoint)
+    } else if (codePoint < 0x800) {
+      if ((units -= 2) < 0) break
+      bytes.push(
+        codePoint >> 0x6 | 0xC0,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x10000) {
+      if ((units -= 3) < 0) break
+      bytes.push(
+        codePoint >> 0xC | 0xE0,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x110000) {
+      if ((units -= 4) < 0) break
+      bytes.push(
+        codePoint >> 0x12 | 0xF0,
+        codePoint >> 0xC & 0x3F | 0x80,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else {
+      throw new Error('Invalid code point')
+    }
+  }
+
+  return bytes
+}
+
+function asciiToBytes (str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+function utf16leToBytes (str, units) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    if ((units -= 2) < 0) break
+
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+function base64ToBytes (str) {
+  return base64.toByteArray(base64clean(str))
+}
+
+function blitBuffer (src, dst, offset, length) {
+  for (var i = 0; i < length; ++i) {
+    if ((i + offset >= dst.length) || (i >= src.length)) break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+// ArrayBuffer or Uint8Array objects from other contexts (i.e. iframes) do not pass
+// the `instanceof` check but they should be treated as of that type.
+// See: https://github.com/feross/buffer/issues/166
+function isInstance (obj, type) {
+  return obj instanceof type ||
+    (obj != null && obj.constructor != null && obj.constructor.name != null &&
+      obj.constructor.name === type.name)
+}
+function numberIsNaN (obj) {
+  // For IE11 support
+  return obj !== obj // eslint-disable-line no-self-compare
+}
+
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"base64-js":63,"buffer":65,"ieee754":68}],66:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -25965,7 +31077,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":35,"_process":38}],35:[function(require,module,exports){
+},{"./common":67,"_process":71}],67:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -26259,7 +31371,94 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":37}],36:[function(require,module,exports){
+},{"ms":70}],68:[function(require,module,exports){
+/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
+
+  i += d
+
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = (e * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = (m * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
+  } else {
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = ((value * c) - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+},{}],69:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -31650,7 +36849,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],37:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -31814,7 +37013,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],38:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -32000,7 +37199,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],39:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -32496,7 +37695,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],40:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -32511,7 +37710,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":39,"./parser":41,"./writer":42}],41:[function(require,module,exports){
+},{"./grammar":72,"./parser":74,"./writer":75}],74:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -32637,7 +37836,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":39}],42:[function(require,module,exports){
+},{"./grammar":72}],75:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -32753,12 +37952,12 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":39}],43:[function(require,module,exports){
+},{"./grammar":72}],76:[function(require,module,exports){
 module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250111",
+  "version": "1.10.9-beta.250128",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -32811,5 +38010,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-},{}]},{},[8])(8)
+},{}]},{},[38])(38)
 });
