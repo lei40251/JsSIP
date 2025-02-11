@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250128.20251282119
+ * CRTC v1.10.9-beta.250211.20252111527
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -2943,6 +2943,7 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 var FloorRequestStatus = require('../messages/floorRequestStatus.js');
 var FloorStatus = require('../messages/floorStatus.js');
 var Primitive = require('../messages/primitive.js');
+var Hello = require('../messages/hello.js');
 var HelloAck = require('../messages/helloAck.js');
 var RequestStatusValue = require('../messages/requestStatusValue.js');
 var Parser = require('../parser/parser.js');
@@ -3064,6 +3065,14 @@ var User = /*#__PURE__*/function () {
       }
     }
 
+    // 心跳消息
+  }, {
+    key: "helloMessage",
+    value: function helloMessage(transactionId, floorId) {
+      var hello = new Hello(this.conferenceId, transactionId, this.userId, floorId);
+      return Buffer.from(hello.encode());
+    }
+
     /**
      * Gets a buffered HelloAck message
      * @param  {bfcp-lib.Message.Hello} helloMessage The Hello message that the HelloAck
@@ -3181,7 +3190,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRequestStatus.js":18,"../messages/floorStatus.js":20,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRequestStatus.js":18,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3451,6 +3460,13 @@ module.exports = {
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
+  // DataChannel
+  MAX_BUFFERED_AMOUNT: 16 * 1024,
+  CHANNEL_CLOSING_TIMEOUT: 5 * 1000,
+  // BFCP心跳间隔，默认30秒
+  BFCP_HEARTBEAT_INTERVAL: 10 * 1000,
+  // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
+  MAX_RETRY_ATTEMPTS: 4,
   // End and Failure causes.
   causes: {
     // Generic error causes.
@@ -17736,6 +17752,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
 var pk = [45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45];
 module.exports = pk;
 },{}],45:[function(require,module,exports){
+(function (Buffer){(function (){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17775,7 +17792,12 @@ var RTCSession_Info = require('./RTCSession/Info');
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
+var BFCPLib = require('./BFCP/index');
 var logger = new Logger('RTCSession');
+var BFCPUser = BFCPLib.User;
+var Primitive = BFCPLib.Primitive;
+var AttributeName = BFCPLib.AttributeName;
+var RequestStatusValue = BFCPLib.RequestStatusValue;
 var C = {
   // RTCSession states.
   STATUS_NULL: 0,
@@ -17808,6 +17830,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._contact = null;
     _this._from_tag = null;
     _this._to_tag = null;
+
+    // DataChannel
+    _this._dataChannel = null;
+    _this._dataChannelName = 'BFCP';
+    _this._dataChannelReady = false;
+    _this._dataChannelConfig = {};
+    _this._dataChannelMsgs = {};
+
+    // BFCP
+    _this._bfcpUser = new BFCPUser(Utils.createRandomToken(7), Utils.createRandomToken(5));
+    _this._floorId = 2; // TODO SDP协商获得值
+    _this._confId = null; // SDP协商获得值
+    _this._transactionId = Math.floor(Math.random() * 9) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    // this._maxRetryAttempts = 4; // 最多重发4次
+
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -18716,6 +18753,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else {
             _this4._connection.addStream(stream);
           }
+
+          /**
+           * DataChannel
+           **/
+          _this4._connection.ondatachannel = function (event) {
+            _this4._initDataChannel(event);
+          };
         }
       })
       // Set remote description.
@@ -21206,13 +21250,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               }
 
+              /**
+               * DataChannel
+               **/
+
+              _this28._initDataChannel();
+
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
               return _context4.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
-            case 6:
+            case 7:
             case "end":
               return _context4.stop();
           }
@@ -22559,6 +22609,171 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       });
     }
+  }, {
+    key: "_onChannelMessage",
+    value: function _onChannelMessage(event) {
+      if (this.destroyed) return;
+      var data = event.data;
+      if (data instanceof ArrayBuffer) data = Buffer.from(data);
+      try {
+        var message = this._bfcpUser.receiveMessage(data);
+        var response;
+
+        // console.warn('rem: ', message);
+        if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
+          this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
+        }
+        switch (message.commonHeader.primitive) {
+          case Primitive.Hello:
+            // console.warn('aaaaaaaabbbbbbbbb');
+            // response = this._bfcpUser.helloAckMessage(message);
+            // this._dataChannel.send(response);
+            break;
+          case Primitive.FloorRequest:
+            {
+              var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
+              response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+              this._dataChannel.send(response);
+              break;
+            }
+        }
+      } catch (error) {
+        console.warn('Error while receiving message.', error);
+      }
+    }
+  }, {
+    key: "_onChannelBufferedAmountLow",
+    value: function _onChannelBufferedAmountLow() {
+      // if (this.destroyed || !this._cb) return;
+      console.warn('ending backpressure: bufferedAmount %d', this._channel.bufferedAmount);
+      // const cb = this._cb;
+
+      // this._cb = null;
+      // cb(null);
+    }
+  }, {
+    key: "_onChannelOpen",
+    value: function _onChannelOpen() {
+      var _this41 = this;
+      if (this._dataChannelReady) return;
+      console.warn('on channel open');
+      this._dataChannelReady = true;
+      setInterval(function () {
+        _this41._transactionId++;
+        var hello = _this41._bfcpUser.helloMessage(_this41._transactionId, _this41._floorId);
+
+        // this._dataChannel.send(hello);
+        _this41._dataChannelSend(hello, _this41._transactionId);
+      }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+    }
+  }, {
+    key: "_onChannelClose",
+    value: function _onChannelClose() {
+      this._dataChannelReady = false;
+      // if (this.destroyed) return;
+      console.warn('on channel close');
+      // this.destroy();
+    }
+  }, {
+    key: "_dataChannelSend",
+    value: function _dataChannelSend(message, transactionId) {
+      var _this42 = this;
+      if (!this._dataChannelReady) {
+        return;
+      }
+      if (!this._dataChannelMsgs[transactionId]) {
+        this._dataChannelMsgs[transactionId] = {
+          retries: 0,
+          sendAt: Date.now(),
+          message: message,
+          received: false
+        };
+      }
+      var messageState = this._dataChannelMsgs[transactionId];
+      console.warn('ctime: ', messageState.sendAt);
+
+      // 如果已经超出最大重试次数，则报告错误
+      if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
+        console.warn("Max retry attempts reached for messageId: ".concat(transactionId));
+        return;
+      }
+
+      // 发送消息
+      console.warn("Sending message Attempt: ".concat(messageState.retries + 1));
+
+      // 设置定时器等待响应
+      setTimeout(function () {
+        console.warn('retry: ', Math.pow(2, messageState.retries) * 500, messageState.received, transactionId);
+        // 如果没有收到响应，则重试
+        if (!messageState.received) {
+          messageState.retries++;
+          // 增加重试的间隔
+          _this42._dataChannelSend(messageState.message, transactionId);
+        }
+      }, Math.pow(2, messageState.retries) * 500);
+      this._dataChannel.send(messageState.message);
+    }
+
+    /**
+     * 初始化DataChannel
+     */
+  }, {
+    key: "_initDataChannel",
+    value: function _initDataChannel(event) {
+      var _this43 = this;
+      // if (!event.channel)
+      // {
+      //   // In some situations `pc.createDataChannel()` returns `undefined` (in wrtc),
+      //   // which is invalid behavior. Handle it gracefully.
+      //   // See: https://github.com/feross/simple-peer/issues/163
+      //   return this.destroy(errCode(
+      // new Error('Data channel event is missing `channel` property'), 'ERR_DATA_CHANNEL'));
+      // }
+      if (event && event.channel) {
+        console.warn(this, event);
+        this._dataChannel = event.channel;
+      } else {
+        this._dataChannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
+      }
+      this._dataChannel.binaryType = 'arraybuffer';
+      if (typeof this._dataChannel.bufferedAmountLowThreshold === 'number') {
+        this._dataChannel.bufferedAmountLowThreshold = CRTC_C.MAX_BUFFERED_AMOUNT;
+      }
+      this._dataChannelName = this._dataChannel.label;
+      this._dataChannel.onmessage = function (ev) {
+        _this43._onChannelMessage(ev);
+      };
+      this._dataChannel.onbufferedamountlow = function () {
+        console.warn('onbufferedamountlow.');
+        // this._onChannelBufferedAmountLow();
+      };
+      this._dataChannel.onopen = function () {
+        _this43._onChannelOpen();
+      };
+      this._dataChannel.onclose = function () {
+        _this43._onChannelClose();
+      };
+      this._dataChannel.onerror = function (ev) {
+        var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
+        _this43._dataChannelReady = false;
+        console.warn('data err: ', err);
+        // this.destroy(errCode(err, 'ERR_DATA_CHANNEL'));
+      };
+
+      // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=882743
+      var isClosing = false;
+      this._closingInterval = setInterval(function () {
+        // No "onclosing" event
+        if (_this43._dataChannel && _this43._dataChannel.readyState === 'closing') {
+          if (isClosing) _this43._onChannelClose(); // closing timed out: equivalent to onclose firing
+          isClosing = true;
+        } else {
+          isClosing = false;
+        }
+      }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
+      return this._dataChannel;
+    }
   }], [{
     key: "C",
     get:
@@ -22570,7 +22785,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":46,"./RTCSession/Info":47,"./RTCSession/ReferNotifier":48,"./RTCSession/ReferSubscriber":49,"./RequestSender":51,"./SIPMessage":52,"./Timers":55,"./Transactions":56,"./URI":59,"./Utils":60,"events":64,"sdp-transform":73}],46:[function(require,module,exports){
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":46,"./RTCSession/Info":47,"./RTCSession/ReferNotifier":48,"./RTCSession/ReferSubscriber":49,"./RequestSender":51,"./SIPMessage":52,"./Timers":55,"./Transactions":56,"./URI":59,"./Utils":60,"buffer":65,"events":64,"sdp-transform":73}],46:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -37957,7 +38173,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250128",
+  "version": "1.10.9-beta.250211",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
