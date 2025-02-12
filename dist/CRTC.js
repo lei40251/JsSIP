@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250212.20252121140
+ * CRTC v1.10.9-beta.250212.2025212230
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -2944,10 +2944,15 @@ var FloorRequestStatus = require('../messages/floorRequestStatus.js');
 var FloorStatus = require('../messages/floorStatus.js');
 var Primitive = require('../messages/primitive.js');
 var Hello = require('../messages/hello.js');
+var FloorRequest = require('../messages/floorRequest.js');
 var HelloAck = require('../messages/helloAck.js');
 var RequestStatusValue = require('../messages/requestStatusValue.js');
 var Parser = require('../parser/parser.js');
 var AttrName = require('../attributes/name.js');
+var FloorRelease = require('../messages/floorRelease.js');
+var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
+var _require = require('../../index.js'),
+  AttributeName = _require.AttributeName;
 
 /**
  * @classdesc
@@ -3087,6 +3092,31 @@ var User = /*#__PURE__*/function () {
       return Buffer.from(helloAck.encode());
     }
 
+    // FloorRequest 请求
+  }, {
+    key: "floorRequestMessage",
+    value: function floorRequestMessage(transactionId, floorId) {
+      var floorRequest = new FloorRequest(this.conferenceId, transactionId, this.userId, floorId);
+      return Buffer.from(floorRequest.encode());
+    }
+
+    // FloorRequest 请求
+  }, {
+    key: "floorReleaseMessage",
+    value: function floorReleaseMessage(transactionId, floorRequestId) {
+      var floorRelease = new FloorRelease(this.conferenceId, transactionId, this.userId, floorRequestId);
+      return Buffer.from(floorRelease.encode());
+    }
+
+    // FloorRequestStatusAck 请求
+  }, {
+    key: "floorRequestStatusAckMessage",
+    value: function floorRequestStatusAckMessage(floorRequestStatusMessage) {
+      var wantedFloorId = floorRequestStatusMessage.getAttribute(AttributeName.FloorId).content;
+      var floorRequestStatusAck = new FloorRequestStatusAck(this.conferenceId, floorRequestStatusMessage.commonHeader.transactionId, this.userId, wantedFloorId);
+      return Buffer.from(floorRequestStatusAck.encode());
+    }
+
     /**
      * Gets a buffered FloorRequestStatus message
      * @param  {bfcp-lib.Message.FloorRequest | bfcp-lib.Message.FloorRelease} message
@@ -3190,7 +3220,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRequestStatus.js":18,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../../index.js":1,"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3463,10 +3493,15 @@ module.exports = {
   // DataChannel
   MAX_BUFFERED_AMOUNT: 16 * 1024,
   CHANNEL_CLOSING_TIMEOUT: 5 * 1000,
+  // BFCP相关
+  BFCP: 'BFCP',
   // BFCP心跳间隔，默认30秒
   BFCP_HEARTBEAT_INTERVAL: 10 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
   MAX_RETRY_ATTEMPTS: 4,
+  CMODE: {
+    PAPHONE: 'paphone'
+  },
   // End and Failure causes.
   causes: {
     // Generic error causes.
@@ -17839,8 +17874,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._dataChannelMsgs = {};
 
     // BFCP
+    _this._enableBFCP = false;
     _this._bfcpUser = new BFCPUser(Utils.createRandomToken(7), Utils.createRandomToken(5));
     _this._floorId = 2; // TODO SDP协商获得值
+    _this._floorRequestId = null;
     _this._confId = null; // SDP协商获得值
     _this._transactionId = Math.floor(Math.random() * 9) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
     // this._maxRetryAttempts = 4; // 最多重发4次
@@ -18099,6 +18136,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
+
+      // 是否启用BFCP
+      if (options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+        this._enableBFCP = true;
+      }
 
       // 定制模式
       this._customizedMode = options.cMode;
@@ -18755,11 +18797,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
 
           /**
-           * DataChannel
+           * 是否启用 DataChannel
            **/
-          _this4._connection.ondatachannel = function (event) {
+          _this4._enableBFCP && (_this4._connection.ondatachannel = function (event) {
             _this4._initDataChannel(event);
-          };
+          });
         }
       })
       // Set remote description.
@@ -19744,6 +19786,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function sendRequest(method, options) {
       logger.debug('sendRequest()');
       return this._dialog.sendRequest(method, options);
+    }
+
+    /**
+     * Send a BFCP FloorRequest
+     */
+  }, {
+    key: "_sendFloorRequest",
+    value: function _sendFloorRequest() {
+      var floorRequest = this._bfcpUser.floorRequestMessage(this._transactionId, this._floorId);
+      this._dataChannelSend(floorRequest);
+    }
+
+    /**
+     * Send a BFCP FloorRelease
+     */
+  }, {
+    key: "_sendFloorRelease",
+    value: function _sendFloorRelease() {
+      var floorRelease = this._bfcpUser.floorReleaseMessage(this._transactionId, this._floorRequestId);
+      this._dataChannelSend(floorRelease);
     }
 
     /**
@@ -21251,10 +21313,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
 
               /**
-               * DataChannel
+               * 是否启用 DataChannel
                **/
-
-              _this28._initDataChannel();
+              _this28._enableBFCP && _this28._initDataChannel();
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
@@ -22609,6 +22670,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       });
     }
+
+    // BFCP && DataChannel
   }, {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
@@ -22627,24 +22690,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         switch (message.commonHeader.primitive) {
           case Primitive.Hello:
             response = this._bfcpUser.helloAckMessage(message);
-            this._dataChannel.send(response);
+            this._dataChannelSend(response);
+            break;
+          case Primitive.FloorRequestStatus:
+            response = this._bfcpUser.floorRequestStatusAckMessage(message);
+            this._dataChannelSend(response);
             break;
           case Primitive.FloorRequest:
             {
               var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
               if (this.listeners('floorRequest').length === 0) {
                 response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                this._dataChannel.send(response);
+                this._dataChannelSend(response);
               } else {
                 this.emit('floorRequest', {
                   message: message,
                   accept: function accept() {
                     response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                    _this41._dataChannel.send(response);
+                    _this41._dataChannelSend(response);
                   },
                   reject: function reject() {
                     response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-                    _this41._dataChannel.send(response);
+                    _this41._dataChannelSend(response);
                   }
                 });
               }
@@ -22724,17 +22791,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
-     * 初始化DataChannel
+     * 初始化 DataChannel
      */
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
       var _this44 = this;
-      logger.debug('Data channel event is missing `channel` property');
+      logger.debug('initDataChannel()');
       if (event && event.channel) {
-        console.warn(this, event);
         this._dataChannel = event.channel;
       } else {
+        // 如果是DataChannel的发起方则创建DataChannel
         this._dataChannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
       }
       if (!this._dataChannel) {

@@ -966,9 +966,10 @@ async function call(type, direction)
 
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
+    extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
-    pcConfig     : pcConfig
+    extraFeatures : [ 'paphone', 'bfcp' ],
+    pcConfig      : pcConfig
   };
 
   if (direction == 'sendonly')

@@ -5,8 +5,13 @@ export const SIPS = 'sips'
 export const MAX_BUFFERED_AMOUNT     = 16*1024
 export const CHANNEL_CLOSING_TIMEOUT = 5*1000
 
-export const BFCP_HEARTBEAT_INTERVAL = 30*1000,
+export const BFCP = 'BFCP'
+export const BFCP_HEARTBEAT_INTERVAL = 30*1000
 export const MAX_RETRY_ATTEMPTS      = 4
+
+export enum CMODE  {
+  PAPHONE = 'paphone'
+}
 
 export enum causes {
   CONNECTION_ERROR = 'Connection Error',
