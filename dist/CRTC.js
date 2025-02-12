@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250211.20252111527
+ * CRTC v1.10.9-beta.250212.20252121140
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -22612,6 +22612,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
+      var _this41 = this;
       if (this.destroyed) return;
       var data = event.data;
       if (data instanceof ArrayBuffer) data = Buffer.from(data);
@@ -22625,15 +22626,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         switch (message.commonHeader.primitive) {
           case Primitive.Hello:
-            // console.warn('aaaaaaaabbbbbbbbb');
-            // response = this._bfcpUser.helloAckMessage(message);
-            // this._dataChannel.send(response);
+            response = this._bfcpUser.helloAckMessage(message);
+            this._dataChannel.send(response);
             break;
           case Primitive.FloorRequest:
             {
               var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
-              response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-              this._dataChannel.send(response);
+              if (this.listeners('floorRequest').length === 0) {
+                response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+                this._dataChannel.send(response);
+              } else {
+                this.emit('floorRequest', {
+                  message: message,
+                  accept: function accept() {
+                    response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+                    _this41._dataChannel.send(response);
+                  },
+                  reject: function reject() {
+                    response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+                    _this41._dataChannel.send(response);
+                  }
+                });
+              }
               break;
             }
         }
@@ -22647,37 +22661,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // if (this.destroyed || !this._cb) return;
       console.warn('ending backpressure: bufferedAmount %d', this._channel.bufferedAmount);
       // const cb = this._cb;
-
       // this._cb = null;
       // cb(null);
     }
   }, {
     key: "_onChannelOpen",
     value: function _onChannelOpen() {
-      var _this41 = this;
+      var _this42 = this;
       if (this._dataChannelReady) return;
       console.warn('on channel open');
       this._dataChannelReady = true;
       setInterval(function () {
-        _this41._transactionId++;
-        var hello = _this41._bfcpUser.helloMessage(_this41._transactionId, _this41._floorId);
-
-        // this._dataChannel.send(hello);
-        _this41._dataChannelSend(hello, _this41._transactionId);
+        _this42._transactionId++;
+        var hello = _this42._bfcpUser.helloMessage(_this42._transactionId, _this42._floorId);
+        _this42._dataChannelSend(hello, _this42._transactionId);
       }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
     }
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
       this._dataChannelReady = false;
-      // if (this.destroyed) return;
       console.warn('on channel close');
-      // this.destroy();
     }
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this42 = this;
+      var _this43 = this;
       if (!this._dataChannelReady) {
         return;
       }
@@ -22708,7 +22717,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (!messageState.received) {
           messageState.retries++;
           // 增加重试的间隔
-          _this42._dataChannelSend(messageState.message, transactionId);
+          _this43._dataChannelSend(messageState.message, transactionId);
         }
       }, Math.pow(2, messageState.retries) * 500);
       this._dataChannel.send(messageState.message);
@@ -22720,20 +22729,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this43 = this;
-      // if (!event.channel)
-      // {
-      //   // In some situations `pc.createDataChannel()` returns `undefined` (in wrtc),
-      //   // which is invalid behavior. Handle it gracefully.
-      //   // See: https://github.com/feross/simple-peer/issues/163
-      //   return this.destroy(errCode(
-      // new Error('Data channel event is missing `channel` property'), 'ERR_DATA_CHANNEL'));
-      // }
+      var _this44 = this;
+      logger.debug('Data channel event is missing `channel` property');
       if (event && event.channel) {
         console.warn(this, event);
         this._dataChannel = event.channel;
       } else {
         this._dataChannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
+      }
+      if (!this._dataChannel) {
+        // In some situations `pc.createDataChannel()` returns `undefined` (in wrtc),
+        // which is invalid behavior. Handle it gracefully.
+        // See: https://github.com/feross/simple-peer/issues/163
+        logger.error('Data channel event is missing `channel` property');
+        return;
       }
       this._dataChannel.binaryType = 'arraybuffer';
       if (typeof this._dataChannel.bufferedAmountLowThreshold === 'number') {
@@ -22741,21 +22750,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._dataChannelName = this._dataChannel.label;
       this._dataChannel.onmessage = function (ev) {
-        _this43._onChannelMessage(ev);
+        _this44._onChannelMessage(ev);
       };
       this._dataChannel.onbufferedamountlow = function () {
         console.warn('onbufferedamountlow.');
         // this._onChannelBufferedAmountLow();
       };
       this._dataChannel.onopen = function () {
-        _this43._onChannelOpen();
+        _this44._onChannelOpen();
       };
       this._dataChannel.onclose = function () {
-        _this43._onChannelClose();
+        _this44._onChannelClose();
       };
       this._dataChannel.onerror = function (ev) {
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this43._dataChannelReady = false;
+        _this44._dataChannelReady = false;
         console.warn('data err: ', err);
         // this.destroy(errCode(err, 'ERR_DATA_CHANNEL'));
       };
@@ -22765,8 +22774,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var isClosing = false;
       this._closingInterval = setInterval(function () {
         // No "onclosing" event
-        if (_this43._dataChannel && _this43._dataChannel.readyState === 'closing') {
-          if (isClosing) _this43._onChannelClose(); // closing timed out: equivalent to onclose firing
+        if (_this44._dataChannel && _this44._dataChannel.readyState === 'closing') {
+          if (isClosing) _this44._onChannelClose(); // closing timed out: equivalent to onclose firing
           isClosing = true;
         } else {
           isClosing = false;
@@ -38173,7 +38182,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250211",
+  "version": "1.10.9-beta.250212",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
