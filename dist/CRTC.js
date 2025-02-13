@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250212.2025212230
+ * CRTC v1.10.9-beta.250212.20252131812
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3097,6 +3097,7 @@ var User = /*#__PURE__*/function () {
     key: "floorRequestMessage",
     value: function floorRequestMessage(transactionId, floorId) {
       var floorRequest = new FloorRequest(this.conferenceId, transactionId, this.userId, floorId);
+      console.warn('aaaa: ', this.conferenceId, transactionId, this.userId, floorId);
       return Buffer.from(floorRequest.encode());
     }
 
@@ -3112,6 +3113,7 @@ var User = /*#__PURE__*/function () {
   }, {
     key: "floorRequestStatusAckMessage",
     value: function floorRequestStatusAckMessage(floorRequestStatusMessage) {
+      console.warn('frsm: ', floorRequestStatusMessage);
       var wantedFloorId = floorRequestStatusMessage.getAttribute(AttributeName.FloorId).content;
       var floorRequestStatusAck = new FloorRequestStatusAck(this.conferenceId, floorRequestStatusMessage.commonHeader.transactionId, this.userId, wantedFloorId);
       return Buffer.from(floorRequestStatusAck.encode());
@@ -3496,7 +3498,7 @@ module.exports = {
   // BFCP相关
   BFCP: 'BFCP',
   // BFCP心跳间隔，默认30秒
-  BFCP_HEARTBEAT_INTERVAL: 10 * 1000,
+  BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
   MAX_RETRY_ATTEMPTS: 4,
   CMODE: {
@@ -17879,7 +17881,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._floorId = 2; // TODO SDP协商获得值
     _this._floorRequestId = null;
     _this._confId = null; // SDP协商获得值
-    _this._transactionId = Math.floor(Math.random() * 9) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    _this._transactionId = Math.floor(Math.random() * 9999) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    _this._bfcpHeatbeatTimer = null;
     // this._maxRetryAttempts = 4; // 最多重发4次
 
     _this._inviteVideoTrackStatsTimer = null;
@@ -17925,7 +17928,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareRTPSender = null;
-    _this._localShareStream = null;
+    _this._localShareStream = new MediaStream();
     _this._localShareStreamLocallyGenerated = false;
 
     // 本地摄像头
@@ -18138,7 +18141,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
 
       // 是否启用BFCP
-      if (options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+      if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
         this._enableBFCP = true;
       }
 
@@ -18533,6 +18536,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
+
+      // 是否启用BFCP
+      if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+        this._enableBFCP = true;
+      }
       var tracks;
       var peerHasAudioLine = false;
       var peerHasVideoLine = false;
@@ -19230,47 +19238,56 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 分享屏幕
       else if (type === 'screen') {
         logger.debug('share screen');
-
-        // 判断浏览器是否兼容获取屏幕分享
-        if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
-          logger.warn('getDisplayMedia is not supported');
-          this.emit('getdisplaymediafailed');
-        }
-        this._localShareStreamLocallyGenerated = true;
-
-        // 分享屏幕 默认帧率 5
-        return navigator.mediaDevices.getDisplayMedia({
-          video: {
-            frameRate: 5
-          }
-        }).then(function (stream) {
-          _this8._localShareRTPSender = null;
-          _this8._localShareStream = stream;
-          _this8._streamInactiveHandle(dual);
-
-          // 替换流方式分享屏幕
-          stream.getVideoTracks().forEach(function (track) {
-            if (dual) {
-              _this8._localShareRTPSender = _this8._connection.addTrack(track, stream);
-              _this8.renegotiate({
-                rtcOfferConstraints: {
-                  iceRestart: true
-                }
-              });
-            } else {
-              var sender = _this8._connection.getSenders().find(function (s) {
-                return s.track.kind == 'video' && s.track.readyState !== 'ended';
-              });
-              sender.replaceTrack(track);
-            }
-          });
-          return stream;
-        })["catch"](function (error) {
-          logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
-          logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this8.emit('getdisplaymediafailed', error);
-          throw new Error('getDisplayMedia() failed');
+        return Promise.resolve().then(function () {
+          _this8._sendFloorRequest();
         });
+
+        // // 判断浏览器是否兼容获取屏幕分享
+        // if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices))
+        // {
+        //   logger.warn('getDisplayMedia is not supported');
+        //   this.emit('getdisplaymediafailed');
+        // }
+
+        // this._localShareStreamLocallyGenerated = true;
+
+        // // 分享屏幕 默认帧率 5
+        // return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } })
+        //   .then((stream) =>
+        //   {
+        //     this._localShareRTPSender = null;
+        //     this._localShareStream = stream;
+
+        //     this._streamInactiveHandle(dual);
+
+        //     // 替换流方式分享屏幕
+        //     stream.getVideoTracks().forEach((track) =>
+        //     {
+        //       if (dual)
+        //       {
+        //         this._localShareRTPSender = this._connection.addTrack(track, stream);
+        //         this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+        //       }
+        //       else
+        //       {
+        //         const sender = this._connection.getSenders().find((s) =>
+        //         {
+        //           return s.track.kind == 'video' && s.track.readyState !== 'ended';
+        //         });
+
+        //         sender.replaceTrack(track);
+        //       }
+        //     });
+
+        //     return stream;
+        //   })
+        //   .catch((error) =>
+        //   {
+        //     logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+        //     logger.warn(`emit "getdisplaymediafailed" [error:%o]${JSON.stringify(error)}`);
+        //     this.emit('getdisplaymediafailed', error);
+        //     throw new Error('getDisplayMedia() failed');
+        //   });
       }
     }
 
@@ -19795,7 +19812,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_sendFloorRequest",
     value: function _sendFloorRequest() {
       var floorRequest = this._bfcpUser.floorRequestMessage(this._transactionId, this._floorId);
-      this._dataChannelSend(floorRequest);
+      this._dataChannelSend(floorRequest, this._transactionId);
+      this._transactionId++;
+    }
+
+    /**
+     * Send a BFCP Hello
+     */
+  }, {
+    key: "_sendHello",
+    value: function _sendHello() {
+      var hello = this._bfcpUser.helloMessage(this._transactionId, this._floorId);
+      this._dataChannelSend(hello, this._transactionId);
+      this._transactionId++;
     }
 
     /**
@@ -19805,7 +19834,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_sendFloorRelease",
     value: function _sendFloorRelease() {
       var floorRelease = this._bfcpUser.floorReleaseMessage(this._transactionId, this._floorRequestId);
-      this._dataChannelSend(floorRelease);
+      this._dataChannelSend(floorRelease, this._transactionId);
+      this._transactionId++;
     }
 
     /**
@@ -20194,7 +20224,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 self.renegotiate({
                   changeViaHost: true
                 });
-                console.warn('aaaaaaaaaaaaaaaaaaaaaaaaa');
                 setTimeout(function () {
                   self._canSend = false;
                 }, 1000);
@@ -21592,7 +21621,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]);
                         }
                       }
-                    case 8:
+
+                      // BFCP
+                      if (_this29._enableBFCP) {
+                        _this29._bfcpVideoTrack = Utils.generateAnEmptyVideoTrack();
+                        _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
+                        _this29._sendReinvite();
+                      }
+                    case 9:
                     case "end":
                       return _context5.stop();
                   }
@@ -22682,36 +22718,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       try {
         var message = this._bfcpUser.receiveMessage(data);
         var response;
-
-        // console.warn('rem: ', message);
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
+          delete this._dataChannelMsgs[message.commonHeader.transactionId];
         }
+        console.warn('BFCP recv: ', message, message.commonHeader.transactionId, Date.now());
         switch (message.commonHeader.primitive) {
           case Primitive.Hello:
             response = this._bfcpUser.helloAckMessage(message);
-            this._dataChannelSend(response);
+            console.warn('BFCP send HACK:', message.commonHeader.transactionId, Date.now());
+            this._dataChannel.send(response);
             break;
           case Primitive.FloorRequestStatus:
             response = this._bfcpUser.floorRequestStatusAckMessage(message);
-            this._dataChannelSend(response);
+            // this._dataChannelSend(response, this._transactionId);
+            console.warn('BFCP send FloorRequestStatusACK:', message.commonHeader.transactionId, Date.now());
+            console.warn('message: ', message);
+            this._dataChannel.send(response);
             break;
           case Primitive.FloorRequest:
             {
               var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
               if (this.listeners('floorRequest').length === 0) {
+                console.warn('mmmmmmmmmmmmm');
                 response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                this._dataChannelSend(response);
+                this._dataChannelSend(response, message.commonHeader.transactionId);
               } else {
                 this.emit('floorRequest', {
                   message: message,
                   accept: function accept() {
                     response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                    _this41._dataChannelSend(response);
+                    _this41._dataChannelSend(response, message.commonHeader.transactionId);
                   },
                   reject: function reject() {
                     response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-                    _this41._dataChannelSend(response);
+                    _this41._dataChannelSend(response, message.commonHeader.transactionId);
                   }
                 });
               }
@@ -22738,16 +22779,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._dataChannelReady) return;
       console.warn('on channel open');
       this._dataChannelReady = true;
-      setInterval(function () {
-        _this42._transactionId++;
-        var hello = _this42._bfcpUser.helloMessage(_this42._transactionId, _this42._floorId);
-        _this42._dataChannelSend(hello, _this42._transactionId);
+      this._sendHello();
+      this._bfcpHeatbeatTimer = setInterval(function () {
+        _this42._sendHello();
       }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
     }
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
       this._dataChannelReady = false;
+      clearInterval(this._bfcpHeatbeatTimer);
       console.warn('on channel close');
     }
   }, {
@@ -22766,7 +22807,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         };
       }
       var messageState = this._dataChannelMsgs[transactionId];
-      console.warn('ctime: ', messageState.sendAt);
 
       // 如果已经超出最大重试次数，则报告错误
       if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
@@ -22775,19 +22815,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       // 发送消息
-      console.warn("Sending message Attempt: ".concat(messageState.retries + 1));
+      console.warn("BFCP send: ".concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
 
       // 设置定时器等待响应
       setTimeout(function () {
-        console.warn('retry: ', Math.pow(2, messageState.retries) * 500, messageState.received, transactionId);
         // 如果没有收到响应，则重试
-        if (!messageState.received) {
+        if (messageState && !messageState.received) {
+          console.warn('retry: ', Math.pow(2, messageState.retries) * 500, messageState.received, transactionId, Date.now());
           messageState.retries++;
           // 增加重试的间隔
           _this43._dataChannelSend(messageState.message, transactionId);
         }
       }, Math.pow(2, messageState.retries) * 500);
       this._dataChannel.send(messageState.message);
+      console.warn('BFCP send msg: ', this._bfcpUser.receiveMessage(messageState.message));
     }
 
     /**
@@ -24781,9 +24822,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
-                  var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
-                  logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
-                  logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
+                  if (s.track) {
+                    var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
+                    logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
+                    logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
+                  }
                 });
               } catch (error) {
                 logger.error(error.toString());
@@ -28220,6 +28263,41 @@ exports.getStreamThroughCanvas = function (stream) {
     newStream.addTrack(audioTrack);
   }
   return newStream;
+};
+
+// 使用 canvas.captureStream 创建空视频轨道的辅助函数
+var createCanvasVideoTrack = function createCanvasVideoTrack() {
+  var canvas = document.createElement('canvas');
+
+  // 设置分辨率
+  canvas.width = 60;
+  canvas.height = 40;
+  var videoStream = canvas.captureStream(1); // 帧率1
+
+  return videoStream.getVideoTracks()[0];
+};
+
+/**
+ * 通过 canvas 画布获取视频流
+ *
+ * @param {MediaStream} stream - 要转换的媒体流
+ */
+exports.generateAnEmptyVideoTrack = function () {
+  if ('MediaStreamTrackGenerator' in window) {
+    // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+    try {
+      // eslint-disable-next-line no-undef
+      var trackGenerator = new MediaStreamTrackGenerator({
+        kind: 'video'
+      });
+      return trackGenerator;
+    } catch (error) {
+      return createCanvasVideoTrack();
+    }
+  } else {
+    // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+    return createCanvasVideoTrack();
+  }
 };
 
 /**

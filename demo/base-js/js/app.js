@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -663,7 +663,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true }
+      rtcOfferConstraints : { offerToReceiveAudio: true },
+      extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('audio answer');
@@ -686,7 +687,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true }
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('video answer');
@@ -968,7 +970,7 @@ async function call(type, direction)
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
-    extraFeatures : [ 'paphone', 'bfcp' ],
+    extraFeatures : [ 'paphone', 'BFCP' ],
     pcConfig      : pcConfig
   };
 

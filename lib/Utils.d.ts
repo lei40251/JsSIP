@@ -15,6 +15,8 @@ export function newTag(): string;
 
 export function newUUID(): string;
 
+export function generateAnEmptyVideoTrack(): MediaStreamTrack;
+
 export function getABU(str:string): any;
 
 export function hostType(host: string): string;
