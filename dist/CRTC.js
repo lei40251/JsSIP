@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250212.20252131812
+ * CRTC v1.10.9-beta.250212.2025214186
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -369,11 +369,15 @@ var FloorRequestInformation = /*#__PURE__*/function (_Attribute) {
    * @param {Integer} requestStatus  The request status
    */
   function FloorRequestInformation(floorRequestId, floorId, requestStatus) {
+    var _this;
     _classCallCheck(this, FloorRequestInformation);
     var content = [];
+    console.warn('ffffff: ', floorRequestId, floorId, requestStatus);
     content.push(floorRequestId);
     content.push(new FloorRequestStatus(floorId, requestStatus));
-    return _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
+    _this = _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
+    console.warn('this: ', _this);
+    return _this;
   }
   _inherits(FloorRequestInformation, _Attribute);
   return _createClass(FloorRequestInformation);
@@ -2704,6 +2708,7 @@ var Parser = /*#__PURE__*/function () {
             attributeList.push(Parser._parseFloorRequestStatus(attribute.substring(16)));
             break;
           case AttributeType.FloorRequestInformation:
+            console.warn('abababab', attribute.substring(16));
             attributeList.push(Parser._parseFloorRequestInformation(attribute.substring(16)));
             break;
           case AttributeType.RequestStatus:
@@ -2786,6 +2791,7 @@ var Parser = /*#__PURE__*/function () {
   }, {
     key: "_parseFloorRequestStatus",
     value: function _parseFloorRequestStatus(content) {
+      console.warn('3333333333333');
       return new FloorRequestStatusAtr(parseInt(content, 2));
     }
 
@@ -2800,6 +2806,7 @@ var Parser = /*#__PURE__*/function () {
   }, {
     key: "_parseFloorRequestInformation",
     value: function _parseFloorRequestInformation(content) {
+      console.warn('abcd: ', parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
       return new FloorRequestInformation(parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
     }
 
@@ -2880,7 +2887,9 @@ var Parser = /*#__PURE__*/function () {
             }
           case Primitive.FloorRequestStatus:
             {
+              console.warn('111111111111');
               var floorRequestStatus = new FloorRequestStatusMsg();
+              console.warn('22222222222');
               floorRequestStatus.commonHeader = commonHeader;
               floorRequestStatus.attributes = attributes;
               return floorRequestStatus;
@@ -3114,7 +3123,8 @@ var User = /*#__PURE__*/function () {
     key: "floorRequestStatusAckMessage",
     value: function floorRequestStatusAckMessage(floorRequestStatusMessage) {
       console.warn('frsm: ', floorRequestStatusMessage);
-      var wantedFloorId = floorRequestStatusMessage.getAttribute(AttributeName.FloorId).content;
+      var wantedFloorId = floorRequestStatusMessage.getAttribute('FloorRequestInformation').content[1].content[0];
+      // const wantedFloorId = floorRequestStatusMessage.getAttribute(AttributeName.FloorId).content;
       var floorRequestStatusAck = new FloorRequestStatusAck(this.conferenceId, floorRequestStatusMessage.commonHeader.transactionId, this.userId, wantedFloorId);
       return Buffer.from(floorRequestStatusAck.encode());
     }
@@ -17877,8 +17887,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // BFCP
     _this._enableBFCP = false;
-    _this._bfcpUser = new BFCPUser(Utils.createRandomToken(7), Utils.createRandomToken(5));
+    _this._bfcpUser = new BFCPUser(Math.floor(Math.random() * 9999) + 1, Math.floor(Math.random() * 999999) + 1);
     _this._floorId = 2; // TODO SDP协商获得值
+    _this._floorctrl = 'c-s';
+    _this._mStream = null;
+    _this._bfcpUserId = null;
     _this._floorRequestId = null;
     _this._confId = null; // SDP协商获得值
     _this._transactionId = Math.floor(Math.random() * 9999) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
@@ -21361,6 +21374,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
+
+        // 添加BFCP所需属性
+        desc = desc.replace('UDP/DTLS/SCTP/BFCP *\r\n', 'UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:c-s\r\n');
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
         logger.debug('emit "sending" [request:%o]', _this28._request);
@@ -21532,6 +21548,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               break;
             }
 
+            // 获取响应中BFCP相关属性
+            this._floorId = response.body.match(/a=floorid:(\d+)/) || 5;
+            this._floorctrl = response.body.match(/a=floorctrl:([a-z-]+)/) === 's-only' ? 'c-s' : 'c-only';
+            this._confId = response.body.match(/a=confid:(\d+)/);
+            this._bfcpUserId = response.body.match(/a=userid:(\d+)/);
+
             /**
              * 音视频切换相关
              * 根据sdp判断用户Answer的通话模式，并触发mode事件
@@ -21682,6 +21704,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _this30._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
         sdp = _this30._mangleOffer(sdp);
+
+        // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
+        var supportedMSTC;
+        if ('MediaStreamTrackGenerator' in window) {
+          supportedMSTC = true;
+        }
+        _this30._connection.getTransceivers().forEach(function (transceiver) {
+          if (supportedMSTC) {
+            // eslint-disable-next-line no-undef
+            if (transceiver.sender.track instanceof MediaStreamTrackGenerator || transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+              _this30._mStream = transceiver.mid;
+            }
+          } else if (transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+            _this30._mStream = transceiver.mid;
+          }
+        });
+
+        // 添加BFCP所需属性
+        sdp = sdp.replace('UDP/DTLS/SCTP/BFCP *\r\n', "UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n"));
+        // a=floorctrl:c-only
+        // a=floorid:2 m-stream:3
+
         var e = {
           originator: 'local',
           type: 'offer',
@@ -22730,17 +22774,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._dataChannel.send(response);
             break;
           case Primitive.FloorRequestStatus:
-            response = this._bfcpUser.floorRequestStatusAckMessage(message);
-            // this._dataChannelSend(response, this._transactionId);
-            console.warn('BFCP send FloorRequestStatusACK:', message.commonHeader.transactionId, Date.now());
-            console.warn('message: ', message);
-            this._dataChannel.send(response);
-            break;
+            {
+              response = this._bfcpUser.floorRequestStatusAckMessage(message);
+              // this._dataChannelSend(response, this._transactionId);
+              console.warn('BFCP send FloorRequestStatusACK:', message.commonHeader.transactionId, Date.now());
+              console.warn('message: ', message);
+              this._dataChannel.send(response);
+              break;
+            }
           case Primitive.FloorRequest:
             {
               var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
               if (this.listeners('floorRequest').length === 0) {
-                console.warn('mmmmmmmmmmmmm');
                 response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
                 this._dataChannelSend(response, message.commonHeader.transactionId);
               } else {
@@ -26202,9 +26247,11 @@ module.exports = /*#__PURE__*/function () {
       // 统一修改收到的SDP
       if (data.indexOf('a=inactive') !== -1) {
         data = data.replace(/m=video \d*/, 'm=video 0');
+
         // 修复修改SDP后的Header头
         data = Utils.fixContentLength(data);
       }
+      data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
       logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,

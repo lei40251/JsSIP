@@ -211,6 +211,8 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
       const match = d.sdp.match(/c=IN.*\r\n/);
 
+      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
+
       d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
 
       // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
