@@ -839,7 +839,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#screenShare').onclick = function()
   {
-    e.session.share('screen', null, null,)
+    e.session.share('screen', null, null)
       .then((stream) => { document.querySelector('#screen').srcObject=stream; });
   };
   document.querySelector('#screenShareD').onclick = function()

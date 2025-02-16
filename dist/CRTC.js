@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250212.2025214186
+ * CRTC v1.10.9-beta.250215.20252161033
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -2960,8 +2960,6 @@ var Parser = require('../parser/parser.js');
 var AttrName = require('../attributes/name.js');
 var FloorRelease = require('../messages/floorRelease.js');
 var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
-var _require = require('../../index.js'),
-  AttributeName = _require.AttributeName;
 
 /**
  * @classdesc
@@ -3106,7 +3104,6 @@ var User = /*#__PURE__*/function () {
     key: "floorRequestMessage",
     value: function floorRequestMessage(transactionId, floorId) {
       var floorRequest = new FloorRequest(this.conferenceId, transactionId, this.userId, floorId);
-      console.warn('aaaa: ', this.conferenceId, transactionId, this.userId, floorId);
       return Buffer.from(floorRequest.encode());
     }
 
@@ -3122,9 +3119,7 @@ var User = /*#__PURE__*/function () {
   }, {
     key: "floorRequestStatusAckMessage",
     value: function floorRequestStatusAckMessage(floorRequestStatusMessage) {
-      console.warn('frsm: ', floorRequestStatusMessage);
       var wantedFloorId = floorRequestStatusMessage.getAttribute('FloorRequestInformation').content[1].content[0];
-      // const wantedFloorId = floorRequestStatusMessage.getAttribute(AttributeName.FloorId).content;
       var floorRequestStatusAck = new FloorRequestStatusAck(this.conferenceId, floorRequestStatusMessage.commonHeader.transactionId, this.userId, wantedFloorId);
       return Buffer.from(floorRequestStatusAck.encode());
     }
@@ -3232,7 +3227,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../../index.js":1,"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -19251,56 +19246,54 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 分享屏幕
       else if (type === 'screen') {
         logger.debug('share screen');
-        return Promise.resolve().then(function () {
-          _this8._sendFloorRequest();
+        return this._sendFloorRequest().then(function (response) {
+          console.warn('response: ', response);
+          if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] != 3) {
+            _this8._floorRequestId = response.getAttribute('FloorRequestInformation').content[0];
+            return Promise.reject("not accept: ".concat(response.getAttribute('FloorRequestInformation').content[1].content[1].content[0]));
+          }
+        }).then(function () {
+          // 判断浏览器是否兼容获取屏幕分享
+          if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
+            logger.warn('getDisplayMedia is not supported');
+            _this8.emit('getdisplaymediafailed');
+          }
+          _this8._localShareStreamLocallyGenerated = true;
+
+          // 分享屏幕 默认帧率 5
+          return navigator.mediaDevices.getDisplayMedia({
+            video: {
+              frameRate: 5
+            }
+          }).then(function (stream) {
+            _this8._localShareRTPSender = null;
+            _this8._localShareStream = stream;
+            _this8._streamInactiveHandle(dual);
+
+            // 替换流方式分享屏幕
+            stream.getVideoTracks().forEach(function (track) {
+              if (dual) {
+                _this8._localShareRTPSender = _this8._connection.addTrack(track, stream);
+                _this8.renegotiate({
+                  rtcOfferConstraints: {
+                    iceRestart: true
+                  }
+                });
+              } else {
+                var sender = _this8._connection.getSenders().find(function (s) {
+                  return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                });
+                sender.replaceTrack(track);
+              }
+            });
+            return stream;
+          })["catch"](function (error) {
+            logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+            logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
+            _this8.emit('getdisplaymediafailed', error);
+            throw new Error('getDisplayMedia() failed');
+          });
         });
-
-        // // 判断浏览器是否兼容获取屏幕分享
-        // if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices))
-        // {
-        //   logger.warn('getDisplayMedia is not supported');
-        //   this.emit('getdisplaymediafailed');
-        // }
-
-        // this._localShareStreamLocallyGenerated = true;
-
-        // // 分享屏幕 默认帧率 5
-        // return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } })
-        //   .then((stream) =>
-        //   {
-        //     this._localShareRTPSender = null;
-        //     this._localShareStream = stream;
-
-        //     this._streamInactiveHandle(dual);
-
-        //     // 替换流方式分享屏幕
-        //     stream.getVideoTracks().forEach((track) =>
-        //     {
-        //       if (dual)
-        //       {
-        //         this._localShareRTPSender = this._connection.addTrack(track, stream);
-        //         this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-        //       }
-        //       else
-        //       {
-        //         const sender = this._connection.getSenders().find((s) =>
-        //         {
-        //           return s.track.kind == 'video' && s.track.readyState !== 'ended';
-        //         });
-
-        //         sender.replaceTrack(track);
-        //       }
-        //     });
-
-        //     return stream;
-        //   })
-        //   .catch((error) =>
-        //   {
-        //     logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
-        //     logger.warn(`emit "getdisplaymediafailed" [error:%o]${JSON.stringify(error)}`);
-        //     this.emit('getdisplaymediafailed', error);
-        //     throw new Error('getDisplayMedia() failed');
-        //   });
       }
     }
 
@@ -19824,9 +19817,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendFloorRequest",
     value: function _sendFloorRequest() {
-      var floorRequest = this._bfcpUser.floorRequestMessage(this._transactionId, this._floorId);
-      this._dataChannelSend(floorRequest, this._transactionId);
+      var currentTransactionId = this._transactionId;
       this._transactionId++;
+      var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
+      return this._dataChannelSend(floorRequest, currentTransactionId);
     }
 
     /**
@@ -19835,9 +19829,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendHello",
     value: function _sendHello() {
-      var hello = this._bfcpUser.helloMessage(this._transactionId, this._floorId);
-      this._dataChannelSend(hello, this._transactionId);
+      var currentTransactionId = this._transactionId;
       this._transactionId++;
+      var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
+      return this._dataChannelSend(hello, currentTransactionId);
     }
 
     /**
@@ -19846,9 +19841,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendFloorRelease",
     value: function _sendFloorRelease() {
-      var floorRelease = this._bfcpUser.floorReleaseMessage(this._transactionId, this._floorRequestId);
-      this._dataChannelSend(floorRelease, this._transactionId);
+      var currentTransactionId = this._transactionId;
       this._transactionId++;
+      var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
+      this._dataChannelSend(floorRelease, currentTransactionId);
     }
 
     /**
@@ -22200,6 +22196,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
           _this34._localShareStream = null;
           _this34._localShareStreamLocallyGenerated = false;
+
+          // BFCP 释放资源
+          _this34._sendFloorRelease();
         }
       });
     }
@@ -22751,19 +22750,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
     }
 
-    // BFCP && DataChannel
+    /**
+     * BFCP && DataChannel
+     */
   }, {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
       var _this41 = this;
-      if (this.destroyed) return;
+      // 如果已经关闭则不再处理
+      if (!this._dataChannelReady) return;
       var data = event.data;
-      if (data instanceof ArrayBuffer) data = Buffer.from(data);
+      if (data instanceof ArrayBuffer) {
+        data = Buffer.from(data);
+      } else {
+        // TODO
+        return;
+      }
       try {
         var message = this._bfcpUser.receiveMessage(data);
         var response;
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
+          this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
         }
         console.warn('BFCP recv: ', message, message.commonHeader.transactionId, Date.now());
@@ -22805,75 +22813,78 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
         }
       } catch (error) {
+        // TODO
         console.warn('Error while receiving message.', error);
       }
     }
-  }, {
-    key: "_onChannelBufferedAmountLow",
-    value: function _onChannelBufferedAmountLow() {
-      // if (this.destroyed || !this._cb) return;
-      console.warn('ending backpressure: bufferedAmount %d', this._channel.bufferedAmount);
-      // const cb = this._cb;
-      // this._cb = null;
-      // cb(null);
-    }
-  }, {
-    key: "_onChannelOpen",
-    value: function _onChannelOpen() {
-      var _this42 = this;
-      if (this._dataChannelReady) return;
-      console.warn('on channel open');
-      this._dataChannelReady = true;
-      this._sendHello();
-      this._bfcpHeatbeatTimer = setInterval(function () {
-        _this42._sendHello();
-      }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
-    }
+
+    /**
+     * DC 关闭后清理
+     */
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
+      // DC 状态设置为未准备好
       this._dataChannelReady = false;
+      // 停止发送心跳
       clearInterval(this._bfcpHeatbeatTimer);
+      // TODO 输出控制台信息
       console.warn('on channel close');
     }
+
+    /**
+     * DC 发送消息
+     * @param {*} message
+     * @param {*} transactionId
+     * @returns
+     */
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this43 = this;
-      if (!this._dataChannelReady) {
-        return;
-      }
-      if (!this._dataChannelMsgs[transactionId]) {
-        this._dataChannelMsgs[transactionId] = {
-          retries: 0,
-          sendAt: Date.now(),
-          message: message,
-          received: false
-        };
-      }
-      var messageState = this._dataChannelMsgs[transactionId];
-
-      // 如果已经超出最大重试次数，则报告错误
-      if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
-        console.warn("Max retry attempts reached for messageId: ".concat(transactionId));
-        return;
-      }
-
-      // 发送消息
-      console.warn("BFCP send: ".concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-
-      // 设置定时器等待响应
-      setTimeout(function () {
-        // 如果没有收到响应，则重试
-        if (messageState && !messageState.received) {
-          console.warn('retry: ', Math.pow(2, messageState.retries) * 500, messageState.received, transactionId, Date.now());
-          messageState.retries++;
-          // 增加重试的间隔
-          _this43._dataChannelSend(messageState.message, transactionId);
+      var _this42 = this;
+      return new Promise(function (resolve, reject) {
+        if (!_this42._dataChannelReady) {
+          // TODO
+          reject(new Error('Data channel is not ready'));
+          return;
         }
-      }, Math.pow(2, messageState.retries) * 500);
-      this._dataChannel.send(messageState.message);
-      console.warn('BFCP send msg: ', this._bfcpUser.receiveMessage(messageState.message));
+
+        // 保存发送的处理中的 DC 消息，收到响应后删除
+        if (!_this42._dataChannelMsgs[transactionId]) {
+          _this42._dataChannelMsgs[transactionId] = {
+            retries: 0,
+            sendAt: Date.now(),
+            message: message,
+            received: false,
+            resolve: resolve,
+            reject: reject
+          };
+        }
+        var messageState = _this42._dataChannelMsgs[transactionId];
+
+        // 如果已经超出最大重试次数，则报告错误
+        if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
+          // TODO
+          console.warn("Max retry attempts reached for messageId: ".concat(transactionId));
+          reject(new Error("Max retry attempts reached for messageId: ".concat(transactionId)));
+          return;
+        }
+
+        // TODO 打印发送消息次数及tid，时间
+        console.warn("BFCP send: ".concat(_this42._bfcpUser.receiveMessage(messageState.message), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+
+        // DC 消息超时重试
+        setTimeout(function () {
+          // 如果没有收到响应，则重试
+          if (messageState && !messageState.received) {
+            messageState.retries++;
+
+            // 增加重试的间隔
+            _this42._dataChannelSend(messageState.message, transactionId);
+          }
+        }, Math.pow(2, messageState.retries) * 500);
+        _this42._dataChannel.send(messageState.message);
+      });
     }
 
     /**
@@ -22882,44 +22893,59 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this44 = this;
+      var _this43 = this;
       logger.debug('initDataChannel()');
+
+      // 内部变量
+      var datachannel;
+
+      /**
+       * 异常处理
+       */
       if (event && event.channel) {
-        this._dataChannel = event.channel;
+        this._dataChannel = datachannel = event.channel;
       } else {
         // 如果是DataChannel的发起方则创建DataChannel
-        this._dataChannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
+        this._dataChannel = datachannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
       }
-      if (!this._dataChannel) {
-        // In some situations `pc.createDataChannel()` returns `undefined` (in wrtc),
-        // which is invalid behavior. Handle it gracefully.
-        // See: https://github.com/feross/simple-peer/issues/163
+      // 特殊场景存在createDataChannel不成功的问题 See: https://github.com/feross/simple-peer/issues/163
+      if (!datachannel) {
         logger.error('Data channel event is missing `channel` property');
         return;
       }
-      this._dataChannel.binaryType = 'arraybuffer';
-      if (typeof this._dataChannel.bufferedAmountLowThreshold === 'number') {
-        this._dataChannel.bufferedAmountLowThreshold = CRTC_C.MAX_BUFFERED_AMOUNT;
-      }
-      this._dataChannelName = this._dataChannel.label;
-      this._dataChannel.onmessage = function (ev) {
-        _this44._onChannelMessage(ev);
+
+      /**
+       * 设置DC默认属性
+       */
+      datachannel.binaryType = 'arraybuffer';
+      this._dataChannelName = datachannel.label;
+
+      /**
+       * 事件监听
+       */
+      datachannel.onmessage = function (ev) {
+        // 收到数据
+        _this43._onChannelMessage(ev);
       };
-      this._dataChannel.onbufferedamountlow = function () {
-        console.warn('onbufferedamountlow.');
-        // this._onChannelBufferedAmountLow();
+      datachannel.onopen = function () {
+        // 端口状态处于 established 的时候会触发
+        console.warn('datachannel opened.');
+        _this43._dataChannelReady = true;
+        // 开始发送心跳消息
+        _this43._sendHello();
+        _this43._bfcpHeatbeatTimer = setInterval(function () {
+          _this43._sendHello();
+        }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
-      this._dataChannel.onopen = function () {
-        _this44._onChannelOpen();
+      datachannel.onclose = function () {
+        // 底层链路被关闭的时候会触发
+        _this43._onChannelClose();
       };
-      this._dataChannel.onclose = function () {
-        _this44._onChannelClose();
-      };
-      this._dataChannel.onerror = function (ev) {
+      datachannel.onerror = function (ev) {
+        // 遇到错误的时候会触发
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this44._dataChannelReady = false;
+        _this43._dataChannelReady = false;
         console.warn('data err: ', err);
-        // this.destroy(errCode(err, 'ERR_DATA_CHANNEL'));
       };
 
       // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
@@ -22927,14 +22953,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var isClosing = false;
       this._closingInterval = setInterval(function () {
         // No "onclosing" event
-        if (_this44._dataChannel && _this44._dataChannel.readyState === 'closing') {
-          if (isClosing) _this44._onChannelClose(); // closing timed out: equivalent to onclose firing
+        if (datachannel && datachannel.readyState === 'closing') {
+          // closing timed out: equivalent to onclose firing
+          if (isClosing) _this43._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
         }
       }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
-      return this._dataChannel;
+      return datachannel;
     }
   }], [{
     key: "C",
@@ -38374,7 +38401,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250212",
+  "version": "1.10.9-beta.250215",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
