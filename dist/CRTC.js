@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250215.20252161033
+ * CRTC v1.10.9-beta.250215.20252171729
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -28229,6 +28229,7 @@ exports.getStreams = function (pc, type) {
   var result;
   if (type === 'remote' && RTCPeerConnection.prototype.getReceivers) {
     pc.getReceivers().forEach(function (receiver) {
+      console.warn('receiver: ', receiver.track);
       if (receiver.track && receiver.track.readyState === 'live') {
         mediaStream.addTrack(receiver.track);
         if (receiver.track.kind === 'audio') {
