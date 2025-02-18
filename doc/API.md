@@ -41,6 +41,7 @@ options
 | extraHeaders     | 呼叫时可以自定义携带的数据，示例：[ 'X-Data: dGVzdCB4LWRhdGE=' ]                                                             |
 | mediaStream      | 发送给远端的自定义媒体流，自定义媒体流必须包含音频或视                                                                       |
 | cMode            | 兼容模式 （如：'paphone'为兼容paphone）                                                                                      |
+| extraFeatures            | 扩展功能数组;例如 当前通话需要支持BFCP：[ 'BFCP' ]                                       |
 
 #### 事件
 
@@ -64,7 +65,9 @@ options
 | originator | "remote" 新会话由远端生成                                                         |
 | session    | 会话的 CRTC. RTCSession 实例                                                      |
 | request    | 收到的 INVITE 请求的实例，可以获取呼叫携带数据，示例：request.getHeader('X-Data') |
+
 呼出时
+
 | 字段名     | 说明                                                                            |
 | ---------- | ------------------------------------------------------------------------------- |
 | originator | "local" 新会话由本地生成                                                        |
@@ -153,6 +156,7 @@ options
 | mode                                      | 通话模式变化，如：音频模式切换到视频模式或视频模式切换到音频模式                                                                    |
 | cameraChanged                             | 摄像头切换完成后触发                                                                                                                |
 | videoTrackState<sup>3</sup>               | 本端video状态变化事件，当video状态变化时触发                                                                                        |
+| remoteShared<sup>4</sup>               | 远端分享或停止分享后触发                                                                                        |
 
 标注 1：
 data 字段
@@ -173,6 +177,12 @@ data 字段
 | ------------------------------ | -------------------------------------------------------- |
 | track                          | 视频媒体track，可以获取track实时属性                     |
 | muted/readyState/label/enabled | muted:一般非主动释放摄像头时该属性会变为true，视频会中断 |
+
+标注 4：
+data 字段
+| 字段名                         | 说明                                                     |
+| ------------------------------ | -------------------------------------------------------- |
+| streamIndex                          | 共享为共享流的索引值，停止共享为 false                     |
 
 ## Module
 

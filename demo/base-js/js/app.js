@@ -17,7 +17,7 @@ let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
 
-let payload;
+// let payload;
 
 // 远端客户端UA
 // let remoteUA;
@@ -349,6 +349,32 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
+    * remoteShared
+    *
+    * 渲染或者停止渲染远端分享的视频媒体
+    *
+    * @fires 远端分享或停止分享后触发
+    *
+    * @type {object}
+    * @property {number||boolean} streamIndex - 共享为共享流的索引值，停止共享为 false
+    */
+  e.session.on('remoteShared', function(d)
+  {
+    if (d.streamIndex)
+    {
+      document.querySelector('#remoteVideo2').srcObject = Utils.getStreams(e.session.connection, 'slides', d.streamIndex);
+      document.querySelector('#remoteVideo2').play();
+
+      document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
+    }
+    else
+    {
+      document.querySelector('#remoteVideo2').classList = 'hide';
+    }
+  });
+
+
+  /**
     * peerconnection:iceConnectionState
     *
     * 反应当前的媒体连接状态变化，如果checking后长时间没有connected则说明媒体异常
@@ -635,15 +661,15 @@ ua.on('newRTCSession', function(e)
       if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
       {
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
-        document.querySelector('#remoteVideo2').play();
+        // document.querySelector('#remoteVideo2').play();
 
         document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
-        document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
+        // document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
       }
       else
       {
         document.querySelector('#remoteVideo').classList = 'h-100';
-        document.querySelector('#remoteVideo2').classList = 'hide';
+        // document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
   });
@@ -974,7 +1000,7 @@ async function call(type, direction)
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
-    extraFeatures : [ 'paphone', 'BFCP' ],
+    extraFeatures : [ 'BFCP' ],
     pcConfig      : pcConfig
   };
 

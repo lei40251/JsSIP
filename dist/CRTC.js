@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250215.20252171729
+ * CRTC v1.10.9-beta.250215.20252181544
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17885,7 +17885,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpUser = new BFCPUser(Math.floor(Math.random() * 9999) + 1, Math.floor(Math.random() * 999999) + 1);
     _this._floorId = 2; // TODO SDP协商获得值
     _this._floorctrl = 'c-s';
-    _this._mStream = null;
+    _this._mStream = null; // 本地流的 mid
+    _this._mstrm = null; // 远端流的 label
+    _this._transceiverIndex = null;
     _this._bfcpUserId = null;
     _this._floorRequestId = null;
     _this._confId = null; // SDP协商获得值
@@ -21549,6 +21551,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._floorctrl = response.body.match(/a=floorctrl:([a-z-]+)/) === 's-only' ? 'c-s' : 'c-only';
             this._confId = response.body.match(/a=confid:(\d+)/);
             this._bfcpUserId = response.body.match(/a=userid:(\d+)/);
+            this._mstrm = response.body.match(/mstrm:(\d+)/);
 
             /**
              * 音视频切换相关
@@ -21719,9 +21722,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 添加BFCP所需属性
         sdp = sdp.replace('UDP/DTLS/SCTP/BFCP *\r\n', "UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n"));
-        // a=floorctrl:c-only
-        // a=floorid:2 m-stream:3
-
         var e = {
           originator: 'local',
           type: 'offer',
@@ -21781,6 +21781,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           onFailed.call(this);
           return;
         }
+
+        // BFCP 控制的媒体 transceiver 索引号
+        this._transceiverIndex = this._findLabelIndexByMstrm(response.sdp);
 
         /**
          * 音视频切换相关
@@ -22790,6 +22793,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._dataChannel.send(response);
               break;
             }
+          case Primitive.FloorStatus:
+            {
+              if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] === 3) {
+                this.emit('remoteShared', {
+                  streamIndex: this._transceiverIndex
+                });
+              } else if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] === 6) {
+                this.emit('remoteShared', {
+                  streamIndex: false
+                });
+              }
+              break;
+            }
           case Primitive.FloorRequest:
             {
               var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
@@ -22885,6 +22901,116 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }, Math.pow(2, messageState.retries) * 500);
         _this42._dataChannel.send(messageState.message);
       });
+    }
+
+    /**
+     * 从sdp解析出指定content的索引
+     */
+  }, {
+    key: "_findLabelIndexByMstrm",
+    value: function _findLabelIndexByMstrm(sdp) {
+      // Step 0: 输入参数校验
+      if (typeof sdp !== 'string' || !sdp.trim()) {
+        throw new Error('Invalid SDP input: SDP must be a non-empty string.');
+      }
+
+      // Step 1: 解析 SDP 并生成 labelMap
+      var lines = sdp.split('\n');
+      var labelMap = [];
+      var currentMediaType = null;
+      var currentContent = null;
+      try {
+        var _iterator18 = _createForOfIteratorHelper(lines),
+          _step18;
+        try {
+          for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
+            var line = _step18.value;
+            if (line.startsWith('m=')) {
+              // 提取媒体类型（如 audio、video）
+              var mediaType = line.split(' ')[0].substring(2);
+
+              // 只处理 audio 和 video 类型
+              if (mediaType === 'audio' || mediaType === 'video') {
+                currentMediaType = mediaType;
+                currentContent = 'unknown'; // 默认内容类型
+
+                // 将当前媒体类型添加到数组中
+                labelMap.push({
+                  label: null,
+                  // 默认没有 label
+                  mediaType: currentMediaType,
+                  content: currentContent
+                });
+              } else {
+                currentMediaType = null;
+                currentContent = null;
+              }
+            } else if (currentMediaType && line.startsWith('a=content:')) {
+              // 提取内容类型（如 main、slides）
+              currentContent = line.split(':')[1];
+
+              // 更新最后一个元素的内容类型
+              if (labelMap.length > 0) {
+                labelMap[labelMap.length - 1].content = currentContent;
+              }
+            } else if (currentMediaType && line.startsWith('a=label:')) {
+              // 提取 label 值
+              var label = line.split(':')[1];
+
+              // 更新最后一个元素的 label
+              if (labelMap.length > 0) {
+                labelMap[labelMap.length - 1].label = label;
+              }
+            }
+          }
+        } catch (err) {
+          _iterator18.e(err);
+        } finally {
+          _iterator18.f();
+        }
+      } catch (error) {
+        throw new Error("Error parsing SDP: ".concat(error.message));
+      }
+
+      // Step 2: 提取所有 mstrm 值并找到对应的 label 索引
+      try {
+        var _loop = function _loop() {
+            if (_line.includes('mstrm:')) {
+              // 提取 mstrm 的值
+              var mstrmMatch = _line.match(/mstrm:(\d+)/);
+              if (mstrmMatch) {
+                var mstrm = mstrmMatch[1];
+
+                // 在 labelMap 中查找对应的 label 索引
+                var index = labelMap.findIndex(function (item) {
+                  return item.label === mstrm;
+                });
+                if (index !== -1) {
+                  return {
+                    v: index
+                  }; // 返回第一个匹配的索引
+                }
+              }
+            }
+          },
+          _ret;
+        var _iterator19 = _createForOfIteratorHelper(lines),
+          _step19;
+        try {
+          for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
+            var _line = _step19.value;
+            _ret = _loop();
+            if (_ret) return _ret.v;
+          }
+        } catch (err) {
+          _iterator19.e(err);
+        } finally {
+          _iterator19.f();
+        }
+      } catch (error) {
+        throw new Error("Error matching mstrm to label: ".concat(error.message));
+      }
+      return -1; // 如果未找到，返回 -1
     }
 
     /**
@@ -28217,12 +28343,44 @@ exports.getMicrophones = function () {
 };
 
 /**
+ * 返回音频输出设备列表
+ *
+ * 该接口不支持在 http 协议下使用，请使用 https 协议部署您的网站
+ * <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#Privacy_and_security"> Privacy and security </a>。<br>
+ * '出于安全的考虑，在用户未授权摄像头或麦克风访问权限前，label 及 deviceId 字段可能都是空的。<br>
+ * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
+ *
+ */
+exports.getSpeaker = function () {
+  var speakers = [];
+  return Promise.resolve().then(function () {
+    return navigator.mediaDevices.enumerateDevices();
+  }).then(function (devices) {
+    return devices.filter(function (dev) {
+      return dev.kind === 'audiooutput';
+    });
+  }).then(function (devices) {
+    devices.forEach(function (speaker, index) {
+      var label = "speaker ".concat(index + 1);
+      speakers.push({
+        kind: speaker.kind,
+        label: speaker.label == '' ? label : speaker.label,
+        deviceId: speaker.deviceId
+      });
+    });
+    return speakers;
+  })["catch"](function (e) {
+    return e;
+  });
+};
+
+/**
  * 获取 RTCPeerConnection 收发的音视频媒体流
  *
  * @param {RTCPeerConnection} pc - 要操作的 RTCPeerConnection
  * @param {string} type - 'local' 发送的媒体流；'remote' 接收的媒体流
  */
-exports.getStreams = function (pc, type) {
+exports.getStreams = function (pc, type, streamIndex) {
   var videoStream = new MediaStream();
   var audioStream = new MediaStream();
   var mediaStream = new MediaStream();
@@ -28244,6 +28402,16 @@ exports.getStreams = function (pc, type) {
       videoStream: videoStream,
       mediaStream: mediaStream
     };
+  } else if (type === 'slides' && RTCPeerConnection.prototype.getReceivers) {
+    if (streamIndex) {
+      var receivers = pc.getReceivers();
+      mediaStream.addTrack(receivers[streamIndex].track);
+      videoStream.addTrack(receivers[streamIndex].track);
+      result = {
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
+    }
   } else if (type === 'local' && RTCPeerConnection.prototype.getSenders) {
     pc.getSenders().forEach(function (sender) {
       if (sender.track && sender.track.readyState === 'live') {
