@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250215.20252181544
+ * CRTC v1.10.9-beta.250219.20252191754
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17880,21 +17880,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._dataChannelConfig = {};
     _this._dataChannelMsgs = {};
 
-    // BFCP
+    // 是否启用BFCP
     _this._enableBFCP = false;
-    _this._bfcpUser = new BFCPUser(Math.floor(Math.random() * 9999) + 1, Math.floor(Math.random() * 999999) + 1);
-    _this._floorId = 2; // TODO SDP协商获得值
+    // 用于解析BFCP消息的User对象
+    _this._bfcpUser = null;
+    // BFCP控制的floorId，SDP协商获得
+    _this._floorId = null;
+    // BFCP服务类型，默认c-s，根据SDP协商修改
     _this._floorctrl = 'c-s';
-    _this._mStream = null; // 本地流的 mid
-    _this._mstrm = null; // 远端流的 label
+    // 本端发送给BFCP服务器的流的mid
+    _this._mStream = null;
+    // 服务端发送给本端的流的label，根据SDP协商获得，用于获取远端辅流
+    _this._mstrm = null;
+    // 远端的辅流在PC中的transceiver索引号，根据前面label及SDP计算得到
     _this._transceiverIndex = null;
+    // SDP协商过程中远端给的userId
     _this._bfcpUserId = null;
+    // SDP协商过程中远端给的confId
+    _this._confId = null;
+    // 本端发送floorRequest收到响应里面的，用于后续释放资源
     _this._floorRequestId = null;
-    _this._confId = null; // SDP协商获得值
-    _this._transactionId = Math.floor(Math.random() * 9999) + 1; // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    _this._transactionId = Math.floor(Math.random() * 99) + 1;
+    // BFCP的心跳定时器
     _this._bfcpHeatbeatTimer = null;
-    // this._maxRetryAttempts = 4; // 最多重发4次
-
+    // BFCP协商时的视频轨道，用于后面替换
+    _this._bfcpVideoTrack = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -18149,14 +18160,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
-
-      // 是否启用BFCP
-      if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
-        this._enableBFCP = true;
-      }
-
-      // 定制模式
-      this._customizedMode = options.cMode;
+      var extraFeatures = options.extraFeatures || null;
       this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
         audio: true,
         video: true
@@ -18195,6 +18199,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         return false;
       }
+
+      // 是否启用BFCP
+      if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+        this._enableBFCP = true;
+        this._bfcpUser = new BFCPUser(this._ua.contact.uri.user, target.user);
+      }
+
+      // 定制模式
+      this._customizedMode = options.cMode;
 
       // Session Timers.
       if (this._sessionTimers.enabled) {
@@ -19135,173 +19148,231 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     )
   }, {
     key: "share",
-    value: function share(type, id, assembly, dual) {
-      var _this8 = this;
-      logger.debug('share()');
+    value: (function () {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, id, assembly, dual) {
+        var _this8 = this;
+        var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
+            case 0:
+              renderHtml = function _renderHtml(canvas, ctx) {
+                assembly(document.querySelector(id), {
+                  allowTaint: true,
+                  logging: false
+                }).then(function (cvs) {
+                  canvas.width = cvs.width;
+                  canvas.height = cvs.height;
+                  ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
+                }).then(function () {
+                  renderHtml(canvas, ctx);
+                });
+              };
+              logger.debug('share()');
 
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      var timer;
-      var element = document.querySelector(id);
-
-      // 分享页面元素
-      function renderHtml(canvas, ctx) {
-        assembly(document.querySelector(id), {
-          allowTaint: true,
-          logging: false
-        }).then(function (cvs) {
-          canvas.width = cvs.width;
-          canvas.height = cvs.height;
-          ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
-        }).then(function () {
-          renderHtml(canvas, ctx);
-        });
-      }
-
-      // 分享视频
-      if (type === 'video') {
-        logger.debug('share video');
-        this._localShareStream = element.captureStream(0);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, element.captureStream(0));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              // 双流必须开启BFCP支持
+              if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
+                _context4.next = 4;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享图片
-      else if (type === 'pic') {
-        logger.debug('share pic');
-        if (timer) {
-          clearInterval(timer);
-        }
-        var canvas = document.createElement('canvas');
-        canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
-        canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
-        var ctx = canvas.getContext('2d');
-        timer = setInterval(function () {
-          // eslint-disable-next-line max-len
-          ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
-        }, 100);
-        this._localShareStream = canvas.captureStream(15);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, canvas.captureStream(15));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              throw new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP));
+            case 4:
+              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
+                _context4.next = 6;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享页面元素
-      else if (type === 'html') {
-        logger.debug('share html');
-        if (!assembly) {
-          return;
-        }
-        var _canvas = document.createElement('canvas');
-        _canvas.width = 1;
-        _canvas.height = 1;
-        var _ctx = _canvas.getContext('2d');
-        renderHtml(_canvas, _ctx);
-        this._localShareStream = _canvas.captureStream(15);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, _canvas.captureStream(15));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              throw new Exceptions.InvalidStateError(this._status);
+            case 6:
+              element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
+              _context4.prev = 7;
+              if (!this._enableBFCP) {
+                _context4.next = 17;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享屏幕
-      else if (type === 'screen') {
-        logger.debug('share screen');
-        return this._sendFloorRequest().then(function (response) {
-          console.warn('response: ', response);
-          if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] != 3) {
-            _this8._floorRequestId = response.getAttribute('FloorRequestInformation').content[0];
-            return Promise.reject("not accept: ".concat(response.getAttribute('FloorRequestInformation').content[1].content[1].content[0]));
-          }
-        }).then(function () {
-          // 判断浏览器是否兼容获取屏幕分享
-          if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
-            logger.warn('getDisplayMedia is not supported');
-            _this8.emit('getdisplaymediafailed');
-          }
-          _this8._localShareStreamLocallyGenerated = true;
+              _context4.next = 11;
+              return this._sendFloorRequest();
+            case 11:
+              floorResponse = _context4.sent;
+              // Log the response for debugging purposes
+              logger.debug('Floor request response:', floorResponse);
+              status = floorResponse.getAttribute('FloorRequestInformation').content[1].content[1].content[0];
+              if (!(status != RequestStatusValue.Granted)) {
+                _context4.next = 16;
+                break;
+              }
+              throw new Error("Floor request not accepted. Status: ".concat(status));
+            case 16:
+              this._floorRequestId = floorResponse.getAttribute('FloorRequestInformation').content[0];
+            case 17:
+              _context4.next = 23;
+              break;
+            case 19:
+              _context4.prev = 19;
+              _context4.t0 = _context4["catch"](7);
+              logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
+              throw new Error("Floor request failed: ".concat(_context4.t0.message || 'Unknown error'));
+            case 23:
+              if (!(type === 'video')) {
+                _context4.next = 31;
+                break;
+              }
+              logger.debug('share video');
+              this._localShareStream = element.captureStream(0);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  // this._localShareRTPSender = this._connection.addTrack(track, element.captureStream(0));
+                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                } else {
+                  var _sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender.replaceTrack(track);
+                }
+              });
+              _context4.next = 65;
+              break;
+            case 31:
+              if (!(type === 'pic')) {
+                _context4.next = 45;
+                break;
+              }
+              logger.debug('share pic');
+              if (timer) {
+                clearInterval(timer);
+              }
+              canvas = document.createElement('canvas');
+              canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
+              canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
+              ctx = canvas.getContext('2d');
+              timer = setInterval(function () {
+                // eslint-disable-next-line max-len
+                ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
+              }, 100);
+              this._localShareStream = canvas.captureStream(15);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  // this._localShareRTPSender = this._connection.addTrack(track, canvas.captureStream(15));
+                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
 
-          // 分享屏幕 默认帧率 5
-          return navigator.mediaDevices.getDisplayMedia({
-            video: {
-              frameRate: 5
-            }
-          }).then(function (stream) {
-            _this8._localShareRTPSender = null;
-            _this8._localShareStream = stream;
-            _this8._streamInactiveHandle(dual);
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                } else {
+                  var _sender2 = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender2.replaceTrack(track);
+                }
+              });
+              _context4.next = 65;
+              break;
+            case 45:
+              if (!(type === 'html')) {
+                _context4.next = 60;
+                break;
+              }
+              logger.debug('share html');
+              if (assembly) {
+                _context4.next = 49;
+                break;
+              }
+              return _context4.abrupt("return");
+            case 49:
+              _canvas = document.createElement('canvas');
+              _canvas.width = 1;
+              _canvas.height = 1;
+              _ctx = _canvas.getContext('2d');
+              renderHtml(_canvas, _ctx);
+              this._localShareStream = _canvas.captureStream(15);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  // this._localShareRTPSender = this._connection.addTrack(track, canvas.captureStream(15));
+                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                } else {
+                  var _sender3 = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender3.replaceTrack(track);
+                }
+              });
+              _context4.next = 65;
+              break;
+            case 60:
+              if (!(type === 'screen')) {
+                _context4.next = 65;
+                break;
+              }
+              logger.debug('share screen');
 
-            // 替换流方式分享屏幕
-            stream.getVideoTracks().forEach(function (track) {
-              if (dual) {
-                _this8._localShareRTPSender = _this8._connection.addTrack(track, stream);
-                _this8.renegotiate({
-                  rtcOfferConstraints: {
-                    iceRestart: true
+              // 判断浏览器是否兼容获取屏幕分享
+              if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
+                logger.warn('getDisplayMedia is not supported');
+                this.emit('getdisplaymediafailed');
+              }
+              this._localShareStreamLocallyGenerated = true;
+
+              // 分享屏幕 默认帧率 5
+              return _context4.abrupt("return", navigator.mediaDevices.getDisplayMedia({
+                video: {
+                  frameRate: 5
+                }
+              }).then(function (stream) {
+                _this8._localShareRTPSender = null;
+                _this8._localShareStream = stream;
+                _this8._streamInactiveHandle(dual);
+
+                // 替换流方式分享屏幕
+                stream.getVideoTracks().forEach(function (track) {
+                  if (dual) {
+                    // this._localShareRTPSender = this._connection.addTrack(track, stream);
+                    // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+                    var sender = _this8._connection.getSenders().find(function (s) {
+                      return s.track == _this8._bfcpVideoTrack;
+                    });
+                    sender.replaceTrack(track);
+                  } else {
+                    var _sender4 = _this8._connection.getSenders().find(function (s) {
+                      return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                    });
+                    _sender4.replaceTrack(track);
                   }
                 });
-              } else {
-                var sender = _this8._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                });
-                sender.replaceTrack(track);
-              }
-            });
-            return stream;
-          })["catch"](function (error) {
-            logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
-            logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this8.emit('getdisplaymediafailed', error);
-            throw new Error('getDisplayMedia() failed');
-          });
-        });
+                return stream;
+              })["catch"](function (error) {
+                logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+                logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                _this8.emit('getdisplaymediafailed', error);
+                throw new Error('getDisplayMedia() failed');
+              }));
+            case 65:
+            case "end":
+              return _context4.stop();
+          }
+        }, _callee4, this, [[7, 19]]);
+      }));
+      function share(_x3, _x4, _x5, _x6) {
+        return _share.apply(this, arguments);
       }
-    }
-
+      return share;
+    }()
     /**
      * 停止分享媒体
      */
+    )
   }, {
     key: "unShare",
     value: function unShare() {
@@ -19819,6 +19890,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendFloorRequest",
     value: function _sendFloorRequest() {
+      logger.debug('sendFloorRequest()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
       var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
@@ -19831,6 +19903,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendHello",
     value: function _sendHello() {
+      logger.debug('sendHello()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
       var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
@@ -19843,10 +19916,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendFloorRelease",
     value: function _sendFloorRelease() {
+      logger.debug('sendFloorRelease()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
       var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
-      this._dataChannelSend(floorRelease, currentTransactionId);
+      return this._dataChannelSend(floorRelease, currentTransactionId);
     }
 
     /**
@@ -21330,12 +21404,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-          while (1) switch (_context4.prev = _context4.next) {
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               if (!(_this28._status === C.STATUS_TERMINATED)) {
-                _context4.next = 2;
+                _context5.next = 2;
                 break;
               }
               throw new Error('terminated');
@@ -21359,15 +21433,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
-              return _context4.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+              return _context5.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
             case 7:
             case "end":
-              return _context4.stop();
+              return _context5.stop();
           }
-        }, _callee4);
+        }, _callee5);
       }))).then(function (desc) {
         if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -21547,11 +21621,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             // 获取响应中BFCP相关属性
-            this._floorId = response.body.match(/a=floorid:(\d+)/) || 5;
-            this._floorctrl = response.body.match(/a=floorctrl:([a-z-]+)/) === 's-only' ? 'c-s' : 'c-only';
-            this._confId = response.body.match(/a=confid:(\d+)/);
-            this._bfcpUserId = response.body.match(/a=userid:(\d+)/);
-            this._mstrm = response.body.match(/mstrm:(\d+)/);
+            this._floorId = (response.body.match(/a=floorid:(\d+)/) || [null, 5])[1];
+            // this._floorctrl = response.body.match(/a=floorctrl:([a-z-]+)/)[1] === 's-only' ? 'c-s' : 'c-only';
+            // this._confId = response.body.match(/a=confid:(\d+)/)[1];
+            // this._bfcpUserId = response.body.match(/a=userid:(\d+)/)[1];
+            // this._mstrm = response.body.match(/mstrm:(\d+)/)[1];
+
+            this._floorctrl = (response.body.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-s' : 'c-only';
+            this._confId = (response.body.match(/a=confid:(\d+)/) || [null, ''])[1];
+            this._bfcpUserId = (response.body.match(/a=userid:(\d+)/) || [null, ''])[1];
+            this._mstrm = (response.body.match(/mstrm:(\d+)/) || [null, ''])[1];
 
             /**
              * 音视频切换相关
@@ -21608,10 +21687,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+              _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-                  while (1) switch (_context5.prev = _context5.next) {
+                return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+                  while (1) switch (_context6.prev = _context6.next) {
                     case 0:
                       // Handle Session Timers.
                       _this29._handleSessionTimersInIncomingResponse(response);
@@ -21620,10 +21699,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this29._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context5.next = 6;
+                      _context6.next = 6;
                       return Utils.getMicrophones();
                     case 6:
-                      mics = _context5.sent;
+                      mics = _context6.sent;
                       if (_this29._replaceAudioTrack && (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1)) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this29._inviteMediaConstraints.audio || true,
@@ -21647,13 +21726,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       if (_this29._enableBFCP) {
                         _this29._bfcpVideoTrack = Utils.generateAnEmptyVideoTrack();
                         _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
-                        _this29._sendReinvite();
+                        // this._sendReinvite();
+                        _this29.renegotiate({
+                          rtcOfferConstraints: {
+                            iceRestart: true
+                          }
+                        });
                       }
                     case 9:
                     case "end":
-                      return _context5.stop();
+                      return _context6.stop();
                   }
-                }, _callee5);
+                }, _callee6);
               })))["catch"](function (error) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -21783,7 +21867,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // BFCP 控制的媒体 transceiver 索引号
-        this._transceiverIndex = this._findLabelIndexByMstrm(response.sdp);
+        this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
 
         /**
          * 音视频切换相关
@@ -22173,21 +22257,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this34._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
                 if (transeiver.sender.track.id === _this34._localShareStream.getTracks()[0].id) {
-                  if (!transeiver.stopped) {
-                    transeiver.direction = 'inactive';
-                  }
-                  transeiver.sender.track.stop();
+                  transeiver.sender.replaceTrack(_this34._bfcpVideoTrack);
                 }
               }
             });
             _this34._localShareStream = null;
             _this34._localShareStreamLocallyGenerated = false;
-            _this34._connection.removeTrack(_this34._localShareRTPSender);
-            _this34.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
-              }
-            });
+
+            // BFCP 释放资源
+            _this34._sendFloorRelease();
           } else {
             _this34._localMediaStream.getVideoTracks().forEach(function (track) {
               var sender = _this34._connection.getSenders().find(function (s) {
@@ -22199,9 +22277,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
           _this34._localShareStream = null;
           _this34._localShareStreamLocallyGenerated = false;
-
-          // BFCP 释放资源
-          _this34._sendFloorRelease();
         }
       });
     }
@@ -22756,81 +22831,155 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     /**
      * BFCP && DataChannel
      */
+
+    /**
+     * 处理 Hello 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleHelloMessage",
+    value: function _handleHelloMessage(message) {
+      logger.info("BFCP send HACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      var response = this._bfcpUser.helloAckMessage(message);
+      this._sendDataChannelMessage(response);
+    }
+
+    /**
+     * 处理 FloorRequestStatus 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorRequestStatusMessage",
+    value: function _handleFloorRequestStatusMessage(message) {
+      logger.info("BFCP send FloorRequestStatusACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      var response = this._bfcpUser.floorRequestStatusAckMessage(message);
+      this._sendDataChannelMessage(response);
+    }
+
+    /**
+     * 处理 FloorStatus 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorStatusMessage",
+    value: function _handleFloorStatusMessage(message) {
+      var floorStatus = message.getAttribute('FloorRequestInformation').content[1].content[1].content[0];
+
+      // 根据状态触发事件
+      if (floorStatus === RequestStatusValue.Granted) {
+        this.emit('remoteShared', {
+          streamIndex: this._transceiverIndex
+        });
+      } else if (floorStatus === RequestStatusValue.Released) {
+        this.emit('remoteShared', {
+          streamIndex: false
+        });
+      } else {
+        logger.warn("Unknown floor status: ".concat(floorStatus));
+      }
+    }
+
+    /**
+     * 处理 FloorRequest 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorRequestMessage",
+    value: function _handleFloorRequestMessage(message) {
+      var _this41 = this;
+      var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
+      if (this.listeners('floorRequest').length === 0) {
+        // 自动接受请求
+        var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+        this._sendDataChannelMessage(response, message.commonHeader.transactionId);
+      } else {
+        // 触发事件，允许外部处理
+        this.emit('floorRequest', {
+          message: message,
+          accept: function accept() {
+            var response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this41._sendDataChannelMessage(response, message.commonHeader.transactionId);
+          },
+          reject: function reject() {
+            var response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this41._sendDataChannelMessage(response, message.commonHeader.transactionId);
+          }
+        });
+      }
+    }
+
+    /**
+     * 发送消息到数据通道
+     * @param {Buffer} message - 要发送的消息
+     * @param {number} [transactionId] - 可选的事务 ID
+     */
+  }, {
+    key: "_sendDataChannelMessage",
+    value: function _sendDataChannelMessage(message, transactionId) {
+      if (transactionId) {
+        logger.info("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
+      }
+      this._dataChannel.send(message);
+    }
+
+    /**
+     * 处理数据通道接收到的消息。
+     *
+     * @param {Object} event - 数据通道消息事件对象。
+     * @param {ArrayBuffer|string} event.data - 接收到的消息数据，通常为 ArrayBuffer 类型。
+     *
+     * 该方法会解析消息并根据消息类型执行相应逻辑。如果数据通道未准备好或消息格式不正确，则忽略处理。
+     */
   }, {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
-      var _this41 = this;
-      // 如果已经关闭则不再处理
-      if (!this._dataChannelReady) return;
+      logger.debug('onChannelMessage()');
+
+      // 如果数据通道未准备好，则忽略消息
+      if (!this._dataChannelReady) {
+        logger.warn('onChannelMessage(): Data channel is not ready, ignoring message.');
+        return;
+      }
       var data = event.data;
-      if (data instanceof ArrayBuffer) {
-        data = Buffer.from(data);
-      } else {
-        // TODO
+
+      // 确保接收到的数据是 ArrayBuffer 类型
+      if (!(data instanceof ArrayBuffer)) {
+        logger.warn('onChannelMessage(): Received non-ArrayBuffer message, ignoring.');
         return;
       }
       try {
-        var message = this._bfcpUser.receiveMessage(data);
-        var response;
+        // 将 ArrayBuffer 转换为 Buffer 并解析消息
+        var bufferData = Buffer.from(data);
+        var message = this._bfcpUser.receiveMessage(bufferData);
+        logger.info("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+
+        // 处理已注册的事务消息
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
         }
-        console.warn('BFCP recv: ', message, message.commonHeader.transactionId, Date.now());
+
+        // 根据消息类型执行相应逻辑
         switch (message.commonHeader.primitive) {
           case Primitive.Hello:
-            response = this._bfcpUser.helloAckMessage(message);
-            console.warn('BFCP send HACK:', message.commonHeader.transactionId, Date.now());
-            this._dataChannel.send(response);
+            this._handleHelloMessage(message);
             break;
           case Primitive.FloorRequestStatus:
-            {
-              response = this._bfcpUser.floorRequestStatusAckMessage(message);
-              // this._dataChannelSend(response, this._transactionId);
-              console.warn('BFCP send FloorRequestStatusACK:', message.commonHeader.transactionId, Date.now());
-              console.warn('message: ', message);
-              this._dataChannel.send(response);
-              break;
-            }
+            this._handleFloorRequestStatusMessage(message);
+            break;
           case Primitive.FloorStatus:
-            {
-              if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] === 3) {
-                this.emit('remoteShared', {
-                  streamIndex: this._transceiverIndex
-                });
-              } else if (response.getAttribute('FloorRequestInformation').content[1].content[1].content[0] === 6) {
-                this.emit('remoteShared', {
-                  streamIndex: false
-                });
-              }
-              break;
-            }
+            this._handleFloorStatusMessage(message);
+            break;
           case Primitive.FloorRequest:
-            {
-              var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
-              if (this.listeners('floorRequest').length === 0) {
-                response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                this._dataChannelSend(response, message.commonHeader.transactionId);
-              } else {
-                this.emit('floorRequest', {
-                  message: message,
-                  accept: function accept() {
-                    response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-                    _this41._dataChannelSend(response, message.commonHeader.transactionId);
-                  },
-                  reject: function reject() {
-                    response = _this41._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-                    _this41._dataChannelSend(response, message.commonHeader.transactionId);
-                  }
-                });
-              }
-              break;
-            }
+            this._handleFloorRequestMessage(message);
+            break;
+          default:
+            logger.warn("onChannelMessage(): Unknown primitive type: ".concat(message.commonHeader.primitive));
+            break;
         }
       } catch (error) {
-        // TODO
-        console.warn('Error while receiving message.', error);
+        logger.error('onChannelMessage(): Error while processing message.', error);
       }
     }
 
@@ -22840,12 +22989,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
+      logger.debug('Data channel closed');
+
       // DC 状态设置为未准备好
       this._dataChannelReady = false;
       // 停止发送心跳
       clearInterval(this._bfcpHeatbeatTimer);
-      // TODO 输出控制台信息
-      console.warn('on channel close');
+      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
     }
 
     /**
@@ -22858,10 +23008,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
       var _this42 = this;
+      logger.debug("dataChannelSend() ".concat(transactionId));
       return new Promise(function (resolve, reject) {
+        // DataChannel 未准备好
         if (!_this42._dataChannelReady) {
-          // TODO
-          reject(new Error('Data channel is not ready'));
+          reject(new Error("[DataChannel] Not ready for transactionId: ".concat(transactionId)));
           return;
         }
 
@@ -22880,14 +23031,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
-          // TODO
-          console.warn("Max retry attempts reached for messageId: ".concat(transactionId));
-          reject(new Error("Max retry attempts reached for messageId: ".concat(transactionId)));
+          reject(new Error("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId)));
           return;
         }
 
-        // TODO 打印发送消息次数及tid，时间
-        console.warn("BFCP send: ".concat(_this42._bfcpUser.receiveMessage(messageState.message), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        // 输出日志：发送消息次数及tid，时间
+        logger.debug("BFCP send: ".concat(_this42._bfcpUser.receiveMessage(messageState.message), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
 
         // DC 消息超时重试
         setTimeout(function () {
@@ -22901,116 +23050,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }, Math.pow(2, messageState.retries) * 500);
         _this42._dataChannel.send(messageState.message);
       });
-    }
-
-    /**
-     * 从sdp解析出指定content的索引
-     */
-  }, {
-    key: "_findLabelIndexByMstrm",
-    value: function _findLabelIndexByMstrm(sdp) {
-      // Step 0: 输入参数校验
-      if (typeof sdp !== 'string' || !sdp.trim()) {
-        throw new Error('Invalid SDP input: SDP must be a non-empty string.');
-      }
-
-      // Step 1: 解析 SDP 并生成 labelMap
-      var lines = sdp.split('\n');
-      var labelMap = [];
-      var currentMediaType = null;
-      var currentContent = null;
-      try {
-        var _iterator18 = _createForOfIteratorHelper(lines),
-          _step18;
-        try {
-          for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
-            var line = _step18.value;
-            if (line.startsWith('m=')) {
-              // 提取媒体类型（如 audio、video）
-              var mediaType = line.split(' ')[0].substring(2);
-
-              // 只处理 audio 和 video 类型
-              if (mediaType === 'audio' || mediaType === 'video') {
-                currentMediaType = mediaType;
-                currentContent = 'unknown'; // 默认内容类型
-
-                // 将当前媒体类型添加到数组中
-                labelMap.push({
-                  label: null,
-                  // 默认没有 label
-                  mediaType: currentMediaType,
-                  content: currentContent
-                });
-              } else {
-                currentMediaType = null;
-                currentContent = null;
-              }
-            } else if (currentMediaType && line.startsWith('a=content:')) {
-              // 提取内容类型（如 main、slides）
-              currentContent = line.split(':')[1];
-
-              // 更新最后一个元素的内容类型
-              if (labelMap.length > 0) {
-                labelMap[labelMap.length - 1].content = currentContent;
-              }
-            } else if (currentMediaType && line.startsWith('a=label:')) {
-              // 提取 label 值
-              var label = line.split(':')[1];
-
-              // 更新最后一个元素的 label
-              if (labelMap.length > 0) {
-                labelMap[labelMap.length - 1].label = label;
-              }
-            }
-          }
-        } catch (err) {
-          _iterator18.e(err);
-        } finally {
-          _iterator18.f();
-        }
-      } catch (error) {
-        throw new Error("Error parsing SDP: ".concat(error.message));
-      }
-
-      // Step 2: 提取所有 mstrm 值并找到对应的 label 索引
-      try {
-        var _loop = function _loop() {
-            if (_line.includes('mstrm:')) {
-              // 提取 mstrm 的值
-              var mstrmMatch = _line.match(/mstrm:(\d+)/);
-              if (mstrmMatch) {
-                var mstrm = mstrmMatch[1];
-
-                // 在 labelMap 中查找对应的 label 索引
-                var index = labelMap.findIndex(function (item) {
-                  return item.label === mstrm;
-                });
-                if (index !== -1) {
-                  return {
-                    v: index
-                  }; // 返回第一个匹配的索引
-                }
-              }
-            }
-          },
-          _ret;
-        var _iterator19 = _createForOfIteratorHelper(lines),
-          _step19;
-        try {
-          for (_iterator19.s(); !(_step19 = _iterator19.n()).done;) {
-            var _line = _step19.value;
-            _ret = _loop();
-            if (_ret) return _ret.v;
-          }
-        } catch (err) {
-          _iterator19.e(err);
-        } finally {
-          _iterator19.f();
-        }
-      } catch (error) {
-        throw new Error("Error matching mstrm to label: ".concat(error.message));
-      }
-      return -1; // 如果未找到，返回 -1
     }
 
     /**
@@ -28521,7 +28560,8 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
 };
 
 /**
- * 通过 canvas 画布获取视频流
+ * 生成空视频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
+ * canvas 生成还是浏览器api直接生成
  *
  * @param {MediaStream} stream - 要转换的媒体流
  */
@@ -28598,6 +28638,114 @@ exports.compatiblePayload = function (sdp) {
   });
   var newSdp = updatedLines.join('\n');
   return newSdp;
+};
+
+/**
+ * 从sdp解析出指定content的索引
+ */
+exports.findLabelIndexByMstrm = function (sdp) {
+  // Step 0: 输入参数校验
+  if (typeof sdp !== 'string' || !sdp.trim()) {
+    throw new Error('Invalid SDP input: SDP must be a non-empty string.');
+  }
+
+  // Step 1: 解析 SDP 并生成 labelMap
+  var lines = sdp.split('\n');
+  var labelMap = [];
+  var currentMediaType = null;
+  var currentContent = null;
+  try {
+    var _iterator4 = _createForOfIteratorHelper(lines),
+      _step4;
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var line = _step4.value;
+        if (line.startsWith('m=')) {
+          // 提取媒体类型（如 audio、video）
+          var mediaType = line.split(' ')[0].substring(2);
+
+          // 只处理 audio 和 video 类型
+          if (mediaType === 'audio' || mediaType === 'video') {
+            currentMediaType = mediaType;
+            currentContent = 'unknown'; // 默认内容类型
+
+            // 将当前媒体类型添加到数组中
+            labelMap.push({
+              label: null,
+              // 默认没有 label
+              mediaType: currentMediaType,
+              content: currentContent
+            });
+          } else {
+            currentMediaType = null;
+            currentContent = null;
+          }
+        } else if (currentMediaType && line.startsWith('a=content:')) {
+          // 提取内容类型（如 main、slides）
+          currentContent = line.split(':')[1];
+
+          // 更新最后一个元素的内容类型
+          if (labelMap.length > 0) {
+            labelMap[labelMap.length - 1].content = currentContent;
+          }
+        } else if (currentMediaType && line.startsWith('a=label:')) {
+          // 提取 label 值
+          var label = line.split(':')[1];
+
+          // 更新最后一个元素的 label
+          if (labelMap.length > 0) {
+            labelMap[labelMap.length - 1].label = label;
+          }
+        }
+      }
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
+  } catch (error) {
+    throw new Error("Error parsing SDP: ".concat(error.message));
+  }
+
+  // Step 2: 提取所有 mstrm 值并找到对应的 label 索引
+  try {
+    var _loop = function _loop() {
+        if (_line.includes('mstrm:')) {
+          // 提取 mstrm 的值
+          var mstrmMatch = _line.match(/mstrm:(\d+)/);
+          if (mstrmMatch) {
+            var mstrm = mstrmMatch[1];
+
+            // 在 labelMap 中查找对应的 label 索引
+            var index = labelMap.findIndex(function (item) {
+              return item.label === mstrm;
+            });
+            if (index !== -1) {
+              return {
+                v: index
+              }; // 返回第一个匹配的索引
+            }
+          }
+        }
+      },
+      _ret;
+    var _iterator5 = _createForOfIteratorHelper(lines),
+      _step5;
+    try {
+      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+        var _line = _step5.value;
+        _ret = _loop();
+        if (_ret) return _ret.v;
+      }
+    } catch (err) {
+      _iterator5.e(err);
+    } finally {
+      _iterator5.f();
+    }
+  } catch (error) {
+    throw new Error("Error matching mstrm to label: ".concat(error.message));
+  }
+  return -1; // 如果未找到，返回 -1
 };
 },{"./Constants":32,"./Grammar":37,"./URI":59}],61:[function(require,module,exports){
 "use strict";
@@ -38570,7 +38718,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250215",
+  "version": "1.10.9-beta.250219",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
