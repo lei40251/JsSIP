@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250219.20252191754
+ * CRTC v1.10.9-beta.250220.20252201151
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3506,6 +3506,8 @@ module.exports = {
   BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
   MAX_RETRY_ATTEMPTS: 4,
+  // BFCP控制的流transceiver索引号
+  BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
   CMODE: {
     PAPHONE: 'paphone'
   },
@@ -19015,7 +19017,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: (function () {
       var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(type, deviceId) {
         var _this7 = this;
-        var cameras, constraints;
+        var cameras, constraints, _constraints;
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
@@ -19099,7 +19101,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this7._connection.getSenders().find(function (s) {
                   logger.debug("kind: ".concat(s.track.kind));
                   if (s.track.kind == 'video') {
-                    s.track.stop();
+                    if (_this7._enableBFCP) {
+                      // 启用了BFCP，区分一下BFCP控制的视频轨道
+                      s.track != _this7._bfcpVideoTrack && s.track.stop();
+                    } else {
+                      s.track.stop();
+                    }
                   }
                 });
                 _this7._localMediaStreamLocallyGenerated = true;
@@ -19121,7 +19128,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 var videoTrack = stream.getVideoTracks()[0];
                 _this7._localMediaStream.addTrack(videoTrack);
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video';
+                  if (_this7._enableBFCP) {
+                    // 启用了BFCP，区分一下BFCP控制的视频轨道
+                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack;
+                  } else {
+                    return s.track.kind == 'video';
+                  }
                 });
                 sender.replaceTrack(videoTrack);
                 _this7.emit('cameraChanged', {
@@ -19130,8 +19142,53 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return stream;
               }));
             case 14:
-              return _context3.abrupt("return", false);
-            case 15:
+              if (!(type === 'audio' && deviceId)) {
+                _context3.next = 19;
+                break;
+              }
+              _constraints = {
+                audio: true,
+                video: false
+              };
+              return _context3.abrupt("return", Promise.resolve().then(function () {
+                var audioConstraints = {
+                  deviceId: {
+                    exact: deviceId
+                  }
+                };
+                _this7._connection.getSenders().find(function (s) {
+                  logger.debug("kind: ".concat(s.track.kind));
+                  if (s.track.kind == 'audio') {
+                    s.track.stop();
+                  }
+                });
+                _this7._localMediaStreamLocallyGenerated = true;
+                _constraints.audio = audioConstraints;
+                return navigator.mediaDevices.getUserMedia(_constraints)["catch"](function (error) {
+                  logger.error('emit "getusermediafailed" [error:%o]', error);
+                  logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                  _this7.emit('getusermediafailed', error);
+                  throw new Error('getUserMedia() failed');
+                });
+              }).then(function (stream) {
+                _this7._localMediaStream.removeTrack(_this7._localMediaStream.getAudioTracks()[0]);
+                var audioTrack = stream.getAudioTracks()[0];
+                _this7._localMediaStream.addTrack(audioTrack);
+                var sender = _this7._connection.getSenders().find(function (s) {
+                  return s.track.kind == 'audio';
+                });
+                sender.replaceTrack(audioTrack);
+                _this7.emit('audiointputChanged', {
+                  audioStream: stream
+                });
+                return stream;
+              }));
+            case 19:
+              logger.error('Invalid parameters');
+
+              // 参数错误
+              return _context3.abrupt("return", Promise.reject('Invalid parameters'));
+            case 21:
             case "end":
               return _context3.stop();
           }
@@ -21868,6 +21925,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // BFCP 控制的媒体 transceiver 索引号
         this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
+        try {
+          sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
+          logger.debug("sessionStorage setItem ".concat(CRTC_C.BFCP_TRANSCEIVER_INDEX, ": ").concat(this._transceiverIndex));
+        } catch (error) {
+          logger.error("Failed to set item in sessionStorage:".concat(error));
+        }
 
         /**
          * 音视频切换相关
@@ -22867,13 +22930,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 根据状态触发事件
       if (floorStatus === RequestStatusValue.Granted) {
-        this.emit('remoteShared', {
-          streamIndex: this._transceiverIndex
-        });
+        this.emit('remoteShared');
       } else if (floorStatus === RequestStatusValue.Released) {
-        this.emit('remoteShared', {
-          streamIndex: false
-        });
+        this.emit('remoteUnShared');
       } else {
         logger.warn("Unknown floor status: ".concat(floorStatus));
       }
@@ -27840,6 +27899,9 @@ module.exports = /*#__PURE__*/function () {
 },{"./Constants":32,"./Grammar":37,"./Utils":60}],60:[function(require,module,exports){
 "use strict";
 
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
@@ -28326,28 +28388,40 @@ exports.cloneObject = function (obj) {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情
  *
  */
-exports.getCameras = function () {
-  var cams = [];
-  return Promise.resolve().then(function () {
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(function (devices) {
-    return devices.filter(function (dev) {
-      return dev.kind === 'videoinput';
-    });
-  }).then(function (cameras) {
-    cameras.forEach(function (cam, index) {
-      var label = "camera ".concat(index + 1);
-      cams.push({
-        kind: cam.kind,
-        label: cam.label == '' ? label : cam.label,
-        deviceId: cam.deviceId
-      });
-    });
-    return cams;
-  })["catch"](function (e) {
-    return e;
-  });
-};
+exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+  var devices, cameras;
+  return _regeneratorRuntime().wrap(function _callee$(_context) {
+    while (1) switch (_context.prev = _context.next) {
+      case 0:
+        _context.prev = 0;
+        _context.next = 3;
+        return navigator.mediaDevices.enumerateDevices();
+      case 3:
+        devices = _context.sent;
+        // 筛选出视频输入设备（摄像头）
+        cameras = devices.filter(function (device) {
+          return device.kind === 'videoinput';
+        }).map(function (cam, index) {
+          return {
+            kind: cam.kind,
+            label: cam.label || "camera ".concat(index + 1),
+            // 默认标签
+            deviceId: cam.deviceId
+          };
+        });
+        return _context.abrupt("return", cameras);
+      case 8:
+        _context.prev = 8;
+        _context.t0 = _context["catch"](0);
+        return _context.abrupt("return", {
+          error: _context.t0.message
+        });
+      case 11:
+      case "end":
+        return _context.stop();
+    }
+  }, _callee, null, [[0, 8]]);
+}));
 
 /**
  * 返回麦克风设备列表
@@ -28358,28 +28432,40 @@ exports.getCameras = function () {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-exports.getMicrophones = function () {
-  var mics = [];
-  return Promise.resolve().then(function () {
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(function (devices) {
-    return devices.filter(function (dev) {
-      return dev.kind === 'audioinput';
-    });
-  }).then(function (microphones) {
-    microphones.forEach(function (mic, index) {
-      var label = "microphone ".concat(index + 1);
-      mics.push({
-        kind: mic.kind,
-        label: mic.label == '' ? label : mic.label,
-        deviceId: mic.deviceId
-      });
-    });
-    return mics;
-  })["catch"](function (e) {
-    return e;
-  });
-};
+exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+  var devices, microphones;
+  return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+    while (1) switch (_context2.prev = _context2.next) {
+      case 0:
+        _context2.prev = 0;
+        _context2.next = 3;
+        return navigator.mediaDevices.enumerateDevices();
+      case 3:
+        devices = _context2.sent;
+        // 筛选出音频输入设备（麦克风）
+        microphones = devices.filter(function (device) {
+          return device.kind === 'audioinput';
+        }).map(function (mic, index) {
+          return {
+            kind: mic.kind,
+            label: mic.label || "microphone ".concat(index + 1),
+            // 默认标签
+            deviceId: mic.deviceId
+          };
+        });
+        return _context2.abrupt("return", microphones);
+      case 8:
+        _context2.prev = 8;
+        _context2.t0 = _context2["catch"](0);
+        return _context2.abrupt("return", {
+          error: _context2.t0.message
+        });
+      case 11:
+      case "end":
+        return _context2.stop();
+    }
+  }, _callee2, null, [[0, 8]]);
+}));
 
 /**
  * 返回音频输出设备列表
@@ -28390,98 +28476,153 @@ exports.getMicrophones = function () {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-exports.getSpeaker = function () {
-  var speakers = [];
-  return Promise.resolve().then(function () {
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(function (devices) {
-    return devices.filter(function (dev) {
-      return dev.kind === 'audiooutput';
-    });
-  }).then(function (devices) {
-    devices.forEach(function (speaker, index) {
-      var label = "speaker ".concat(index + 1);
-      speakers.push({
-        kind: speaker.kind,
-        label: speaker.label == '' ? label : speaker.label,
-        deviceId: speaker.deviceId
-      });
-    });
-    return speakers;
-  })["catch"](function (e) {
-    return e;
-  });
-};
+exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+  var devices, speakers;
+  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+    while (1) switch (_context3.prev = _context3.next) {
+      case 0:
+        _context3.prev = 0;
+        _context3.next = 3;
+        return navigator.mediaDevices.enumerateDevices();
+      case 3:
+        devices = _context3.sent;
+        // 筛选出音频输出设备
+        speakers = devices.filter(function (device) {
+          return device.kind === 'audiooutput';
+        }).map(function (speaker, index) {
+          return {
+            kind: speaker.kind,
+            label: speaker.label || "speaker ".concat(index + 1),
+            // 默认标签
+            deviceId: speaker.deviceId
+          };
+        });
+        return _context3.abrupt("return", speakers);
+      case 8:
+        _context3.prev = 8;
+        _context3.t0 = _context3["catch"](0);
+        return _context3.abrupt("return", {
+          error: _context3.t0.message
+        });
+      case 11:
+      case "end":
+        return _context3.stop();
+    }
+  }, _callee3, null, [[0, 8]]);
+}));
 
 /**
- * 获取 RTCPeerConnection 收发的音视频媒体流
+ * 获取音视频流（音频流、视频流或媒体流）。
  *
- * @param {RTCPeerConnection} pc - 要操作的 RTCPeerConnection
- * @param {string} type - 'local' 发送的媒体流；'remote' 接收的媒体流
+ * @param {RTCPeerConnection} pc - RTCPeerConnection 实例，用于管理 WebRTC 连接。
+ * @param {string} type - 流类型，可选值：
+ *   - 'remote': 获取远程流（通过 getReceivers 方法）。
+ *   - 'slides': 获取幻灯片流（通过 sessionStorage 中的索引定位特定接收器）。
+ *   - 'local': 获取本地流（通过 getSenders 方法）。
+ *   - 默认：兼容旧版 API，使用 getRemoteStreams 方法获取远程流。
+ *
+ * @returns {Object|null} 返回包含音频流、视频流和媒体流的对象，格式如下：
+ *   {
+ *     audioStream: MediaStream,  // 音频流
+ *     videoStream: MediaStream,  // 视频流
+ *     mediaStream: MediaStream   // 媒体流（包含所有轨道）
+ *   }
+ *   如果发生错误或参数无效，则返回 null。
  */
-exports.getStreams = function (pc, type, streamIndex) {
+exports.getStreams = function (pc, type) {
+  // 检查 pc 是否有效
+  if (!pc || !(pc instanceof RTCPeerConnection)) {
+    console.warn('Invalid RTCPeerConnection object:', pc);
+    return null;
+  }
   var videoStream = new MediaStream();
   var audioStream = new MediaStream();
   var mediaStream = new MediaStream();
   var result;
-  if (type === 'remote' && RTCPeerConnection.prototype.getReceivers) {
-    pc.getReceivers().forEach(function (receiver) {
-      console.warn('receiver: ', receiver.track);
-      if (receiver.track && receiver.track.readyState === 'live') {
-        mediaStream.addTrack(receiver.track);
-        if (receiver.track.kind === 'audio') {
-          audioStream.addTrack(receiver.track);
-        } else {
-          videoStream.addTrack(receiver.track);
-        }
-      }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream,
-      mediaStream: mediaStream
-    };
-  } else if (type === 'slides' && RTCPeerConnection.prototype.getReceivers) {
-    if (streamIndex) {
+  try {
+    if (type === 'remote' && typeof pc.getReceivers === 'function') {
+      // 处理远程流
       var receivers = pc.getReceivers();
-      mediaStream.addTrack(receivers[streamIndex].track);
-      videoStream.addTrack(receivers[streamIndex].track);
+      if (Array.isArray(receivers)) {
+        receivers.forEach(function (receiver) {
+          console.warn('receiver: ', receiver.track);
+          if (receiver.track && receiver.track.readyState === 'live') {
+            mediaStream.addTrack(receiver.track);
+            if (receiver.track.kind === 'audio') {
+              audioStream.addTrack(receiver.track);
+            } else {
+              videoStream.addTrack(receiver.track);
+            }
+          }
+        });
+      }
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
+    } else if (type === 'shared' && typeof pc.getReceivers === 'function') {
+      // 处理辅流
+      var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      if (streamIndex !== null && !isNaN(streamIndex)) {
+        var _receivers = pc.getReceivers();
+        var index = parseInt(streamIndex, 10);
+        if (Array.isArray(_receivers) && _receivers[index] && _receivers[index].track) {
+          var track = _receivers[index].track;
+          if (track.readyState === 'live') {
+            mediaStream.addTrack(track);
+            videoStream.addTrack(track);
+          }
+        } else {
+          console.warn("Invalid stream index: ".concat(streamIndex));
+        }
+      } else {
+        console.warn('BFCP_TRANSCEIVER_INDEX is not set or invalid.');
+      }
       result = {
         videoStream: videoStream,
         mediaStream: mediaStream
       };
+    } else if (type === 'local' && typeof pc.getSenders === 'function') {
+      // 处理本地流
+      var senders = pc.getSenders();
+      if (Array.isArray(senders)) {
+        senders.forEach(function (sender) {
+          if (sender.track && sender.track.readyState === 'live') {
+            if (sender.track.kind === 'audio') {
+              audioStream.addTrack(sender.track);
+            } else {
+              videoStream.addTrack(sender.track);
+            }
+          }
+        });
+      }
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream
+      };
+    } else {
+      // 兼容旧版 API
+      var stream = pc.getRemoteStreams()[0];
+      stream.getTracks().forEach(function (track) {
+        if (track.readyState === 'live') {
+          mediaStream.addTrack(track);
+          if (track.kind === 'audio') {
+            audioStream.addTrack(track);
+          } else {
+            videoStream.addTrack(track);
+          }
+        }
+      });
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
     }
-  } else if (type === 'local' && RTCPeerConnection.prototype.getSenders) {
-    pc.getSenders().forEach(function (sender) {
-      if (sender.track && sender.track.readyState === 'live') {
-        if (sender.track.kind === 'audio') {
-          audioStream.addTrack(sender.track);
-        } else {
-          videoStream.addTrack(sender.track);
-        }
-      }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream
-    };
-  } else {
-    var stream = pc.getRemoteStreams()[0];
-    stream.getTracks().forEach(function (track) {
-      if (track.readyState === 'live') {
-        mediaStream.addTrack(track);
-        if (track.kind === 'audio') {
-          audioStream.addTrack(track);
-        } else {
-          videoStream.addTrack(track);
-        }
-      }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream,
-      mediaStream: mediaStream
-    };
+  } catch (error) {
+    console.warn('Error occurred while processing streams:', error);
+    return null;
   }
   return result;
 };
@@ -38718,7 +38859,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250219",
+  "version": "1.10.9-beta.250220",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

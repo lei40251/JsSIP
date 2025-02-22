@@ -8,6 +8,7 @@ export const CHANNEL_CLOSING_TIMEOUT = 5*1000
 export const BFCP = 'BFCP'
 export const BFCP_HEARTBEAT_INTERVAL = 30*1000
 export const MAX_RETRY_ATTEMPTS      = 4
+export const BFCP_TRANSCEIVER_INDEX  = 'trancesiver_index'
 
 export enum CMODE  {
   PAPHONE = 'paphone'
