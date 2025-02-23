@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250220.20252201151
+ * CRTC v1.10.9-beta.250222.20252221656
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -19231,13 +19231,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _context4.next = 4;
                 break;
               }
-              throw new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP));
+              return _context4.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
             case 4:
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
                 _context4.next = 6;
                 break;
               }
-              throw new Exceptions.InvalidStateError(this._status);
+              return _context4.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
             case 6:
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
               _context4.prev = 7;
@@ -19256,7 +19256,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _context4.next = 16;
                 break;
               }
-              throw new Error("Floor request not accepted. Status: ".concat(status));
+              return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 16:
               this._floorRequestId = floorResponse.getAttribute('FloorRequestInformation').content[0];
             case 17:
@@ -19266,7 +19266,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _context4.prev = 19;
               _context4.t0 = _context4["catch"](7);
               logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
-              throw new Error("Floor request failed: ".concat(_context4.t0.message || 'Unknown error'));
+              return _context4.abrupt("return", Promise.reject("Floor request failed: ".concat(_context4.t0.message || 'Unknown error')));
             case 23:
               if (!(type === 'video')) {
                 _context4.next = 31;
@@ -20461,6 +20461,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // paphone 定制过滤掉 packetization-mode=1 的payload
                 if (_this18._customizedMode === 'paphone' && fmtp.config.indexOf('packetization-mode=1') !== -1) {
                   delH264Payload.push(fmtp.payload);
+                } else if (fmtp.config.indexOf('packetization-mode=0') !== -1) {
+                  delH264Payload.push(fmtp.payload);
                 }
               });
               media.fmtp.forEach(function (fmtp) {
@@ -20516,26 +20518,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp.groups[0].mids = mids.join(' ');
           desc.sdp = sdp_transform.write(sdp);
         }
-        sdp.media.forEach(function (media) {
-          /**
-           * 处理SDP的码率配置
-           */
-          if (media.type === 'video') {
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 960
-            }];
-          } else if (media.type === 'audio') {
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 90
-            }];
-          }
-        });
-        sdp.bandwidth = [{
-          type: 'AS',
-          limit: 1050
-        }];
+
+        /**
+         * 5G授权的时候通过SDP设置带宽
+         */
+        if (_this18._ua.sk[7] >= 3) {
+          sdp.media.forEach(function (media) {
+            /**
+             * 处理SDP的码率配置
+             */
+            if (media.type === 'video') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 960
+              }];
+            } else if (media.type === 'audio') {
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 90
+              }];
+            }
+          });
+          sdp.bandwidth = [{
+            type: 'AS',
+            limit: 1050
+          }];
+        }
         desc.sdp = sdp_transform.write(sdp);
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
@@ -20691,12 +20699,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _iterator6.f();
           }
         }
-        sdp_desc.media.forEach(function (media) {
-          /**
-            * 处理5G外呼sdp过大问题,
-            * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-            */
-          if (_this18._ua.sk[7] >= 3) {
+
+        /**
+         * 处理5G外呼sdp过大问题,
+         * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+         */
+        if (_this18._ua.sk[7] >= 3) {
+          sdp_desc.media.forEach(function (media) {
             if (media.type === 'video') {
               media.bandwidth = [{
                 type: 'AS',
@@ -20735,8 +20744,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               type: 'RS',
               limit: 10000
             }];
-          }
-        });
+          });
+        }
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -38859,7 +38868,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250220",
+  "version": "1.10.9-beta.250222",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
