@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250222.20252221656
+ * CRTC v1.10.9-beta.250222.20252232155
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17908,6 +17908,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpHeatbeatTimer = null;
     // BFCP协商时的视频轨道，用于后面替换
     _this._bfcpVideoTrack = null;
+
+    // 测试用
+    _this.timeoutHandle = null;
+    _this.dataString = null;
+    _this.MAX_CHUNK_SIZE = 1048576;
+    _this.chunkSize = null;
+    _this.lowWaterMark = null;
+    _this.highWaterMark = null;
+    _this.sendPressmax = null;
+    _this.sendPressvalue = null;
+    _this.numberOfSendCalls = null;
+    _this.maxTimeUsedInSend = null;
+    _this.totalTimeUsedInSend = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -23165,10 +23178,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         console.warn('datachannel opened.');
         _this43._dataChannelReady = true;
         // 开始发送心跳消息
-        _this43._sendHello();
-        _this43._bfcpHeatbeatTimer = setInterval(function () {
-          _this43._sendHello();
-        }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+        // this._sendHello();
+        // this._bfcpHeatbeatTimer = setInterval(() =>
+        // {
+        //   this._sendHello();
+        // }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+
+        // 测试
+
+        _this43.chunkSize = Math.min(_this43._connection.sctp.maxMessageSize, _this43.MAX_CHUNK_SIZE);
+        console.warn('Determined chunk size: ', _this43.chunkSize);
+        _this43.dataString = new Array(_this43.chunkSize).fill('X').join('');
+        _this43.lowWaterMark = _this43.chunkSize; // A single chunk
+        _this43.highWaterMark = Math.max(_this43.chunkSize * 8, 1048576); // 8 chunks or at least 1 MiB
+        console.warn('Send buffer low water threshold: ', _this43.lowWaterMark);
+        console.warn('Send buffer high water threshold: ', _this43.highWaterMark);
+        _this43._dataChannel.bufferedAmountLowThreshold = _this43.lowWaterMark;
+        _this43._dataChannel.addEventListener('bufferedamountlow', function (e) {
+          console.warn('BufferedAmountLow event:', e);
+          _this43._sendData();
+        });
+        console.warn('Start sending data.');
+        _this43.sendProgressmax = 1 * 1024 * 1024;
+        // receiveProgress.max = sendProgress.max;
+        _this43.sendProgressvalue = 0;
+        // receiveProgress.value = 0;
+        // sendStartTime = performance.now();
+        _this43.maxTimeUsedInSend = 0;
+        _this43.totalTimeUsedInSend = 0;
+        _this43.numberOfSendCalls = 0;
+        _this43._sendData();
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
@@ -23195,6 +23234,48 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
       return datachannel;
+    }
+
+    // 测试 发送测试数据
+  }, {
+    key: "_sendData",
+    value: function _sendData() {
+      var _this44 = this;
+      // Stop scheduled timer if any (part of the workaround introduced below)
+      if (this.timeoutHandle !== null) {
+        clearTimeout(this.timeoutHandle);
+        this.timeoutHandle = null;
+      }
+      var bufferedAmount = this._dataChannel.bufferedAmount;
+      while (this.sendProgressvalue < this.sendProgressmax) {
+        console.warn('Sending data...');
+        var timeBefore = performance.now();
+        this._dataChannel.send(this.dataString);
+        var timeUsed = performance.now() - timeBefore;
+        if (timeUsed > this.maxTimeUsedInSend) {
+          this.maxTimeUsedInSend = timeUsed;
+          this.totalTimeUsedInSend += timeUsed;
+        }
+        this.numberOfSendCalls += 1;
+        bufferedAmount += this.chunkSize;
+        this.sendProgressvalue += this.chunkSize;
+
+        // Pause sending if we reach the high water mark
+        if (bufferedAmount >= this.highWaterMark) {
+          // This is a workaround due to the bug that all browsers are incorrectly calculating the
+          // amount of buffered data. Therefore, the 'bufferedamountlow' event would not fire.
+          if (this._dataChannel.bufferedAmount < this.lowWaterMark) {
+            this.timeoutHandle = setTimeout(function () {
+              return _this44._sendData();
+            }, 0);
+          }
+          console.warn("Paused sending, buffered amount: ".concat(bufferedAmount, " (announced: ").concat(this._dataChannel.bufferedAmount, ")"));
+          break;
+        }
+      }
+      if (this.sendProgressvalue === this.sendProgressmax) {
+        console.warn('Data transfer completed successfully!');
+      }
     }
   }], [{
     key: "C",
