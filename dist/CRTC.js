@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250222.20252232155
+ * CRTC v1.10.9-beta.250223.20252232217
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -21508,7 +21508,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               /**
                * 是否启用 DataChannel
                **/
-              _this28._enableBFCP && _this28._initDataChannel();
+              // this._enableBFCP && this._initDataChannel();
+              if (_this28._enableBFCP) {
+                _this28._initDataChannel();
+                _this28._initDataChannel();
+              }
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
@@ -23193,8 +23197,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this43.highWaterMark = Math.max(_this43.chunkSize * 8, 1048576); // 8 chunks or at least 1 MiB
         console.warn('Send buffer low water threshold: ', _this43.lowWaterMark);
         console.warn('Send buffer high water threshold: ', _this43.highWaterMark);
-        _this43._dataChannel.bufferedAmountLowThreshold = _this43.lowWaterMark;
-        _this43._dataChannel.addEventListener('bufferedamountlow', function (e) {
+        datachannel.bufferedAmountLowThreshold = _this43.lowWaterMark;
+        datachannel.addEventListener('bufferedamountlow', function (e) {
           console.warn('BufferedAmountLow event:', e);
           _this43._sendData();
         });
@@ -23207,7 +23211,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this43.maxTimeUsedInSend = 0;
         _this43.totalTimeUsedInSend = 0;
         _this43.numberOfSendCalls = 0;
-        _this43._sendData();
+        _this43._sendData(datachannel);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
@@ -23239,18 +23243,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 测试 发送测试数据
   }, {
     key: "_sendData",
-    value: function _sendData() {
+    value: function _sendData(datachannel) {
       var _this44 = this;
       // Stop scheduled timer if any (part of the workaround introduced below)
       if (this.timeoutHandle !== null) {
         clearTimeout(this.timeoutHandle);
         this.timeoutHandle = null;
       }
-      var bufferedAmount = this._dataChannel.bufferedAmount;
+      var bufferedAmount = datachannel.bufferedAmount;
       while (this.sendProgressvalue < this.sendProgressmax) {
         console.warn('Sending data...');
         var timeBefore = performance.now();
-        this._dataChannel.send(this.dataString);
+        datachannel.send(this.dataString);
         var timeUsed = performance.now() - timeBefore;
         if (timeUsed > this.maxTimeUsedInSend) {
           this.maxTimeUsedInSend = timeUsed;
@@ -23264,12 +23268,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (bufferedAmount >= this.highWaterMark) {
           // This is a workaround due to the bug that all browsers are incorrectly calculating the
           // amount of buffered data. Therefore, the 'bufferedamountlow' event would not fire.
-          if (this._dataChannel.bufferedAmount < this.lowWaterMark) {
+          if (datachannel.bufferedAmount < this.lowWaterMark) {
             this.timeoutHandle = setTimeout(function () {
               return _this44._sendData();
             }, 0);
           }
-          console.warn("Paused sending, buffered amount: ".concat(bufferedAmount, " (announced: ").concat(this._dataChannel.bufferedAmount, ")"));
+          console.warn("Paused sending, buffered amount: ".concat(bufferedAmount, " (announced: ").concat(datachannel.bufferedAmount, ")"));
           break;
         }
       }
@@ -38949,7 +38953,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250222",
+  "version": "1.10.9-beta.250223",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
