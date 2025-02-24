@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250222.20252221656
+ * CRTC v1.10.9-beta.250224.20252241627
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3107,7 +3107,7 @@ var User = /*#__PURE__*/function () {
       return Buffer.from(floorRequest.encode());
     }
 
-    // FloorRequest 请求
+    // FloorRelease 请求
   }, {
     key: "floorReleaseMessage",
     value: function floorReleaseMessage(transactionId, floorRequestId) {
@@ -3159,14 +3159,17 @@ var User = /*#__PURE__*/function () {
      */
   }, {
     key: "floorStatusMessage",
-    value: function floorStatusMessage(floorId, requestStatus) {
+    value: function floorStatusMessage(floorId, requestStatus, transactionId) {
       if (this.currentMessage) {
         if (this.currentMessage.commonHeader.transactionId > this.currentTransactionId) {
           this.currentTransactionId = this.currentMessage.commonHeader.transactionId;
         }
       }
-      this.currentTransactionId++;
-      var floorStatus = new FloorStatus(this.conferenceId, this.currentTransactionId, this.userId, User.getFloorRequestId(), floorId, requestStatus);
+      var ctid = this.currentTransactionId++;
+      if (transactionId) {
+        ctid = transactionId;
+      }
+      var floorStatus = new FloorStatus(this.conferenceId, ctid, this.userId, User.getFloorRequestId(), floorId, requestStatus);
       return Buffer.from(floorStatus.encode());
     }
   }], [{
@@ -17908,6 +17911,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpHeatbeatTimer = null;
     // BFCP协商时的视频轨道，用于后面替换
     _this._bfcpVideoTrack = null;
+    // BFCP控制的流，接通后立即获取
+    _this._bfcpStream = null;
+    // 停止BFCP占位媒体
+    _this._stopAnimation = null;
+    // this._bfct = null;
+
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -18565,6 +18574,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 是否启用BFCP
       if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
         this._enableBFCP = true;
+        this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
       }
       var tracks;
       var peerHasAudioLine = false;
@@ -19359,6 +19369,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                     return s.track == _this8._bfcpVideoTrack;
                   });
                   sender.replaceTrack(track);
+                  // this._bfct = track;
                 } else {
                   var _sender3 = _this8._connection.getSenders().find(function (s) {
                     return s.track.kind == 'video' && s.track.readyState !== 'ended';
@@ -19401,6 +19412,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       return s.track == _this8._bfcpVideoTrack;
                     });
                     sender.replaceTrack(track);
+                    // this._bfct = track;
                   } else {
                     var _sender4 = _this8._connection.getSenders().find(function (s) {
                       return s.track.kind == 'video' && s.track.readyState !== 'ended';
@@ -19952,6 +19964,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._transactionId++;
       var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
       return this._dataChannelSend(floorRequest, currentTransactionId);
+    }
+  }, {
+    key: "sendFloorStatus",
+    value: function sendFloorStatus() {
+      logger.debug('_sendFloorStatus()');
+      var currentTransactionId = this._transactionId;
+      this._transactionId++;
+      var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, 3, currentTransactionId);
+      return this._dataChannelSend(floorStatus, currentTransactionId);
     }
 
     /**
@@ -21688,11 +21709,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             // 获取响应中BFCP相关属性
             this._floorId = (response.body.match(/a=floorid:(\d+)/) || [null, 5])[1];
-            // this._floorctrl = response.body.match(/a=floorctrl:([a-z-]+)/)[1] === 's-only' ? 'c-s' : 'c-only';
-            // this._confId = response.body.match(/a=confid:(\d+)/)[1];
-            // this._bfcpUserId = response.body.match(/a=userid:(\d+)/)[1];
-            // this._mstrm = response.body.match(/mstrm:(\d+)/)[1];
-
             this._floorctrl = (response.body.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-s' : 'c-only';
             this._confId = (response.body.match(/a=confid:(\d+)/) || [null, ''])[1];
             this._bfcpUserId = (response.body.match(/a=userid:(\d+)/) || [null, ''])[1];
@@ -21754,7 +21770,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }).then(function () {
               _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-                var mics, sender;
+                var mics, sender, _Utils$generateAnEmpt, videoTrack, stopAnimation;
                 return _regeneratorRuntime().wrap(function _callee6$(_context6) {
                   while (1) switch (_context6.prev = _context6.next) {
                     case 0:
@@ -21790,9 +21806,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
                       // BFCP
                       if (_this29._enableBFCP) {
-                        _this29._bfcpVideoTrack = Utils.generateAnEmptyVideoTrack();
+                        if (_this29._stopAnimation) {
+                          _this29._stopAnimation();
+                        }
+                        _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt.videoTrack, stopAnimation = _Utils$generateAnEmpt.stopAnimation;
+                        _this29._stopAnimation = stopAnimation;
+                        _this29._bfcpVideoTrack = videoTrack;
+                        // this._bfcpVideoTrack = this._createCanvasVideoTrack();
                         _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
-                        // this._sendReinvite();
                         _this29.renegotiate({
                           rtcOfferConstraints: {
                             iceRestart: true
@@ -21936,6 +21957,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
         try {
           sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
+          this._bfcpStream = Utils.getStreams(this._connection, 'shared');
           logger.debug("sessionStorage setItem ".concat(CRTC_C.BFCP_TRANSCEIVER_INDEX, ": ").concat(this._transceiverIndex));
         } catch (error) {
           logger.error("Failed to set item in sessionStorage:".concat(error));
@@ -22911,7 +22933,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleHelloMessage",
     value: function _handleHelloMessage(message) {
-      logger.info("BFCP send HACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      logger.debug("BFCP send HACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
       var response = this._bfcpUser.helloAckMessage(message);
       this._sendDataChannelMessage(response);
     }
@@ -22923,7 +22945,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorRequestStatusMessage",
     value: function _handleFloorRequestStatusMessage(message) {
-      logger.info("BFCP send FloorRequestStatusACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      logger.debug("BFCP send FloorRequestStatusACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
       var response = this._bfcpUser.floorRequestStatusAckMessage(message);
       this._sendDataChannelMessage(response);
     }
@@ -22939,7 +22961,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 根据状态触发事件
       if (floorStatus === RequestStatusValue.Granted) {
-        this.emit('remoteShared');
+        this.emit('remoteShared', {
+          sharedStream: this._bfcpStream
+        });
       } else if (floorStatus === RequestStatusValue.Released) {
         this.emit('remoteUnShared');
       } else {
@@ -22985,7 +23009,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_sendDataChannelMessage",
     value: function _sendDataChannelMessage(message, transactionId) {
       if (transactionId) {
-        logger.info("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
+        logger.debug("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
       }
       this._dataChannel.send(message);
     }
@@ -23019,7 +23043,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 将 ArrayBuffer 转换为 Buffer 并解析消息
         var bufferData = Buffer.from(data);
         var message = this._bfcpUser.receiveMessage(bufferData);
-        logger.info("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+        logger.debug("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
 
         // 处理已注册的事务消息
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
@@ -23196,6 +23220,61 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
       return datachannel;
     }
+
+    // let track = null; // 全局变量 track
+
+    // _createCanvasVideoTrack()
+    // {
+    // // 创建 Canvas 元素
+    //   const canvas = document.createElement('canvas');
+    //   const ctx = canvas.getContext('2d');
+
+    //   // 定义一个变量用于绘制动态内容
+    //   let frameCount = 0;
+
+    //   // 定义一个函数来更新 Canvas 内容
+    //   const updateCanvas =() =>
+    //   {
+    //     console.warn('mmmmmmmmmm: ', this);
+
+    //     if (this._bfct && this._bfct.kind === 'video')
+    //     {
+    //     // 如果 track 是一个视频轨道
+    //       const video = document.createElement('video');
+
+    //       video.srcObject = new MediaStream([ this._bfct ]);
+    //       video.onloadedmetadata = () =>
+    //       {
+    //       // 动态调整 Canvas 尺寸以匹配视频分辨率
+    //         canvas.width = video.videoWidth;
+    //         canvas.height = video.videoHeight;
+
+    //         // 绘制视频帧到 Canvas
+    //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    //       };
+    //       video.play(); // 开始播放视频
+    //     }
+    //     else
+    //     {
+    //     // 如果 track 不是视频轨道，绘制默认动态内容
+    //       ctx.clearRect(0, 0, canvas.width, canvas.height); // 清空画布
+    //       ctx.fillStyle = 'red';
+    //       const x = (frameCount % canvas.width); // 矩形水平移动
+
+    //       ctx.fillRect(x, 10, 10, 10);
+    //       frameCount++;
+    //     }
+    //   };
+
+    //   // 启动定时器以定期更新 Canvas 内容
+    //   setInterval(updateCanvas, 1000 / 5); // 每秒更新 5 次（帧率）
+
+    //   // 捕获 Canvas 的视频流
+    //   const videoStream = canvas.captureStream(5); // 指定帧率为 5 FPS
+
+    //   // 返回视频轨道
+    //   return videoStream.getVideoTracks()[0];
+    // }
   }], [{
     key: "C",
     get:
@@ -28699,38 +28778,88 @@ exports.getStreamThroughCanvas = function (stream) {
 
 // 使用 canvas.captureStream 创建空视频轨道的辅助函数
 var createCanvasVideoTrack = function createCanvasVideoTrack() {
+  var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+    _ref4$width = _ref4.width,
+    width = _ref4$width === void 0 ? 64 : _ref4$width,
+    _ref4$height = _ref4.height,
+    height = _ref4$height === void 0 ? 48 : _ref4$height,
+    _ref4$frameRate = _ref4.frameRate,
+    frameRate = _ref4$frameRate === void 0 ? 1 : _ref4$frameRate;
+  // 创建 Canvas 元素
   var canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  var ctx = canvas.getContext('2d');
+  var frameCount = 0;
+  var animationFrameId;
 
-  // 设置分辨率
-  canvas.width = 60;
-  canvas.height = 40;
-  var videoStream = canvas.captureStream(1); // 帧率1
+  // 定义更新 Canvas 内容的函数
+  var _updateCanvas = function updateCanvas() {
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  return videoStream.getVideoTracks()[0];
+    // 绘制动态内容（例如一个移动的矩形）
+    ctx.fillStyle = 'red';
+    var x = frameCount % canvas.width; // 矩形水平移动
+
+    ctx.fillRect(x, 1, 1, 1);
+
+    // 增加帧计数
+    frameCount++;
+
+    // 使用 requestAnimationFrame 循环调用
+    animationFrameId = requestAnimationFrame(_updateCanvas);
+  };
+
+  // 启动动画
+  _updateCanvas();
+
+  // 捕获 Canvas 的视频流
+  var videoStream = canvas.captureStream(frameRate);
+
+  // 提供一个清理函数，用于停止动画
+  var stopAnimation = function stopAnimation() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+  };
+
+  // 返回视频轨道和清理函数
+  return {
+    videoTrack: videoStream.getVideoTracks()[0],
+    stopAnimation: stopAnimation
+  };
 };
 
 /**
  * 生成空视频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
  * canvas 生成还是浏览器api直接生成
  *
+ * MediaStreamTrackGenerator 生成的视频muted=false 不能满足要求，暂时改为canvas直接生成
+ *
  * @param {MediaStream} stream - 要转换的媒体流
  */
 exports.generateAnEmptyVideoTrack = function () {
-  if ('MediaStreamTrackGenerator' in window) {
-    // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
-    try {
-      // eslint-disable-next-line no-undef
-      var trackGenerator = new MediaStreamTrackGenerator({
-        kind: 'video'
-      });
-      return trackGenerator;
-    } catch (error) {
-      return createCanvasVideoTrack();
-    }
-  } else {
-    // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
-    return createCanvasVideoTrack();
-  }
+  // if ('MediaStreamTrackGenerator' in window)
+  // {
+  //   // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+  //   try
+  //   {
+  //     // eslint-disable-next-line no-undef
+  //     const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
+
+  //     return trackGenerator;
+  //   }
+  //   catch (error)
+  //   {
+  //     return createCanvasVideoTrack();
+  //   }
+  // }
+  // else
+  // {
+  // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+  return createCanvasVideoTrack();
+  // }
 };
 
 /**
@@ -38868,7 +38997,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250222",
+  "version": "1.10.9-beta.250224",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

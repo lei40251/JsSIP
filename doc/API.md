@@ -162,7 +162,8 @@ options
 | mode                                      | 通话模式变化，如：音频模式切换到视频模式或视频模式切换到音频模式                                                                    |
 | cameraChanged                             | 摄像头切换完成后触发                                                                                                                |
 | videoTrackState<sup>3</sup>               | 本端video状态变化事件，当video状态变化时触发                                                                                        |
-| remoteShared<sup>4</sup>               | 远端分享或停止分享后触发                                                                                        |
+| remoteShared<sup>4</sup>               | 远端分享后触发                                                                                        |
+| remoteUnShared               | 远端停止分享后触发                                                                                        |
 
 标注 1：
 data 字段
@@ -190,9 +191,9 @@ data 字段
 标注 4：
 data 字段
 
-| 字段名                         | 说明                                                     |
+|                          | 说明                                                     |
 | ------------------------------ | -------------------------------------------------------- |
-| streamIndex                          | 共享为共享流的索引值，停止共享为 false                     |
+| 返回值                          | 如果发生错误或参数无效，则返回 null<br> 正常返回：<br>{<br> audioStream: MediaStream,  // 音频流<br>videoStream: MediaStream,  // 视频流<br>mediaStream: MediaStream   // 媒体流（包含所有Track）<br>}                   |
 
 ## Module
 
