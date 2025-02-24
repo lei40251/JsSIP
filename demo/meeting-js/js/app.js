@@ -90,6 +90,7 @@ const maxB = {
 };
 
 let dropdownSwitchCam;
+let dropdownSwitchMic;
 
 // 信令地址
 // const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
@@ -852,6 +853,13 @@ ua.on('newRTCSession', function(e)
     setStatus(`switchDevice${deviceId}`);
   };
 
+  // 移动端不支持本功能
+  dropdownSwitchMic = (deviceId) =>
+  {
+    e.session.switchDevice('audio', deviceId);
+    setStatus(`switchDevice${deviceId}`);
+  };
+
   /**
    * 手机端用切换摄像头
    */
@@ -1365,6 +1373,20 @@ function updateDevices()
 
       document.querySelector('#cameras').innerHTML = option;
       document.querySelector('#select-camera').innerHTML = menus;
+    });
+
+  // 移动端不支持切换麦克风
+  CRTC.Utils.getMicrophones()
+    .then((microphones) =>
+    {
+      let menus = '';
+
+      microphones.forEach((device) =>
+      {
+        menus += `<li onclick="dropdownSwitchMic('${device.deviceId}')"><a class="dropdown-item" href="#">${device.label}</a></li>`;
+      });
+
+      document.querySelector('#select-mic').innerHTML = menus;
     });
 }
 
