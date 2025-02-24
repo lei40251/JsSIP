@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250224.20252241627
+ * CRTC v1.10.9-beta.250224.2025224232
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17915,8 +17915,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpStream = null;
     // 停止BFCP占位媒体
     _this._stopAnimation = null;
-    // this._bfct = null;
-
+    // 动态更新流用
+    _this._bfcpUserMediaStrem = new MediaStream();
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -19412,7 +19412,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       return s.track == _this8._bfcpVideoTrack;
                     });
                     sender.replaceTrack(track);
-                    // this._bfct = track;
+
+                    // 动态更新流
+                    // this._bfcpUserMediaStrem.addTrack(track);
+                    // this._bfcpUserMediaStrem.removeTrack(this._bfcpUserMediaStrem.getVideoTracks()[0]);
                   } else {
                     var _sender4 = _this8._connection.getSenders().find(function (s) {
                       return s.track.kind == 'video' && s.track.readyState !== 'ended';
@@ -21809,7 +21812,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         if (_this29._stopAnimation) {
                           _this29._stopAnimation();
                         }
-                        _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt.videoTrack, stopAnimation = _Utils$generateAnEmpt.stopAnimation;
+                        _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt.videoTrack, stopAnimation = _Utils$generateAnEmpt.stopAnimation; // 动态更新流用
+                        // this._bfcpUserMediaStrem.addTrack(videoTrack);
+                        // this._bfcpVideoTrack = this._drawTrackToCanvas();
                         _this29._stopAnimation = stopAnimation;
                         _this29._bfcpVideoTrack = videoTrack;
                         // this._bfcpVideoTrack = this._createCanvasVideoTrack();
@@ -23221,60 +23226,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return datachannel;
     }
 
-    // let track = null; // 全局变量 track
+    //
+  }, {
+    key: "_drawTrackToCanvas",
+    value: function _drawTrackToCanvas() {
+      // 创建 video 元素并设置 srcObject
+      var videoElement = document.createElement('video');
+      videoElement.srcObject = this._bfcpUserMediaStrem;
+      videoElement.play();
 
-    // _createCanvasVideoTrack()
-    // {
-    // // 创建 Canvas 元素
-    //   const canvas = document.createElement('canvas');
-    //   const ctx = canvas.getContext('2d');
+      // 创建 canvas 元素
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
 
-    //   // 定义一个变量用于绘制动态内容
-    //   let frameCount = 0;
+      // 将 canvas 和 video 添加到页面（可选）
+      document.body.appendChild(videoElement);
+      document.body.appendChild(canvas);
 
-    //   // 定义一个函数来更新 Canvas 内容
-    //   const updateCanvas =() =>
-    //   {
-    //     console.warn('mmmmmmmmmm: ', this);
-
-    //     if (this._bfct && this._bfct.kind === 'video')
-    //     {
-    //     // 如果 track 是一个视频轨道
-    //       const video = document.createElement('video');
-
-    //       video.srcObject = new MediaStream([ this._bfct ]);
-    //       video.onloadedmetadata = () =>
-    //       {
-    //       // 动态调整 Canvas 尺寸以匹配视频分辨率
-    //         canvas.width = video.videoWidth;
-    //         canvas.height = video.videoHeight;
-
-    //         // 绘制视频帧到 Canvas
-    //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    //       };
-    //       video.play(); // 开始播放视频
-    //     }
-    //     else
-    //     {
-    //     // 如果 track 不是视频轨道，绘制默认动态内容
-    //       ctx.clearRect(0, 0, canvas.width, canvas.height); // 清空画布
-    //       ctx.fillStyle = 'red';
-    //       const x = (frameCount % canvas.width); // 矩形水平移动
-
-    //       ctx.fillRect(x, 10, 10, 10);
-    //       frameCount++;
-    //     }
-    //   };
-
-    //   // 启动定时器以定期更新 Canvas 内容
-    //   setInterval(updateCanvas, 1000 / 5); // 每秒更新 5 次（帧率）
-
-    //   // 捕获 Canvas 的视频流
-    //   const videoStream = canvas.captureStream(5); // 指定帧率为 5 FPS
-
-    //   // 返回视频轨道
-    //   return videoStream.getVideoTracks()[0];
-    // }
+      // 设置 canvas 的尺寸与 video 一致
+      videoElement.addEventListener('loadedmetadata', function () {
+        // 定期绘制 video 到 canvas
+        function drawFrame() {
+          canvas.width = videoElement.clientWidth;
+          canvas.height = videoElement.clientHeight;
+          ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+          requestAnimationFrame(drawFrame); // 循环绘制
+        }
+        drawFrame();
+      });
+      return canvas.captureStream(15).getVideoTracks()[0];
+    }
   }], [{
     key: "C",
     get:
@@ -28802,7 +28783,7 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
     ctx.fillStyle = 'red';
     var x = frameCount % canvas.width; // 矩形水平移动
 
-    ctx.fillRect(x, 1, 1, 1);
+    ctx.fillRect(x, 5, 5, 5);
 
     // 增加帧计数
     frameCount++;
