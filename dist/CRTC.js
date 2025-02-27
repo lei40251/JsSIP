@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250224.20252241627
+ * CRTC v1.10.9-beta.250227.20252271650
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -19109,8 +19109,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return;
                 }
                 _this7._connection.getSenders().find(function (s) {
-                  logger.debug("kind: ".concat(s.track.kind));
-                  if (s.track.kind == 'video') {
+                  logger.debug("kind: ".concat(s.track && s.track.kind));
+                  if (s.track && s.track.kind == 'video') {
                     if (_this7._enableBFCP) {
                       // 启用了BFCP，区分一下BFCP控制的视频轨道
                       s.track != _this7._bfcpVideoTrack && s.track.stop();
@@ -20543,28 +20543,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         /**
          * 5G授权的时候通过SDP设置带宽
          */
-        if (_this18._ua.sk[7] >= 3) {
-          sdp.media.forEach(function (media) {
-            /**
+        // if (this._ua.sk[7] >= 3)
+        // {
+        sdp.media.forEach(function (media) {
+          /**
              * 处理SDP的码率配置
              */
-            if (media.type === 'video') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 960
-              }];
-            } else if (media.type === 'audio') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 90
-              }];
-            }
-          });
-          sdp.bandwidth = [{
-            type: 'AS',
-            limit: 1050
-          }];
-        }
+          if (media.type === 'video') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 960
+            }];
+          } else if (media.type === 'audio') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 90
+            }];
+          }
+        });
+        sdp.bandwidth = [{
+          type: 'AS',
+          limit: 1050
+        }];
+        // }
+
         desc.sdp = sdp_transform.write(sdp);
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
@@ -20595,6 +20597,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             type: type,
             sdp: connection.localDescription.sdp
           };
+
+          // this._enableBFCP &&
+          // (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
           logger.debug('emit "sdp"');
           _this18.emit('sdp', e);
           return Promise.resolve(e.sdp);
@@ -20619,6 +20624,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               type: type,
               sdp: connection.localDescription.sdp
             };
+
+            // this._enableBFCP &&
+            // (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
             logger.debug('emit "sdp"');
             _this18.emit('sdp', e);
             resolve(e.sdp);
@@ -20725,48 +20733,51 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          * 处理5G外呼sdp过大问题,
          * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
          */
-        if (_this18._ua.sk[7] >= 3) {
-          sdp_desc.media.forEach(function (media) {
-            if (media.type === 'video') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 960
-              }, {
-                type: 'RR',
-                limit: 6000
-              }, {
-                type: 'RS',
-                limit: 8000
-              }];
-              media.invalid = [{
-                value: 'tcap:1 RTP/AVPF'
-              }, {
-                value: 'pcfg:1 t=1'
-              }];
-            } else if (media.type === 'audio') {
-              media.bandwidth = [{
-                type: 'AS',
-                limit: 90
-              }, {
-                type: 'RR',
-                limit: 600
-              }, {
-                type: 'RS',
-                limit: 2000
-              }];
-            }
-            sdp_desc.bandwidth = [{
+        // if (this._ua.sk[7] >= 3)
+        // {
+        // 华为MCU对接需要带
+        sdp_desc.media.forEach(function (media) {
+          if (media.type === 'video') {
+            media.bandwidth = [{
               type: 'AS',
-              limit: 1050
+              limit: 960
             }, {
               type: 'RR',
-              limit: 6600
+              limit: 6000
             }, {
               type: 'RS',
-              limit: 10000
+              limit: 8000
             }];
-          });
-        }
+            media.invalid = [{
+              value: 'tcap:1 RTP/AVPF'
+            }, {
+              value: 'pcfg:1 t=1'
+            }];
+          } else if (media.type === 'audio') {
+            media.bandwidth = [{
+              type: 'AS',
+              limit: 90
+            }, {
+              type: 'RR',
+              limit: 600
+            }, {
+              type: 'RS',
+              limit: 2000
+            }];
+          }
+          sdp_desc.bandwidth = [{
+            type: 'AS',
+            limit: 1050
+          }, {
+            type: 'RR',
+            limit: 6600
+          }, {
+            type: 'RS',
+            limit: 10000
+          }];
+        });
+        // }
+
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -21893,11 +21904,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 添加BFCP所需属性
         sdp = sdp.replace('UDP/DTLS/SCTP/BFCP *\r\n', "UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n"));
+        // 添加主辅流标志
+        sdp = _this30._addMediastreamFlag(sdp, _this30._mStream);
         var e = {
           originator: 'local',
           type: 'offer',
           sdp: sdp
         };
+
+        // this._enableBFCP &&
+        // (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
         logger.debug('emit "sdp"');
         _this30.emit('sdp', e);
 
@@ -22063,6 +22079,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             type: 'offer',
             sdp: sdp
           };
+
+          // this._enableBFCP &&
+          // (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
           logger.debug('emit "sdp"');
           _this32.emit('sdp', e);
           _this32.sendRequest(CRTC_C.UPDATE, {
@@ -22325,6 +22344,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._toggleMuteAudio(!enableAudio);
       this._toggleMuteVideo(!enableVideo);
+    }
+
+    // 给SDP添加主辅流标志
+  }, {
+    key: "_addMediastreamFlag",
+    value: function _addMediastreamFlag(sdp) {
+      var targetMid = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '3';
+      // 处理目标mid的video块
+      var midPattern = new RegExp("(m=video[\\s\\S]*?^a=mid:".concat(targetMid, "\\r?\\n)"), 'gm');
+      sdp = sdp.replace(midPattern, '$1a=content:slides\r\n');
+
+      // 处理其他video块
+      var otherMidPattern = new RegExp("(m=video[\\s\\S]*?^a=mid:(?!".concat(targetMid, "\\b)\\d+\\r?\\n)"), 'gm');
+      sdp = sdp.replace(otherMidPattern, '$1a=content:main\r\n');
+      return sdp;
     }
 
     // 如果是音频模式，则关闭本地视频
@@ -22821,6 +22855,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
       var _this39 = this;
+      logger.debug('_replaceVideoToCanvas()');
+
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -23104,7 +23140,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
         if (!_this42._dataChannelReady) {
-          reject(new Error("[DataChannel] Not ready for transactionId: ".concat(transactionId)));
+          reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
+          logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           return;
         }
 
@@ -23123,7 +23160,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
-          reject(new Error("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId)));
+          reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+          logger.error("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           return;
         }
 
@@ -38997,7 +39035,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250224",
+  "version": "1.10.9-beta.250227",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

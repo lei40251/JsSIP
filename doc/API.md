@@ -203,7 +203,7 @@ data 字段
 | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | getCameras()               | 获取可用的摄像头列表                                                                                        |
 | getMicrophones()           | 获取可用的麦克风列表                                                                                   |
-| getgetSpeakers()           | 返回音频输出设备列表表                                                                                   |
+| getSpeakers()           | 返回音频输出设备列表表                                                                                   |
 | getStreams<sup>1</sup>(pc, type<sup>2</sup>) | 获取音视频流（音频流、视频流或媒体流）。<br>pc - RTCPeerConnection 实例<br>type - 流类型<br>return - 返回包含音频流、视频流和媒体流的对象或null
 
 标注 1：
@@ -219,4 +219,3 @@ data 字段
 | 默认                          | 兼容旧版 API，使用 getRemoteStreams 方法获取远程流                     |
 | 'local'                          | 获取本地流（通过 getSenders 方法）                     |
 | 'remote'                          | 获取远程流（通过 getReceivers 方法）                     |
-| 'shared'                          | 获取远端分享的流（通过 sessionStorage 中的索引定位特定接收器）                     |
