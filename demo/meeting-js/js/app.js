@@ -6,7 +6,7 @@
 
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -17,8 +17,6 @@ let rtcSession;
 let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
-
-let payload;
 
 // 远端客户端UA
 // let remoteUA;
@@ -287,11 +285,13 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      const match = d.sdp.match(/c=IN.*\r\n/);
+      // const match = d.sdp.match(/c=IN.*\r\n/);
 
-      d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
+      // d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
       // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
       // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
+
+      // d.sdp = d.sdp.replace('webrtc-datachannel\r\n', 'webrtc-datachannel\r\na=floorctrl:c-only\r\na=floorid:2 mstrm:2\r\n');
     }
     else if (d.originator === 'remote')
     {
@@ -300,12 +300,15 @@ ua.on('newRTCSession', function(e)
       // // 适配CRTC
       // d.sdp = d.sdp.replace(/420D0D/g, payload);
 
-      d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
-      d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
+      // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=confid:368\r\na=floorid:2 mstrm:12\r\n');
 
-      d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
-      d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
-      d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
+      // console.warn('dsdp: ', d.sdp);
+      // d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
+      // d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
+
+      // d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
+      // d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
+      // d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
     }
 
   });

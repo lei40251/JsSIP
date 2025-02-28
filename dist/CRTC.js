@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250227.20252271650
+ * CRTC v1.10.9-beta.250228.20252281830
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -369,15 +369,11 @@ var FloorRequestInformation = /*#__PURE__*/function (_Attribute) {
    * @param {Integer} requestStatus  The request status
    */
   function FloorRequestInformation(floorRequestId, floorId, requestStatus) {
-    var _this;
     _classCallCheck(this, FloorRequestInformation);
     var content = [];
-    console.warn('ffffff: ', floorRequestId, floorId, requestStatus);
     content.push(floorRequestId);
     content.push(new FloorRequestStatus(floorId, requestStatus));
-    _this = _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
-    console.warn('this: ', _this);
-    return _this;
+    return _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
   }
   _inherits(FloorRequestInformation, _Attribute);
   return _createClass(FloorRequestInformation);
@@ -2708,7 +2704,6 @@ var Parser = /*#__PURE__*/function () {
             attributeList.push(Parser._parseFloorRequestStatus(attribute.substring(16)));
             break;
           case AttributeType.FloorRequestInformation:
-            console.warn('abababab', attribute.substring(16));
             attributeList.push(Parser._parseFloorRequestInformation(attribute.substring(16)));
             break;
           case AttributeType.RequestStatus:
@@ -2791,7 +2786,6 @@ var Parser = /*#__PURE__*/function () {
   }, {
     key: "_parseFloorRequestStatus",
     value: function _parseFloorRequestStatus(content) {
-      console.warn('3333333333333');
       return new FloorRequestStatusAtr(parseInt(content, 2));
     }
 
@@ -2806,7 +2800,6 @@ var Parser = /*#__PURE__*/function () {
   }, {
     key: "_parseFloorRequestInformation",
     value: function _parseFloorRequestInformation(content) {
-      console.warn('abcd: ', parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
       return new FloorRequestInformation(parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
     }
 
@@ -2887,9 +2880,7 @@ var Parser = /*#__PURE__*/function () {
             }
           case Primitive.FloorRequestStatus:
             {
-              console.warn('111111111111');
               var floorRequestStatus = new FloorRequestStatusMsg();
-              console.warn('22222222222');
               floorRequestStatus.commonHeader = commonHeader;
               floorRequestStatus.attributes = attributes;
               return floorRequestStatus;
@@ -2960,6 +2951,7 @@ var Parser = require('../parser/parser.js');
 var AttrName = require('../attributes/name.js');
 var FloorRelease = require('../messages/floorRelease.js');
 var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
+var FloorStatusAck = require('../messages/floorStatusAck.js');
 
 /**
  * @classdesc
@@ -3172,6 +3164,20 @@ var User = /*#__PURE__*/function () {
       var floorStatus = new FloorStatus(this.conferenceId, ctid, this.userId, User.getFloorRequestId(), floorId, requestStatus);
       return Buffer.from(floorStatus.encode());
     }
+
+    /**
+     * Gets a buffered FloorStatus message
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorStatus} The FloorStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorStatusAckMessage",
+    value: function floorStatusAckMessage(floorId, floorStatusMessage) {
+      var floorStatusAck = new FloorStatusAck(this.conferenceId, floorStatusMessage.commonHeader.transactionId, this.userId, floorId);
+      return Buffer.from(floorStatusAck.encode());
+    }
   }], [{
     key: "getFloorRequestId",
     value: function getFloorRequestId() {
@@ -3230,7 +3236,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -17892,7 +17898,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // BFCP控制的floorId，SDP协商获得
     _this._floorId = null;
     // BFCP服务类型，默认c-s，根据SDP协商修改
-    _this._floorctrl = 'c-s';
+    _this._floorctrl = null;
     // 本端发送给BFCP服务器的流的mid
     _this._mStream = null;
     // 服务端发送给本端的流的label，根据SDP协商获得，用于获取远端辅流
@@ -17915,6 +17921,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpStream = null;
     // 停止BFCP占位媒体
     _this._stopAnimation = null;
+    // 是否已经收到共享
+    _this._remoteShared = false;
     // this._bfct = null;
 
     _this._inviteVideoTrackStatsTimer = null;
@@ -18535,6 +18543,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
 
+      // 更新BFCP的floorctrl
+      var lines = request.body.split(/\r?\n/);
+      var line = lines.find(function (l) {
+        return l.trim().startsWith('a=floorctrl:') && l.includes(':');
+      });
+      if (line) {
+        switch (line.split(':')[1].trim()) {
+          case 'c-s':
+          case 'c-only':
+            this._floorctrl = 's-only';
+            break;
+          case 's-only':
+            this._floorctrl = 'c-only';
+            break;
+          default:
+            break;
+        }
+      }
+
       // Fire 'newRTCSession' event.
       this._newRTCSession('remote', request);
 
@@ -18842,9 +18869,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           /**
            * 是否启用 DataChannel
            **/
-          _this4._enableBFCP && (_this4._connection.ondatachannel = function (event) {
-            _this4._initDataChannel(event);
-          });
+          if (_this4._enableBFCP) {
+            if (_this4._stopAnimation) {
+              _this4._stopAnimation();
+            }
+            var _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(),
+              videoTrack = _Utils$generateAnEmpt.videoTrack,
+              stopAnimation = _Utils$generateAnEmpt.stopAnimation;
+            _this4._stopAnimation = stopAnimation;
+            _this4._bfcpVideoTrack = videoTrack;
+            // this._bfcpVideoTrack = this._createCanvasVideoTrack();
+            _this4._connection.addTrack(_this4._bfcpVideoTrack, _this4._localMediaStream);
+            // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+
+            _this4._connection.ondatachannel = function (event) {
+              _this4._initDataChannel(event);
+            };
+          }
         }
       })
       // Set remote description.
@@ -18903,6 +18944,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         if (!mediaConstraints.video) {
           desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
+        }
+        if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
+          _this4._floorId = 2;
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this4._floorctrl, "\r\na=floorid:").concat(_this4._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
         }
         _this4._handleSessionTimersInIncomingRequest(request, extraHeaders);
         request.reply(200, null, extraHeaders, desc, function () {
@@ -19261,14 +19306,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               floorResponse = _context4.sent;
               // Log the response for debugging purposes
               logger.debug('Floor request response:', floorResponse);
-              status = floorResponse.getAttribute('FloorRequestInformation').content[1].content[1].content[0];
+              status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
               if (!(status != RequestStatusValue.Granted)) {
                 _context4.next = 16;
                 break;
               }
               return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 16:
-              this._floorRequestId = floorResponse.getAttribute('FloorRequestInformation').content[0];
+              this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
             case 17:
               _context4.next = 23;
               break;
@@ -19962,17 +20007,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('sendFloorRequest()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
+      console.warn('this.f: ', this._floorId);
       var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
       return this._dataChannelSend(floorRequest, currentTransactionId);
     }
+
+    // TODO: 测试用
   }, {
     key: "sendFloorStatus",
-    value: function sendFloorStatus() {
+    value: function sendFloorStatus(status) {
       logger.debug('_sendFloorStatus()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
-      var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, 3, currentTransactionId);
+      var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, status, currentTransactionId);
       return this._dataChannelSend(floorStatus, currentTransactionId);
+    }
+  }, {
+    key: "_sendFloorStatusAck",
+    value: function _sendFloorStatusAck(message) {
+      logger.debug('_sendFloorStatusAck()');
+      var floorStatus = this._bfcpUser.floorStatusAckMessage(this._floorId, message);
+      return this._sendDataChannelMessage(floorStatus);
     }
 
     /**
@@ -20915,6 +20970,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
+          if (_this20._enableBFCP && _this20._floorctrl == 's-only') {
+            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this20._floorctrl, "\r\na=floorid:").concat(_this20._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
+          }
           if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
@@ -21546,7 +21604,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 添加BFCP所需属性
-        desc = desc.replace('UDP/DTLS/SCTP/BFCP *\r\n', 'UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:c-s\r\n');
+        _this28._enableBFCP && (desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n")));
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
         logger.debug('emit "sending" [request:%o]', _this28._request);
@@ -21718,13 +21776,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               break;
             }
 
-            // 获取响应中BFCP相关属性
-            this._floorId = (response.body.match(/a=floorid:(\d+)/) || [null, 5])[1];
-            this._floorctrl = (response.body.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-s' : 'c-only';
-            this._confId = (response.body.match(/a=confid:(\d+)/) || [null, ''])[1];
-            this._bfcpUserId = (response.body.match(/a=userid:(\d+)/) || [null, ''])[1];
-            this._mstrm = (response.body.match(/mstrm:(\d+)/) || [null, ''])[1];
-
             /**
              * 音视频切换相关
              * 根据sdp判断用户Answer的通话模式，并触发mode事件
@@ -21764,6 +21815,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', _e);
+
+            // 获取响应中BFCP相关属性
+            this._floorId = (_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1];
+            this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
+            this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
+            this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
+            this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -21781,7 +21839,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }).then(function () {
               _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-                var mics, sender, _Utils$generateAnEmpt, videoTrack, stopAnimation;
+                var mics, sender, _Utils$generateAnEmpt2, videoTrack, stopAnimation;
                 return _regeneratorRuntime().wrap(function _callee6$(_context6) {
                   while (1) switch (_context6.prev = _context6.next) {
                     case 0:
@@ -21820,7 +21878,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         if (_this29._stopAnimation) {
                           _this29._stopAnimation();
                         }
-                        _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt.videoTrack, stopAnimation = _Utils$generateAnEmpt.stopAnimation;
+                        _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack, stopAnimation = _Utils$generateAnEmpt2.stopAnimation;
                         _this29._stopAnimation = stopAnimation;
                         _this29._bfcpVideoTrack = videoTrack;
                         // this._bfcpVideoTrack = this._createCanvasVideoTrack();
@@ -21903,7 +21961,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
 
         // 添加BFCP所需属性
-        sdp = sdp.replace('UDP/DTLS/SCTP/BFCP *\r\n', "UDP/DTLS/SCTP/BFCP *\r\na=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n"));
+        _this30._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n")));
         // 添加主辅流标志
         sdp = _this30._addMediastreamFlag(sdp, _this30._mStream);
         var e = {
@@ -22993,14 +23051,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorStatusMessage",
     value: function _handleFloorStatusMessage(message) {
-      var floorStatus = message.getAttribute('FloorRequestInformation').content[1].content[1].content[0];
+      this._sendFloorStatusAck(message);
+      console.warn('aaaaa: ', message.getAttribute(AttributeName.FloorRequestInformation), message);
+      var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
 
       // 根据状态触发事件
-      if (floorStatus === RequestStatusValue.Granted) {
+      if (floorStatus === RequestStatusValue.Granted && !this._remoteShared) {
+        this._remoteShared = true;
         this.emit('remoteShared', {
           sharedStream: this._bfcpStream
         });
-      } else if (floorStatus === RequestStatusValue.Released) {
+      } else if (floorStatus === RequestStatusValue.Released && this._remoteShared) {
+        this._remoteShared = false;
         this.emit('remoteUnShared');
       } else {
         logger.warn("Unknown floor status: ".concat(floorStatus));
@@ -23015,8 +23077,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
       var _this41 = this;
+      console.warn('eeee: ', AttributeName, AttributeName.FloorId, message);
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
-      if (this.listeners('floorRequest').length === 0) {
+      if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
         var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
         this._sendDataChannelMessage(response, message.commonHeader.transactionId);
@@ -23087,6 +23150,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
         }
+        console.warn('mmmmmmmmm: ', message.commonHeader.primitive, message);
 
         // 根据消息类型执行相应逻辑
         switch (message.commonHeader.primitive) {
@@ -23097,6 +23161,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._handleFloorRequestStatusMessage(message);
             break;
           case Primitive.FloorStatus:
+          case Primitive.FloorRelease:
+            console.warn('aaaaaaaaaaannnnnnn');
             this._handleFloorStatusMessage(message);
             break;
           case Primitive.FloorRequest:
@@ -23222,9 +23288,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 收到数据
         _this43._onChannelMessage(ev);
       };
+
+      // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
-        // 端口状态处于 established 的时候会触发
-        console.warn('datachannel opened.');
+        logger.debug('datachannel opened.');
         _this43._dataChannelReady = true;
         // 开始发送心跳消息
         _this43._sendHello();
@@ -23236,8 +23303,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 底层链路被关闭的时候会触发
         _this43._onChannelClose();
       };
+
+      // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
-        // 遇到错误的时候会触发
+        logger.warn('data channel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
         _this43._dataChannelReady = false;
         console.warn('data err: ', err);
@@ -23258,61 +23327,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
       return datachannel;
     }
-
-    // let track = null; // 全局变量 track
-
-    // _createCanvasVideoTrack()
-    // {
-    // // 创建 Canvas 元素
-    //   const canvas = document.createElement('canvas');
-    //   const ctx = canvas.getContext('2d');
-
-    //   // 定义一个变量用于绘制动态内容
-    //   let frameCount = 0;
-
-    //   // 定义一个函数来更新 Canvas 内容
-    //   const updateCanvas =() =>
-    //   {
-    //     console.warn('mmmmmmmmmm: ', this);
-
-    //     if (this._bfct && this._bfct.kind === 'video')
-    //     {
-    //     // 如果 track 是一个视频轨道
-    //       const video = document.createElement('video');
-
-    //       video.srcObject = new MediaStream([ this._bfct ]);
-    //       video.onloadedmetadata = () =>
-    //       {
-    //       // 动态调整 Canvas 尺寸以匹配视频分辨率
-    //         canvas.width = video.videoWidth;
-    //         canvas.height = video.videoHeight;
-
-    //         // 绘制视频帧到 Canvas
-    //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    //       };
-    //       video.play(); // 开始播放视频
-    //     }
-    //     else
-    //     {
-    //     // 如果 track 不是视频轨道，绘制默认动态内容
-    //       ctx.clearRect(0, 0, canvas.width, canvas.height); // 清空画布
-    //       ctx.fillStyle = 'red';
-    //       const x = (frameCount % canvas.width); // 矩形水平移动
-
-    //       ctx.fillRect(x, 10, 10, 10);
-    //       frameCount++;
-    //     }
-    //   };
-
-    //   // 启动定时器以定期更新 Canvas 内容
-    //   setInterval(updateCanvas, 1000 / 5); // 每秒更新 5 次（帧率）
-
-    //   // 捕获 Canvas 的视频流
-    //   const videoStream = canvas.captureStream(5); // 指定帧率为 5 FPS
-
-    //   // 返回视频轨道
-    //   return videoStream.getVideoTracks()[0];
-    // }
   }], [{
     key: "C",
     get:
@@ -28655,7 +28669,7 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRu
  *   }
  *   如果发生错误或参数无效，则返回 null。
  */
-exports.getStreams = function (pc, type) {
+exports.getStreams = function (pc, type, i) {
   // 检查 pc 是否有效
   if (!pc || !(pc instanceof RTCPeerConnection)) {
     console.warn('Invalid RTCPeerConnection object:', pc);
@@ -28671,7 +28685,6 @@ exports.getStreams = function (pc, type) {
       var receivers = pc.getReceivers();
       if (Array.isArray(receivers)) {
         receivers.forEach(function (receiver) {
-          console.warn('receiver: ', receiver.track);
           if (receiver.track && receiver.track.readyState === 'live') {
             mediaStream.addTrack(receiver.track);
             if (receiver.track.kind === 'audio') {
@@ -28690,6 +28703,7 @@ exports.getStreams = function (pc, type) {
     } else if (type === 'shared' && typeof pc.getReceivers === 'function') {
       // 处理辅流
       var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      i && (streamIndex = i);
       if (streamIndex !== null && !isNaN(streamIndex)) {
         var _receivers = pc.getReceivers();
         var index = parseInt(streamIndex, 10);
@@ -39035,7 +39049,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250227",
+  "version": "1.10.9-beta.250228",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],

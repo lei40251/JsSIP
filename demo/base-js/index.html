@@ -32,17 +32,28 @@
         下行分辨率: <span id="downF"></span><br>
         NetworkQualities: <span id="NQ"></span><br>
       </div>
-      <video muted playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
+      <!-- <video muted playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
         id="localVideo"></video>
       <video style="position: absolute;left:0 ;top: 0;width: 45%;" muted playsinline x5-video-player-fullscreen="true"
-        autoplay x5-video-player-type="h5" id="screen"></video>
+        autoplay x5-video-player-type="h5" id="screen"></video> -->
+      <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
+        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+          class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="localVideo"></video>
+        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+          class="mh-100 mw-100 hide" style="object-fit: contain; flex: 1 1 auto;min-width: 0;" id="screen"></video>
+      </div>
     </div>
     <div class="position-relative h-100">
-      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">远端视频</p>
-      <video playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-50"
-        id="remoteVideo"></video>
-      <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-        id="remoteVideo2"></video>
+      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light align-content-center"
+        style="z-index: 10;">
+        远端视频</p>
+      <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
+        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+          class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="remoteVideo"></video>
+        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+          class="mh-100 mw-100 hide" style="object-fit: contain; flex: 1 1 auto;min-width: 0;"
+          id="remoteVideo2"></video>
+      </div>
       <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
     </div>
   </div>
