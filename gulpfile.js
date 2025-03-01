@@ -9,7 +9,7 @@ const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
 const gulp = require('gulp');
 const babel = require('gulp-babel');
-const uglify = require('gulp-uglify-es').default;
+// const uglify = require('gulp-uglify-es').default;
 const rename = require('gulp-rename');
 const header = require('gulp-header');
 const expect = require('gulp-expect-file');
@@ -18,9 +18,10 @@ const eslint = require('gulp-eslint');
 const plumber = require('gulp-plumber');
 const log = require('fancy-log');
 const colors = require('ansi-colors');
-const obfuscate = require('gulp-javascript-obfuscator');
+// const obfuscate = require('gulp-javascript-obfuscator');
 const zip = require('gulp-zip');
 const del = require('del');
+const terser = require('gulp-terser');
 
 const PKG = require('./package.json');
 const today = new Date();
@@ -63,13 +64,13 @@ gulp.task('babel', function()
     .pipe(gulp.dest('lib-es5'));
 });
 
-gulp.task('babel1', function()
-{
-  return gulp
-    .src([ `dist/${ PKG.title }.js` ])
-    .pipe(babel())
-    .pipe(gulp.dest('dist/b/'));
-});
+// gulp.task('babel1', function()
+// {
+//   return gulp
+//     .src([ `dist/${ PKG.title }.js` ])
+//     .pipe(babel())
+//     .pipe(gulp.dest('dist/b/'));
+// });
 
 gulp.task('browserify', function()
 {
@@ -98,12 +99,42 @@ gulp.task('browserify', function()
 
 gulp.task('uglify', function()
 {
-  const src = `dist/b/${ PKG.title }.js`;
+  const src = `dist/${ PKG.title }.js`;
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
-    .pipe(obfuscate({ compact: true }))
-    .pipe(uglify())
+    // .pipe(obfuscate({ compact: true }))
+    .pipe(terser({
+      mangle : {
+        // 保留必要的名称
+        reserved : [
+          'CommonHeader',
+          'FloorRequest',
+          'FloorRelease',
+          'FloorRequestStatusMsg',
+          'FloorStatus',
+          'Hello',
+          'HelloAck',
+          'FloorRequestStatusAck',
+          'FloorStatusAck',
+          'FloorQuery',
+          'AttributeType',
+          'FloorId',
+          'FloorRequestId',
+          'FloorRequestStatusAtr',
+          'SupportedAttributes',
+          'SupportedPrimitives',
+          'FloorRequestInformation',
+          'Primitive',
+          'Complements',
+          'RequestStatus'
+        ]
+      },
+      compress : {
+        // 增加压缩轮次
+        passes : 3
+      }
+    }))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title }.min.js`))
     .pipe(gulp.dest('dist/'));
@@ -111,7 +142,6 @@ gulp.task('uglify', function()
 
 gulp.task('test', function()
 {
-  // var src = 'test/*.js';
   const src = [
     'test/test-classes.js',
     'test/test-normalizeTarget.js',
@@ -214,6 +244,6 @@ gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changel
 
 gulp.task('devel', gulp.series('grammar'));
 
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'babel1', 'uglify', 'tmp-del'));
+gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del'));
 
 gulp.task('default', gulp.series('dist'));

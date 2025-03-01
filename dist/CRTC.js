@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250228.20252281830
+ * CRTC v1.10.9-beta.250301.2025311732
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -18608,6 +18608,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var peerHasVideoLine = false;
       var peerOffersFullAudio = false;
       var peerOffersFullVideo = false;
+
+      // 本端媒体约束
+      this._inviteMediaConstraints = Utils.cloneObject(rtcAnswerConstraints, {
+        audio: true,
+        video: true
+      });
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
       this._data = options.data || this._data;
@@ -20007,7 +20013,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('sendFloorRequest()');
       var currentTransactionId = this._transactionId;
       this._transactionId++;
-      console.warn('this.f: ', this._floorId);
       var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
       return this._dataChannelSend(floorRequest, currentTransactionId);
     }
@@ -20595,32 +20600,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc.sdp = sdp_transform.write(sdp);
         }
 
-        /**
-         * 5G授权的时候通过SDP设置带宽
-         */
-        // if (this._ua.sk[7] >= 3)
+        // // 总带宽AS值
+        // let _bandWidth = 0;
+
+        // /**
+        //  * 5G授权的时候通过SDP设置带宽
+        //  * 华为MCU需要，所以非5G授权也需要携带
+        //  */
+        // sdp.media.forEach((media) =>
         // {
-        sdp.media.forEach(function (media) {
-          /**
-             * 处理SDP的码率配置
-             */
-          if (media.type === 'video') {
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 960
-            }];
-          } else if (media.type === 'audio') {
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 90
-            }];
-          }
-        });
-        sdp.bandwidth = [{
-          type: 'AS',
-          limit: 1050
-        }];
-        // }
+        //   /**
+        //    * 处理SDP的码率配置
+        //    */
+        //   if (media.type === 'video')
+        //   {
+        //     _bandWidth += 960;
+        //     media.bandwidth = [ { type: 'AS', limit: 960 } ];
+        //   }
+        //   else if (media.type === 'audio')
+        //   {
+        //     _bandWidth += 90;
+        //     media.bandwidth = [ { type: 'AS', limit: 90 } ];
+        //   }
+        // });
+
+        // sdp.bandwidth = [ { type: 'AS', limit: _bandWidth } ];
 
         desc.sdp = sdp_transform.write(sdp);
 
@@ -20783,16 +20787,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _iterator6.f();
           }
         }
+        var _bandAS = 0;
+        var _bandRR = 0;
+        var _bandRS = 0;
 
         /**
          * 处理5G外呼sdp过大问题,
          * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
+         *
+         * 华为MCU对接需要带
          */
-        // if (this._ua.sk[7] >= 3)
-        // {
-        // 华为MCU对接需要带
         sdp_desc.media.forEach(function (media) {
           if (media.type === 'video') {
+            _bandAS += 960;
+            _bandRR += 6000;
+            _bandRS += 8000;
             media.bandwidth = [{
               type: 'AS',
               limit: 960
@@ -20809,6 +20818,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               value: 'pcfg:1 t=1'
             }];
           } else if (media.type === 'audio') {
+            _bandAS += 90;
+            _bandRR += 600;
+            _bandRS += 2000;
             media.bandwidth = [{
               type: 'AS',
               limit: 90
@@ -20820,19 +20832,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               limit: 2000
             }];
           }
-          sdp_desc.bandwidth = [{
-            type: 'AS',
-            limit: 1050
-          }, {
-            type: 'RR',
-            limit: 6600
-          }, {
-            type: 'RS',
-            limit: 10000
-          }];
         });
-        // }
-
+        sdp_desc.bandwidth = [{
+          type: 'AS',
+          limit: _bandAS
+        }, {
+          type: 'RR',
+          limit: _bandRR
+        }, {
+          type: 'RS',
+          limit: _bandRS
+        }];
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -22443,7 +22453,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this34._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
                 if (transeiver.sender.track.id === _this34._localShareStream.getTracks()[0].id) {
-                  transeiver.sender.replaceTrack(_this34._bfcpVideoTrack);
+                  _this34._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this34._bfcpVideoTrack);
                 }
               }
             });
@@ -22457,7 +22467,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var sender = _this34._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              track.readyState === 'live' && sender.replaceTrack(track);
+              track.readyState === 'live' && _this34._connection.connectionState === 'connected' && sender.replaceTrack(track);
             });
             _this34._localShareStreamLocallyGenerated = false;
           }
@@ -23052,7 +23062,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_handleFloorStatusMessage",
     value: function _handleFloorStatusMessage(message) {
       this._sendFloorStatusAck(message);
-      console.warn('aaaaa: ', message.getAttribute(AttributeName.FloorRequestInformation), message);
       var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
 
       // 根据状态触发事件
@@ -23077,7 +23086,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
       var _this41 = this;
-      console.warn('eeee: ', AttributeName, AttributeName.FloorId, message);
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
       if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
@@ -23150,7 +23158,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
         }
-        console.warn('mmmmmmmmm: ', message.commonHeader.primitive, message);
 
         // 根据消息类型执行相应逻辑
         switch (message.commonHeader.primitive) {
@@ -23161,13 +23168,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._handleFloorRequestStatusMessage(message);
             break;
           case Primitive.FloorStatus:
-          case Primitive.FloorRelease:
-            console.warn('aaaaaaaaaaannnnnnn');
             this._handleFloorStatusMessage(message);
             break;
           case Primitive.FloorRequest:
             this._handleFloorRequestMessage(message);
             break;
+          case Primitive.FloorRelease:
           default:
             logger.warn("onChannelMessage(): Unknown primitive type: ".concat(message.commonHeader.primitive));
             break;
@@ -23233,9 +23239,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 输出日志：发送消息次数及tid，时间
         logger.debug("BFCP send: ".concat(_this42._bfcpUser.receiveMessage(messageState.message), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this42._bfcpUser.receiveMessage(messageState.message);
 
-        // DC 消息超时重试
-        setTimeout(function () {
+        // DC 消息超时重试，FloorRelease消息不重发
+        sendMessage.commonHeader.primitive != Primitive.FloorRelease && setTimeout(function () {
           // 如果没有收到响应，则重试
           if (messageState && !messageState.received) {
             messageState.retries++;
@@ -39049,7 +39056,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250228",
+  "version": "1.10.9-beta.250301",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -39089,7 +39096,7 @@ module.exports={
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
-    "gulp-uglify-es": "^1.0.4",
+    "gulp-terser": "^2.1.0",
     "gulp-zip": "^5.1.0",
     "pegjs": "^0.7.0",
     "vinyl-buffer": "^1.0.1",
@@ -39102,5 +39109,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[38])(38)
 });

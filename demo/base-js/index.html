@@ -23,8 +23,9 @@
   </nav>
   <div style="height: 310px;" class="bg-light row row-cols-2 m-2 text-center" id="video_area">
     <div class="position-relative h-100">
-      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light">本端视频</p>
-      <div class="position-absolute top-50 opacity-50 start-0 text-start bg-light" style="font-size: 11px">
+      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light"
+        style="z-index: 10;">本端视频</p>
+      <div class="position-absolute top-50 opacity-50 start-0 text-start bg-light" style="font-size: 11px;z-index: 10;">
         上行速率: <span id="upS"></span><br>
         下行速率: <span id="downS"></span><br>
         下行丢包率: <span id="downL"></span><br>
@@ -32,10 +33,6 @@
         下行分辨率: <span id="downF"></span><br>
         NetworkQualities: <span id="NQ"></span><br>
       </div>
-      <!-- <video muted playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="h-100"
-        id="localVideo"></video>
-      <video style="position: absolute;left:0 ;top: 0;width: 45%;" muted playsinline x5-video-player-fullscreen="true"
-        autoplay x5-video-player-type="h5" id="screen"></video> -->
       <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
         <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
           class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="localVideo"></video>
