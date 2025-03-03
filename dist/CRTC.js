@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250302.2025331817
+ * CRTC v1.10.9-beta.250302.20253413
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17912,7 +17912,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 本端发送floorRequest收到响应里面的，用于后续释放资源
     _this._floorRequestId = null;
     // 发送BFCP消息事务ID，起始值为1-9的随机整数
-    _this._transactionId = Math.floor(Math.random() * 99) + 1;
+    _this._transactionId = 1;
     // BFCP的心跳定时器
     _this._bfcpHeatbeatTimer = null;
     // BFCP协商时的视频轨道，用于后面替换
@@ -21847,6 +21847,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
             this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
             this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
+
+            // 把协商来的userId 和 confId赋值给bfcpUser对象
+            this._bfcpUser.userId = this._bfcpUserId;
+            this._bfcpUser.conferenceId = this._confId;
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -28736,7 +28740,7 @@ exports.getStreams = function (pc, type, i) {
       // 处理辅流
       var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
       i && (streamIndex = i);
-      if (streamIndex !== null && !isNaN(streamIndex)) {
+      if (streamIndex !== -1 && streamIndex !== null && !isNaN(streamIndex)) {
         var _receivers = pc.getReceivers();
         var index = parseInt(streamIndex, 10);
         if (Array.isArray(_receivers) && _receivers[index] && _receivers[index].track) {
