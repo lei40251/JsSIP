@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250301.2025311732
+ * CRTC v1.10.9-beta.250302.202533183
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -130,7 +130,7 @@ var Attribute = /*#__PURE__*/function () {
     key: "encode",
     value: function encode() {
       var type = Complements.complementBinary(this.type.toString(2), 7);
-      var m = '0';
+      var m = '1';
       var length = Complements.complementBinary(this.length.toString(2), 8);
       var content = null;
       switch (this.format) {
@@ -21571,6 +21571,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
       Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+        var _Utils$generateAnEmpt2, videoTrack, stopAnimation;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
@@ -21595,7 +21596,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               /**
                * 是否启用 DataChannel
                **/
-              _this28._enableBFCP && _this28._initDataChannel();
+              // this._enableBFCP && this._initDataChannel();
+              // BFCP
+              if (_this28._enableBFCP) {
+                if (_this28._stopAnimation) {
+                  _this28._stopAnimation();
+                }
+                _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack, stopAnimation = _Utils$generateAnEmpt2.stopAnimation;
+                _this28._stopAnimation = stopAnimation;
+                _this28._bfcpVideoTrack = videoTrack;
+                // this._bfcpVideoTrack = this._createCanvasVideoTrack();
+                _this28._connection.addTrack(_this28._bfcpVideoTrack, _this28._localMediaStream);
+                // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+
+                _this28._initDataChannel();
+              }
 
               // TODO: should this be triggered here?
               _this28._connecting(_this28._request);
@@ -21849,7 +21864,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }).then(function () {
               _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
-                var mics, sender, _Utils$generateAnEmpt2, videoTrack, stopAnimation;
+                var mics, sender;
                 return _regeneratorRuntime().wrap(function _callee6$(_context6) {
                   while (1) switch (_context6.prev = _context6.next) {
                     case 0:
@@ -21883,22 +21898,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         }
                       }
 
-                      // BFCP
-                      if (_this29._enableBFCP) {
-                        if (_this29._stopAnimation) {
-                          _this29._stopAnimation();
-                        }
-                        _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack, stopAnimation = _Utils$generateAnEmpt2.stopAnimation;
-                        _this29._stopAnimation = stopAnimation;
-                        _this29._bfcpVideoTrack = videoTrack;
-                        // this._bfcpVideoTrack = this._createCanvasVideoTrack();
-                        _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
-                        _this29.renegotiate({
-                          rtcOfferConstraints: {
-                            iceRestart: true
-                          }
-                        });
-                      }
+                      // 开启 BFCP，自动发送reInvite
+                      _this29._enableBFCP && _this29.renegotiate();
                     case 9:
                     case "end":
                       return _context6.stop();
@@ -22419,13 +22420,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_addMediastreamFlag",
     value: function _addMediastreamFlag(sdp) {
       var targetMid = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '3';
-      // 处理目标mid的video块
-      var midPattern = new RegExp("(m=video[\\s\\S]*?^a=mid:".concat(targetMid, "\\r?\\n)"), 'gm');
-      sdp = sdp.replace(midPattern, '$1a=content:slides\r\n');
-
-      // 处理其他video块
-      var otherMidPattern = new RegExp("(m=video[\\s\\S]*?^a=mid:(?!".concat(targetMid, "\\b)\\d+\\r?\\n)"), 'gm');
-      sdp = sdp.replace(otherMidPattern, '$1a=content:main\r\n');
+      // 仅处理video媒体块，排除application块
+      var videoPattern = new RegExp('(m=video[\\s\\S]*?^a=mid:(\\d+)\\r?\\n)', 'gm');
+      sdp = sdp.replace(videoPattern, function (match, p1, mid) {
+        // 根据mid设置content值
+        var content = mid === targetMid ? 'slides' : 'main';
+        return "".concat(p1, "a=content:").concat(content, "\r\n");
+      });
       return sdp;
     }
 
@@ -23117,6 +23118,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _sendDataChannelMessage(message, transactionId) {
       if (transactionId) {
         logger.debug("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
+        // TODO 调试用
+        console.warn('send unit8 ACK: ', Utils.uint8ArrayToBase64(message), Utils.uint8ArrayToBinaryString(message));
+        console.warn('BFCP send ACK: ', this._bfcpUser.receiveMessage(message), transactionId, Date.now());
       }
       this._dataChannel.send(message);
     }
@@ -23150,6 +23154,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 将 ArrayBuffer 转换为 Buffer 并解析消息
         var bufferData = Buffer.from(data);
         var message = this._bfcpUser.receiveMessage(bufferData);
+
+        // TODO 调试用
+        console.warn('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
+        console.warn("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+
+        // 输出日志：收到消息内容及tid，时间戳
         logger.debug("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
 
         // 处理已注册的事务消息
@@ -23237,8 +23247,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
 
-        // 输出日志：发送消息次数及tid，时间
-        logger.debug("BFCP send: ".concat(_this42._bfcpUser.receiveMessage(messageState.message), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        // TODO 调试用
+        console.warn('send unit8: ', Utils.uint8ArrayToBase64(messageState.message), Utils.uint8ArrayToBinaryString(messageState.message));
+        console.warn('BFCP send: ', _this42._bfcpUser.receiveMessage(messageState.message), messageState.retries + 1, transactionId, Date.now());
+        // 输出日志：发送消息次数及tid，时间戳
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this42._bfcpUser.receiveMessage(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
         var sendMessage = _this42._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试，FloorRelease消息不重发
@@ -23246,7 +23259,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           // 如果没有收到响应，则重试
           if (messageState && !messageState.received) {
             messageState.retries++;
-
             // 增加重试的间隔
             _this42._dataChannelSend(messageState.message, transactionId);
           }
@@ -26649,7 +26661,20 @@ module.exports = /*#__PURE__*/function () {
         // 修复修改SDP后的Header头
         data = Utils.fixContentLength(data);
       }
-      data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+
+      // 第一步，修复BFCP用到的SDP信息
+      var updatedRtcpMessage = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+
+      // 检查第一步是否成功，成功后修改Content-Length的值
+      if (updatedRtcpMessage !== data) {
+        data = updatedRtcpMessage.replace(/(Content-Length:\s*)(\d+)/, function (_, p1, p2) {
+          // 将原始值加 12
+          var newValue = parseInt(p2, 10) + 12;
+
+          // 返回更新后的字符串
+          return "".concat(p1).concat(newValue);
+        });
+      }
       logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,
@@ -29084,6 +29109,19 @@ exports.findLabelIndexByMstrm = function (sdp) {
     throw new Error("Error matching mstrm to label: ".concat(error.message));
   }
   return -1; // 如果未找到，返回 -1
+};
+exports.uint8ArrayToBase64 = function (uint8Array) {
+  var binary = '';
+  for (var i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
+};
+exports.uint8ArrayToBinaryString = function (uint8Array) {
+  return Array.from(uint8Array, function (_byte) {
+    return _byte.toString(2).padStart(8, '0');
+  } // 将每个字节转为8位二进制字符串
+  ).join(' '); // 可选：用空格分隔每个字节，增强可读性
 };
 },{"./Constants":32,"./Grammar":37,"./URI":59}],61:[function(require,module,exports){
 "use strict";
@@ -39056,7 +39094,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250301",
+  "version": "1.10.9-beta.250302",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -39109,6 +39147,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[38])(38)
 });

@@ -30,17 +30,17 @@ const cusMediaStream = new MediaStream();
 
 // 信令地址
 // const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
-// const signalingUrl = 'wss://a.vsbc.com:5062/wss';
+const signalingUrl = 'wss://a.vsbc.com:5062/wss';
 // const signalingUrl = 'wss://cloudnetuc.vsbc.com:50600/wss';
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
 // const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
-// const sipDomain = 'a.vsbc.com';
+const sipDomain = 'a.vsbc.com';
 // const sipDomain = 'cloudnetuc.vsbc.com';
-const sipDomain = '5g.vsbc.com';
+// const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名
@@ -209,22 +209,18 @@ ua.on('newRTCSession', function(e)
       // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
 
       // payload || (payload = d.sdp.match(payloadRegex)[1]);
-
       // const newPayloadRegex = new RegExp(payload, 'g');
-
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
       // const match = d.sdp.match(/c=IN.*\r\n/);
-
       // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel\r\n', 'UDP/DTLS/SCTP webrtc-datachannel\r\na=floorctrl:c-s\r\na=confid:368\r\na=floorid:2 mstrm:2\r\n');
 
 
-      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
+      d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
+
       // d.sdp = `${d.sdp}\r\nm=application 3236 RTP/AVP 100\r\na=rtpmap:100 H224/4800`;
-
       // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
-
       // d.sdp = d.sdp.replace('webrtc-datachannel\r\n', 'webrtc-datachannel\r\na=floorctrl:s-only\r\na=confid:368\r\na=floorid:2 mstrm:2\r\n');
 
     }
@@ -235,18 +231,19 @@ ua.on('newRTCSession', function(e)
       // // 适配CRTC
       // d.sdp = d.sdp.replace(/420D0D/g, payload);
       // d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
-      // d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
+      d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
 
       // d.sdp = d.sdp.replace('a=mid:2\r\n', 'a=mid:2\r\na=floorctrl:c-s\r\na=confid:368\r\na=floorid:2 m-stream:12\r\n');
-      d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
-      d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
+      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+
+      // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
+      // d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
 
       // console.warn('dsdp: ', d.sdp);
-      // d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
-      // d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
-      // d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
     }
-
   });
 
   /**
