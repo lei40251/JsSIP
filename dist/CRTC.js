@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250302.202533183
+ * CRTC v1.10.9-beta.250302.2025331817
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17886,7 +17886,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // DataChannel
     _this._dataChannel = null;
-    _this._dataChannelName = 'BFCP';
+    _this._dataChannelName = CRTC_C.BFCP;
     _this._dataChannelReady = false;
     _this._dataChannelConfig = {};
     _this._dataChannelMsgs = {};
