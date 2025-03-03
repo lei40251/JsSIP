@@ -368,7 +368,6 @@ ua.on('newRTCSession', function(e)
   e.session.on('remoteShared', function(d)
   {
     // document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
-
     document.querySelector('#remoteVideo2').srcObject = CRTC.Utils.getStreams(e.session.connection, 'shared', 2).videoStream;
     document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100';
   });

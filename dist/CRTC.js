@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250302.20253413
+ * CRTC v1.10.9-beta.250302.202534134
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -22044,12 +22044,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // BFCP 控制的媒体 transceiver 索引号
         this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
-        try {
+        if (this._transceiverIndex && this._transceiverIndex !== -1) {
           sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
-          this._bfcpStream = Utils.getStreams(this._connection, 'shared');
-          logger.debug("sessionStorage setItem ".concat(CRTC_C.BFCP_TRANSCEIVER_INDEX, ": ").concat(this._transceiverIndex));
-        } catch (error) {
-          logger.error("Failed to set item in sessionStorage:".concat(error));
+          try {
+            this._bfcpStream = Utils.getStreams(this._connection, 'shared');
+            logger.debug("sessionStorage setItem ".concat(CRTC_C.BFCP_TRANSCEIVER_INDEX, ": ").concat(this._transceiverIndex));
+          } catch (error) {
+            logger.error("Failed to set item in sessionStorage:".concat(error));
+          }
         }
 
         /**
@@ -23141,7 +23143,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
       logger.debug('onChannelMessage()');
-
+      console.warn('event: ', event);
       // 如果数据通道未准备好，则忽略消息
       if (!this._dataChannelReady) {
         logger.warn('onChannelMessage(): Data channel is not ready, ignoring message.');
@@ -23157,10 +23159,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       try {
         // 将 ArrayBuffer 转换为 Buffer 并解析消息
         var bufferData = Buffer.from(data);
-        var message = this._bfcpUser.receiveMessage(bufferData);
 
         // TODO 调试用
         console.warn('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
+
+        // 适配 0002 0000  的包
+        if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
+          return;
+        }
+        var message = this._bfcpUser.receiveMessage(bufferData);
+
+        // TODO 调试用
         console.warn("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
 
         // 输出日志：收到消息内容及tid，时间戳
@@ -23187,7 +23196,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           case Primitive.FloorRequest:
             this._handleFloorRequestMessage(message);
             break;
-          case Primitive.FloorRelease:
           default:
             logger.warn("onChannelMessage(): Unknown primitive type: ".concat(message.commonHeader.primitive));
             break;
