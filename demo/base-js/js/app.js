@@ -30,17 +30,17 @@ const cusMediaStream = new MediaStream();
 
 // 信令地址
 // const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
-const signalingUrl = 'wss://a.vsbc.com:5062/wss';
+// const signalingUrl = 'wss://a.vsbc.com:5062/wss';
 // const signalingUrl = 'wss://cloudnetuc.vsbc.com:50600/wss';
-// const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
+const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
 // const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
 // sip domain
 // const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
-const sipDomain = 'a.vsbc.com';
+// const sipDomain = 'a.vsbc.com';
 // const sipDomain = 'cloudnetuc.vsbc.com';
-// const sipDomain = '5g.vsbc.com';
+const sipDomain = '5g.vsbc.com';
 // const sipDomain = 'pro.vsbc.com';
 
 // 注册UA的用户名

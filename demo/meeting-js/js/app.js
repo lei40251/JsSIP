@@ -87,19 +87,15 @@ const maxB = {
   p1080c : 2000
 };
 
+// eslint-disable-next-line no-unused-vars
 let dropdownSwitchCam;
+// eslint-disable-next-line no-unused-vars
 let dropdownSwitchMic;
 
 // 信令地址
-// const signalingUrl = 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss';
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
-// const signalingUrl = 'wss://pro.vsbc.com:60041/wss';
-// const signalingUrl = 'wss://pro.vsbc.com:60040/wss';
-// const signalingUrl = 'wss://pro.vsbc.com:12550/wss';
+const signalingUrl = 'wss://cloudnetuc.vsbc.com:50600/wss';
 // sip domain
-// const sipDomain = 'jfvideo-bond-media-stg.zgpajf.com.cn';
-const sipDomain = '5g.vsbc.com';
-// const sipDomain = 'pro.vsbc.com';
+const sipDomain = 'cloudnetuc.vsbc.com';
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -128,8 +124,7 @@ const configuration = {
   // SIP身份验证密码
   password       : `yl_19${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'fRahTcdzG56dS4JukJiFYaBdKus72vKNuTU9bAgYmJDqc7fL+5n8vbYlBz/7VZ0/HrX5un7NBPhs7U+dPl1KAqi/OKk8EwnQgMFr4jdITmpYPavfQXixCW3nM/nBMq5YbdsXSehsW611XHHW3dzl+H9m7yw7iRGAdlnu2bDZ2zrDXLBYNYYmGZFTmS4VeVrq9usO8Q9kNeSqG4Fgl31it5mpZEXJzLIHBfUlP9zkuF/PZX3ldZerPtXqrSwTnl+E6mi9GZjyAD3O/z1tMEdMJvWJDkM5/0Rh/9ly1mHUXfIy+zAMjrahRLAJ7hchZeySsWIghc13/EB7j9S/4wG6YQ=='
-  // secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
+  secret_key     : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA=='
 };
 // 媒体约束条件
 const videoConstraints = constraints[resolution];
@@ -288,7 +283,7 @@ ua.on('newRTCSession', function(e)
       // const match = d.sdp.match(/c=IN.*\r\n/);
 
       // d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
-      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
+      d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
       // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
 
       // d.sdp = d.sdp.replace('webrtc-datachannel\r\n', 'webrtc-datachannel\r\na=floorctrl:c-only\r\na=floorid:2 mstrm:2\r\n');
@@ -306,9 +301,9 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
       // d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
 
-      // d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
-      // d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
-      // d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
+      d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
     }
 
   });
@@ -434,11 +429,9 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('remoteShared', function(d)
   {
-    document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
-    // document.querySelector('#remoteVideo2').srcObject = CRTC.Utils.getStreams(e.session.connection, 'shared').videoStream;
-    document.querySelector('#remoteVideo2').play();
-
-    document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
+    // document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
+    document.querySelector('#remoteVideo2').srcObject = CRTC.Utils.getStreams(e.session.connection, 'shared').videoStream;
+    document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100';
   });
 
   /**
@@ -451,7 +444,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('remoteUnShared', function()
   {
     document.querySelector('#remoteVideo2').srcObject=null;
-    document.querySelector('#remoteVideo2').classList = 'hide';
+    document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
   });
 
   /**

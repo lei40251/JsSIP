@@ -99,17 +99,16 @@
 
         <p class="py-2 m-0 position-absolute top-0 start-0 w-100 text-center z-index-1 bg-opacity-25 bg-light"
           style="font-size: 14px">
-          <!--                <button type="button" class="btn btn-sm btn-outline-info position-absolute start-0 mx-2"><i class="bi bi-info"></i></button>-->
           当前房间号: <span id="room"></span>
         </p>
-        <div class="m-5" id="large">
-          <video autoplay class="w-50" id="remoteVideo" playsinline x5-video-player-fullscreen="true"
-            x5-video-player-type="h5"></video>
-
-          <video autoplay class="w-50" id="remoteVideo2" muted playsinline x5-video-player-fullscreen="true"
-            x5-video-player-type="h5"></video>
-          <span id="large-text" class="hide"><i class="bi bi-people-fill"></i> 远端</span></span>
+        <div id="large" class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
+          <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+            class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="remoteVideo"></video>
+          <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
+            class="mh-100 mw-100 hide" style="object-fit: contain; flex: 1 1 auto;min-width: 0;"
+            id="remoteVideo2"></video>
         </div>
+        <span id="large-text" class="hide"><i class="bi bi-people-fill"></i> 远端</span></span>
       </div>
       <div class="col-2">
         <div class="position-relative bg-light my-2" id="small">
