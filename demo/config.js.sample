@@ -1,0 +1,6 @@
+// 信令地址
+const signalingUrl = 'wss://example.com:8060/wss';
+// sip domain
+const sipDomain = 'example.com';
+// 授权码
+const secretKey = 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ';

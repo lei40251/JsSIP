@@ -12,12 +12,6 @@ let tmpSession;
 let tmpStream;
 let callee;
 
-// 信令地址
-const signalingUrl = 'wss://5g.vsbc.com:9002/wss';
-// sip domain
-const sipDomain = '5g.vsbc.com';
-// const sipDomain = 'pro.vsbc.com';
-
 // 注册UA的用户名
 const callerAccount = handleGetQuery('caller');
 // UA 配置项
@@ -30,7 +24,7 @@ const configuration = {
   display_name : callerAccount,
   // SIP身份验证密码
   password     : `yl_19${callerAccount}`,
-  secret_key   : sessionStorage.getItem('secret_key') || 'dhrrsY0tGw0VGSos+3lLLiZJK7hPe10zmSKueyNMS7Ig5PnThG0EYrLGx4mYmE2j23jAVexrZLTjZQL1ytosFN5EU1t95eyn38+t3KTZV4jSPCD2iidEXtOi6GuaB73na/5jH4wkobyOMpaZCKK5SNl2yDhaU8qbXMtnG1b0ezWd+ROcsC4WPh8O0HHk42VWhEnzXVp0k9KAn+idsO2536CZ4uIPPT244Z7aC1QPL0Y5Vj54oJrB3C54wbkouWd9s+MDIm3BzewBnf3ogSLGIlrN85Y7U5PnBERpeb0JXKi8pGGY40fS3EUJxi7zRPRrdGuzrAMgFiOBRTfqz+sWuQ=='
+  secret_key   : secretKey
 };
 
 // RTCPeerConnection 的 RTCConfiguration 对象

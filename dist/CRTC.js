@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250305.2025351818
+ * CRTC v1.10.9-beta.250305.202535236
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -19389,7 +19389,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 64;
               break;
             case 31:
               if (!(type === 'pic')) {
@@ -19427,7 +19427,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 64;
               break;
             case 45:
               if (!(type === 'html')) {
@@ -19465,11 +19465,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 64;
               break;
             case 60:
               if (!(type === 'screen')) {
-                _context4.next = 65;
+                _context4.next = 64;
                 break;
               }
               logger.debug('share screen');
@@ -19479,7 +19479,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 logger.warn('getDisplayMedia is not supported');
                 this.emit('getdisplaymediafailed');
               }
-              this._localShareStreamLocallyGenerated = true;
 
               // 分享屏幕 默认帧率 5
               return _context4.abrupt("return", navigator.mediaDevices.getDisplayMedia({
@@ -19508,6 +19507,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                     _sender4.replaceTrack(track);
                   }
                 });
+                _this8._localShareStreamLocallyGenerated = true;
                 return stream;
               })["catch"](function (error) {
                 logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
@@ -19515,7 +19515,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8.emit('getdisplaymediafailed', error);
                 throw new Error('getDisplayMedia() failed');
               }));
-            case 65:
+            case 64:
             case "end":
               return _context4.stop();
           }
@@ -22090,6 +22090,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // BFCP 控制的媒体 transceiver 索引号
         this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
+        console.warn('tran: ', this._transceiverIndex);
         if (this._transceiverIndex && this._transceiverIndex !== -1) {
           sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
           try {
@@ -23105,6 +23106,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug("BFCP send FloorRequestStatusACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
       var response = this._bfcpUser.floorRequestStatusAckMessage(message);
       this._sendDataChannelMessage(response);
+
+      // 处理本端分享被撤销的情况
+      var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+      if (status === RequestStatusValue.Revoked && this._localShareStreamLocallyGenerated) {
+        this._localShareStreamLocallyGenerated = false;
+        this.unShare();
+      }
     }
 
     /**
@@ -23168,10 +23176,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendDataChannelMessage",
     value: function _sendDataChannelMessage(message, transactionId) {
-      logger.debug("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
-      // TODO 调试用
-      console.warn('send unit8 ACK: ', Utils.uint8ArrayToBase64(message), Utils.uint8ArrayToBinaryString(message));
-      console.warn('BFCP send ACK: ', this._bfcpUser.receiveMessage(message), transactionId, Date.now());
+      logger.debug("Sending message ".concat(Utils.uint8ArrayToBase64(message), " with Transaction ID: ").concat(transactionId, ", Timestamp: ").concat(Date.now()));
       this._dataChannel.send(message);
     }
 
@@ -23187,7 +23192,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_onChannelMessage",
     value: function _onChannelMessage(event) {
       logger.debug('onChannelMessage()');
-      console.warn('event: ', event);
+
       // 如果数据通道未准备好，则忽略消息
       if (!this._dataChannelReady) {
         logger.warn('onChannelMessage(): Data channel is not ready, ignoring message.');
@@ -23203,18 +23208,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       try {
         // 将 ArrayBuffer 转换为 Buffer 并解析消息
         var bufferData = Buffer.from(data);
-
-        // TODO 调试用
-        console.warn('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
+        logger.warn('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
 
         // 适配 0002 0000  的包
         if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
           return;
         }
         var message = this._bfcpUser.receiveMessage(bufferData);
-
-        // TODO 调试用
-        console.warn("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
 
         // 输出日志：收到消息内容及tid，时间戳
         logger.debug("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
@@ -23224,6 +23224,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
+          return;
         }
 
         // 根据消息类型执行相应逻辑
@@ -23303,14 +23304,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
 
-        // TODO 调试用
-        console.warn('send unit8: ', Utils.uint8ArrayToBase64(messageState.message), Utils.uint8ArrayToBinaryString(messageState.message));
-        console.warn('BFCP send: ', _this42._bfcpUser.receiveMessage(messageState.message), messageState.retries + 1, transactionId, Date.now());
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(_this42._bfcpUser.receiveMessage(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        logger.debug("BFCP send: ".concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
         var sendMessage = _this42._bfcpUser.receiveMessage(messageState.message);
 
-        // DC 消息超时重试，FloorRelease消息不重发
+        // DC 消息超时重试, FloorRelease消息不重发
         sendMessage.commonHeader.primitive != Primitive.FloorRelease && setTimeout(function () {
           // 如果没有收到响应，则重试
           if (messageState && !messageState.received) {
@@ -29109,7 +29107,8 @@ exports.findLabelIndexByMstrm = function (sdp) {
           }
         } else if (currentMediaType && line.startsWith('a=label:')) {
           // 提取 label 值
-          var label = line.split(':')[1];
+          var labelMatch = line.match(/^a=label:(\S+)/);
+          var label = labelMatch ? labelMatch[1].trim() : '';
 
           // 更新最后一个元素的 label
           if (labelMap.length > 0) {
@@ -39203,5 +39202,6 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
+
 },{}]},{},[38])(38)
 });

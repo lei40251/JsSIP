@@ -14,7 +14,7 @@ callee = new CRTC.UA({
   display_name : calleeAccount,
   // SIP身份验证密码
   password     : `yl_19${calleeAccount}`,
-  secret_key   : sessionStorage.getItem('secret_key') || 'dhrrsY0tGw0VGSos+3lLLiZJK7hPe10zmSKueyNMS7Ig5PnThG0EYrLGx4mYmE2j23jAVexrZLTjZQL1ytosFN5EU1t95eyn38+t3KTZV4jSPCD2iidEXtOi6GuaB73na/5jH4wkobyOMpaZCKK5SNl2yDhaU8qbXMtnG1b0ezWd+ROcsC4WPh8O0HHk42VWhEnzXVp0k9KAn+idsO2536CZ4uIPPT244Z7aC1QPL0Y5Vj54oJrB3C54wbkouWd9s+MDIm3BzewBnf3ogSLGIlrN85Y7U5PnBERpeb0JXKi8pGGY40fS3EUJxi7zRPRrdGuzrAMgFiOBRTfqz+sWuQ=='
+  secret_key   : secretKey
 });
 
 // ***** UA 事件回调 *****

@@ -3,10 +3,9 @@
 /* eslint-disable no-undef */
 
 // 调试信息输出
-
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -92,11 +91,6 @@ let dropdownSwitchCam;
 // eslint-disable-next-line no-unused-vars
 let dropdownSwitchMic;
 
-// 信令地址
-const signalingUrl = 'wss://cloudnetuc.vsbc.com:50600/wss';
-// sip domain
-const sipDomain = 'cloudnetuc.vsbc.com';
-
 // 注册UA的用户名
 const account = handleGetQuery('caller');
 const display = handleGetQuery('display');
@@ -124,7 +118,7 @@ const configuration = {
   // SIP身份验证密码
   password       : `yl_19${account}`,
   session_timers : false,
-  secret_key     : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA=='
+  secret_key     : secretKey
 };
 // 媒体约束条件
 const videoConstraints = constraints[resolution];
@@ -270,37 +264,14 @@ ua.on('newRTCSession', function(e)
 
     if (d.originator === 'local')
     {
-      // 保存浏览器默认payload
-      // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
 
-      // payload || (payload = d.sdp.match(payloadRegex)[1]);
-
-      // const newPayloadRegex = new RegExp(payload, 'g');
-
-      // // 将sdp的默认payload改为420D0D
-      // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
-      // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      // const match = d.sdp.match(/c=IN.*\r\n/);
-
-      // d.sdp = d.sdp.replace(/s=-\r\n/, `s=-\r\n${match[0]}`);
       d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
-      // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
 
-      // d.sdp = d.sdp.replace('webrtc-datachannel\r\n', 'webrtc-datachannel\r\na=floorctrl:c-only\r\na=floorid:2 mstrm:2\r\n');
     }
-    else if (d.originator === 'remote')
+    else if (d.originator==='remote')
     {
-      // // 适配paphone
-      // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
-      // // 适配CRTC
-      // d.sdp = d.sdp.replace(/420D0D/g, payload);
 
-      // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=confid:368\r\na=floorid:2 mstrm:12\r\n');
-
-      // console.warn('dsdp: ', d.sdp);
       // d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
-      // d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
-
       d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
       d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
       d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
@@ -427,7 +398,7 @@ ua.on('newRTCSession', function(e)
     *
     * @fires 远端分享或停止分享后触发
     */
-  e.session.on('remoteShared', function(d)
+  e.session.on('remoteShared', function()
   {
     // document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
     document.querySelector('#remoteVideo2').srcObject = CRTC.Utils.getStreams(e.session.connection, 'shared').videoStream;
@@ -748,16 +719,15 @@ ua.on('newRTCSession', function(e)
       if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
       {
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
-        document.querySelector('#remoteVideo2')
-          .play();
+        // document.querySelector('#remoteVideo2').play();
 
         document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
-        document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
+        // document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
       }
       else
       {
         document.querySelector('#remoteVideo').classList = 'h-100';
-        document.querySelector('#remoteVideo2').classList = 'hide';
+        // document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
   });
@@ -781,7 +751,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true }
+      rtcOfferConstraints : { offerToReceiveAudio: true },
+      extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('audio answer');
@@ -804,7 +775,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true }
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('video answer');
@@ -878,6 +850,7 @@ ua.on('newRTCSession', function(e)
     }
     catch (error)
     {
+
     }
   };
 
@@ -888,37 +861,12 @@ ua.on('newRTCSession', function(e)
   {
     // 转接过程中的事件
     const eventHandlers = {
-      'progress' : function(data)
-      {
-        console.log('progress', data);
-      },
-      'failed' : function()
-      {
-        if (e.session.isOnHold().local)
-        {
-          e.session.unhold();
-        }
-      },
-      'accepted' : function(data)
-      {
-        console.log('accept', data);
-        e.session.terminate();
-      },
-      'trying' : function(data)
-      {
-        console.log('trying', data);
-      },
-      'requestSucceeded' : function(data)
-      {
-        console.log('requestSucceeded', data);
-      },
-      'requestFailed' : function()
-      {
-        if (e.session.isOnHold().local)
-        {
-          e.session.unhold();
-        }
-      }
+      'progress'         : function(data) { console.log('progress', data); },
+      'failed'           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
+      'accepted'         : function(data) { console.log('accept', data); e.session.terminate(); },
+      'trying'           : function(data) { console.log('trying', data); },
+      'requestSucceeded' : function(data) { console.log('requestSucceeded', data); },
+      'requestFailed'    : function() { if (e.session.isOnHold().local) { e.session.unhold(); } }
     };
 
     // 暂停前一个通话，开始转接
@@ -996,7 +944,13 @@ ua.on('newRTCSession', function(e)
     e.session.share('screen', null, null)
       .then((stream) =>
       {
-        document.querySelector('#screen').srcObject = stream;
+        document.querySelector('#screen').srcObject=stream;
+        document.querySelector('#screen').classList = 'mh-100 mw-100';
+
+        stream.getVideoTracks()[0].onended = () =>
+        {
+          document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+        };
       });
   };
   document.querySelector('#screenShareD').onclick = function()
@@ -1004,7 +958,26 @@ ua.on('newRTCSession', function(e)
     e.session.share('screen', null, null, true)
       .then((stream) =>
       {
-        document.querySelector('#screen').srcObject = stream;
+        document.querySelector('#screen').srcObject=stream;
+        document.querySelector('#screen').classList='mh-100 mw-100';
+
+        // 演示用
+        // e.session.sendFloorStatus(3);
+
+        // 部分被动场景可能无法触发ended事件，集成时如果必要可以考虑定时获取状态更新页面
+        stream.getVideoTracks()[0].addEventListener('ended', () =>
+        {
+          // e.session.sendFloorStatus(6);
+          document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+        });
+
+        document.querySelector('#remoteVideo2').srcObject=null;
+        document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
+      })
+      .catch((err) =>
+      {
+        console.warn('err: ', err);
+        // e.session.sendFloorStatus(6);
       });
   };
 
@@ -1205,9 +1178,7 @@ async function call(type, direction)
        * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
        */
       remoteAudio.play()
-        .catch(() =>
-        {
-        });
+        .catch(() => { });
     }
   };
 
@@ -1284,9 +1255,7 @@ function getStreams(pc)
      * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
      */
     remoteAudio.play()
-      .catch(() =>
-      {
-      });
+      .catch(() => { });
   }, 100);
   // 远端视频
   remoteVideo.srcObject = remoteStream.mediaStream;
@@ -1305,12 +1274,8 @@ function getStreams(pc)
    * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
    */
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
-    .then(() =>
-    {
-    })
-    .catch(() =>
-    {
-    });
+    .then(() => { })
+    .catch(() => { });
 }
 
 function stopStreams()

@@ -46,6 +46,27 @@ function logError(error)
   log(colors.red(String(error)));
 }
 
+// 1. 复制文件
+function copyFiles()
+{
+  return gulp.src('demo/**')
+    .pipe(gulp.dest('zip/demo/'));
+}
+
+// 2. 重命名备份文件
+function renameConfig()
+{
+  return gulp.src('zip/demo/config.js.sample')
+    .pipe(rename('config.js'))
+    .pipe(gulp.dest('zip/demo/'));
+}
+
+// 3. 删除旧备份文件
+function deleteBackup()
+{
+  return del('zip/demo/config.js.sample');
+}
+
 gulp.task('lint', function()
 {
   const src = [ 'gulpfile.js', '.eslintrc.js', 'lib/**/*.js', 'test/**/*.js' ];
@@ -189,12 +210,11 @@ gulp.task('grammar', function(cb)
 });
 
 // 打zip压缩包用
-gulp.task('zip-demo', function()
-{
-  return gulp
-    .src('demo/**')
-    .pipe(gulp.dest('zip/demo/'));
-});
+gulp.task('zip-demo', gulp.series(
+  copyFiles,
+  renameConfig,
+  deleteBackup // 新增删除步骤
+));
 
 gulp.task('zip-dist', function()
 {
