@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250302.202534134
+ * CRTC v1.10.9-beta.250305.2025351818
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -1062,7 +1062,7 @@ var SupportedAttributes = /*#__PURE__*/function (_Attribute) {
     _classCallCheck(this, SupportedAttributes);
     var supAttributes = [];
     if (!attributes || attributes == undefined) {
-      supAttributes = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.SupportedPrimitives, Type.SupportedAttributes];
+      supAttributes = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.Priority, Type.RequestStatus, Type.ErrorCode, Type.ErrorInfo, Type.ParticipantProvidedInfo, Type.StatusInfo, Type.SupportedAttributes, Type.SupportedPrimitives, Type.UserDisplayName, Type.UserUri, Type.RequestedByInformation, Type.FloorRequestInformation, Type.RequestedByInformation, Type.FloorRequestStatus, Type.OverallRequestStatus];
     } else {
       supAttributes = attributes;
     }
@@ -1113,7 +1113,17 @@ var SupportedPrimitives = /*#__PURE__*/function (_Attribute) {
     _classCallCheck(this, SupportedPrimitives);
     var supPrimitives = [];
     if (!primitives || primitives == undefined) {
-      supPrimitives = [Primitive.Hello, Primitive.HelloAck];
+      supPrimitives = [Primitive.FloorRequest,
+      // Primitive.FloorRelease,
+      // Primitive.FloorRequestQuery,
+      Primitive.FloorRequestStatus,
+      // Primitive.UserQuery,
+      // Primitive.UserStatus,
+      // Primitive.FloorQuery,
+      Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck, Primitive.FloorStatusAck
+      // Primitive.Goodbye,
+      // Primitive.GoodbyeAck
+      ];
     } else {
       supPrimitives = primitives;
     }
@@ -2439,6 +2449,32 @@ var Primitive = /*#__PURE__*/function () {
     get: function get() {
       return 16;
     }
+
+    /**
+     * Gets Goodbye Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Goodbye",
+    get: function get() {
+      return 17;
+    }
+
+    /**
+     * Gets GoodbyeAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "GoodbyeAck",
+    get: function get() {
+      return 18;
+    }
   }]);
 }();
 module.exports = Primitive;
@@ -2713,7 +2749,8 @@ var Parser = /*#__PURE__*/function () {
             attributeList.push(Parser._parseFloorRequestId(attribute.substring(16)));
             break;
           default:
-            throw new Error('I cant parse this attribute!');
+            console.warn('I cant parse this attribute!');
+          // throw new Error('I cant parse this attribute!');
         }
         var size = length * 8;
         while (size % 32 != 0) {
@@ -21629,7 +21666,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 添加BFCP所需属性
-        _this28._enableBFCP && (desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n")));
+        if (_this28._enableBFCP) {
+          // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
+          var supportedMSTC;
+          if ('MediaStreamTrackGenerator' in window) {
+            supportedMSTC = true;
+          }
+          _this28._connection.getTransceivers().forEach(function (transceiver) {
+            if (supportedMSTC) {
+              // eslint-disable-next-line no-undef
+              if (transceiver.sender.track instanceof MediaStreamTrackGenerator || transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+                _this28._mStream = transceiver.mid;
+              }
+            } else if (transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+              _this28._mStream = transceiver.mid;
+            }
+          });
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n"));
+
+          // 添加主辅流标志
+          desc = _this28._addMediastreamFlag(desc, _this28._mStream);
+        }
+        // this._enableBFCP && ();
+
+        // 添加主辅流标志
+        // sdp = this._addMediastreamFlag(sdp, this._mStream);
+
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
         logger.debug('emit "sending" [request:%o]', _this28._request);
@@ -21842,15 +21904,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this.emit('sdp', _e);
 
             // 获取响应中BFCP相关属性
-            this._floorId = (_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1];
+            this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
             this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
             this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
             this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
             this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
 
             // 把协商来的userId 和 confId赋值给bfcpUser对象
-            this._bfcpUser.userId = this._bfcpUserId;
-            this._bfcpUser.conferenceId = this._confId;
+            this._bfcpUser.userId = Number(this._bfcpUserId);
+            this._bfcpUser.conferenceId = Number(this._confId);
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -21958,22 +22020,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _this30._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
         sdp = _this30._mangleOffer(sdp);
-
-        // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
-        var supportedMSTC;
-        if ('MediaStreamTrackGenerator' in window) {
-          supportedMSTC = true;
-        }
-        _this30._connection.getTransceivers().forEach(function (transceiver) {
-          if (supportedMSTC) {
-            // eslint-disable-next-line no-undef
-            if (transceiver.sender.track instanceof MediaStreamTrackGenerator || transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
-              _this30._mStream = transceiver.mid;
-            }
-          } else if (transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
-            _this30._mStream = transceiver.mid;
-          }
-        });
 
         // 添加BFCP所需属性
         _this30._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n")));
@@ -23122,12 +23168,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendDataChannelMessage",
     value: function _sendDataChannelMessage(message, transactionId) {
-      if (transactionId) {
-        logger.debug("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
-        // TODO 调试用
-        console.warn('send unit8 ACK: ', Utils.uint8ArrayToBase64(message), Utils.uint8ArrayToBinaryString(message));
-        console.warn('BFCP send ACK: ', this._bfcpUser.receiveMessage(message), transactionId, Date.now());
-      }
+      logger.debug("Sending message with Transaction ID: ".concat(transactionId, ", Timestamp: ").concat(Date.now()));
+      // TODO 调试用
+      console.warn('send unit8 ACK: ', Utils.uint8ArrayToBase64(message), Utils.uint8ArrayToBinaryString(message));
+      console.warn('BFCP send ACK: ', this._bfcpUser.receiveMessage(message), transactionId, Date.now());
       this._dataChannel.send(message);
     }
 
@@ -39106,7 +39150,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250302",
+  "version": "1.10.9-beta.250305",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
