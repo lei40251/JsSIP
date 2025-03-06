@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250305.202535236
+ * CRTC v1.10.9-beta.250306.2025361823
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -17999,6 +17999,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._restoreCameraTrackCanvas = null;
     _this._restoreCameraTrackCtx = null;
     _this._restoreCameraTrackDraw = null;
+    _this._boundReplaceVideoToCanvas = _this._replaceVideoToCanvas.bind(_this);
+    _this._boundReplaceMicToAudios = _this._replaceMicToAudio.bind(_this);
 
     // 定制模式
     _this._customizedMode = null;
@@ -19340,7 +19342,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
               _context4.prev = 7;
               if (!this._enableBFCP) {
-                _context4.next = 17;
+                _context4.next = 18;
                 break;
               }
               _context4.next = 11;
@@ -19356,18 +19358,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 16:
+              // 主动踢掉远端的共享
+              this._remoteShared = false;
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
-            case 17:
-              _context4.next = 23;
+            case 18:
+              _context4.next = 24;
               break;
-            case 19:
-              _context4.prev = 19;
+            case 20:
+              _context4.prev = 20;
               _context4.t0 = _context4["catch"](7);
               logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
               return _context4.abrupt("return", Promise.reject("Floor request failed: ".concat(_context4.t0.message || 'Unknown error')));
-            case 23:
+            case 24:
               if (!(type === 'video')) {
-                _context4.next = 31;
+                _context4.next = 32;
                 break;
               }
               logger.debug('share video');
@@ -19389,11 +19393,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context4.next = 64;
+              _context4.next = 65;
               break;
-            case 31:
+            case 32:
               if (!(type === 'pic')) {
-                _context4.next = 45;
+                _context4.next = 46;
                 break;
               }
               logger.debug('share pic');
@@ -19427,20 +19431,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context4.next = 64;
+              _context4.next = 65;
               break;
-            case 45:
+            case 46:
               if (!(type === 'html')) {
-                _context4.next = 60;
+                _context4.next = 61;
                 break;
               }
               logger.debug('share html');
               if (assembly) {
-                _context4.next = 49;
+                _context4.next = 50;
                 break;
               }
               return _context4.abrupt("return");
-            case 49:
+            case 50:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
               _canvas.height = 1;
@@ -19465,11 +19469,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context4.next = 64;
+              _context4.next = 65;
               break;
-            case 60:
+            case 61:
               if (!(type === 'screen')) {
-                _context4.next = 64;
+                _context4.next = 65;
                 break;
               }
               logger.debug('share screen');
@@ -19515,11 +19519,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8.emit('getdisplaymediafailed', error);
                 throw new Error('getDisplayMedia() failed');
               }));
-            case 64:
+            case 65:
             case "end":
               return _context4.stop();
           }
-        }, _callee4, this, [[7, 19]]);
+        }, _callee4, this, [[7, 20]]);
       }));
       function share(_x3, _x4, _x5, _x6) {
         return _share.apply(this, arguments);
@@ -20636,33 +20640,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp.groups[0].mids = mids.join(' ');
           desc.sdp = sdp_transform.write(sdp);
         }
-
-        // // 总带宽AS值
-        // let _bandWidth = 0;
-
-        // /**
-        //  * 5G授权的时候通过SDP设置带宽
-        //  * 华为MCU需要，所以非5G授权也需要携带
-        //  */
-        // sdp.media.forEach((media) =>
-        // {
-        //   /**
-        //    * 处理SDP的码率配置
-        //    */
-        //   if (media.type === 'video')
-        //   {
-        //     _bandWidth += 960;
-        //     media.bandwidth = [ { type: 'AS', limit: 960 } ];
-        //   }
-        //   else if (media.type === 'audio')
-        //   {
-        //     _bandWidth += 90;
-        //     media.bandwidth = [ { type: 'AS', limit: 90 } ];
-        //   }
-        // });
-
-        // sdp.bandwidth = [ { type: 'AS', limit: _bandWidth } ];
-
         desc.sdp = sdp_transform.write(sdp);
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
@@ -20829,57 +20806,77 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var _bandRS = 0;
 
         /**
-         * 处理5G外呼sdp过大问题,
-         * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-         *
-         * 华为MCU对接需要带
+         * 处理5G外呼sdp
+         * 华为MCU对接需要带 b=AS
          */
         sdp_desc.media.forEach(function (media) {
           if (media.type === 'video') {
-            _bandAS += 960;
-            _bandRR += 6000;
-            _bandRS += 8000;
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 960
-            }, {
-              type: 'RR',
-              limit: 6000
-            }, {
-              type: 'RS',
-              limit: 8000
-            }];
-            media.invalid = [{
-              value: 'tcap:1 RTP/AVPF'
-            }, {
-              value: 'pcfg:1 t=1'
-            }];
+            /**
+             * 处理5G和非5G的SDP
+             */
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += 960;
+              _bandRR += 6000;
+              _bandRS += 8000;
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 960
+              }, {
+                type: 'RR',
+                limit: 6000
+              }, {
+                type: 'RS',
+                limit: 8000
+              }];
+              media.invalid = [{
+                value: 'tcap:1 RTP/AVPF'
+              }, {
+                value: 'pcfg:1 t=1'
+              }];
+            } else {
+              _bandAS += 1024;
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 1024
+              }];
+            }
           } else if (media.type === 'audio') {
-            _bandAS += 90;
-            _bandRR += 600;
-            _bandRS += 2000;
-            media.bandwidth = [{
-              type: 'AS',
-              limit: 90
-            }, {
-              type: 'RR',
-              limit: 600
-            }, {
-              type: 'RS',
-              limit: 2000
-            }];
+            /**
+             * 处理5G和非5G的SDP
+             */
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += 90;
+              _bandRR += 600;
+              _bandRS += 2000;
+              media.bandwidth = [{
+                type: 'AS',
+                limit: 90
+              }, {
+                type: 'RR',
+                limit: 600
+              }, {
+                type: 'RS',
+                limit: 2000
+              }];
+            }
           }
         });
-        sdp_desc.bandwidth = [{
-          type: 'AS',
-          limit: _bandAS
-        }, {
-          type: 'RR',
-          limit: _bandRR
-        }, {
-          type: 'RS',
-          limit: _bandRS
-        }];
+
+        /**
+         * 处理5G和非5G的SDP
+         */
+        if (_this18._ua.sk[7] >= 3) {
+          sdp_desc.bandwidth = [{
+            type: 'AS',
+            limit: _bandAS
+          }, {
+            type: 'RR',
+            limit: _bandRR
+          }, {
+            type: 'RS',
+            limit: _bandRS
+          }];
+        }
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -21902,17 +21899,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', _e);
+            if (this._enableBFCP) {
+              // 获取响应中BFCP相关属性
+              this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
+              this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
+              this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
+              this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
+              this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
 
-            // 获取响应中BFCP相关属性
-            this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
-            this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
-            this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
-            this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
-            this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
-
-            // 把协商来的userId 和 confId赋值给bfcpUser对象
-            this._bfcpUser.userId = Number(this._bfcpUserId);
-            this._bfcpUser.conferenceId = Number(this._confId);
+              // 把协商来的userId 和 confId赋值给bfcpUser对象
+              this._bfcpUser.userId = Number(this._bfcpUserId);
+              this._bfcpUser.conferenceId = Number(this._confId);
+            }
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -22090,7 +22088,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // BFCP 控制的媒体 transceiver 索引号
         this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
-        console.warn('tran: ', this._transceiverIndex);
         if (this._transceiverIndex && this._transceiverIndex !== -1) {
           sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
           try {
@@ -22881,8 +22878,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this36.emit('localMediastreamUpdate', _this36._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this36._replaceMicToAudio);
-            stream.getAudioTracks()[0].addEventListener('ended', _this36._replaceMicToAudio);
+            stream.getAudioTracks()[0].addEventListener('mute', _this36._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this36._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
@@ -22907,8 +22904,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this37._replaceMicToAudio);
-          sender.track.removeEventListener('ended', _this37._replaceMicToAudio);
+          sender.track.removeEventListener('mute', _this37._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this37._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
@@ -22959,8 +22956,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this38._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this38._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this38._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this38._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
@@ -23002,11 +22999,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 从画布获取15fps视频流
       var newStream = this._restoreCameraTrackCanvas.captureStream(15);
       this._connection.getSenders().forEach(function (sender) {
-        if (sender.track && sender.track.kind == 'video') {
+        // eslint-disable-next-line no-undef
+        if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this39._replaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this39._replaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this39._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this39._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
@@ -23057,14 +23055,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 先判断现在PC里面的媒体是否已经是muted
       this._connection.getSenders().forEach(function (sender) {
         // 视频轨道
-        if (sender.track && sender.track.kind === 'video') {
+        if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
             _this40._replaceVideoToCanvas();
-          } else {
+          } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this40._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this40._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this40._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this40._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
@@ -23073,8 +23071,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this40._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this40._replaceMicToAudio);
-            sender.track.addEventListener('ended', _this40._replaceMicToAudio);
+            sender.track.addEventListener('mute', _this40._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this40._boundReplaceMicToAudios);
           }
         }
       });
@@ -23110,7 +23108,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 处理本端分享被撤销的情况
       var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
       if (status === RequestStatusValue.Revoked && this._localShareStreamLocallyGenerated) {
-        this._localShareStreamLocallyGenerated = false;
         this.unShare();
       }
     }
@@ -23208,7 +23205,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       try {
         // 将 ArrayBuffer 转换为 Buffer 并解析消息
         var bufferData = Buffer.from(data);
-        logger.warn('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
+        logger.debug('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
 
         // 适配 0002 0000  的包
         if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
@@ -23379,10 +23376,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
-        logger.warn('data channel error.');
+        logger.error('data channel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
         _this43._dataChannelReady = false;
-        console.warn('data err: ', err);
+        logger.warn('data err: ', err);
       };
 
       // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
@@ -25206,6 +25203,13 @@ exports.isSocket = function (socket) {
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
@@ -25221,17 +25225,18 @@ function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.
 function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/* eslint-disable no-unused-vars */
 var EventEmitter = require('events').EventEmitter;
 var Utils = require('./Utils');
 var Logger = require('./Logger');
-var logger = new Logger('Stats');
+var logger = new Logger('ImprovedStats');
 module.exports = /*#__PURE__*/function (_EventEmitter) {
-  function getStats(pc) {
+  function ImprovedStats(pc) {
     var _this;
     var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
     var interval = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
-    _classCallCheck(this, getStats);
-    _this = _callSuper(this, getStats);
+    _classCallCheck(this, ImprovedStats);
+    _this = _callSuper(this, ImprovedStats);
     _this._pc = pc;
     _this._delay = delay;
     _this._interval = interval;
@@ -25239,72 +25244,64 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 多少次getStats后发送完整statsReport
     _this._count = _this._interval;
     _this._statsTimer;
-    _this._stats = {
-      transport: {
-        RTT: null
-      },
+
+    // 基本传输信息
+    _this._transport = {
+      RTT: null
+    };
+
+    // 使用Map存储音频统计信息
+    _this._audioStats = new Map();
+
+    // 使用Map存储视频统计信息，key为ssrc或trackId
+    _this._videoStats = new Map();
+
+    // 当前周期的变化量
+    _this._currentChanges = {
+      audio: new Map(),
+      video: new Map()
+    };
+
+    // 汇总的统计信息
+    _this._aggregatedStats = {
       audio: {
-        bytesSent: null,
-        packetsSent: null,
-        packetsSentLost: null,
-        bytesReceived: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        // uplinkRTT           : null,
+        bytesSent: 0,
+        packetsSent: 0,
+        packetsSentLost: 0,
+        bytesReceived: 0,
+        packetsReceived: 0,
+        packetsReceivedLost: 0,
         uplinkLoss: null,
         uplinkSpeed: null,
-        // downlinkRTT         : null,
         downlinkLoss: null,
         downlinkSpeed: null
       },
       video: {
-        packetsSent: null,
-        packetsSentLost: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        bytesSent: null,
-        bytesReceived: null,
-        // uplinkRTT           : null,
+        bytesSent: 0,
+        packetsSent: 0,
+        packetsSentLost: 0,
+        bytesReceived: 0,
+        packetsReceived: 0,
+        packetsReceivedLost: 0,
         uplinkLoss: null,
         uplinkSpeed: null,
-        // downlinkRTT         : null,
         downlinkLoss: null,
         downlinkSpeed: null,
-        framesEncoded: null,
-        framesDecoded: null,
-        framesSent: null,
-        framesReceived: null,
-        upFramesPerSecond: null,
-        downFramesPerSecond: null,
-        upFrameHeight: null,
-        upFrameWidth: null,
-        downFrameHeight: null,
-        downFrameWidth: null
-      }
-    };
-    _this._cStats = {
-      audio: {
-        bytesSent: null,
-        packetsSent: null,
-        packetsSentLost: null,
-        bytesReceived: null,
-        packetsReceived: null,
-        packetsReceivedLost: null
-      },
-      video: {
-        packetsSent: null,
-        packetsSentLost: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        bytesSent: null,
-        bytesReceived: null
+        // 视频特有的统计信息
+        framesEncoded: 0,
+        framesDecoded: 0,
+        framesSent: 0,
+        framesReceived: 0,
+        // 使用数组存储多个视频流的帧率和分辨率
+        upStreams: [],
+        downStreams: []
       }
     };
     _this.start();
     return _this;
   }
-  _inherits(getStats, _EventEmitter);
-  return _createClass(getStats, [{
+  _inherits(ImprovedStats, _EventEmitter);
+  return _createClass(ImprovedStats, [{
     key: "start",
     value: function start() {
       var _this2 = this;
@@ -25356,49 +25353,74 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "reset",
     value: function reset() {
-      this._stats = {
-        transport: {
-          RTT: null
-        },
+      this._transport = {
+        RTT: null
+      };
+      this._audioStats.clear();
+      this._videoStats.clear();
+      this._currentChanges = {
+        audio: new Map(),
+        video: new Map()
+      };
+      this._aggregatedStats = {
         audio: {
-          bytesSent: null,
-          packetsSent: null,
-          packetsSentLost: null,
-          bytesReceived: null,
-          packetsReceived: null,
-          packetsReceivedLost: null,
-          // uplinkRTT           : null,
+          bytesSent: 0,
+          packetsSent: 0,
+          packetsSentLost: 0,
+          bytesReceived: 0,
+          packetsReceived: 0,
+          packetsReceivedLost: 0,
           uplinkLoss: null,
           uplinkSpeed: null,
-          // downlinkRTT         : null,
           downlinkLoss: null,
           downlinkSpeed: null
         },
         video: {
-          packetsSent: null,
-          packetsSentLost: null,
-          packetsReceived: null,
-          packetsReceivedLost: null,
-          bytesSent: null,
-          bytesReceived: null,
-          // uplinkRTT           : null,
+          bytesSent: 0,
+          packetsSent: 0,
+          packetsSentLost: 0,
+          bytesReceived: 0,
+          packetsReceived: 0,
+          packetsReceivedLost: 0,
           uplinkLoss: null,
           uplinkSpeed: null,
-          // downlinkRTT         : null,
           downlinkLoss: null,
           downlinkSpeed: null,
-          framesEncoded: null,
-          framesDecoded: null,
-          framesSent: null,
-          framesReceived: null,
-          upFramesPerSecond: null,
-          downFramesPerSecond: null,
-          upFrameHeight: null,
-          upFrameWidth: null,
-          downFrameHeight: null,
-          downFrameWidth: null
+          framesEncoded: 0,
+          framesDecoded: 0,
+          framesSent: 0,
+          framesReceived: 0,
+          upStreams: [],
+          downStreams: []
         }
       };
+    }
+
+    // 重置聚合统计信息
+  }, {
+    key: "_resetAggregatedStats",
+    value: function _resetAggregatedStats() {
+      // 重置音频统计信息
+      this._aggregatedStats.audio.bytesSent = 0;
+      this._aggregatedStats.audio.packetsSent = 0;
+      this._aggregatedStats.audio.packetsSentLost = 0;
+      this._aggregatedStats.audio.bytesReceived = 0;
+      this._aggregatedStats.audio.packetsReceived = 0;
+      this._aggregatedStats.audio.packetsReceivedLost = 0;
+
+      // 重置视频统计信息
+      this._aggregatedStats.video.bytesSent = 0;
+      this._aggregatedStats.video.packetsSent = 0;
+      this._aggregatedStats.video.packetsSentLost = 0;
+      this._aggregatedStats.video.bytesReceived = 0;
+      this._aggregatedStats.video.packetsReceived = 0;
+      this._aggregatedStats.video.packetsReceivedLost = 0;
+      this._aggregatedStats.video.framesEncoded = 0;
+      this._aggregatedStats.video.framesDecoded = 0;
+      this._aggregatedStats.video.framesSent = 0;
+      this._aggregatedStats.video.framesReceived = 0;
+      this._aggregatedStats.video.upStreams = [];
+      this._aggregatedStats.video.downStreams = [];
     }
 
     // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
@@ -25408,9 +25430,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function parseReport(stats, inform) {
       var _this3 = this;
       var data = null;
+
+      // 清空当前周期的变化量
+      this._currentChanges.audio.clear();
+      this._currentChanges.video.clear();
+
+      // 清空聚合统计信息
+      this._resetAggregatedStats();
       stats.forEach(function (report) {
         if (inform) {
-          data += JSON.stringify(report);
+          data = data ? data + JSON.stringify(report) : JSON.stringify(report);
           return;
         }
         switch (report.type) {
@@ -25419,58 +25448,149 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               break;
             }
             if (report.kind === 'video') {
-              _this3._cStats.video.packetsSentLost = report['packetsLost'] - (_this3._stats.video.packetsSentLost ? _this3._stats.video.packetsSentLost : 0);
-              _this3._stats.video.packetsSentLost = report['packetsLost'];
+              var id = report.ssrc || report.id;
+              var prevStats = _this3._videoStats.get(id) || {};
+              var currentStats = Object.assign({}, prevStats, {
+                packetsSentLost: report['packetsLost']
+              });
+
+              // 计算当前周期的变化量
+              var change = {
+                packetsSentLost: report['packetsLost'] - (prevStats.packetsSentLost || 0)
+              };
+              _this3._videoStats.set(id, currentStats);
+              _this3._currentChanges.video.set(id, Object.assign({}, _this3._currentChanges.video.get(id) || {}, change));
             } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsSentLost = report['packetsLost'] - (_this3._stats.audio.packetsSentLost ? _this3._stats.audio.packetsSentLost : 0);
-              _this3._stats.audio.packetsSentLost = report['packetsLost'];
+              var _id = report.ssrc || report.id;
+              var _prevStats = _this3._audioStats.get(_id) || {};
+              var _currentStats = Object.assign({}, _prevStats, {
+                packetsSentLost: report['packetsLost']
+              });
+
+              // 计算当前周期的变化量
+              var _change = {
+                packetsSentLost: report['packetsLost'] - (_prevStats.packetsSentLost || 0)
+              };
+              _this3._audioStats.set(_id, _currentStats);
+              _this3._currentChanges.audio.set(_id, Object.assign({}, _this3._currentChanges.audio.get(_id) || {}, _change));
             }
             break;
           case 'candidate-pair':
             if (report['state'] !== 'succeeded') {
               break;
             } else {
-              _this3._stats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']);
+              _this3._transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']);
             }
             break;
           case 'outbound-rtp':
             if (report.kind === 'video') {
-              _this3._cStats.video.packetsSent = report['packetsSent'] - (_this3._stats.video.packetsSent ? _this3._stats.video.packetsSent : 0);
-              _this3._cStats.video.bytesSent = report['bytesSent'] - (_this3._stats.video.bytesSent ? _this3._stats.video.bytesSent : 0);
-              _this3._stats.video.packetsSent = report['packetsSent'];
-              _this3._stats.video.bytesSent = report['bytesSent'];
-              _this3._stats.video.upFrameHeight = report['frameHeight'];
-              _this3._stats.video.upFrameWidth = report['frameWidth'];
-              _this3._stats.video.framesEncoded = report['framesEncoded'];
-              _this3._stats.video.framesSent = report['framesSent'];
-              _this3._stats.video.upFramesPerSecond = report['framesPerSecond'];
+              var _id2 = report.ssrc || report.id;
+              var _prevStats2 = _this3._videoStats.get(_id2) || {};
+              var _currentStats2 = Object.assign({}, _prevStats2, {
+                packetsSent: report['packetsSent'],
+                bytesSent: report['bytesSent'],
+                frameHeight: report['frameHeight'],
+                frameWidth: report['frameWidth'],
+                framesEncoded: report['framesEncoded'],
+                framesSent: report['framesSent'],
+                framesPerSecond: report['framesPerSecond'],
+                mediaSourceId: report['mediaSourceId'],
+                contentType: report['contentType']
+              });
+
+              // 计算当前周期的变化量
+              var _change2 = {
+                packetsSent: report['packetsSent'] - (_prevStats2.packetsSent || 0),
+                bytesSent: report['bytesSent'] - (_prevStats2.bytesSent || 0)
+              };
+              _this3._videoStats.set(_id2, _currentStats2);
+              _this3._currentChanges.video.set(_id2, Object.assign({}, _this3._currentChanges.video.get(_id2) || {}, _change2));
+
+              // 添加到上行流信息
+              if (_currentStats2.frameHeight && _currentStats2.frameWidth) {
+                // 更新过滤逻辑，只排除特定的测试流
+                var isTestStream = _currentStats2.frameHeight === 48 && _currentStats2.frameWidth === 64 && _currentStats2.framesPerSecond === 1 && !_currentStats2.contentType;
+                if (!isTestStream) {
+                  _this3._aggregatedStats.video.upStreams.push({
+                    id: _id2,
+                    frameHeight: _currentStats2.frameHeight,
+                    frameWidth: _currentStats2.frameWidth,
+                    framesPerSecond: _currentStats2.framesPerSecond,
+                    contentType: _currentStats2.contentType || 'video',
+                    mid: report.mid
+                  });
+                }
+              }
             } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsSent = report['packetsSent'] - (_this3._stats.audio.packetsSent ? _this3._stats.audio.packetsSent : 0);
-              _this3._cStats.audio.bytesSent = report['bytesSent'] - (_this3._stats.audio.bytesSent ? _this3._stats.audio.bytesSent : 0);
-              _this3._stats.audio.packetsSent = report['packetsSent'];
-              _this3._stats.audio.bytesSent = report['bytesSent'];
+              var _id3 = report.ssrc || report.id;
+              var _prevStats3 = _this3._audioStats.get(_id3) || {};
+              var _currentStats3 = Object.assign({}, _prevStats3, {
+                packetsSent: report['packetsSent'],
+                bytesSent: report['bytesSent']
+              });
+
+              // 计算当前周期的变化量
+              var _change3 = {
+                packetsSent: report['packetsSent'] - (_prevStats3.packetsSent || 0),
+                bytesSent: report['bytesSent'] - (_prevStats3.bytesSent || 0)
+              };
+              _this3._audioStats.set(_id3, _currentStats3);
+              _this3._currentChanges.audio.set(_id3, Object.assign({}, _this3._currentChanges.audio.get(_id3) || {}, _change3));
             }
             break;
           case 'inbound-rtp':
             if (report.kind === 'video') {
-              _this3._cStats.video.packetsReceived = report['packetsReceived'] - (_this3._stats.video.packetsReceived ? _this3._stats.video.packetsReceived : 0);
-              _this3._cStats.video.bytesReceived = report['bytesReceived'] - (_this3._stats.video.bytesReceived ? _this3._stats.video.bytesReceived : 0);
-              _this3._cStats.video.packetsReceivedLost = report['packetsLost'] - (_this3._stats.video.packetsReceivedLost ? _this3._stats.video.packetsReceivedLost : 0);
-              _this3._stats.video.packetsReceived = report['packetsReceived'];
-              _this3._stats.video.bytesReceived = report['bytesReceived'];
-              _this3._stats.video.packetsReceivedLost = report['packetsLost'];
-              _this3._stats.video.downFrameHeight = report['frameHeight'];
-              _this3._stats.video.downFrameWidth = report['frameWidth'];
-              _this3._stats.video.framesDecoded = report['framesDecoded'];
-              _this3._stats.video.framesReceived = report['framesReceived'];
-              _this3._stats.video.downFramesPerSecond = report['framesPerSecond'];
+              var _id4 = report.ssrc || report.id;
+              var _prevStats4 = _this3._videoStats.get(_id4) || {};
+              var _currentStats4 = Object.assign({}, _prevStats4, {
+                packetsReceived: report['packetsReceived'],
+                bytesReceived: report['bytesReceived'],
+                packetsReceivedLost: report['packetsLost'],
+                frameHeight: report['frameHeight'],
+                frameWidth: report['frameWidth'],
+                framesDecoded: report['framesDecoded'],
+                framesReceived: report['framesReceived'],
+                framesPerSecond: report['framesPerSecond']
+              });
+
+              // 计算当前周期的变化量
+              var _change4 = {
+                packetsReceived: report['packetsReceived'] - (_prevStats4.packetsReceived || 0),
+                bytesReceived: report['bytesReceived'] - (_prevStats4.bytesReceived || 0),
+                packetsReceivedLost: report['packetsLost'] - (_prevStats4.packetsReceivedLost || 0)
+              };
+              _this3._videoStats.set(_id4, _currentStats4);
+              _this3._currentChanges.video.set(_id4, Object.assign({}, _this3._currentChanges.video.get(_id4) || {}, _change4));
+
+              // 添加到下行流信息
+              if (_currentStats4.frameHeight && _currentStats4.frameWidth) {
+                // 添加所有接收到的视频流，不进行过滤
+                _this3._aggregatedStats.video.downStreams.push({
+                  id: _id4,
+                  frameHeight: _currentStats4.frameHeight,
+                  frameWidth: _currentStats4.frameWidth,
+                  framesPerSecond: _currentStats4.framesPerSecond || 0,
+                  contentType: report.contentType || 'video',
+                  mid: report.mid
+                });
+              }
             } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsReceived = report['packetsReceived'] - (_this3._stats.audio.packetsReceived ? _this3._stats.audio.packetsReceived : 0);
-              _this3._cStats.audio.bytesReceived = report['bytesReceived'] - (_this3._stats.audio.bytesReceived ? _this3._stats.audio.bytesReceived : 0);
-              _this3._cStats.audio.packetsReceivedLost = report['packetsLost'] - (_this3._stats.audio.packetsReceivedLost ? _this3._stats.audio.packetsReceivedLost : 0);
-              _this3._stats.audio.packetsReceived = report['packetsReceived'];
-              _this3._stats.audio.bytesReceived = report['bytesReceived'];
-              _this3._stats.audio.packetsReceivedLost = report['packetsLost'];
+              var _id5 = report.ssrc || report.id;
+              var _prevStats5 = _this3._audioStats.get(_id5) || {};
+              var _currentStats5 = Object.assign({}, _prevStats5, {
+                packetsReceived: report['packetsReceived'],
+                bytesReceived: report['bytesReceived'],
+                packetsReceivedLost: report['packetsLost']
+              });
+
+              // 计算当前周期的变化量
+              var _change5 = {
+                packetsReceived: report['packetsReceived'] - (_prevStats5.packetsReceived || 0),
+                bytesReceived: report['bytesReceived'] - (_prevStats5.bytesReceived || 0),
+                packetsReceivedLost: report['packetsLost'] - (_prevStats5.packetsReceivedLost || 0)
+              };
+              _this3._audioStats.set(_id5, _currentStats5);
+              _this3._currentChanges.audio.set(_id5, Object.assign({}, _this3._currentChanges.audio.get(_id5) || {}, _change5));
             }
             break;
           default:
@@ -25482,191 +25602,210 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
 
-      // 语音上行丢包率
-      if (this._cStats.audio.packetsSent === null) {
-        this._stats.audio.uplinkLoss = null;
-      } else if (this._cStats.audio.packetsSentLost === null) {
-        this._stats.audio.uplinkLoss = null;
-      } else {
-        var audioUplinkLoss = 0;
-        if (this._cStats.audio.packetsSent === 0) {
-          audioUplinkLoss = 100;
-        } else {
-          audioUplinkLoss = Math.floor(this._cStats.audio.packetsSentLost * 100 / (this._cStats.audio.packetsSentLost + this._cStats.audio.packetsSent));
-        }
-        if (audioUplinkLoss >= 0) {
-          this._stats.audio.uplinkLoss = audioUplinkLoss;
-        }
-      }
+      // 计算聚合统计信息
+      this._calculateAggregatedStats();
 
-      // 语音上行速率
-      if (this._cStats.audio.bytesSent === null) {
-        this._stats.audio.uplinkSpeed = null;
-      } else {
-        this._stats.audio.uplinkSpeed = this._cStats.audio.bytesSent / this._delay * 8;
-      }
+      // 计算网络质量
+      this._calculateNetworkQuality();
 
-      // 语音下行丢包率
-      if (this._cStats.audio.packetsReceived === null) {
-        this._stats.audio.downlinkLoss = null;
-      } else if (this._cStats.audio.packetsReceivedLost === null) {
-        this._stats.audio.downlinkLoss = null;
-      } else {
-        var audioDownlinkLoss = 0;
-        if (this._cStats.audio.packetsReceived === 0) {
-          audioDownlinkLoss = 100;
-        } else {
-          audioDownlinkLoss = Math.floor(this._cStats.audio.packetsReceivedLost * 100 / (this._cStats.audio.packetsReceivedLost + this._cStats.audio.packetsReceived));
-        }
-        if (audioDownlinkLoss >= 0) {
-          this._stats.audio.downlinkLoss = audioDownlinkLoss;
-        }
-      }
-
-      // 语音下行速率
-      if (this._cStats.audio.bytesReceived === null) {
-        this._stats.audio.downlinkSpeed = null;
-      } else {
-        this._stats.audio.downlinkSpeed = this._cStats.audio.bytesReceived / this._delay * 8;
-      }
-
-      // 视频上行丢包率
-      if (this._cStats.video.packetsSent === null) {
-        this._stats.video.uplinkLoss = null;
-      } else if (this._cStats.video.packetsSentLost === null) {
-        this._stats.video.uplinkLoss = null;
-      } else {
-        var videoUplinkLoss = 0;
-        if (this._cStats.video.packetsSent === 0) {
-          videoUplinkLoss = 100;
-        } else {
-          videoUplinkLoss = Math.floor(this._cStats.video.packetsSentLost * 100 / (this._cStats.video.packetsSentLost + this._cStats.video.packetsSent));
-        }
-        if (videoUplinkLoss >= 0) {
-          this._stats.video.uplinkLoss = videoUplinkLoss;
-        }
-      }
-
-      // 视频上行速率
-      if (this._cStats.video.bytesSent === null) {
-        this._stats.video.uplinkSpeed = null;
-      } else {
-        this._stats.video.uplinkSpeed = this._cStats.video.bytesSent / this._delay * 8;
-      }
-
-      // 视频下行丢包率
-      if (this._cStats.video.packetsReceived === null || this._cStats.video.packetsReceivedLost === null) {
-        this._stats.video.downlinkLoss = null;
-      } else {
-        var videoDownlinkLoss = 0;
-        if (this._cStats.video.packetsReceived === 0) {
-          videoDownlinkLoss = 100;
-        } else {
-          videoDownlinkLoss = Math.floor(this._cStats.video.packetsReceivedLost * 100 / (this._cStats.video.packetsReceivedLost + this._cStats.video.packetsReceived));
-        }
-        if (videoDownlinkLoss >= 0) {
-          this._stats.video.downlinkLoss = videoDownlinkLoss;
-        }
-      }
-
-      // 视频下行速率
-      if (this._cStats.video.bytesReceived === null) {
-        this._stats.video.downlinkSpeed = null;
-      } else {
-        this._stats.video.downlinkSpeed = this._cStats.video.bytesReceived / this._delay * 8;
-      }
-      function parseStatsReport(report) {
-        var rp = {
-          transport: {
-            RTT: report.transport.RTT
-          },
-          audio: {
-            bytesSent: report.audio.bytesSent,
-            packetsSent: report.audio.packetsSent,
-            uplinkLoss: report.audio.uplinkLoss,
-            uplinkSpeed: report.audio.uplinkSpeed,
-            bytesReceived: report.audio.bytesReceived,
-            packetsReceived: report.audio.packetsReceived,
-            downlinkLoss: report.audio.downlinkLoss,
-            downlinkSpeed: report.audio.downlinkSpeed
-          },
-          video: {
-            bytesSent: report.video.bytesSent,
-            packetsSent: report.video.packetsSent,
-            framesSent: report.video.framesSent,
-            framesEncoded: report.video.framesEncoded,
-            upFrameWidth: report.video.upFrameWidth,
-            upFrameHeight: report.video.upFrameHeight,
-            uplinkLoss: report.video.uplinkLoss,
-            uplinkSpeed: report.video.uplinkSpeed,
-            bytesReceived: report.video.bytesReceived,
-            packetsReceived: report.video.packetsReceived,
-            framesReceived: report.video.framesReceived,
-            framesDecoded: report.video.framesDecoded,
-            upFramesPerSecond: report.video.upFramesPerSecond,
-            downFramesPerSecond: report.video.downFramesPerSecond,
-            downFrameWidth: report.video.downFrameWidth,
-            downFrameHeight: report.video.downFrameHeight,
-            downlinkLoss: report.video.downlinkLoss,
-            downlinkSpeed: report.video.downlinkSpeed
-          }
-        };
-        return {
-          RTT: rp.transport.RTT,
-          upFrameWidth: rp.video.upFrameWidth,
-          upFrameHeight: rp.video.upFrameHeight,
-          upFramesPerSecond: rp.video.upFramesPerSecond,
-          downFramesPerSecond: rp.video.downFramesPerSecond,
-          downFrameWidth: rp.video.downFrameWidth,
-          downFrameHeight: rp.video.downFrameHeight,
-          uplinkSpeed: "".concat(((rp.video.uplinkSpeed + rp.audio.uplinkSpeed) / 1000).toFixed(1), "kbps"),
-          downlinkSpeed: "".concat(((rp.video.downlinkSpeed + rp.audio.downlinkSpeed) / 1000).toFixed(1), "kbps"),
-          downlinkLoss: "".concat(rp.audio.downlinkLoss > rp.video.downlinkLoss ? rp.audio.downlinkLoss : rp.video.downlinkLoss, "%"),
-          uplinkLoss: "".concat(rp.audio.uplinkLoss > rp.video.uplinkLoss ? rp.audio.uplinkLoss : rp.video.uplinkLoss, "%")
-        };
-      }
-      logger.debug(JSON.stringify(this._stats));
-      this.emit('report', parseStatsReport(this._stats));
-
-      // 发送网络质量报告
-      var RTT = [];
-      var uplinkLoss = [];
-      var uplinkNetworkQuality = [];
-      var downlinkNetworkQuality = [];
-      var downlinkLoss = [];
-      RTT.push(this._stats.transport.RTT);
-      // eslint-disable-next-line max-len
-      uplinkLoss.push(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss);
-      // eslint-disable-next-line max-len
-      uplinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss, this._stats.transport.RTT));
-
-      // eslint-disable-next-line max-len
-      downlinkLoss.push(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss);
-      // eslint-disable-next-line max-len
-      downlinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss, this._stats.transport.RTT));
-      this._networkQuality = {
-        // eslint-disable-next-line max-len
-        uplinkNetworkQuality: uplinkNetworkQuality.length > 0 ? Math.floor(uplinkNetworkQuality.reduce(function (pre, cur) {
-          return pre + cur;
-        }) / uplinkNetworkQuality.length) || 0 : null,
-        RTT: RTT.length > 0 ? Math.floor(RTT.reduce(function (pre, cur) {
-          return pre + cur;
-        }) / RTT.length) || 0 : null,
-        // eslint-disable-next-line max-len
-        uplinkLoss: uplinkLoss.length > 0 ? Math.floor(uplinkLoss.reduce(function (pre, cur) {
-          return pre + cur;
-        }) / uplinkLoss.length) || 0 : null,
-        // eslint-disable-next-line max-len
-        downlinkNetworkQuality: downlinkNetworkQuality.length > 0 ? Math.floor(downlinkNetworkQuality.reduce(function (pre, cur) {
-          return pre + cur;
-        }) / downlinkNetworkQuality.length) || 0 : null,
-        // eslint-disable-next-line max-len
-        downlinkLoss: downlinkLoss.length > 0 ? Math.floor(downlinkLoss.reduce(function (pre, cur) {
-          return pre + cur;
-        }) / downlinkLoss.length) || 0 : null
-      };
-      logger.debug("networkQuality: ".concat(JSON.stringify(this._networkQuality)));
+      // 生成报告
+      var report = this._generateReport();
+      logger.debug(JSON.stringify(this._aggregatedStats));
+      this.emit('report', report);
       this.emit('network-quality', this._networkQuality);
+    }
+
+    // 计算聚合统计信息
+  }, {
+    key: "_calculateAggregatedStats",
+    value: function _calculateAggregatedStats() {
+      // 计算音频聚合统计信息
+      var _iterator = _createForOfIteratorHelper(this._audioStats.entries()),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var _step$value = _slicedToArray(_step.value, 2),
+            id = _step$value[0],
+            stats = _step$value[1];
+          // 上行统计
+          if (stats.packetsSent !== undefined) {
+            this._aggregatedStats.audio.bytesSent += stats.bytesSent || 0;
+            this._aggregatedStats.audio.packetsSent += stats.packetsSent || 0;
+          }
+
+          // 上行丢包
+          if (stats.packetsSentLost !== undefined) {
+            this._aggregatedStats.audio.packetsSentLost += stats.packetsSentLost || 0;
+          }
+
+          // 下行统计
+          if (stats.packetsReceived !== undefined) {
+            this._aggregatedStats.audio.bytesReceived += stats.bytesReceived || 0;
+            this._aggregatedStats.audio.packetsReceived += stats.packetsReceived || 0;
+          }
+
+          // 下行丢包
+          if (stats.packetsReceivedLost !== undefined) {
+            this._aggregatedStats.audio.packetsReceivedLost += stats.packetsReceivedLost || 0;
+          }
+        }
+
+        // 计算视频聚合统计信息
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      var _iterator2 = _createForOfIteratorHelper(this._videoStats.entries()),
+        _step2;
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var _step2$value = _slicedToArray(_step2.value, 2),
+            _id6 = _step2$value[0],
+            _stats = _step2$value[1];
+          // 上行统计
+          if (_stats.packetsSent !== undefined) {
+            this._aggregatedStats.video.bytesSent += _stats.bytesSent || 0;
+            this._aggregatedStats.video.packetsSent += _stats.packetsSent || 0;
+            this._aggregatedStats.video.framesEncoded += _stats.framesEncoded || 0;
+            this._aggregatedStats.video.framesSent += _stats.framesSent || 0;
+          }
+
+          // 上行丢包
+          if (_stats.packetsSentLost !== undefined) {
+            this._aggregatedStats.video.packetsSentLost += _stats.packetsSentLost || 0;
+          }
+
+          // 下行统计
+          if (_stats.packetsReceived !== undefined) {
+            this._aggregatedStats.video.bytesReceived += _stats.bytesReceived || 0;
+            this._aggregatedStats.video.packetsReceived += _stats.packetsReceived || 0;
+            this._aggregatedStats.video.framesDecoded += _stats.framesDecoded || 0;
+            this._aggregatedStats.video.framesReceived += _stats.framesReceived || 0;
+          }
+
+          // 下行丢包
+          if (_stats.packetsReceivedLost !== undefined) {
+            this._aggregatedStats.video.packetsReceivedLost += _stats.packetsReceivedLost || 0;
+          }
+        }
+
+        // 计算音频上行丢包率
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+      if (this._aggregatedStats.audio.packetsSent > 0 && this._aggregatedStats.audio.packetsSentLost >= 0) {
+        this._aggregatedStats.audio.uplinkLoss = Math.floor(this._aggregatedStats.audio.packetsSentLost * 100 / (this._aggregatedStats.audio.packetsSentLost + this._aggregatedStats.audio.packetsSent));
+      }
+
+      // 计算音频下行丢包率
+      if (this._aggregatedStats.audio.packetsReceived > 0 && this._aggregatedStats.audio.packetsReceivedLost >= 0) {
+        this._aggregatedStats.audio.downlinkLoss = Math.floor(this._aggregatedStats.audio.packetsReceivedLost * 100 / (this._aggregatedStats.audio.packetsReceivedLost + this._aggregatedStats.audio.packetsReceived));
+      }
+
+      // 计算视频上行丢包率
+      if (this._aggregatedStats.video.packetsSent > 0 && this._aggregatedStats.video.packetsSentLost >= 0) {
+        this._aggregatedStats.video.uplinkLoss = Math.floor(this._aggregatedStats.video.packetsSentLost * 100 / (this._aggregatedStats.video.packetsSentLost + this._aggregatedStats.video.packetsSent));
+      }
+
+      // 计算视频下行丢包率
+      if (this._aggregatedStats.video.packetsReceived > 0 && this._aggregatedStats.video.packetsReceivedLost >= 0) {
+        this._aggregatedStats.video.downlinkLoss = Math.floor(this._aggregatedStats.video.packetsReceivedLost * 100 / (this._aggregatedStats.video.packetsReceivedLost + this._aggregatedStats.video.packetsReceived));
+      }
+
+      // 计算音频上行速率
+      var audioBytesSentChanges = Array.from(this._currentChanges.audio.values()).reduce(function (sum, change) {
+        return sum + (change.bytesSent || 0);
+      }, 0);
+      this._aggregatedStats.audio.uplinkSpeed = audioBytesSentChanges / this._delay * 8;
+
+      // 计算音频下行速率
+      var audioBytesReceivedChanges = Array.from(this._currentChanges.audio.values()).reduce(function (sum, change) {
+        return sum + (change.bytesReceived || 0);
+      }, 0);
+      this._aggregatedStats.audio.downlinkSpeed = audioBytesReceivedChanges / this._delay * 8;
+
+      // 计算视频上行速率
+      var videoBytesSentChanges = Array.from(this._currentChanges.video.values()).reduce(function (sum, change) {
+        return sum + (change.bytesSent || 0);
+      }, 0);
+      this._aggregatedStats.video.uplinkSpeed = videoBytesSentChanges / this._delay * 8;
+
+      // 计算视频下行速率
+      var videoBytesReceivedChanges = Array.from(this._currentChanges.video.values()).reduce(function (sum, change) {
+        return sum + (change.bytesReceived || 0);
+      }, 0);
+      this._aggregatedStats.video.downlinkSpeed = videoBytesReceivedChanges / this._delay * 8;
+    }
+
+    // 计算网络质量
+  }, {
+    key: "_calculateNetworkQuality",
+    value: function _calculateNetworkQuality() {
+      // 获取最大丢包率
+      var maxUplinkLoss = Math.max(this._aggregatedStats.audio.uplinkLoss || 0, this._aggregatedStats.video.uplinkLoss || 0);
+      var maxDownlinkLoss = Math.max(this._aggregatedStats.audio.downlinkLoss || 0, this._aggregatedStats.video.downlinkLoss || 0);
+
+      // 计算上行和下行网络质量
+      var uplinkNetworkQuality = Utils.getNetworkQuality(maxUplinkLoss, this._transport.RTT);
+      var downlinkNetworkQuality = Utils.getNetworkQuality(maxDownlinkLoss, this._transport.RTT);
+      this._networkQuality = {
+        uplinkNetworkQuality: uplinkNetworkQuality,
+        RTT: this._transport.RTT || 0,
+        uplinkLoss: maxUplinkLoss,
+        downlinkNetworkQuality: downlinkNetworkQuality,
+        downlinkLoss: maxDownlinkLoss
+      };
+    }
+
+    // 生成报告
+  }, {
+    key: "_generateReport",
+    value: function _generateReport() {
+      var rp = {
+        transport: {
+          RTT: this._transport.RTT
+        },
+        audio: {
+          bytesSent: this._aggregatedStats.audio.bytesSent,
+          packetsSent: this._aggregatedStats.audio.packetsSent,
+          uplinkLoss: this._aggregatedStats.audio.uplinkLoss,
+          uplinkSpeed: this._aggregatedStats.audio.uplinkSpeed,
+          bytesReceived: this._aggregatedStats.audio.bytesReceived,
+          packetsReceived: this._aggregatedStats.audio.packetsReceived,
+          downlinkLoss: this._aggregatedStats.audio.downlinkLoss,
+          downlinkSpeed: this._aggregatedStats.audio.downlinkSpeed
+        },
+        video: {
+          bytesSent: this._aggregatedStats.video.bytesSent,
+          packetsSent: this._aggregatedStats.video.packetsSent,
+          framesSent: this._aggregatedStats.video.framesSent,
+          framesEncoded: this._aggregatedStats.video.framesEncoded,
+          uplinkLoss: this._aggregatedStats.video.uplinkLoss,
+          uplinkSpeed: this._aggregatedStats.video.uplinkSpeed,
+          bytesReceived: this._aggregatedStats.video.bytesReceived,
+          packetsReceived: this._aggregatedStats.video.packetsReceived,
+          framesReceived: this._aggregatedStats.video.framesReceived,
+          framesDecoded: this._aggregatedStats.video.framesDecoded,
+          downlinkLoss: this._aggregatedStats.video.downlinkLoss,
+          downlinkSpeed: this._aggregatedStats.video.downlinkSpeed,
+          upStreams: this._aggregatedStats.video.upStreams,
+          downStreams: this._aggregatedStats.video.downStreams
+        }
+      };
+
+      // 返回格式化的报告
+      return {
+        RTT: rp.transport.RTT,
+        upStreams: rp.video.upStreams,
+        downStreams: rp.video.downStreams,
+        uplinkSpeed: "".concat(((rp.video.uplinkSpeed + rp.audio.uplinkSpeed) / 1000).toFixed(1), "kbps"),
+        downlinkSpeed: "".concat(((rp.video.downlinkSpeed + rp.audio.downlinkSpeed) / 1000).toFixed(1), "kbps"),
+        downlinkLoss: "".concat(Math.max(rp.audio.downlinkLoss || 0, rp.video.downlinkLoss || 0), "%"),
+        uplinkLoss: "".concat(Math.max(rp.audio.uplinkLoss || 0, rp.video.uplinkLoss || 0), "%")
+      };
     }
   }]);
 }(EventEmitter);
@@ -28978,26 +29117,23 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
  * @param {MediaStream} stream - 要转换的媒体流
  */
 exports.generateAnEmptyVideoTrack = function () {
-  // if ('MediaStreamTrackGenerator' in window)
-  // {
-  //   // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
-  //   try
-  //   {
-  //     // eslint-disable-next-line no-undef
-  //     const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-
-  //     return trackGenerator;
-  //   }
-  //   catch (error)
-  //   {
-  //     return createCanvasVideoTrack();
-  //   }
-  // }
-  // else
-  // {
-  // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
-  return createCanvasVideoTrack();
-  // }
+  if ('MediaStreamTrackGenerator' in window) {
+    // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+    try {
+      // eslint-disable-next-line no-undef
+      var trackGenerator = new MediaStreamTrackGenerator({
+        kind: 'video'
+      });
+      return {
+        videoTrack: trackGenerator
+      };
+    } catch (error) {
+      return createCanvasVideoTrack();
+    }
+  } else {
+    // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+    return createCanvasVideoTrack();
+  }
 };
 
 /**
@@ -39149,7 +39285,7 @@ module.exports={
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250305",
+  "version": "1.10.9-beta.250306",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -39202,6 +39338,5 @@ module.exports={
     "release": "node npm-scripts.js release"
   }
 }
-
 },{}]},{},[38])(38)
 });
