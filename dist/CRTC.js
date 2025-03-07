@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.250306.2025361823
+ * CRTC v1.10.9-beta.2025371757
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3537,9 +3537,8 @@ exports.load = function (dst, src) {
 },{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":53,"./URI":59,"./Utils":60}],32:[function(require,module,exports){
 "use strict";
 
-var pkg = require('../package.json');
 module.exports = {
-  USER_AGENT: "UA/".concat(pkg.version, " (Web)"),
+  USER_AGENT: 'UA/1.10.9-beta.405006143514 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3554,6 +3553,7 @@ module.exports = {
   MAX_RETRY_ATTEMPTS: 4,
   // BFCP控制的流transceiver索引号
   BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
+  BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
   CMODE: {
     PAPHONE: 'paphone'
   },
@@ -3747,7 +3747,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":76}],33:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -16821,7 +16821,6 @@ module.exports = function () {
 },{"./NameAddrHeader":41,"./URI":59}],38:[function(require,module,exports){
 "use strict";
 
-var pkg = require('../package.json');
 var C = require('./Constants');
 var Exceptions = require('./Exceptions');
 var Utils = require('./Utils');
@@ -16833,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', pkg.version);
+debug('version %s', '1.10.9-beta.405006143514');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16867,13 +16866,13 @@ module.exports = {
   // Expose the debug module.
   debug: require('debug'),
   get name() {
-    return pkg.title;
+    return 'CRTC';
   },
   get version() {
-    return pkg.version;
+    return '1.10.9-beta.405006143514';
   }
 };
-},{"../package.json":76,"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17837,9 +17836,11 @@ function parseHeader(message, data, headerStart, headerEnd) {
 },{"./Grammar":37,"./Logger":39,"./SIPMessage":52}],44:[function(require,module,exports){
 "use strict";
 
+/* eslint-disable max-len */
 // 密钥
-// eslint-disable-next-line max-len
-var pk = [45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45];
+var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66];
+// const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
+
 module.exports = pk;
 },{}],45:[function(require,module,exports){
 (function (Buffer){(function (){
@@ -18259,6 +18260,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
 
       // 是否启用BFCP
+      this._enableBFCP = false;
       if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
         this._enableBFCP = true;
         this._bfcpUser = new BFCPUser(this._ua.contact.uri.user, target.user);
@@ -18638,6 +18640,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
 
       // 是否启用BFCP
+      this._enableBFCP = false;
       if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
         this._enableBFCP = true;
         this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
@@ -19202,8 +19205,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   logger.debug("kind: ".concat(s.track && s.track.kind));
                   if (s.track && s.track.kind == 'video') {
                     if (_this7._enableBFCP) {
+                      console.warn('aaaaaa: ', s.track != _this7._bfcpVideoTrack, s.track != _this7._localShareStream.getVideoTracks()[0]);
+
                       // 启用了BFCP，区分一下BFCP控制的视频轨道
-                      s.track != _this7._bfcpVideoTrack && s.track.stop();
+                      s.track != _this7._bfcpVideoTrack && s.track != _this7._localShareStream.getVideoTracks()[0] && s.track.stop();
                     } else {
                       s.track.stop();
                     }
@@ -19230,7 +19235,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 var sender = _this7._connection.getSenders().find(function (s) {
                   if (_this7._enableBFCP) {
                     // 启用了BFCP，区分一下BFCP控制的视频轨道
-                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack;
+                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != _this7._localShareStream.getVideoTracks()[0];
                   } else {
                     return s.track.kind == 'video';
                   }
@@ -19342,36 +19347,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
               _context4.prev = 7;
               if (!this._enableBFCP) {
-                _context4.next = 18;
+                _context4.next = 19;
                 break;
               }
               _context4.next = 11;
               return this._sendFloorRequest();
             case 11:
               floorResponse = _context4.sent;
+              this._handleFloorRequestStatusMessage(floorResponse);
               // Log the response for debugging purposes
               logger.debug('Floor request response:', floorResponse);
               status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
               if (!(status != RequestStatusValue.Granted)) {
-                _context4.next = 16;
+                _context4.next = 17;
                 break;
               }
               return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
-            case 16:
+            case 17:
               // 主动踢掉远端的共享
               this._remoteShared = false;
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
-            case 18:
-              _context4.next = 24;
+            case 19:
+              _context4.next = 25;
               break;
-            case 20:
-              _context4.prev = 20;
+            case 21:
+              _context4.prev = 21;
               _context4.t0 = _context4["catch"](7);
               logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
               return _context4.abrupt("return", Promise.reject("Floor request failed: ".concat(_context4.t0.message || 'Unknown error')));
-            case 24:
+            case 25:
               if (!(type === 'video')) {
-                _context4.next = 32;
+                _context4.next = 33;
                 break;
               }
               logger.debug('share video');
@@ -19393,11 +19399,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 66;
               break;
-            case 32:
+            case 33:
               if (!(type === 'pic')) {
-                _context4.next = 46;
+                _context4.next = 47;
                 break;
               }
               logger.debug('share pic');
@@ -19431,20 +19437,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 66;
               break;
-            case 46:
+            case 47:
               if (!(type === 'html')) {
-                _context4.next = 61;
+                _context4.next = 62;
                 break;
               }
               logger.debug('share html');
               if (assembly) {
-                _context4.next = 50;
+                _context4.next = 51;
                 break;
               }
               return _context4.abrupt("return");
-            case 50:
+            case 51:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
               _canvas.height = 1;
@@ -19469,11 +19475,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context4.next = 65;
+              _context4.next = 66;
               break;
-            case 61:
+            case 62:
               if (!(type === 'screen')) {
-                _context4.next = 65;
+                _context4.next = 66;
                 break;
               }
               logger.debug('share screen');
@@ -19519,11 +19525,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8.emit('getdisplaymediafailed', error);
                 throw new Error('getDisplayMedia() failed');
               }));
-            case 65:
+            case 66:
             case "end":
               return _context4.stop();
           }
-        }, _callee4, this, [[7, 20]]);
+        }, _callee4, this, [[7, 21]]);
       }));
       function share(_x3, _x4, _x5, _x6) {
         return _share.apply(this, arguments);
@@ -20618,6 +20624,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }
+            media.rtcpMux = 'rtcp-mux';
 
             /**
              * 处理5G外呼sdp过大问题,
@@ -21630,8 +21637,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               /**
                * 是否启用 DataChannel
                **/
-              // this._enableBFCP && this._initDataChannel();
-              // BFCP
               if (_this28._enableBFCP) {
                 if (_this28._stopAnimation) {
                   _this28._stopAnimation();
@@ -21639,10 +21644,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack, stopAnimation = _Utils$generateAnEmpt2.stopAnimation;
                 _this28._stopAnimation = stopAnimation;
                 _this28._bfcpVideoTrack = videoTrack;
-                // this._bfcpVideoTrack = this._createCanvasVideoTrack();
                 _this28._connection.addTrack(_this28._bfcpVideoTrack, _this28._localMediaStream);
-                // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-
                 _this28._initDataChannel();
               }
 
@@ -21674,9 +21676,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // eslint-disable-next-line no-undef
               if (transceiver.sender.track instanceof MediaStreamTrackGenerator || transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
                 _this28._mStream = transceiver.mid;
+                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this28._mStream);
               }
             } else if (transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
               _this28._mStream = transceiver.mid;
+              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this28._mStream);
             }
           });
           desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n"));
@@ -21684,11 +21688,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           // 添加主辅流标志
           desc = _this28._addMediastreamFlag(desc, _this28._mStream);
         }
-        // this._enableBFCP && ();
-
-        // 添加主辅流标志
-        // sdp = this._addMediastreamFlag(sdp, this._mStream);
-
         _this28._request.body = desc;
         _this28._status = C.STATUS_INVITE_SENT;
         logger.debug('emit "sending" [request:%o]', _this28._request);
@@ -22821,9 +22820,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_sdpAddMid",
     value: function _sdpAddMid(sdp) {
       if (sdp.indexOf('a=mid:0') === -1) {
-        var regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
-        var replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
-        return sdp.replace(regex, replacement);
+        // 新增多个媒体及Datachannel的mid
+        var midCounter = 0;
+        var newSdp = sdp.replace(/(^m=[^\r\n]+)/gm, function (match) {
+          return "".concat(match, "\r\na=mid:").concat(midCounter++);
+        });
+        logger.debug('new sdp: ', newSdp);
+        return newSdp;
       } else {
         return sdp;
       }
@@ -23253,7 +23256,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
-      logger.debug('Data channel closed');
+      logger.debug('datachannel closed.');
 
       // DC 状态设置为未准备好
       this._dataChannelReady = false;
@@ -23361,7 +23364,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
-        logger.debug('datachannel opened.');
+        logger.warn('datachannel opened.');
         _this43._dataChannelReady = true;
         // 开始发送心跳消息
         _this43._sendHello();
@@ -23376,7 +23379,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
-        logger.error('data channel error.');
+        logger.error('datachannel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
         _this43._dataChannelReady = false;
         logger.warn('data err: ', err);
@@ -25229,14 +25232,15 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
 var EventEmitter = require('events').EventEmitter;
 var Utils = require('./Utils');
 var Logger = require('./Logger');
-var logger = new Logger('ImprovedStats');
+var CRTC_C = require('./Constants');
+var logger = new Logger('Stats');
 module.exports = /*#__PURE__*/function (_EventEmitter) {
-  function ImprovedStats(pc) {
+  function getStats(pc) {
     var _this;
     var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
     var interval = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
-    _classCallCheck(this, ImprovedStats);
-    _this = _callSuper(this, ImprovedStats);
+    _classCallCheck(this, getStats);
+    _this = _callSuper(this, getStats);
     _this._pc = pc;
     _this._delay = delay;
     _this._interval = interval;
@@ -25300,8 +25304,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this.start();
     return _this;
   }
-  _inherits(ImprovedStats, _EventEmitter);
-  return _createClass(ImprovedStats, [{
+  _inherits(getStats, _EventEmitter);
+  return _createClass(getStats, [{
     key: "start",
     value: function start() {
       var _this2 = this;
@@ -25517,7 +25521,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                     frameWidth: _currentStats2.frameWidth,
                     framesPerSecond: _currentStats2.framesPerSecond,
                     contentType: _currentStats2.contentType || 'video',
-                    mid: report.mid
+                    type: report.mid == sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) ? 'shared' : report.mid
                   });
                 }
               }
@@ -25571,7 +25575,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   frameWidth: _currentStats4.frameWidth,
                   framesPerSecond: _currentStats4.framesPerSecond || 0,
                   contentType: report.contentType || 'video',
-                  mid: report.mid
+                  type: report.mid == sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX) ? 'shared' : report.mid
                 });
               }
             } else if (report.kind === 'audio') {
@@ -25809,7 +25813,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Logger":39,"./Utils":60,"events":64}],55:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":60,"events":64}],55:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -26699,6 +26703,7 @@ module.exports = /*#__PURE__*/function () {
 
       // 统一修改发出的SDP
       message = message.replace(/a=group:BUNDLE.*\r\n/, '');
+      message = message.replace(/a=candidate.*typ host.*\r?\n/gm, '');
 
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);
@@ -26848,26 +26853,20 @@ module.exports = /*#__PURE__*/function () {
       }
 
       // 统一修改收到的SDP
-      if (data.indexOf('a=inactive') !== -1) {
-        data = data.replace(/m=video \d*/, 'm=video 0');
+      data = data.replace(/b=(AS|RS|RR):\d.*\r?\n/g, '');
+      data = data.replace(/(m=video[^\r\n]*(?:[\s\S]*?(?=\r?\nm=|$)))/gm, function (match) {
+        if (match.includes('a=inactive')) {
+          // 替换该视频块中的m=video行的端口为0
+          return match.replace(/m=video \d+/g, 'm=video 0');
+        }
+        return match;
+      });
 
-        // 修复修改SDP后的Header头
-        data = Utils.fixContentLength(data);
-      }
+      // 修复BFCP用到的SDP信息
+      data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
 
-      // 第一步，修复BFCP用到的SDP信息
-      var updatedRtcpMessage = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
-
-      // 检查第一步是否成功，成功后修改Content-Length的值
-      if (updatedRtcpMessage !== data) {
-        data = updatedRtcpMessage.replace(/(Content-Length:\s*)(\d+)/, function (_, p1, p2) {
-          // 将原始值加 12
-          var newValue = parseInt(p2, 10) + 12;
-
-          // 返回更新后的字符串
-          return "".concat(p1).concat(newValue);
-        });
-      }
+      // 修复修改SDP后的Header头
+      data = Utils.fixContentLength(data);
       logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,
@@ -28906,11 +28905,15 @@ exports.getStreams = function (pc, type, i) {
   var result;
   try {
     if (type === 'remote' && typeof pc.getReceivers === 'function') {
+      // 处理辅流
+      var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      i && (streamIndex = i);
+
       // 处理远程流
       var receivers = pc.getReceivers();
       if (Array.isArray(receivers)) {
-        receivers.forEach(function (receiver) {
-          if (receiver.track && receiver.track.readyState === 'live') {
+        receivers.forEach(function (receiver, index) {
+          if (receiver.track && receiver.track.readyState === 'live' && index != streamIndex) {
             mediaStream.addTrack(receiver.track);
             if (receiver.track.kind === 'audio') {
               audioStream.addTrack(receiver.track);
@@ -28927,11 +28930,11 @@ exports.getStreams = function (pc, type, i) {
       };
     } else if (type === 'shared' && typeof pc.getReceivers === 'function') {
       // 处理辅流
-      var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
-      i && (streamIndex = i);
-      if (streamIndex !== -1 && streamIndex !== null && !isNaN(streamIndex)) {
+      var _streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      i && (_streamIndex = i);
+      if (_streamIndex !== -1 && _streamIndex !== null && !isNaN(_streamIndex)) {
         var _receivers = pc.getReceivers();
-        var index = parseInt(streamIndex, 10);
+        var index = parseInt(_streamIndex, 10);
         if (Array.isArray(_receivers) && _receivers[index] && _receivers[index].track) {
           var track = _receivers[index].track;
           if (track.readyState === 'live') {
@@ -28939,7 +28942,7 @@ exports.getStreams = function (pc, type, i) {
             videoStream.addTrack(track);
           }
         } else {
-          console.warn("Invalid stream index: ".concat(streamIndex));
+          console.warn("Invalid stream index: ".concat(_streamIndex));
         }
       } else {
         console.warn('BFCP_TRANSCEIVER_INDEX is not set or invalid.');
@@ -39280,63 +39283,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":72}],76:[function(require,module,exports){
-module.exports={
-  "name": "crtc",
-  "title": "CRTC",
-  "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250306",
-  "SIP_version": "3.9.0",
-  "homepage": "",
-  "contributors": [],
-  "keywords": [
-    "sip",
-    "websocket",
-    "webrtc",
-    "node",
-    "browser",
-    "library"
-  ],
-  "license": "MIT",
-  "dependencies": {
-    "@types/debug": "^4.1.5",
-    "@types/node": "^14.14.34",
-    "debug": "^4.3.1",
-    "events": "^3.3.0",
-    "jsencrypt": "github:lei40251/JSEncrypt",
-    "sdp-transform": "^2.14.1"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.13.10",
-    "@babel/plugin-transform-block-scoping": "^7.23.4",
-    "@babel/preset-env": "^7.13.10",
-    "ansi-colors": "^3.2.4",
-    "browserify": "^16.5.1",
-    "core-js": "^3.33.3",
-    "del": "^6.1.1",
-    "eslint": "^5.16.0",
-    "fancy-log": "^1.3.3",
-    "gulp": "^4.0.2",
-    "gulp-babel": "^8.0.0",
-    "gulp-eslint": "^5.0.0",
-    "gulp-expect-file": "^1.0.2",
-    "gulp-header": "^2.0.9",
-    "gulp-javascript-obfuscator": "^1.1.6",
-    "gulp-nodeunit-runner": "^0.2.2",
-    "gulp-plumber": "^1.2.1",
-    "gulp-rename": "^1.4.0",
-    "gulp-terser": "^2.1.0",
-    "gulp-zip": "^5.1.0",
-    "pegjs": "^0.7.0",
-    "vinyl-buffer": "^1.0.1",
-    "vinyl-source-stream": "^2.0.0"
-  },
-  "scripts": {
-    "lint": "node npm-scripts.js lint",
-    "test": "node npm-scripts.js test",
-    "prepublish": "node npm-scripts.js prepublish",
-    "release": "node npm-scripts.js release"
-  }
-}
-},{}]},{},[38])(38)
+},{"./grammar":72}]},{},[38])(38)
 });

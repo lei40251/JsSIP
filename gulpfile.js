@@ -22,6 +22,7 @@ const colors = require('ansi-colors');
 const zip = require('gulp-zip');
 const del = require('del');
 const terser = require('gulp-terser');
+const replace = require('gulp-replace');
 
 const PKG = require('./package.json');
 const today = new Date();
@@ -34,6 +35,8 @@ const BANNER_OPTIONS = {
   compileTime : `${today.getFullYear()}${today.getMonth()+1}${today.getDate()}${today.getHours()}${today.getMinutes()}`
 };
 
+const buildTime = getLocalTimestamp()*2;
+
 // gulp-expect-file options.
 const EXPECT_OPTIONS = {
   silent         : true,
@@ -44,6 +47,20 @@ const EXPECT_OPTIONS = {
 function logError(error)
 {
   log(colors.red(String(error)));
+}
+
+function getLocalTimestamp()
+{
+  const d = new Date();
+
+  return d.getFullYear().toString() +
+    (d.getMonth() + 1).toString().padStart(2, '0') + // 月份从0开始需+1
+    d.getDate().toString()
+      .padStart(2, '0') +
+    d.getHours().toString()
+      .padStart(2, '0') +
+    d.getMinutes().toString()
+      .padStart(2, '0');
 }
 
 // 1. 复制文件
@@ -114,6 +131,8 @@ gulp.task('browserify', function()
     .pipe(source(`${PKG.title}.js`))
     .pipe(buffer())
     .pipe(rename(`${PKG.title}.js`))
+    .pipe(replace(/__VERSION__/g, `${PKG.version }.${buildTime}`))
+    .pipe(replace(/__TITLE__/g, PKG.title))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(gulp.dest('dist/'));
 });
@@ -126,36 +145,75 @@ gulp.task('uglify', function()
     .pipe(expect(EXPECT_OPTIONS, src))
     // .pipe(obfuscate({ compact: true }))
     .pipe(terser({
-      mangle : {
+      toplevel        : true, // 混淆顶级作用域
+      module          : true, // 处理 ES 模块
+      keep_classnames : false, // 混淆类名
+      keep_fnames     : false, // 混淆函数名
+      mangle          : {
         // 保留必要的名称
         reserved : [
           'CommonHeader',
           'FloorRequest',
           'FloorRelease',
-          'FloorRequestStatusMsg',
+          // 'FloorRequestStatusMsg',
           'FloorStatus',
           'Hello',
           'HelloAck',
-          'FloorRequestStatusAck',
-          'FloorStatusAck',
+          // 'FloorRequestStatusAck',
+          // 'FloorStatusAck',
           'FloorQuery',
           'AttributeType',
-          'FloorId',
+          // 'FloorId',
           'FloorRequestId',
           'FloorRequestStatusAtr',
-          'SupportedAttributes',
-          'SupportedPrimitives',
+          // 'SupportedAttributes',
+          // 'SupportedPrimitives',
           'FloorRequestInformation',
-          'Primitive',
-          'Complements',
+          // 'Primitive',
+          // 'Complements',
           'RequestStatus'
         ]
       },
       compress : {
         // 增加压缩轮次
-        passes : 3
+        passes      : 5,
+        unsafe      : true,
+        unsafe_math : true,
+        reduce_vars : true,
+        global_defs : {
+          __DEBUG__ : false // 全局常量替换
+        }
+      },
+      output : { // 添加这一段配置
+        comments : false, // 禁用所有注释
+        beautify : false, // 禁用美化格式
+        preamble : 'var _0x1234=0;' // 添加混淆前缀
+        // ascii_only : true // 防止 Unicode 转义
       }
     }))
+    // .pipe(obfuscate({
+    //   compact                  : true,
+    //   // controlFlowFlattening          : true, // 控制流扁平化
+    //   // controlFlowFlatteningThreshold : 0.01,
+    //   // deadCodeInjection              : true, // 注入死代码
+    //   // deadCodeInjectionThreshold     : 0.4,
+    //   // debugProtection                : true, // 防调试
+    //   // debugProtectionInterval        : 5000,
+    //   // disableConsoleOutput           : true, // 禁用 console
+    //   identifierNamesGenerator : 'hexadecimal', // 16进制变量名
+    //   // log                            : false,
+    //   numbersToExpressions     : true
+    //   // renameGlobals            : false, // 保留全局变量
+    //   // selfDefending            : true, // 自我保护
+    //   // simplify                 : true,
+    //   // splitStrings             : true,
+    //   // splitStringsChunkLength        : 5,
+    //   // stringArray              : true
+    //   // stringArrayEncoding      : [ 'base64', 'rc4' ], // 字符串加密
+    //   // stringArrayThreshold     : 0.15,
+    //   // transformObjectKeys            : true
+    //   // unicodeEscapeSequence          : false
+    // }))
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title }.min.js`))
     .pipe(gulp.dest('dist/'));

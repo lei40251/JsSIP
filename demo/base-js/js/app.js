@@ -55,25 +55,25 @@ const videoConstraints = {
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
-if (/Android/.test(navigator.userAgent))
-{
-  const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
+// if (/Android/.test(navigator.userAgent))
+// {
+//   const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
 
-  if (browserVersion < 85)
+//   if (browserVersion < 85)
+//   {
+// console.log('Your Chrome version is lower than 85.');
+// TURN 配置
+pcConfig['iceServers'] = [
   {
-    console.log('Your Chrome version is lower than 85.');
-    // TURN 配置
-    pcConfig['iceServers'] =[
-      {
-        'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
-        'username'   : 'ipcu',
-        'credential' : 'yl_19cu'
-      } ];
+    'urls'       : 'turn:cloudnetuc.vsbc.com:20100?transport=udp',
+    'username'   : 'ipcu',
+    'credential' : 'yl_19cu'
+  } ];
 
-    pcConfig['iceTransportPolicy']= 'all';
-    pcConfig['iceCandidatePoolSize']= 2;
-  }
-}
+pcConfig['iceTransportPolicy']= 'all';
+pcConfig['iceCandidatePoolSize']= 2;
+//   }
+// }
 // UA 实例
 const ua = new CRTC.UA(configuration);
 
@@ -187,44 +187,25 @@ ua.on('newRTCSession', function(e)
 
     if (d.originator==='local')
     {
-      // 保存浏览器默认payload
+      // 保存浏览器默认payload，适配pa
       // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
-
       // payload || (payload = d.sdp.match(payloadRegex)[1]);
       // const newPayloadRegex = new RegExp(payload, 'g');
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      // const match = d.sdp.match(/c=IN.*\r\n/);
-      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel\r\n', 'UDP/DTLS/SCTP webrtc-datachannel\r\na=floorctrl:c-s\r\na=confid:368\r\na=floorid:2 mstrm:2\r\n');
-
 
       d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
-
-      // d.sdp = `${d.sdp}\r\nm=application 3236 RTP/AVP 100\r\na=rtpmap:100 H224/4800`;
-      // console.warn('c: ', d.sdp.match(/c=IN.*\r\n/));
-      // d.sdp = d.sdp.replace('webrtc-datachannel\r\n', 'webrtc-datachannel\r\na=floorctrl:s-only\r\na=confid:368\r\na=floorid:2 mstrm:2\r\n');
-
     }
     else if (d.originator==='remote')
     {
-      // // 适配paphone
+      // 适配pa
       // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
-      // // 适配CRTC
       // d.sdp = d.sdp.replace(/420D0D/g, payload);
-      // d.sdp = d.sdp.replace(/m=video/, 'a=rtcp-mux\r\nm=video');
-      d.sdp = `${d.sdp}a=rtcp-mux \r\n`;
 
-      // d.sdp = d.sdp.replace('a=mid:2\r\n', 'a=mid:2\r\na=floorctrl:c-s\r\na=confid:368\r\na=floorid:2 m-stream:12\r\n');
-      // d.sdp = d.sdp.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
-
+      // 端到端用
       // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
       // d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
-
-      // console.warn('dsdp: ', d.sdp);
-      d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
-      d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
-      d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
     }
   });
 
@@ -615,8 +596,23 @@ ua.on('newRTCSession', function(e)
 
     stats.on('report', function(r)
     {
-      document.querySelector('#upF').innerText = `${r.upFrameWidth || ''} ${r.upFrameHeight || ''}`;
-      document.querySelector('#downF').innerText = `${r.downFrameWidth || ''} ${r.downFrameHeight || ''}`;
+      let downF = '';
+      let upF = '';
+
+      r.downStreams.forEach((item) =>
+      {
+        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+      });
+
+      r.upStreams.forEach((item) =>
+      {
+        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+      });
+
+      document.querySelector('#upF').innerText = upF;
+      document.querySelector('#downF').innerText = downF;
+
+
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
       document.querySelector('#downL').innerText = r.downlinkLoss || '';
@@ -687,8 +683,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true },
-      extraFeatures       : [ 'BFCP' ]
+      rtcOfferConstraints : { offerToReceiveAudio: true }
+      // extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('audio answer');
@@ -711,8 +707,8 @@ ua.on('newRTCSession', function(e)
       pcConfig            : pcConfig,
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : [ 'BFCP' ]
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true }
+      // extraFeatures       : [ 'BFCP' ]
     });
 
     setStatus('video answer');

@@ -126,25 +126,25 @@ const videoConstraints = constraints[resolution];
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
-if (/Android/.test(navigator.userAgent))
-{
-  const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
+// if (/Android/.test(navigator.userAgent))
+// {
+//   const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
 
-  if (browserVersion < 85)
+//   if (browserVersion < 85)
+//   {
+// console.log('Your Chrome version is lower than 85.');
+// TURN 配置
+pcConfig['iceServers'] = [
   {
-    console.log('Your Chrome version is lower than 85.');
-    // TURN 配置
-    pcConfig['iceServers'] = [
-      {
-        'urls'       : 'turn:5g.vsbc.com:60000?transport=udp',
-        'username'   : 'ipcu',
-        'credential' : 'yl_19cu'
-      } ];
+    'urls'       : 'turn:cloudnetuc.vsbc.com:20100?transport=udp',
+    'username'   : 'ipcu',
+    'credential' : 'yl_19cu'
+  } ];
 
-    pcConfig['iceTransportPolicy'] = 'all';
-    pcConfig['iceCandidatePoolSize'] = 2;
-  }
-}
+pcConfig['iceTransportPolicy'] = 'all';
+pcConfig['iceCandidatePoolSize'] = 2;
+//   }
+// }
 // UA 实例
 const ua = new CRTC.UA(configuration);
 
@@ -678,9 +678,22 @@ ua.on('newRTCSession', function(e)
     stats = new CRTC.getStats(e.session.connection);
     stats.on('report', function(r)
     {
-      console.warn('a: ', r);
-      document.querySelector('#upF').innerText = `${r.upFrameWidth || ''}*${r.upFrameHeight || ''} ${r.upFramesPerSecond || ''}fps`;
-      document.querySelector('#downF').innerText = `${r.downFrameWidth || ''}*${r.downFrameHeight || ''} ${r.downFramesPerSecond || ''}fps`;
+      let downF = '';
+      let upF = '';
+
+      r.downStreams.forEach((item) =>
+      {
+        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+      });
+
+      r.upStreams.forEach((item) =>
+      {
+        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+      });
+
+      document.querySelector('#upF').innerText = upF;
+      document.querySelector('#downF').innerText = downF;
+
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
       // document.querySelector('#downL').innerText = r.downlinkLoss || '';
