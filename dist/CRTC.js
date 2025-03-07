@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025371757
+ * CRTC v1.10.9-beta.2025372249
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405006143514 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405006144498 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405006143514');
+debug('version %s', '1.10.9-beta.405006144498');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405006143514';
+    return '1.10.9-beta.405006144498';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19205,8 +19205,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   logger.debug("kind: ".concat(s.track && s.track.kind));
                   if (s.track && s.track.kind == 'video') {
                     if (_this7._enableBFCP) {
-                      console.warn('aaaaaa: ', s.track != _this7._bfcpVideoTrack, s.track != _this7._localShareStream.getVideoTracks()[0]);
-
                       // 启用了BFCP，区分一下BFCP控制的视频轨道
                       s.track != _this7._bfcpVideoTrack && s.track != _this7._localShareStream.getVideoTracks()[0] && s.track.stop();
                     } else {
@@ -19229,7 +19227,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
                   stream = Utils.getStreamThroughCanvas(stream);
                 }
-                _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
+                try {
+                  _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
+                } catch (error) {
+                  logger.error(error);
+                }
                 var videoTrack = stream.getVideoTracks()[0];
                 _this7._localMediaStream.addTrack(videoTrack);
                 var sender = _this7._connection.getSenders().find(function (s) {
@@ -19276,7 +19278,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   throw new Error('getUserMedia() failed');
                 });
               }).then(function (stream) {
-                _this7._localMediaStream.removeTrack(_this7._localMediaStream.getAudioTracks()[0]);
+                try {
+                  _this7._localMediaStream.removeTrack(_this7._localMediaStream.getAudioTracks()[0]);
+                } catch (error) {
+                  logger.error(error);
+                }
                 var audioTrack = stream.getAudioTracks()[0];
                 _this7._localMediaStream.addTrack(audioTrack);
                 var sender = _this7._connection.getSenders().find(function (s) {
@@ -23013,6 +23019,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
+          console.warn('kkkkkkkkkkkkkkkkkkkk');
           // 本地播放本地视频轨道
           _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
           _this39._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
