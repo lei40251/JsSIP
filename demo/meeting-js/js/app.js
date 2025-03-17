@@ -136,7 +136,7 @@ const pcConfig = {};
 // TURN 配置
 pcConfig['iceServers'] = [
   {
-    'urls'       : 'turn:cloudnetuc.vsbc.com:20100?transport=udp',
+    'urls'       : 'turn:cloudnetuchw.vsbc.com:10000?transport=udp',
     'username'   : 'ipcu',
     'credential' : 'yl_19cu'
   } ];
