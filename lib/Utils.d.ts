@@ -40,3 +40,7 @@ export function cloneArray<T = unknown>(arr: T[]): T[];
 export function cloneObject<T>(obj: T, fallback?: T): T;
 
 export function fixContentLength(data:string): string;
+
+export function getApplicationMediaPositions(sdp:string): Array<string>;
+
+export function reorderApplicationMedia(sdp:string, positions:Array<string>): string;
