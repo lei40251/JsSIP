@@ -16,6 +16,7 @@ let rtcSession;
 let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
+const extraFeatures = [];
 
 // let payload;
 
@@ -27,6 +28,12 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 const cusMediaStream = new MediaStream();
+
+const env = handleGetQuery('env');
+const { signalingUrl, sipDomain, secretKey, iceServers } = env? envs[`env_${env}`]:envs['env_default'];
+const exts = handleGetQuery('ext')?handleGetQuery('ext').split():null;
+
+exts && exts.forEach((ext) => extraFeatures.push(ext));
 
 // 注册UA的用户名
 const account = handleGetQuery('caller');
@@ -55,31 +62,9 @@ const videoConstraints = {
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
-// if (/Android/.test(navigator.userAgent))
-// {
-//   const browserVersion = navigator.userAgent.match(/Chrome\/(\d+)/)[1];
-
-//   if (browserVersion < 85)
-//   {
-// console.log('Your Chrome version is lower than 85.');
-// TURN 配置
-// pcConfig['iceServers'] = [
-//   {
-//     'urls'       : 'turn:cloudnetuc.vsbc.com:20100?transport=udp',
-//     'username'   : 'ipcu',
-//     'credential' : 'yl_19cu'
-//   } ];
-pcConfig['iceServers'] = [
-  {
-    'urls'       : 'turn:cloudnetuchw.vsbc.com:10000?transport=udp',
-    'username'   : 'ipcu',
-    'credential' : 'yl_19cu'
-  } ];
-
+iceServers && (pcConfig['iceServers']=iceServers);
 pcConfig['iceTransportPolicy']= 'all';
-pcConfig['iceCandidatePoolSize']= 2;
-//   }
-// }
+
 // UA 实例
 const ua = new CRTC.UA(configuration);
 
@@ -186,7 +171,7 @@ ua.on('newRTCSession', function(e)
       // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
       // cMode        : 'paphone',
-      extraFeatures : [ 'BFCP' ],
+      extraFeatures : extraFeatures,
       pcConfig      : pcConfig
     });
   });
@@ -697,7 +682,7 @@ ua.on('newRTCSession', function(e)
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true },
-      extraFeatures       : [ 'BFCP' ]
+      extraFeatures       : extraFeatures
     });
 
     setStatus('audio answer');
@@ -721,7 +706,7 @@ ua.on('newRTCSession', function(e)
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : [ 'BFCP' ]
+      extraFeatures       : extraFeatures
     });
 
     setStatus('video answer');
@@ -1035,7 +1020,7 @@ async function call(type, direction)
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
-    extraFeatures : [ 'BFCP' ],
+    extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
 

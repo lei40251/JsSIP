@@ -1,6 +1,14 @@
-// 信令地址
-const signalingUrl = 'wss://example.com:8060/wss';
-// sip domain
-const sipDomain = 'example.com';
-// 授权码
-const secretKey = 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ';
+const defaulteEnvs = {
+  // 信令地址
+  signalingUrl : 'wss://example.com:8060/wss',
+  // sip domain
+  sipDomain    : 'example.com',
+  // 授权码
+  secretKey    : 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ',
+  // Turn 配置
+  iceServers   : [ { 'urls': 'turn:example.com:10000?transport=udp', 'username': 'username', 'credential': 'password' } ]
+};
+
+const envs = {
+  env_default : defaulteEnvs,
+};
