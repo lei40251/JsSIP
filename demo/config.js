@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-/* eslint-disable max-len */
 
 const defaulteEnv ={
   signalingUrl : 'wss://5g.vsbc.com:9002/wss',

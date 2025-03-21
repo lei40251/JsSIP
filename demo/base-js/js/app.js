@@ -27,7 +27,7 @@ const localVideo = document.querySelector('#localVideo');
 const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
-const cusMediaStream = new MediaStream();
+let cusMediaStream = new MediaStream();
 
 const env = handleGetQuery('env');
 const { signalingUrl, sipDomain, secretKey, iceServers } = env? envs[`env_${env}`]:envs['env_default'];
@@ -192,6 +192,9 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
+
+      // fb 改 *
+      d.sdp = processSdp(d.sdp);
 
       d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
     }
@@ -392,6 +395,8 @@ ua.on('newRTCSession', function(e)
     document.querySelector('#remoteVideo2').classList = 'hide';
 
     cusMediaStream.getTracks().forEach((track) => track.stop());
+
+    cusMediaStream = new MediaStream();
   });
 
   /**
@@ -448,6 +453,7 @@ ua.on('newRTCSession', function(e)
     document.querySelector('#remoteVideo2').classList = 'hide';
 
     cusMediaStream.getTracks().forEach((track) => track.stop());
+    cusMediaStream = new MediaStream();
   });
 
   /**
@@ -1016,6 +1022,8 @@ async function call(type, direction)
     return;
   }
 
+  rtcSession && rtcSession.terminate();
+
   const options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
@@ -1040,7 +1048,7 @@ async function call(type, direction)
 
   if (type=== 'screen')
   {
-    await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+    await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
       .then(async(stream) =>
       {
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false });
@@ -1269,7 +1277,7 @@ function start()
   document.querySelector('#callScreen').onclick = function()
   {
     // 设置当前通话模式为视频模式
-    call('screen', 'sendonly');
+    call('screen');
   };
 
   // 发起视频呼叫
@@ -1297,6 +1305,49 @@ function start()
   {
     ua.stop();
   };
+}
+
+function processSdp(sdp)
+{
+  // 将SDP按行分割
+  const lines = sdp.split('\n');
+  const processedLines = [];
+  // let currentMediaType = ''; // 用于标记当前处理的媒体类型
+  const seenRtcpFb = new Set(); // 用于存储当前媒体块中的rtcp-fb规则
+
+  for (let i = 0; i < lines.length; i++)
+  {
+    let line = lines[i];
+
+    // 检查是否进入新的媒体块
+    if (line.startsWith('m='))
+    {
+      // 清空已见过的rtcp-fb集合
+      seenRtcpFb.clear();
+      // currentMediaType = line;
+      processedLines.push(line);
+      continue;
+    }
+
+    // 处理rtcp-fb行
+    if (line.match(/^a=rtcp-fb:/))
+    {
+      // 将具体编码数字替换为*
+      line = line.replace(/^a=rtcp-fb:\d+/, 'a=rtcp-fb:*');
+
+      // 检查在当前媒体块中是否已经存在该规则
+      if (seenRtcpFb.has(line))
+      {
+        continue; // 跳过重复的行
+      }
+      seenRtcpFb.add(line);
+    }
+
+    processedLines.push(line);
+  }
+
+  // 重新组合SDP
+  return processedLines.join('\n');
 }
 
 start();
