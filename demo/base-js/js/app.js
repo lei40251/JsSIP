@@ -192,11 +192,6 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-
-      // fb 改 *
-      d.sdp = processSdp(d.sdp);
-
-      d.sdp = d.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *');
     }
     else if (d.originator==='remote')
     {
@@ -378,6 +373,7 @@ ua.on('newRTCSession', function(e)
     setStatus(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
+    rtcSession = null;
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -629,18 +625,18 @@ ua.on('newRTCSession', function(e)
       document.querySelector('#NQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
-    if (d.originator === 'local')
-    {
-      // 兼容部分手机初始黑屏问题
-      setTimeout(() =>
-      {
-        e.session.mute({ video: true });
-        setTimeout(() =>
-        {
-          e.session.unmute({ video: true });
-        }, 300);
-      }, 1000);
-    }
+    // if (d.originator === 'local')
+    // {
+    //   // 兼容部分手机初始黑屏问题
+    //   setTimeout(() =>
+    //   {
+    //     e.session.mute({ video: true });
+    //     setTimeout(() =>
+    //     {
+    //       e.session.unmute({ video: true });
+    //     }, 300);
+    //   }, 1000);
+    // }
 
     // 获取媒体流
     getStreams(e.session.connection);
@@ -1305,49 +1301,6 @@ function start()
   {
     ua.stop();
   };
-}
-
-function processSdp(sdp)
-{
-  // 将SDP按行分割
-  const lines = sdp.split('\n');
-  const processedLines = [];
-  // let currentMediaType = ''; // 用于标记当前处理的媒体类型
-  const seenRtcpFb = new Set(); // 用于存储当前媒体块中的rtcp-fb规则
-
-  for (let i = 0; i < lines.length; i++)
-  {
-    let line = lines[i];
-
-    // 检查是否进入新的媒体块
-    if (line.startsWith('m='))
-    {
-      // 清空已见过的rtcp-fb集合
-      seenRtcpFb.clear();
-      // currentMediaType = line;
-      processedLines.push(line);
-      continue;
-    }
-
-    // 处理rtcp-fb行
-    if (line.match(/^a=rtcp-fb:/))
-    {
-      // 将具体编码数字替换为*
-      line = line.replace(/^a=rtcp-fb:\d+/, 'a=rtcp-fb:*');
-
-      // 检查在当前媒体块中是否已经存在该规则
-      if (seenRtcpFb.has(line))
-      {
-        continue; // 跳过重复的行
-      }
-      seenRtcpFb.add(line);
-    }
-
-    processedLines.push(line);
-  }
-
-  // 重新组合SDP
-  return processedLines.join('\n');
 }
 
 start();
