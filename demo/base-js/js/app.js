@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -1304,3 +1304,16 @@ function start()
 }
 
 start();
+
+// 测试用
+function addNewTrack(type)
+{
+  const vtrack = new MediaStreamTrackGenerator({ kind: type });
+
+  rtcSession.connection.addTrack(vtrack);
+
+  rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+}
+
+document.querySelector('#addAudio').onclick = function() { addNewTrack('audio'); };
+document.querySelector('#addVideo').onclick = function() { addNewTrack('video'); };
