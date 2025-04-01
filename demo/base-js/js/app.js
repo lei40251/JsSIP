@@ -18,6 +18,7 @@ let optionsTimer;
 let tmpSession;
 
 let payload;
+let telephone_event_pt;
 
 // 远端客户端UA
 // let remoteUA;
@@ -55,6 +56,7 @@ const configuration = {
   password       : `yl_19${account}`,
   session_timers : false,
   secret_key     : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA=='
+  // secret_key     : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA=='
   // secret_key     : sessionStorage.getItem('secret_key') || 'FznBAK9CyckB0tBDRMJIDrKntILmGFIfZsBoAmbP8dVAe1J0r1v5ydaEjOsCTgL2NSEGkm263mNmv1zKxQI7eQE3Txwca2mYOARGI3C5XlroLCNRJgRHouVegzFVd5HOUl+JcpvQMTcKPavHpPu5EumK2e8hTc327DZgOK+KJTLF8PRG0Uzd5UXtq0iCNGOTfwPYbDJ8eIh1f9nY+bfaWjqT0oWGZL9rM/NZLjReliV1wurV2fLio48+Cz+aOwWEWwIBjJaMTN3a2xccy+ync73axto9oRQX9r1p/9XrYd8Bd4mDxy5Hl0ib6XQRla6CjXYoKlUObbSlgwGipQbqJA=='
 };
 // 媒体约束条件
@@ -228,6 +230,20 @@ ua.on('newRTCSession', function(e)
       d.sdp = d.sdp.replace(/b=AS:\d.*\r\n/g, '');
       d.sdp = d.sdp.replace(/b=RS:\d.*\r\n/g, '');
       d.sdp = d.sdp.replace(/b=RR:\d.*\r\n/g, '');
+
+      const regex = /a=rtpmap:(\d+)\s+telephone-event/;
+      const match = d.sdp.match(regex);
+
+      if (telephone_event_pt)
+      {
+        d.sdp = fixTelephoneEventPT(d.sdp, telephone_event_pt);
+
+        console.warn('dsdp: ', d.sdp);
+      }
+      else
+      {
+        telephone_event_pt = match ? match[1] : null;
+      }
     }
 
   });
@@ -957,6 +973,8 @@ document.querySelector('.resume').onclick = function()
  */
 async function call(type, direction)
 {
+  telephone_event_pt = null;
+
   if (!ua.isRegistered())
   {
     setStatus('请注册成功后呼叫');
@@ -1244,6 +1262,53 @@ function start()
   {
     ua.stop();
   };
+}
+
+function fixTelephoneEventPT(sdp, targetPT)
+{
+  // 先获取当前的 telephone-event PT值
+  const regex = /a=rtpmap:(\d+)\s+telephone-event\/\d+/;
+  const match = sdp.match(regex);
+
+  if (!match)
+  {
+    return sdp;
+  }
+
+  const currentPT = match[1];
+
+  if (currentPT === targetPT.toString())
+  {
+    return sdp;
+  }
+
+  let newSdp = sdp;
+
+  // 替换媒体行中的PT值，确保保持换行
+  newSdp = newSdp.replace(
+    /^(m=audio\s+\d+\s+[\w/]+\s+[\d\s]+?)(\d+)([\r\n]+)/m,
+    (_, prefix, pt, lineEnding) =>
+    {
+      if (pt === currentPT)
+      {
+        return `${prefix}${targetPT}${lineEnding}`;
+      }
+
+      return match;
+    }
+  );
+
+  // 替换 rtpmap 行
+  newSdp = newSdp.replace(
+    new RegExp(`a=rtpmap:${currentPT}\\s+telephone-event`, 'g'),
+    `a=rtpmap:${targetPT} telephone-event`
+  );
+
+  // 替换 fmtp 行
+  return newSdp.replace(
+    new RegExp(`a=fmtp:${currentPT}\\s+`, 'g'),
+    `a=fmtp:${targetPT} `
+  );
 }
 
 start();
