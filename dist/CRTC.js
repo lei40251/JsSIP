@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20253221449
+ * CRTC v1.10.9-beta.20253261230
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405006442898 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405006522460 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405006442898');
+debug('version %s', '1.10.9-beta.405006522460');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405006442898';
+    return '1.10.9-beta.405006522460';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -23042,7 +23042,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
-          console.warn('kkkkkkkkkkkkkkkkkkkk');
           // 本地播放本地视频轨道
           _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
           _this40._localMediaStream.addTrack(newStream.getVideoTracks()[0]);

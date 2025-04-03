@@ -3,7 +3,8 @@
 const defaulteEnv ={
   signalingUrl : 'wss://5g.vsbc.com:9002/wss',
   sipDomain    : '5g.vsbc.com',
-  secretKey    : sessionStorage.getItem('secret_key') ||'WjEI+dWAJYCGB+FqZJURtj9hhb0CMY6suuv8OQbkkO0BWS039oxggfJXuijuq30BXrsFt0kO8n8zpOkyQ0fM4oZqzDiFRgRxEtbE0rABqbtLoMxniFCxaVpRQi8q7F8YbsZDyv8CKaozYsFrw2VdGTBLPtiI8akgCOIXhFwg8XVHeUJ28HLWHna/h0EyV08ottnpO8L6M9h0zxxiHR109UI+WFW5E2kK5Z/mllIM5z62kSrOx6J1gt/BYCPNVSixW1FsYDmI7BirPqytBim9MTjciHzSYosEjzmjhKA980APFXQ4YCCCqTkRjxJJAHFMWdOAttrYtyTfdEteKfRRsg==',
+  // secretKey    : sessionStorage.getItem('secret_key') ||'WjEI+dWAJYCGB+FqZJURtj9hhb0CMY6suuv8OQbkkO0BWS039oxggfJXuijuq30BXrsFt0kO8n8zpOkyQ0fM4oZqzDiFRgRxEtbE0rABqbtLoMxniFCxaVpRQi8q7F8YbsZDyv8CKaozYsFrw2VdGTBLPtiI8akgCOIXhFwg8XVHeUJ28HLWHna/h0EyV08ottnpO8L6M9h0zxxiHR109UI+WFW5E2kK5Z/mllIM5z62kSrOx6J1gt/BYCPNVSixW1FsYDmI7BirPqytBim9MTjciHzSYosEjzmjhKA980APFXQ4YCCCqTkRjxJJAHFMWdOAttrYtyTfdEteKfRRsg==',
+  secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
   iceServers   : null
 };
 
@@ -11,7 +12,13 @@ const envs =
   {
     env_default : defaulteEnv,
     env_5g      : defaulteEnv,
-    env_a       : {
+    env_dev     : {
+      signalingUrl : 'wss://dev.vsbc.com:5062/wss',
+      sipDomain    : 'dev.vsbc.com',
+      secretKey    : sessionStorage.getItem('secret_key') ||'rq+mNXSyGT04iMNQDXxCbuZJZNwnO3royUvKKPIw4KBNXH1tKmO0/loaggQn7LD9Q3ua1yxOgWaHZiVrd8JJoRd1IvkHuVf2o3Q7QSHvS+SIUIhq+bFb8Vti12wVRVpQ489XEWjqrRLa/YZ/HOWkZIi7Zulmd6O8HMlCY8nnlRPZI/XRRPEyKsLrncdJcE4mtPkaenj2LrI4NbC3jBWfKGAXQo3Ddvzyqpd8qhJqnKkW87IH/UH+MRDHVI8UcoMPlRDs2nFC5JTm8b0+Tq0sb8X2t2NDl41ccPHXYfBbSbOgEiMcQsnehsrCXuEMX+puEJcl+OUpNRNB0GcyzS46SA==',
+      iceServers   : null
+    },
+    env_a : {
       signalingUrl : 'wss://a.vsbc.com:5062/wss',
       sipDomain    : 'a.vsbc.com',
       secretKey    : sessionStorage.getItem('secret_key') ||'WjEI+dWAJYCGB+FqZJURtj9hhb0CMY6suuv8OQbkkO0BWS039oxggfJXuijuq30BXrsFt0kO8n8zpOkyQ0fM4oZqzDiFRgRxEtbE0rABqbtLoMxniFCxaVpRQi8q7F8YbsZDyv8CKaozYsFrw2VdGTBLPtiI8akgCOIXhFwg8XVHeUJ28HLWHna/h0EyV08ottnpO8L6M9h0zxxiHR109UI+WFW5E2kK5Z/mllIM5z62kSrOx6J1gt/BYCPNVSixW1FsYDmI7BirPqytBim9MTjciHzSYosEjzmjhKA980APFXQ4YCCCqTkRjxJJAHFMWdOAttrYtyTfdEteKfRRsg==',
