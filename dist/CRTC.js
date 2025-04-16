@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254161821
+ * CRTC v1.10.9-beta.20254162325
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008323642 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008324650 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008323642');
+debug('version %s', '1.10.9-beta.405008324650');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008323642';
+    return '1.10.9-beta.405008324650';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21645,7 +21645,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
       Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
-        var _Utils$generateAnEmpt2, videoTrack, stopAnimation;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
@@ -21674,13 +21673,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                * 是否启用 DataChannel
                **/
               if (_this29._enableBFCP) {
-                if (_this29._stopAnimation) {
-                  _this29._stopAnimation();
-                }
-                _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack, stopAnimation = _Utils$generateAnEmpt2.stopAnimation;
-                _this29._stopAnimation = stopAnimation;
-                _this29._bfcpVideoTrack = videoTrack;
-                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
+                // if (this._stopAnimation)
+                // {
+                //   this._stopAnimation();
+                // }
+                // const { videoTrack, stopAnimation } = Utils.generateAnEmptyVideoTrack();
+
+                // this._stopAnimation = stopAnimation;
+                // this._bfcpVideoTrack = videoTrack;
+                // this._connection.addTrack(this._bfcpVideoTrack, this._localMediaStream);
+
+                _this29._connection.addTransceiver('video', {
+                  direction: 'recvonly'
+                });
                 _this29._initDataChannel();
               }
 
@@ -29005,7 +29010,7 @@ exports.getStreams = function (pc, type, i) {
       if (Array.isArray(senders)) {
         senders.forEach(function (sender) {
           if (sender.track && sender.track.readyState === 'live') {
-            console.warn('str: ', sender.track);
+            console.warn('str: ', sender.track.muted, sender.track.enabled, sender.track);
             if (sender.track.kind === 'audio') {
               audioStream.addTrack(sender.track);
             } else if (!(sender.track instanceof CanvasCaptureMediaStreamTrack)) {
@@ -29111,52 +29116,56 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
     _ref4$width = _ref4.width,
     width = _ref4$width === void 0 ? 64 : _ref4$width,
     _ref4$height = _ref4.height,
-    height = _ref4$height === void 0 ? 48 : _ref4$height,
-    _ref4$frameRate = _ref4.frameRate,
-    frameRate = _ref4$frameRate === void 0 ? 1 : _ref4$frameRate;
+    height = _ref4$height === void 0 ? 48 : _ref4$height;
   // 创建 Canvas 元素
   var canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  var ctx = canvas.getContext('2d');
-  var frameCount = 0;
-  var animationFrameId;
+  // const ctx = canvas.getContext('2d');
+
+  // let frameCount = 0;
+  // let animationFrameId;
 
   // 定义更新 Canvas 内容的函数
-  var _updateCanvas = function updateCanvas() {
-    // 清空画布
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // const updateCanvas = () =>
+  // {
+  //   // 清空画布
+  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 绘制动态内容（例如一个移动的矩形）
-    ctx.fillStyle = 'red';
-    var x = frameCount % canvas.width; // 矩形水平移动
+  //   // 绘制动态内容（例如一个移动的矩形）
+  //   ctx.fillStyle = 'red';
+  //   const x = (frameCount % canvas.width); // 矩形水平移动
 
-    ctx.fillRect(x, 1, 1, 1);
+  //   ctx.fillRect(x, 1, 1, 1);
 
-    // 增加帧计数
-    frameCount++;
+  //   // 增加帧计数
+  //   frameCount++;
 
-    // 使用 requestAnimationFrame 循环调用
-    animationFrameId = requestAnimationFrame(_updateCanvas);
-  };
+  //   // 使用 requestAnimationFrame 循环调用
+  //   // animationFrameId = requestAnimationFrame(updateCanvas);
+  // };
 
   // 启动动画
-  _updateCanvas();
+  // updateCanvas();
 
   // 捕获 Canvas 的视频流
-  var videoStream = canvas.captureStream(frameRate);
+  var videoStream = canvas.captureStream();
 
   // 提供一个清理函数，用于停止动画
-  var stopAnimation = function stopAnimation() {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-    }
-  };
+  // const stopAnimation = () =>
+  // {
+  //   if (animationFrameId)
+  //   {
+  //     cancelAnimationFrame(animationFrameId);
+  //   }
+  // };
+
+  videoStream.getVideoTracks()[0].stop();
 
   // 返回视频轨道和清理函数
   return {
-    videoTrack: videoStream.getVideoTracks()[0],
-    stopAnimation: stopAnimation
+    videoTrack: videoStream.getVideoTracks()[0]
+    // stopAnimation
   };
 };
 
@@ -29169,17 +29178,17 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
 exports.generateAnEmptyVideoTrack = function () {
   if ('MediaStreamTrackGenerator' in window) {
     // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
-    try {
-      // eslint-disable-next-line no-undef
-      var trackGenerator = new MediaStreamTrackGenerator({
-        kind: 'video'
-      });
-      return {
-        videoTrack: trackGenerator
-      };
-    } catch (error) {
-      return createCanvasVideoTrack();
-    }
+    // try
+    // {
+    //   // eslint-disable-next-line no-undef
+    //   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
+
+    //   return { videoTrack: trackGenerator };
+    // }
+    // catch (error)
+    // {
+    return createCanvasVideoTrack();
+    // }
   } else {
     // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
     return createCanvasVideoTrack();
