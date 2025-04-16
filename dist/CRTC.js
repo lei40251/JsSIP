@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20253261230
+ * CRTC v1.10.9-beta.20254161821
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405006522460 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008323642 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405006522460');
+debug('version %s', '1.10.9-beta.405008323642');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405006522460';
+    return '1.10.9-beta.405008323642';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21659,7 +21659,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (_this29._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
-                  _this29._localMediaStream.getTracks().forEach(function (track) {
+                  _this29._localMediaStream.getAudioTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
+                  });
+                  _this29._localMediaStream.getVideoTracks().forEach(function (track) {
                     _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
                 } else {
@@ -26899,7 +26902,10 @@ module.exports = /*#__PURE__*/function () {
       data = data.replace(/420D0D/g, '42e01f');
 
       // 兼容hwcloudlink，修改收到的 profile
-      data = data.replace(/(a=fmtp:\d+\s+profile-level-id=[\w\d]+[\s\S]*?a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/, '$142e01f');
+      data = data.replace(/(a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/g, '$142c01e');
+      // eslint-disable-next-line max-len
+      // data = data.replace(/(a=fmtp:\d+\s+profile-level-id=[\w\d]+[\s\S]*?a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/, '$142c01e');
+
       // 修复BFCP用到的SDP信息
       data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
 
@@ -28999,9 +29005,10 @@ exports.getStreams = function (pc, type, i) {
       if (Array.isArray(senders)) {
         senders.forEach(function (sender) {
           if (sender.track && sender.track.readyState === 'live') {
+            console.warn('str: ', sender.track);
             if (sender.track.kind === 'audio') {
               audioStream.addTrack(sender.track);
-            } else {
+            } else if (!(sender.track instanceof CanvasCaptureMediaStreamTrack)) {
               videoStream.addTrack(sender.track);
             }
           }
@@ -29158,8 +29165,6 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
  * canvas 生成还是浏览器api直接生成
  *
  * MediaStreamTrackGenerator 生成的视频muted=false 不能满足要求，暂时改为canvas直接生成
- *
- * @param {MediaStream} stream - 要转换的媒体流
  */
 exports.generateAnEmptyVideoTrack = function () {
   if ('MediaStreamTrackGenerator' in window) {
@@ -29179,6 +29184,51 @@ exports.generateAnEmptyVideoTrack = function () {
     // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
     return createCanvasVideoTrack();
   }
+};
+var createAnAudioCtxMediaTrack = function createAnAudioCtxMediaTrack() {
+  // 增加安卓微信呼叫的语音提醒
+  // const audio = new Audio('./sound/waiting.mp3');
+  var audio = new Audio();
+  var audioCtx = new AudioContext();
+  var destination = audioCtx.createMediaStreamDestination();
+  var source = audioCtx.createMediaElementSource(audio);
+  audio.loop = true;
+  audio.crossOrigin = 'anonymous';
+  // eslint-disable-next-line no-console
+  audio.play()["catch"](function (error) {
+    console.error("new Audio() error: ".concat(JSON.stringify(error)));
+  });
+  source.connect(destination);
+  return {
+    audioTrack: destination.stream.getAudioTracks()[0]
+  };
+};
+
+/**
+ * 生成空音频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
+ * AudioContext 生成还是浏览器api直接生成
+ */
+exports.generateAnEmptyAudioTrack = function () {
+  // if ('MediaStreamTrackGenerator' in window)
+  // {
+  //   // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+  //   try
+  //   {
+  //     // eslint-disable-next-line no-undef
+  //     const trackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
+
+  //     return { audioTrack: trackGenerator };
+  //   }
+  //   catch (error)
+  //   {
+  //     return createAnAudioCtxMediaTrack();
+  //   }
+  // }
+  // else
+  // {
+  // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+  return createAnAudioCtxMediaTrack();
+  // }
 };
 
 /**

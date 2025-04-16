@@ -46,3 +46,7 @@ export function getApplicationMediaPositions(sdp:string): Array<string>;
 export function reorderApplicationMedia(sdp:string, positions:Array<string>): string;
 
 export function processSdp(sdp:string): string;
+
+export function generateAnEmptyVideoTrack(): MediaStreamTrack;
+
+export function generateAnEmptyAudioTrack(): MediaStreamTrack;

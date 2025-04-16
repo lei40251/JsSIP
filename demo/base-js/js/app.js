@@ -747,6 +747,17 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
+   * 切换麦克风
+   *
+   * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
+   */
+  document.querySelector('#mics').onchange = function()
+  {
+    e.session.switchDevice('audio', this.options[this.selectedIndex].value);
+    setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
+  };
+
+  /**
    * 手机端用切换摄像头
    */
   document.querySelector('#switchDevice').onclick = function()
@@ -1065,6 +1076,16 @@ async function call(type, direction)
 
   }
 
+  if (type === 'callnull')
+  {
+    const tmpStream = new MediaStream();
+
+    tmpStream.addTrack(CRTC.Utils.generateAnEmptyAudioTrack().audioTrack, tmpStream);
+    tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
+
+    options['mediaStream'] = tmpStream;
+  }
+
   const callee = document.querySelector('#callee').value;
 
   console.log('op: ', options);
@@ -1237,6 +1258,20 @@ function updateDevices()
 
       document.querySelector('#cameras').innerHTML = option;
     });
+
+  // 移动端不支持切换麦克风
+  CRTC.Utils.getMicrophones()
+    .then((microphones) =>
+    {
+      let menus = '';
+
+      microphones.forEach((device) =>
+      {
+        menus += `<option value="${device.deviceId}">${device.label}</option>`;
+      });
+
+      document.querySelector('#mics').innerHTML = menus;
+    });
 }
 
 /**
@@ -1261,6 +1296,13 @@ function start()
       console.log('网络连接异常或未注册成功');
     }
   }, 10000);
+
+  // 发起无音视频呼叫
+  document.querySelector('#callNull').onclick = function()
+  {
+    // 设置当前通话模式为音频模式
+    call('callnull');
+  };
 
   // 发起音频呼叫
   document.querySelector('#call').onclick = function()
