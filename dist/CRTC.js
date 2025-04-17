@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254162325
+ * CRTC v1.10.9-beta.20254171140
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008324650 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008342280 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008324650');
+debug('version %s', '1.10.9-beta.405008342280');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008324650';
+    return '1.10.9-beta.405008342280';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -17957,8 +17957,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpVideoTrack = null;
     // BFCP控制的流，接通后立即获取
     _this._bfcpStream = null;
-    // 停止BFCP占位媒体
-    _this._stopAnimation = null;
     // 是否已经收到共享
     _this._remoteShared = false;
     // this._bfct = null;
@@ -18918,13 +18916,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 是否启用 DataChannel
            **/
           if (_this4._enableBFCP) {
-            if (_this4._stopAnimation) {
-              _this4._stopAnimation();
-            }
             var _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(),
-              videoTrack = _Utils$generateAnEmpt.videoTrack,
-              stopAnimation = _Utils$generateAnEmpt.stopAnimation;
-            _this4._stopAnimation = stopAnimation;
+              videoTrack = _Utils$generateAnEmpt.videoTrack;
             _this4._bfcpVideoTrack = videoTrack;
             // this._bfcpVideoTrack = this._createCanvasVideoTrack();
             _this4._connection.addTrack(_this4._bfcpVideoTrack, _this4._localMediaStream);
@@ -20667,7 +20660,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
-        // 修改为只支持 42c01e
+        // 非BFCP修改为只支持 42c01e
         _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/42e01f/g, '42c01e'));
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
@@ -21055,15 +21048,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (request.body) {
         var waiting = false;
         var mediaIndex = 0;
-        if (this._enableBFCP) {
-          var _Utils$getApplication = Utils.getApplicationMediaPositions(request.body),
-            originalIndexes = _Utils$getApplication.originalIndexes,
-            sdp = _Utils$getApplication.sdp;
-          applicationIndex = originalIndexes;
-          request.body = sdp;
-          logger.debug('applicationIndex: ', applicationIndex);
-          logger.debug('NEW Reinvite SDP: ', sdp);
-        }
+
+        // 适配通用情况下的SDP H224
+        var _Utils$getApplication = Utils.getApplicationMediaPositions(request.body),
+          originalIndexes = _Utils$getApplication.originalIndexes,
+          sdp = _Utils$getApplication.sdp;
+        applicationIndex = originalIndexes;
+        request.body = sdp;
+        logger.debug('applicationIndex: ', applicationIndex);
+        logger.debug('NEW Reinvite SDP: ', sdp);
         var sdp_request = sdp_transform.parse(request.body);
 
         // request['mode'] = 'audio';
@@ -21143,12 +21136,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
         }
-        if (this._enableBFCP) {
-          applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
-          logger.debug('OLD SDP: ', desc);
-          desc = Utils.reorderApplicationMedia(desc, applicationIndex);
-          logger.debug('NEW Answer SDP: ', desc);
-        }
+
+        // 适配通用情况下的SDP H224
+        applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
+        logger.debug('OLD SDP: ', desc);
+        desc = Utils.reorderApplicationMedia(desc, applicationIndex);
+        logger.debug('NEW Answer SDP: ', desc);
         request.reply(200, null, extraHeaders, desc, function () {
           _this21._status = C.STATUS_WAITING_FOR_ACK;
           _this21._setInvite2xxTimer(request, desc);
@@ -21645,6 +21638,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
       Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+        var _Utils$generateAnEmpt2, videoTrack;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
@@ -21673,19 +21667,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                * 是否启用 DataChannel
                **/
               if (_this29._enableBFCP) {
-                // if (this._stopAnimation)
-                // {
-                //   this._stopAnimation();
-                // }
-                // const { videoTrack, stopAnimation } = Utils.generateAnEmptyVideoTrack();
-
-                // this._stopAnimation = stopAnimation;
-                // this._bfcpVideoTrack = videoTrack;
-                // this._connection.addTrack(this._bfcpVideoTrack, this._localMediaStream);
-
-                _this29._connection.addTransceiver('video', {
-                  direction: 'recvonly'
-                });
+                _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack;
+                _this29._bfcpVideoTrack = videoTrack;
+                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
                 _this29._initDataChannel();
               }
 
@@ -29121,51 +29105,15 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
   var canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  // const ctx = canvas.getContext('2d');
-
-  // let frameCount = 0;
-  // let animationFrameId;
-
-  // 定义更新 Canvas 内容的函数
-  // const updateCanvas = () =>
-  // {
-  //   // 清空画布
-  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  //   // 绘制动态内容（例如一个移动的矩形）
-  //   ctx.fillStyle = 'red';
-  //   const x = (frameCount % canvas.width); // 矩形水平移动
-
-  //   ctx.fillRect(x, 1, 1, 1);
-
-  //   // 增加帧计数
-  //   frameCount++;
-
-  //   // 使用 requestAnimationFrame 循环调用
-  //   // animationFrameId = requestAnimationFrame(updateCanvas);
-  // };
-
-  // 启动动画
-  // updateCanvas();
 
   // 捕获 Canvas 的视频流
   var videoStream = canvas.captureStream();
-
-  // 提供一个清理函数，用于停止动画
-  // const stopAnimation = () =>
-  // {
-  //   if (animationFrameId)
-  //   {
-  //     cancelAnimationFrame(animationFrameId);
-  //   }
-  // };
-
+  canvas = null;
   videoStream.getVideoTracks()[0].stop();
 
   // 返回视频轨道和清理函数
   return {
     videoTrack: videoStream.getVideoTracks()[0]
-    // stopAnimation
   };
 };
 
@@ -29178,17 +29126,17 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
 exports.generateAnEmptyVideoTrack = function () {
   if ('MediaStreamTrackGenerator' in window) {
     // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
-    // try
-    // {
-    //   // eslint-disable-next-line no-undef
-    //   const trackGenerator = new MediaStreamTrackGenerator({ kind: 'video' });
-
-    //   return { videoTrack: trackGenerator };
-    // }
-    // catch (error)
-    // {
-    return createCanvasVideoTrack();
-    // }
+    try {
+      // eslint-disable-next-line no-undef
+      var trackGenerator = new MediaStreamTrackGenerator({
+        kind: 'video'
+      });
+      return {
+        videoTrack: trackGenerator
+      };
+    } catch (error) {
+      return createCanvasVideoTrack();
+    }
   } else {
     // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
     return createCanvasVideoTrack();
@@ -29439,11 +29387,19 @@ exports.getApplicationMediaPositions = function (sdp) {
   var h224Index = mediaSections.findIndex(function (s) {
     return s.includes('application') && s.includes('H224');
   });
+  var tcpBfcpInde = mediaSections.findIndex(function (s) {
+    return s.includes('application') && s.includes('TCP/TLS/BFCP');
+  });
+  var indexesToRemove = [h224Index, tcpBfcpInde].filter(function (i) {
+    return i !== -1;
+  }).sort(function (a, b) {
+    return b - a;
+  }); // 降序排序
 
-  // 删除H224媒体块
-  if (h224Index !== -1) {
-    mediaSections.splice(h224Index, 1);
-  }
+  indexesToRemove.forEach(function (index) {
+    // 删除对应索引
+    mediaSections.splice(index, 1);
+  });
 
   // 如果存在BFCP媒体块，移动到最后
   if (bfcpIndex !== -1) {
@@ -29472,7 +29428,7 @@ exports.getApplicationMediaPositions = function (sdp) {
 
   // 返回原始索引位置和处理后的SDP
   return {
-    originalIndexes: [bfcpIndex, h224Index],
+    originalIndexes: [bfcpIndex, h224Index, tcpBfcpInde],
     sdp: newSdp
   };
 };
