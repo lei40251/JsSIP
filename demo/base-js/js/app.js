@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -16,6 +16,8 @@ let rtcSession;
 let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
+let safari_r = false;
+
 const extraFeatures = [];
 
 // let payload;
@@ -393,6 +395,13 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
 
     cusMediaStream = new MediaStream();
+  });
+
+  e.session.on('reShareScreen', function()
+  {
+    safari_r = true;
+    // eslint-disable-next-line no-alert
+    setStatus('reShareScreen');
   });
 
   /**
@@ -906,6 +915,38 @@ ua.on('newRTCSession', function(e)
         console.warn('err: ', err);
         // e.session.sendFloorStatus(6);
       });
+  };
+
+  document.querySelector('#screenShareD_iOS').onclick = function()
+  {
+    if (safari_r)
+    {
+      safari_r = false;
+      e.session.share('screen', null, null, true, true)
+        .then((stream) =>
+        {
+          document.querySelector('#screen').srcObject=stream;
+          document.querySelector('#screen').classList='mh-100 mw-100';
+
+          // 演示用
+          // e.session.sendFloorStatus(3);
+
+          // 部分被动场景可能无法触发ended事件，集成时如果必要可以考虑定时获取状态更新页面
+          stream.getVideoTracks()[0].addEventListener('ended', () =>
+          {
+            // e.session.sendFloorStatus(6);
+            document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+          });
+
+          document.querySelector('#remoteVideo2').srcObject=null;
+          document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
+        })
+        .catch((err) =>
+        {
+          console.warn('err: ', err);
+          // e.session.sendFloorStatus(6);
+        });
+    }
   };
 
   /**

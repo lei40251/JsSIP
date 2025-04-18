@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254171140
+ * CRTC v1.10.9-beta.20254182211
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008342280 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008364422 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008342280');
+debug('version %s', '1.10.9-beta.405008364422');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008342280';
+    return '1.10.9-beta.405008364422';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19310,7 +19310,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "share",
     value: (function () {
-      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, id, assembly, dual) {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, id, assembly, dual, skip) {
         var _this8 = this;
         var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
         return _regeneratorRuntime().wrap(function _callee4$(_context4) {
@@ -19345,7 +19345,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             case 6:
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
               _context4.prev = 7;
-              if (!this._enableBFCP) {
+              if (!(this._enableBFCP && !skip)) {
                 _context4.next = 19;
                 break;
               }
@@ -19525,10 +19525,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8._localShareStreamLocallyGenerated = true;
                 return stream;
               })["catch"](function (error) {
-                logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
-                logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
-                _this8.emit('getdisplaymediafailed', error);
-                throw new Error('getDisplayMedia() failed');
+                if (error.message.indexOf('user gesture handler') !== -1) {
+                  _this8.emit('reShareScreen');
+                } else {
+                  logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+                  logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                  _this8.emit('getdisplaymediafailed', error);
+                  throw new Error('getDisplayMedia() failed');
+                }
+                console.warn('error: ', error.message);
+                console.warn("Error: ".concat(error));
               }));
             case 66:
             case "end":
@@ -19536,7 +19542,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }, _callee4, this, [[7, 21]]);
       }));
-      function share(_x3, _x4, _x5, _x6) {
+      function share(_x3, _x4, _x5, _x6, _x7) {
         return _share.apply(this, arguments);
       }
       return share;
