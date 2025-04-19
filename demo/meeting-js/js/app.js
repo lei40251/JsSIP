@@ -67,6 +67,7 @@ const constraints = {
     height    : 720,
     frameRate : 30
   },
+  
   p1080c : {
     width     : 1920,
     height    : 1080,

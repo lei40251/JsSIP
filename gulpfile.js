@@ -299,7 +299,7 @@ gulp.task('zip-zip', function()
 {
   return gulp
     .src('zip/**')
-    .pipe(zip(`CRTC_SDK_Web_Release_${ PKG.version }.zip`))
+    .pipe(zip(`CRTC_SDK_Web_Release_${ PKG.version }.${today.getFullYear()}${today.getMonth()+1}${today.getDate()}${today.getHours()}.zip`))
     .pipe(gulp.dest('./SDK_zip/'));
 });
 
@@ -318,10 +318,10 @@ gulp.task('tmp-del', function(done)
   del.sync('./dist/b', done());
 });
 
-gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
-
 gulp.task('devel', gulp.series('grammar'));
 
 gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del'));
+
+gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
 gulp.task('default', gulp.series('dist'));
