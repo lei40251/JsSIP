@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -65,7 +65,7 @@ const videoConstraints = {
 const pcConfig = {};
 
 iceServers && (pcConfig['iceServers']=iceServers);
-pcConfig['iceTransportPolicy']= 'all';
+pcConfig['iceTransportPolicy']= 'relay';
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -194,6 +194,8 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
+      d.sdp = d.sdp.replace(/profile-level-id=.*\r\n/g, 'profile-level-id=428028\r\n');
+      d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
     }
     else if (d.originator==='remote')
     {
@@ -646,7 +648,7 @@ ua.on('newRTCSession', function(e)
     //     }, 300);
     //   }, 1000);
     // }
-
+    
     // 获取媒体流
     getStreams(e.session.connection);
 
