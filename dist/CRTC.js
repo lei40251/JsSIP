@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254192040
+ * CRTC v1.10.9-beta.20254201151
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008384080 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008402302 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008384080');
+debug('version %s', '1.10.9-beta.405008402302');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008384080';
+    return '1.10.9-beta.405008402302';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19346,7 +19346,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
               _context4.prev = 7;
               if (!(this._enableBFCP && !skip)) {
-                _context4.next = 19;
+                _context4.next = 21;
                 break;
               }
               _context4.next = 11;
@@ -19363,20 +19363,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 17:
+              // 保存一下状态
+              this._bfcpRequestStatus = status;
+
               // 主动踢掉远端的共享
               this._remoteShared = false;
+              this.emit('remoteUnShared');
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
-            case 19:
-              _context4.next = 25;
-              break;
             case 21:
-              _context4.prev = 21;
+              _context4.next = 27;
+              break;
+            case 23:
+              _context4.prev = 23;
               _context4.t0 = _context4["catch"](7);
               logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
               return _context4.abrupt("return", Promise.reject("Floor request failed: ".concat(_context4.t0.message || 'Unknown error')));
-            case 25:
+            case 27:
               if (!(type === 'video')) {
-                _context4.next = 33;
+                _context4.next = 35;
                 break;
               }
               logger.debug('share video');
@@ -19398,11 +19402,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context4.next = 66;
+              _context4.next = 68;
               break;
-            case 33:
+            case 35:
               if (!(type === 'pic')) {
-                _context4.next = 47;
+                _context4.next = 49;
                 break;
               }
               logger.debug('share pic');
@@ -19436,20 +19440,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context4.next = 66;
+              _context4.next = 68;
               break;
-            case 47:
+            case 49:
               if (!(type === 'html')) {
-                _context4.next = 62;
+                _context4.next = 64;
                 break;
               }
               logger.debug('share html');
               if (assembly) {
-                _context4.next = 51;
+                _context4.next = 53;
                 break;
               }
               return _context4.abrupt("return");
-            case 51:
+            case 53:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
               _canvas.height = 1;
@@ -19474,11 +19478,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context4.next = 66;
+              _context4.next = 68;
               break;
-            case 62:
+            case 64:
               if (!(type === 'screen')) {
-                _context4.next = 66;
+                _context4.next = 68;
                 break;
               }
               logger.debug('share screen');
@@ -19489,7 +19493,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('getdisplaymediafailed');
               }
 
-              // 分享屏幕 默认帧率 5
+              // 分享屏幕 默认帧率 15
               return _context4.abrupt("return", navigator.mediaDevices.getDisplayMedia({
                 video: {
                   width: {
@@ -19504,43 +19508,46 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8._localShareRTPSender = null;
                 _this8._localShareStream = stream;
                 _this8._streamInactiveHandle(dual);
-
-                // 替换流方式分享屏幕
-                stream.getVideoTracks().forEach(function (track) {
-                  if (dual) {
-                    // this._localShareRTPSender = this._connection.addTrack(track, stream);
-                    // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-                    var sender = _this8._connection.getSenders().find(function (s) {
-                      return s.track == _this8._bfcpVideoTrack;
-                    });
-                    sender.replaceTrack(track);
-                    // this._bfct = track;
-                  } else {
-                    var _sender4 = _this8._connection.getSenders().find(function (s) {
-                      return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                    });
-                    _sender4.replaceTrack(track);
-                  }
-                });
-                _this8._localShareStreamLocallyGenerated = true;
-                return stream;
+                if (_this8._bfcpRequestStatus === RequestStatusValue.Granted) {
+                  // 替换流方式分享屏幕
+                  stream.getVideoTracks().forEach(function (track) {
+                    if (dual) {
+                      // this._localShareRTPSender = this._connection.addTrack(track, stream);
+                      // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+                      var sender = _this8._connection.getSenders().find(function (s) {
+                        return s.track == _this8._bfcpVideoTrack;
+                      });
+                      sender.replaceTrack(track);
+                      // this._bfct = track;
+                    } else {
+                      var _sender4 = _this8._connection.getSenders().find(function (s) {
+                        return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                      });
+                      _sender4.replaceTrack(track);
+                    }
+                  });
+                  _this8._localShareStreamLocallyGenerated = true;
+                  return stream;
+                } else {
+                  // 如果共享权限已经被撤销则自动取消共享
+                  _this8.unShare();
+                  return Promise.reject('Yours sharing permission has been revoked.');
+                }
               })["catch"](function (error) {
-                if (error.message.indexOf('user gesture handler') !== -1) {
+                if (error.message && error.message.indexOf('user gesture handler') !== -1) {
                   _this8.emit('reShareScreen');
                 } else {
                   logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
                   logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
                   _this8.emit('getdisplaymediafailed', error);
-                  throw new Error('getDisplayMedia() failed');
+                  throw error;
                 }
-                console.warn('error: ', error.message);
-                console.warn("Error: ".concat(error));
               }));
-            case 66:
+            case 68:
             case "end":
               return _context4.stop();
           }
-        }, _callee4, this, [[7, 21]]);
+        }, _callee4, this, [[7, 23]]);
       }));
       function share(_x3, _x4, _x5, _x6, _x7) {
         return _share.apply(this, arguments);
@@ -23137,8 +23144,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 处理本端分享被撤销的情况
       var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
-      if (status === RequestStatusValue.Revoked && this._localShareStreamLocallyGenerated) {
-        this.unShare();
+      if (status === RequestStatusValue.Revoked) {
+        this._bfcpRequestStatus = status;
+        // 已经共享了的自动取消共享
+        if (this._localShareStreamLocallyGenerated) {
+          this.unShare();
+        }
       }
     }
 

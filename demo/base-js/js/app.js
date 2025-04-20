@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -399,10 +399,10 @@ ua.on('newRTCSession', function(e)
     cusMediaStream = new MediaStream();
   });
 
+  // Safari 某些情况需要用户单独授权
   e.session.on('reShareScreen', function()
   {
     safari_r = true;
-    // eslint-disable-next-line no-alert
     setStatus('reShareScreen');
   });
 
@@ -648,7 +648,7 @@ ua.on('newRTCSession', function(e)
     //     }, 300);
     //   }, 1000);
     // }
-    
+
     // 获取媒体流
     getStreams(e.session.connection);
 
@@ -915,6 +915,7 @@ ua.on('newRTCSession', function(e)
       .catch((err) =>
       {
         console.warn('err: ', err);
+        setStatus(err);
         // e.session.sendFloorStatus(6);
       });
   };
