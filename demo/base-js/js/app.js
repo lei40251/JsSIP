@@ -912,10 +912,15 @@ ua.on('newRTCSession', function(e)
         document.querySelector('#remoteVideo2').srcObject=null;
         document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
       })
-      .catch((err) =>
+      .catch((error) =>
       {
-        console.warn('err: ', err);
-        setStatus(err);
+        if (error.message && error.message.indexOf('user gesture handler') !== -1)
+        {
+          setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
+        }
+
+        console.warn('error: ', error);
+        setStatus(error.message);
         // e.session.sendFloorStatus(6);
       });
   };

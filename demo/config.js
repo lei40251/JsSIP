@@ -47,18 +47,18 @@ const envs =
       signalingUrl : 'wss://cloudnetuc.vsbc.com:50600/wss',
       sipDomain    : 'cloudnetuc.vsbc.com',
       secretKey    : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA==',
-      iceServers   : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
+      iceServers   : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' }, { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
     },
     env_cloudnetuchw : {
       signalingUrl : 'wss://cloudnetuchw.vsbc.com:50600/wss',
       sipDomain    : 'cloudnetuchw.vsbc.com',
       secretKey    : sessionStorage.getItem('secret_key') || 'DNkWSqkLI79UprRRwlS09VNytskRaDdzSi+kc/SX4obPhkkRxrg7dOoQt5pWr4kYoDvAoyCYJg6IJR00mEFgs6fbnzk7qVuUV4thEF7WSM4Cp2yUtjIwActYAM/13eZDNnR73UxiepUW/arubPkQ0Y6xMwqJMRB52VL1kpI1eFf8aAioZ72FqTwlR6MiLX0llio8eUzZ42tG51kOHUXHt5HuG+EyHXeVHEYaLgqZdIB0B6Azh/g0yPvReD1wB/MHzvU+uvuFezJnfbndwlwpLJXMr6F2GKZrqgtMGUIhaLOt6mleKL059ut5JTiNGm0c1oEhQSy4RKDmiQ/+mtao2g==',
-      iceServers   : [ { 'urls': 'turn:cloudnetuchw.vsbc.com:10000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
+      iceServers   : [ { 'urls': 'turn:cloudnetuchw.vsbc.com:10000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' }, { 'urls': 'turn:cloudnetuchw.vsbc.com:10000?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
     },
     env_cloudnetuchw443 : {
       signalingUrl : 'wss://cloudnetuchw.vsbc.com:50443/wss',
       sipDomain    : 'cloudnetuchw.vsbc.com',
       secretKey    : sessionStorage.getItem('secret_key') || 'DNkWSqkLI79UprRRwlS09VNytskRaDdzSi+kc/SX4obPhkkRxrg7dOoQt5pWr4kYoDvAoyCYJg6IJR00mEFgs6fbnzk7qVuUV4thEF7WSM4Cp2yUtjIwActYAM/13eZDNnR73UxiepUW/arubPkQ0Y6xMwqJMRB52VL1kpI1eFf8aAioZ72FqTwlR6MiLX0llio8eUzZ42tG51kOHUXHt5HuG+EyHXeVHEYaLgqZdIB0B6Azh/g0yPvReD1wB/MHzvU+uvuFezJnfbndwlwpLJXMr6F2GKZrqgtMGUIhaLOt6mleKL059ut5JTiNGm0c1oEhQSy4RKDmiQ/+mtao2g==',
-      iceServers   : [ { 'urls': 'turn:cloudnetuchw.vsbc.com:10002?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
+      iceServers   : [ { 'urls': 'turn:cloudnetuchw.vsbc.com:10002?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' }, { 'urls': 'turn:cloudnetuchw.vsbc.com:10002?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ]
     }
   };
