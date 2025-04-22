@@ -318,10 +318,15 @@ gulp.task('tmp-del', function(done)
   del.sync('./dist/b', done());
 });
 
+gulp.task('dist-del', function(done)
+{
+  del.sync('./dist/', done());
+});
+
 gulp.task('devel', gulp.series('grammar'));
 
 gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
-gulp.task('default', gulp.series('dist'));
+gulp.task('default', gulp.series('dist-del', 'dist'));

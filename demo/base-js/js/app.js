@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -66,6 +66,7 @@ const pcConfig = {};
 
 iceServers && (pcConfig['iceServers']=iceServers);
 pcConfig['iceTransportPolicy']= 'relay';
+pcConfig['iceCandidatePoolSize']=10;
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -626,6 +627,7 @@ ua.on('newRTCSession', function(e)
 
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
+      document.querySelector('#upL').innerText = r.uplinkLoss || '';
       document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
