@@ -32,8 +32,8 @@ const remoteAudio = document.querySelector('#remoteAudio');
 let cusMediaStream = new MediaStream();
 
 const env = handleGetQuery('env');
-const { signalingUrl, sipDomain, secretKey, iceServers } = env? envs[`env_${env}`]:envs['env_default'];
-const exts = handleGetQuery('ext')?handleGetQuery('ext').split():null;
+const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
+const exts = handleGetQuery('ext') ? handleGetQuery('ext').split() : null;
 
 exts && exts.forEach((ext) => extraFeatures.push(ext));
 
@@ -64,9 +64,9 @@ const videoConstraints = {
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
-iceServers && (pcConfig['iceServers']=iceServers);
-pcConfig['iceTransportPolicy']= 'relay';
-pcConfig['iceCandidatePoolSize']=10;
+iceServers && (pcConfig['iceServers'] = iceServers);
+iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
+pcConfig['iceCandidatePoolSize'] = 10;
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -186,7 +186,7 @@ ua.on('newRTCSession', function(e)
     // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
     // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
-    if (d.originator==='local')
+    if (d.originator === 'local')
     {
       // 保存浏览器默认payload，适配pa
       // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
@@ -198,7 +198,7 @@ ua.on('newRTCSession', function(e)
       d.sdp = d.sdp.replace(/profile-level-id=.*\r\n/g, 'profile-level-id=428028\r\n');
       d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
     }
-    else if (d.originator==='remote')
+    else if (d.originator === 'remote')
     {
       // 适配pa
       // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
@@ -283,7 +283,7 @@ ua.on('newRTCSession', function(e)
   {
     setStatus(`mode: ${d.mode}`);
 
-    if (d.mode=='video')
+    if (d.mode == 'video')
     {
       // 兼容部分手机初始黑屏问题
       setTimeout(() =>
@@ -345,7 +345,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('remoteUnShared', function()
   {
-    document.querySelector('#remoteVideo2').srcObject=null;
+    document.querySelector('#remoteVideo2').srcObject = null;
     document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
   });
 
@@ -613,17 +613,16 @@ ua.on('newRTCSession', function(e)
 
       r.downStreams.forEach((item) =>
       {
-        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}  `;
       });
 
       r.upStreams.forEach((item) =>
       {
-        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight||''} ${item.framesPerSecond||''}  `;
+        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}  `;
       });
 
       document.querySelector('#upF').innerText = upF;
       document.querySelector('#downF').innerText = downF;
-
 
       document.querySelector('#upS').innerText = r.uplinkSpeed || '';
       document.querySelector('#downS').innerText = r.downlinkSpeed || '';
@@ -635,7 +634,7 @@ ua.on('newRTCSession', function(e)
     {
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
-      document.querySelector('#NQ').innerText =`Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
+      document.querySelector('#NQ').innerText = `Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
     // if (d.originator === 'local')
@@ -884,7 +883,7 @@ ua.on('newRTCSession', function(e)
     e.session.share('screen', null, null)
       .then((stream) =>
       {
-        document.querySelector('#screen').srcObject=stream;
+        document.querySelector('#screen').srcObject = stream;
         document.querySelector('#screen').classList = 'mh-100 mw-100';
 
         stream.getVideoTracks()[0].onended = () =>
@@ -898,8 +897,8 @@ ua.on('newRTCSession', function(e)
     e.session.share('screen', null, null, true)
       .then((stream) =>
       {
-        document.querySelector('#screen').srcObject=stream;
-        document.querySelector('#screen').classList='mh-100 mw-100';
+        document.querySelector('#screen').srcObject = stream;
+        document.querySelector('#screen').classList = 'mh-100 mw-100';
 
         // 演示用
         // e.session.sendFloorStatus(3);
@@ -911,7 +910,7 @@ ua.on('newRTCSession', function(e)
           document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
         });
 
-        document.querySelector('#remoteVideo2').srcObject=null;
+        document.querySelector('#remoteVideo2').srcObject = null;
         document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
       })
       .catch((error) =>
@@ -935,8 +934,8 @@ ua.on('newRTCSession', function(e)
       e.session.share('screen', null, null, true, true)
         .then((stream) =>
         {
-          document.querySelector('#screen').srcObject=stream;
-          document.querySelector('#screen').classList='mh-100 mw-100';
+          document.querySelector('#screen').srcObject = stream;
+          document.querySelector('#screen').classList = 'mh-100 mw-100';
 
           // 演示用
           // e.session.sendFloorStatus(3);
@@ -948,7 +947,7 @@ ua.on('newRTCSession', function(e)
             document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
           });
 
-          document.querySelector('#remoteVideo2').srcObject=null;
+          document.querySelector('#remoteVideo2').srcObject = null;
           document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
         })
         .catch((err) =>
@@ -1092,7 +1091,7 @@ async function call(type, direction)
 
   if (direction == 'sendonly')
   {
-    options['rtcOfferConstraints'] ={ offerToReceiveAudio: true, offerToReceiveVideo: false };
+    options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
   }
 
   options['mediaConstraints'] = {
@@ -1104,7 +1103,7 @@ async function call(type, direction)
     video : type === 'video' ? videoConstraints : false
   };
 
-  if (type=== 'screen')
+  if (type === 'screen')
   {
     await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
       .then(async(stream) =>
@@ -1114,16 +1113,16 @@ async function call(type, direction)
         cusMediaStream.addTrack(stream.getVideoTracks()[0]);
         cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
         delete options['mediaConstraints'];
-        options['mediaStream']=cusMediaStream;
+        options['mediaStream'] = cusMediaStream;
       });
   }
 
   if (navigator.userAgent.indexOf('ArkWeb') != -1)
   {
-    const tmpVideo =await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
+    const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
 
     tmpVideo.addTrack(generateAnEmptyAudioTrack());
-    options['mediaStream'] =tmpVideo;
+    options['mediaStream'] = tmpVideo;
 
   }
 
@@ -1131,7 +1130,40 @@ async function call(type, direction)
   {
     const tmpStream = new MediaStream();
 
-    tmpStream.addTrack(CRTC.Utils.generateAnEmptyAudioTrack().audioTrack, tmpStream);
+    const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
+
+    // 自动呼叫会有异常
+    if (emptyTrack.state === 'suspended')
+    {
+      // await emptyTrack.audioContext.resume();
+      // 创建一个临时按钮
+      const resumeButton = document.createElement('button');
+
+      resumeButton.innerText = '点击开启音频';
+      resumeButton.style.position = 'fixed';
+      resumeButton.style.top = '50%';
+      resumeButton.style.left = '50%';
+      resumeButton.style.transform = 'translate(-50%, -50%)';
+      resumeButton.style.zIndex = '9999';
+      resumeButton.style.padding = '10px 20px';
+
+      document.body.appendChild(resumeButton);
+
+      // 等待用户点击
+      await new Promise((resolve) =>
+      {
+        resumeButton.onclick = async() =>
+        {
+          await emptyTrack.audioContext.resume();
+          document.body.removeChild(resumeButton);
+          resolve();
+        };
+      });
+    }
+
+    console.warn('emptyTrack: ', emptyTrack);
+
+    tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
@@ -1238,7 +1270,7 @@ function getStreams(pc)
   }, 100);
   // 远端视频
   remoteVideo.srcObject = remoteStream.mediaStream;
-  remoteStream.videoStream.getVideoTracks().length> 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
+  remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     if (!tmpSession)

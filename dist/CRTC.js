@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254222321
+ * CRTC v1.10.9-beta.20254231444
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008444642 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008462888 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008444642');
+debug('version %s', '1.10.9-beta.405008462888');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008444642';
+    return '1.10.9-beta.405008462888';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21701,18 +21701,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 添加BFCP所需属性
         if (_this29._enableBFCP) {
           // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
-          var supportedMSTC;
+          var supportedMSTC = false;
           if ('MediaStreamTrackGenerator' in window) {
             supportedMSTC = true;
           }
           _this29._connection.getTransceivers().forEach(function (transceiver) {
+            var track = transceiver.sender.track;
+            if (!track) {
+              return;
+            }
+
+            // 检查是否为画布流的通用方法
+            var isCanvasTrack = function isCanvasTrack() {
+              // 检查track的settings中是否包含canvas相关信息
+              var settings = track.getSettings();
+              return settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack';
+            };
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
-              if (transceiver.sender.track instanceof MediaStreamTrackGenerator || transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+              if (track instanceof MediaStreamTrackGenerator || isCanvasTrack()) {
                 _this29._mStream = transceiver.sender.track.id;
                 sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this29._mStream);
               }
-            } else if (transceiver.sender.track instanceof CanvasCaptureMediaStreamTrack) {
+            } else if (isCanvasTrack()) {
               _this29._mStream = transceiver.sender.track.id;
               sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this29._mStream);
             }
@@ -25324,11 +25335,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             case 3:
               _this2._pc.getStats().then(function (stats) {
                 // 通话开始的时候统计报告不完整
-                try {
-                  _this2._parseReport(stats);
-                } catch (error) {
-                  logger.error("parseReport error: ".concat(error.message));
-                }
+                // try
+                // {
+                _this2._parseReport(stats);
+                // }
+                // catch (error)
+                // {
+                //   logger.error(`parseReport error: ${error.message}`);
+                // }
+
                 if (_this2._count === 0) {
                   // 第二次开始间隔5-10次输出一次完整report
                   _this2._count = _this2._interval + (Math.random() * 5 | 0);
@@ -25413,10 +25428,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var type = report['mediaSourceId'] === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
               // 前一次的统计结果
               var previewStats = _this3._newStats.video.upStreams[type];
+              var remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
+
               // 用于计算速率和丢包的值
               var calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
               var calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
-              var calc_packetsLost = _this3._remoteInboundRtps.get(report['remoteId']).packetsLost - (previewStats.packetsLost || 0);
+              var calc_packetsLost = remoteInboundRtpsPacketsLost - (previewStats.packetsLost || 0);
 
               // 当前报告的原始值
               tmpObject['bytesSent'] = report['bytesSent'];
@@ -25427,18 +25444,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               tmpObject['frameHeight'] = report['frameHeight'];
               tmpObject['frameWidth'] = report['frameWidth'];
               // 通过 remote-inbound-rtp 报告获取的原始值
-              tmpObject['packetsLost'] = _this3._remoteInboundRtps.get(report['remoteId']).packetsLost;
+              tmpObject['packetsLost'] = remoteInboundRtpsPacketsLost;
 
               // 当前周期的计算值
               var loss = 0;
               if (!calc_packetsSent || calc_packetsLost === null) {
                 loss = null;
-              } else if ('fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
+              } else if (_this3._remoteInboundRtps.get(report['remoteId']) && 'fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
                 loss = Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100);
               } else {
                 loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
               }
-              console.warn('vuloss: ', Math.floor(calc_packetsLost * 100 / calc_packetsSent), '#', Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100));
+              logger.warn('vuloss: ', Math.floor(calc_packetsLost * 100 / calc_packetsSent), '#', loss);
               tmpObject['calc_loss'] = loss;
               tmpObject['calc_speed'] = report['bytesSent'] === null ? null : calc_bytesSent / _this3._delay * 8;
 
@@ -25449,27 +25466,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 前一次的统计结果
               var _previewStats = _this3._newStats.audio;
+              var _remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
+
               // 用于计算速率和丢包的值
               var _calc_bytesSent = report['bytesSent'] - (_previewStats.bytesSent || 0);
               var _calc_packetsSent = report['packetsSent'] - (_previewStats.sendPacketsLost || 0);
-              var _calc_packetsLost = _this3._remoteInboundRtps.get(report['remoteId']).packetsLost - (_previewStats.packetsLost || 0);
+              var _calc_packetsLost = _remoteInboundRtpsPacketsLost - (_previewStats.packetsLost || 0);
 
               // 当前报告的原始值
               _tmpObject['bytesSent'] = report['bytesSent'];
               _tmpObject['packetsSent'] = report['packetsSent'];
               // 通过 remote-inbound-rtp 报告获取的原始值
-              _tmpObject['sendPacketsLost'] = _this3._remoteInboundRtps.get(report['remoteId']).packetsLost;
+              _tmpObject['sendPacketsLost'] = _remoteInboundRtpsPacketsLost;
 
               // 当前周期的计算值
               var _loss = 0;
               if (!_calc_packetsSent || _calc_packetsLost === null) {
                 _loss = null;
-              } else if ('fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
+              } else if (_this3._remoteInboundRtps.get(report['remoteId']) && 'fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
                 _loss = Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100);
               } else {
                 _loss = Math.floor(_calc_packetsLost * 100 / _calc_packetsSent);
               }
-              console.warn('auloss: ', Math.floor(_calc_packetsLost * 100 / _calc_packetsSent), '#', Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100));
+              logger.warn('auloss: ', Math.floor(_calc_packetsLost * 100 / _calc_packetsSent), '#', _loss);
               _tmpObject['calc_uplink_loss'] = _loss;
               _tmpObject['calc_uplink_speed'] = report['bytesSent'] === null ? null : _calc_bytesSent / _this3._delay * 8;
 
@@ -25509,7 +25528,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 _loss2 = Math.floor(_calc_packetsLost2 * 100 / (calc_packetsReceived + _calc_packetsLost2));
               }
-              console.warn('vdloss: ', _loss2);
+              logger.warn('vdloss: ', _loss2);
               _tmpObject2['calc_loss'] = _loss2;
               _tmpObject2['calc_speed'] = report['bytesReceived'] === null ? null : calc_bytesReceived / _this3._delay * 8;
 
@@ -25538,7 +25557,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 _loss3 = Math.floor(_calc_packetsLost3 * 100 / (_calc_packetsReceived + _calc_packetsLost3));
               }
-              console.warn('adloss: ', _loss3);
+              logger.warn('adloss: ', _loss3);
               _tmpObject3['calc_downlink_loss'] = _loss3;
               _tmpObject3['calc_downlink_speed'] = report['bytesReceived'] === null ? null : _calc_bytesReceived / _this3._delay * 8;
               // 合并统计结果
@@ -28864,7 +28883,6 @@ exports.getStreams = function (pc, type, i) {
       if (Array.isArray(senders)) {
         senders.forEach(function (sender) {
           if (sender.track && sender.track.readyState === 'live') {
-            console.warn('str: ', sender.track.muted, sender.track.enabled, sender.track);
             if (sender.track.kind === 'audio') {
               audioStream.addTrack(sender.track);
             } else if (!(sender.track instanceof CanvasCaptureMediaStreamTrack)) {
@@ -29012,24 +29030,40 @@ exports.generateAnEmptyVideoTrack = function () {
     return createCanvasVideoTrack();
   }
 };
-var createAnAudioCtxMediaTrack = function createAnAudioCtxMediaTrack() {
-  // 增加安卓微信呼叫的语音提醒
-  // const audio = new Audio('./sound/waiting.mp3');
-  var audio = new Audio();
-  var audioCtx = new AudioContext();
-  var destination = audioCtx.createMediaStreamDestination();
-  var source = audioCtx.createMediaElementSource(audio);
-  audio.loop = true;
-  audio.crossOrigin = 'anonymous';
-  // eslint-disable-next-line no-console
-  audio.play()["catch"](function (error) {
-    console.error("new Audio() error: ".concat(JSON.stringify(error)));
-  });
-  source.connect(destination);
-  return {
-    audioTrack: destination.stream.getAudioTracks()[0]
+var createSilentAudioTrack = /*#__PURE__*/function () {
+  var _ref5 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+    var audioContext, oscillator, destination, gainNode;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          // 创建 AudioContext
+          audioContext = new AudioContext();
+          oscillator = audioContext.createOscillator();
+          destination = audioContext.createMediaStreamDestination();
+          gainNode = audioContext.createGain(); // 将增益设置为0（静音）
+          gainNode.gain.value = 0;
+
+          // 连接节点
+          oscillator.connect(gainNode);
+          gainNode.connect(destination);
+
+          // 开始产生音频
+          oscillator.start();
+          return _context4.abrupt("return", {
+            state: audioContext.state,
+            audioContext: audioContext,
+            audioTrack: destination.stream.getAudioTracks()[0]
+          });
+        case 9:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4);
+  }));
+  return function createSilentAudioTrack() {
+    return _ref5.apply(this, arguments);
   };
-};
+}();
 
 /**
  * 生成空音频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
@@ -29044,17 +29078,17 @@ exports.generateAnEmptyAudioTrack = function () {
   //     // eslint-disable-next-line no-undef
   //     const trackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
 
-  //     return { audioTrack: trackGenerator };
+  //     return { state: null, audioTrack: trackGenerator };
   //   }
   //   catch (error)
   //   {
-  //     return createAnAudioCtxMediaTrack();
+  //     return createSilentAudioTrack();
   //   }
   // }
   // else
   // {
   // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
-  return createAnAudioCtxMediaTrack();
+  return createSilentAudioTrack();
   // }
 };
 
