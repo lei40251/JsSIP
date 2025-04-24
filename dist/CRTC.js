@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254241018
+ * CRTC v1.10.9-beta.20254241337
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008482036 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008482674 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008482036');
+debug('version %s', '1.10.9-beta.405008482674');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008482036';
+    return '1.10.9-beta.405008482674';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21721,11 +21721,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // eslint-disable-next-line no-undef
               if (track instanceof MediaStreamTrackGenerator || isCanvasTrack()) {
                 _this29._mStream = transceiver.mid;
-                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.sender.track.id);
+                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
               }
             } else if (isCanvasTrack()) {
               _this29._mStream = transceiver.mid;
-              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.sender.track.id);
+              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
             }
           });
           desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
@@ -25275,7 +25275,7 @@ var logger = new Logger('Stats');
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   function getStats(pc) {
     var _this;
-    var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;
+    var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 2;
     var interval = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 5;
     _classCallCheck(this, getStats);
     _this = _callSuper(this, getStats);
@@ -25389,22 +25389,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 取得 mediaSourceId 和 trackIdentifier 的对应关系
       stats.forEach(function (report) {
         if (report.type === 'media-source') {
-          _this3._mediaSourceIdToTrackIdentifier.set(report.mediaSourceId, report.trackIdentifier);
+          _this3._mediaSourceIdToTrackIdentifier.set(report.id, report.trackIdentifier);
         }
         if (report.type === 'remote-inbound-rtp') {
           _this3._remoteInboundRtps.set(report.id, report);
         }
       });
-
-      // 获取远端共享的 trackIdentifier
       this._pc.getTransceivers().forEach(function (transceiver) {
-        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX) && transceiver.track && transceiver.track.kind === 'video') {
-          _this3._remoteSharedTrackIdentifier = transceiver.track.id;
+        // 获取远端共享的 trackIdentifier
+        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX) && transceiver.receiver.track && transceiver.receiver.track.kind === 'video') {
+          _this3._remoteSharedTrackIdentifier = transceiver.receiver.track.id;
+        }
+
+        // 获取本端共享的 trackIdentifier
+        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) && transceiver.sender.track && transceiver.sender.track.kind === 'video') {
+          _this3._localSharedTrackIdentifier = transceiver.sender.track.id;
         }
       });
 
-      // 获取本端共享的 trackIdentifier
-      this._localSharedTrackIdentifier = sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX);
+      // this._localSharedTrackIdentifier = sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX);
 
       // 遍历所有的 report 获取必要数据
       stats.forEach(function (report) {
@@ -25426,6 +25429,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var tmpObject = {};
               // 当前统计报告的类型
               var type = _this3._mediaSourceIdToTrackIdentifier.get(report['mediaSourceId']) === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
+
               // 前一次的统计结果
               var previewStats = _this3._newStats.video.upStreams[type];
               var remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
