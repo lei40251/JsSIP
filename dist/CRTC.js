@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254231444
+ * CRTC v1.10.9-beta.20254241018
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008462888 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008482036 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008462888');
+debug('version %s', '1.10.9-beta.405008482036');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008462888';
+    return '1.10.9-beta.405008482036';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21720,12 +21720,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
               if (track instanceof MediaStreamTrackGenerator || isCanvasTrack()) {
-                _this29._mStream = transceiver.sender.track.id;
-                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this29._mStream);
+                _this29._mStream = transceiver.mid;
+                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.sender.track.id);
               }
             } else if (isCanvasTrack()) {
-              _this29._mStream = transceiver.sender.track.id;
-              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, _this29._mStream);
+              _this29._mStream = transceiver.mid;
+              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.sender.track.id);
             }
           });
           desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
@@ -25425,7 +25425,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (report.kind === 'video') {
               var tmpObject = {};
               // 当前统计报告的类型
-              var type = report['mediaSourceId'] === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
+              var type = _this3._mediaSourceIdToTrackIdentifier.get(report['mediaSourceId']) === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
               // 前一次的统计结果
               var previewStats = _this3._newStats.video.upStreams[type];
               var remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
@@ -25636,7 +25636,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               framesEncoded: oldUpStreams[type].framesEncoded,
               framesPerSecond: oldUpStreams[type].framesPerSecond,
               frameHeight: oldUpStreams[type].frameHeight,
-              frameWidth: oldUpStreams[type].frameWidth
+              frameWidth: oldUpStreams[type].frameWidth,
+              speed: "".concat((oldUpStreams[type].calc_speed / 1000).toFixed(1), "kbps")
             });
           }
         }
@@ -25664,7 +25665,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               framesDecoded: oldDownStreams[_type2].framesDecoded,
               framesPerSecond: oldDownStreams[_type2].framesPerSecond,
               frameHeight: oldDownStreams[_type2].frameHeight,
-              frameWidth: oldDownStreams[_type2].frameWidth
+              frameWidth: oldDownStreams[_type2].frameWidth,
+              speed: "".concat((oldDownStreams[_type2].calc_speed / 1000).toFixed(1), "kbps")
             });
           }
         }

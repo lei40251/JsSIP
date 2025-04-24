@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -594,7 +594,7 @@ ua.on('newRTCSession', function(e)
     * @type {object}
     * @property {string} originator - 'remote'为远端触发，'local'为本端触发
     */
-  e.session.on('confirmed', async function(d)
+  e.session.on('confirmed', async function()
   {
     setStatus('confirmed');
 
@@ -611,14 +611,15 @@ ua.on('newRTCSession', function(e)
       let downF = '';
       let upF = '';
 
+      console.warn('report: ', r);
       r.downStreams.forEach((item) =>
       {
-        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}  `;
+        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}fps ${item.speed || ''} `;
       });
 
       r.upStreams.forEach((item) =>
       {
-        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}  `;
+        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}fps ${item.speed || ''} `;
       });
 
       document.querySelector('#upF').innerText = upF;
