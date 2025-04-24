@@ -400,13 +400,6 @@ ua.on('newRTCSession', function(e)
     cusMediaStream = new MediaStream();
   });
 
-  // Safari 某些情况需要用户单独授权
-  e.session.on('reShareScreen', function()
-  {
-    safari_r = true;
-    setStatus('reShareScreen');
-  });
-
   /**
     * videoTrackState
     *
@@ -918,6 +911,7 @@ ua.on('newRTCSession', function(e)
       {
         if (error.message && error.message.indexOf('user gesture handler') !== -1)
         {
+          safari_r = true;
           setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
         }
 
