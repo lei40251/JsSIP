@@ -369,7 +369,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('peerconnection:iceConnectionState', (d) =>
   {
-    console.warn('iceConnectionState: ', d);
+    // console.warn('iceConnectionState: ', d);
   });
 
   /**
@@ -932,7 +932,6 @@ ua.on('newRTCSession', function(e)
 
   document.querySelector('#screenShareD_iOS').onclick = function()
   {
-    console.warn('aaaaaaaaaa', safari_r);
     if (safari_r)
     {
       safari_r = false;
