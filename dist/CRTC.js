@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254241827
+ * CRTC v1.10.9-beta.20254242216
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008483654 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008484432 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008483654');
+debug('version %s', '1.10.9-beta.405008484432');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008483654';
+    return '1.10.9-beta.405008484432';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -25472,7 +25472,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
               }
-              logger.warn('vuloss: ', Math.floor(calc_packetsLost * 100 / calc_packetsSent), '#', loss);
               tmpObject['calc_loss'] = loss;
               tmpObject['calc_speed'] = report['bytesSent'] === null ? null : calc_bytesSent / _this3._delay * 8;
 
@@ -25505,7 +25504,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 _loss = Math.floor(_calc_packetsLost * 100 / _calc_packetsSent);
               }
-              logger.warn('auloss: ', Math.floor(_calc_packetsLost * 100 / _calc_packetsSent), '#', _loss);
               _tmpObject['calc_uplink_loss'] = _loss;
               _tmpObject['calc_uplink_speed'] = report['bytesSent'] === null ? null : _calc_bytesSent / _this3._delay * 8;
 
@@ -25545,7 +25543,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 _loss2 = Math.floor(_calc_packetsLost2 * 100 / (calc_packetsReceived + _calc_packetsLost2));
               }
-              logger.warn('vdloss: ', _loss2);
               _tmpObject2['calc_loss'] = _loss2;
               _tmpObject2['calc_speed'] = report['bytesReceived'] === null ? null : calc_bytesReceived / _this3._delay * 8;
 
@@ -25574,7 +25571,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 _loss3 = Math.floor(_calc_packetsLost3 * 100 / (_calc_packetsReceived + _calc_packetsLost3));
               }
-              logger.warn('adloss: ', _loss3);
               _tmpObject3['calc_downlink_loss'] = _loss3;
               _tmpObject3['calc_downlink_speed'] = report['bytesReceived'] === null ? null : _calc_bytesReceived / _this3._delay * 8;
               // 合并统计结果

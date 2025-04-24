@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -1438,9 +1438,11 @@ start();
 // 测试用
 function addNewTrack(type)
 {
-  const vtrack = new MediaStreamTrackGenerator({ kind: type });
+  // const vtrack = new MediaStreamTrackGenerator({ kind: type });
 
-  rtcSession.connection.addTrack(vtrack);
+  const vtrack1 = CRTC.Utils.generateAnEmptyVideoTrack().videoTrack;
+
+  rtcSession.connection.addTrack(vtrack1);
 
   rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
 }
