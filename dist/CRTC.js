@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254241614
+ * CRTC v1.10.9-beta.20254241825
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008483228 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008483650 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008483228');
+debug('version %s', '1.10.9-beta.405008483650');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008483228';
+    return '1.10.9-beta.405008483650';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -20640,7 +20640,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }
-            media.rtcpMux = 'rtcp-mux';
+            if (media.type !== 'application') {
+              media.rtcpMux = 'rtcp-mux';
+            }
 
             /**
              * 处理5G外呼sdp过大问题,
@@ -21719,7 +21721,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var isCanvasTrack = function isCanvasTrack() {
               // 检查track的settings中是否包含canvas相关信息
               var settings = track.getSettings();
-              return settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack';
+
+              // Firefox中canvas轨道的label通常包含"MediaStreamTrack"且不会有deviceId
+              // 同时增加对Firefox中CanvasCaptureMediaStreamTrack的检查
+              return settings || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
             };
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
@@ -21959,6 +21964,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._bfcpUser.userId = Number(this._bfcpUserId);
               this._bfcpUser.conferenceId = Number(this._confId);
             }
+            _e.sdp = _e.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
+            _e.sdp = _e.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
+            _e.sdp = _e.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
+            console.warn('esdp: ', _e.sdp);
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -22018,7 +22027,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   }
                 }, _callee6);
               })))["catch"](function (error) {
-                console.warn(error);
                 _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);

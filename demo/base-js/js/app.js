@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -207,6 +207,15 @@ ua.on('newRTCSession', function(e)
       // 端到端用
       // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
       // d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
+
+      d.sdp = d.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
+      d.sdp = d.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
+      d.sdp = d.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
+
+      // m=video 20080 UDP/TLS/RTP/SAVPF 106
+      // b=TIAS:512000
+      // a=rtpmap:106 H264/90000
+      // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
     }
   });
 
@@ -398,13 +407,6 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
 
     cusMediaStream = new MediaStream();
-  });
-
-  // Safari 某些情况需要用户单独授权
-  e.session.on('reShareScreen', function()
-  {
-    safari_r = true;
-    setStatus('reShareScreen');
   });
 
   /**
@@ -916,10 +918,12 @@ ua.on('newRTCSession', function(e)
       })
       .catch((error) =>
       {
-        if (error.message && error.message.indexOf('user gesture handler') !== -1)
-        {
-          setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
-        }
+        // if (error.message && error.message.indexOf('user gesture handler') !== -1)
+        // if (error.message && error.message.indexOf('user gesture handler') !== -1)
+        // {
+        safari_r = true;
+        setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
+        // }
 
         console.warn('error: ', error);
         setStatus(error.message);
@@ -929,6 +933,7 @@ ua.on('newRTCSession', function(e)
 
   document.querySelector('#screenShareD_iOS').onclick = function()
   {
+    console.warn('aaaaaaaaaa', safari_r);
     if (safari_r)
     {
       safari_r = false;
