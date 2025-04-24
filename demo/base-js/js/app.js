@@ -918,12 +918,11 @@ ua.on('newRTCSession', function(e)
       })
       .catch((error) =>
       {
-        // if (error.message && error.message.indexOf('user gesture handler') !== -1)
-        // if (error.message && error.message.indexOf('user gesture handler') !== -1)
-        // {
-        safari_r = true;
-        setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
-        // }
+        if (error.message && error.message.indexOf('user gesture handler') !== -1)
+        {
+          safari_r = true;
+          setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
+        }
 
         console.warn('error: ', error);
         setStatus(error.message);
