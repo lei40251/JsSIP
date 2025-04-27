@@ -1171,6 +1171,14 @@ async function call(type, direction)
     tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
+    options['mediaConstraints'] = {
+      audio :
+      {
+        sampleRate   : 48000,
+        channelCount : 1
+      },
+      video : videoConstraints
+    };
   }
 
   const callee = document.querySelector('#callee').value;
