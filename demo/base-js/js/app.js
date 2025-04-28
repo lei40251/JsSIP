@@ -1167,16 +1167,25 @@ async function call(type, direction)
 
     console.warn('emptyTrack: ', emptyTrack);
 
+    /**
+     * 注意:自定义媒体类型和使用系统设备的相同类型不能同时存在,例如:
+     * 当添加了自定义音频的时候不可以设置 mediaConstraints 里面 audio为ture,
+     * 当添加了自定义视频的时候不可以设置 mediaConstraints 里面 video为ture,
+     */
+
+    // 自定义音频
     tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
-    tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
+    // 自定义视频
+    // tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
+    // 系统麦克风和摄像头
     options['mediaConstraints'] = {
-      audio :
-      {
-        sampleRate   : 48000,
-        channelCount : 1
-      },
+      // audio :
+      // {
+      //   sampleRate   : 48000,
+      //   channelCount : 1
+      // },
       video : videoConstraints
     };
   }
