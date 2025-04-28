@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025428154
+ * CRTC v1.10.9-beta.20254281512
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008563008 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008563024 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008563008');
+debug('version %s', '1.10.9-beta.405008563024');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008563008';
+    return '1.10.9-beta.405008563024';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19538,6 +19538,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return Promise.reject(new Error('Yours sharing permission has been revoked.'));
                 }
               })["catch"](function (error) {
+                // BFCP 释放资源
+                _this8._sendFloorRelease();
                 logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
                 logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
                 _this8.emit('getdisplaymediafailed', error);
