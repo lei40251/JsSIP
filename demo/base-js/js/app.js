@@ -68,6 +68,8 @@ iceServers && (pcConfig['iceServers'] = iceServers);
 iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
 pcConfig['iceCandidatePoolSize'] = 10;
 
+pcConfig['bundlePolicy'] = 'max-compat';
+
 // UA 实例
 const ua = new CRTC.UA(configuration);
 

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254242316
+ * CRTC v1.10.9-beta.20254281114
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008484632 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008562228 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008484632');
+debug('version %s', '1.10.9-beta.405008562228');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008484632';
+    return '1.10.9-beta.405008562228';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -26513,6 +26513,10 @@ module.exports = /*#__PURE__*/function () {
     this.recovery_timer = null;
     this.close_requested = false;
 
+    // 适配部分浏览器的SDP 的 DC 参数，适配 Firefox
+    this._sctp_port = null;
+    this._max_message_size = null;
+
     // It seems that TextDecoder is not available in some versions of React-Native.
     // See https://github.com/versatica/JsSIP/issues/695
     try {
@@ -26631,6 +26635,14 @@ module.exports = /*#__PURE__*/function () {
 
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);
+      var sctpPortMatch = message.match(/a=sctp-port:(\d+)/);
+      var maxMessageSizeMatch = message.match(/a=max-message-size:(\d+)/);
+
+      // 提取SCTP端口
+      this._sctp_port = sctpPortMatch ? sctpPortMatch[1] : null; // 结果: "5000"
+      // 提取最大消息大小
+      this._max_message_size = maxMessageSizeMatch ? maxMessageSizeMatch[1] : null; // 结果: "1073741823"
+
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
     }
@@ -26789,7 +26801,8 @@ module.exports = /*#__PURE__*/function () {
       // 适配paphone
       data = data.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f');
       data = data.replace(/420D0D/g, '42e01f');
-      data += 'a=sctp-port:5000\r\na=max-message-size:1073741823\r\n';
+
+      // data += 'a=sctp-port:5000\r\na=max-message-size:1073741823\r\n';
 
       // 兼容hwcloudlink，修改收到的 profile
       data = data.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=42c01e');
@@ -26798,6 +26811,15 @@ module.exports = /*#__PURE__*/function () {
 
       // 修复BFCP用到的SDP信息
       data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+
+      // 检查并添加SCTP参数,适配Firefox
+      if (data.includes('UDP/DTLS/SCTP webrtc-datachannel')) {
+        var hasSctpPort = /a=sctp-port:\d+/.test(data);
+        var hasMaxMessageSize = /a=max-message-size:\d+/.test(data);
+        if (!hasSctpPort || !hasMaxMessageSize) {
+          data = data.replace(/(SCTP webrtc-datachannel\r\n)/g, "$1a=sctp-port:".concat(this._sctp_port, "\r\na=max-message-size:").concat(this._max_message_size, "\r\n"));
+        }
+      }
 
       // 修复修改SDP后的Header头
       data = Utils.fixContentLength(data);
