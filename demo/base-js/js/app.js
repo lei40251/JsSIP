@@ -1130,63 +1130,61 @@ async function call(type, direction)
 
   }
 
-  if (type === 'callnull')
+  if (type === 'callnull' || type === 'callnullaudio' || type === 'callnullvideo')
   {
     const tmpStream = new MediaStream();
 
-    const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
-
-    // 自动呼叫会有异常
-    if (emptyTrack.state === 'suspended')
+    if (type === 'callnullaudio' || type === 'callnull')
     {
-      // await emptyTrack.audioContext.resume();
-      // 创建一个临时按钮
-      const resumeButton = document.createElement('button');
+      const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
 
-      resumeButton.innerText = '点击开启音频';
-      resumeButton.style.position = 'fixed';
-      resumeButton.style.top = '50%';
-      resumeButton.style.left = '50%';
-      resumeButton.style.transform = 'translate(-50%, -50%)';
-      resumeButton.style.zIndex = '9999';
-      resumeButton.style.padding = '10px 20px';
-
-      document.body.appendChild(resumeButton);
-
-      // 等待用户点击
-      await new Promise((resolve) =>
+      // 自动呼叫会有异常
+      if (emptyTrack.state === 'suspended')
       {
-        resumeButton.onclick = async() =>
+        // await emptyTrack.audioContext.resume();
+        // 创建一个临时按钮
+        const resumeButton = document.createElement('button');
+
+        resumeButton.innerText = '点击开启音频';
+        resumeButton.style.position = 'fixed';
+        resumeButton.style.top = '50%';
+        resumeButton.style.left = '50%';
+        resumeButton.style.transform = 'translate(-50%, -50%)';
+        resumeButton.style.zIndex = '9999';
+        resumeButton.style.padding = '10px 20px';
+
+        document.body.appendChild(resumeButton);
+
+        // 等待用户点击
+        await new Promise((resolve) =>
         {
-          await emptyTrack.audioContext.resume();
-          document.body.removeChild(resumeButton);
-          resolve();
-        };
-      });
+          resumeButton.onclick = async() =>
+          {
+            await emptyTrack.audioContext.resume();
+            document.body.removeChild(resumeButton);
+            resolve();
+          };
+        });
+      }
+
+      /**
+       * 注意:自定义媒体类型和使用系统设备的相同类型不能同时存在,例如:
+       * 当添加了自定义音频的时候不可以设置 mediaConstraints 里面 audio为ture,
+       * 当添加了自定义视频的时候不可以设置 mediaConstraints 里面 video为ture,
+       */
+
+      // 自定义音频
+      tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     }
 
-    console.warn('emptyTrack: ', emptyTrack);
-
-    /**
-     * 注意:自定义媒体类型和使用系统设备的相同类型不能同时存在,例如:
-     * 当添加了自定义音频的时候不可以设置 mediaConstraints 里面 audio为ture,
-     * 当添加了自定义视频的时候不可以设置 mediaConstraints 里面 video为ture,
-     */
-
-    // 自定义音频
-    tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     // 自定义视频
-    // tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
+    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
     // 系统麦克风和摄像头
     options['mediaConstraints'] = {
-      // audio :
-      // {
-      //   sampleRate   : 48000,
-      //   channelCount : 1
-      // },
-      video : videoConstraints
+      audio : type === 'callnullvideo' ? true : false,
+      video : type === 'callnullaudio' ? videoConstraints : false
     };
   }
 
@@ -1406,6 +1404,20 @@ function start()
   {
     // 设置当前通话模式为音频模式
     call('callnull');
+  };
+
+  // 发起无麦克风呼叫
+  document.querySelector('#callNullAudio').onclick = function()
+  {
+    // 设置当前通话模式为音频模式
+    call('callnullaudio');
+  };
+
+  // 发起无音视频呼叫
+  document.querySelector('#callNullVideo').onclick = function()
+  {
+    // 设置当前通话模式为音频模式
+    call('callnullvideo');
   };
 
   // 发起音频呼叫

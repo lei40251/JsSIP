@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254272110
+ * CRTC v1.10.9-beta.20254281023
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008544220 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008562046 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008544220');
+debug('version %s', '1.10.9-beta.405008562046');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008544220';
+    return '1.10.9-beta.405008562046';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -18383,11 +18383,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   mStream.addTrack(track, mStream);
                 });
               }
-              console.warn('bbbbbb: ', mStream);
               sendStream = new MediaStream();
-              _context.next = 15;
+              _context.next = 14;
               return Utils.getMicrophones();
-            case 15:
+            case 14:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
@@ -18400,16 +18399,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
 
-              console.warn('aaaaa: ', sendStream);
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 23;
+                _context.next = 21;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 23:
+            case 21:
               return _context.abrupt("return", sendStream);
-            case 24:
+            case 22:
             case "end":
               return _context.stop();
           }
