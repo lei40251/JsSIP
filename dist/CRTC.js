@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254281454
+ * CRTC v1.10.9-beta.2025428154
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008562908 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008563008 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008562908');
+debug('version %s', '1.10.9-beta.405008563008');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008562908';
+    return '1.10.9-beta.405008563008';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -18219,8 +18219,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var extraFeatures = options.extraFeatures || null;
       this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
-        audio: true,
-        video: true
+        audio: false,
+        video: false
       });
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
@@ -18328,20 +18328,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return Promise.resolve()
       // Get a stream if required.
       .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-        var currMediaConstraints, mStream, sendStream, mics, ua;
+        var mStream, currMediaConstraints, sendStream, mics, ua;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
-              if (!mediaStream) {
-                _context.next = 5;
-                break;
-              }
-              // 自定义媒体流模式
-              _this2._customMediaStream = true;
-              return _context.abrupt("return", mediaStream);
-            case 5:
+              mStream = new MediaStream(); // Request for user media access.
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 26;
+                _context.next = 10;
                 break;
               }
               // 非自定义媒体流模式
@@ -18352,7 +18345,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (Number(_this2._ua.sk[7]) < 1) {
                 delete _this2._inviteMediaConstraints.video;
               }
-              mStream = new MediaStream(); // 兼容安卓微信Bug，开始不获取麦克风媒体
+              // 兼容安卓微信Bug，开始不获取麦克风媒体
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1) {
                 currMediaConstraints = {
                   audio: false,
@@ -18362,10 +18355,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 15;
+                _context.next = 10;
                 break;
               }
-              _context.next = 14;
+              _context.next = 9;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18376,13 +18369,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2.emit('getusermediafailed', error);
                 throw error;
               });
-            case 14:
+            case 9:
               mStream = _context.sent;
-            case 15:
+            case 10:
+              // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
+              if (mediaStream) {
+                // 自定义媒体流模式
+                _this2._customMediaStream = true;
+                mediaStream.getTracks().forEach(function (track) {
+                  if (track.kind === 'audio' && Boolean(_this2._inviteMediaConstraints.audio) || track.kind === 'video' && Boolean(_this2._inviteMediaConstraints.video)) {
+                    throw Error("There are two ".concat(_this2._inviteMediaConstraints.audio ? 'audio' : 'video', " tracks in the input, please check the parameters"));
+                  }
+                  mStream.addTrack(track, mStream);
+                });
+              }
               sendStream = new MediaStream();
-              _context.next = 18;
+              _context.next = 14;
               return Utils.getMicrophones();
-            case 18:
+            case 14:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
@@ -18397,13 +18401,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 25;
+                _context.next = 21;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 25:
+            case 21:
               return _context.abrupt("return", sendStream);
-            case 26:
+            case 22:
             case "end":
               return _context.stop();
           }
