@@ -6,7 +6,8 @@ const defaulteEnvs = {
   // 授权码
   secretKey    : 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ',
   // Turn 配置
-  iceServers   : [ { 'urls': 'turn:example.com:10000?transport=udp', 'username': 'username', 'credential': 'password' } ]
+  iceServers   : [ { 'urls': 'turn:example.com:10000?transport=udp', 'username': 'username', 'credential': 'password' } ],
+  iceTransportPolicy : 'all'
 };
 
 const envs = {

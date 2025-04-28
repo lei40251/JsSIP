@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254281114
+ * CRTC v1.10.9-beta.20254281454
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008562228 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008562908 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008562228');
+debug('version %s', '1.10.9-beta.405008562908');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008562228';
+    return '1.10.9-beta.405008562908';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -23359,7 +23359,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this43._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
         var sendMessage = _this43._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
