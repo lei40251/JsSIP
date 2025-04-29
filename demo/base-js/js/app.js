@@ -1162,11 +1162,28 @@ async function call(type, direction)
         {
           resumeButton.onclick = async() =>
           {
-            await emptyTrack.audioContext.resume();
-            document.body.removeChild(resumeButton);
-            resolve();
+            try
+            {
+              console.warn('准备恢复音频上下文');
+              const v = await emptyTrack.audioContext.resume();
+
+              console.warn('音频上下文恢复结果:', v);
+
+              // 检查音频上下文的状态
+              console.warn('当前音频上下文状态:', emptyTrack.audioContext.state);
+
+              document.body.removeChild(resumeButton);
+              resolve();
+            }
+            catch (error)
+            {
+              console.error('恢复音频上下文时发生错误:', error);
+              // 即使发生错误也要移除按钮并继续
+              document.body.removeChild(resumeButton);
+              resolve();
+            }
           };
-        });
+        }).catch((e) => console.warn(e));
       }
 
       /**

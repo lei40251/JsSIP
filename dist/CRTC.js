@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254281512
+ * CRTC v1.10.9-beta.202542992
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008563024 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008581804 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008563024');
+debug('version %s', '1.10.9-beta.405008581804');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008563024';
+    return '1.10.9-beta.405008581804';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -20379,8 +20379,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         Utils.closeMediaStream(this._localMediaStream);
       }
       if (this._localShareStream) {
-        logger.debug('close() | closing local MediaStream');
+        logger.debug('close() | closing local share MediaStream');
         Utils.closeMediaStream(this._localShareStream);
+      }
+      if (this._bfcpStream) {
+        logger.debug('close() | closing local bfcp MediaStream');
+        Utils.closeMediaStream(this._bfcpStream);
       }
       if (this._status === C.STATUS_TERMINATED) {
         return;
@@ -21722,23 +21726,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (!track) {
               return;
             }
-
-            // 检查是否为画布流的通用方法
-            var isCanvasTrack = function isCanvasTrack() {
-              // 检查track的settings中是否包含canvas相关信息
-              var settings = track.getSettings();
-
-              // Firefox中canvas轨道的label通常包含"MediaStreamTrack"且不会有deviceId
-              // 同时增加对Firefox中CanvasCaptureMediaStreamTrack的检查
-              return settings || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
-            };
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
-              if (track instanceof MediaStreamTrackGenerator || isCanvasTrack()) {
+              if (track instanceof MediaStreamTrackGenerator || _this29._isCanvasTrack(track)) {
                 _this29._mStream = transceiver.mid;
                 sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
               }
-            } else if (isCanvasTrack()) {
+            } else if (_this29._isCanvasTrack(track)) {
               _this29._mStream = transceiver.mid;
               sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
             }
@@ -22552,8 +22546,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_streamInactiveHandle",
     value: function _streamInactiveHandle(dual) {
       var _this35 = this;
-      // 分享屏幕点击系统停止按钮后停止分享
-      this._localShareStream.addEventListener('inactive', function () {
+      var ended = false;
+      var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
         if (_this35._localShareStream && _this35._localShareStreamLocallyGenerated) {
           if (dual) {
             _this35._connection.getTransceivers().forEach(function (transeiver) {
@@ -22580,6 +22574,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this35._localShareStream = null;
           _this35._localShareStreamLocallyGenerated = false;
         }
+      };
+
+      // 分享屏幕点击系统停止按钮后停止分享
+      this._localShareStream.getVideoTracks()[0].addEventListener('ended', function () {
+        ended || mediaStreamTrackEndedHandler();
+        ended = true;
+      });
+      this._localShareStream.addEventListener('inactive', function () {
+        ended || mediaStreamTrackEndedHandler();
+        ended = true;
       });
     }
 
@@ -22691,7 +22695,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_toggleMuteVideo",
     value: function _toggleMuteVideo(mute) {
+      var _this37 = this;
       var senders = this._connection.getSenders().filter(function (sender) {
+        if (_this37._enableBFCP) {
+          // 检查是否存在视频轨道
+          if (!sender.track || sender.track.kind !== 'video') {
+            return false;
+          }
+
+          // 获取本地共享流的视频轨道ID
+          var localShareTrackId = null;
+          if (_this37._localShareStream && _this37._localShareStream.getVideoTracks() && _this37._localShareStream.getVideoTracks()[0]) {
+            localShareTrackId = _this37._localShareStream.getVideoTracks()[0].id;
+          }
+
+          // 验证视频轨道条件
+          return !_this37._isCanvasTrack(sender.track) && sender.track !== _this37._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+        }
         return sender.track && sender.track.kind === 'video';
       });
       var _iterator17 = _createForOfIteratorHelper(senders),
@@ -22915,36 +22935,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceAudioToMic",
     value: function _replaceAudioToMic() {
-      var _this37 = this;
+      var _this38 = this;
       // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: this._inviteMediaConstraints.audio || true,
         video: false
       }).then(function (stream) {
-        _this37._connection.getSenders().forEach(function (sender) {
+        _this38._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this37.isMuted().audio;
+            stream.getAudioTracks()[0].enabled = _this38.isMuted().audio;
 
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
             // 本地播放本地音频轨道
-            _this37._localMediaStream.removeTrack(_this37._localMediaStream.getAudioTracks()[0]);
-            _this37._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+            _this38._localMediaStream.removeTrack(_this38._localMediaStream.getAudioTracks()[0]);
+            _this38._localMediaStream.addTrack(stream.getAudioTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this37.emit('localMediastreamUpdate', _this37._localMediaStream);
+            _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this37._boundReplaceMicToAudios);
-            stream.getAudioTracks()[0].addEventListener('ended', _this37._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('mute', _this38._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this38._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
         logger.error("replaceAudioToMic error: ".concat(JSON.stringify(error)));
-        _this37._replaceAudioToMic();
+        _this38._replaceAudioToMic();
       });
     }
 
@@ -22954,7 +22974,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceMicToAudio",
     value: function _replaceMicToAudio() {
-      var _this38 = this;
+      var _this39 = this;
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -22963,24 +22983,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this38._boundReplaceMicToAudios);
-          sender.track.removeEventListener('ended', _this38._boundReplaceMicToAudios);
+          sender.track.removeEventListener('mute', _this39._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this39._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
 
           // 替换音频轨道
-          sender.replaceTrack(_this38._generateAnEmptyAudioTrack());
+          sender.replaceTrack(_this39._generateAnEmptyAudioTrack());
 
           // 本地播放本地音频轨道
-          _this38._localMediaStream.removeTrack(_this38._localMediaStream.getVideoTracks()[0]);
-          _this38._localMediaStream.addTrack(_this38._generateAnEmptyAudioTrack());
+          _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
+          _this39._localMediaStream.addTrack(_this39._generateAnEmptyAudioTrack());
 
           // 触发本地媒体更新事件
-          _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
+          _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
 
           // 开始尝试获取麦克风体并恢复
-          _this38._replaceAudioToMic();
+          _this39._replaceAudioToMic();
         }
       });
     }
@@ -22991,38 +23011,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceCanvasToVideo",
     value: function _replaceCanvasToVideo() {
-      var _this39 = this;
+      var _this40 = this;
       // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: false,
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
-        _this39._connection.getSenders().forEach(function (sender) {
+        _this40._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this39._restoreCameraTrackDraw);
-            _this39._restoreCameraTrackCtx.clearRect(0, 0, _this39._inviteMediaConstraints.width || 640, _this39._inviteMediaConstraints.height || 480);
+            window.cancelAnimationFrame(_this40._restoreCameraTrackDraw);
+            _this40._restoreCameraTrackCtx.clearRect(0, 0, _this40._inviteMediaConstraints.width || 640, _this40._inviteMediaConstraints.height || 480);
             // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this39.isMuted().video;
+            stream.getVideoTracks()[0].enabled = _this40.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
             // 本地播放本地视频轨道
-            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
-            _this39._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+            _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
+            _this40._localMediaStream.addTrack(stream.getVideoTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+            _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this39._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this39._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this40._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this40._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
         logger.error("replaceCanvasToVideo error: ".concat(JSON.stringify(error)));
-        _this39._replaceCanvasToVideo();
+        _this40._replaceCanvasToVideo();
       });
     }
 
@@ -23032,7 +23052,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
-      var _this40 = this;
+      var _this41 = this;
       logger.debug('_replaceVideoToCanvas()');
 
       // 判断是否在通话中
@@ -23047,11 +23067,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 开始绘制纯色
       var _drawToCanvas = function drawToCanvas() {
-        _this40._restoreCameraTrackCanvas.width = _this40._inviteMediaConstraints.width || 640;
-        _this40._restoreCameraTrackCanvas.height = _this40._inviteMediaConstraints.height || 480;
-        _this40._restoreCameraTrackCtx.fillStyle = 'blue';
-        _this40._restoreCameraTrackCtx.fillRect(0, 0, _this40._inviteMediaConstraints.width || 640, _this40._inviteMediaConstraints.height || 480);
-        _this40._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
+        _this41._restoreCameraTrackCanvas.width = _this41._inviteMediaConstraints.width || 640;
+        _this41._restoreCameraTrackCanvas.height = _this41._inviteMediaConstraints.height || 480;
+        _this41._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this41._restoreCameraTrackCtx.fillRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
+        _this41._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
       };
       _drawToCanvas();
 
@@ -23062,20 +23082,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this40._boundReplaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this40._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this41._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this41._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
           // 本地播放本地视频轨道
-          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
-          _this40._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
+          _this41._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
           // 触发本地媒体更新事件
-          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
+          _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
           // 开始尝试获取摄像头媒体并恢复
-          _this40._replaceCanvasToVideo();
+          _this41._replaceCanvasToVideo();
         }
       });
     }
@@ -23086,7 +23106,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this41 = this;
+      var _this42 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -23098,14 +23118,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           timer = null;
 
           // 如果设备变化则替换轨道流
-          _this41._connection.getSenders().forEach(function (sender) {
+          _this42._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this41._replaceVideoToCanvas();
+              _this42._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this41._replaceMicToAudio();
+              _this42._replaceMicToAudio();
             }
           });
         }, 300);
@@ -23116,22 +23136,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 视频轨道
         if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
-            _this41._replaceVideoToCanvas();
+            _this42._replaceVideoToCanvas();
           } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this42._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this42._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this41._replaceMicToAudio();
+            _this42._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this41._boundReplaceMicToAudios);
-            sender.track.addEventListener('ended', _this41._boundReplaceMicToAudios);
+            sender.track.addEventListener('mute', _this42._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this42._boundReplaceMicToAudios);
           }
         }
       });
@@ -23206,7 +23226,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
-      var _this42 = this;
+      var _this43 = this;
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
       if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
@@ -23217,12 +23237,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this.emit('floorRequest', {
           message: message,
           accept: function accept() {
-            var response = _this42._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-            _this42._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this43._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this43._sendDataChannelMessage(response, message.commonHeader.transactionId);
           },
           reject: function reject() {
-            var response = _this42._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-            _this42._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this43._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this43._sendDataChannelMessage(response, message.commonHeader.transactionId);
           }
         });
       }
@@ -23334,19 +23354,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this43 = this;
+      var _this44 = this;
       logger.debug("dataChannelSend() ".concat(transactionId));
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
-        if (!_this43._dataChannelReady) {
+        if (!_this44._dataChannelReady) {
           reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           return;
         }
 
         // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this43._dataChannelMsgs[transactionId]) {
-          _this43._dataChannelMsgs[transactionId] = {
+        if (!_this44._dataChannelMsgs[transactionId]) {
+          _this44._dataChannelMsgs[transactionId] = {
             retries: 0,
             sendAt: Date.now(),
             message: message,
@@ -23355,7 +23375,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             reject: reject
           };
         }
-        var messageState = _this43._dataChannelMsgs[transactionId];
+        var messageState = _this44._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
@@ -23365,8 +23385,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(_this43._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this43._bfcpUser.receiveMessage(messageState.message);
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this44._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this44._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
         sendMessage.commonHeader.primitive != Primitive.FloorRelease && setTimeout(function () {
@@ -23374,11 +23394,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (messageState && !messageState.received) {
             messageState.retries++;
             // 增加重试的间隔
-            _this43._dataChannelSend(messageState.message, transactionId);
+            _this44._dataChannelSend(messageState.message, transactionId);
           }
         }, Math.pow(2, messageState.retries) * 500);
-        _this43._dataChannel.send(messageState.message);
+        _this44._dataChannel.send(messageState.message);
       });
+    }
+
+    // 检查是否为画布流的通用方法
+  }, {
+    key: "_isCanvasTrack",
+    value: function _isCanvasTrack(track) {
+      // 检查track的settings中是否包含canvas相关信息
+      var settings = track.getSettings();
+
+      // Firefox中canvas轨道的label通常包含"MediaStreamTrack"且不会有deviceId
+      // 同时增加对Firefox中CanvasCaptureMediaStreamTrack的检查
+      return !settings.deviceId || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
     }
 
     /**
@@ -23387,7 +23419,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this44 = this;
+      var _this45 = this;
       logger.debug('initDataChannel()');
 
       // 内部变量
@@ -23419,29 +23451,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
       datachannel.onmessage = function (ev) {
         // 收到数据
-        _this44._onChannelMessage(ev);
+        _this45._onChannelMessage(ev);
       };
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
         logger.warn('datachannel opened.');
-        _this44._dataChannelReady = true;
+        _this45._dataChannelReady = true;
         // 开始发送心跳消息
-        _this44._sendHello();
-        _this44._bfcpHeatbeatTimer = setInterval(function () {
-          _this44._sendHello();
+        _this45._sendHello();
+        _this45._bfcpHeatbeatTimer = setInterval(function () {
+          _this45._sendHello();
         }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
-        _this44._onChannelClose();
+        _this45._onChannelClose();
       };
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
         logger.error('datachannel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this44._dataChannelReady = false;
+        _this45._dataChannelReady = false;
         logger.warn('data err: ', err);
       };
 
@@ -23452,7 +23484,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // No "onclosing" event
         if (datachannel && datachannel.readyState === 'closing') {
           // closing timed out: equivalent to onclose firing
-          if (isClosing) _this44._onChannelClose();
+          if (isClosing) _this45._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
@@ -28646,7 +28678,7 @@ exports.closeMediaStream = function (stream) {
   if (!stream) {
     return;
   }
-
+  console.warn('str: ', stream);
   // Latest spec states that MediaStream has no stop() method and instead must
   // call stop() on every MediaStreamTrack.
   try {
@@ -28658,6 +28690,7 @@ exports.closeMediaStream = function (stream) {
       try {
         for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var track = _step.value;
+          console.warn('track: ', track);
           track.stop();
         }
       } catch (err) {
