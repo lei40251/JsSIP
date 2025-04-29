@@ -953,6 +953,16 @@ ua.on('newRTCSession', function(e)
             document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
           });
 
+          const timer = setInterval(() => 
+          {
+            if (stream.getVideoTracks()[0].readyState === 'ended')
+            {
+              // e.session.sendFloorStatus(6);
+              document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+              clearInterval(timer);
+            }
+          }, 100);
+
           document.querySelector('#remoteVideo2').srcObject = null;
           document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
         })

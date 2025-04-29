@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.202542992
+ * CRTC v1.10.9-beta.20254291042
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008581804 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008582084 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008581804');
+debug('version %s', '1.10.9-beta.405008582084');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008581804';
+    return '1.10.9-beta.405008582084';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19538,8 +19538,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return Promise.reject(new Error('Yours sharing permission has been revoked.'));
                 }
               })["catch"](function (error) {
-                // BFCP 释放资源
-                _this8._sendFloorRelease();
+                if (error.message || error.message.indexOf('user gesture handler') !== -1) {
+                  setTimeout(function () {
+                    // BFCP 释放资源
+                    _this8._localShareStreamLocallyGenerated || _this8._sendFloorRelease();
+                  }, 10000);
+                } else {
+                  // BFCP 释放资源
+                  _this8._sendFloorRelease();
+                }
                 logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
                 logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
                 _this8.emit('getdisplaymediafailed', error);
@@ -22576,6 +22583,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       };
 
+      // safari 等场景ended 或者 inactive 事件不会触发
+      var timer = setInterval(function () {
+        if (_this35._localShareStream.getVideoTracks()[0].readyState === 'ended') {
+          clearInterval(timer);
+          ended || mediaStreamTrackEndedHandler();
+          ended = true;
+        }
+      }, 200);
+
       // 分享屏幕点击系统停止按钮后停止分享
       this._localShareStream.getVideoTracks()[0].addEventListener('ended', function () {
         ended || mediaStreamTrackEndedHandler();
@@ -22796,6 +22812,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 停止全部统计信息事件
       window.CRTCStats = 'stop';
+      this._dataChannel && this._dataChannel.close();
+      this._dataChannel = null;
       if (this._inviteVideoTrackStatsTimer) {
         clearInterval(this._inviteVideoTrackStatsTimer);
       }
@@ -22818,6 +22836,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 停止全部统计信息事件
       window.CRTCStats = 'stop';
+      this._dataChannel && this._dataChannel.close();
+      this._dataChannel = null;
       this._close();
       logger.debug('emit "failed"');
       this.emit('failed', {
@@ -23343,6 +23363,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 停止发送心跳
       clearInterval(this._bfcpHeatbeatTimer);
       this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+      // 停止检测close状态
+      clearInterval(this._closingInterval);
     }
 
     /**
@@ -28678,7 +28701,6 @@ exports.closeMediaStream = function (stream) {
   if (!stream) {
     return;
   }
-  console.warn('str: ', stream);
   // Latest spec states that MediaStream has no stop() method and instead must
   // call stop() on every MediaStreamTrack.
   try {
@@ -28690,7 +28712,6 @@ exports.closeMediaStream = function (stream) {
       try {
         for (_iterator.s(); !(_step = _iterator.n()).done;) {
           var track = _step.value;
-          console.warn('track: ', track);
           track.stop();
         }
       } catch (err) {
