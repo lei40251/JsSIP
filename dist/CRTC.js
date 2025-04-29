@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254291042
+ * CRTC v1.10.9-beta.20254291651
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3538,7 +3538,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008582084 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008583302 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16832,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008582084');
+debug('version %s', '1.10.9-beta.405008583302');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16869,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008582084';
+    return '1.10.9-beta.405008583302';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -25490,7 +25490,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (report['state'] !== 'succeeded') {
               break;
             } else {
-              _this3._newStats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']);
+              report['currentRoundTripTime'] && (_this3._newStats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']));
             }
             break;
           case 'outbound-rtp':
@@ -25526,6 +25526,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 loss = null;
               } else if (_this3._remoteInboundRtps.get(report['remoteId']) && 'fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
                 loss = Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100);
+                if (_this3._remoteInboundRtps.get(report['remoteId']).roundTripTime) {
+                  _this3._newStats.transport.RTT = Math.floor(1e3 * _this3._remoteInboundRtps.get(report['remoteId']).roundTripTime);
+                }
               } else {
                 loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
               }

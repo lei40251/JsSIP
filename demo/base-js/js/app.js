@@ -210,9 +210,9 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
       // d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
 
-      d.sdp = d.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
-      d.sdp = d.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
-      d.sdp = d.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
+      // d.sdp = d.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
+      // d.sdp = d.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
+      // d.sdp = d.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
 
       // m=video 20080 UDP/TLS/RTP/SAVPF 106
       // b=TIAS:512000
@@ -953,7 +953,7 @@ ua.on('newRTCSession', function(e)
             document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
           });
 
-          const timer = setInterval(() => 
+          const timer = setInterval(() =>
           {
             if (stream.getVideoTracks()[0].readyState === 'ended')
             {
