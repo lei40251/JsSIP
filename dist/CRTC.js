@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025429175
+ * CRTC v1.10.9-beta.20254302219
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -1120,7 +1120,8 @@ var SupportedPrimitives = /*#__PURE__*/function (_Attribute) {
       // Primitive.UserQuery,
       // Primitive.UserStatus,
       // Primitive.FloorQuery,
-      Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck, Primitive.FloorStatusAck
+      Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck
+      // Primitive.FloorStatusAck
       // Primitive.Goodbye,
       // Primitive.GoodbyeAck
       ];
@@ -2447,7 +2448,7 @@ var Primitive = /*#__PURE__*/function () {
   }, {
     key: "FloorStatusAck",
     get: function get() {
-      return 16;
+      return 15;
     }
 
     /**
@@ -2460,7 +2461,7 @@ var Primitive = /*#__PURE__*/function () {
   }, {
     key: "Goodbye",
     get: function get() {
-      return 17;
+      return 16;
     }
 
     /**
@@ -2473,7 +2474,7 @@ var Primitive = /*#__PURE__*/function () {
   }, {
     key: "GoodbyeAck",
     get: function get() {
-      return 18;
+      return 17;
     }
   }]);
 }();
@@ -3538,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008583410 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405008604438 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16832,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008583410');
+debug('version %s', '1.10.9-beta.405008604438');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16869,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008583410';
+    return '1.10.9-beta.405008604438';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -22789,8 +22790,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('session confirmed');
       this._is_confirmed = true;
 
-      // 如果是SDK调用媒体设备，则启动媒体状态监测
-      this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
+      // 如果是SDK调用媒体设备，则启动媒体状态监测,停用媒体状态检测
+      // this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
+
       logger.debug('emit "confirmed"');
       this.emit('confirmed', {
         originator: originator,
@@ -23222,7 +23224,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorStatusMessage",
     value: function _handleFloorStatusMessage(message) {
-      this._sendFloorStatusAck(message);
+      // 不再回ack，根据support里面是否支持做出这个决定
+      // this._sendFloorStatusAck(message);
       var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
 
       // 根据状态触发事件
