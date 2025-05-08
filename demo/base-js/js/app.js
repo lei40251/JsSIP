@@ -197,8 +197,8 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      // d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
-      // d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
+      d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
+      d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
     }
     else if (d.originator === 'remote')
     {

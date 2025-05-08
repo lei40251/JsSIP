@@ -2,7 +2,7 @@
   "cSpell.words": [
     "crtc"
   ],
-  "liveServer.settings.port": 5838,
+  "liveServer.settings.port": 5839,
   "commentTranslate.source": "naomi233.comment-translate-transmart-transmart",
   "clangd.arguments": [
     "\"--compile-commands-dir=${workspaceFolder}/build\"",

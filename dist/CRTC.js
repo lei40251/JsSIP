@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20254302219
+ * CRTC v1.10.9-beta.2025581254
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405008604438 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405010162508 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16833,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405008604438');
+debug('version %s', '1.10.9-beta.405010162508');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405008604438';
+    return '1.10.9-beta.405010162508';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -25476,6 +25476,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 获取本端共享的 trackIdentifier
         if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) && transceiver.sender.track && transceiver.sender.track.kind === 'video') {
+          console.warn('tst: ', transceiver);
           _this3._localSharedTrackIdentifier = transceiver.sender.track.id;
         }
       });
@@ -25502,7 +25503,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var tmpObject = {};
               // 当前统计报告的类型
               var type = _this3._mediaSourceIdToTrackIdentifier.get(report['mediaSourceId']) === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
-
+              console.warn('tid: ', _this3._localSharedTrackIdentifier, report);
               // 前一次的统计结果
               var previewStats = _this3._newStats.video.upStreams[type];
               var remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
@@ -29170,8 +29171,12 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
     height = _ref4$height === void 0 ? 48 : _ref4$height;
   // 创建 Canvas 元素
   var canvas = document.createElement('canvas');
+  // 适配部分情况需要绘制内容后才可以调用captureStream方法，比如：Firefox v86.0
+  var ctx = canvas.getContext('2d');
   canvas.width = width;
   canvas.height = height;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 捕获 Canvas 的视频流
   var videoStream = canvas.captureStream();
