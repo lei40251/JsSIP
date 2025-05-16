@@ -25,15 +25,15 @@
     <div class="position-relative h-100">
       <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light"
         style="z-index: 10;">本端视频</p>
-      <div class="position-absolute top-50 opacity-50 start-0 text-start bg-light p-2"
+      <div class="position-absolute bottom-0 opacity-50 start-0 text-start bg-light p-2"
         style="font-size: 11px;z-index: 10;">
-        上行速率: <span id="upS"></span><br>
-        下行速率: <span id="downS"></span><br>
-        上行丢包率: <span id="upL"></span><br>
-        下行丢包率: <span id="downL"></span><br>
-        上行分辨率: <span id="upF"></span><br>
-        下行分辨率: <span id="downF"></span><br>
-        NetworkQualities: <span id="NQ"></span><br>
+        <!-- 上行速率: <span id="upS"></span><br> -->
+        延迟: <span id="RTT"></span><br>
+        <!-- 上行丢包率: <span id="upL"></span><br> -->
+        <!-- 下行丢包率: <span id="downL"></span><br> -->
+        上行统计: <br /><span id="upF"></span>
+        下行统计: <br /><span id="downF"></span>
+        NetworkQualities: <span id="NQ"></span>
       </div>
       <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
         <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
@@ -71,7 +71,7 @@
           <div class="col col-auto row">
             <div class="col col-auto">
               <div class="input-group">
-                <input class="form-control" type="text" value="9740975" placeholder="请输入要呼叫的号码" id="callee" />
+                <input class="form-control" type="text" value="9656145" placeholder="请输入要呼叫的号码" id="callee" />
 
                 <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                   <button class="btn btn-warning" id="callNull"> 无设备外呼</button>

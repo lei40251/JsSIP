@@ -17,6 +17,7 @@ let optionsTimer;
 // 呼叫转移 被转用
 let tmpSession;
 let safari_r = false;
+let options;
 
 const extraFeatures = [];
 
@@ -115,6 +116,10 @@ ua.on('disconnected', function(data)
 ua.on('registered', function(data)
 {
   setStatus(`注册成功：${data.response.from.uri.toString()}`);
+  // setTimeout(() =>
+  // {
+  //   call('callnull');
+  // }, 1000);
 });
 
 /**
@@ -172,13 +177,7 @@ ua.on('newRTCSession', function(e)
   {
     console.log('refer', d);
     d.request.refer_to.uri.host = sipDomain;
-    d.accept(null, {
-      // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
-      // cMode        : 'paphone',
-      extraFeatures : extraFeatures,
-      pcConfig      : pcConfig
-    });
+    d.accept(null, options);
   });
 
   // 部分场景兼容使用
@@ -199,6 +198,8 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
       d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
       d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
+
+      d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
     }
     else if (d.originator === 'remote')
     {
@@ -611,26 +612,40 @@ ua.on('newRTCSession', function(e)
 
     stats.on('report', function(r)
     {
+      console.warn('report: ', JSON.stringify(r));
       let downF = '';
       let upF = '';
 
       r.downStreams.forEach((item) =>
       {
-        downF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}fps ${item.speed || ''} `;
+        if (item.type === 'audio')
+        {
+          downF += `# 音频 # ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+        }
+        else
+        {
+          downF += `# ${item.type==='shared'?'共享':'视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+        }
       });
 
       r.upStreams.forEach((item) =>
       {
-        upF += `## ${item.type || 'video'}: ${item.frameWidth || ''} * ${item.frameHeight || ''} ${item.framesPerSecond || ''}fps ${item.speed || ''} `;
+        if (item.type === 'audio')
+        {
+          upF += `# 音频 # ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+        }
+        else
+        {
+          upF += `# ${item.type==='shared'?'共享':'视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+        }
       });
 
       document.querySelector('#upF').innerText = upF;
       document.querySelector('#downF').innerText = downF;
 
-      document.querySelector('#upS').innerText = r.uplinkSpeed || '';
-      document.querySelector('#downS').innerText = r.downlinkSpeed || '';
-      document.querySelector('#upL').innerText = r.uplinkLoss || '';
-      document.querySelector('#downL').innerText = r.downlinkLoss || '';
+      document.querySelector('#RTT').innerText = r.RTT || '';
+      // document.querySelector('#upL').innerText = r.uplinkLoss || '';
+      // document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
     stats.on('network-quality', function(ev)
@@ -913,6 +928,16 @@ ua.on('newRTCSession', function(e)
           document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
         });
 
+        const timer = setInterval(() =>
+        {
+          if (stream.getVideoTracks()[0].readyState === 'ended')
+          {
+            // e.session.sendFloorStatus(6);
+            document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
+            clearInterval(timer);
+          }
+        }, 100);
+
         document.querySelector('#remoteVideo2').srcObject = null;
         document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
       })
@@ -1039,9 +1064,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#dtmf').onclick = function(d)
   {
-    const options = { 'transportType': 'RFC2833' };
-
-    e.session.sendDTMF(d.target.innerText, options);
+    e.session.sendDTMF(d.target.innerText, { 'transportType': 'RFC2833' });
   };
 
   /**
@@ -1095,7 +1118,7 @@ async function call(type, direction)
 
   rtcSession && rtcSession.terminate();
 
-  const options = {
+  options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
     // cMode        : 'paphone',
@@ -1147,58 +1170,6 @@ async function call(type, direction)
     if (type === 'callnullaudio' || type === 'callnull')
     {
       const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
-
-      // 自动呼叫会有异常
-      if (emptyTrack.state === 'suspended')
-      {
-        // await emptyTrack.audioContext.resume();
-        // 创建一个临时按钮
-        const resumeButton = document.createElement('button');
-
-        resumeButton.innerText = '点击开启音频';
-        resumeButton.style.position = 'fixed';
-        resumeButton.style.top = '50%';
-        resumeButton.style.left = '50%';
-        resumeButton.style.transform = 'translate(-50%, -50%)';
-        resumeButton.style.zIndex = '9999';
-        resumeButton.style.padding = '10px 20px';
-
-        document.body.appendChild(resumeButton);
-
-        // 等待用户点击
-        await new Promise((resolve) =>
-        {
-          resumeButton.onclick = async() =>
-          {
-            try
-            {
-              console.warn('准备恢复音频上下文');
-              const v = await emptyTrack.audioContext.resume();
-
-              console.warn('音频上下文恢复结果:', v);
-
-              // 检查音频上下文的状态
-              console.warn('当前音频上下文状态:', emptyTrack.audioContext.state);
-
-              document.body.removeChild(resumeButton);
-              resolve();
-            }
-            catch (error)
-            {
-              console.error('恢复音频上下文时发生错误:', error);
-              // 即使发生错误也要移除按钮并继续
-              document.body.removeChild(resumeButton);
-              resolve();
-            }
-          };
-        }).catch((e) => console.warn(e));
-      }
-
-      /**
-       * 注意:自定义媒体类型和使用系统设备的相同类型不能同时存在,例如:
-       * 当添加了自定义音频的时候不可以设置 mediaConstraints 里面 audio为ture,
-       * 当添加了自定义视频的时候不可以设置 mediaConstraints 里面 video为ture,
-       */
 
       // 自定义音频
       tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025591638
+ * CRTC v1.10.9-beta.20255141021
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405010183276 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405010282042 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16833,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405010183276');
+debug('version %s', '1.10.9-beta.405010282042');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405010183276';
+    return '1.10.9-beta.405010282042';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19204,7 +19204,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   if (s.track && s.track.kind == 'video') {
                     if (_this7._enableBFCP) {
                       // 启用了BFCP，区分一下BFCP控制的视频轨道
-                      s.track != _this7._bfcpVideoTrack && s.track != _this7._localShareStream.getVideoTracks()[0] && s.track.stop();
+                      // eslint-disable-next-line max-len
+                      s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]) && s.track.stop();
                     } else {
                       s.track.stop();
                     }
@@ -19235,7 +19236,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 var sender = _this7._connection.getSenders().find(function (s) {
                   if (_this7._enableBFCP) {
                     // 启用了BFCP，区分一下BFCP控制的视频轨道
-                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != _this7._localShareStream.getVideoTracks()[0];
+                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]);
                   } else {
                     return s.track.kind == 'video';
                   }
@@ -22568,7 +22569,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this35._localShareStream = null;
             _this35._localShareStreamLocallyGenerated = false;
 
-            // BFCP 释放资源
+            // BFCP 释放资源，当被取消权限以后不再用发送release
             _this35._bfcpRequestStatus !== RequestStatusValue.Revoked && _this35._sendFloorRelease();
           } else {
             _this35._localMediaStream.getVideoTracks().forEach(function (track) {
@@ -25325,6 +25326,9 @@ exports.isSocket = function (socket) {
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
@@ -25372,19 +25376,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // 新的统计信息
     _this._newStats = {
-      transport: {
-        RTT: null
+      rtt: null,
+      upStreams: {
+        audio: {},
+        video: {},
+        shared: {}
       },
-      audio: {},
-      video: {
-        upStreams: {
-          camera: {},
-          shared: {}
-        },
-        downStreams: {
-          camera: {},
-          shared: {}
-        }
+      downStreams: {
+        audio: {},
+        video: {},
+        shared: {}
       }
     };
     _this.start();
@@ -25396,34 +25397,68 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function start() {
       var _this2 = this;
       this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
+              inform = false; // 全局停止统计信息输出
               if (!(window.CRTCStats === 'stop')) {
-                _context.next = 3;
+                _context.next = 4;
                 break;
               }
               clearInterval(_this2._statsTimer);
               return _context.abrupt("return");
-            case 3:
-              _this2._pc.getStats().then(function (stats) {
-                // 通话开始的时候统计报告不完整
-                // try
-                // {
-                _this2._parseReport(stats);
-                // }
-                // catch (error)
-                // {
-                //   logger.error(`parseReport error: ${error.message}`);
-                // }
-
-                if (_this2._count === 0) {
-                  // 第二次开始间隔5-10次输出一次完整report
-                  _this2._count = _this2._interval + (Math.random() * 5 | 0);
-                  _this2._parseReport(stats, true);
-                }
-                _this2._count--;
-              });
+            case 4:
+              _this2._data = '';
+              if (_this2._count === 0) {
+                // 第二次开始间隔5-10次输出一次完整report
+                _this2._count = _this2._interval + (Math.random() * 5 | 0);
+                inform = true;
+              }
+              _this2._count--;
+              _context.next = 9;
+              return _this2._pc.getTransceivers();
+            case 9:
+              transceivers = _context.sent;
+              _iterator = _createForOfIteratorHelper(transceivers);
+              _context.prev = 11;
+              _iterator.s();
+            case 13:
+              if ((_step = _iterator.n()).done) {
+                _context.next = 24;
+                break;
+              }
+              transceiver = _step.value;
+              _context.next = 17;
+              return transceiver.sender.getStats();
+            case 17:
+              senderReports = _context.sent;
+              _context.next = 20;
+              return transceiver.receiver.getStats();
+            case 20:
+              receiverReports = _context.sent;
+              if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
+                _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
+                _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
+              } else {
+                _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
+                _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
+              }
+            case 22:
+              _context.next = 13;
+              break;
+            case 24:
+              _context.next = 29;
+              break;
+            case 26:
+              _context.prev = 26;
+              _context.t0 = _context["catch"](11);
+              _iterator.e(_context.t0);
+            case 29:
+              _context.prev = 29;
+              _iterator.f();
+              return _context.finish(29);
+            case 32:
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
@@ -25434,328 +25469,257 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } catch (error) {
                 logger.error(error.toString());
               }
-            case 6:
+              if (!_this2._data) {
+                _context.next = 37;
+                break;
+              }
+              logger.debug(_this2._data);
+              return _context.abrupt("return");
+            case 37:
+              _this2._createReport();
+            case 38:
             case "end":
               return _context.stop();
           }
-        }, _callee);
+        }, _callee, null, [[11, 26, 29, 32]]);
       })), this._delay * 1000);
     }
   }, {
     key: "stop",
     value: function stop() {
       clearInterval(this._statsTimer);
-      this._count = 5;
+      this._count = this._interval;
     }
   }, {
     key: "reset",
     value: function reset() {}
 
-    // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
-    // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
+    // 解析上行统计报告
   }, {
-    key: "_parseReport",
-    value: function _parseReport(stats, inform) {
+    key: "_parseSenderReport",
+    value: function _parseSenderReport(reports, sender, shared, inform) {
       var _this3 = this;
-      var data = null;
+      var type;
+      var tmpObject = {};
+      shared ? type = 'shared' : type = sender.track.kind;
 
-      // 取得 mediaSourceId 和 trackIdentifier 的对应关系
-      stats.forEach(function (report) {
-        if (report.type === 'media-source') {
-          _this3._mediaSourceIdToTrackIdentifier.set(report.id, report.trackIdentifier);
-        }
-        if (report.type === 'remote-inbound-rtp') {
-          _this3._remoteInboundRtps.set(report.id, report);
-        }
-      });
-      this._pc.getTransceivers().forEach(function (transceiver) {
-        // 获取远端共享的 trackIdentifier
-        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX) && transceiver.receiver.track && transceiver.receiver.track.kind === 'video') {
-          _this3._remoteSharedTrackIdentifier = transceiver.receiver.track.id;
-        }
-
-        // 获取本端共享的 trackIdentifier
-        if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX) && transceiver.sender.track && transceiver.sender.track.kind === 'video') {
-          _this3._localSharedTrackIdentifier = transceiver.sender.track.id;
-        }
-      });
-
-      // this._localSharedTrackIdentifier = sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX);
-
-      // 遍历所有的 report 获取必要数据
-      stats.forEach(function (report) {
+      // 前一次的统计结果
+      var previewStats = this._newStats.upStreams[type];
+      var calc_bytesSent;
+      var calc_packetsSent;
+      var calc_packetsLost;
+      var fractionLost;
+      reports.forEach(function (report) {
         if (inform) {
-          data += JSON.stringify(report);
+          _this3._data += JSON.stringify(report);
           return;
         }
         switch (report.type) {
-          case 'candidate-pair':
-            if (report['state'] !== 'succeeded') {
-              break;
-            } else {
-              report['currentRoundTripTime'] && (_this3._newStats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']));
-            }
-            break;
           case 'outbound-rtp':
-            // 上行视频
-            if (report.kind === 'video') {
-              var tmpObject = {};
-              // 当前统计报告的类型
-              var type = _this3._mediaSourceIdToTrackIdentifier.get(report['mediaSourceId']) === _this3._localSharedTrackIdentifier ? 'shared' : 'camera';
-              console.warn('tid: ', _this3._localSharedTrackIdentifier, report);
-              // 前一次的统计结果
-              var previewStats = _this3._newStats.video.upStreams[type];
-              var remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
-
+            {
               // 用于计算速率和丢包的值
-              var calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
-              var calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
-              var calc_packetsLost = remoteInboundRtpsPacketsLost - (previewStats.packetsLost || 0);
+              calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
+              calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
 
               // 当前报告的原始值
               tmpObject['bytesSent'] = report['bytesSent'];
               tmpObject['packetsSent'] = report['packetsSent'];
-              tmpObject['framesSent'] = report['framesSent'];
-              tmpObject['framesEncoded'] = report['framesEncoded'];
-              tmpObject['framesPerSecond'] = report['framesPerSecond'];
-              tmpObject['frameHeight'] = report['frameHeight'];
-              tmpObject['frameWidth'] = report['frameWidth'];
-              // 通过 remote-inbound-rtp 报告获取的原始值
-              tmpObject['packetsLost'] = remoteInboundRtpsPacketsLost;
-
-              // 当前周期的计算值
-              var loss = 0;
-              if (!calc_packetsSent || calc_packetsLost === null) {
-                loss = null;
-              } else if (_this3._remoteInboundRtps.get(report['remoteId']) && 'fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
-                loss = Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100);
-                if (_this3._remoteInboundRtps.get(report['remoteId']).roundTripTime) {
-                  _this3._newStats.transport.RTT = Math.floor(1e3 * _this3._remoteInboundRtps.get(report['remoteId']).roundTripTime);
-                }
-              } else {
-                loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
+              if (report['kind'] === 'video') {
+                report['framesSent'] && (tmpObject['framesSent'] = report['framesSent']);
+                tmpObject['framesEncoded'] = report['framesEncoded'] || null;
+                tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
+                tmpObject['frameHeight'] = report['frameHeight'] || sender.track && sender.track.getSettings()['height'] || null;
+                tmpObject['frameWidth'] = report['frameWidth'] || sender.track && sender.track.getSettings()['width'] || null;
               }
-              tmpObject['calc_loss'] = loss;
-              tmpObject['calc_speed'] = report['bytesSent'] === null ? null : calc_bytesSent / _this3._delay * 8;
-
-              // 合并统计结果
-              Object.assign(_this3._newStats.video.upStreams[type], tmpObject);
-            } else if (report.kind === 'audio') {
-              var _tmpObject = {};
-
-              // 前一次的统计结果
-              var _previewStats = _this3._newStats.audio;
-              var _remoteInboundRtpsPacketsLost = _this3._remoteInboundRtps.get(report['remoteId']) ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost ? _this3._remoteInboundRtps.get(report['remoteId']).packetsLost : 0 : 0;
-
-              // 用于计算速率和丢包的值
-              var _calc_bytesSent = report['bytesSent'] - (_previewStats.bytesSent || 0);
-              var _calc_packetsSent = report['packetsSent'] - (_previewStats.sendPacketsLost || 0);
-              var _calc_packetsLost = _remoteInboundRtpsPacketsLost - (_previewStats.packetsLost || 0);
-
-              // 当前报告的原始值
-              _tmpObject['bytesSent'] = report['bytesSent'];
-              _tmpObject['packetsSent'] = report['packetsSent'];
-              // 通过 remote-inbound-rtp 报告获取的原始值
-              _tmpObject['sendPacketsLost'] = _remoteInboundRtpsPacketsLost;
-
-              // 当前周期的计算值
-              var _loss = 0;
-              if (!_calc_packetsSent || _calc_packetsLost === null) {
-                _loss = null;
-              } else if (_this3._remoteInboundRtps.get(report['remoteId']) && 'fractionLost' in _this3._remoteInboundRtps.get(report['remoteId'])) {
-                _loss = Math.floor(_this3._remoteInboundRtps.get(report['remoteId']).fractionLost * 100);
-              } else {
-                _loss = Math.floor(_calc_packetsLost * 100 / _calc_packetsSent);
-              }
-              _tmpObject['calc_uplink_loss'] = _loss;
-              _tmpObject['calc_uplink_speed'] = report['bytesSent'] === null ? null : _calc_bytesSent / _this3._delay * 8;
-
-              // 合并统计结果
-              Object.assign(_this3._newStats.audio, _tmpObject);
+              break;
             }
+          case 'remote-inbound-rtp':
+            calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
+            fractionLost = 'fractionLost' in report ? report['fractionLost'] : null;
+            _this3._newStats.rtt = report['roundTripTime'] && Math.floor(1e3 * report['roundTripTime']);
+            (report['jitter'] || report['jitter'] === 0) && (tmpObject['jitter'] = Math.floor(1e3 * report['jitter']));
+            tmpObject['packetsLost'] = report['packetsLost'];
             break;
-          case 'inbound-rtp':
-            // 下行视频
-            if (report.kind === 'video') {
-              var _tmpObject2 = {};
-              // 当前统计报告的类型
-              var _type = report['trackIdentifier'] === _this3._remoteSharedTrackIdentifier ? 'shared' : 'camera';
-
-              // 前一次的统计结果
-              var _previewStats2 = _this3._newStats.video.downStreams[_type];
-
-              // 用于计算速率和丢包的值
-              var calc_bytesReceived = report['bytesReceived'] - (_previewStats2.bytesReceived || 0);
-              var calc_packetsReceived = report['packetsReceived'] - (_previewStats2.packetsReceived || 0);
-              var _calc_packetsLost2 = report['packetsLost'] - (_previewStats2.packetsLost || 0);
-
-              // 当前报告的原始值
-              _tmpObject2['bytesReceived'] = report['bytesReceived'];
-              _tmpObject2['packetsReceived'] = report['packetsReceived'];
-              _tmpObject2['packetsLost'] = report['packetsLost'];
-              _tmpObject2['framesReceived'] = report['framesReceived'];
-              _tmpObject2['framesDecoded'] = report['framesDecoded'];
-              _tmpObject2['framesPerSecond'] = report['framesPerSecond'];
-              _tmpObject2['frameHeight'] = report['frameHeight'];
-              _tmpObject2['frameWidth'] = report['frameWidth'];
-
-              // 当前周期的计算值
-              var _loss2 = 0;
-              if (!calc_bytesReceived || _calc_packetsLost2 === null) {
-                _loss2 = null;
-              } else {
-                _loss2 = Math.floor(_calc_packetsLost2 * 100 / (calc_packetsReceived + _calc_packetsLost2));
-              }
-              _tmpObject2['calc_loss'] = _loss2;
-              _tmpObject2['calc_speed'] = report['bytesReceived'] === null ? null : calc_bytesReceived / _this3._delay * 8;
-
-              // 合并统计结果
-              Object.assign(_this3._newStats.video.downStreams[_type], _tmpObject2);
-            } else if (report.kind === 'audio') {
-              var _tmpObject3 = {};
-
-              // 前一次的统计结果
-              var _previewStats3 = _this3._newStats.audio;
-
-              // 用于计算速率和丢包的值
-              var _calc_bytesReceived = report['bytesReceived'] - (_previewStats3.bytesReceived || 0);
-              var _calc_packetsReceived = report['packetsReceived'] - (_previewStats3.packetsReceived || 0);
-              var _calc_packetsLost3 = report['packetsLost'] - (_previewStats3.recvPacketsLost || 0);
-
-              // 当前报告的原始值
-              _tmpObject3['bytesReceived'] = report['bytesReceived'];
-              _tmpObject3['packetsReceived'] = report['packetsReceived'];
-              _tmpObject3['recvPacketsLost'] = report['packetsLost'];
-
-              // 当前周期的计算值
-              var _loss3 = 0;
-              if (!_calc_bytesReceived || _calc_packetsLost3 === null) {
-                _loss3 = null;
-              } else {
-                _loss3 = Math.floor(_calc_packetsLost3 * 100 / (_calc_packetsReceived + _calc_packetsLost3));
-              }
-              _tmpObject3['calc_downlink_loss'] = _loss3;
-              _tmpObject3['calc_downlink_speed'] = report['bytesReceived'] === null ? null : _calc_bytesReceived / _this3._delay * 8;
-              // 合并统计结果
-              Object.assign(_this3._newStats.audio, _tmpObject3);
-            }
+          case 'codec':
+            tmpObject['mimeType'] = report['mimeType'].split('/')[1];
             break;
           default:
             break;
         }
       });
-      if (data) {
-        logger.debug(data);
-        return;
+
+      // 当前周期的计算值
+      var loss = 0;
+      if (!calc_packetsSent || calc_packetsLost === null) {
+        loss = null;
+      } else if (fractionLost) {
+        loss = Math.floor(fractionLost * 100);
+      } else {
+        loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
       }
+      tmpObject['calc_loss'] = loss;
+      tmpObject['calc_speed'] = !calc_bytesSent ? null : calc_bytesSent / this._delay * 8;
+      !tmpObject['frameWidth'] && type !== 'audio' && (tmpObject = {});
+
+      // 合并统计结果
+      (calc_packetsSent || calc_packetsSent === 0) && (this._newStats.upStreams[type] = tmpObject);
+    }
+
+    // 解析下行统计报告
+  }, {
+    key: "_parseReceiverReport",
+    value: function _parseReceiverReport(reports, receiver, shared, inform) {
+      var _this4 = this;
+      var type;
+      var tmpObject = {};
+      shared ? type = 'shared' : type = receiver.track.kind;
+
+      // 前一次的统计结果
+      var previewStats = this._newStats.downStreams[type];
+
+      // 用于计算速率和丢包的值
+      var calc_bytesReceived;
+      var calc_packetsReceived;
+      var calc_packetsLost;
+      reports.forEach(function (report) {
+        if (inform) {
+          _this4._data += JSON.stringify(report);
+          return;
+        }
+        switch (report.type) {
+          case 'inbound-rtp':
+            {
+              // 用于计算速率和丢包的值
+              calc_bytesReceived = report['bytesReceived'] - (previewStats.bytesReceived || 0);
+              calc_packetsReceived = report['packetsReceived'] - (previewStats.packetsReceived || 0);
+              calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
+
+              // 当前报告的原始值
+              tmpObject['bytesReceived'] = report['bytesReceived'];
+              tmpObject['packetsReceived'] = report['packetsReceived'];
+              tmpObject['packetsLost'] = report['packetsLost'];
+              (report['jitter'] || report['jitter'] === 0) && (tmpObject['jitter'] = Math.floor(1e3 * report['jitter']));
+              if (report['kind'] === 'video') {
+                report['framesReceived'] && (tmpObject['framesReceived'] = report['framesReceived']);
+                tmpObject['framesDecoded'] = report['framesDecoded'] || null;
+                tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
+                report['frameHeight'] && (tmpObject['frameHeight'] = report['frameHeight']);
+                report['frameWidth'] && (tmpObject['frameWidth'] = report['frameWidth']);
+              }
+              break;
+            }
+          case 'codec':
+            tmpObject['mimeType'] = report['mimeType'].split('/')[1];
+            break;
+          default:
+            break;
+        }
+      });
+
+      // 当前周期的计算值
+      var loss = 0;
+      if (!calc_bytesReceived || calc_packetsLost === null) {
+        loss = null;
+      } else {
+        loss = Math.floor(calc_packetsLost * 100 / (calc_packetsReceived + calc_packetsLost));
+      }
+      tmpObject['calc_loss'] = loss;
+      tmpObject['calc_speed'] = !calc_bytesReceived ? null : calc_bytesReceived / this._delay * 8;
+      calc_packetsReceived === 0 && (tmpObject = {});
+      // 合并统计结果
+      (calc_packetsReceived || calc_packetsReceived === 0) && (this._newStats.downStreams[type] = tmpObject);
+    }
+
+    // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
+    // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
+  }, {
+    key: "_createReport",
+    value: function _createReport() {
       var newReport = formatStats(this._newStats);
       logger.debug(JSON.stringify(this._newStats));
       this.emit('report', {
-        RTT: newReport.transport.RTT,
-        upStreams: newReport.video.upStreams,
-        downStreams: newReport.video.downStreams,
-        uplinkSpeed: "".concat(((newReport.video.calc_uplink_speed + newReport.audio.calc_uplink_speed) / 1000).toFixed(1), "kbps"),
-        downlinkSpeed: "".concat(((newReport.video.calc_downlink_speed + newReport.audio.calc_downlink_speed) / 1000).toFixed(1), "kbps"),
-        downlinkLoss: "".concat(Math.max(newReport.audio.calc_downlink_loss || 0, newReport.video.calc_downlink_loss || 0), "%"),
-        uplinkLoss: "".concat(Math.max(newReport.audio.calc_uplink_loss || 0, newReport.video.calc_uplink_loss || 0), "%")
+        RTT: newReport.rtt,
+        upStreams: newReport.upStreams,
+        downStreams: newReport.downStreams
       });
       function formatStats(oldStats) {
         // 创建新的stats对象结构
         var newStats = {
-          transport: {
-            RTT: oldStats.transport.RTT
-          },
+          rtt: oldStats.rtt,
           audio: {
-            bytesSent: oldStats.audio.bytesSent,
-            packetsSent: oldStats.audio.packetsSent,
-            bytesReceived: oldStats.audio.bytesReceived,
-            packetsReceived: oldStats.audio.packetsReceived,
-            calc_uplink_loss: oldStats.audio.calc_uplink_loss,
-            calc_uplink_speed: oldStats.audio.calc_uplink_speed,
-            calc_downlink_loss: oldStats.audio.calc_downlink_loss,
-            calc_downlink_speed: oldStats.audio.calc_downlink_speed
+            calc_uplink_loss: 0,
+            calc_downlink_loss: 0
           },
           video: {
-            bytesSent: 0,
-            packetsSent: 0,
-            bytesReceived: 0,
-            packetsReceived: 0,
             calc_uplink_loss: 0,
-            calc_uplink_speed: 0,
-            calc_downlink_loss: 0,
-            calc_downlink_speed: 0,
-            upStreams: [],
-            downStreams: []
-          }
+            calc_downlink_loss: 0
+          },
+          upStreams: [],
+          downStreams: []
         };
 
-        // 处理视频上行流数据
-        var oldUpStreams = oldStats.video.upStreams;
-        var totalBytesSent = 0;
-        var totalPacketsSent = 0;
+        // 处理视频上下行流数据
+        var oldUpStreams = oldStats.upStreams;
+        var oldDownStreams = oldStats.downStreams;
         var maxUpLinkLoss = 0;
-        var totalUpLinkSpeed = 0;
+        var maxDownLinkLoss = 0;
+        newStats.upStreams.push({
+          type: 'audio',
+          mimeType: oldUpStreams['audio'].mimeType,
+          bytesSent: oldUpStreams['audio'].bytesSent,
+          packetsSent: oldUpStreams['audio'].packetsSent,
+          loss: oldUpStreams['audio'].calc_loss,
+          jitter: oldUpStreams['audio'].jitter,
+          speed: (oldUpStreams['audio'].calc_speed / 1000).toFixed(1)
+        });
+        newStats.downStreams.push({
+          type: 'audio',
+          mimeType: oldDownStreams['audio'].mimeType,
+          bytesReceived: oldDownStreams['audio'].bytesReceived,
+          packetsReceived: oldDownStreams['audio'].packetsReceived,
+          loss: oldDownStreams['audio'].calc_loss,
+          jitter: oldDownStreams['audio'].jitter,
+          speed: (oldDownStreams['audio'].calc_speed / 1000).toFixed(1)
+        });
 
-        // 计算camera和shared的总和
-        for (var _i = 0, _arr = ['camera', 'shared']; _i < _arr.length; _i++) {
+        // 计算video和shared的总和
+        for (var _i = 0, _arr = ['video', 'shared']; _i < _arr.length; _i++) {
           var type = _arr[_i];
-          if (oldUpStreams[type]) {
-            totalBytesSent += oldUpStreams[type].bytesSent || 0;
-            totalPacketsSent += oldUpStreams[type].packetsSent || 0;
+          if (Object.keys(oldUpStreams[type]).length > 0) {
             maxUpLinkLoss = Math.max(maxUpLinkLoss, oldUpStreams[type].calc_loss || 0);
-            totalUpLinkSpeed += oldUpStreams[type].calc_speed || 0;
-
             // 添加到新的upStreams数组
-            newStats.video.upStreams.push({
+            newStats.upStreams.push({
               type: type,
+              mimeType: oldUpStreams[type].mimeType,
               framesSent: oldUpStreams[type].framesSent,
               framesEncoded: oldUpStreams[type].framesEncoded,
               framesPerSecond: oldUpStreams[type].framesPerSecond,
               frameHeight: oldUpStreams[type].frameHeight,
               frameWidth: oldUpStreams[type].frameWidth,
-              speed: "".concat((oldUpStreams[type].calc_speed / 1000).toFixed(1), "kbps")
+              loss: oldUpStreams[type].calc_loss,
+              jitter: oldUpStreams[type].jitter,
+              speed: (oldUpStreams[type].calc_speed / 1000).toFixed(1)
             });
           }
-        }
-
-        // 处理视频下行流数据
-        var oldDownStreams = oldStats.video.downStreams;
-        var totalBytesReceived = 0;
-        var totalPacketsReceived = 0;
-        var maxDownLinkLoss = 0;
-        var totalDownLinkSpeed = 0;
-
-        // 计算camera和shared的总和
-        for (var _i2 = 0, _arr2 = ['camera', 'shared']; _i2 < _arr2.length; _i2++) {
-          var _type2 = _arr2[_i2];
-          if (oldDownStreams[_type2]) {
-            totalBytesReceived += oldDownStreams[_type2].bytesReceived || 0;
-            totalPacketsReceived += oldDownStreams[_type2].packetsReceived || 0;
-            maxDownLinkLoss = Math.max(maxDownLinkLoss, oldDownStreams[_type2].calc_loss || 0);
-            totalDownLinkSpeed += oldDownStreams[_type2].calc_speed || 0;
-
+          if (Object.keys(oldDownStreams[type]).length > 0) {
+            maxDownLinkLoss = Math.max(maxDownLinkLoss, oldDownStreams[type].calc_loss || 0);
             // 添加到新的downStreams数组
-            newStats.video.downStreams.push({
-              type: _type2,
-              framesReceived: oldDownStreams[_type2].framesReceived,
-              framesDecoded: oldDownStreams[_type2].framesDecoded,
-              framesPerSecond: oldDownStreams[_type2].framesPerSecond,
-              frameHeight: oldDownStreams[_type2].frameHeight,
-              frameWidth: oldDownStreams[_type2].frameWidth,
-              speed: "".concat((oldDownStreams[_type2].calc_speed / 1000).toFixed(1), "kbps")
+            newStats.downStreams.push({
+              type: type,
+              mimeType: oldDownStreams[type].mimeType,
+              framesReceived: oldDownStreams[type].framesReceived,
+              framesDecoded: oldDownStreams[type].framesDecoded,
+              framesPerSecond: oldDownStreams[type].framesPerSecond,
+              frameHeight: oldDownStreams[type].frameHeight,
+              frameWidth: oldDownStreams[type].frameWidth,
+              loss: oldUpStreams[type].calc_loss,
+              jitter: oldUpStreams[type].jitter,
+              speed: (oldDownStreams[type].calc_speed / 1000).toFixed(1)
             });
           }
         }
-
-        // 设置计算后的视频统计数据
-        newStats.video.bytesSent = totalBytesSent;
-        newStats.video.packetsSent = totalPacketsSent;
-        newStats.video.bytesReceived = totalBytesReceived;
-        newStats.video.packetsReceived = totalPacketsReceived;
         newStats.video.calc_uplink_loss = maxUpLinkLoss;
-        newStats.video.calc_uplink_speed = totalUpLinkSpeed;
         newStats.video.calc_downlink_loss = maxDownLinkLoss;
-        newStats.video.calc_downlink_speed = totalDownLinkSpeed;
         return newStats;
       }
 
@@ -25765,16 +25729,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var uplinkNetworkQuality = [];
       var downlinkNetworkQuality = [];
       var downlinkLoss = [];
-      RTT.push(newReport.transport.RTT);
+      RTT.push(newReport.rtt);
       // eslint-disable-next-line max-len
       uplinkLoss.push(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss);
       // eslint-disable-next-line max-len
-      uplinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss, newReport.transport.RTT));
+      uplinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss, newReport.rtt));
 
       // eslint-disable-next-line max-len
       downlinkLoss.push(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss);
       // eslint-disable-next-line max-len
-      downlinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss, newReport.transport.RTT));
+      downlinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss, newReport.rtt));
       this._networkQuality = {
         // eslint-disable-next-line max-len
         uplinkNetworkQuality: uplinkNetworkQuality.length > 0 ? Math.floor(uplinkNetworkQuality.reduce(function (pre, cur) {
@@ -29215,23 +29179,20 @@ exports.generateAnEmptyVideoTrack = function () {
 };
 var createSilentAudioTrack = /*#__PURE__*/function () {
   var _ref5 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
-    var audioContext, oscillator, destination, gainNode;
+    var audio, audioContext, destination, source;
     return _regeneratorRuntime().wrap(function _callee4$(_context4) {
       while (1) switch (_context4.prev = _context4.next) {
         case 0:
-          // 创建 AudioContext
+          audio = new Audio();
           audioContext = new AudioContext();
-          oscillator = audioContext.createOscillator();
           destination = audioContext.createMediaStreamDestination();
-          gainNode = audioContext.createGain(); // 将增益设置为0（静音）
-          gainNode.gain.value = 0;
-
-          // 连接节点
-          oscillator.connect(gainNode);
-          gainNode.connect(destination);
-
-          // 开始产生音频
-          oscillator.start();
+          source = audioContext.createMediaElementSource(audio);
+          audio.loop = true;
+          audio.crossOrigin = 'anonymous';
+          audio.play()["catch"](function (error) {
+            console.warn("new Audio() error: ".concat(JSON.stringify(error)));
+          });
+          source.connect(destination);
           return _context4.abrupt("return", {
             state: audioContext.state,
             audioContext: audioContext,
