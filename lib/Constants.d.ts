@@ -2,16 +2,16 @@ export const USER_AGENT: string
 export const SIP = 'sip'
 export const SIPS = 'sips'
 
-export const MAX_BUFFERED_AMOUNT     = 16*1024
-export const CHANNEL_CLOSING_TIMEOUT = 5*1000
+export const MAX_BUFFERED_AMOUNT = 16 * 1024
+export const CHANNEL_CLOSING_TIMEOUT = 5 * 1000
 
 export const BFCP = 'BFCP'
-export const BFCP_HEARTBEAT_INTERVAL = 30*1000
-export const MAX_RETRY_ATTEMPTS      = 4
-export const BFCP_TRANSCEIVER_INDEX  = 'trancesiver_index'
-export const BFCP_SHARED_STREAM_INDEX  = 'shared_stream_index'
+export const BFCP_HEARTBEAT_INTERVAL = 30 * 1000
+export const MAX_RETRY_ATTEMPTS = 4
+export const BFCP_TRANSCEIVER_INDEX = 'trancesiver_index'
+export const BFCP_SHARED_STREAM_INDEX = 'shared_stream_index'
 
-export enum CMODE  {
+export enum CMODE {
   PAPHONE = 'paphone'
 }
 
@@ -71,7 +71,7 @@ export enum DTMF_TRANSPORT {
 }
 
 export const REASON_PHRASE: Record<number, string>
-export const ALLOWED_METHODS = 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY'
+export const ALLOWED_METHODS = 'INVITE,ACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,INFO,NOTIFY'
 export const ACCEPTED_BODY_TYPES = 'application/sdp, application/dtmf-relay'
 export const MAX_FORWARDS = 69
 export const SESSION_EXPIRES = 90

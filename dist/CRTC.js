@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20255141021
+ * CRTC v1.10.9-beta.20255161535
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405010282042 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405010323070 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3740,7 +3740,7 @@ module.exports = {
     604: 'Does Not Exist Anywhere',
     606: 'Not Acceptable'
   },
-  ALLOWED_METHODS: 'INVITE,ACK,PRACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
+  ALLOWED_METHODS: 'INVITE,ACK,PRACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
   MAX_FORWARDS: 69,
   SESSION_EXPIRES: 90,
@@ -16833,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405010282042');
+debug('version %s', '1.10.9-beta.405010323070');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405010282042';
+    return '1.10.9-beta.405010323070';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21525,11 +21525,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua);
         session.on('progress', function (_ref4) {
           var response = _ref4.response;
-          notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
         session.on('accepted', function (_ref5) {
           var response = _ref5.response;
-          notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
 
           // 华为MCU需要挂断
           _this26._enableBFCP && _this26.terminate();
@@ -21538,9 +21538,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var message = _ref6.message,
             cause = _ref6.cause;
           if (message) {
-            notifier.notify(message.status_code, message.reason_phrase);
+            _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
-            notifier.notify(487, cause);
+            _this26._enableBFCP || notifier.notify(487, cause);
           }
         });
 
@@ -26670,10 +26670,11 @@ module.exports = /*#__PURE__*/function () {
       var maxMessageSizeMatch = message.match(/a=max-message-size:(\d+)/);
 
       // 提取SCTP端口
-      this._sctp_port = sctpPortMatch ? sctpPortMatch[1] : null; // 结果: "5000"
+      sctpPortMatch && sctpPortMatch[1] && (this._sctp_port = sctpPortMatch[1]); // 结果: "5000"
       // 提取最大消息大小
-      this._max_message_size = maxMessageSizeMatch ? maxMessageSizeMatch[1] : null; // 结果: "1073741823"
+      maxMessageSizeMatch && maxMessageSizeMatch[1] && (this._max_message_size = maxMessageSizeMatch[1]); // 结果: "1073741823"
 
+      logger.debug('scpt,max_message_size: ', this._sctp_port, this._max_message_size);
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
     }
