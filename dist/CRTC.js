@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20255161535
+ * CRTC v1.10.9-beta.20255231013
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405010323070 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405010462026 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3740,7 +3740,7 @@ module.exports = {
     604: 'Does Not Exist Anywhere',
     606: 'Not Acceptable'
   },
-  ALLOWED_METHODS: 'INVITE,ACK,PRACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,INFO,NOTIFY',
+  ALLOWED_METHODS: 'INVITE,ACK,PRACK,CANCEL,BYE,UPDATE,MESSAGE,OPTIONS,REFER,INFO,NOTIFY',
   ACCEPTED_BODY_TYPES: 'application/sdp, application/dtmf-relay',
   MAX_FORWARDS: 69,
   SESSION_EXPIRES: 90,
@@ -16833,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405010323070');
+debug('version %s', '1.10.9-beta.405010462026');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405010323070';
+    return '1.10.9-beta.405010462026';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -20385,6 +20385,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Close local MediaStream if it was not given by the user.
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
         logger.debug('close() | closing local MediaStream');
+        console.warn('close() | closing local MediaStream', this._localMediaStream, this._localMediaStream.getTracks());
         Utils.closeMediaStream(this._localMediaStream);
       }
       if (this._localShareStream) {
@@ -21521,6 +21522,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         initCallback = typeof initCallback === 'function' ? initCallback : null;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
+        }
+        if (this._enableBFCP) {
+          initCallback && initCallback();
+          return;
         }
         var session = new RTCSession(this._ua);
         session.on('progress', function (_ref4) {
@@ -25523,7 +25528,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 当前报告的原始值
               tmpObject['bytesSent'] = report['bytesSent'];
-              tmpObject['packetsSent'] = report['packetsSent'];
+              tmpObject['packetsSent'] = report['packetsSent'] || 0;
               if (report['kind'] === 'video') {
                 report['framesSent'] && (tmpObject['framesSent'] = report['framesSent']);
                 tmpObject['framesEncoded'] = report['framesEncoded'] || null;
@@ -25537,7 +25542,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
             fractionLost = 'fractionLost' in report ? report['fractionLost'] : null;
             _this3._newStats.rtt = report['roundTripTime'] && Math.floor(1e3 * report['roundTripTime']);
-            (report['jitter'] || report['jitter'] === 0) && (tmpObject['jitter'] = Math.floor(1e3 * report['jitter']));
+            if ('jitter' in report) {
+              tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
+            }
             tmpObject['packetsLost'] = report['packetsLost'];
             break;
           case 'codec':
@@ -25596,13 +25603,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 当前报告的原始值
               tmpObject['bytesReceived'] = report['bytesReceived'];
-              tmpObject['packetsReceived'] = report['packetsReceived'];
+              tmpObject['packetsReceived'] = report['packetsReceived'] || 0;
               tmpObject['packetsLost'] = report['packetsLost'];
-              (report['jitter'] || report['jitter'] === 0) && (tmpObject['jitter'] = Math.floor(1e3 * report['jitter']));
+              if ('jitter' in report) {
+                tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
+              }
               if (report['kind'] === 'video') {
                 report['framesReceived'] && (tmpObject['framesReceived'] = report['framesReceived']);
                 tmpObject['framesDecoded'] = report['framesDecoded'] || null;
-                tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
+                report['framerateMean'] && (tmpObject['framesPerSecond'] = Math.ceil(report['framerateMean']));
+                report['framesPerSecond'] && (tmpObject['framesPerSecond'] = report['framesPerSecond']);
+                // tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
                 report['frameHeight'] && (tmpObject['frameHeight'] = report['frameHeight']);
                 report['frameWidth'] && (tmpObject['frameWidth'] = report['frameWidth']);
               }
@@ -25625,7 +25636,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       tmpObject['calc_loss'] = loss;
       tmpObject['calc_speed'] = !calc_bytesReceived ? null : calc_bytesReceived / this._delay * 8;
-      calc_packetsReceived === 0 && (tmpObject = {});
+      calc_packetsReceived === 0 && (tmpObject = {
+        packetsReceived: tmpObject['packetsReceived']
+      });
       // 合并统计结果
       (calc_packetsReceived || calc_packetsReceived === 0) && (this._newStats.downStreams[type] = tmpObject);
     }
@@ -25685,7 +25698,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 计算video和shared的总和
         for (var _i = 0, _arr = ['video', 'shared']; _i < _arr.length; _i++) {
           var type = _arr[_i];
-          if (Object.keys(oldUpStreams[type]).length > 0) {
+          if (Object.keys(oldUpStreams[type]).length > 1) {
             maxUpLinkLoss = Math.max(maxUpLinkLoss, oldUpStreams[type].calc_loss || 0);
             // 添加到新的upStreams数组
             newStats.upStreams.push({
@@ -25701,7 +25714,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               speed: (oldUpStreams[type].calc_speed / 1000).toFixed(1)
             });
           }
-          if (Object.keys(oldDownStreams[type]).length > 0) {
+          if (Object.keys(oldDownStreams[type]).length > 1) {
             maxDownLinkLoss = Math.max(maxDownLinkLoss, oldDownStreams[type].calc_loss || 0);
             // 添加到新的downStreams数组
             newStats.downStreams.push({
@@ -25712,8 +25725,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               framesPerSecond: oldDownStreams[type].framesPerSecond,
               frameHeight: oldDownStreams[type].frameHeight,
               frameWidth: oldDownStreams[type].frameWidth,
-              loss: oldUpStreams[type].calc_loss,
-              jitter: oldUpStreams[type].jitter,
+              loss: oldDownStreams[type].calc_loss,
+              jitter: oldDownStreams[type].jitter,
               speed: (oldDownStreams[type].calc_speed / 1000).toFixed(1)
             });
           }

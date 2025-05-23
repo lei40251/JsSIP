@@ -19,6 +19,11 @@ let tmpSession;
 let safari_r = false;
 let options;
 
+// 兼容mcu等候室用
+let cloneStream = null;
+let cusStream;
+let isRefer = false;
+
 const extraFeatures = [];
 
 // let payload;
@@ -175,9 +180,13 @@ ua.on('newRTCSession', function(e)
 
   e.session.on('refer', function(d)
   {
-    console.log('refer', d);
+    isRefer = true;
     d.request.refer_to.uri.host = sipDomain;
-    d.accept(null, options);
+    d.accept(() =>
+    {
+      e.session.terminate();
+      call('video', null, cloneStream);
+    }, options);
   });
 
   // 部分场景兼容使用
@@ -325,7 +334,12 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('cameraChanged', function(d)
   {
-    localVideo.srcObject = d.videoStream;
+    // 兼容mcu等候室用
+    const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
+
+    cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
+    cloneStream=new MediaStream([ localStream.audioStream.getAudioTracks()[0].clone(), d.videoStream.getVideoTracks()[0].clone() ]);
+    localVideo.srcObject = cloneStream;
 
     // 兼容不同浏览器安全策略
     setTimeout(() =>
@@ -344,7 +358,6 @@ ua.on('newRTCSession', function(e)
   e.session.on('remoteShared', function(d)
   {
     document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
-    // document.querySelector('#remoteVideo2').srcObject = CRTC.Utils.getStreams(e.session.connection, 'shared').videoStream;
     document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100';
   });
 
@@ -445,7 +458,7 @@ ua.on('newRTCSession', function(e)
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    if (rtcSession == e.session && Boolean(tmpSession))
+    if (rtcSession === e.session && Boolean(tmpSession))
     {
       stopStreams();
       getStreams(tmpSession.connection);
@@ -455,7 +468,7 @@ ua.on('newRTCSession', function(e)
       tmpSession = null;
       rtcSession = null;
       // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-      stopStreams();
+      // stopStreams();
       // 停止获取统计信息
       stats && stats.stop();
     }
@@ -1107,7 +1120,7 @@ document.querySelector('.resume').onclick = function()
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
  */
-async function call(type, direction)
+async function call(type, direction, mediaStream)
 {
   if (!ua.isRegistered())
   {
@@ -1131,14 +1144,21 @@ async function call(type, direction)
     options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
   }
 
-  options['mediaConstraints'] = {
-    audio :
-    {
-      sampleRate   : 48000,
-      channelCount : 1
-    },
-    video : type === 'video' ? videoConstraints : false
-  };
+  if (mediaStream)
+  {
+    options['mediaStream'] = mediaStream;
+  }
+  else
+  {
+    options['mediaConstraints'] = {
+      audio :
+      {
+        sampleRate   : 48000,
+        channelCount : 1
+      },
+      video : type === 'video' ? videoConstraints : false
+    };
+  }
 
   if (type === 'screen')
   {
@@ -1232,6 +1252,14 @@ async function call(type, direction)
   document.querySelector('#cancel').onclick = function()
   {
     session.terminate();
+    // 兼容mcu等候室用
+    cloneStream && cloneStream.getTracks().forEach((track) =>
+    {
+      track.stop();
+      localVideo.srcObject = null;
+    });
+    cusStream && cusStream.getTracks().forEach((track) => track.stop());
+    cloneStream = null;
   };
 }
 
@@ -1265,12 +1293,33 @@ function getStreams(pc)
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
   // 本地视频
-  localVideo.srcObject = localStream.videoStream;
-  localStream.videoStream.getTracks().length > 0 && localStream.videoStream.getTracks()[0].addEventListener('ended', function()
+  const newCloneStream = new MediaStream([ localStream.audioStream.getAudioTracks()[0].clone(), localStream.videoStream.getVideoTracks()[0].clone() ]);
+
+  localVideo.srcObject = newCloneStream;
+  newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
   {
     // 特殊情况下清理页面残留的video黑框
     localVideo.srcObject = null;
   });
+
+  // 停止旧的媒体流
+  if (cloneStream)
+  {
+    if (!isRefer)
+    {
+      cloneStream.getTracks().forEach((track) => track.stop());
+    }
+    else
+    {
+      cusStream && cusStream.getTracks().forEach((track) => track.stop());
+      cusStream = new MediaStream(cloneStream.getTracks());
+    }
+  }
+  isRefer = false;
+
+  // 更新全局的 cloneStream 引用
+  cloneStream = newCloneStream;
+
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
   setTimeout(() =>
