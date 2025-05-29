@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20255231013
+ * CRTC v1.10.9-beta.2025529155
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405010462026 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405010583010 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16833,7 +16833,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405010462026');
+debug('version %s', '1.10.9-beta.405010583010');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16870,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405010462026';
+    return '1.10.9-beta.405010583010';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -17960,8 +17960,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpStream = null;
     // 是否已经收到共享
     _this._remoteShared = false;
-    // this._bfct = null;
-
+    // bfcp使用的混音音频
+    _this._bfcpAudioDestination = null;
+    _this._bfcpAudioSources = [];
+    _this._bfcpMediastreams = [];
+    _this._bfcpAudioCtx = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -19509,22 +19512,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                     max: 1080
                   },
                   frameRate: 15
-                }
+                },
+                audio: true
               }).then(function (stream) {
                 _this8._localShareRTPSender = null;
                 _this8._localShareStream = stream;
                 _this8._streamInactiveHandle(dual);
                 if (_this8._bfcpRequestStatus === RequestStatusValue.Granted) {
                   // 替换流方式分享屏幕
-                  stream.getVideoTracks().forEach(function (track) {
+                  stream.getTracks().forEach(function (track) {
                     if (dual) {
-                      // this._localShareRTPSender = this._connection.addTrack(track, stream);
-                      // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-                      var sender = _this8._connection.getSenders().find(function (s) {
-                        return s.track == _this8._bfcpVideoTrack;
-                      });
-                      sender.replaceTrack(track);
-                      // this._bfct = track;
+                      if (track.kind === 'audio') {
+                        _this8._addShareAudioToBfcpAudioTrack(stream);
+                      } else {
+                        // this._localShareRTPSender = this._connection.addTrack(track, stream);
+                        // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
+                        var sender = _this8._connection.getSenders().find(function (s) {
+                          return s.track == _this8._bfcpVideoTrack;
+                        });
+                        sender.replaceTrack(track);
+                      }
                     } else {
                       var _sender4 = _this8._connection.getSenders().find(function (s) {
                         return s.track.kind == 'video' && s.track.readyState !== 'ended';
@@ -20137,6 +20144,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return this._dataChannelSend(floorRelease, currentTransactionId);
     }
 
+    // BFCP用的混音相关方法
+  }, {
+    key: "_createBfcpAudioTrack",
+    value: function _createBfcpAudioTrack(mediaStream) {
+      this._bfcpAudioCtx = new AudioContext();
+      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+      this._bfcpAudioSources.push(audioSource);
+      this._bfcpAudioDestination = this._bfcpAudioCtx.createMediaStreamDestination();
+      audioSource.connect(this._bfcpAudioDestination);
+      return this._bfcpAudioDestination.stream.getAudioTracks()[0];
+    }
+  }, {
+    key: "_addShareAudioToBfcpAudioTrack",
+    value: function _addShareAudioToBfcpAudioTrack(mediaStream) {
+      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+      this._bfcpAudioSources.push(audioSource);
+      audioSource.connect(this._bfcpAudioDestination);
+    }
+  }, {
+    key: "_distoryBfcpAudioTrack",
+    value: function _distoryBfcpAudioTrack() {
+      if (this._bfcpAudioSources.length > 0) {
+        this._bfcpAudioSources.forEach(function (audioSource) {
+          return audioSource.disconnect();
+        });
+        this._bfcpAudioSources = [];
+        this._bfcpAudioDestination = null;
+      }
+    }
+
     /**
      * In dialog Request Reception
      */
@@ -20388,6 +20425,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         console.warn('close() | closing local MediaStream', this._localMediaStream, this._localMediaStream.getTracks());
         Utils.closeMediaStream(this._localMediaStream);
       }
+
+      // 销毁BFCP相关媒体
+      this._distoryBfcpAudioTrack();
+      this._bfcpMediastreams.length > 0 && this._bfcpMediastreams.forEach(function (mediaStream) {
+        logger.debug('close() | closing local bfcp MediaStream');
+        Utils.closeMediaStream(mediaStream);
+      });
       if (this._localShareStream) {
         logger.debug('close() | closing local share MediaStream');
         Utils.closeMediaStream(this._localShareStream);
@@ -21677,7 +21721,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
       Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
-        var _Utils$generateAnEmpt2, videoTrack;
+        var stream, _Utils$generateAnEmpt2, videoTrack;
         return _regeneratorRuntime().wrap(function _callee5$(_context5) {
           while (1) switch (_context5.prev = _context5.next) {
             case 0:
@@ -21687,7 +21731,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               throw new Error('terminated');
             case 2:
-              _this29._localMediaStream = mediaStream;
+              // 兼容BFCP需要做音频混音
+              if (_this29._enableBFCP) {
+                stream = new MediaStream([_this29._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
+                _this29._bfcpMediastreams.push(mediaStream);
+                _this29._localMediaStream = stream;
+              } else {
+                _this29._localMediaStream = mediaStream;
+              }
               if (_this29._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
@@ -22566,7 +22617,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (dual) {
             _this35._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this35._localShareStream.getTracks()[0].id) {
+                if (transeiver.sender.track.id === _this35._localShareStream.getVideoTracks()[0].id) {
                   _this35._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this35._bfcpVideoTrack);
                 }
               }
@@ -23429,7 +23480,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _this44._dataChannelSend(messageState.message, transactionId);
           }
         }, Math.pow(2, messageState.retries) * 500);
-        _this44._dataChannel.send(messageState.message);
+        _this44._dataChannel && _this44._dataChannel.send(messageState.message);
       });
     }
 

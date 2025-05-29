@@ -625,6 +625,13 @@ ua.on('newRTCSession', function(e)
 
     stats.on('report', function(r)
     {
+      e.session.connection.getReceivers().forEach((re) =>
+      {
+        // 测试丢包用
+        re.jitterBufferTarget = 2000;
+        re.playoutDelayHint = 1000;
+      });
+
       console.warn('report: ', JSON.stringify(r));
       let downF = '';
       let upF = '';

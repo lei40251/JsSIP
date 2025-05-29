@@ -52,6 +52,20 @@ const envs =
     iceServers         : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' }, { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
     iceTransportPolicy : 'relay'
   },
+  env_cloudnetuc_tcp : {
+    signalingUrl       : 'wss://cloudnetuc.vsbc.com:50600/wss',
+    sipDomain          : 'cloudnetuc.vsbc.com',
+    secretKey          : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA==',
+    iceServers         : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+    iceTransportPolicy : 'relay'
+  },
+  env_cloudnetuc_udp : {
+    signalingUrl       : 'wss://cloudnetuc.vsbc.com:50600/wss',
+    sipDomain          : 'cloudnetuc.vsbc.com',
+    secretKey          : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA==',
+    iceServers         : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+    iceTransportPolicy : 'relay'
+  },
   env_cloudnetuchw : {
     signalingUrl       : 'wss://cloudnetuchw.vsbc.com:50600/wss',
     sipDomain          : 'cloudnetuchw.vsbc.com',
