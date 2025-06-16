@@ -208,7 +208,7 @@ ua.on('newRTCSession', function(e)
       d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
       d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
 
-      d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
+      // d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
     }
     else if (d.originator === 'remote')
     {
@@ -823,6 +823,8 @@ ua.on('newRTCSession', function(e)
   {
     e.session.terminate();
 
+    CRTC.Utils.stopBlackVideo();
+
     try
     {
       rtcSession.terminate();
@@ -1203,7 +1205,7 @@ async function call(type, direction, mediaStream)
     }
 
     // 自定义视频
-    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnEmptyVideoTrack().videoTrack, tmpStream);
+    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
     // 系统麦克风和摄像头
@@ -1214,6 +1216,10 @@ async function call(type, direction, mediaStream)
   }
 
   const callee = document.querySelector('#callee').value;
+
+  options['mediaConstraints'].video = {
+    deviceId : document.querySelector('#cameras').options[document.querySelector('#cameras').selectedIndex].value
+  };
 
   console.log('op: ', options);
   const session = await ua.call(`${callee}@${sipDomain}`, options);
@@ -1259,6 +1265,8 @@ async function call(type, direction, mediaStream)
   document.querySelector('#cancel').onclick = function()
   {
     session.terminate();
+    // 关闭无设备的黑屏
+    CRTC.Utils.stopBlackVideo();
     // 兼容mcu等候室用
     cloneStream && cloneStream.getTracks().forEach((track) =>
     {
@@ -1299,8 +1307,21 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
+  const audioTrack = localStream.audioStream.getAudioTracks()[0].clone();
+  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  let mediaStreamArray = [];
+
+  if (videoTrack)
+  {
+    mediaStreamArray = [ audioTrack, videoTrack ];
+  }
+  else
+  {
+    mediaStreamArray = [ audioTrack ];
+  }
+
   // 本地视频
-  const newCloneStream = new MediaStream([ localStream.audioStream.getAudioTracks()[0].clone(), localStream.videoStream.getVideoTracks()[0].clone() ]);
+  const newCloneStream = new MediaStream(mediaStreamArray);
 
   localVideo.srcObject = newCloneStream;
   newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()

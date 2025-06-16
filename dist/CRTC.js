@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025529155
+ * CRTC v1.10.9-beta.2025691230
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405010583010 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405012182460 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3555,6 +3555,7 @@ module.exports = {
   // BFCP控制的流transceiver索引号
   BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
   BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
+  ANIMATION_ID: 'animationId',
   CMODE: {
     PAPHONE: 'paphone'
   },
@@ -16833,7 +16834,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405010583010');
+debug('version %s', '1.10.9-beta.405012182460');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16870,7 +16871,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405010583010';
+    return '1.10.9-beta.405012182460';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -20741,6 +20742,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 兼容 Firefox 去掉 bundle
         desc.sdp = desc.sdp.replace(/a=bundle-only\r\n/g, '');
         desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
+        desc.sdp = desc.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -29079,22 +29081,17 @@ exports.getStreams = function (pc, type, i) {
         mediaStream: mediaStream
       };
     } else if (type === 'local' && typeof pc.getSenders === 'function') {
+      var shareStreamIndex = sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX);
+
       // 处理本地流
       var senders = pc.getSenders();
       if (Array.isArray(senders)) {
-        senders.forEach(function (sender) {
+        senders.forEach(function (sender, index) {
           if (sender.track && sender.track.readyState === 'live') {
             if (sender.track.kind === 'audio') {
               audioStream.addTrack(sender.track);
-            } else {
-              // 检查是否为Canvas轨道的兼容方案
-              var isCanvasTrack = function isCanvasTrack() {
-                var settings = sender.track.getSettings();
-                return settings.deviceId === 'canvas' || sender.track.label.toLowerCase().includes('canvas') || sender.track.constructor && sender.track.constructor.name === 'CanvasCaptureMediaStreamTrack' || sender.track.kind === 'video' && sender.track.contentHint === 'drawing';
-              };
-              if (!isCanvasTrack()) {
-                videoStream.addTrack(sender.track);
-              }
+            } else if (sender.track && sender.track.readyState === 'live' && shareStreamIndex !== index) {
+              videoStream.addTrack(sender.track);
             }
           }
         });
@@ -29207,7 +29204,7 @@ var createCanvasVideoTrack = function createCanvasVideoTrack() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 捕获 Canvas 的视频流
-  var videoStream = canvas.captureStream();
+  var videoStream = canvas.captureStream(1);
   canvas = null;
   videoStream.getVideoTracks()[0].stop();
 
@@ -29242,6 +29239,39 @@ exports.generateAnEmptyVideoTrack = function () {
     return createCanvasVideoTrack();
   }
 };
+
+// 输出一个黑图视频
+exports.generateAnBlackVideoTrack = function () {
+  sessionStorage.clear('stopBlackTrack');
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  canvas.setAttribute('style', 'diaplay:none');
+  var _drawToCanvas2 = function drawToCanvas() {
+    if (sessionStorage.getItem('stopBlackTrack')) {
+      return;
+    }
+    canvas.width = 640;
+    canvas.height = 480;
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, 640, 480);
+    window.requestAnimationFrame(_drawToCanvas2);
+  };
+  _drawToCanvas2();
+
+  // 捕获 Canvas 的视频流
+  var videoStream = canvas.captureStream(5);
+
+  // 返回视频轨道和清理函数
+  return {
+    videoTrack: videoStream.getVideoTracks()[0]
+  };
+};
+// 停止黑屏视频
+exports.stopBlackVideo = function () {
+  sessionStorage.setItem('stopBlackTrack', true);
+};
+
+// 创建一个静音音频轨道
 var createSilentAudioTrack = /*#__PURE__*/function () {
   var _ref5 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
     var audio, audioContext, destination, source;

@@ -6,8 +6,8 @@ const defaulteEnv = {
   sipDomain          : '5g.vsbc.com',
   // secretKey    : sessionStorage.getItem('secret_key') ||'WjEI+dWAJYCGB+FqZJURtj9hhb0CMY6suuv8OQbkkO0BWS039oxggfJXuijuq30BXrsFt0kO8n8zpOkyQ0fM4oZqzDiFRgRxEtbE0rABqbtLoMxniFCxaVpRQi8q7F8YbsZDyv8CKaozYsFrw2VdGTBLPtiI8akgCOIXhFwg8XVHeUJ28HLWHna/h0EyV08ottnpO8L6M9h0zxxiHR109UI+WFW5E2kK5Z/mllIM5z62kSrOx6J1gt/BYCPNVSixW1FsYDmI7BirPqytBim9MTjciHzSYosEjzmjhKA980APFXQ4YCCCqTkRjxJJAHFMWdOAttrYtyTfdEteKfRRsg==',
   secretKey          : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
-  iceServers         : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
-  iceTransportPolicy : 'relay'
+  // iceServers         : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+  iceTransportPolicy : 'all'
 };
 
 const envs =
@@ -65,6 +65,13 @@ const envs =
     secretKey          : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA==',
     iceServers         : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
     iceTransportPolicy : 'relay'
+  },
+  env_cloudnetuc_no : {
+    signalingUrl       : 'wss://cloudnetuc.vsbc.com:50600/wss',
+    sipDomain          : 'cloudnetuc.vsbc.com',
+    secretKey          : sessionStorage.getItem('secret_key') || 'lOujhLsCfirM1l0AlbHIAHBgZa4+6bVPsJef83HkijZ/gGhtZC8fmEsnaK9wnQCKbq6Qp1uUt9bCvv61PefL7TCa6CJITdOYYiJY4AOO8q1WHH1wri8v7yujsd9EJKn3OkCeCVnC4IfPCmElD8U7yuBgqVzDH6DDpXBIN0qUsRAr6/nSZtAHx3aF9lyN/qTC+is3Pwgs9NxXajTzyf6I7Nl1xbHCexNTp4+ndN1JaeleeeCnFVHzazE8nwrmcoH9tMwaiUjkYBYbV3qaFAEU0k9QLebcW/twJbkb8v8lTo/OFEU4hS2bzBcyoHslQQ2E1o+kgqWR9OCntSoRTtIiIA==',
+    // iceServers         : [ { 'urls': 'turn:cloudnetuc.vsbc.com:20100?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+    iceTransportPolicy : 'all'
   },
   env_cloudnetuchw : {
     signalingUrl       : 'wss://cloudnetuchw.vsbc.com:50600/wss',
