@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20256171144
+ * CRTC v1.10.9-beta.20256172119
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405012342288 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405012344238 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16834,7 +16834,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405012342288');
+debug('version %s', '1.10.9-beta.405012344238');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16871,7 +16871,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405012342288';
+    return '1.10.9-beta.405012344238';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -20423,7 +20423,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Close local MediaStream if it was not given by the user.
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
         logger.debug('close() | closing local MediaStream');
-        console.warn('close() | closing local MediaStream', this._localMediaStream, this._localMediaStream.getTracks());
         Utils.closeMediaStream(this._localMediaStream);
       }
 
@@ -20846,17 +20845,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 m.port = 0;
                 // m.direction = 'inactive';
               }
+              console.warn('mport: ', m.port);
               if (m.port !== 0) {
-                _this18._mode === '' && (_this18._mode = 'video');
+                if (_this18._mode === '') {
+                  _this18._mode = 'video';
+                } else {
+                  _this18._ontogglemode('video');
+                }
                 _this18._localToAudio = false;
                 _this18._localToVideo = true;
               }
+              console.warn('mptm: ', _this18._mode);
             }
           } catch (err) {
             _iterator5.e(err);
           } finally {
             _iterator5.f();
           }
+          console.warn('this.mode: ', _this18._mode);
           _this18._mode === '' && (_this18._mode = 'audio');
         } else {
           /**
@@ -20868,12 +20874,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           try {
             for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
               var _m = _step6.value;
+              console.warn('aaaaammmmmmmmmmm: ', _m.type);
               if (_m.type !== 'video') {
                 continue;
               }
               var port = _m.port;
               // const direction = m.direction;
 
+              console.warn('mmmmmm: ', _this18._localToAudio, _this18._localToVideo, _this18._remoteToAudio);
               if (_this18._localToAudio) {
                 if (_m.direction != 'recvonly') {
                   _m.port = 0;
@@ -20884,7 +20892,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   // m.direction = direction;
                 }
                 _this18._ontogglemode('audio');
-              } else if (!_this18._remoteToAudio) {
+              } else if (!_this18._remoteToAudio || _this18._localToVideo) {
                 _this18._ontogglemode('video');
               }
             }
@@ -20927,13 +20935,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 value: 'pcfg:1 t=1'
               }];
             } else {
-              var bwidth = 1024;
+              var bwidth = 2048;
               media.mid === 2 && (bwidth = 2048);
               _bandAS += bwidth;
               media.bandwidth || (media.bandwidth = [{
                 type: 'AS',
                 limit: bwidth
               }]);
+              media.fmtp.forEach(function (fmtp) {
+                if (fmtp.config.indexOf('profile-level-id') !== -1) {
+                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+                }
+              });
             }
           } else if (media.type === 'audio') {
             /**
@@ -21389,11 +21402,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _step9;
       try {
         for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-          var m = _step9.value;
-          if (holdMediaTypes.indexOf(m.type) === -1) {
+          var _m2 = _step9.value;
+          if (holdMediaTypes.indexOf(_m2.type) === -1) {
             continue;
           }
-          var direction = m.direction || sdp.direction || 'sendrecv';
+          var direction = _m2.direction || sdp.direction || 'sendrecv';
           if (direction === 'sendonly' || direction === 'inactive') {
             hold = true;
           }
@@ -21408,7 +21421,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       } finally {
         _iterator9.f();
       }
-      var newSdp = this._sdpAddMid(request.body);
+      var sdp1 = sdp_transform.parse(request.body);
+      var _loop = function _loop() {
+        var bwidth = 2048;
+        m.fmtp.forEach(function (fmtp) {
+          if (fmtp.config.indexOf('profile-level-id') !== -1) {
+            fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+          }
+        });
+      };
+      var _iterator10 = _createForOfIteratorHelper(sdp1.media),
+        _step10;
+      try {
+        for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+          var m = _step10.value;
+          _loop();
+        }
+      } catch (err) {
+        _iterator10.e(err);
+      } finally {
+        _iterator10.f();
+      }
+      var newSdp = this._sdpAddMid(sdp_transform.write(sdp1));
       var e = {
         originator: 'remote',
         type: 'offer',
@@ -21982,37 +22016,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             /**
-               * 音视频切换相关
-               * 根据sdp判断用户Answer的通话模式，并触发mode事件
-               * @author: lei
-               */
+                 * 音视频切换相关
+                 * 根据sdp判断用户Answer的通话模式，并触发mode事件
+                 * @author: lei
+                 */
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
-            var _iterator10 = _createForOfIteratorHelper(sdp.media),
-              _step10;
+            var _loop2 = function _loop2() {
+              if (m.type === 'audio') {
+                return 1; // continue
+              }
+              var bwidth = 2048;
+              m.fmtp.forEach(function (fmtp) {
+                if (fmtp.config.indexOf('profile-level-id') !== -1) {
+                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+                }
+              });
+              if (m.port !== 0) {
+                _this30._remoteToAudio = false;
+                _this30._remoteToVideo = true;
+              }
+            };
+            var _iterator11 = _createForOfIteratorHelper(sdp.media),
+              _step11;
             try {
-              for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-                var m = _step10.value;
-                if (m.type === 'audio') {
-                  continue;
-                }
-                if (m.port !== 0) {
-                  this._remoteToAudio = false;
-                  this._remoteToVideo = true;
-                }
+              for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+                var m = _step11.value;
+                if (_loop2()) continue;
               }
             } catch (err) {
-              _iterator10.e(err);
+              _iterator11.e(err);
             } finally {
-              _iterator10.f();
+              _iterator11.f();
             }
             if (this._remoteToAudio) {
               this._ontogglemode('audio');
             } else {
               this._ontogglemode('video');
             }
-            var _newSdp = this._sdpAddMid(response.body);
+            var _newSdp = this._sdpAddMid(sdp_transform.write(sdp));
+            // const newSdp = this._sdpAddMid(response.body);
             var _e = {
               originator: 'remote',
               type: 'answer',
@@ -22224,31 +22268,42 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          */
         var sdp_body = sdp_transform.parse(response.body);
         var mediaIndex = 0;
-        var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
-          _step11;
+        var _loop3 = function _loop3() {
+          if (m.type == 'audio') {
+            return 1; // continue
+          }
+          var bwidth = 2048;
+          m.fmtp.forEach(function (fmtp) {
+            if (fmtp.config.indexOf('profile-level-id') !== -1) {
+              fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+            }
+          });
+          mediaIndex++;
+          console.warn('aaaaaa: ', m.port, mediaIndex);
+          if (m.port === 0 && mediaIndex == 1) {
+            _this32._remoteToAudio = true;
+            _this32._remoteToVideo = false;
+            console.warn('aaaabbbbbbbbbbbbbbbbb');
+            _this32._ontogglemode('audio');
+          } else {
+            _this32._remoteToAudio = false;
+            _this32._remoteToVideo = true;
+            _this32._ontogglemode('video');
+          }
+        };
+        var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
+          _step12;
         try {
-          for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-            var m = _step11.value;
-            if (m.type == 'audio') {
-              continue;
-            }
-            mediaIndex++;
-            if (m.port === 0 && mediaIndex == 1) {
-              this._remoteToAudio = true;
-              this._remoteToVideo = false;
-              this._ontogglemode('audio');
-            } else {
-              this._remoteToAudio = false;
-              this._remoteToVideo = true;
-              this._ontogglemode('video');
-            }
+          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+            var m = _step12.value;
+            if (_loop3()) continue;
           }
         } catch (err) {
-          _iterator11.e(err);
+          _iterator12.e(err);
         } finally {
-          _iterator11.f();
+          _iterator12.f();
         }
-        var newSdp = this._sdpAddMid(response.body);
+        var newSdp = this._sdpAddMid(sdp_transform.write(sdp_body));
         var e = {
           originator: 'remote',
           type: 'answer',
@@ -22400,11 +22455,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           * @author: lei
           */
           var sdp_body = sdp_transform.parse(response.body);
-          var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
-            _step12;
+          var _iterator13 = _createForOfIteratorHelper(sdp_body.media),
+            _step13;
           try {
-            for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-              var m = _step12.value;
+            for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+              var m = _step13.value;
               if (m.type == 'audio') {
                 continue;
               }
@@ -22419,9 +22474,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }
           } catch (err) {
-            _iterator12.e(err);
+            _iterator13.e(err);
           } finally {
-            _iterator12.f();
+            _iterator13.f();
           }
           var newSdp = this._sdpAddMid(response.body);
           var e = {
@@ -22495,11 +22550,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Local hold.
       if (this._localHold && !this._remoteHold) {
         logger.debug('mangleOffer() | me on hold, mangling offer');
-        var _iterator13 = _createForOfIteratorHelper(sdp.media),
-          _step13;
+        var _iterator14 = _createForOfIteratorHelper(sdp.media),
+          _step14;
         try {
-          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-            var m = _step13.value;
+          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+            var m = _step14.value;
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
             }
@@ -22512,33 +22567,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator13.e(err);
-        } finally {
-          _iterator13.f();
-        }
-      }
-      // Local and remote hold.
-      else if (this._localHold && this._remoteHold) {
-        logger.debug('mangleOffer() | both on hold, mangling offer');
-        var _iterator14 = _createForOfIteratorHelper(sdp.media),
-          _step14;
-        try {
-          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-            var _m2 = _step14.value;
-            if (holdMediaTypes.indexOf(_m2.type) === -1) {
-              continue;
-            }
-            _m2.direction = 'inactive';
-          }
-        } catch (err) {
           _iterator14.e(err);
         } finally {
           _iterator14.f();
         }
       }
-      // Remote hold.
-      else if (this._remoteHold) {
-        logger.debug('mangleOffer() | remote on hold, mangling offer');
+      // Local and remote hold.
+      else if (this._localHold && this._remoteHold) {
+        logger.debug('mangleOffer() | both on hold, mangling offer');
         var _iterator15 = _createForOfIteratorHelper(sdp.media),
           _step15;
         try {
@@ -22547,18 +22583,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (holdMediaTypes.indexOf(_m3.type) === -1) {
               continue;
             }
-            if (!_m3.direction) {
-              _m3.direction = 'recvonly';
-            } else if (_m3.direction === 'sendrecv') {
-              _m3.direction = 'recvonly';
-            } else if (_m3.direction === 'recvonly') {
-              _m3.direction = 'inactive';
-            }
+            _m3.direction = 'inactive';
           }
         } catch (err) {
           _iterator15.e(err);
         } finally {
           _iterator15.f();
+        }
+      }
+      // Remote hold.
+      else if (this._remoteHold) {
+        logger.debug('mangleOffer() | remote on hold, mangling offer');
+        var _iterator16 = _createForOfIteratorHelper(sdp.media),
+          _step16;
+        try {
+          for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+            var _m4 = _step16.value;
+            if (holdMediaTypes.indexOf(_m4.type) === -1) {
+              continue;
+            }
+            if (!_m4.direction) {
+              _m4.direction = 'recvonly';
+            } else if (_m4.direction === 'sendrecv') {
+              _m4.direction = 'recvonly';
+            } else if (_m4.direction === 'recvonly') {
+              _m4.direction = 'inactive';
+            }
+          }
+        } catch (err) {
+          _iterator16.e(err);
+        } finally {
+          _iterator16.f();
         }
       }
       return sdp_transform.write(sdp);
@@ -22756,17 +22811,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var senders = this._connection.getSenders().filter(function (sender) {
         return sender.track && sender.track.kind === 'audio';
       });
-      var _iterator16 = _createForOfIteratorHelper(senders),
-        _step16;
+      var _iterator17 = _createForOfIteratorHelper(senders),
+        _step17;
       try {
-        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
-          var sender = _step16.value;
+        for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+          var sender = _step17.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator16.e(err);
+        _iterator17.e(err);
       } finally {
-        _iterator16.f();
+        _iterator17.f();
       }
     }
   }, {
@@ -22791,17 +22846,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         return sender.track && sender.track.kind === 'video';
       });
-      var _iterator17 = _createForOfIteratorHelper(senders),
-        _step17;
+      var _iterator18 = _createForOfIteratorHelper(senders),
+        _step18;
       try {
-        for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
-          var sender = _step17.value;
+        for (_iterator18.s(); !(_step18 = _iterator18.n()).done;) {
+          var sender = _step18.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator17.e(err);
+        _iterator18.e(err);
       } finally {
-        _iterator17.f();
+        _iterator18.f();
       }
     }
   }, {
@@ -22959,6 +23014,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
+      console.warn('mode: ', mode, this._mode);
       if (mode === this._mode) {
         return;
       }
@@ -29253,7 +29309,7 @@ exports.generateAnBlackVideoTrack = function () {
     }
     canvas.width = 640;
     canvas.height = 480;
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = 'red';
     ctx.fillRect(0, 0, 640, 480);
     window.requestAnimationFrame(_drawToCanvas2);
   };
