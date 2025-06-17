@@ -1217,10 +1217,6 @@ async function call(type, direction, mediaStream)
 
   const callee = document.querySelector('#callee').value;
 
-  options['mediaConstraints'].video = {
-    deviceId : document.querySelector('#cameras').options[document.querySelector('#cameras').selectedIndex].value
-  };
-
   console.log('op: ', options);
   const session = await ua.call(`${callee}@${sipDomain}`, options);
 
