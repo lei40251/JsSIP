@@ -52,3 +52,7 @@ export function generateAnEmptyVideoTrack(): MediaStreamTrack;
 export function generateAnEmptyAudioTrack(): MediaStreamTrack;
 
 export function isFirefox(): Boolean;
+
+export function getDtmfPayloadAndClockRate(): Array;
+
+export function replaceDtmfPayloads(): string;

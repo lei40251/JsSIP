@@ -712,6 +712,18 @@ ua.on('newRTCSession', function(e)
         // document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
+
+    // e.session.connection.getSenders().forEach((sender) =>
+    // {
+    //   if (sender.track&& sender.track.kind === 'video')
+    //   {
+    //     const parameters = sender.getParameters();
+
+    //     parameters.encodings[0].maxBitrate = 400 * 1000;
+
+    //     sender.setParameters(parameters);
+    //   }
+    // });
   });
 
   //  ***** DOM 事件绑定 *****
@@ -782,6 +794,15 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toVideo').onclick = function()
   {
     e.session.upgradeToVideo();
+    stats && stats.reset();
+  };
+
+  /**
+   * 切换单向视频
+   */
+  document.querySelector('#toVideoSendonly').onclick = function()
+  {
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true });
     stats && stats.reset();
   };
 
@@ -1143,7 +1164,7 @@ async function call(type, direction, mediaStream)
   options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
-    // cMode        : 'paphone',
+    // cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
@@ -1183,14 +1204,13 @@ async function call(type, direction, mediaStream)
       });
   }
 
-  if (navigator.userAgent.indexOf('ArkWeb') != -1)
-  {
-    const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
+  // if (navigator.userAgent.indexOf('ArkWeb') != -1)
+  // {
+  //   const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
 
-    tmpVideo.addTrack(generateAnEmptyAudioTrack());
-    options['mediaStream'] = tmpVideo;
-
-  }
+  //   tmpVideo.addTrack(generateAnEmptyAudioTrack());
+  //   options['mediaStream'] = tmpVideo;
+  // }
 
   if (type === 'callnull' || type === 'callnullaudio' || type === 'callnullvideo')
   {
@@ -1513,11 +1533,11 @@ function start()
   };
 
   // 发起视频呼叫
-  document.querySelector('#callVideoSendonly').onclick = function()
-  {
-    // 设置当前通话模式为单向视频模式
-    call('video', 'sendonly');
-  };
+  // document.querySelector('#callVideoSendonly').onclick = function()
+  // {
+  //   // 设置当前通话模式为单向视频模式
+  //   call('video', 'sendonly');
+  // };
 
   // 监听系统输入设备变化更新摄像头列表
   navigator.mediaDevices.addEventListener('devicechange', () =>

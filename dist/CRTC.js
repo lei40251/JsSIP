@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20256172119
+ * CRTC v1.10.9-beta.20256231221
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405012344238 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405012462442 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16834,7 +16834,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405012344238');
+debug('version %s', '1.10.9-beta.405012462442');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16871,7 +16871,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405012344238';
+    return '1.10.9-beta.405012462442';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -17966,6 +17966,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpAudioSources = [];
     _this._bfcpMediastreams = [];
     _this._bfcpAudioCtx = null;
+
+    // 适配 DTMF payload 值
+    _this._dtmf_payload = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -19023,6 +19026,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "upgradeToVideo",
     value: function upgradeToVideo() {
       var _this5 = this;
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('upgradeToVideo()');
       if (this._ua.sk[7] < 2) {
         return;
@@ -19054,11 +19058,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }).then(function () {
         _this5._iceReady = false;
-        _this5.renegotiate({
+        var opts = {
           rtcOfferConstraints: {
             iceRestart: true
           }
-        });
+        };
+        if (options.sendOnly) {
+          opts = {
+            rtcOfferConstraints: {
+              iceRestart: true,
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: false
+            }
+          };
+        }
+        if (options.useUpdate) {
+          opts['useUpdate'] = true;
+        }
+        _this5.renegotiate(opts);
       });
     }
 
@@ -21846,6 +21863,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         _this29._request.body = desc;
         _this29._status = C.STATUS_INVITE_SENT;
+
+        // 获取DTMF的payload
+        !_this29._dtmf_payload && (_this29._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc));
+        logger.debug("dtmf payload".concat(JSON.stringify(_this29._dtmf_payload)));
         logger.debug('emit "sending" [request:%o]', _this29._request);
         var cache = [];
         logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this29._request, function (key, value) {
@@ -22656,9 +22677,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
+      var _this35 = this;
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
+          _this35._localMediaStream.removeTrack(track);
         });
         this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -22668,40 +22691,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_streamInactiveHandle",
     value: function _streamInactiveHandle(dual) {
-      var _this35 = this;
+      var _this36 = this;
       var ended = false;
       var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
-        if (_this35._localShareStream && _this35._localShareStreamLocallyGenerated) {
+        if (_this36._localShareStream && _this36._localShareStreamLocallyGenerated) {
           if (dual) {
-            _this35._connection.getTransceivers().forEach(function (transeiver) {
+            _this36._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this35._localShareStream.getVideoTracks()[0].id) {
-                  _this35._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this35._bfcpVideoTrack);
+                if (transeiver.sender.track.id === _this36._localShareStream.getVideoTracks()[0].id) {
+                  _this36._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this36._bfcpVideoTrack);
                 }
               }
             });
-            _this35._localShareStream = null;
-            _this35._localShareStreamLocallyGenerated = false;
+            _this36._localShareStream = null;
+            _this36._localShareStreamLocallyGenerated = false;
 
             // BFCP 释放资源，当被取消权限以后不再用发送release
-            _this35._bfcpRequestStatus !== RequestStatusValue.Revoked && _this35._sendFloorRelease();
+            _this36._bfcpRequestStatus !== RequestStatusValue.Revoked && _this36._sendFloorRelease();
           } else {
-            _this35._localMediaStream.getVideoTracks().forEach(function (track) {
-              var sender = _this35._connection.getSenders().find(function (s) {
+            _this36._localMediaStream.getVideoTracks().forEach(function (track) {
+              var sender = _this36._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              track.readyState === 'live' && _this35._connection.connectionState === 'connected' && sender.replaceTrack(track);
+              track.readyState === 'live' && _this36._connection.connectionState === 'connected' && sender.replaceTrack(track);
             });
-            _this35._localShareStreamLocallyGenerated = false;
+            _this36._localShareStreamLocallyGenerated = false;
           }
-          _this35._localShareStream = null;
-          _this35._localShareStreamLocallyGenerated = false;
+          _this36._localShareStream = null;
+          _this36._localShareStreamLocallyGenerated = false;
         }
       };
 
       // safari 等场景ended 或者 inactive 事件不会触发
       var timer = setInterval(function () {
-        if (_this35._localShareStream && _this35._localShareStream.getVideoTracks() && _this35._localShareStream.getVideoTracks()[0].readyState === 'ended') {
+        if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0].readyState === 'ended') {
           clearInterval(timer);
           ended || mediaStreamTrackEndedHandler();
           ended = true;
@@ -22767,7 +22790,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this36 = this;
+      var _this37 = this;
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
       clearTimeout(this._sessionTimers.timer);
@@ -22775,17 +22798,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm the refresher.
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this36._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
-          if (!_this36._isReadyToReOffer()) {
+          if (!_this37._isReadyToReOffer()) {
             return;
           }
           logger.debug('runSessionTimer() | sending session refresh request');
-          if (_this36._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this36._sendUpdate();
+          if (_this37._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
+            _this37._sendUpdate();
           } else {
-            _this36._sendReinvite();
+            _this37._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       }
@@ -22793,11 +22816,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this36._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
           logger.warn('runSessionTimer() | timer expired, terminating the session');
-          _this36.terminate({
+          _this37.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
             reason_phrase: 'Session Timer Expired'
@@ -22827,9 +22850,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_toggleMuteVideo",
     value: function _toggleMuteVideo(mute) {
-      var _this37 = this;
+      var _this38 = this;
       var senders = this._connection.getSenders().filter(function (sender) {
-        if (_this37._enableBFCP) {
+        if (_this38._enableBFCP) {
           // 检查是否存在视频轨道
           if (!sender.track || sender.track.kind !== 'video') {
             return false;
@@ -22837,12 +22860,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           // 获取本地共享流的视频轨道ID
           var localShareTrackId = null;
-          if (_this37._localShareStream && _this37._localShareStream.getVideoTracks() && _this37._localShareStream.getVideoTracks()[0]) {
-            localShareTrackId = _this37._localShareStream.getVideoTracks()[0].id;
+          if (_this38._localShareStream && _this38._localShareStream.getVideoTracks() && _this38._localShareStream.getVideoTracks()[0]) {
+            localShareTrackId = _this38._localShareStream.getVideoTracks()[0].id;
           }
 
           // 验证视频轨道条件
-          return !_this37._isCanvasTrack(sender.track) && sender.track !== _this37._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+          return !_this38._isCanvasTrack(sender.track) && sender.track !== _this38._bfcpVideoTrack && sender.track.id !== localShareTrackId;
         }
         return sender.track && sender.track.kind === 'video';
       });
@@ -23073,36 +23096,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceAudioToMic",
     value: function _replaceAudioToMic() {
-      var _this38 = this;
+      var _this39 = this;
       // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: this._inviteMediaConstraints.audio || true,
         video: false
       }).then(function (stream) {
-        _this38._connection.getSenders().forEach(function (sender) {
+        _this39._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this38.isMuted().audio;
+            stream.getAudioTracks()[0].enabled = _this39.isMuted().audio;
 
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
             // 本地播放本地音频轨道
-            _this38._localMediaStream.removeTrack(_this38._localMediaStream.getAudioTracks()[0]);
-            _this38._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getAudioTracks()[0]);
+            _this39._localMediaStream.addTrack(stream.getAudioTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
+            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this38._boundReplaceMicToAudios);
-            stream.getAudioTracks()[0].addEventListener('ended', _this38._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('mute', _this39._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this39._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
         logger.error("replaceAudioToMic error: ".concat(JSON.stringify(error)));
-        _this38._replaceAudioToMic();
+        _this39._replaceAudioToMic();
       });
     }
 
@@ -23112,7 +23135,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceMicToAudio",
     value: function _replaceMicToAudio() {
-      var _this39 = this;
+      var _this40 = this;
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -23121,24 +23144,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this39._boundReplaceMicToAudios);
-          sender.track.removeEventListener('ended', _this39._boundReplaceMicToAudios);
+          sender.track.removeEventListener('mute', _this40._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this40._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
 
           // 替换音频轨道
-          sender.replaceTrack(_this39._generateAnEmptyAudioTrack());
+          sender.replaceTrack(_this40._generateAnEmptyAudioTrack());
 
           // 本地播放本地音频轨道
-          _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
-          _this39._localMediaStream.addTrack(_this39._generateAnEmptyAudioTrack());
+          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
+          _this40._localMediaStream.addTrack(_this40._generateAnEmptyAudioTrack());
 
           // 触发本地媒体更新事件
-          _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
 
           // 开始尝试获取麦克风体并恢复
-          _this39._replaceAudioToMic();
+          _this40._replaceAudioToMic();
         }
       });
     }
@@ -23149,38 +23172,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceCanvasToVideo",
     value: function _replaceCanvasToVideo() {
-      var _this40 = this;
+      var _this41 = this;
       // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: false,
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
-        _this40._connection.getSenders().forEach(function (sender) {
+        _this41._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this40._restoreCameraTrackDraw);
-            _this40._restoreCameraTrackCtx.clearRect(0, 0, _this40._inviteMediaConstraints.width || 640, _this40._inviteMediaConstraints.height || 480);
+            window.cancelAnimationFrame(_this41._restoreCameraTrackDraw);
+            _this41._restoreCameraTrackCtx.clearRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
             // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this40.isMuted().video;
+            stream.getVideoTracks()[0].enabled = _this41.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
             // 本地播放本地视频轨道
-            _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
-            _this40._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+            _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
+            _this41._localMediaStream.addTrack(stream.getVideoTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
+            _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this40._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this40._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
         logger.error("replaceCanvasToVideo error: ".concat(JSON.stringify(error)));
-        _this40._replaceCanvasToVideo();
+        _this41._replaceCanvasToVideo();
       });
     }
 
@@ -23190,7 +23213,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
-      var _this41 = this;
+      var _this42 = this;
       logger.debug('_replaceVideoToCanvas()');
 
       // 判断是否在通话中
@@ -23205,11 +23228,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 开始绘制纯色
       var _drawToCanvas = function drawToCanvas() {
-        _this41._restoreCameraTrackCanvas.width = _this41._inviteMediaConstraints.width || 640;
-        _this41._restoreCameraTrackCanvas.height = _this41._inviteMediaConstraints.height || 480;
-        _this41._restoreCameraTrackCtx.fillStyle = 'blue';
-        _this41._restoreCameraTrackCtx.fillRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
-        _this41._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
+        _this42._restoreCameraTrackCanvas.width = _this42._inviteMediaConstraints.width || 640;
+        _this42._restoreCameraTrackCanvas.height = _this42._inviteMediaConstraints.height || 480;
+        _this42._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this42._restoreCameraTrackCtx.fillRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
+        _this42._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
       };
       _drawToCanvas();
 
@@ -23220,20 +23243,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this41._boundReplaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this41._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this42._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this42._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
           // 本地播放本地视频轨道
-          _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
-          _this41._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
+          _this42._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
           // 触发本地媒体更新事件
-          _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
+          _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
           // 开始尝试获取摄像头媒体并恢复
-          _this41._replaceCanvasToVideo();
+          _this42._replaceCanvasToVideo();
         }
       });
     }
@@ -23244,7 +23267,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this42 = this;
+      var _this43 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -23256,14 +23279,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           timer = null;
 
           // 如果设备变化则替换轨道流
-          _this42._connection.getSenders().forEach(function (sender) {
+          _this43._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this42._replaceVideoToCanvas();
+              _this43._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this42._replaceMicToAudio();
+              _this43._replaceMicToAudio();
             }
           });
         }, 300);
@@ -23274,22 +23297,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 视频轨道
         if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
-            _this42._replaceVideoToCanvas();
+            _this43._replaceVideoToCanvas();
           } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this42._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this42._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this43._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this43._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this42._replaceMicToAudio();
+            _this43._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this42._boundReplaceMicToAudios);
-            sender.track.addEventListener('ended', _this42._boundReplaceMicToAudios);
+            sender.track.addEventListener('mute', _this43._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this43._boundReplaceMicToAudios);
           }
         }
       });
@@ -23365,7 +23388,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
-      var _this43 = this;
+      var _this44 = this;
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
       if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
@@ -23376,12 +23399,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this.emit('floorRequest', {
           message: message,
           accept: function accept() {
-            var response = _this43._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-            _this43._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
           },
           reject: function reject() {
-            var response = _this43._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-            _this43._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
           }
         });
       }
@@ -23496,19 +23519,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this44 = this;
+      var _this45 = this;
       logger.debug("dataChannelSend() ".concat(transactionId));
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
-        if (!_this44._dataChannelReady) {
+        if (!_this45._dataChannelReady) {
           reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           return;
         }
 
         // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this44._dataChannelMsgs[transactionId]) {
-          _this44._dataChannelMsgs[transactionId] = {
+        if (!_this45._dataChannelMsgs[transactionId]) {
+          _this45._dataChannelMsgs[transactionId] = {
             retries: 0,
             sendAt: Date.now(),
             message: message,
@@ -23517,7 +23540,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             reject: reject
           };
         }
-        var messageState = _this44._dataChannelMsgs[transactionId];
+        var messageState = _this45._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
@@ -23527,8 +23550,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(_this44._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this44._bfcpUser.receiveMessage(messageState.message);
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this45._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this45._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
         sendMessage.commonHeader.primitive != Primitive.FloorRelease && setTimeout(function () {
@@ -23536,10 +23559,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (messageState && !messageState.received) {
             messageState.retries++;
             // 增加重试的间隔
-            _this44._dataChannelSend(messageState.message, transactionId);
+            _this45._dataChannelSend(messageState.message, transactionId);
           }
         }, Math.pow(2, messageState.retries) * 500);
-        _this44._dataChannel && _this44._dataChannel.send(messageState.message);
+        _this45._dataChannel && _this45._dataChannel.send(messageState.message);
       });
     }
 
@@ -23561,7 +23584,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this45 = this;
+      var _this46 = this;
       logger.debug('initDataChannel()');
 
       // 内部变量
@@ -23593,29 +23616,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
       datachannel.onmessage = function (ev) {
         // 收到数据
-        _this45._onChannelMessage(ev);
+        _this46._onChannelMessage(ev);
       };
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
         logger.warn('datachannel opened.');
-        _this45._dataChannelReady = true;
+        _this46._dataChannelReady = true;
         // 开始发送心跳消息
-        _this45._sendHello();
-        _this45._bfcpHeatbeatTimer = setInterval(function () {
-          _this45._sendHello();
+        _this46._sendHello();
+        _this46._bfcpHeatbeatTimer = setInterval(function () {
+          _this46._sendHello();
         }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
-        _this45._onChannelClose();
+        _this46._onChannelClose();
       };
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
         logger.error('datachannel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this45._dataChannelReady = false;
+        _this46._dataChannelReady = false;
         logger.warn('data err: ', err);
       };
 
@@ -23626,7 +23649,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // No "onclosing" event
         if (datachannel && datachannel.readyState === 'closing') {
           // closing timed out: equivalent to onclose firing
-          if (isClosing) _this45._onChannelClose();
+          if (isClosing) _this46._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
@@ -25556,7 +25579,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
               } else {
-                _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
+                transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
               }
             case 22:
@@ -25577,6 +25600,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
+                  if (!s.track) {
+                    return;
+                  }
                   var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
                   logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
                   logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
@@ -29709,6 +29735,157 @@ exports.processSdp = function (sdp) {
 // 是否Firefox浏览器
 exports.isFirefox = function () {
   return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+};
+
+// 从SDP里面获取DTMF的payload
+exports.getDtmfPayloadAndClockRate = function (sdp) {
+  var lines = sdp.split('\n');
+  var dtmfInfo = new Map(); // 使用 Map 存储，确保 payload 唯一
+  var _iterator6 = _createForOfIteratorHelper(lines),
+    _step6;
+  try {
+    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      var line = _step6.value;
+      // 匹配形如 "a=rtpmap:110 telephone-event/48000" 的行
+      var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+telephone-event\/(\d+)/);
+      if (rtpmapDtmfMatch) {
+        var payload = rtpmapDtmfMatch[1];
+        var clockRate = rtpmapDtmfMatch[2];
+        // 如果同一个 payload 有多个定义（尽管不常见），这里会取最后一个
+
+        dtmfInfo.set(payload, clockRate);
+      }
+    }
+
+    // 将 Map 转换为数组以便输出
+  } catch (err) {
+    _iterator6.e(err);
+  } finally {
+    _iterator6.f();
+  }
+  return Array.from(dtmfInfo, function (_ref6) {
+    var _ref7 = _slicedToArray(_ref6, 2),
+      payload = _ref7[0],
+      clockRate = _ref7[1];
+    return {
+      payload: payload,
+      clockRate: clockRate
+    };
+  });
+};
+
+/**
+ * 根据提供的 payload 类型映射更新 SDP 字符串的 DTMF payload。
+ * @param {Array<Object>} payloadMappings 一个对象数组，每个对象包含 { payloadType: number, frequency: number }。
+ * @param {string} sdp 原始的 SDP 字符串。
+ * @returns {string} 更新后的 SDP 字符串。
+ */
+exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
+  var lines = sdp.split('\r\n');
+  var newSdpLines = [];
+
+  // 1. 预处理新的 DTMF 信息，方便按频率查找新 payload
+  // Map<clockRate, newPayload>
+  var newDtmfPayloadByClockRate = new Map();
+  payloadMappings.forEach(function (info) {
+    newDtmfPayloadByClockRate.set(info.clockRate, info.payload);
+  });
+
+  // 2. 预处理目标 SDP 中的原始 DTMF rtpmap 信息，用于将现有 payload 映射回其时钟频率
+  // Map<originalPayload, clockRate>
+  var originalDtmfRtpmapLookup = new Map();
+  lines.forEach(function (line) {
+    var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+telephone-event\/(\d+)/);
+    if (rtpmapDtmfMatch) {
+      var payload = rtpmapDtmfMatch[1];
+      var clockRate = rtpmapDtmfMatch[2];
+      originalDtmfRtpmapLookup.set(payload, clockRate);
+    }
+  });
+
+  // 3. 遍历目标 SDP 行并执行替换
+  var _iterator7 = _createForOfIteratorHelper(lines),
+    _step7;
+  try {
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var line = _step7.value;
+      var processedLine = line;
+
+      // 尝试匹配 a=rtpmap:XX telephone-event/YYY 行
+      var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+(telephone-event\/)(\d+)/);
+      if (rtpmapDtmfMatch) {
+        var codecAndSeparator = rtpmapDtmfMatch[2]; // "telephone-event/"
+        var clockRate = rtpmapDtmfMatch[3];
+
+        // 检查是否有新的 payload 对应这个时钟频率
+        if (newDtmfPayloadByClockRate.has(clockRate)) {
+          var newPayload = newDtmfPayloadByClockRate.get(clockRate);
+          processedLine = "a=rtpmap:".concat(newPayload, " ").concat(codecAndSeparator).concat(clockRate);
+        }
+      } else {
+        // 如果不是 DTMF rtpmap 行，则检查 m=audio 和 a=fmtp 行，因为它们也可能包含 DTMF payload
+
+        // 尝试匹配 m=audio 行
+        var audioMLineMatch = line.match(/^(m=audio\s+\d+\s+UDP\/TLS\/RTP\/SAVPF\s+)(.*)/);
+        if (audioMLineMatch) {
+          var prefix = audioMLineMatch[1];
+          var currentPayloadsStr = audioMLineMatch[2];
+          var currentPayloads = currentPayloadsStr.split(/\s+/);
+          var updatedAudioPayloads = [];
+          var _iterator8 = _createForOfIteratorHelper(currentPayloads),
+            _step8;
+          try {
+            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+              var p = _step8.value;
+              if (originalDtmfRtpmapLookup.has(p)) {
+                // 如果此 payload 是原始 SDP 中的 DTMF payload
+                var originalClockRate = originalDtmfRtpmapLookup.get(p);
+                if (newDtmfPayloadByClockRate.has(originalClockRate)) {
+                  // 并且有新的 payload 对应此频率，则进行替换
+                  updatedAudioPayloads.push(newDtmfPayloadByClockRate.get(originalClockRate));
+                } else {
+                  updatedAudioPayloads.push(p); // 否则保持原样
+                }
+              } else {
+                updatedAudioPayloads.push(p); // 非 DTMF payload 保持原样
+              }
+            }
+          } catch (err) {
+            _iterator8.e(err);
+          } finally {
+            _iterator8.f();
+          }
+          processedLine = prefix + updatedAudioPayloads.join(' ');
+        } else {
+          // 尝试匹配 a=fmtp:XX 行
+          var fmtpMatch = line.match(/^(a=fmtp:)(\d+)(\s+.*)/);
+          if (fmtpMatch) {
+            var _prefix = fmtpMatch[1]; // "a=fmtp:"
+            var originalFmtpPayload = fmtpMatch[2]; // 原始 fmtp 后面的 payload 号
+            var suffix = fmtpMatch[3]; // fmtp 参数部分
+
+            if (originalDtmfRtpmapLookup.has(originalFmtpPayload)) {
+              // 如果此 fmtp payload 是原始 SDP 中的 DTMF payload
+              var _originalClockRate = originalDtmfRtpmapLookup.get(originalFmtpPayload);
+              if (newDtmfPayloadByClockRate.has(_originalClockRate)) {
+                // 并且有新的 payload 对应此频率，则进行替换
+                var _newPayload = newDtmfPayloadByClockRate.get(_originalClockRate);
+                processedLine = "".concat(_prefix).concat(_newPayload).concat(suffix);
+              }
+              // 否则保持原样
+            }
+            // 否则保持原样 (非 DTMF fmtp 行)
+          }
+        }
+      }
+      newSdpLines.push(processedLine);
+    }
+  } catch (err) {
+    _iterator7.e(err);
+  } finally {
+    _iterator7.f();
+  }
+  return newSdpLines.join('\r\n');
 };
 },{"./Constants":32,"./Grammar":37,"./URI":59}],61:[function(require,module,exports){
 "use strict";
