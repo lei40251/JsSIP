@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025622948
+ * CRTC v1.10.9-beta.20256231217
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405012441896 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405012462434 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16834,7 +16834,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405012441896');
+debug('version %s', '1.10.9-beta.405012462434');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16871,7 +16871,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405012441896';
+    return '1.10.9-beta.405012462434';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -25531,7 +25531,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
               } else {
-                _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
+                transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
               }
             case 22:
@@ -25552,6 +25552,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
+                  if (!s.track) {
+                    return;
+                  }
                   var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
                   logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
                   logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
