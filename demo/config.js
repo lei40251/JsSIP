@@ -86,5 +86,12 @@ const envs =
     secretKey          : sessionStorage.getItem('secret_key') || 'DNkWSqkLI79UprRRwlS09VNytskRaDdzSi+kc/SX4obPhkkRxrg7dOoQt5pWr4kYoDvAoyCYJg6IJR00mEFgs6fbnzk7qVuUV4thEF7WSM4Cp2yUtjIwActYAM/13eZDNnR73UxiepUW/arubPkQ0Y6xMwqJMRB52VL1kpI1eFf8aAioZ72FqTwlR6MiLX0llio8eUzZ42tG51kOHUXHt5HuG+EyHXeVHEYaLgqZdIB0B6Azh/g0yPvReD1wB/MHzvU+uvuFezJnfbndwlwpLJXMr6F2GKZrqgtMGUIhaLOt6mleKL059ut5JTiNGm0c1oEhQSy4RKDmiQ/+mtao2g==',
     iceServers         : [ { 'urls': 'turn:cloudnetuchw.vsbc.com:10002?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' }, { 'urls': 'turn:cloudnetuchw.vsbc.com:10002?transport=tcp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
     iceTransportPolicy : 'relay'
+  },
+  env_ar_rec : {
+    signalingUrl       : 'wss://crtc.ai-rtc.com:8443/wss',
+    sipDomain          : 'crtc.ai-rtc.com',
+    secretKey          : 'oSsKA/AuIVTMgi3G2SJZoseErvVeif9klrfHMBbj2tGf2VxvjHB0wuahGoLPV/rGbllpAuC0Rl1jDJ+Ci09zZOjnou2mL0Ebf+rKg0vf5v47VeKpmJAQecWJgnQ5+g1vBKTdi6TAD/cmtMgEfbuHbdFeQTQ7uTRNwjJT6PDbBpfYui+koO64LeZLfx01pnZLxuErWkErk7y/YptVzz9EniFqzPVrAwSrDVVXXElPhHwXnF3Le2ky1HdpoqzA96WWEopd/UsBwJntsH1+bbneeDBhliekCaalIaqNYqh/9ok2Ip5D+nlCVDJXgapzqCEw2SylZDq3VzKW5A09TzdO3w==',
+    iceServers         : [ { 'urls': 'turn:116.133.5.85:30120?transport=udp', 'username': 'user', 'credential': '5g_24@cu' } ],
+    iceTransportPolicy : 'relay'
   }
 };

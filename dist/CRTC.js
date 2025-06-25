@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20256231217
+ * CRTC v1.10.9-beta.20256251611
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405012462434 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405012503222 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16834,7 +16834,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405012462434');
+debug('version %s', '1.10.9-beta.405012503222');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16871,7 +16871,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405012462434';
+    return '1.10.9-beta.405012503222';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -19038,24 +19038,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._localToAudio = false;
       this._localToVideo = true;
-      navigator.mediaDevices.getUserMedia({
-        video: true
-      }).then(function (stream) {
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          stream = Utils.getStreamThroughCanvas(stream);
+      return Promise.resolve().then(function () {
+        // 兼容重复调用，或者由单向视频切换双向视频，或者双向视频切换单向视频的情况
+        if (_this5._localMediaStream.getVideoTracks().length > 0) {
+          _this5._connection.getTransceivers().forEach(function (t) {
+            if (options.sendOnly) {
+              t.direction = 'sendOnly';
+            } else {
+              t.direction = 'sendrecv';
+            }
+          });
+          return;
         }
-        var videoTracks = stream.getVideoTracks();
-        _this5._localMediaStream.addTrack(videoTracks[0]);
+        return navigator.mediaDevices.getUserMedia({
+          video: true
+        }).then(function (stream) {
+          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+          var ua;
+          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+            stream = Utils.getStreamThroughCanvas(stream);
+          }
+          var videoTracks = stream.getVideoTracks();
+          _this5._localMediaStream.addTrack(videoTracks[0]);
 
-        // 兼容低版本浏览器不支持addTrack的情况
-        if (RTCPeerConnection.prototype.addTrack) {
-          _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
-        } else {
-          _this5._connection.addStream(stream);
-        }
+          // 兼容低版本浏览器不支持addTrack的情况
+          if (RTCPeerConnection.prototype.addTrack) {
+            _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
+          } else {
+            _this5._connection.addStream(stream);
+          }
+        });
       }).then(function () {
         _this5._iceReady = false;
         var opts = {

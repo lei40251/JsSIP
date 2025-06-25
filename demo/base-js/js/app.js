@@ -315,6 +315,18 @@ ua.on('newRTCSession', function(e)
           e.session.unmute({ video: true });
         }, 300);
       }, 1000);
+
+      e.session.connection.getSenders().forEach((sender) =>
+      {
+        if (sender.track&& sender.track.kind === 'video')
+        {
+          const parameters = sender.getParameters();
+
+          parameters.encodings[0].maxBitrate = 400 * 1000;
+
+          sender.setParameters(parameters);
+        }
+      });
     }
 
     stats && stats.reset();
@@ -713,17 +725,17 @@ ua.on('newRTCSession', function(e)
       }
     };
 
-    // e.session.connection.getSenders().forEach((sender) =>
-    // {
-    //   if (sender.track&& sender.track.kind === 'video')
-    //   {
-    //     const parameters = sender.getParameters();
+    e.session.connection.getSenders().forEach((sender) =>
+    {
+      if (sender.track&& sender.track.kind === 'video')
+      {
+        const parameters = sender.getParameters();
 
-    //     parameters.encodings[0].maxBitrate = 400 * 1000;
+        parameters.encodings[0].maxBitrate = 400 * 1000;
 
-    //     sender.setParameters(parameters);
-    //   }
-    // });
+        sender.setParameters(parameters);
+      }
+    });
   });
 
   //  ***** DOM 事件绑定 *****
