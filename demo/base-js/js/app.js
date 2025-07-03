@@ -153,7 +153,7 @@ ua.on('registrationFailed', function(data)
  */
 ua.on('newRTCSession', function(e)
 {
-  console.log('nsession: ', e);
+  console.warn('nsession: ', e);
 
   if (tmpSession)
   {
@@ -193,8 +193,8 @@ ua.on('newRTCSession', function(e)
   e.session.on('sdp', function(d)
   {
     // 呼叫VoLTE手机号需要
-    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
-    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
     if (d.originator === 'local')
     {
@@ -205,16 +205,20 @@ ua.on('newRTCSession', function(e)
       // // 将sdp的默认payload改为420D0D
       // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
       // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
-      d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
+      // d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
+      // d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
 
       // d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
+
+      // d.sdp = d.sdp.replace(/packetization-mode=0/g, 'packetization-mode=1');
     }
     else if (d.originator === 'remote')
     {
       // 适配pa
       // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
       // d.sdp = d.sdp.replace(/420D0D/g, payload);
+
+      // d.sdp = d.sdp.replace(/packetization-mode=1/g, 'packetization-mode=0');
 
       // 端到端用
       // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
