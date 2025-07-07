@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.202574930
+ * CRTC v1.10.9-beta.202577948
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3570,7 +3570,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014081860 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014141896 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16873,7 +16873,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405014081860');
+debug('version %s', '1.10.9-beta.405014141896');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16910,7 +16910,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014081860';
+    return '1.10.9-beta.405014141896';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -21007,7 +21007,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }]);
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id') !== -1) {
-                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .3), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
                 }
               });
             }
@@ -21489,7 +21489,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var bwidth = 2048;
         m.fmtp.forEach(function (fmtp) {
           if (fmtp.config.indexOf('profile-level-id') !== -1) {
-            fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+            fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .3), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
           }
         });
       };
@@ -22097,7 +22097,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var bwidth = 2048;
               m.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id') !== -1) {
-                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+                  fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .3), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
                 }
               });
               if (m.port !== 0) {
@@ -22344,7 +22344,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var bwidth = 2048;
           m.fmtp.forEach(function (fmtp) {
             if (fmtp.config.indexOf('profile-level-id') !== -1) {
-              fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .6), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
+              fmtp.config = "x-google-start-bitrate=".concat(Math.floor(bwidth * .3), ";x-google-min-bitrate=").concat(Math.floor(bwidth * .3), ";x-google-max-bitrate=").concat(Math.floor(bwidth), ";").concat(fmtp.config);
             }
           });
           mediaIndex++;
