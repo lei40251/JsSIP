@@ -738,6 +738,8 @@ ua.on('newRTCSession', function(e)
         parameters.encodings[0].maxBitrate = 400 * 1000;
 
         sender.setParameters(parameters);
+
+        sender.track.contentHint = 'detail';
       }
     });
   });
