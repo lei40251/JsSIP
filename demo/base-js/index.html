@@ -84,7 +84,6 @@
               </div>
             </div>
             <div class="col col-auto">
-              <button class="btn btn-warning" id="toVideoSendonly"><i class="bi-camera-video"></i> 切换单向视频</button>
               <!-- <button class="btn btn-warning" id="callVideoSendonly"><i class="bi-camera-video"></i> 单向视频外呼</button> -->
               <button class="btn btn-danger" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
             </div>
@@ -100,6 +99,7 @@
           <div class="col col-auto mt-3">
             <button class="btn btn-success" id="toAudio"><i class="bi-mic"></i> 切换音频模式</button>
             <button class="btn btn-primary" id="toVideo"><i class="bi-camera-video"></i> 切换视频模式</button>
+            <button class="btn btn-warning" id="toVideoSendonly"><i class="bi-camera-video"></i> 切换单向视频</button>
             <button class="btn btn-success" id="capture"><i class="bi-pip"></i> 对远端视频截图</button>
             <button class="btn btn-outline-primary resume"><i class="bi-bootstrap-reboot"></i></button>
           </div>
@@ -116,7 +116,6 @@
             </div>
           </div>
           <div class="col col-auto mt-3">
-            <button class="btn btn-warning" id="hold">保持/取消保持</button>
             <button class="btn btn-success" id="switchDevice">切换摄像头（兼容）</button>
           </div>
         </div>
@@ -134,6 +133,7 @@
             <button class="btn btn-info" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
             <button class="btn btn-info" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>
             <button class="btn btn-info" id="videoShareD"><i class="bi-play"></i> 分享视频(D)</button>
+            <button class="btn btn-warning" id="hold">保持/取消保持</button>
           </div>
         </div>
         <div class="col col-12 row">
@@ -182,7 +182,7 @@
   </div>
   <canvas id="captureView" style="width: 240px;"></canvas>
   <div class="hide">
-    <img id="pic_s" style="height: 100%;" src="../pic.png" alt="" />
+    <img id="pic_s" style="height: 100%;" src="https://pro.vsbc.com/rtc/dev/crtc/pic.png" alt="" />
     <video playsinline x5-video-player-fullscreen=" true" x5-video-player-type="h5" id="video_s"
       src="https://pro.vsbc.com/rtc/dev/crtc/1280.mp4" loop muted style="height: 100%"></video>
   </div>
@@ -226,7 +226,7 @@
     debug(false);
     // 结束
   </script> -->
-  <script src="../../dist/CRTC.js"></script>
+  <script src="../../dist/CRTC.min.js"></script>
   <script src="../config.js"></script>
   <script src="./js/app.js"></script>
 </body>
