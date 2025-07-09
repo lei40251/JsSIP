@@ -352,9 +352,21 @@ ua.on('newRTCSession', function(e)
   {
     // 兼容mcu等候室用
     const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
+    const tmpTracks = [];
 
     cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
-    cloneStream=new MediaStream([ localStream.audioStream.getAudioTracks()[0].clone(), d.videoStream.getVideoTracks()[0].clone() ]);
+
+    if (localStream.audioStream.getAudioTracks().length>0)
+    {
+      tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
+    }
+
+    if (d.videoStream.getVideoTracks().length>0)
+    {
+      tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
+    }
+
+    cloneStream=new MediaStream(tmpTracks);
     localVideo.srcObject = cloneStream;
 
     // 兼容不同浏览器安全策略
@@ -795,6 +807,31 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
+   * 空音频接听
+   */
+  document.querySelector('#answerAudio').onclick = async function()
+  {
+    const tmpStream = new MediaStream();
+    const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
+
+    tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
+    e.session.answer({
+      mediaConstraints : {
+        audio : true,
+        video : videoConstraints
+      },
+      pcConfig            : pcConfig,
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : extraFeatures,
+      mediaStream         : tmpStream
+    });
+
+    setStatus('video answer');
+  };
+
+  /**
    * 切换为音频模式
    *
    * 切换会触发 session 的 mode 事件回调
@@ -1204,7 +1241,7 @@ async function call(type, direction, mediaStream)
         sampleRate   : 48000,
         channelCount : 1
       },
-      video : type === 'video' ? videoConstraints : false
+      video : (type === 'video' || type === 'onlyVideo') ? videoConstraints : false
     };
   }
 
@@ -1251,6 +1288,11 @@ async function call(type, direction, mediaStream)
       audio : type === 'callnullvideo' ? true : false,
       video : type === 'callnullaudio' ? videoConstraints : false
     };
+  }
+
+  if (type==='onlyVideo')
+  {
+    options.mediaConstraints.audio = false;
   }
 
   const callee = document.querySelector('#callee').value;
@@ -1341,17 +1383,17 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  const audioTrack = localStream.audioStream.getAudioTracks()[0].clone();
+  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
   const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
-  let mediaStreamArray = [];
+  const mediaStreamArray = [];
 
   if (videoTrack)
   {
-    mediaStreamArray = [ audioTrack, videoTrack ];
+    mediaStreamArray.push(videoTrack);
   }
   else
   {
-    mediaStreamArray = [ audioTrack ];
+    mediaStreamArray.push(audioTrack);
   }
 
   // 本地视频
@@ -1550,6 +1592,13 @@ function start()
     call('video');
   };
 
+  // 发起无音频视频呼叫
+  // document.querySelector('#callAudio').onclick = function()
+  // {
+  //   // 设置当前通话模式为视频模式
+  //   call('onlyVideo');
+  // };
+
   // 发起视频呼叫
   // document.querySelector('#callVideoSendonly').onclick = function()
   // {
@@ -1571,18 +1620,3 @@ function start()
 }
 
 start();
-
-// 测试用
-function addNewTrack(type)
-{
-  // const vtrack = new MediaStreamTrackGenerator({ kind: type });
-
-  const vtrack1 = CRTC.Utils.generateAnEmptyVideoTrack().videoTrack;
-
-  rtcSession.connection.addTrack(vtrack1);
-
-  rtcSession.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-}
-
-document.querySelector('#addAudio').onclick = function() { addNewTrack('audio'); };
-document.querySelector('#addVideo').onclick = function() { addNewTrack('video'); };

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025781545
+ * CRTC v1.10.9-beta.2025791528
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3570,7 +3570,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014163090 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014183056 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16873,7 +16873,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405014163090');
+debug('version %s', '1.10.9-beta.405014183056');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16910,7 +16910,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014163090';
+    return '1.10.9-beta.405014183056';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
@@ -18386,13 +18386,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
-              mStream = new MediaStream(); // Request for user media access.
+              mStream = new MediaStream(); // 非自定义媒体流模式
+              _this2._customMediaStream = false;
+
+              // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
+              if (mediaStream) {
+                // 自定义媒体流模式
+                _this2._customMediaStream = true;
+                mediaStream.getTracks().forEach(function (track) {
+                  logger.warn("There are two ".concat(_this2._inviteMediaConstraints.audio ? 'audio' : 'video', " tracks in the input, please check the parameters"));
+                  _this2._inviteMediaConstraints[track.kind] = false;
+                  mStream.addTrack(track, mStream);
+                });
+              }
+
+              // Request for user media access.
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 10;
+                _context.next = 12;
                 break;
               }
-              // 非自定义媒体流模式
-              _this2._customMediaStream = false;
               _this2._localMediaStreamLocallyGenerated = true;
 
               // 判断授权是否包含视频
@@ -18409,10 +18421,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 10;
+                _context.next = 12;
                 break;
               }
-              _context.next = 9;
+              _context.next = 10;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18423,23 +18435,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this2.emit('getusermediafailed', error);
                 throw error;
               });
-            case 9:
-              mStream = _context.sent;
             case 10:
-              // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
-              if (mediaStream) {
-                // 自定义媒体流模式
-                _this2._customMediaStream = true;
-                mediaStream.getTracks().forEach(function (track) {
-                  logger.warn("There are two ".concat(_this2._inviteMediaConstraints.audio ? 'audio' : 'video', " tracks in the input, please check the parameters"));
-                  _this2._inviteMediaConstraints[track.kind] = false;
-                  mStream.addTrack(track, mStream);
-                });
-              }
+              mStream = _context.sent;
+              mStream.getTracks().forEach(function (track) {
+                mStream.addTrack(track, mStream);
+              });
+            case 12:
               sendStream = new MediaStream();
-              _context.next = 14;
+              _context.next = 15;
               return Utils.getMicrophones();
-            case 14:
+            case 15:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
@@ -18454,13 +18459,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 21;
+                _context.next = 22;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 21:
-              return _context.abrupt("return", sendStream);
             case 22:
+              return _context.abrupt("return", sendStream);
+            case 23:
             case "end":
               return _context.stop();
           }
@@ -18707,10 +18712,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var peerOffersFullVideo = false;
 
       // 本端媒体约束
-      this._inviteMediaConstraints = Utils.cloneObject(rtcAnswerConstraints, {
-        audio: true,
-        video: true
-      });
+      // this._inviteMediaConstraints = Utils.cloneObject(rtcAnswerConstraints, {
+      //   audio : true,
+      //   video : true
+      // });
+
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
       this._data = options.data || this._data;
@@ -18848,12 +18854,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              if (!mediaStream) {
-                _context2.next = 4;
-                break;
-              }
-              return _context2.abrupt("return", mediaStream);
-            case 4:
+              console.warn('mediaConstraints: ', mediaConstraints, mediaStream);
+
+              // 根据自定义流确定是否需要获取对应设备的流
+              mediaStream && mediaStream.getTracks().forEach(function (track) {
+                mediaConstraints[track.kind] = false;
+              });
+
+              // Audio and/or video requested, prompt getUserMedia.
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
                 _context2.next = 17;
                 break;
@@ -18873,7 +18881,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (!mediaConstraints.video) {
                 _this4._localToAudio = true;
               }
-              _context2.next = 10;
+              _context2.next = 8;
               return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
                 if (_this4._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18885,17 +18893,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this4.emit('getusermediafailed', error);
                 throw new Error('getUserMedia() failed');
               });
-            case 10:
+            case 8:
               mStream = _context2.sent;
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context2.next = 16;
+                _context2.next = 14;
                 break;
               }
               return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
-            case 16:
+            case 14:
               return _context2.abrupt("return", mStream);
+            case 15:
+              _context2.next = 18;
+              break;
             case 17:
+              return _context2.abrupt("return", mediaStream);
+            case 18:
             case "end":
               return _context2.stop();
           }
@@ -18905,6 +18918,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       .then(function (stream) {
         if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
+        }
+
+        // 如果有自定义流，使用自定义流对应音视频轨道
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(function (track) {
+            stream.addTrack(track, stream);
+          });
         }
         _this4._localMediaStream = stream;
         if (stream) {
@@ -19593,53 +19613,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8._localShareRTPSender = null;
                 _this8._localShareStream = stream;
                 _this8._streamInactiveHandle(dual);
-
-                // if (this._bfcpRequestStatus === RequestStatusValue.Granted)
-                // {
-                //   // 替换流方式分享屏幕
-                //   stream.getTracks().forEach((track) =>
-                //   {
-                //     if (dual)
-                //     {
-                //       if (track.kind === 'audio')
-                //       {
-                //         this._addShareAudioToBfcpAudioTrack(stream);
-                //       }
-                //       else
-                //       {
-                //       // this._localShareRTPSender = this._connection.addTrack(track, stream);
-                //       // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-                //         const sender = this._connection.getSenders().find((s) =>
-                //         {
-                //           return s.track == this._bfcpVideoTrack;
-                //         });
-
-                //         sender.replaceTrack(track);
-                //       }
-                //     }
-                //     else
-                //     {
-                //       const sender = this._connection.getSenders().find((s) =>
-                //       {
-                //         return s.track.kind == 'video' && s.track.readyState !== 'ended';
-                //       });
-
-                //       sender.replaceTrack(track);
-                //     }
-                //   });
-
-                //   this._localShareStreamLocallyGenerated = true;
-
-                //   return stream;
-                // }
-                // else
-                // {
-                //   // 如果共享权限已经被撤销则自动取消共享
-                //   this.unShare();
-
-                //   return Promise.reject(new Error('Yours sharing permission has been revoked.'));
-                // }
-
                 if (dual) {
                   if (_this8._bfcpRequestStatus === RequestStatusValue.Granted) {
                     // BFCP 双流方式分享屏幕
