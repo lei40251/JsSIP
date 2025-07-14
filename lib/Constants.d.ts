@@ -15,6 +15,17 @@ export enum CMODE {
   PAPHONE = 'paphone'
 }
 
+export const SDP_LEVELID_AS : {
+  BP720P : {
+    LEVELID : '42c01f',
+    AS      : 2162
+  },
+  BP480P : {
+    LEVELID : '42c01e',
+    AS      : 960
+  }
+},
+
 export enum causes {
   CONNECTION_ERROR = 'Connection Error',
   REQUEST_TIMEOUT = 'Request Timeout',

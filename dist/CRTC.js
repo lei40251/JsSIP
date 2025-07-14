@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025791528
+ * CRTC v1.10.9-beta.20257141729
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3305,7 +3305,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":66}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -3566,11 +3566,11 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":53,"./URI":59,"./Utils":60}],32:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":54,"./URI":60,"./Utils":61}],32:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014183056 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014283458 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3589,6 +3589,17 @@ module.exports = {
   ANIMATION_ID: 'animationId',
   CMODE: {
     PAPHONE: 'paphone'
+  },
+  // 不同清晰度对应H264的levleId和AS值
+  SDP_LEVELID_AS: {
+    BP720P: {
+      LEVELID: '42c01f',
+      AS: 2162
+    },
+    BP480P: {
+      LEVELID: '42c01e',
+      AS: 960
+    }
   },
   // End and Failure causes.
   causes: {
@@ -4061,7 +4072,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Dialog;
 }();
-},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":52,"./Transactions":56,"./Utils":60}],34:[function(require,module,exports){
+},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":53,"./Transactions":57,"./Utils":61}],34:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -4173,7 +4184,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return DialogRequestSender;
 }();
-},{"../Constants":32,"../RequestSender":51,"../Transactions":56}],35:[function(require,module,exports){
+},{"../Constants":32,"../RequestSender":52,"../Transactions":57}],35:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -4367,7 +4378,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return DigestAuthentication;
 }();
-},{"./Logger":39,"./Utils":60}],36:[function(require,module,exports){
+},{"./Logger":39,"./Utils":61}],36:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -16859,7 +16870,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":41,"./URI":59}],38:[function(require,module,exports){
+},{"./NameAddrHeader":42,"./URI":60}],38:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -16873,7 +16884,8 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-debug('version %s', '1.10.9-beta.405014183056');
+var MediaStreamMixer = require('./MediaStreamMixer');
+debug('version %s', '1.10.9-beta.405014283458');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16902,6 +16914,7 @@ module.exports = {
   URI: URI,
   NameAddrHeader: NameAddrHeader,
   WebSocketInterface: WebSocketInterface,
+  MediaStreamMixer: MediaStreamMixer,
   Grammar: Grammar,
   getStats: getStats,
   // Expose the debug module.
@@ -16910,10 +16923,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014183056';
+    return '1.10.9-beta.405014283458';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./NameAddrHeader":41,"./Stats":54,"./UA":58,"./URI":59,"./Utils":60,"./WebSocketInterface":61,"debug":66}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./MediaStreamMixer":40,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -16963,7 +16976,269 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Logger;
 }();
-},{"debug":66}],40:[function(require,module,exports){
+},{"debug":67}],40:[function(require,module,exports){
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, _toPropertyKey(descriptor.key), descriptor); } }
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
+function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return _typeof(key) === "symbol" ? key : String(key); }
+function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (_typeof(res) !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
+var Logger = require('./Logger');
+var logger = new Logger('MediaStreamMixer');
+module.exports = /*#__PURE__*/function () {
+  function MediaStreamMixer(videos) {
+    var _this = this;
+    _classCallCheck(this, MediaStreamMixer);
+    logger.debug("constructor: ".concat(videos.length));
+
+    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
+    var tmpVideos = [];
+    videos.forEach(function (video) {
+      if (video instanceof HTMLMediaElement) {
+        tmpVideos.push(video);
+      } else {
+        tmpVideos.push(_this._mediaStreamToVideoElement(video));
+      }
+    });
+    // 需要混屏的全部 HTMLMediaElement 数组
+    this._videos = tmpVideos;
+    // 是否停止绘制视频帧
+    this._isStopDrawingFrames = false;
+
+    // 停止时使用
+    this._audioSources;
+    this._audioDestination;
+    this._audioContext;
+
+    // 初始化混屏用的画布
+    this._canvas = document.createElement('canvas');
+    this._context = this._canvas.getContext('2d');
+    this._canvas.setAttribute('style', 'display:none');
+  }
+
+  /**
+   * 视频绘制到画布
+   */
+  _createClass(MediaStreamMixer, [{
+    key: "_drawImage",
+    value: function _drawImage(video, idx) {
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      var x = 0;
+      var y = 0;
+      var width = video.videoWidth * 480 / video.videoHeight;
+      if (idx === 1) {
+        y = 480;
+      }
+      if (idx === 2) {
+        x = 640;
+      }
+      if (idx === 3) {
+        x = 640;
+        y = 480;
+      }
+      if (idx === 4) {
+        y = 480 * 2;
+      }
+      if (idx === 5) {
+        x = 640;
+        y = 480 * 2;
+      }
+      if (width < 640) {
+        x = x + (640 - width) / 2;
+      }
+      this._context.drawImage(video, x, y, width, 480);
+    }
+
+    /**
+     * 将视频流渲染到画布
+     */
+  }, {
+    key: "_drawVideosToCanvas",
+    value: function _drawVideosToCanvas() {
+      var _this2 = this;
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      var renderVideos = this._videos.filter(function (video) {
+        return video.srcObject ? video.srcObject.active : false;
+      });
+
+      // 根据视频数量生成画布高的倍数
+      var height = 1;
+      if (renderVideos.length === 2 || renderVideos.length === 3 || renderVideos.length === 4) {
+        height = 2;
+      }
+      if (renderVideos.length === 5 || renderVideos.length === 6) {
+        height = 3;
+      }
+      if (renderVideos.length === 7 || renderVideos.length === 8) {
+        height = 4;
+      }
+      if (renderVideos.length === 9 || renderVideos.length === 10) {
+        height = 5;
+      }
+
+      // 设置画布宽高
+      this._canvas.width = renderVideos.length > 2 ? 1280 : 640;
+      this._canvas.height = 480 * height;
+      renderVideos.forEach(function (video, idx) {
+        // 开始绘制当前视频帧
+        _this2._drawImage(video, idx);
+      });
+
+      // 开始帧动画开始混流
+      window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
+    }
+
+    // 将MediaStream转换为 HTMLVideoElement
+  }, {
+    key: "_mediaStreamToVideoElement",
+    value: function _mediaStreamToVideoElement(mediaStream) {
+      var video = document.createElement('video');
+      video.setAttribute('style', 'display:none');
+      video.muted = true;
+      video.autoplay = true;
+      video.setAttribute('playsinline', '');
+      video.srcObject = mediaStream.mediaStream || mediaStream;
+      video.play()["catch"](function () {
+        logger.error('video play error');
+      });
+      return video;
+    }
+
+    // 停止合流
+  }, {
+    key: "stop",
+    value: function stop() {
+      logger.debug('stop');
+      this._videos = [];
+      this._isStopDrawingFrames = true;
+      if (this._audioSources.length) {
+        this._audioSources.forEach(function (source) {
+          source.disconnect();
+        });
+        this._audioSources = [];
+      }
+      if (this._audioDestination) {
+        this._audioDestination.disconnect();
+        this._audioDestination = null;
+      }
+      if (this._audioContext) {
+        this._audioContext.close();
+      }
+      this._audioContext = null;
+
+      // 清理画布
+      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+      // 停止画布导出的视频流
+      if (this._canvas.stream) {
+        this._canvas.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        this._canvas.stream = null;
+      }
+    }
+
+    // 添加媒体
+  }, {
+    key: "appendStream",
+    value: function appendStream(videos) {
+      var _this3 = this;
+      logger.debug('appendStream');
+      if (!videos) {
+        // eslint-disable-next-line no-throw-literal
+        throw 'First parameter is required.';
+      }
+      if (!(videos instanceof Array)) {
+        videos = [videos];
+      }
+      videos.forEach(function (video) {
+        if (video instanceof HTMLMediaElement) {
+          _this3._videos.push(video);
+        } else {
+          _this3._videos.push(_this3._mediaStreamToVideoElement(video));
+        }
+      });
+    }
+
+    // 获取音视频混合的媒体流
+  }, {
+    key: "getMixedStream",
+    value: function getMixedStream() {
+      logger.debug('getMixedStream');
+      this._isStopDrawingFrames = false;
+      var mixedVideoStream = this.getVideoStream();
+      var mixedAudioStream = this.getAudioStream();
+      if (mixedAudioStream) {
+        mixedAudioStream.getAudioTracks().forEach(function (track) {
+          mixedVideoStream.addTrack(track);
+        });
+      }
+      return mixedVideoStream;
+    }
+
+    // 获取混合后的视频流
+  }, {
+    key: "getVideoStream",
+    value: function getVideoStream() {
+      logger.debug('getVideoStream');
+
+      // 开始帧动画开始混流
+      this._drawVideosToCanvas();
+      var videoStream = new MediaStream();
+      var capturedStream = this._canvas.captureStream();
+      capturedStream.getVideoTracks().forEach(function (track) {
+        videoStream.addTrack(track);
+      });
+
+      // 用于停止混合时
+      this._canvas.stream = capturedStream;
+      // this._canvas.stream = videoStream;
+
+      return videoStream;
+    }
+
+    // 获取混合后的音频流
+  }, {
+    key: "getAudioStream",
+    value: function getAudioStream() {
+      var _this4 = this;
+      logger.debug('getAudioStream');
+      this._audioSources = [];
+      this._audioContext = new AudioContext();
+
+      // TODO:可以分别混合音频
+      // if (this._useGainNode === true)
+      // {
+      //   this._gainNode = this._audioContext.createGain();
+      //   this._gainNode.connect(this._audioContext.destination);
+      //   this._gainNode.gain.value = 0; // don't hear this
+      // }
+
+      this._videos.forEach(function (video) {
+        if (!video.srcObject.getAudioTracks()) {
+          return;
+        }
+        var audioSource = _this4._audioContext.createMediaStreamSource(video.srcObject);
+        _this4._audioSources.push(audioSource);
+      });
+      this._audioDestination = this._audioContext.createMediaStreamDestination();
+      this._audioSources.forEach(function (audioSource) {
+        audioSource.connect(_this4._audioDestination);
+      });
+      return this._audioDestination.stream;
+    }
+  }]);
+  return MediaStreamMixer;
+}();
+},{"./Logger":39}],41:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -17227,7 +17502,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Message;
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./URI":59,"./Utils":60,"events":64}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":65}],42:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -17348,7 +17623,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return NameAddrHeader;
 }();
-},{"./Grammar":37,"./URI":59}],42:[function(require,module,exports){
+},{"./Grammar":37,"./URI":60}],43:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -17605,7 +17880,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Options;
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./Utils":60,"events":64}],43:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":65}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -17880,7 +18155,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":37,"./Logger":39,"./SIPMessage":52}],44:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./SIPMessage":53}],45:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -17889,7 +18164,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -18013,6 +18288,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpAudioSources = [];
     _this._bfcpMediastreams = [];
     _this._bfcpAudioCtx = null;
+
+    // SDP协商的分辨率速率
+    _this._sdpResolution = 'BP480P';
 
     // 适配 DTMF payload 值
     _this._dtmf_payload = null;
@@ -18309,6 +18587,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           cause: CRTC_C.AUTHORIZATION_ERROR_CAUSES.AUTH_SIPDOMAIN_ERROR
         });
         return false;
+      }
+
+      // SDP协商的分辨率速率
+      if (extraFeatures) {
+        if (extraFeatures.indexOf('BP480P') !== -1) {
+          this._sdpResolution = 'BP480P';
+          this._ua.transport.sdpResolution = 'BP480P';
+        }
+        if (extraFeatures.indexOf('BP720P') !== -1) {
+          this._sdpResolution = 'BP720P';
+          this._ua.transport.sdpResolution = 'BP720P';
+        }
       }
 
       // 是否启用BFCP
@@ -18710,13 +19000,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var peerHasVideoLine = false;
       var peerOffersFullAudio = false;
       var peerOffersFullVideo = false;
-
-      // 本端媒体约束
-      // this._inviteMediaConstraints = Utils.cloneObject(rtcAnswerConstraints, {
-      //   audio : true,
-      //   video : true
-      // });
-
       this._rtcAnswerConstraints = rtcAnswerConstraints;
       this._rtcOfferConstraints = options.rtcOfferConstraints || null;
       this._data = options.data || this._data;
@@ -18854,8 +19137,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              console.warn('mediaConstraints: ', mediaConstraints, mediaStream);
-
               // 根据自定义流确定是否需要获取对应设备的流
               mediaStream && mediaStream.getTracks().forEach(function (track) {
                 mediaConstraints[track.kind] = false;
@@ -18863,7 +19144,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // Audio and/or video requested, prompt getUserMedia.
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
-                _context2.next = 17;
+                _context2.next = 16;
                 break;
               }
               _this4._localMediaStreamLocallyGenerated = true;
@@ -18881,7 +19162,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (!mediaConstraints.video) {
                 _this4._localToAudio = true;
               }
-              _context2.next = 8;
+              _context2.next = 7;
               return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
                 if (_this4._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18893,22 +19174,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this4.emit('getusermediafailed', error);
                 throw new Error('getUserMedia() failed');
               });
-            case 8:
+            case 7:
               mStream = _context2.sent;
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context2.next = 14;
+                _context2.next = 13;
                 break;
               }
               return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
-            case 14:
+            case 13:
               return _context2.abrupt("return", mStream);
-            case 15:
-              _context2.next = 18;
+            case 14:
+              _context2.next = 17;
               break;
-            case 17:
+            case 16:
               return _context2.abrupt("return", mediaStream);
-            case 18:
+            case 17:
             case "end":
               return _context2.stop();
           }
@@ -19044,14 +19325,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // TODO: Is this event already useful?
         _this4._connecting(request);
         if (!_this4._late_sdp) {
-          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function () {
+          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function (error) {
             request.reply(500);
-            throw new Error('_createLocalDescription() failed');
+            throw new Error("_createLocalDescription() failed ".concat(error.message));
           });
         } else {
-          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function () {
+          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function (error) {
             request.reply(500);
-            throw new Error('_createLocalDescription() failed');
+            throw new Error("_createLocalDescription() failed ".concat(error.message));
           });
         }
       })
@@ -20845,7 +21126,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
         // 非BFCP修改为只支持 42c01e
-        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/42e01f/g, '42c01e'));
+        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/42e01f/g, CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID));
 
         // 兼容 Firefox 去掉 bundle
         if (Utils.isFirefox() && type === 'offer') {
@@ -21022,12 +21303,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * 处理5G和非5G的SDP
              */
             if (_this18._ua.sk[7] >= 3) {
-              _bandAS += 960;
+              _bandAS += CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS;
               _bandRR += 6000;
               _bandRS += 8000;
               media.bandwidth = [{
                 type: 'AS',
-                limit: 960
+                limit: CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS
               }, {
                 type: 'RR',
                 limit: 6000
@@ -23742,7 +24023,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   return RTCSession;
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":46,"./RTCSession/Info":47,"./RTCSession/ReferNotifier":48,"./RTCSession/ReferSubscriber":49,"./RequestSender":51,"./SIPMessage":52,"./Timers":55,"./Transactions":56,"./URI":59,"./Utils":60,"buffer":65,"events":64,"sdp-transform":73}],46:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":66,"events":65,"sdp-transform":74}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -23911,7 +24192,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":60,"events":64}],47:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":65}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24022,7 +24303,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Info;
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":60,"events":64}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":65}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24080,7 +24361,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return ReferNotifier;
 }();
-},{"../Constants":32,"../Logger":39}],49:[function(require,module,exports){
+},{"../Constants":32,"../Logger":39}],50:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24238,7 +24519,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":60,"events":64}],50:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":65}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24571,7 +24852,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Registrator;
 }();
-},{"./Constants":32,"./Logger":39,"./RequestSender":51,"./SIPMessage":52,"./Utils":60}],51:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61}],52:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24724,7 +25005,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return RequestSender;
 }();
-},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":56}],52:[function(require,module,exports){
+},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":57}],53:[function(require,module,exports){
 "use strict";
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
@@ -25480,7 +25761,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":41,"./Utils":60,"sdp-transform":73}],53:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":74}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -25548,7 +25829,7 @@ exports.isSocket = function (socket) {
   }
   return true;
 };
-},{"./Grammar":37,"./Logger":39,"./Utils":60}],54:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./Utils":61}],55:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -26005,7 +26286,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return getStats;
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":60,"events":64}],55:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":65}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -26026,7 +26307,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -26735,7 +27016,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":52,"./Timers":55,"events":64}],57:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":65}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -26796,6 +27077,7 @@ module.exports = /*#__PURE__*/function () {
     // 适配部分浏览器的SDP 的 DC 参数，适配 Firefox
     this._sctp_port = null;
     this._max_message_size = null;
+    this._sdpResolution = 'BP480P';
 
     // It seems that TextDecoder is not available in some versions of React-Native.
     // See https://github.com/versatica/JsSIP/issues/695
@@ -26845,6 +27127,14 @@ module.exports = /*#__PURE__*/function () {
     key: "sip_uri",
     get: function get() {
       return this.socket.sip_uri;
+    }
+  }, {
+    key: "sdpResolution",
+    get: function get() {
+      return this._sdpResolution;
+    },
+    set: function set(value) {
+      this._sdpResolution = value;
     }
   }, {
     key: "connect",
@@ -27086,7 +27376,7 @@ module.exports = /*#__PURE__*/function () {
       // data += 'a=sctp-port:5000\r\na=max-message-size:1073741823\r\n';
 
       // 兼容hwcloudlink，修改收到的 profile
-      data = data.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=42c01e');
+      data = data.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[this._sdpResolution].LEVELID));
       // eslint-disable-next-line max-len
       // data = data.replace(/(a=fmtp:\d+\s+profile-level-id=[\w\d]+[\s\S]*?a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/, '$142c01e');
 
@@ -27113,7 +27403,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Transport;
 }();
-},{"./Constants":32,"./Logger":39,"./Socket":53,"./Utils":60}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Socket":54,"./Utils":61}],59:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -28269,7 +28559,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":42,"./Parser":43,"./Pk":44,"./RTCSession":45,"./Registrator":50,"./SIPMessage":52,"./Transactions":56,"./Transport":57,"./URI":59,"./Utils":60,"./sanityCheck":62,"events":64,"jsencrypt":69}],59:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":41,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":65,"jsencrypt":70}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -28501,7 +28791,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return URI;
 }();
-},{"./Constants":32,"./Grammar":37,"./Utils":60}],60:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Utils":61}],61:[function(require,module,exports){
 "use strict";
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
@@ -28530,6 +28820,14 @@ var isFunction = exports.isFunction = function (fn) {
     return false;
   }
 };
+var isIOS = function isIOS() {
+  var ua = navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(ua) ||
+  // 检测iOS设备
+  navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 // 检测iPad Pro
+  ;
+};
+
 exports.isString = function (str) {
   if (str !== undefined) {
     return Object.prototype.toString.call(str) === '[object String]' ? true : false;
@@ -29009,26 +29307,30 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRu
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        _context.prev = 2;
-        _context.next = 5;
+        if (isIOS()) {
+          _context.next = 12;
+          break;
+        }
+        _context.prev = 3;
+        _context.next = 6;
         return navigator.mediaDevices.getUserMedia({
           video: true
         });
-      case 5:
+      case 6:
         mediaStream = _context.sent;
         mediaStream.getTracks().forEach(function (track) {
           return track.stop();
         });
-        _context.next = 11;
+        _context.next = 12;
         break;
-      case 9:
-        _context.prev = 9;
-        _context.t0 = _context["catch"](2);
-      case 11:
-        _context.prev = 11;
-        _context.next = 14;
+      case 10:
+        _context.prev = 10;
+        _context.t0 = _context["catch"](3);
+      case 12:
+        _context.prev = 12;
+        _context.next = 15;
         return navigator.mediaDevices.enumerateDevices();
-      case 14:
+      case 15:
         devices = _context.sent;
         // 筛选出视频输入设备（摄像头）
         cameras = devices.filter(function (device) {
@@ -29042,17 +29344,17 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRu
           };
         });
         return _context.abrupt("return", cameras);
-      case 19:
-        _context.prev = 19;
-        _context.t1 = _context["catch"](11);
+      case 20:
+        _context.prev = 20;
+        _context.t1 = _context["catch"](12);
         return _context.abrupt("return", {
           error: _context.t1.message
         });
-      case 22:
+      case 23:
       case "end":
         return _context.stop();
     }
-  }, _callee, null, [[2, 9], [11, 19]]);
+  }, _callee, null, [[3, 10], [12, 20]]);
 }));
 
 /**
@@ -29077,26 +29379,30 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regenerat
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        _context2.prev = 2;
-        _context2.next = 5;
+        if (isIOS()) {
+          _context2.next = 12;
+          break;
+        }
+        _context2.prev = 3;
+        _context2.next = 6;
         return navigator.mediaDevices.getUserMedia({
           audio: true
         });
-      case 5:
+      case 6:
         mediaStream = _context2.sent;
         mediaStream.getTracks().forEach(function (track) {
           return track.stop();
         });
-        _context2.next = 11;
+        _context2.next = 12;
         break;
-      case 9:
-        _context2.prev = 9;
-        _context2.t0 = _context2["catch"](2);
-      case 11:
-        _context2.prev = 11;
-        _context2.next = 14;
+      case 10:
+        _context2.prev = 10;
+        _context2.t0 = _context2["catch"](3);
+      case 12:
+        _context2.prev = 12;
+        _context2.next = 15;
         return navigator.mediaDevices.enumerateDevices();
-      case 14:
+      case 15:
         devices = _context2.sent;
         // 筛选出音频输入设备（麦克风）
         microphones = devices.filter(function (device) {
@@ -29110,17 +29416,17 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regenerat
           };
         });
         return _context2.abrupt("return", microphones);
-      case 19:
-        _context2.prev = 19;
-        _context2.t1 = _context2["catch"](11);
+      case 20:
+        _context2.prev = 20;
+        _context2.t1 = _context2["catch"](12);
         return _context2.abrupt("return", {
           error: _context2.t1.message
         });
-      case 22:
+      case 23:
       case "end":
         return _context2.stop();
     }
-  }, _callee2, null, [[2, 9], [11, 19]]);
+  }, _callee2, null, [[3, 10], [12, 20]]);
 }));
 
 /**
@@ -29145,26 +29451,30 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorR
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        _context3.prev = 2;
-        _context3.next = 5;
+        if (isIOS()) {
+          _context3.next = 12;
+          break;
+        }
+        _context3.prev = 3;
+        _context3.next = 6;
         return navigator.mediaDevices.getUserMedia({
           audio: true
         });
-      case 5:
+      case 6:
         mediaStream = _context3.sent;
         mediaStream.getTracks().forEach(function (track) {
           return track.stop();
         });
-        _context3.next = 11;
+        _context3.next = 12;
         break;
-      case 9:
-        _context3.prev = 9;
-        _context3.t0 = _context3["catch"](2);
-      case 11:
-        _context3.prev = 11;
-        _context3.next = 14;
+      case 10:
+        _context3.prev = 10;
+        _context3.t0 = _context3["catch"](3);
+      case 12:
+        _context3.prev = 12;
+        _context3.next = 15;
         return navigator.mediaDevices.enumerateDevices();
-      case 14:
+      case 15:
         devices = _context3.sent;
         // 筛选出音频输出设备
         speakers = devices.filter(function (device) {
@@ -29178,17 +29488,17 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorR
           };
         });
         return _context3.abrupt("return", speakers);
-      case 19:
-        _context3.prev = 19;
-        _context3.t1 = _context3["catch"](11);
+      case 20:
+        _context3.prev = 20;
+        _context3.t1 = _context3["catch"](12);
         return _context3.abrupt("return", {
           error: _context3.t1.message
         });
-      case 22:
+      case 23:
       case "end":
         return _context3.stop();
     }
-  }, _callee3, null, [[2, 9], [11, 19]]);
+  }, _callee3, null, [[3, 10], [12, 20]]);
 }));
 
 /**
@@ -29995,7 +30305,7 @@ exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
   }
   return newSdpLines.join('\r\n');
 };
-},{"./Constants":32,"./Grammar":37,"./URI":59}],61:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -30144,7 +30454,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return WebSocketInterface;
 }();
-},{"./Grammar":37,"./Logger":39}],62:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39}],63:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -30353,7 +30663,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":52,"./Utils":60}],63:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],64:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -30505,7 +30815,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -31030,7 +31340,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],65:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -32811,7 +33121,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":63,"buffer":65,"ieee754":68}],66:[function(require,module,exports){
+},{"base64-js":64,"buffer":66,"ieee754":69}],67:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -33084,7 +33394,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":67,"_process":71}],67:[function(require,module,exports){
+},{"./common":68,"_process":72}],68:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -33360,7 +33670,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":70}],68:[function(require,module,exports){
+},{"ms":71}],69:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -33447,7 +33757,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],69:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -38838,7 +39148,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],70:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -39002,7 +39312,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],71:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -39188,7 +39498,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -39684,7 +39994,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -39697,7 +40007,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./parser":74,"./writer":75}],74:[function(require,module,exports){
+},{"./parser":75,"./writer":76}],75:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -39823,7 +40133,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":72}],75:[function(require,module,exports){
+},{"./grammar":73}],76:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -39939,5 +40249,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":72}]},{},[38])(38)
+},{"./grammar":73}]},{},[38])(38)
 });

@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-// CRTC.debug.disable('CRTC:*');
+CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -24,7 +24,7 @@ let cloneStream = null;
 let cusStream;
 let isRefer = false;
 
-const extraFeatures = [];
+const extraFeatures = [ ];
 
 // let payload;
 
@@ -37,9 +37,10 @@ const remoteAudio = document.querySelector('#remoteAudio');
 
 let cusMediaStream = new MediaStream();
 
+const mbit = handleGetQuery('mbit');
 const env = handleGetQuery('env');
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
-const exts = handleGetQuery('ext') ? handleGetQuery('ext').split() : null;
+const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 
 exts && exts.forEach((ext) => extraFeatures.push(ext));
 
@@ -60,12 +61,22 @@ const configuration = {
   session_timers : false,
   secret_key     : secretKey
 };
+
 // 媒体约束条件
-const videoConstraints = {
+let videoConstraints = {
   width     : 640,
   height    : 480,
   frameRate : 15
 };
+
+if (exts && exts.indexOf('BP720P')!==-1)
+{
+  videoConstraints = {
+    width     : 1280,
+    height    : 720,
+    frameRate : 15
+  };
+}
 
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
@@ -741,19 +752,23 @@ ua.on('newRTCSession', function(e)
       }
     };
 
-    e.session.connection.getSenders().forEach((sender) =>
+    // 根据分辨率设置速率
+    if (mbit)
     {
-      if (sender.track&& sender.track.kind === 'video')
+      e.session.connection.getSenders().forEach((sender) =>
       {
-        const parameters = sender.getParameters();
+        if (sender.track&& sender.track.kind === 'video')
+        {
+          const parameters = sender.getParameters();
 
-        parameters.encodings[0].maxBitrate = 400 * 1000;
+          parameters.encodings[0].maxBitrate = mbit * 1000;
 
-        sender.setParameters(parameters);
+          sender.setParameters(parameters);
 
-        sender.track.contentHint = 'detail';
-      }
-    });
+          sender.track.contentHint = 'detail';
+        }
+      });
+    }
   });
 
   //  ***** DOM 事件绑定 *****
@@ -1387,24 +1402,29 @@ function getStreams(pc)
   const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
   const mediaStreamArray = [];
 
+  let newCloneStream;
+
   if (videoTrack)
   {
     mediaStreamArray.push(videoTrack);
   }
-  else
+  else if (audioTrack)
   {
     mediaStreamArray.push(audioTrack);
   }
 
-  // 本地视频
-  const newCloneStream = new MediaStream(mediaStreamArray);
-
-  localVideo.srcObject = newCloneStream;
-  newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
+  if (mediaStreamArray.length>0)
   {
+  // 本地视频
+    newCloneStream = new MediaStream(mediaStreamArray);
+
+    localVideo.srcObject = newCloneStream;
+    newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
+    {
     // 特殊情况下清理页面残留的video黑框
-    localVideo.srcObject = null;
-  });
+      localVideo.srcObject = null;
+    });
+  }
 
   // 停止旧的媒体流
   if (cloneStream)
@@ -1422,7 +1442,7 @@ function getStreams(pc)
   isRefer = false;
 
   // 更新全局的 cloneStream 引用
-  cloneStream = newCloneStream;
+  newCloneStream && (cloneStream = newCloneStream);
 
   // 远端音频
   // 适配安卓微信部分情况下无声音问题 trackId
@@ -1620,3 +1640,16 @@ function start()
 }
 
 start();
+
+document.addEventListener('visibilitychange', function()
+{
+  if (document.hidden)
+  {
+    console.log('页面进入后台');
+  }
+  else
+  {
+    document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
+    console.warn('页面回到前台');
+  }
+});
