@@ -16,7 +16,7 @@ let callee;
 const callerAccount = handleGetQuery('caller');
 // UA 配置项
 const configuration = {
-  // JsSIP.Socket 实例
+  // Socket 实例
   sockets      : new CRTC.WebSocketInterface(signalingUrl),
   // 与 UA 关联的 SIP URI
   uri          : `sip:${callerAccount}@${sipDomain}`,

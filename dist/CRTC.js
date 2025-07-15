@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257141729
+ * CRTC v1.10.9-beta.2025715159
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3570,7 +3570,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014283458 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014303018 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16885,7 +16885,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamMixer = require('./MediaStreamMixer');
-debug('version %s', '1.10.9-beta.405014283458');
+debug('version %s', '1.10.9-beta.405014303018');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16923,7 +16923,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014283458';
+    return '1.10.9-beta.405014303018';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./MediaStreamMixer":40,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -17018,10 +17018,40 @@ module.exports = /*#__PURE__*/function () {
     this._canvas.setAttribute('style', 'display:none');
   }
 
-  /**
-   * 视频绘制到画布
-   */
+  // 计算缩放后的视频分辨率
   _createClass(MediaStreamMixer, [{
+    key: "_scaleVideo",
+    value: function _scaleVideo(width, height) {
+      var targetWidth = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 640;
+      var targetHeight = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 480;
+      var newWidth, newHeight, scale;
+
+      // 始终按比例缩放（无论原始尺寸是否小于目标尺寸）
+      if (width / height >= targetWidth / targetHeight) {
+        scale = targetWidth / width; // 以宽度为基准缩放
+        newHeight = height * scale;
+        newWidth = targetWidth;
+      } else {
+        scale = targetHeight / height; // 以高度为基准缩放
+        newWidth = width * scale;
+        newHeight = targetHeight;
+      }
+
+      // 计算居中偏移量（若缩放后尺寸仍小于目标尺寸）
+      var offsetX = Math.max(0, (targetWidth - newWidth) / 2);
+      var offsetY = Math.max(0, (targetHeight - newHeight) / 2);
+      return {
+        width: newWidth,
+        height: newHeight,
+        offsetX: offsetX,
+        offsetY: offsetY
+      };
+    }
+
+    /**
+     * 视频绘制到画布
+     */
+  }, {
     key: "_drawImage",
     value: function _drawImage(video, idx) {
       // 是否已经停止
@@ -17030,12 +17060,11 @@ module.exports = /*#__PURE__*/function () {
       }
       var x = 0;
       var y = 0;
-      var width = video.videoWidth * 480 / video.videoHeight;
       if (idx === 1) {
-        y = 480;
+        x = 640;
       }
       if (idx === 2) {
-        x = 640;
+        y = 480;
       }
       if (idx === 3) {
         x = 640;
@@ -17048,10 +17077,8 @@ module.exports = /*#__PURE__*/function () {
         x = 640;
         y = 480 * 2;
       }
-      if (width < 640) {
-        x = x + (640 - width) / 2;
-      }
-      this._context.drawImage(video, x, y, width, 480);
+      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight);
+      this._context.drawImage(video, x + newVideo.offsetX, y + newVideo.offsetY, newVideo.width, newVideo.height);
     }
 
     /**
@@ -17071,21 +17098,15 @@ module.exports = /*#__PURE__*/function () {
 
       // 根据视频数量生成画布高的倍数
       var height = 1;
-      if (renderVideos.length === 2 || renderVideos.length === 3 || renderVideos.length === 4) {
+      if (renderVideos.length > 3) {
         height = 2;
       }
-      if (renderVideos.length === 5 || renderVideos.length === 6) {
+      if (renderVideos.length > 5 && renderVideos.length < 9) {
         height = 3;
-      }
-      if (renderVideos.length === 7 || renderVideos.length === 8) {
-        height = 4;
-      }
-      if (renderVideos.length === 9 || renderVideos.length === 10) {
-        height = 5;
       }
 
       // 设置画布宽高
-      this._canvas.width = renderVideos.length > 2 ? 1280 : 640;
+      this._canvas.width = renderVideos.length >= 2 ? 1280 : 640;
       this._canvas.height = 480 * height;
       renderVideos.forEach(function (video, idx) {
         // 开始绘制当前视频帧
@@ -19377,6 +19398,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._ua.sk[7] < 2) {
         return;
       }
+      var videoConstraints = options.videoConstraints || this._inviteMediaConstraints.video || {
+        video: true
+      };
 
       // Check Session Status.
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
@@ -19396,9 +19420,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
-        return navigator.mediaDevices.getUserMedia({
-          video: true
-        }).then(function (stream) {
+        return navigator.mediaDevices.getUserMedia(videoConstraints).then(function (stream) {
           // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
           var ua;
           navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));

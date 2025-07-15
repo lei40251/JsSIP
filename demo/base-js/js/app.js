@@ -5,7 +5,7 @@
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
-CRTC.debug.disable('CRTC:*');
+// CRTC.debug.disable('CRTC:*');
 
 // 通话统计
 let stats;
@@ -50,7 +50,7 @@ const account = handleGetQuery('caller');
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
 const configuration = {
-  // JsSIP.Socket 实例
+  // Socket 实例
   sockets        : socket,
   // 与 UA 关联的 SIP URI
   uri            : `sip:${account}@${sipDomain}`,
@@ -863,7 +863,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo();
+    e.session.upgradeToVideo({ videoConstraints: videoConstraints });
     stats && stats.reset();
   };
 
@@ -872,7 +872,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true, videoConstraints: videoConstraints });
     stats && stats.reset();
   };
 
@@ -1274,14 +1274,6 @@ async function call(type, direction, mediaStream)
       });
   }
 
-  // if (navigator.userAgent.indexOf('ArkWeb') != -1)
-  // {
-  //   const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
-
-  //   tmpVideo.addTrack(generateAnEmptyAudioTrack());
-  //   options['mediaStream'] = tmpVideo;
-  // }
-
   if (type === 'callnull' || type === 'callnullaudio' || type === 'callnullvideo')
   {
     const tmpStream = new MediaStream();
@@ -1309,6 +1301,19 @@ async function call(type, direction, mediaStream)
   {
     options.mediaConstraints.audio = false;
   }
+
+  // if (navigator.userAgent.indexOf('ArkWeb') != -1)
+  // {
+  //   const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
+
+  //   tmpVideo.addTrack(generateAnEmptyAudioTrack());
+  //   options['mediaStream'] = tmpVideo;
+
+  //   options['mediaConstraints'] = {
+  //     audio : false,
+  //     video : false
+  //   };
+  // }
 
   const callee = document.querySelector('#callee').value;
 
@@ -1533,18 +1538,18 @@ function updateDevices()
     });
 
   // 移动端不支持切换麦克风
-  CRTC.Utils.getMicrophones()
-    .then((microphones) =>
-    {
-      let menus = '';
+  // CRTC.Utils.getMicrophones()
+  //   .then((microphones) =>
+  //   {
+  //     let menus = '';
 
-      microphones.forEach((device) =>
-      {
-        menus += `<option value="${device.deviceId}">${device.label}</option>`;
-      });
+  //     microphones.forEach((device) =>
+  //     {
+  //       menus += `<option value="${device.deviceId}">${device.label}</option>`;
+  //     });
 
-      document.querySelector('#mics').innerHTML = menus;
-    });
+  //     document.querySelector('#mics').innerHTML = menus;
+  //   });
 }
 
 /**

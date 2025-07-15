@@ -6,7 +6,7 @@ const calleeAccount = handleGetQuery('callee');
 // 主叫
 
 callee = new CRTC.UA({
-  // JsSIP.Socket 实例
+  // Socket 实例
   sockets      : new CRTC.WebSocketInterface(signalingUrl),
   // 与 UA 关联的 SIP URI
   uri          : `sip:${calleeAccount}@${sipDomain}`,

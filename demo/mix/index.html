@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>WebRTC Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <link rel="stylesheet" href="./style/materialize.min.css" />
+  <link rel="stylesheet" href="./style/style.min.css" />
+</head>
+
+<body>
+  <audio id="ringback" style="display: none;" loop="loop">
+    <source src="./sound/ringback.ogg" type="audio/ogg" />
+  </audio>
+  <audio id="ringing" style="display: none;" loop="loop">
+    <source src="./sound/ringing.ogg" type="audio/ogg" />
+  </audio>
+  <input type="hidden" class="dtmfTarget" />
+  <div id="welcome-page" class="welcomt-page hide valign-wrapper" style="width:100vw;height:100vh;">
+    <div class="la-line-scale la-2x blue-text">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+    <h6>WebRTC Tool</h6>
+  </div>
+  <div id="login-page" class="row hide" style="width:30vw;">
+    <div class="col s12">
+      <div class="card">
+        <form action="./index.html" method="GET">
+          <div class="card-content">
+            <div class="input-field">
+              <input id="account" type="text" required name="account" class="validate" />
+              <label for="account">用户名</label>
+            </div>
+            <div class="input-field">
+              <input id="password" type="password" name="password" autocomplete="false" class="validate" />
+              <label for="password">密码</label>
+            </div>
+          </div>
+          <div class="card-action">
+            <button type="submit" id="login" class="btn waves-effect waves-light fluid">
+              立即登陆
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div id="main-page" class="container mainPage valign-wrapper row hide">
+    <div class="callArea">
+      <div class="card col s12">
+        <div class="card-content">
+          <h4 class="card-title center-align">
+            <span id="registered-user" class="red-text"></span>
+            <small>注册成功</small>
+          </h4>
+          <div class="input-field row col s12">
+            <input id="linkman" type="text" required name="linkman" class="validate" />
+            <label for="linkman">请输入客服号码</label>
+          </div>
+        </div>
+        <div class="col row s12">
+          <button id="logout" type="button"
+            class="btn white-text btn-flat fluid waves-effect waves-light blue-grey col s5">
+            注销
+          </button>
+          <button data-method="video" title="三方视频" type="button"
+            class="btn conference fluid waves-effect waves-light teal darken-1 col s6 offset-s1">
+            <i class="material-icons video-on">group_add</i>
+          </button>
+        </div>
+        <div class="col row s12">
+          <button data-method="audio" title="语音模式" type="button"
+            class="btn call fluid waves-effect waves-light blue col s5">
+            <i class="material-icons video-on">mic</i>
+          </button>
+          <button data-method="video" title="视频模式" type="button"
+            class="btn call fluid waves-effect waves-light pink darken-1 col s6 offset-s1">
+            <i class="material-icons video-on">videocam</i>
+          </button>
+        </div>
+      </div>
+      <video id="mixVideo" src=""></video>
+    </div>
+    <div class="fixed-action-btn">
+      <button data-target="settings-modal" class="btn-floating modal-trigger btn-large green">
+        <i class="large material-icons">settings</i>
+      </button>
+    </div>
+    <div id="settings-modal" class="modal modal-fixed-footer">
+      <div class="modal-content">
+        <!-- <h4>Modal Header</h4> -->
+        <!-- <p>A bunch of text</p> -->
+        <div class="input-field col s12">
+          <select id="switch-microphone">
+            <option value="" disabled selected>选择麦克风</option>
+          </select>
+          <label>选择麦克风</label>
+        </div>
+        <div class="input-field col s12">
+          <select id="switch-camera">
+            <option value="" disabled selected>选择摄像头</option>
+          </select>
+          <label>选择摄像头及帧率</label>
+          <video id="test-video" autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+            style="width:100%;"></video>
+          <div class="input-field col s12">
+            <p class="range-field">
+              <input id="change-frameRate" type="range" min="15" value="5" max="30" />
+            </p>
+          </div>
+        </div>
+        <div class="input-field col s12">
+          <select id="switch-audiooutput">
+            <option value="" disabled selected>选择外放设备</option>
+          </select>
+          <label>选择外放设备</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-contraints" class="modal-close waves-effect waves-green btn-flat">
+          确定
+        </button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="a" class="main" data-target="a">
+        <div class="calling-page hide">
+          <div class="animate">
+            <div class="preloader-wrapper big active">
+              <div class="spinner-layer spinner-blue">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-red">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-yellow">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-green">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <h5 class="white-text">呼叫中</h5>
+          </div>
+          <div class="action">
+            <a class="cancel btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </a>
+          </div>
+        </div>
+        <div class="session-page row hide">
+          <div class="displayName"
+            style="z-index:5;font-size: 30px;background-color: rgba(0,0,0,.3);position: absolute;left: 2vw;top: 3vh;padding: 0 .5vw;border-radius: .3vw;color: #fff;">
+          </div>
+          <div class="large-video">
+            <div class="small-video z-depth-1">
+              <video class="localVideo" autoplay muted playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv">
+              <video style="position:static;width: 100%" autoplay playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" class="remoteVideo" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv screen-video hide">
+              <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+                class="screenVideo" poster="./video.png"></video>
+            </div>
+          </div>
+          <div class="action">
+            <button class="toggle-microphone btn-floating btn-flat waves-effect waves-light indigo darken-1">
+              <i class="material-icons mic-on">mic</i>
+              <i class="material-icons mic-off">mic_off</i>
+            </button>
+            <button class="toggle-camera btn-floating waves-effect waves-light indigo darken-1">
+              <i class="material-icons video-on">videocam</i><i class="material-icons video-off">videocam_off</i>
+            </button>
+            <button class="share-screen btn-floating waves-effect waves-light orange">
+              <i class="material-icons">screen_share</i>
+            </button>
+            <button class="to-mcu btn-floating waves-effect waves-light orange">
+              <i class="material-icons">group_add</i>
+            </button>
+            <button class="hangup btn-floating waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="toggle-phone btn-floating btn-flat waves-effect waves-light cyan darken-1">
+              <i class="material-icons phone-on">phone</i>
+              <i class="material-icons phone-off">phone_paused</i>
+            </button>
+            <button data-target="dialpad-modal"
+              class="btn-floating dialpad modal-trigger waves-effect waves-light teal">
+              <i class="material-icons">dialpad</i>
+            </button>
+          </div>
+        </div>
+        <div class="incoming-page hide">
+          <div class="animate">
+            <h4 class="white-text center-align display-name"></h4>
+            <h6 class="white-text">来电</h6>
+          </div>
+          <div class="action">
+            <button class="reject btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="answer btn-floating btn-large waves-effect waves-light green">
+              <i class="material-icons">phone</i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="b" class="main" data-target="b">
+        <div class="calling-page hide">
+          <div class="animate">
+            <div class="preloader-wrapper big active">
+              <div class="spinner-layer spinner-blue">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-red">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-yellow">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-green">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <h5 class="white-text">呼叫中</h5>
+          </div>
+          <div class="action">
+            <a class="cancel btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </a>
+          </div>
+        </div>
+        <div class="session-page row hide">
+          <div class="displayName"
+            style="z-index:5;font-size: 30px;background-color: rgba(0,0,0,.3);position: absolute;left: 2vw;top: 3vh;padding: 0 .5vw;border-radius: .3vw;color: #fff;">
+          </div>
+          <div class="large-video">
+            <div class="small-video z-depth-1">
+              <video class="localVideo" autoplay muted playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv">
+              <video style="position:static;width: 100%" autoplay playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" class="remoteVideo" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv screen-video hide">
+              <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+                class="screenVideo" poster="./video.png"></video>
+            </div>
+          </div>
+          <div class="action">
+            <button class="toggle-microphone btn-floating btn-flat waves-effect waves-light indigo darken-1">
+              <i class="material-icons mic-on">mic</i>
+              <i class="material-icons mic-off">mic_off</i>
+            </button>
+            <button class="toggle-camera btn-floating waves-effect waves-light indigo darken-1">
+              <i class="material-icons video-on">videocam</i><i class="material-icons video-off">videocam_off</i>
+            </button>
+            <button class="share-screen btn-floating waves-effect waves-light orange">
+              <i class="material-icons">screen_share</i>
+            </button>
+            <button class="to-mcu btn-floating waves-effect waves-light orange">
+              <i class="material-icons">group_add</i>
+            </button>
+            <button class="hangup btn-floating waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="toggle-phone btn-floating btn-flat waves-effect waves-light cyan darken-1">
+              <i class="material-icons phone-on">phone</i>
+              <i class="material-icons phone-off">phone_paused</i>
+            </button>
+            <button data-target="dialpad-modal"
+              class="btn-floating dialpad modal-trigger waves-effect waves-light teal">
+              <i class="material-icons">dialpad</i>
+            </button>
+          </div>
+        </div>
+        <div class="incoming-page hide">
+          <div class="animate">
+            <h4 class="white-text center-align display-name"></h4>
+            <h6 class="white-text">来电</h6>
+          </div>
+          <div class="action">
+            <button class="reject btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="answer btn-floating btn-large waves-effect waves-light green">
+              <i class="material-icons">phone</i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="c" class="main" data-target="c">
+        <div class="calling-page hide">
+          <div class="animate">
+            <div class="preloader-wrapper big active">
+              <div class="spinner-layer spinner-blue">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-red">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-yellow">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-green">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <h5 class="white-text">呼叫中</h5>
+          </div>
+          <div class="action">
+            <a class="cancel btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </a>
+          </div>
+        </div>
+        <div class="session-page row hide">
+          <div class="displayName"
+            style="z-index:5;font-size: 30px;background-color: rgba(0,0,0,.3);position: absolute;left: 2vw;top: 3vh;padding: 0 .5vw;border-radius: .3vw;color: #fff;">
+          </div>
+          <div class="large-video">
+            <div class="small-video z-depth-1">
+              <video class="localVideo" autoplay muted playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv">
+              <video style="position:static;width: 100%" autoplay playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" class="remoteVideo" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv screen-video hide">
+              <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+                class="screenVideo" poster="./video.png"></video>
+            </div>
+          </div>
+          <div class="action">
+            <button class="toggle-microphone btn-floating btn-flat waves-effect waves-light indigo darken-1">
+              <i class="material-icons mic-on">mic</i>
+              <i class="material-icons mic-off">mic_off</i>
+            </button>
+            <button class="toggle-camera btn-floating waves-effect waves-light indigo darken-1">
+              <i class="material-icons video-on">videocam</i><i class="material-icons video-off">videocam_off</i>
+            </button>
+            <button class="share-screen btn-floating waves-effect waves-light orange">
+              <i class="material-icons">screen_share</i>
+            </button>
+            <button class="to-mcu btn-floating waves-effect waves-light orange">
+              <i class="material-icons">group_add</i>
+            </button>
+            <button class="hangup btn-floating waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="toggle-phone btn-floating btn-flat waves-effect waves-light cyan darken-1">
+              <i class="material-icons phone-on">phone</i>
+              <i class="material-icons phone-off">phone_paused</i>
+            </button>
+            <button data-target="dialpad-modal"
+              class="btn-floating dialpad modal-trigger waves-effect waves-light teal">
+              <i class="material-icons">dialpad</i>
+            </button>
+          </div>
+        </div>
+        <div class="incoming-page hide">
+          <div class="animate">
+            <h4 class="white-text center-align display-name"></h4>
+            <h6 class="white-text">来电</h6>
+          </div>
+          <div class="action">
+            <button class="reject btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="answer btn-floating btn-large waves-effect waves-light green">
+              <i class="material-icons">phone</i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="d" class="main" data-target="d">
+        <div class="calling-page hide">
+          <div class="animate">
+            <div class="preloader-wrapper big active">
+              <div class="spinner-layer spinner-blue">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-red">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-yellow">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+
+              <div class="spinner-layer spinner-green">
+                <div class="circle-clipper left">
+                  <div class="circle"></div>
+                </div>
+                <div class="gap-patch">
+                  <div class="circle"></div>
+                </div>
+                <div class="circle-clipper right">
+                  <div class="circle"></div>
+                </div>
+              </div>
+            </div>
+            <h5 class="white-text">呼叫中</h5>
+          </div>
+          <div class="action">
+            <a class="cancel btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </a>
+          </div>
+        </div>
+        <div class="session-page row hide">
+          <div class="displayName"
+            style="z-index:5;font-size: 30px;background-color: rgba(0,0,0,.3);position: absolute;left: 2vw;top: 3vh;padding: 0 .5vw;border-radius: .3vw;color: #fff;">
+          </div>
+          <div class="large-video">
+            <div class="small-video z-depth-1">
+              <video class="localVideo" autoplay muted playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv">
+              <video style="position:static;width: 100%" autoplay playsinline x5-video-player-fullscreen="true"
+                x5-video-player-type="h5" class="remoteVideo" poster="./video.png"></video>
+            </div>
+            <div class="videoDiv screen-video hide">
+              <video autoplay playsinline x5-video-player-fullscreen="true" x5-video-player-type="h5"
+                class="screenVideo" poster="./video.png"></video>
+            </div>
+          </div>
+          <div class="action">
+            <button class="toggle-microphone btn-floating btn-flat waves-effect waves-light indigo darken-1">
+              <i class="material-icons mic-on">mic</i>
+              <i class="material-icons mic-off">mic_off</i>
+            </button>
+            <button class="toggle-camera btn-floating waves-effect waves-light indigo darken-1">
+              <i class="material-icons video-on">videocam</i><i class="material-icons video-off">videocam_off</i>
+            </button>
+            <button class="share-screen btn-floating waves-effect waves-light orange">
+              <i class="material-icons">screen_share</i>
+            </button>
+            <button class="to-mcu btn-floating waves-effect waves-light orange">
+              <i class="material-icons">group_add</i>
+            </button>
+            <button class="hangup btn-floating waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="toggle-phone btn-floating btn-flat waves-effect waves-light cyan darken-1">
+              <i class="material-icons phone-on">phone</i>
+              <i class="material-icons phone-off">phone_paused</i>
+            </button>
+            <button data-target="dialpad-modal"
+              class="btn-floating dialpad modal-trigger waves-effect waves-light teal">
+              <i class="material-icons">dialpad</i>
+            </button>
+          </div>
+        </div>
+        <div class="incoming-page hide">
+          <div class="animate">
+            <h4 class="white-text center-align display-name"></h4>
+            <h6 class="white-text">来电</h6>
+          </div>
+          <div class="action">
+            <button class="reject btn-floating btn-large waves-effect waves-light red">
+              <i class="material-icons">call_end</i>
+            </button>
+            <button class="answer btn-floating btn-large waves-effect waves-light green">
+              <i class="material-icons">phone</i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dialpad-modal" class="modal modal-fixed-footer">
+      <div class="modal-content">
+        <div class="chat">
+          <div class="send-message">
+            <div class="input-field">
+              <input placeholder="输入消息" id="info-message" type="text" class="validate" />
+            </div>
+            <div class="input-field">
+              <button id="sendInfo" class="waves-effect waves-light btn btn-flat white-text teal">
+                send
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="DTMF" class="DTMF row" style="margin-bottom:0;">
+          <div class="col s3">
+            <button data-value="1" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              1
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="2" class="waves-effect waves-light btn-floating  btn-flat teal white-text btn-large">
+              2
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="3" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              3
+            </button>
+          </div>
+
+          <!-- <div class="col s3">
+            <button id="volume" class="btn-floating btn-flat btn-large waves-effect waves-light grey"><i
+                class="material-icons">volume_up</i></button>
+            <button id="unvolume" class="btn-floating btn-flat btn-large waves-effect waves-light red"
+              style="display:none;"><i class="material-icons">volume_off</i></button>
+          </div> -->
+
+          <div class="col s3">
+            <button data-value="4" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              4
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="5" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              5
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="6" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              6
+            </button>
+          </div>
+
+          <!-- <div class="col s3">
+            <button id="photograph" class="btn-floating waves-effect waves-light  btn-large grey"><i
+                class="material-icons">camera_enhance</i></button>
+          </div> -->
+
+          <div class="col s3">
+            <button data-value="7" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              7
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="8" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              8
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="9" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              9
+            </button>
+          </div>
+
+          <!-- <div class="col s3">
+            <button id="hold" class="btn-floating btn-flat btn-large waves-effect waves-light grey"><i
+                class="material-icons">phone_paused</i></button>
+            <button id="unhold" class="btn-floating btn-flat btn-large waves-effect waves-light red"
+              style="display:none;"><i class="material-icons">phone_paused</i></button>
+          </div> -->
+
+          <div class="col s3">
+            <button data-value="*" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              *
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="0" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              0
+            </button>
+          </div>
+          <div class="col s3">
+            <button data-value="#" class="waves-effect waves-light btn-floating btn-flat teal white-text btn-large">
+              #
+            </button>
+          </div>
+
+          <!-- <div class="col s3">
+            <button id="hold" class="btn-floating btn-flat btn-large waves-effect waves-light grey"><i class="material-icons">call_split</i></button>
+            <button id="unhold" class="btn-floating btn-flat btn-large waves-effect waves-light red" style="display:none;"><i
+                class="material-icons">call_split</i></button>
+          </div> -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-close waves-effect waves-green btn-flat">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+  </div>
+  <script>
+    window.App = {}
+    const App = window.App;
+  </script>
+  <script src="./js/jquery-3.3.1.min.js"></script>
+  <script src="./js/adapter.min.js"></script>
+  <script src="../../dist/CRTC.min.js"></script>
+  <script src="./js/materialize.min.js"></script>
+  <script src="./js/vconsole.min.js"></script>
+
+  <script src="./js/config.js"></script>
+  <script src="./js/common.js"></script>
+  <script src="./js/webrtc.sip.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+
+</html>

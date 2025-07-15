@@ -34,7 +34,7 @@ const account = handleGetQuery('caller');
 const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
 const configuration = {
-  // JsSIP.Socket 实例
+  // Socket 实例
   sockets        : socket,
   // 与 UA 关联的 SIP URI
   uri            : `sip:${account}@${sipDomain}`,
