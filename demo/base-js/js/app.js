@@ -1302,19 +1302,6 @@ async function call(type, direction, mediaStream)
     options.mediaConstraints.audio = false;
   }
 
-  // if (navigator.userAgent.indexOf('ArkWeb') != -1)
-  // {
-  //   const tmpVideo = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints || false });
-
-  //   tmpVideo.addTrack(generateAnEmptyAudioTrack());
-  //   options['mediaStream'] = tmpVideo;
-
-  //   options['mediaConstraints'] = {
-  //     audio : false,
-  //     video : false
-  //   };
-  // }
-
   const callee = document.querySelector('#callee').value;
 
   console.log('op: ', options);
