@@ -898,12 +898,15 @@ ua.on('newRTCSession', function(e)
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
 
+  let camFlag = true;
+
   /**
    * 手机端用切换摄像头
    */
   document.querySelector('#switchDevice').onclick = function()
   {
-    e.session.switchDevice('camera');
+    e.session.switchDevice('camera', cam ? 'environment' : 'user');
+    camFlag = !camFlag;
     setStatus('switchDevice facingMode');
   };
 

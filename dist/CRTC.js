@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257161658
+ * CRTC v1.10.9-beta.20257212316
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014323316 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014424632 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16846,7 +16846,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamMixer = require('./MediaStreamMixer');
-debug('version %s', '1.10.9-beta.405014323316');
+debug('version %s', '1.10.9-beta.405014424632');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16884,7 +16884,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014323316';
+    return '1.10.9-beta.405014424632';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./MediaStreamMixer":40,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19514,25 +19514,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
                 // 如果传参包含deviceId则使用deviceId
                 if (deviceId) {
-                  videoConstraints = {
-                    deviceId: {
-                      exact: deviceId
-                    }
-                  };
-                } else if (_this7._localCameras.length === 2) {
-                  // 不传deviceId情况下，如果有两个摄像头则使用facingMode参数
-                  var facingMode;
-                  if (_this7._selectedLocalCameras === 'user') {
-                    facingMode = 'environment';
-                    _this7._selectedLocalCameras = 'environment';
-                  } else {
-                    facingMode = 'user';
-                    _this7._selectedLocalCameras = 'user';
+                  if (deviceId !== 'user' && deviceId !== 'environment') {
+                    videoConstraints = {
+                      deviceId: {
+                        exact: deviceId
+                      }
+                    };
                   }
-                  // 两个摄像头使用facingMode参数切换
-                  videoConstraints = {
-                    facingMode: facingMode
-                  };
+                  // 使用facingMode参数
+                  else if (navigator.mediaDevices.getSupportedConstraints()['facingMode']) {
+                    // 两个摄像头使用facingMode参数切换
+                    videoConstraints = {
+                      facingMode: deviceId
+                    };
+                  }
                 } else if (_this7._localCameras.length > 2) {
                   // 多于两个摄像头，则轮询摄像头列表
                   var did;
