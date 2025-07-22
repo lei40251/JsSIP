@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257161658
+ * CRTC v1.10.9-beta.20257181348
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014323316 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014362696 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3563,7 +3563,12 @@ module.exports = {
   SDP_LEVELID_AS: {
     BP720P: {
       LEVELID: '42c01f',
-      AS: 2162
+      AS: 2162,
+      VIDEOCONSTRAINTS: {
+        width: 1280,
+        height: 720,
+        frameRate: 15
+      }
     },
     BP480P: {
       LEVELID: '42c01e',
@@ -16845,8 +16850,8 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-var MediaStreamMixer = require('./MediaStreamMixer');
-debug('version %s', '1.10.9-beta.405014323316');
+var Mixer = require('./Mixer');
+debug('version %s', '1.10.9-beta.405014362696');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16875,7 +16880,7 @@ module.exports = {
   URI: URI,
   NameAddrHeader: NameAddrHeader,
   WebSocketInterface: WebSocketInterface,
-  MediaStreamMixer: MediaStreamMixer,
+  Mixer: Mixer,
   Grammar: Grammar,
   getStats: getStats,
   // Expose the debug module.
@@ -16884,10 +16889,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014323316';
+    return '1.10.9-beta.405014362696';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./MediaStreamMixer":40,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -16937,288 +16942,6 @@ module.exports = /*#__PURE__*/function () {
   }]);
 }();
 },{"debug":67}],40:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-var Logger = require('./Logger');
-var logger = new Logger('MediaStreamMixer');
-module.exports = /*#__PURE__*/function () {
-  function MediaStreamMixer(videos) {
-    var _this = this;
-    _classCallCheck(this, MediaStreamMixer);
-    logger.debug("constructor: ".concat(videos.length));
-
-    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
-    var tmpVideos = [];
-    videos.forEach(function (video) {
-      if (video instanceof HTMLMediaElement) {
-        tmpVideos.push(video);
-      } else {
-        tmpVideos.push(_this._mediaStreamToVideoElement(video));
-      }
-    });
-    // 需要混屏的全部 HTMLMediaElement 数组
-    this._videos = tmpVideos;
-    // 是否停止绘制视频帧
-    this._isStopDrawingFrames = false;
-
-    // 停止时使用
-    this._audioSources;
-    this._audioDestination;
-    this._audioContext;
-
-    // 初始化混屏用的画布
-    this._canvas = document.createElement('canvas');
-    this._context = this._canvas.getContext('2d');
-    this._canvas.setAttribute('style', 'display:none');
-  }
-
-  // 计算缩放后的视频分辨率
-  return _createClass(MediaStreamMixer, [{
-    key: "_scaleVideo",
-    value: function _scaleVideo(width, height) {
-      var targetWidth = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 640;
-      var targetHeight = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 480;
-      var newWidth, newHeight, scale;
-
-      // 始终按比例缩放（无论原始尺寸是否小于目标尺寸）
-      if (width / height >= targetWidth / targetHeight) {
-        scale = targetWidth / width; // 以宽度为基准缩放
-        newHeight = height * scale;
-        newWidth = targetWidth;
-      } else {
-        scale = targetHeight / height; // 以高度为基准缩放
-        newWidth = width * scale;
-        newHeight = targetHeight;
-      }
-
-      // 计算居中偏移量（若缩放后尺寸仍小于目标尺寸）
-      var offsetX = Math.max(0, (targetWidth - newWidth) / 2);
-      var offsetY = Math.max(0, (targetHeight - newHeight) / 2);
-      return {
-        width: newWidth,
-        height: newHeight,
-        offsetX: offsetX,
-        offsetY: offsetY
-      };
-    }
-
-    /**
-     * 视频绘制到画布
-     */
-  }, {
-    key: "_drawImage",
-    value: function _drawImage(video, idx) {
-      // 是否已经停止
-      if (this._isStopDrawingFrames) {
-        return;
-      }
-      var x = 0;
-      var y = 0;
-      if (idx === 1) {
-        x = 640;
-      }
-      if (idx === 2) {
-        y = 480;
-      }
-      if (idx === 3) {
-        x = 640;
-        y = 480;
-      }
-      if (idx === 4) {
-        y = 480 * 2;
-      }
-      if (idx === 5) {
-        x = 640;
-        y = 480 * 2;
-      }
-      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight);
-      this._context.drawImage(video, x + newVideo.offsetX, y + newVideo.offsetY, newVideo.width, newVideo.height);
-    }
-
-    /**
-     * 将视频流渲染到画布
-     */
-  }, {
-    key: "_drawVideosToCanvas",
-    value: function _drawVideosToCanvas() {
-      var _this2 = this;
-      // 是否已经停止
-      if (this._isStopDrawingFrames) {
-        return;
-      }
-      var renderVideos = this._videos.filter(function (video) {
-        return video.srcObject ? video.srcObject.active : false;
-      });
-
-      // 根据视频数量生成画布高的倍数
-      var height = 1;
-      if (renderVideos.length > 3) {
-        height = 2;
-      }
-      if (renderVideos.length > 5 && renderVideos.length < 9) {
-        height = 3;
-      }
-
-      // 设置画布宽高
-      this._canvas.width = renderVideos.length >= 2 ? 1280 : 640;
-      this._canvas.height = 480 * height;
-      renderVideos.forEach(function (video, idx) {
-        // 开始绘制当前视频帧
-        _this2._drawImage(video, idx);
-      });
-
-      // 开始帧动画开始混流
-      window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
-    }
-
-    // 将MediaStream转换为 HTMLVideoElement
-  }, {
-    key: "_mediaStreamToVideoElement",
-    value: function _mediaStreamToVideoElement(mediaStream) {
-      var video = document.createElement('video');
-      video.setAttribute('style', 'display:none');
-      video.muted = true;
-      video.autoplay = true;
-      video.setAttribute('playsinline', '');
-      video.srcObject = mediaStream.mediaStream || mediaStream;
-      video.play()["catch"](function () {
-        logger.error('video play error');
-      });
-      return video;
-    }
-
-    // 停止合流
-  }, {
-    key: "stop",
-    value: function stop() {
-      logger.debug('stop');
-      this._videos = [];
-      this._isStopDrawingFrames = true;
-      if (this._audioSources.length) {
-        this._audioSources.forEach(function (source) {
-          source.disconnect();
-        });
-        this._audioSources = [];
-      }
-      if (this._audioDestination) {
-        this._audioDestination.disconnect();
-        this._audioDestination = null;
-      }
-      if (this._audioContext) {
-        this._audioContext.close();
-      }
-      this._audioContext = null;
-
-      // 清理画布
-      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
-
-      // 停止画布导出的视频流
-      if (this._canvas.stream) {
-        this._canvas.stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-        this._canvas.stream = null;
-      }
-    }
-
-    // 添加媒体
-  }, {
-    key: "appendStream",
-    value: function appendStream(videos) {
-      var _this3 = this;
-      logger.debug('appendStream');
-      if (!videos) {
-        // eslint-disable-next-line no-throw-literal
-        throw 'First parameter is required.';
-      }
-      if (!(videos instanceof Array)) {
-        videos = [videos];
-      }
-      videos.forEach(function (video) {
-        if (video instanceof HTMLMediaElement) {
-          _this3._videos.push(video);
-        } else {
-          _this3._videos.push(_this3._mediaStreamToVideoElement(video));
-        }
-      });
-    }
-
-    // 获取音视频混合的媒体流
-  }, {
-    key: "getMixedStream",
-    value: function getMixedStream() {
-      logger.debug('getMixedStream');
-      this._isStopDrawingFrames = false;
-      var mixedVideoStream = this.getVideoStream();
-      var mixedAudioStream = this.getAudioStream();
-      if (mixedAudioStream) {
-        mixedAudioStream.getAudioTracks().forEach(function (track) {
-          mixedVideoStream.addTrack(track);
-        });
-      }
-      return mixedVideoStream;
-    }
-
-    // 获取混合后的视频流
-  }, {
-    key: "getVideoStream",
-    value: function getVideoStream() {
-      logger.debug('getVideoStream');
-
-      // 开始帧动画开始混流
-      this._drawVideosToCanvas();
-      var videoStream = new MediaStream();
-      var capturedStream = this._canvas.captureStream();
-      capturedStream.getVideoTracks().forEach(function (track) {
-        videoStream.addTrack(track);
-      });
-
-      // 用于停止混合时
-      this._canvas.stream = capturedStream;
-      // this._canvas.stream = videoStream;
-
-      return videoStream;
-    }
-
-    // 获取混合后的音频流
-  }, {
-    key: "getAudioStream",
-    value: function getAudioStream() {
-      var _this4 = this;
-      logger.debug('getAudioStream');
-      this._audioSources = [];
-      this._audioContext = new AudioContext();
-
-      // TODO:可以分别混合音频
-      // if (this._useGainNode === true)
-      // {
-      //   this._gainNode = this._audioContext.createGain();
-      //   this._gainNode.connect(this._audioContext.destination);
-      //   this._gainNode.gain.value = 0; // don't hear this
-      // }
-
-      this._videos.forEach(function (video) {
-        if (!video.srcObject.getAudioTracks()) {
-          return;
-        }
-        var audioSource = _this4._audioContext.createMediaStreamSource(video.srcObject);
-        _this4._audioSources.push(audioSource);
-      });
-      this._audioDestination = this._audioContext.createMediaStreamDestination();
-      this._audioSources.forEach(function (audioSource) {
-        audioSource.connect(_this4._audioDestination);
-      });
-      return this._audioDestination.stream;
-    }
-  }]);
-}();
-},{"./Logger":39}],41:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17480,7 +17203,280 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":65}],42:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":65}],41:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Logger = require('./Logger');
+var logger = new Logger('MediaStreamMixer');
+module.exports = /*#__PURE__*/function () {
+  function MediaStreamMixer(videos) {
+    var _this = this;
+    _classCallCheck(this, MediaStreamMixer);
+    logger.debug("constructor: ".concat(videos.length));
+
+    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
+    var tmpVideos = [];
+    videos.forEach(function (video) {
+      if (video instanceof HTMLMediaElement) {
+        tmpVideos.push(video);
+      } else {
+        tmpVideos.push(_this._mediaStreamToVideoElement(video));
+      }
+    });
+    // 需要混屏的全部 HTMLMediaElement 数组
+    this._videos = tmpVideos;
+    // 是否停止绘制视频帧
+    this._isStopDrawingFrames = false;
+
+    // 停止时使用
+    this._audioSources;
+    this._audioDestination;
+    this._audioContext;
+
+    // 初始化混屏用的画布
+    this._canvas = document.createElement('canvas');
+    this._context = this._canvas.getContext('2d');
+    this._canvas.setAttribute('style', 'display:none');
+  }
+
+  // 计算缩放后的视频分辨率
+  return _createClass(MediaStreamMixer, [{
+    key: "_scaleVideo",
+    value: function _scaleVideo(width, height) {
+      var targetWidth = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 640;
+      var targetHeight = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 480;
+      var newWidth, newHeight, scale;
+
+      // 始终按比例缩放（无论原始尺寸是否小于目标尺寸）
+      if (width / height >= targetWidth / targetHeight) {
+        scale = targetWidth / width; // 以宽度为基准缩放
+        newHeight = height * scale;
+        newWidth = targetWidth;
+      } else {
+        scale = targetHeight / height; // 以高度为基准缩放
+        newWidth = width * scale;
+        newHeight = targetHeight;
+      }
+
+      // 计算居中偏移量（若缩放后尺寸仍小于目标尺寸）
+      var offsetX = Math.max(0, (targetWidth - newWidth) / 2);
+      var offsetY = Math.max(0, (targetHeight - newHeight) / 2);
+      return {
+        width: newWidth,
+        height: newHeight,
+        offsetX: offsetX,
+        offsetY: offsetY
+      };
+    }
+
+    /**
+     * 视频绘制到画布
+     */
+  }, {
+    key: "_drawImage",
+    value: function _drawImage(video, idx) {
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      console.warn('idx: ', idx);
+      var x = 0;
+      var y = 0;
+      if (idx === 1) {
+        x = 640;
+      }
+      if (idx === 2) {
+        y = 480;
+      }
+      if (idx === 3) {
+        x = 640;
+        y = 480;
+      }
+      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight);
+      this._context.drawImage(video, x + newVideo.offsetX, y + newVideo.offsetY, newVideo.width, newVideo.height);
+    }
+
+    /**
+     * 将视频流渲染到画布
+     */
+  }, {
+    key: "_drawVideosToCanvas",
+    value: function _drawVideosToCanvas() {
+      var _this2 = this;
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      var renderVideos = this._videos.filter(function (video) {
+        if (!video.srcObject) return false;
+
+        // 检查流是否活跃且包含视频轨道
+        return video.srcObject.active && video.srcObject.getVideoTracks().length > 0;
+      });
+
+      // 根据视频数量生成画布高的倍数
+      var height = 1;
+      if (renderVideos.length >= 3) {
+        height = 2;
+      }
+
+      // 设置画布宽高
+      this._canvas.width = renderVideos.length >= 2 ? 1280 : 640;
+      this._canvas.height = 480 * height;
+      renderVideos.forEach(function (video, idx) {
+        // 开始绘制当前视频帧
+        _this2._drawImage(video, idx);
+      });
+
+      // 开始帧动画开始混流
+      window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
+    }
+
+    // 将MediaStream转换为 HTMLVideoElement
+  }, {
+    key: "_mediaStreamToVideoElement",
+    value: function _mediaStreamToVideoElement(mediaStream) {
+      var video = document.createElement('video');
+      video.setAttribute('style', 'display:none');
+      video.muted = true;
+      video.autoplay = true;
+      video.setAttribute('playsinline', '');
+      video.srcObject = mediaStream.mediaStream || mediaStream;
+      video.play()["catch"](function () {
+        logger.error('video play error');
+      });
+      return video;
+    }
+
+    // 停止合流
+  }, {
+    key: "stop",
+    value: function stop() {
+      logger.debug('stop');
+      this._videos = [];
+      this._isStopDrawingFrames = true;
+      if (this._audioSources.length) {
+        this._audioSources.forEach(function (source) {
+          source.disconnect();
+        });
+        this._audioSources = [];
+      }
+      if (this._audioDestination) {
+        this._audioDestination.disconnect();
+        this._audioDestination = null;
+      }
+      if (this._audioContext) {
+        this._audioContext.close();
+      }
+      this._audioContext = null;
+
+      // 清理画布
+      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+      // 停止画布导出的视频流
+      if (this._canvas.stream) {
+        this._canvas.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        this._canvas.stream = null;
+      }
+    }
+
+    // 添加媒体
+  }, {
+    key: "appendStream",
+    value: function appendStream(videos) {
+      var _this3 = this;
+      logger.debug('appendStream');
+      if (!videos) {
+        // eslint-disable-next-line no-throw-literal
+        throw 'First parameter is required.';
+      }
+      if (!(videos instanceof Array)) {
+        videos = [videos];
+      }
+      videos.forEach(function (video) {
+        if (video instanceof HTMLMediaElement) {
+          _this3._videos.push(video);
+        } else {
+          _this3._videos.push(_this3._mediaStreamToVideoElement(video));
+        }
+      });
+    }
+
+    // 获取音视频混合的媒体流
+  }, {
+    key: "getMixedStream",
+    value: function getMixedStream() {
+      logger.debug('getMixedStream()');
+      this._isStopDrawingFrames = false;
+      var mixedVideoStream = this.getVideoStream();
+      var mixedAudioStream = this.getAudioStream();
+      if (mixedAudioStream) {
+        mixedAudioStream.getAudioTracks().forEach(function (track) {
+          mixedVideoStream.addTrack(track);
+        });
+      }
+      return mixedVideoStream;
+    }
+
+    // 获取混合后的视频流
+  }, {
+    key: "getVideoStream",
+    value: function getVideoStream() {
+      logger.debug('getVideoStream()');
+
+      // 开始帧动画开始混流
+      this._drawVideosToCanvas();
+      var videoStream = new MediaStream();
+      var capturedStream = this._canvas.captureStream();
+      capturedStream.getVideoTracks().forEach(function (track) {
+        videoStream.addTrack(track);
+      });
+
+      // 用于停止混合时
+      this._canvas.stream = capturedStream;
+      return videoStream;
+    }
+
+    // 获取混合后的音频流
+  }, {
+    key: "getAudioStream",
+    value: function getAudioStream() {
+      var _this4 = this;
+      logger.debug('getAudioStream()');
+      this._audioSources = [];
+      this._audioContext = new AudioContext();
+
+      // TODO:可以分别混合音频
+      // if (this._useGainNode === true)
+      // {
+      //   this._gainNode = this._audioContext.createGain();
+      //   this._gainNode.connect(this._audioContext.destination);
+      //   this._gainNode.gain.value = 0; // don't hear this
+      // }
+
+      this._videos.forEach(function (video) {
+        if (video.srcObject.getAudioTracks().length > 0) {
+          var audioSource = _this4._audioContext.createMediaStreamSource(video.srcObject);
+          _this4._audioSources.push(audioSource);
+        }
+      });
+      this._audioDestination = this._audioContext.createMediaStreamDestination();
+      this._audioSources.forEach(function (audioSource) {
+        audioSource.connect(_this4._audioDestination);
+      });
+      return this._audioDestination.stream;
+    }
+  }]);
+}();
+},{"./Logger":39}],42:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -19373,7 +19369,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
           return;
         }
-        return navigator.mediaDevices.getUserMedia(videoConstraints).then(function (stream) {
+        return navigator.mediaDevices.getUserMedia({
+          video: videoConstraints
+        }).then(function (stream) {
           // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
           var ua;
           navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
@@ -19568,6 +19566,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 _this7._localMediaStreamLocallyGenerated = true;
                 constraints.video = videoConstraints;
+                if (CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS) {
+                  constraints.video = Object.assign(constraints.video, CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS);
+                }
                 return navigator.mediaDevices.getUserMedia(constraints)["catch"](function (error) {
                   logger.error('emit "getusermediafailed" [error:%o]', error);
                   logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
@@ -20778,8 +20779,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('close()');
       // Close local MediaStream if it was not given by the user.
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
-        logger.debug('close() | closing local MediaStream');
-        console.warn('close() | closing local MediaStream', this._localMediaStream, this._localMediaStream.getTracks());
+        logger.warn('close() | closing local MediaStream');
         Utils.closeMediaStream(this._localMediaStream);
       }
 
@@ -21845,9 +21845,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          return navigator.mediaDevices.getUserMedia({
+          var videoConstraints = {
             video: true
-          })["catch"](function (error) {
+          };
+          if (CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS) {
+            videoConstraints['video'] = CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS;
+          }
+          return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
             if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -28495,7 +28499,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":41,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":65,"jsencrypt":70}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":65,"jsencrypt":70}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }

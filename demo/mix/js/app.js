@@ -68,11 +68,11 @@ const draggable = document.querySelector('.small-video');
 
 conferenceBtn.click(function()
 {
-  // const mix = new MultiStreamsMixer([document.querySelector('.localVideo').srcObject,document.querySelector('.remoteVideo').srcObject])
+  // const mix = new Mixer([document.querySelector('.localVideo').srcObject,document.querySelector('.remoteVideo').srcObject])
   // mix.frameInterval = 1;
   // mix.startDrawingFrames();
   // webrtc.conference(linkman.value, mix.getMixedStream());
-  const mix = new CRTC.MediaStreamMixer([ document.querySelector('.localVideo').srcObject.clone(), document.querySelector('.remoteVideo') ]);
+  const mix = new CRTC.Mixer([ document.querySelector('.localVideo').srcObject.clone(), document.querySelector('.remoteVideo') ]);
 
   webrtc.conference(linkman.value, mix.getMixedStream());
 });

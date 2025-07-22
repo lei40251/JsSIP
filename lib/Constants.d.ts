@@ -18,7 +18,8 @@ export enum CMODE {
 export const SDP_LEVELID_AS : {
   BP720P : {
     LEVELID : '42c01f',
-    AS      : 2162
+    AS      : 2162,
+    VIDEOCONSTRAINTS:{}
   },
   BP480P : {
     LEVELID : '42c01e',

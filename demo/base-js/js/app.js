@@ -207,6 +207,8 @@ ua.on('newRTCSession', function(e)
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
     d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
+    // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
+
     if (d.originator === 'local')
     {
       // 保存浏览器默认payload，适配pa
@@ -222,6 +224,8 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
 
       // d.sdp = d.sdp.replace(/packetization-mode=0/g, 'packetization-mode=1');
+
+      // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:2');
     }
     else if (d.originator === 'remote')
     {
@@ -243,6 +247,7 @@ ua.on('newRTCSession', function(e)
       // b=TIAS:512000
       // a=rtpmap:106 H264/90000
       // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
+      // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
     }
   });
 

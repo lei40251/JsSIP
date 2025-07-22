@@ -121,7 +121,7 @@ function _afterAccept(session, target)
     remoteKinds += receiver.track.kind;
     // remoteKinds = '';
     // receiver.track && _remoteStream[target].addTrack(receiver.track);
-    if (receiver.track && receiver.track.readyState != 'ended' && receiver.track.muted == false)
+    if (receiver.track && receiver.track.readyState != 'ended')
     {
       _remoteStream[target].addTrack(receiver.track);
     }
@@ -761,17 +761,17 @@ WebRTC.prototype.toMCU = function(target)
 
   for (const key in _session)
   {
-    if (_session[key] && key !== target)
+    if (_session[key])
     {
       other.push(_session[key]);
       const stream = new MediaStream();
 
       console.warn('sk: ', _session[key].connection.getReceivers());
-      _session[key].connection.getReceivers().forEach((receiver) =>
+      _session[key].connection.getReceivers().forEach(({ track }) => 
       {
-        if (receiver.track && receiver.track.readyState != 'ended')
+        if (track && track.readyState !== 'ended' && (key !== target || track.kind !== 'audio')) 
         {
-          stream.addTrack(receiver.track);
+          stream.addTrack(track);
         }
       });
       othStream.push(stream);
@@ -780,14 +780,7 @@ WebRTC.prototype.toMCU = function(target)
 
   console.warn('othStream: ', othStream);
 
-  // const mix = new MultiStreamsMixer(othStream);
-  // mix.frameInterval = 1;
-  // mix.startDrawingFrames();
-  //
-  // const lVs =  mix.getMixedStream();
-
-  const mix = new CRTC.MediaStreamMixer(othStream);
-  // mix.startDrawingFrames();
+  const mix = new CRTC.Mixer(othStream);
   const lVs = mix.getMixedStream();
 
   _session[target].connection.getSenders().forEach((sender) =>
