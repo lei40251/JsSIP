@@ -374,12 +374,14 @@ ua.on('newRTCSession', function(e)
 
     if (localStream.audioStream.getAudioTracks().length>0)
     {
-      tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
+      // tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
+      tmpTracks.push(localStream.audioStream.getAudioTracks()[0]);
     }
 
     if (d.videoStream.getVideoTracks().length>0)
     {
-      tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
+      // tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
+      tmpTracks.push(d.videoStream.getVideoTracks()[0]);
     }
 
     cloneStream=new MediaStream(tmpTracks);
@@ -910,7 +912,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#switchDevice').onclick = function()
   {
-    e.session.switchDevice('camera', cam ? 'environment' : 'user');
+    e.session.switchDevice('camera', camFlag ? 'environment' : 'user');
     camFlag = !camFlag;
     setStatus('switchDevice facingMode');
   };
@@ -1398,8 +1400,10 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
-  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  // const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
+  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0]:null;
+  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
   let newCloneStream;

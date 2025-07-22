@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025722858
+ * CRTC v1.10.9-beta.20257221021
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014441716 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014442042 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014441716');
+debug('version %s', '1.10.9-beta.405014442042');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014441716';
+    return '1.10.9-beta.405014442042';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19469,33 +19469,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchDevice",
     value: (function () {
-      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(type, deviceId) {
+      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, deviceId) {
         var _this7 = this;
         var cameras, constraints, _constraints;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
             case 0:
               logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context3.next = 3;
+                _context4.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context3.next = 14;
+                _context4.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context3.next = 9;
+                _context4.next = 9;
                 break;
               }
-              _context3.next = 7;
+              _context4.next = 7;
               return Utils.getCameras();
             case 7:
-              cameras = _context3.sent;
+              cameras = _context4.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
@@ -19507,7 +19507,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context3.abrupt("return", Promise.resolve().then(function () {
+              return _context4.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
@@ -19564,50 +19564,67 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 if (CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS) {
                   constraints.video = Object.assign(constraints.video, CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS);
                 }
-                return navigator.mediaDevices.getUserMedia(constraints)["catch"](function (error) {
-                  logger.error('emit "getusermediafailed" [error:%o]', error);
-                  logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
-                  _this7.emit('getusermediafailed', error);
-                  throw new Error('getUserMedia() failed');
-                });
-              }).then(function (stream) {
-                // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-                var ua;
-                navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-                if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-                  stream = Utils.getStreamThroughCanvas(stream);
-                }
-                try {
-                  _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
-                } catch (error) {
-                  logger.error(error);
-                }
-                var videoTrack = stream.getVideoTracks()[0];
-                _this7._localMediaStream.addTrack(videoTrack);
-                var sender = _this7._connection.getSenders().find(function (s) {
-                  if (_this7._enableBFCP) {
-                    // 启用了BFCP，区分一下BFCP控制的视频轨道
-                    return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]);
-                  } else {
-                    return s.track.kind == 'video';
-                  }
-                });
-                sender.replaceTrack(videoTrack);
-                _this7.emit('cameraChanged', {
-                  videoStream: stream
-                });
-                return stream;
-              }));
+                return constraints;
+              }).then(/*#__PURE__*/function () {
+                var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(videoConstraints) {
+                  var sender, stream, ua, videoTrack;
+                  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+                    while (1) switch (_context3.prev = _context3.next) {
+                      case 0:
+                        sender = _this7._connection.getSenders().find(function (s) {
+                          if (_this7._enableBFCP) {
+                            // 启用了BFCP，区分一下BFCP控制的视频轨道
+                            return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]);
+                          } else {
+                            return s.track.kind == 'video';
+                          }
+                        }); // 先释放原来的设备再获取新的
+                        sender.track.stop();
+                        _context3.next = 4;
+                        return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
+                          logger.error('emit "getusermediafailed" [error:%o]', error);
+                          logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                          _this7.emit('getusermediafailed', error);
+                          throw new Error('getUserMedia() failed');
+                        });
+                      case 4:
+                        stream = _context3.sent;
+                        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+                        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+                          stream = Utils.getStreamThroughCanvas(stream);
+                        }
+                        try {
+                          _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
+                        } catch (error) {
+                          logger.error(error);
+                        }
+                        videoTrack = stream.getVideoTracks()[0];
+                        _this7._localMediaStream.addTrack(videoTrack);
+                        sender.replaceTrack(videoTrack);
+                        _this7.emit('cameraChanged', {
+                          videoStream: stream
+                        });
+                        return _context3.abrupt("return", stream);
+                      case 13:
+                      case "end":
+                        return _context3.stop();
+                    }
+                  }, _callee3);
+                }));
+                return function (_x3) {
+                  return _ref3.apply(this, arguments);
+                };
+              }()));
             case 14:
               if (!(type === 'audio' && deviceId)) {
-                _context3.next = 19;
+                _context4.next = 19;
                 break;
               }
               _constraints = {
                 audio: true,
                 video: false
               };
-              return _context3.abrupt("return", Promise.resolve().then(function () {
+              return _context4.abrupt("return", Promise.resolve().then(function () {
                 var audioConstraints = {
                   deviceId: {
                     exact: deviceId
@@ -19648,12 +19665,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.error('Invalid parameters');
 
               // 参数错误
-              return _context3.abrupt("return", Promise.reject('Invalid parameters'));
+              return _context4.abrupt("return", Promise.reject('Invalid parameters'));
             case 21:
             case "end":
-              return _context3.stop();
+              return _context4.stop();
           }
-        }, _callee3, this);
+        }, _callee4, this);
       }));
       function switchDevice(_x, _x2) {
         return _switchDevice.apply(this, arguments);
@@ -19667,11 +19684,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "share",
     value: (function () {
-      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, id, assembly, dual, skip) {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(type, id, assembly, dual, skip) {
         var _this8 = this;
         var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
-        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-          while (1) switch (_context4.prev = _context4.next) {
+        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               renderHtml = function _renderHtml(canvas, ctx) {
                 assembly(document.querySelector(id), {
@@ -19689,36 +19706,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 双流必须开启BFCP支持
               if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
-                _context4.next = 4;
+                _context5.next = 4;
                 break;
               }
-              return _context4.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
+              return _context5.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
             case 4:
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context4.next = 6;
+                _context5.next = 6;
                 break;
               }
-              return _context4.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
+              return _context5.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
             case 6:
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
-              _context4.prev = 7;
+              _context5.prev = 7;
               if (!(this._enableBFCP && !skip)) {
-                _context4.next = 21;
+                _context5.next = 21;
                 break;
               }
-              _context4.next = 11;
+              _context5.next = 11;
               return this._sendFloorRequest();
             case 11:
-              floorResponse = _context4.sent;
+              floorResponse = _context5.sent;
               this._handleFloorRequestStatusMessage(floorResponse);
               // Log the response for debugging purposes
               logger.debug('Floor request response:', floorResponse);
               status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
               if (!(status != RequestStatusValue.Granted)) {
-                _context4.next = 17;
+                _context5.next = 17;
                 break;
               }
-              return _context4.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
+              return _context5.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 17:
               // 保存一下状态
               this._bfcpRequestStatus = status;
@@ -19728,16 +19745,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this.emit('remoteUnShared');
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
             case 21:
-              _context4.next = 27;
+              _context5.next = 27;
               break;
             case 23:
-              _context4.prev = 23;
-              _context4.t0 = _context4["catch"](7);
-              logger.error('Error while processing floor request:', _context4.t0.message || _context4.t0);
-              return _context4.abrupt("return", Promise.reject("Floor request failed: ".concat(_context4.t0.message || 'Unknown error')));
+              _context5.prev = 23;
+              _context5.t0 = _context5["catch"](7);
+              logger.error('Error while processing floor request:', _context5.t0.message || _context5.t0);
+              return _context5.abrupt("return", Promise.reject("Floor request failed: ".concat(_context5.t0.message || 'Unknown error')));
             case 27:
               if (!(type === 'video')) {
-                _context4.next = 35;
+                _context5.next = 35;
                 break;
               }
               logger.debug('share video');
@@ -19759,11 +19776,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context4.next = 68;
+              _context5.next = 68;
               break;
             case 35:
               if (!(type === 'pic')) {
-                _context4.next = 49;
+                _context5.next = 49;
                 break;
               }
               logger.debug('share pic');
@@ -19797,19 +19814,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context4.next = 68;
+              _context5.next = 68;
               break;
             case 49:
               if (!(type === 'html')) {
-                _context4.next = 64;
+                _context5.next = 64;
                 break;
               }
               logger.debug('share html');
               if (assembly) {
-                _context4.next = 53;
+                _context5.next = 53;
                 break;
               }
-              return _context4.abrupt("return");
+              return _context5.abrupt("return");
             case 53:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
@@ -19835,11 +19852,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context4.next = 68;
+              _context5.next = 68;
               break;
             case 64:
               if (!(type === 'screen')) {
-                _context4.next = 68;
+                _context5.next = 68;
                 break;
               }
               logger.debug('share screen');
@@ -19851,7 +19868,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
 
               // 分享屏幕 默认帧率 15
-              return _context4.abrupt("return", navigator.mediaDevices.getDisplayMedia({
+              return _context5.abrupt("return", navigator.mediaDevices.getDisplayMedia({
                 video: {
                   width: {
                     max: 1920
@@ -19916,11 +19933,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }));
             case 68:
             case "end":
-              return _context4.stop();
+              return _context5.stop();
           }
-        }, _callee4, this, [[7, 23]]);
+        }, _callee5, this, [[7, 23]]);
       }));
-      function share(_x3, _x4, _x5, _x6, _x7) {
+      function share(_x4, _x5, _x6, _x7, _x8) {
         return _share.apply(this, arguments);
       }
       return share;
@@ -20017,8 +20034,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var dialog = this._dialog;
 
             // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref3) {
-              var method = _ref3.method;
+            this.receiveRequest = function (_ref4) {
+              var method = _ref4.method;
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
@@ -21961,20 +21978,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
         var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref4) {
-          var response = _ref4.response;
+        session.on('progress', function (_ref5) {
+          var response = _ref5.response;
           _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
-        session.on('accepted', function (_ref5) {
-          var response = _ref5.response;
+        session.on('accepted', function (_ref6) {
+          var response = _ref6.response;
           _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
 
           // 华为MCU需要挂断
           _this26._enableBFCP && _this26.terminate();
         });
-        session.on('_failed', function (_ref6) {
-          var message = _ref6.message,
-            cause = _ref6.cause;
+        session.on('_failed', function (_ref7) {
+          var message = _ref7.message,
+            cause = _ref7.cause;
           if (message) {
             _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
@@ -22109,13 +22126,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
         var stream, _Utils$generateAnEmpt2, videoTrack;
-        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-          while (1) switch (_context5.prev = _context5.next) {
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
             case 0:
               if (!(_this29._status === C.STATUS_TERMINATED)) {
-                _context5.next = 2;
+                _context6.next = 2;
                 break;
               }
               throw new Error('terminated');
@@ -22154,15 +22171,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // TODO: should this be triggered here?
               _this29._connecting(_this29._request);
-              return _context5.abrupt("return", _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+              return _context6.abrupt("return", _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this29._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
             case 7:
             case "end":
-              return _context5.stop();
+              return _context6.stop();
           }
-        }, _callee5);
+        }, _callee6);
       }))).then(function (desc) {
         if (_this29._is_canceled || _this29._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -22438,10 +22455,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
+              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-                  while (1) switch (_context6.prev = _context6.next) {
+                return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+                  while (1) switch (_context7.prev = _context7.next) {
                     case 0:
                       // Handle Session Timers.
                       _this30._handleSessionTimersInIncomingResponse(response);
@@ -22450,10 +22467,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this30._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context6.next = 6;
+                      _context7.next = 6;
                       return Utils.getMicrophones();
                     case 6:
-                      mics = _context6.sent;
+                      mics = _context7.sent;
                       if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this30._inviteMediaConstraints.audio || true,
@@ -22477,9 +22494,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this30._enableBFCP && _this30.renegotiate();
                     case 9:
                     case "end":
-                      return _context6.stop();
+                      return _context7.stop();
                   }
-                }, _callee6);
+                }, _callee7);
               })))["catch"](function (error) {
                 _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -23328,9 +23345,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref9) {
-      var audio = _ref9.audio,
-        video = _ref9.video;
+    value: function _onmute(_ref10) {
+      var audio = _ref10.audio,
+        video = _ref10.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -23341,9 +23358,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref10) {
-      var audio = _ref10.audio,
-        video = _ref10.video;
+    value: function _onunmute(_ref11) {
+      var audio = _ref11.audio,
+        video = _ref11.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
