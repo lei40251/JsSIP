@@ -251,6 +251,11 @@ ua.on('newRTCSession', function(e)
     }
   });
 
+  e.session.on('icecandidate', function(d)
+  {
+    d.ready();
+  });
+
   /**
     * progress
     *
