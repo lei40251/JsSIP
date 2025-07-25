@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257231724
+ * CRTC v1.10.9-beta.20257241431
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014463448 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014482862 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014463448');
+debug('version %s', '1.10.9-beta.405014482862');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014463448';
+    return '1.10.9-beta.405014482862';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21204,6 +21204,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }, 5000);
             }
           });
+
+          // 修改适配 iceServers 的时候等待超时时间过长的问题
+          ready();
         });
       }).then(function (sdp) {
         // 去掉IPV6
@@ -27159,6 +27162,10 @@ module.exports = /*#__PURE__*/function () {
       message = message.replace(/a=candidate.*typ host.*\r?\n/gm, '');
       // 去掉IPV6
       message = message.replace(/a=candidate:.*:.*\r\n/g, '');
+
+      // 修改端口，适配 icecandidate 收集未完成的情况
+      message = message.replace(/m=audio 9 /, 'm=audio 11028 ');
+      message = message.replace(/m=video 9 /, 'm=video 11029 ');
 
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);

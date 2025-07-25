@@ -251,11 +251,6 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('icecandidate', function(d)
-  {
-    d.ready();
-  });
-
   /**
     * progress
     *
@@ -816,11 +811,7 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : {
-        audio :
-        {
-          sampleRate   : 48000,
-          channelCount : 1
-        },
+        audio : false,
         video : videoConstraints
       },
       pcConfig            : pcConfig,
