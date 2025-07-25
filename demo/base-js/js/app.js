@@ -1311,30 +1311,56 @@ async function call(type, direction, mediaStream)
   const callee = document.querySelector('#callee').value;
 
   console.log('op: ', options);
-  const session = await ua.call(`${callee}@${sipDomain}`, options);
 
-  // 默认远端无回铃音
-  earlyMedia = false;
-
-  // 播放远端的回铃音
-  session.connection.ontrack = function(event)
+  try
   {
-    if (event.track.kind === 'audio')
+    const session = await ua.call(`${callee}@${sipDomain}`, options);
+
+    // 默认远端无回铃音
+    earlyMedia = false;
+
+    // 播放远端的回铃音
+    session.connection.ontrack = function(event)
     {
+      if (event.track.kind === 'audio')
+      {
       // 收到远端媒体则设置远端回铃音
-      earlyMedia = true;
+        earlyMedia = true;
 
-      remoteAudio.srcObject = event.streams[0];
+        remoteAudio.srcObject = event.streams[0];
 
-      /**
+        /**
        * 兼容chrome
        * https://developer.chrome.com/blog/play-request-was-interrupted/#error
        * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
        */
-      remoteAudio.play()
-        .catch(() => { });
-    }
-  };
+        remoteAudio.play()
+          .catch(() => { });
+      }
+    };
+
+    // 外呼未触发newRTCSession前取消呼叫
+    document.querySelector('#cancel').onclick = function()
+    {
+      session.terminate();
+      // 关闭无设备的黑屏
+      CRTC.Utils.stopBlackVideo();
+      // 兼容mcu等候室用
+      cloneStream && cloneStream.getTracks().forEach((track) =>
+      {
+        track.stop();
+        localVideo.srcObject = null;
+      });
+      cusStream && cusStream.getTracks().forEach((track) => track.stop());
+      cloneStream = null;
+    };
+
+  }
+  catch (error)
+  {
+    console.warn(`name: ${error.name}, message: ${error.message}`);
+  }
+
 
   // 兼容iOS
   if (optionsTimer)
@@ -1350,21 +1376,6 @@ async function call(type, direction, mediaStream)
     }, 3000);
   }
 
-  // 外呼未触发newRTCSession前取消呼叫
-  document.querySelector('#cancel').onclick = function()
-  {
-    session.terminate();
-    // 关闭无设备的黑屏
-    CRTC.Utils.stopBlackVideo();
-    // 兼容mcu等候室用
-    cloneStream && cloneStream.getTracks().forEach((track) =>
-    {
-      track.stop();
-      localVideo.srcObject = null;
-    });
-    cusStream && cusStream.getTracks().forEach((track) => track.stop());
-    cloneStream = null;
-  };
 }
 
 function generateAnEmptyAudioTrack()
@@ -1519,18 +1530,18 @@ function setStatus(text)
  */
 function updateDevices()
 {
-  CRTC.Utils.getCameras()
-    .then((cameras) =>
-    {
-      let option = '<option selected value="">请选择切换摄像头</option>';
+  // CRTC.Utils.getCameras()
+  //   .then((cameras) =>
+  //   {
+  //     let option = '<option selected value="">请选择切换摄像头</option>';
 
-      cameras.forEach((device) =>
-      {
-        option += `<option value="${device.deviceId}">${device.label}</option>`;
-      });
+  //     cameras.forEach((device) =>
+  //     {
+  //       option += `<option value="${device.deviceId}">${device.label}</option>`;
+  //     });
 
-      document.querySelector('#cameras').innerHTML = option;
-    });
+  //     document.querySelector('#cameras').innerHTML = option;
+  //   });
 
   // 移动端不支持切换麦克风
   // CRTC.Utils.getMicrophones()

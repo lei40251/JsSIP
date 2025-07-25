@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257241431
+ * CRTC v1.10.9-beta.2025726028
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014482862 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014520056 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014482862');
+debug('version %s', '1.10.9-beta.405014520056');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014482862';
+    return '1.10.9-beta.405014520056';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -18693,7 +18693,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 logger.warn('emit "getusermediafailed" [error:%o]', error);
                 logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                 _this2.emit('getusermediafailed', error);
-                throw error;
+                var e = new Error("getusermediafailed, ".concat(error.message), {
+                  cause: error.message
+                });
+                e.name = error.name;
+                throw e;
               });
             case 10:
               mStream = _context.sent;
