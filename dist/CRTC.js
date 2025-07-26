@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257261336
+ * CRTC v1.10.9-beta.20257261857
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014522672 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014523714 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014522672');
+debug('version %s', '1.10.9-beta.405014523714');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014522672';
+    return '1.10.9-beta.405014523714';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -28797,13 +28797,6 @@ var isFunction = exports.isFunction = function (fn) {
     return false;
   }
 };
-var isIOS = function isIOS() {
-  var ua = navigator.userAgent.toLowerCase();
-  return /iphone|ipad|ipod/.test(ua) ||
-  // 检测iOS设备
-  navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 // 检测iPad Pro
-  ;
-};
 exports.isString = function (str) {
   if (str !== undefined) {
     return Object.prototype.toString.call(str) === '[object String]' ? true : false;
@@ -29271,7 +29264,7 @@ exports.cloneObject = function (obj) {
  *
  */
 exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-  var mediaStream, devices, cameras;
+  var devices, cameras;
   return _regeneratorRuntime().wrap(function _callee$(_context) {
     while (1) switch (_context.prev = _context.next) {
       case 0:
@@ -29283,30 +29276,10 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRun
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        if (isIOS()) {
-          _context.next = 12;
-          break;
-        }
-        _context.prev = 3;
-        _context.next = 6;
-        return navigator.mediaDevices.getUserMedia({
-          video: true
-        });
-      case 6:
-        mediaStream = _context.sent;
-        mediaStream.getTracks().forEach(function (track) {
-          return track.stop();
-        });
-        _context.next = 12;
-        break;
-      case 10:
-        _context.prev = 10;
-        _context.t0 = _context["catch"](3);
-      case 12:
-        _context.prev = 12;
-        _context.next = 15;
+        _context.prev = 2;
+        _context.next = 5;
         return navigator.mediaDevices.enumerateDevices();
-      case 15:
+      case 5:
         devices = _context.sent;
         // 筛选出视频输入设备（摄像头）
         cameras = devices.filter(function (device) {
@@ -29320,17 +29293,17 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRun
           };
         });
         return _context.abrupt("return", cameras);
-      case 20:
-        _context.prev = 20;
-        _context.t1 = _context["catch"](12);
+      case 10:
+        _context.prev = 10;
+        _context.t0 = _context["catch"](2);
         return _context.abrupt("return", {
-          error: _context.t1.message
+          error: _context.t0.message
         });
-      case 23:
+      case 13:
       case "end":
         return _context.stop();
     }
-  }, _callee, null, [[3, 10], [12, 20]]);
+  }, _callee, null, [[2, 10]]);
 }));
 
 /**
@@ -29343,7 +29316,7 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRun
  *
  */
 exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-  var mediaStream, devices, microphones;
+  var devices, microphones;
   return _regeneratorRuntime().wrap(function _callee2$(_context2) {
     while (1) switch (_context2.prev = _context2.next) {
       case 0:
@@ -29355,30 +29328,10 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        if (isIOS()) {
-          _context2.next = 12;
-          break;
-        }
-        _context2.prev = 3;
-        _context2.next = 6;
-        return navigator.mediaDevices.getUserMedia({
-          audio: true
-        });
-      case 6:
-        mediaStream = _context2.sent;
-        mediaStream.getTracks().forEach(function (track) {
-          return track.stop();
-        });
-        _context2.next = 12;
-        break;
-      case 10:
-        _context2.prev = 10;
-        _context2.t0 = _context2["catch"](3);
-      case 12:
-        _context2.prev = 12;
-        _context2.next = 15;
+        _context2.prev = 2;
+        _context2.next = 5;
         return navigator.mediaDevices.enumerateDevices();
-      case 15:
+      case 5:
         devices = _context2.sent;
         // 筛选出音频输入设备（麦克风）
         microphones = devices.filter(function (device) {
@@ -29392,17 +29345,17 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
           };
         });
         return _context2.abrupt("return", microphones);
-      case 20:
-        _context2.prev = 20;
-        _context2.t1 = _context2["catch"](12);
+      case 10:
+        _context2.prev = 10;
+        _context2.t0 = _context2["catch"](2);
         return _context2.abrupt("return", {
-          error: _context2.t1.message
+          error: _context2.t0.message
         });
-      case 23:
+      case 13:
       case "end":
         return _context2.stop();
     }
-  }, _callee2, null, [[3, 10], [12, 20]]);
+  }, _callee2, null, [[2, 10]]);
 }));
 
 /**
@@ -29415,7 +29368,7 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
  *
  */
 exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-  var mediaStream, devices, speakers;
+  var devices, speakers;
   return _regeneratorRuntime().wrap(function _callee3$(_context3) {
     while (1) switch (_context3.prev = _context3.next) {
       case 0:
@@ -29427,30 +29380,10 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRu
           error: 'The current browser does not support device enumeration function.'
         });
       case 2:
-        if (isIOS()) {
-          _context3.next = 12;
-          break;
-        }
-        _context3.prev = 3;
-        _context3.next = 6;
-        return navigator.mediaDevices.getUserMedia({
-          audio: true
-        });
-      case 6:
-        mediaStream = _context3.sent;
-        mediaStream.getTracks().forEach(function (track) {
-          return track.stop();
-        });
-        _context3.next = 12;
-        break;
-      case 10:
-        _context3.prev = 10;
-        _context3.t0 = _context3["catch"](3);
-      case 12:
-        _context3.prev = 12;
-        _context3.next = 15;
+        _context3.prev = 2;
+        _context3.next = 5;
         return navigator.mediaDevices.enumerateDevices();
-      case 15:
+      case 5:
         devices = _context3.sent;
         // 筛选出音频输出设备
         speakers = devices.filter(function (device) {
@@ -29464,17 +29397,17 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRu
           };
         });
         return _context3.abrupt("return", speakers);
-      case 20:
-        _context3.prev = 20;
-        _context3.t1 = _context3["catch"](12);
+      case 10:
+        _context3.prev = 10;
+        _context3.t0 = _context3["catch"](2);
         return _context3.abrupt("return", {
-          error: _context3.t1.message
+          error: _context3.t0.message
         });
-      case 23:
+      case 13:
       case "end":
         return _context3.stop();
     }
-  }, _callee3, null, [[3, 10], [12, 20]]);
+  }, _callee3, null, [[2, 10]]);
 }));
 
 /**

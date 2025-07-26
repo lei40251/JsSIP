@@ -1624,11 +1624,11 @@ function start()
   };
 
   // 发起无音频视频呼叫
-  // document.querySelector('#callAudio').onclick = function()
-  // {
-  //   // 设置当前通话模式为视频模式
-  //   call('onlyVideo');
-  // };
+  document.querySelector('#callAudio').onclick = function()
+  {
+    // 设置当前通话模式为视频模式
+    call('onlyVideo');
+  };
 
   // 发起视频呼叫
   // document.querySelector('#callVideoSendonly').onclick = function()
