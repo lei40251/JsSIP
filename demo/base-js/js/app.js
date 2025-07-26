@@ -37,7 +37,7 @@ const remoteAudio = document.querySelector('#remoteAudio');
 
 let cusMediaStream = new MediaStream();
 
-const mbit = handleGetQuery('mbit');
+const mbit = handleGetQuery('mbit') || 400;
 const env = handleGetQuery('env');
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
@@ -204,8 +204,8 @@ ua.on('newRTCSession', function(e)
   e.session.on('sdp', function(d)
   {
     // 呼叫VoLTE手机号需要
-    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
-    d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
 
@@ -811,7 +811,7 @@ ua.on('newRTCSession', function(e)
   {
     e.session.answer({
       mediaConstraints : {
-        audio : false,
+        audio : true,
         video : videoConstraints
       },
       pcConfig            : pcConfig,
@@ -1530,32 +1530,32 @@ function setStatus(text)
  */
 function updateDevices()
 {
-  // CRTC.Utils.getCameras()
-  //   .then((cameras) =>
-  //   {
-  //     let option = '<option selected value="">请选择切换摄像头</option>';
+  CRTC.Utils.getCameras()
+    .then((cameras) =>
+    {
+      let option = '<option selected value="">请选择切换摄像头</option>';
 
-  //     cameras.forEach((device) =>
-  //     {
-  //       option += `<option value="${device.deviceId}">${device.label}</option>`;
-  //     });
+      cameras.forEach((device) =>
+      {
+        option += `<option value="${device.deviceId}">${device.label}</option>`;
+      });
 
-  //     document.querySelector('#cameras').innerHTML = option;
-  //   });
+      document.querySelector('#cameras').innerHTML = option;
+    });
 
   // 移动端不支持切换麦克风
-  // CRTC.Utils.getMicrophones()
-  //   .then((microphones) =>
-  //   {
-  //     let menus = '';
+  CRTC.Utils.getMicrophones()
+    .then((microphones) =>
+    {
+      let menus = '';
 
-  //     microphones.forEach((device) =>
-  //     {
-  //       menus += `<option value="${device.deviceId}">${device.label}</option>`;
-  //     });
+      microphones.forEach((device) =>
+      {
+        menus += `<option value="${device.deviceId}">${device.label}</option>`;
+      });
 
-  //     document.querySelector('#mics').innerHTML = menus;
-  //   });
+      document.querySelector('#mics').innerHTML = menus;
+    });
 }
 
 /**

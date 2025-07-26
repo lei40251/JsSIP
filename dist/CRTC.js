@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025726028
+ * CRTC v1.10.9-beta.20257261336
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014520056 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014522672 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014520056');
+debug('version %s', '1.10.9-beta.405014522672');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014520056';
+    return '1.10.9-beta.405014522672';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -18962,12 +18962,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
+      var extraFeatures = options.extraFeatures || null;
 
       // 是否启用BFCP
       this._enableBFCP = false;
-      if (options.extraFeatures && options.extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+      if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
         this._enableBFCP = true;
         this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
+      }
+
+      // SDP协商的分辨率速率
+      if (extraFeatures) {
+        if (extraFeatures.indexOf('BP480P') !== -1) {
+          this._sdpResolution = 'BP480P';
+          this._ua.transport.sdpResolution = 'BP480P';
+        }
+        if (extraFeatures.indexOf('BP720P') !== -1) {
+          this._sdpResolution = 'BP720P';
+          this._ua.transport.sdpResolution = 'BP720P';
+        }
       }
       var tracks;
       var peerHasAudioLine = false;
@@ -21205,12 +21218,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (connection.iceGatheringState === 'gathering') {
               setTimeout(function () {
                 !finished && ready();
-              }, 5000);
+              }, 500);
             }
           });
 
           // 修改适配 iceServers 的时候等待超时时间过长的问题
-          ready();
+          // ready();
         });
       }).then(function (sdp) {
         // 去掉IPV6

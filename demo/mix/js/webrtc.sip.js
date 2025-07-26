@@ -33,6 +33,18 @@ const _sipCode = {
 };
 let mediaConstraints = null;
 
+const env = handleGetQuery('env');
+const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
+
+// RTCPeerConnection 的 RTCConfiguration 对象
+const pcConfig = {};
+
+iceServers && (pcConfig['iceServers'] = iceServers);
+iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
+pcConfig['iceCandidatePoolSize'] = 10;
+
+pcConfig['bundlePolicy'] = 'max-compat';
+
 function haveSession(session)
 {
   for (const k in session)
@@ -42,6 +54,21 @@ function haveSession(session)
       return k;
     }
   }
+
+  return null;
+}
+
+/**
+ * 获取url参数
+ *
+ * @param {string} name - 参数名，区分大小写
+ */
+function handleGetQuery(name)
+{
+  const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
+  const r = window.location.search.substr(1).match(reg);
+
+  if (r != null) return unescape(r[2]);
 
   return null;
 }
@@ -387,23 +414,23 @@ const _rtcSessionEvent = {
   },
   sdp : function(e)
   {
-    if (e.type == 'offer')
-    {
-      e.sdp = e.sdp.replace(/a=setup:passive/g, 'a=setup:actpass');
-    }
-    else if (e.type == 'answer')
-    {
-      e.sdp = e.sdp.replace(/a=setup:actpass/g, 'a=setup:actpass');
-    }
+    // if (e.type == 'offer')
+    // {
+    //   e.sdp = e.sdp.replace(/a=setup:passive/g, 'a=setup:actpass');
+    // }
+    // else if (e.type == 'answer')
+    // {
+    //   e.sdp = e.sdp.replace(/a=setup:actpass/g, 'a=setup:actpass');
+    // }
 
-    e.sdp = e.sdp.replace(/a=ssrc.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=msid.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=mid.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=extmap.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
-    e.sdp = e.sdp.replace(/a=candidate.*169\.254.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=candidate.*tcp.*\r\n/g, '');
-    e.sdp = e.sdp.replace(/a=candidate.*([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){0,7}::[a-f0-9]{0,4}(:[a-f0-9]{1,4}){0,7}).*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=ssrc.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=msid.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=mid.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=extmap.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=group:BUNDLE.*\r\n/, '');
+    // e.sdp = e.sdp.replace(/a=candidate.*169\.254.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=candidate.*tcp.*\r\n/g, '');
+    // e.sdp = e.sdp.replace(/a=candidate.*([a-f0-9]{1,4}(:[a-f0-9]{1,4}){7}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){0,7}::[a-f0-9]{0,4}(:[a-f0-9]{1,4}){0,7}).*\r\n/g, '');
   },
   failed : function(e, session, UAe)
   {
@@ -696,6 +723,8 @@ WebRTC.prototype.answer = function()
     //   offerToReceiveVideo: 0,
     //   DtlsSrtpKeyAgreement: 0
     // },
+
+    // pcConfig         : pcConfig,
     mediaConstraints :
       phoneModal == 'audio'
         ? {
@@ -767,9 +796,9 @@ WebRTC.prototype.toMCU = function(target)
       const stream = new MediaStream();
 
       console.warn('sk: ', _session[key].connection.getReceivers());
-      _session[key].connection.getReceivers().forEach(({ track }) => 
+      _session[key].connection.getReceivers().forEach(({ track }) =>
       {
-        if (track && track.readyState !== 'ended' && (key !== target || track.kind !== 'audio')) 
+        if (track && track.readyState !== 'ended' && (key !== target || track.kind !== 'audio'))
         {
           stream.addTrack(track);
         }
