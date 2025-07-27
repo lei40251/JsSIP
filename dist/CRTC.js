@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257261857
+ * CRTC v1.10.9-beta.20257271152
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014523714 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405014542304 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014523714');
+debug('version %s', '1.10.9-beta.405014542304');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014523714';
+    return '1.10.9-beta.405014542304';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19360,6 +19360,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function upgradeToVideo() {
       var _this5 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
       logger.debug('upgradeToVideo()');
       if (this._ua.sk[7] < 2) {
         return;
@@ -19424,7 +19425,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (options.useUpdate) {
           opts['useUpdate'] = true;
         }
-        _this5.renegotiate(opts);
+        _this5.renegotiate(opts, done);
       });
     }
 

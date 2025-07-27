@@ -19,6 +19,9 @@ let tmpSession;
 let safari_r = false;
 let options;
 
+// 当前模式
+let curMode;
+
 // 兼容mcu等候室用
 let cloneStream = null;
 let cusStream;
@@ -323,6 +326,8 @@ ua.on('newRTCSession', function(e)
   e.session.on('mode', function(d)
   {
     setStatus(`mode: ${d.mode}`);
+
+    curMode = d.mode;
 
     if (d.mode == 'video')
     {
@@ -856,7 +861,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toAudio').onclick = function()
   {
-    e.session.demoteToAudio();
+    e.session.demoteToAudio({}, () => { setStatus(`切换音频模式完成${ curMode}`); });
   };
 
   /**
@@ -866,7 +871,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo({ videoConstraints: videoConstraints });
+    e.session.upgradeToVideo({ videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
     stats && stats.reset();
   };
 
@@ -875,7 +880,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true, videoConstraints: videoConstraints });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
 
