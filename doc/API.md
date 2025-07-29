@@ -114,8 +114,8 @@ options
 | unshare()                                    | 取消分享                                                            |
 | sendInfo()                                   | 发送INFO消息                                                        |
 | sendDTMF()                                   | 发送DTMF                                                            |
-| demoteToAudio()                              | 通话降级为音频模式                                                  |
-| upgradeToVideo()                             | 升级通话到视频模式                                                  |
+| demoteToAudio(options = {}, done = ()=>{})<sup>4</sup>                              | 通话降级为音频模式                                                  |
+| upgradeToVideo(options = {}, done = ()=>{})<sup>5</sup>                             | 升级通话到视频模式                                                  |
 | isEstablished()                              | 如果会话已经建立则返回true，否则返回false                           |
 
 标注 1:
@@ -138,6 +138,20 @@ options
 | ------ | ---------------------------- |
 | audio  | 布尔值，是否取消本地音频静音 |
 | video  | 布尔值，是否打开本地视频     |
+
+标注 4&5：
+
+| 参数名 | 说明                         |
+| ------ | ---------------------------- |
+| options  | 可选，带有附加参数的**可选对象**（请参见下文），默认 {} |
+| done  | 可选，模式切换完成后的回调    |
+
+options：
+
+| 参数名 | 说明                         |
+| ------ | ---------------------------- |
+| useUpdate  | 布尔值,true使用update进行重新协商；默认false |
+| extraHeaders | 字符串，呼叫时可以自定义携带的数据，参考发起呼叫对应字段 |
 
 #### 事件
 
