@@ -19,6 +19,8 @@ let tmpSession;
 let safari_r = false;
 let options;
 
+let useUpdate = true;
+
 // 当前模式
 let curMode;
 
@@ -880,7 +882,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: true, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
 
@@ -904,6 +906,13 @@ ua.on('newRTCSession', function(e)
   {
     e.session.switchDevice('audio', this.options[this.selectedIndex].value);
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
+  };
+
+  document.querySelector('#useupdate').onchange = function()
+  {
+    this.options[this.selectedIndex].value !== 'update' && (useUpdate = false);
+    console.log(this.options[this.selectedIndex]);
+    setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
   };
 
   let camFlag = true;
