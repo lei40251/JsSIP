@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257311359
+ * CRTC v1.10.9-beta.2025841230
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014622718 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016082460 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014622718');
+debug('version %s', '1.10.9-beta.405016082460');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014622718';
+    return '1.10.9-beta.405016082460';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -20955,7 +20955,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             window.addEventListener('setItemEvent', function (e) {
               if (e.key === 'needReinvite' && e.newValue === 1 && !self._canSend) {
                 self._canSend = true;
-                sessionStorage.removeItem('needReinvite');
                 self.renegotiate({
                   changeViaHost: true
                 });
@@ -22140,7 +22139,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          console.warn('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
           _this29._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
@@ -27087,6 +27085,17 @@ module.exports = /*#__PURE__*/function () {
 
     // Get the socket with higher weight.
     this._getSocket();
+    var orignalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = function (key) {
+      var setItemEvent = new CustomEvent('setItemEvent');
+      setItemEvent.key = key;
+      for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        newValue[_key - 1] = arguments[_key];
+      }
+      setItemEvent.newValue = newValue[0];
+      window.dispatchEvent(setItemEvent);
+      orignalSetItem.apply(this, [key].concat(newValue));
+    };
   }
 
   /**
@@ -27275,10 +27284,14 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_onConnect",
     value: function _onConnect() {
+      console.warn('eeeeeeeeeeeeeeeeee: ', this.recover_attempts);
       // 信令连接成功，如果重试次数不为零则为重连，延迟1秒后调用reinvite
       if (this.recover_attempts !== 0) {
         setTimeout(function () {
-          sessionStorage.setItem('needReinvite', 1);
+          var setItemEvent = new CustomEvent('setItemEvent');
+          setItemEvent.key = 'needReinvite';
+          setItemEvent.newValue = 1;
+          window.dispatchEvent(setItemEvent);
         }, 200);
       }
       this.recover_attempts = 0;
@@ -27450,17 +27463,6 @@ function generateDate() {
   }
   return "".concat(tYear).concat(m).concat(d);
 }
-var orignalSetItem = sessionStorage.setItem;
-sessionStorage.setItem = function (key) {
-  var setItemEvent = new CustomEvent('setItemEvent');
-  setItemEvent.key = key;
-  for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    newValue[_key - 1] = arguments[_key];
-  }
-  setItemEvent.newValue = newValue[0];
-  window.dispatchEvent(setItemEvent);
-  orignalSetItem.apply(this, [key].concat(newValue));
-};
 
 /**
  * The User-Agent class.
