@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.2025841230
+ * CRTC v1.10.9-beta.20258141622
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405016082460 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016283244 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405016082460');
+debug('version %s', '1.10.9-beta.405016283244');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405016082460';
+    return '1.10.9-beta.405016283244';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21905,11 +21905,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             stream = Utils.getStreamThroughCanvas(stream);
           }
           stream.getVideoTracks().forEach(function (track) {
-            _this24._localMediaStream.addTrack(track);
+            try {
+              _this24._localMediaStream.addTrack(track);
+            } catch (error) {
+              logger.warn("_processInDialogSdpOffer() failed local stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+            }
 
             // 兼容低版本浏览器不支持addTrack的情况
             if (RTCPeerConnection.prototype.addTrack) {
-              _this24._connection.addTrack(track, stream);
+              try {
+                _this24._connection.addTrack(track, stream);
+              } catch (error) {
+                logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+              }
             } else {
               _this24._connection.addStream(stream);
             }
@@ -21925,7 +21933,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return sender.track === videoTrack;
               });
               if (!trackAlreadyAdded) {
-                _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                try {
+                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                } catch (error) {
+                  logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
+                }
               } else {
                 logger.warn('Track is already added to the peer connection.');
               }
@@ -27284,7 +27296,6 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_onConnect",
     value: function _onConnect() {
-      console.warn('eeeeeeeeeeeeeeeeee: ', this.recover_attempts);
       // 信令连接成功，如果重试次数不为零则为重连，延迟1秒后调用reinvite
       if (this.recover_attempts !== 0) {
         setTimeout(function () {
