@@ -29,7 +29,7 @@ let cloneStream = null;
 let cusStream;
 let isRefer = false;
 
-const extraFeatures = [ ];
+const extraFeatures = [];
 
 // let payload;
 
@@ -74,7 +74,7 @@ let videoConstraints = {
   frameRate : 15
 };
 
-if (exts && exts.indexOf('BP720P')!==-1)
+if (exts && exts.indexOf('BP720P') !== -1)
 {
   videoConstraints = {
     width     : 1280,
@@ -345,7 +345,7 @@ ua.on('newRTCSession', function(e)
 
       e.session.connection.getSenders().forEach((sender) =>
       {
-        if (sender.track&& sender.track.kind === 'video')
+        if (sender.track && sender.track.kind === 'video')
         {
           const parameters = sender.getParameters();
 
@@ -379,19 +379,19 @@ ua.on('newRTCSession', function(e)
 
     cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
 
-    if (localStream.audioStream.getAudioTracks().length>0)
+    if (localStream.audioStream.getAudioTracks().length > 0)
     {
       // tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
       tmpTracks.push(localStream.audioStream.getAudioTracks()[0]);
     }
 
-    if (d.videoStream.getVideoTracks().length>0)
+    if (d.videoStream.getVideoTracks().length > 0)
     {
       // tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
       tmpTracks.push(d.videoStream.getVideoTracks()[0]);
     }
 
-    cloneStream=new MediaStream(tmpTracks);
+    cloneStream = new MediaStream(tmpTracks);
     localVideo.srcObject = cloneStream;
 
     // 兼容不同浏览器安全策略
@@ -685,7 +685,7 @@ ua.on('newRTCSession', function(e)
       //   re.playoutDelayHint = 1000;
       // });
 
-      console.warn('report: ', JSON.stringify(r));
+      // console.warn('report: ', JSON.stringify(r));
       let downF = '';
       let upF = '';
 
@@ -697,7 +697,7 @@ ua.on('newRTCSession', function(e)
         }
         else
         {
-          downF += `# ${item.type==='shared'?'共享':'视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          downF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
         }
       });
 
@@ -709,7 +709,7 @@ ua.on('newRTCSession', function(e)
         }
         else
         {
-          upF += `# ${item.type==='shared'?'共享':'视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          upF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
         }
       });
 
@@ -771,7 +771,7 @@ ua.on('newRTCSession', function(e)
     {
       e.session.connection.getSenders().forEach((sender) =>
       {
-        if (sender.track&& sender.track.kind === 'video')
+        if (sender.track && sender.track.kind === 'video')
         {
           const parameters = sender.getParameters();
 
@@ -863,7 +863,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toAudio').onclick = function()
   {
-    e.session.demoteToAudio({}, () => { setStatus(`切换音频模式完成${ curMode}`); });
+    e.session.demoteToAudio({ useUpdate: false }, () => { setStatus(`切换音频模式完成${curMode}`); });
   };
 
   /**
@@ -1254,7 +1254,7 @@ async function call(type, direction, mediaStream)
   options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
-    // cMode         : 'paphone',
+    cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
@@ -1317,7 +1317,7 @@ async function call(type, direction, mediaStream)
     };
   }
 
-  if (type==='onlyVideo')
+  if (type === 'onlyVideo')
   {
     options.mediaConstraints.audio = false;
   }
@@ -1338,7 +1338,7 @@ async function call(type, direction, mediaStream)
     {
       if (event.track.kind === 'audio')
       {
-      // 收到远端媒体则设置远端回铃音
+        // 收到远端媒体则设置远端回铃音
         earlyMedia = true;
 
         remoteAudio.srcObject = event.streams[0];
@@ -1423,7 +1423,7 @@ function getStreams(pc)
 
   // const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
   // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
-  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0]:null;
+  const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
   const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
@@ -1438,15 +1438,15 @@ function getStreams(pc)
     mediaStreamArray.push(audioTrack);
   }
 
-  if (mediaStreamArray.length>0)
+  if (mediaStreamArray.length > 0)
   {
-  // 本地视频
+    // 本地视频
     newCloneStream = new MediaStream(mediaStreamArray);
 
     localVideo.srcObject = newCloneStream;
     newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
     {
-    // 特殊情况下清理页面残留的video黑框
+      // 特殊情况下清理页面残留的video黑框
       localVideo.srcObject = null;
     });
   }

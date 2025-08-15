@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20257311359
+ * CRTC v1.10.9-beta.20258151910
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405014622718 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016303820 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405014622718');
+debug('version %s', '1.10.9-beta.405016303820');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405014622718';
+    return '1.10.9-beta.405016303820';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -20955,7 +20955,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             window.addEventListener('setItemEvent', function (e) {
               if (e.key === 'needReinvite' && e.newValue === 1 && !self._canSend) {
                 self._canSend = true;
-                sessionStorage.removeItem('needReinvite');
                 self.renegotiate({
                   changeViaHost: true
                 });
@@ -21041,7 +21040,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             mids.push(index);
             if (media.type === 'video') {
               var lowH264 = false;
-              var delH264Payload = [];
+              var delH264Payload = [124];
               var payloads = media.payloads.split(' ');
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
@@ -21060,9 +21059,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
                 // 默认过滤掉 packetization-mode=0
                 else if (fmtp.config.indexOf('packetization-mode=0') !== -1) {
-                  delH264Payload.push(fmtp.payload);
+                  // delH264Payload.push(fmtp.payload);
                   // eslint-disable-next-line max-len
-                  // (constraints && constraints.offerToReceiveVideo !== false) && delH264Payload.push(fmtp.payload);
+                  constraints && constraints.offerToReceiveVideo !== false && delH264Payload.push(fmtp.payload);
                 }
               });
               media.fmtp.forEach(function (fmtp) {
@@ -21906,11 +21905,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             stream = Utils.getStreamThroughCanvas(stream);
           }
           stream.getVideoTracks().forEach(function (track) {
-            _this24._localMediaStream.addTrack(track);
+            try {
+              _this24._localMediaStream.addTrack(track);
+            } catch (error) {
+              logger.warn("_processInDialogSdpOffer() failed local stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+            }
 
             // 兼容低版本浏览器不支持addTrack的情况
             if (RTCPeerConnection.prototype.addTrack) {
-              _this24._connection.addTrack(track, stream);
+              try {
+                _this24._connection.addTrack(track, stream);
+              } catch (error) {
+                logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+              }
             } else {
               _this24._connection.addStream(stream);
             }
@@ -21926,7 +21933,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return sender.track === videoTrack;
               });
               if (!trackAlreadyAdded) {
-                _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                try {
+                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                } catch (error) {
+                  logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
+                }
               } else {
                 logger.warn('Track is already added to the peer connection.');
               }
@@ -22140,7 +22151,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          console.warn('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
           _this29._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
@@ -22380,7 +22390,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
-              if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+              if (response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
                 _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                   RSeq: response.getHeader('rseq')
                 });
@@ -23039,6 +23049,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
       var _this35 = this;
+      logger.debug("setLocalMedia() ".concat(mode));
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -23398,6 +23409,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
+      logger.debug("ontogglemode() ".concat(mode));
       if (mode === this._mode) {
         return;
       }
@@ -27087,6 +27099,17 @@ module.exports = /*#__PURE__*/function () {
 
     // Get the socket with higher weight.
     this._getSocket();
+    var orignalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = function (key) {
+      var setItemEvent = new CustomEvent('setItemEvent');
+      setItemEvent.key = key;
+      for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        newValue[_key - 1] = arguments[_key];
+      }
+      setItemEvent.newValue = newValue[0];
+      window.dispatchEvent(setItemEvent);
+      orignalSetItem.apply(this, [key].concat(newValue));
+    };
   }
 
   /**
@@ -27278,7 +27301,10 @@ module.exports = /*#__PURE__*/function () {
       // 信令连接成功，如果重试次数不为零则为重连，延迟1秒后调用reinvite
       if (this.recover_attempts !== 0) {
         setTimeout(function () {
-          sessionStorage.setItem('needReinvite', 1);
+          var setItemEvent = new CustomEvent('setItemEvent');
+          setItemEvent.key = 'needReinvite';
+          setItemEvent.newValue = 1;
+          window.dispatchEvent(setItemEvent);
         }, 200);
       }
       this.recover_attempts = 0;
@@ -27450,17 +27476,6 @@ function generateDate() {
   }
   return "".concat(tYear).concat(m).concat(d);
 }
-var orignalSetItem = sessionStorage.setItem;
-sessionStorage.setItem = function (key) {
-  var setItemEvent = new CustomEvent('setItemEvent');
-  setItemEvent.key = key;
-  for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    newValue[_key - 1] = arguments[_key];
-  }
-  setItemEvent.newValue = newValue[0];
-  window.dispatchEvent(setItemEvent);
-  orignalSetItem.apply(this, [key].concat(newValue));
-};
 
 /**
  * The User-Agent class.
