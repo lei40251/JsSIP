@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20258141622
+ * CRTC v1.10.9-beta.20258151910
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405016283244 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016303820 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405016283244');
+debug('version %s', '1.10.9-beta.405016303820');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405016283244';
+    return '1.10.9-beta.405016303820';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21040,7 +21040,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             mids.push(index);
             if (media.type === 'video') {
               var lowH264 = false;
-              var delH264Payload = [];
+              var delH264Payload = [124];
               var payloads = media.payloads.split(' ');
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
@@ -21059,9 +21059,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
                 // 默认过滤掉 packetization-mode=0
                 else if (fmtp.config.indexOf('packetization-mode=0') !== -1) {
-                  delH264Payload.push(fmtp.payload);
+                  // delH264Payload.push(fmtp.payload);
                   // eslint-disable-next-line max-len
-                  // (constraints && constraints.offerToReceiveVideo !== false) && delH264Payload.push(fmtp.payload);
+                  constraints && constraints.offerToReceiveVideo !== false && delH264Payload.push(fmtp.payload);
                 }
               });
               media.fmtp.forEach(function (fmtp) {
@@ -22390,7 +22390,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
-              if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
+              if (response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
                 _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                   RSeq: response.getHeader('rseq')
                 });
@@ -23049,6 +23049,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
       var _this35 = this;
+      logger.debug("setLocalMedia() ".concat(mode));
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -23408,6 +23409,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
+      logger.debug("ontogglemode() ".concat(mode));
       if (mode === this._mode) {
         return;
       }
