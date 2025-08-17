@@ -42,6 +42,7 @@ const remoteAudio = document.querySelector('#remoteAudio');
 
 let cusMediaStream = new MediaStream();
 
+const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
 const env = handleGetQuery('env');
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
@@ -803,7 +804,7 @@ ua.on('newRTCSession', function(e)
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true },
       extraFeatures       : extraFeatures
     });
@@ -823,7 +824,7 @@ ua.on('newRTCSession', function(e)
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures
     });
@@ -847,7 +848,7 @@ ua.on('newRTCSession', function(e)
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures,
       mediaStream         : tmpStream
@@ -1253,7 +1254,7 @@ async function call(type, direction, mediaStream)
 
   options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders  : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}`, 'Custom: C00071694431-TEST47518-P120100016079316-176049668', 'RecordID: E1647E83-7729-48F7-AF58-951CC86CFF16', 'SessName: -' ],
+    extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig

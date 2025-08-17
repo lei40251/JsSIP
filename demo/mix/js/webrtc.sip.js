@@ -33,17 +33,8 @@ const _sipCode = {
 };
 let mediaConstraints = null;
 
-const env = handleGetQuery('env');
-const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
+// const xdata = handleGetQuery('xdata');
 
-// RTCPeerConnection 的 RTCConfiguration 对象
-const pcConfig = {};
-
-iceServers && (pcConfig['iceServers'] = iceServers);
-iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
-pcConfig['iceCandidatePoolSize'] = 10;
-
-pcConfig['bundlePolicy'] = 'max-compat';
 
 function haveSession(session)
 {
@@ -54,21 +45,6 @@ function haveSession(session)
       return k;
     }
   }
-
-  return null;
-}
-
-/**
- * 获取url参数
- *
- * @param {string} name - 参数名，区分大小写
- */
-function handleGetQuery(name)
-{
-  const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-  const r = window.location.search.substr(1).match(reg);
-
-  if (r != null) return unescape(r[2]);
 
   return null;
 }
@@ -703,7 +679,8 @@ WebRTC.prototype.call = function(linkman, mode)
   }
   this.session = this.ua.call(`sip:${ linkman }@${ this.domain}`, {
     mediaConstraints : mediaConstraints,
-    pcConfig         : pcConfig
+    pcConfig         : pcConfig,
+    extraHeaders     : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ]
   });
 };
 
@@ -724,7 +701,8 @@ WebRTC.prototype.answer = function()
     //   DtlsSrtpKeyAgreement: 0
     // },
 
-    // pcConfig         : pcConfig,
+    pcConfig         : pcConfig,
+    extraHeaders     : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
     mediaConstraints :
       phoneModal == 'audio'
         ? {
