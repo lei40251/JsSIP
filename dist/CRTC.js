@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20258151910
+ * CRTC v1.10.9-beta.20258171345
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405016303820 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016342690 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405016303820');
+debug('version %s', '1.10.9-beta.405016342690');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405016303820';
+    return '1.10.9-beta.405016342690';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21040,7 +21040,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             mids.push(index);
             if (media.type === 'video') {
               var lowH264 = false;
-              var delH264Payload = [124];
+              var delH264Payload = _this18._customizedMode === 'paphone' ? [124] : [];
               var payloads = media.payloads.split(' ');
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
@@ -21095,9 +21095,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }
-            if (media.type !== 'application') {
-              media.rtcpMux = 'rtcp-mux';
-            }
+
+            // if (media.type !== 'application')
+            // {
+            //   media.rtcpMux = 'rtcp-mux';
+            // }
 
             /**
              * 处理5G外呼sdp过大问题,

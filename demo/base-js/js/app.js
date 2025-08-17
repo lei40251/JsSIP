@@ -602,7 +602,7 @@ ua.on('newRTCSession', function(e)
           },
           video : true
         },
-        pcConfig : pcConfig
+        pcConfig : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' })
       });
       setStatus('3pcc answer');
     }
@@ -801,7 +801,7 @@ ua.on('newRTCSession', function(e)
         },
         video : false
       },
-      pcConfig            : pcConfig,
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true },
@@ -821,7 +821,7 @@ ua.on('newRTCSession', function(e)
         audio : true,
         video : videoConstraints
       },
-      pcConfig            : pcConfig,
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
@@ -845,7 +845,7 @@ ua.on('newRTCSession', function(e)
         audio : true,
         video : videoConstraints
       },
-      pcConfig            : pcConfig,
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ 'X-Data: dGVzdCB4LWRhdGE=', `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
