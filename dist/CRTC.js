@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9.20258181327
+ * CRTC v1.10.10-beta.20258181724
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9.405016362654 (Web)',
+  USER_AGENT: 'UA/1.10.10-beta.405016363448 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9.405016362654');
+debug('version %s', '1.10.10-beta.405016363448');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9.405016362654';
+    return '1.10.10-beta.405016363448';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21040,7 +21040,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             mids.push(index);
             if (media.type === 'video') {
               var lowH264 = false;
-              var delH264Payload = _this18._customizedMode === 'paphone' ? [124] : [];
+              var delH264Payload = [];
               var payloads = media.payloads.split(' ');
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
@@ -21050,18 +21050,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   delH264Payload.push(fmtp.payload);
                 }
 
-                // 新增判断是不是单向视频，如果单向视频则只保留 packetization-mode=0
-                // paphone 定制过滤掉 packetization-mode=1 的payload
-                // eslint-disable-next-line max-len
-                // if ((this._customizedMode === 'paphone' || (constraints && constraints.offerToReceiveVideo === false)) && fmtp.config.indexOf('packetization-mode=1') !== -1)
-                if (_this18._customizedMode === 'paphone' && fmtp.config.indexOf('packetization-mode=1') !== -1) {
+                // packetization-mode 规则：
+                // 1) paphone    => 保留 0，删除 1
+                // 2) 单向视频（可能多发关键帧）    => 保留 0，删除 1
+                // 3) 否则       => 保留 1，删除 0
+                var keepZero = _this18._customizedMode === 'paphone' || constraints && constraints.offerToReceiveVideo === false;
+                var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
+                if (shouldDelete) {
                   delH264Payload.push(fmtp.payload);
-                }
-                // 默认过滤掉 packetization-mode=0
-                else if (fmtp.config.indexOf('packetization-mode=0') !== -1) {
-                  // delH264Payload.push(fmtp.payload);
-                  // eslint-disable-next-line max-len
-                  constraints && constraints.offerToReceiveVideo !== false && delH264Payload.push(fmtp.payload);
                 }
               });
               media.fmtp.forEach(function (fmtp) {
@@ -21074,6 +21070,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   delH264Payload.push(fmtp.payload);
                 }
               });
+
+              // paphone H264 payload 为124，去掉其他payload为124的媒体
+              if (media.rtp && _this18._customizedMode === 'paphone') {
+                media.rtp.forEach(function (item) {
+                  item.payload === 124 && String(item.codec).toLowerCase() !== 'h264' && delH264Payload.push(124);
+                });
+              }
               media.payloads = payloads.filter(function (x) {
                 return !delH264Payload.some(function (i) {
                   return i == x;
@@ -21085,6 +21088,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
               if (media.rtp) {
+                // 是否存在 payload=124 且 codec 为 h264（忽略大小写）
+                var hasOther124 = media.rtp.some(function (item) {
+                  return item.payload === 124 && String(item.codec).toLowerCase() !== 'h264';
+                });
+
+                // paphone H264 payload 为124，去掉其他payload为124的媒体
+                _this18._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
                 media.rtp = media.rtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
@@ -21095,11 +21105,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }
-
-            // if (media.type !== 'application')
-            // {
-            //   media.rtcpMux = 'rtcp-mux';
-            // }
 
             /**
              * 处理5G外呼sdp过大问题,
