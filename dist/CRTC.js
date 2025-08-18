@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.10.20258181727
+ * CRTC v1.10.11-beta.2025818183
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.10.405016363454 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016363606 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.10.405016363454');
+debug('version %s', '1.10.11-beta.405016363606');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.10.405016363454';
+    return '1.10.11-beta.405016363606';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21137,8 +21137,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
-        // 非BFCP修改为只支持 42c01e
-        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/42e01f/g, CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID));
+        // 非BFCP修改为根据配置参数设置 profile-level-id
+        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID)));
 
         // 兼容 Firefox 去掉 bundle
         if (Utils.isFirefox() && type === 'offer') {
