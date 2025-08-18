@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.9-beta.20258171345
+ * CRTC v1.10.9-beta.20258181248
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.9-beta.405016342690 (Web)',
+  USER_AGENT: 'UA/1.10.9-beta.405016362496 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.9-beta.405016342690');
+debug('version %s', '1.10.9-beta.405016362496');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.9-beta.405016342690';
+    return '1.10.9-beta.405016362496';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21223,9 +21223,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }, 500);
             }
           });
-
-          // 修改适配 iceServers 的时候等待超时时间过长的问题
-          // ready();
         });
       }).then(function (sdp) {
         // 去掉IPV6
@@ -27211,6 +27208,9 @@ module.exports = /*#__PURE__*/function () {
       message = message.replace(/m=audio 9 /, 'm=audio 11028 ');
       message = message.replace(/m=video 9 /, 'm=video 11029 ');
 
+      // 修正rtcpmux的ip问题
+      message = Utils.fixRtcpLines(message);
+
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);
       var sctpPortMatch = message.match(/a=sctp-port:(\d+)/);
@@ -30113,6 +30113,19 @@ exports.getDtmfPayloadAndClockRate = function (sdp) {
       payload: payload,
       clockRate: clockRate
     };
+  });
+};
+
+// 修复sdp里面rtcp行缺少ip地址的问题
+exports.fixRtcpLines = function (sdp) {
+  return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, function (match, prefix) {
+    // 如果已经有IP地址，不做修改
+    if (/\d+\.\d+\.\d+\.\d+$/.test(match) || /[0-9a-fA-F:]+$/.test(match)) {
+      return match;
+    }
+
+    // 如果没有IP地址，添加默认的 0.0.0.0
+    return "".concat(prefix, " 0.0.0.0");
   });
 };
 

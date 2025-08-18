@@ -1255,7 +1255,7 @@ async function call(type, direction, mediaStream)
   options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
     extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-    cMode         : 'paphone',
+    // cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
