@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258201114
+ * CRTC v1.10.11-beta.20258201244
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016402228 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016402488 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3549,9 +3549,9 @@ module.exports = {
   // BFCP相关
   BFCP: 'BFCP',
   // BFCP心跳间隔，默认30秒
-  BFCP_HEARTBEAT_INTERVAL: 1 * 1000,
+  BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
-  MAX_RETRY_ATTEMPTS: 0,
+  MAX_RETRY_ATTEMPTS: 4,
   // BFCP控制的流transceiver索引号
   BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
   BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016402228');
+debug('version %s', '1.10.11-beta.405016402488');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016402228';
+    return '1.10.11-beta.405016402488';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -18642,7 +18642,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       return Promise.resolve()
       // Get a stream if required.
       .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-        var mStream, currMediaConstraints, sendStream, mics, ua;
+        var mStream, currMediaConstraints, tStream, sendStream, mics, ua;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
@@ -18662,7 +18662,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // Request for user media access.
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 12;
+                _context.next = 13;
                 break;
               }
               _this2._localMediaStreamLocallyGenerated = true;
@@ -18680,11 +18680,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
+              console.warn('cur: ', currMediaConstraints);
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 12;
+                _context.next = 13;
                 break;
               }
-              _context.next = 10;
+              _context.next = 11;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18699,16 +18700,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 e.name = error.name;
                 throw e;
               });
-            case 10:
-              mStream = _context.sent;
-              mStream.getTracks().forEach(function (track) {
+            case 11:
+              tStream = _context.sent;
+              tStream.getTracks().forEach(function (track) {
                 mStream.addTrack(track, mStream);
               });
-            case 12:
+            case 13:
               sendStream = new MediaStream();
-              _context.next = 15;
+              _context.next = 16;
               return Utils.getMicrophones();
-            case 15:
+            case 16:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
@@ -18723,13 +18724,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 22;
+                _context.next = 23;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 22:
-              return _context.abrupt("return", sendStream);
             case 23:
+              return _context.abrupt("return", sendStream);
+            case 24:
             case "end":
               return _context.stop();
           }
@@ -18737,6 +18738,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }))).then(function (stream) {
         // Create a new RTCPeerConnection instance.
         _this2._createRTCConnection(pcConfig, rtcConstraints);
+        console.warn('sss: ', stream.getTracks());
         var videoTrackStates = new Map();
 
         // 音视频轨道属性状态都分别保存日志，视频轨道状态变化触发对应事件
@@ -19379,12 +19381,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 兼容重复调用，或者由单向视频切换双向视频，或者双向视频切换单向视频的情况
         if (_this5._localMediaStream.getVideoTracks().length > 0) {
           _this5._connection.getTransceivers().forEach(function (t) {
+            // 单向视频，仅发送
             if (options.sendOnly) {
               t.direction = 'sendOnly';
-            } else {
+            }
+            // 单向视频，仅接收
+            else if (options.recvOnly) {
+              t.direction = 'recvOnly';
+            }
+            // 双向视频
+            else {
               t.direction = 'sendrecv';
             }
           });
+          return;
+        }
+
+        // 单向视频，仅接收
+        if (options.recvOnly) {
           return;
         }
         return navigator.mediaDevices.getUserMedia({
@@ -19413,6 +19427,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             iceRestart: true
           }
         };
+
+        // 单向视频，仅发送
         if (options.sendOnly) {
           opts = {
             rtcOfferConstraints: {
@@ -19422,6 +19438,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           };
         }
+
+        // 单向视频，仅接收
+        if (options.recvOnly) {
+          opts = {
+            rtcOfferConstraints: {
+              iceRestart: true,
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: true
+            }
+          };
+        }
+
+        // 使用update还是reinvite
         if (options.useUpdate) {
           opts['useUpdate'] = true;
         }

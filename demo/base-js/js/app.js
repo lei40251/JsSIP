@@ -883,7 +883,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
+    e.session.upgradeToVideo({ recvOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
 
@@ -1311,6 +1311,8 @@ async function call(type, direction, mediaStream)
     (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
+
+    console.warn(tmpStream.getTracks());
     // 系统麦克风和摄像头
     options['mediaConstraints'] = {
       audio : type === 'callnullvideo' ? true : false,
