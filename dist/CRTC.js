@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.2025818183
+ * CRTC v1.10.11-beta.20258201114
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016363606 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016402228 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3549,9 +3549,9 @@ module.exports = {
   // BFCP相关
   BFCP: 'BFCP',
   // BFCP心跳间隔，默认30秒
-  BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
+  BFCP_HEARTBEAT_INTERVAL: 1 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
-  MAX_RETRY_ATTEMPTS: 4,
+  MAX_RETRY_ATTEMPTS: 0,
   // BFCP控制的流transceiver索引号
   BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
   BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016363606');
+debug('version %s', '1.10.11-beta.405016402228');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016363606';
+    return '1.10.11-beta.405016402228';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -23839,6 +23839,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 处理已注册的事务消息
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
+          console.warn('bfcp result: transactionId -', message.commonHeader.transactionId, ', time -', Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt);
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];
@@ -23860,7 +23861,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._handleFloorRequestMessage(message);
             break;
           default:
-            logger.warn("onChannelMessage(): Unknown primitive type: ".concat(message.commonHeader.primitive));
+            logger.debug("onChannelMessage(): do not require processing type: ".concat(message.commonHeader.primitive));
             break;
         }
       } catch (error) {
@@ -23874,16 +23875,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
+      var _this45 = this;
       logger.debug('datachannel closed.');
+      setTimeout(function () {
+        // 判断dc如果断开1秒后ice状态正常则重连dc
+        if (_this45.connection.iceConnectionState === 'connected') {
+          _this45.renegotiate({
+            rtcOfferConstraints: {
+              iceRestart: true
+            }
+          });
+        } else {
+          // DC 状态设置为未准备好
+          _this45._dataChannelReady = false;
+          // 停止发送心跳
+          clearInterval(_this45._bfcpHeatbeatTimer);
+          _this45._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
 
-      // DC 状态设置为未准备好
-      this._dataChannelReady = false;
-      // 停止发送心跳
-      clearInterval(this._bfcpHeatbeatTimer);
-      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
-
-      // 停止检测close状态
-      clearInterval(this._closingInterval);
+          // 停止检测close状态
+          clearInterval(_this45._closingInterval);
+        }
+      }, 1000);
     }
 
     /**
@@ -23895,19 +23907,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this45 = this;
+      var _this46 = this;
       logger.debug("dataChannelSend() ".concat(transactionId));
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
-        if (!_this45._dataChannelReady) {
+        if (!_this46._dataChannelReady) {
           reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           return;
         }
 
         // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this45._dataChannelMsgs[transactionId]) {
-          _this45._dataChannelMsgs[transactionId] = {
+        if (!_this46._dataChannelMsgs[transactionId]) {
+          _this46._dataChannelMsgs[transactionId] = {
             retries: 0,
             sendAt: Date.now(),
             message: message,
@@ -23916,29 +23928,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             reject: reject
           };
         }
-        var messageState = _this45._dataChannelMsgs[transactionId];
+        var messageState = _this46._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
-        if (messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
-          reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
-          logger.error("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+        if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
+          logger.warn("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+          messageState.reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           return;
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(_this45._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this45._bfcpUser.receiveMessage(messageState.message);
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this46._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this46._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
-        sendMessage.commonHeader.primitive != Primitive.FloorRelease && setTimeout(function () {
-          // 如果没有收到响应，则重试
-          if (messageState && !messageState.received) {
-            messageState.retries++;
-            // 增加重试的间隔
-            _this45._dataChannelSend(messageState.message, transactionId);
-          }
-        }, Math.pow(2, messageState.retries) * 500);
-        _this45._dataChannel && _this45._dataChannel.send(messageState.message);
+        if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
+          setTimeout(function () {
+            // 如果没有收到响应，则重试
+            if (messageState && !messageState.received) {
+              messageState.retries++;
+              // 增加重试的间隔
+              _this46._dataChannelSend(messageState.message, transactionId);
+            }
+          }, Math.pow(2, messageState.retries) * 500);
+        }
+        _this46._dataChannel && _this46._dataChannel.send(messageState.message);
       });
     }
 
@@ -23960,8 +23974,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this46 = this;
-      logger.debug('initDataChannel()');
+      var _this47 = this;
+      logger.debug("initDataChannel()".concat(JSON.stringify(event)));
 
       // 内部变量
       var datachannel;
@@ -23992,30 +24006,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
       datachannel.onmessage = function (ev) {
         // 收到数据
-        _this46._onChannelMessage(ev);
+        _this47._onChannelMessage(ev);
       };
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
         logger.warn('datachannel opened.');
-        _this46._dataChannelReady = true;
+        _this47._dataChannelReady = true;
         // 开始发送心跳消息
-        _this46._sendHello();
-        _this46._bfcpHeatbeatTimer = setInterval(function () {
-          _this46._sendHello();
+        _this47._sendHello();
+        _this47._bfcpHeatbeatTimer = setInterval(function () {
+          _this47._sendHello();
         }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
-        _this46._onChannelClose();
+        _this47._onChannelClose();
       };
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
         logger.error('datachannel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this46._dataChannelReady = false;
+        _this47._dataChannelReady = false;
         logger.warn('data err: ', err);
+
+        // 异常重连
+        if (_this47.connection.iceConnectionState === 'connected') {
+          _this47.renegotiate({
+            rtcOfferConstraints: {
+              iceRestart: true
+            }
+          });
+        }
       };
 
       // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
@@ -24025,7 +24048,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // No "onclosing" event
         if (datachannel && datachannel.readyState === 'closing') {
           // closing timed out: equivalent to onclose firing
-          if (isClosing) _this46._onChannelClose();
+          if (isClosing) _this47._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
