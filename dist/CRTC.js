@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258201114
+ * CRTC v1.10.11-beta.20258201259
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016402228 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016402518 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016402228');
+debug('version %s', '1.10.11-beta.405016402518');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016402228';
+    return '1.10.11-beta.405016402518';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -18219,7 +18219,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._dataChannel = null;
     _this._dataChannelName = CRTC_C.BFCP;
     _this._dataChannelReady = false;
-    _this._dataChannelConfig = {};
+    _this._dataChannelConfig = {
+      ordered: false
+    };
     _this._dataChannelMsgs = {};
 
     // 是否启用BFCP
