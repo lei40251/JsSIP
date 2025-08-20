@@ -858,6 +858,29 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
+   * 视频接听
+   */
+  document.querySelector('#onlyVideoAudio').onclick = async function()
+  {
+    const tmpStream = new MediaStream();
+
+    tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
+    e.session.answer({
+      mediaConstraints : {
+        audio : false,
+        video : videoConstraints
+      },
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : extraFeatures
+    });
+
+    setStatus('video answer');
+  };
+
+  /**
    * 切换为音频模式
    *
    * 切换会触发 session 的 mode 事件回调
@@ -883,7 +906,11 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    e.session.upgradeToVideo({ recvOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
+    // const tmpStream = new MediaStream();
+
+    // tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+    // e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
 
