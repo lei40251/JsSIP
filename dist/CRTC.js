@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258201536
+ * CRTC v1.10.11-beta.20258211442
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016403072 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016422884 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016403072');
+debug('version %s', '1.10.11-beta.405016422884');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016403072';
+    return '1.10.11-beta.405016422884';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19640,9 +19640,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 _this7._localMediaStreamLocallyGenerated = true;
                 constraints.video = videoConstraints;
-                if (CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS) {
-                  constraints.video = Object.assign(constraints.video, CRTC_C.SDP_LEVELID_AS[_this7._sdpResolution].VIDEOCONSTRAINTS);
-                }
+                constraints.video = Object.assign(constraints.video, _this7._inviteMediaConstraints.video);
                 return constraints;
               }).then(/*#__PURE__*/function () {
                 var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(videoConstraints) {
@@ -19650,6 +19648,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return _regeneratorRuntime().wrap(function _callee4$(_context4) {
                     while (1) switch (_context4.prev = _context4.next) {
                       case 0:
+                        console.warn('bbbbbbbbbbbb: ', videoConstraints);
                         sender = _this7._connection.getSenders().find(function (s) {
                           if (_this7._enableBFCP) {
                             // 启用了BFCP，区分一下BFCP控制的视频轨道
@@ -19659,14 +19658,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           }
                         }); // 先释放原来的设备再获取新的
                         sender.track.stop();
-                        _context4.next = 4;
+                        _context4.next = 5;
                         return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
                           logger.error('emit "getusermediafailed" [error:%o]', error);
                           logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                           _this7.emit('getusermediafailed', error);
                           throw new Error('getUserMedia() failed');
                         });
-                      case 4:
+                      case 5:
                         stream = _context4.sent;
                         navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
                         if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
@@ -19684,7 +19683,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           videoStream: stream
                         });
                         return _context4.abrupt("return", stream);
-                      case 13:
+                      case 14:
                       case "end":
                         return _context4.stop();
                     }
@@ -22455,7 +22454,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
-              if (e.sdp.indexOf('m=video 0 ')) {
+              if (e.sdp.indexOf('m=video 0 ') !== -1) {
                 _this30._ealyAudio = true;
               }
               if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
@@ -23404,6 +23403,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._answerVideoTrackStatsTimer) {
         clearInterval(this._answerVideoTrackStatsTimer);
       }
+
+      // DC 状态设置为未准备好
+      this._dataChannelReady = false;
+      // 停止发送心跳
+      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
+      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+      // 停止检测close状态
+      this._closingInterval && clearInterval(this._closingInterval);
     }
   }, {
     key: "_failed",
@@ -23429,6 +23437,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+
+      // DC 状态设置为未准备好
+      this._dataChannelReady = false;
+      // 停止发送心跳
+      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
+      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+      // 停止检测close状态
+      this._closingInterval && clearInterval(this._closingInterval);
     }
   }, {
     key: "_onhold",
@@ -23907,7 +23924,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 处理已注册的事务消息
         if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
-          console.warn('bfcp result: transactionId -', message.commonHeader.transactionId, ', time -', Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt);
+          // 记录BFCP消息响应时间
+          logger.debug("bfcp response time: transactionId(".concat(message.commonHeader.transactionId, "), time(").concat(Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt, "ms)"));
           this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
           this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
           delete this._dataChannelMsgs[message.commonHeader.transactionId];

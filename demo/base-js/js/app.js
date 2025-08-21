@@ -215,6 +215,8 @@ ua.on('newRTCSession', function(e)
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
 
+    d.sdp = d.sdp.replace(/a=extmap:\d.* urn:3gpp:video-orientation\r\n/g, '');
+
     if (d.originator === 'local')
     {
       // 保存浏览器默认payload，适配pa
@@ -254,6 +256,7 @@ ua.on('newRTCSession', function(e)
       // a=rtpmap:106 H264/90000
       // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
       // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
+      d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
     }
   });
 
@@ -1268,7 +1271,8 @@ document.querySelector('.resume').onclick = function()
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
  */
-async function call(type, direction, mediaStream)
+async function
+call(type, direction, mediaStream)
 {
   if (!ua.isRegistered())
   {
