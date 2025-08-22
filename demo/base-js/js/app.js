@@ -660,6 +660,8 @@ ua.on('newRTCSession', function(e)
     }
   });
 
+  // e.session.on('upgradeToVideo', (d) => { d.reject(); });
+
   /**
     * confirmed
     *
@@ -909,11 +911,11 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideoSendonly').onclick = function()
   {
-    // const tmpStream = new MediaStream();
+    const tmpStream = new MediaStream();
 
-    // tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
-    // e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
-    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
+    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+    e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
+    // e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
 
@@ -1271,8 +1273,7 @@ document.querySelector('.resume').onclick = function()
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
  */
-async function
-call(type, direction, mediaStream)
+async function call(type, direction, mediaStream)
 {
   if (!ua.isRegistered())
   {
@@ -1455,10 +1456,10 @@ function getStreams(pc)
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  // const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
-  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
-  const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
-  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
+  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
+  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  // const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
+  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
   let newCloneStream;
@@ -1490,7 +1491,7 @@ function getStreams(pc)
   {
     if (!isRefer)
     {
-      cloneStream.getTracks().forEach((track) => track.stop());
+      // cloneStream.getTracks().forEach((track) => track.stop());
     }
     else
     {

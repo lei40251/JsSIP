@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258211442
+ * CRTC v1.10.11-beta.20258221754
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016422884 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016443508 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016422884');
+debug('version %s', '1.10.11-beta.405016443508');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016422884';
+    return '1.10.11-beta.405016443508';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19368,7 +19368,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._ua.sk[7] < 2) {
         return;
       }
-      var videoConstraints = options.videoConstraints || this._inviteMediaConstraints.video || {
+      var videoConstraints = options.videoConstraints ? Object.assign(this._inviteMediaConstraints.video, options.videoConstraints) : this._inviteMediaConstraints.video || {
         video: true
       };
       var videoStream = options.videoStream || null;
@@ -19411,24 +19411,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _context3.abrupt("return");
             case 5:
               if (!videoStream) {
-                _context3.next = 9;
+                _context3.next = 10;
                 break;
               }
+              _this5._customMediaStream = true;
               stream = videoStream;
-              _context3.next = 12;
+              _context3.next = 13;
               break;
-            case 9:
-              _context3.next = 11;
+            case 10:
+              _context3.next = 12;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
               })["catch"](function (error) {
                 throw error;
               });
-            case 11:
-              stream = _context3.sent;
             case 12:
+              stream = _context3.sent;
+            case 13:
               if (!stream) {
-                _context3.next = 19;
+                _context3.next = 20;
                 break;
               }
               // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
@@ -19447,7 +19448,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this5._connection.addStream(stream);
               }
               return _context3.abrupt("return", true);
-            case 19:
+            case 20:
             case "end":
               return _context3.stop();
           }
@@ -19640,7 +19641,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 _this7._localMediaStreamLocallyGenerated = true;
                 constraints.video = videoConstraints;
-                constraints.video = Object.assign(constraints.video, _this7._inviteMediaConstraints.video);
+                constraints.video = Object.assign(_this7._inviteMediaConstraints.video, constraints.video);
                 return constraints;
               }).then(/*#__PURE__*/function () {
                 var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(videoConstraints) {
@@ -19648,7 +19649,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return _regeneratorRuntime().wrap(function _callee4$(_context4) {
                     while (1) switch (_context4.prev = _context4.next) {
                       case 0:
-                        console.warn('bbbbbbbbbbbb: ', videoConstraints);
                         sender = _this7._connection.getSenders().find(function (s) {
                           if (_this7._enableBFCP) {
                             // 启用了BFCP，区分一下BFCP控制的视频轨道
@@ -19658,14 +19658,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           }
                         }); // 先释放原来的设备再获取新的
                         sender.track.stop();
-                        _context4.next = 5;
+                        _context4.next = 4;
                         return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
                           logger.error('emit "getusermediafailed" [error:%o]', error);
                           logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                           _this7.emit('getusermediafailed', error);
                           throw new Error('getUserMedia() failed');
                         });
-                      case 5:
+                      case 4:
                         stream = _context4.sent;
                         navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
                         if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
@@ -19683,7 +19683,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           videoStream: stream
                         });
                         return _context4.abrupt("return", stream);
-                      case 14:
+                      case 13:
                       case "end":
                         return _context4.stop();
                     }
@@ -21341,10 +21341,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               var port = _m.port;
               // const direction = m.direction;
 
-              if (_this18._localToAudio) {
-                if (_m.direction != 'recvonly') {
-                  _m.port = 0;
-                }
+              if (_this18._localToAudio || _m.direction === 'inactive') {
+                _m.port = 0;
+
                 // m.direction = 'inactive';
                 if (_this18._remoteHold) {
                   _m.port = port;
@@ -21628,9 +21627,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               continue;
             }
             mediaIndex++;
-
-            // waiting = true;
-
             if (mediaIndex == 1 && (m.port === 0 || m.port === 0 && this._mode === 'video')) {
               this._ontogglemode('audio');
               // this._localToAudio = true;
@@ -21939,16 +21935,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
 
         // 适配 100rel 调整 hold 的判断
-        if (_this24._remoteToVideo && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
+        if (_this24._remoteToVideo && !_this24._localToAudio && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
           if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          var videoConstraints = {
+          var videoConstraints = _this24._inviteMediaConstraints.video ? {
+            video: _this24._inviteMediaConstraints.video
+          } : {
             video: true
           };
-          if (CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS) {
-            videoConstraints['video'] = CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS;
-          }
+
+          // if (CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS)
+          // {
+          //   videoConstraints['video'] = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS;
+          // }
+
           return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
             if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
@@ -21986,6 +21987,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this24._connection.addStream(stream);
             }
           });
+          _this24._iceReady = false;
         } else {
           // 兼容低版本浏览器不支持addTrack的情况
           // eslint-disable-next-line no-lonely-if
@@ -22009,8 +22011,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else {
             _this24._connection.addStream(_this24._localMediaStream);
           }
+          _this24._iceReady = true;
         }
-        _this24._iceReady = false;
       })
       // Create local description.
       .then(function () {

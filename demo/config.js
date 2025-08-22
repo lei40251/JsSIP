@@ -30,7 +30,7 @@ const envs =
   env_a : {
     signalingUrl : 'wss://a.vsbc.com:5062/wss',
     sipDomain    : 'a.vsbc.com',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
+    secretKey    : sessionStorage.getItem('secret_key') || 'FgUvPLJlMrIcAE4msvkZ4WfKy1XtpWXNoQhB9Dx8RhDw7yJfINTJsNPybpGALXOjFFbZq+iwXbRleTJgEGAAMgIpHmSlctsN/DJ7637Va8RQsGBXxAB3zpsz+n9gR4PIzhBQlKVMknvETgFIaUvbfzP0RWhzdHDvBcYGvfrjHZ6ZMcV4lbAT+uSG9xpJZKzUQTl5h2AdCt51pIYNBJftSol+szubf2sB7oAoiXWpgjJL2dc73CFwSRDvGHwMQZOgyIP/mLyw7FNeU7ENieW+At4Eytu0sETnpNlw9rIKvyl62/j/zY5VG6dWoMQ7YF8aEALXLVU0pQbDCYG2EQQ3Zg==',
     iceServers   : null
   },
   env_pro40 : {
