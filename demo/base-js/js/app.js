@@ -661,7 +661,7 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  // e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
+  e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
 
   /**
     * confirmed
@@ -928,6 +928,20 @@ ua.on('newRTCSession', function(e)
     e.session.upgradeToVideo({ videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
     stats && stats.reset();
   };
+
+  /**
+   * 切换自定义流单向视频
+   */
+  document.querySelector('#toCommonVideoSendonly').onclick = function()
+  {
+    const tmpStream = new MediaStream();
+
+    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+
+    e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
+    stats && stats.reset();
+  };
+
 
   /**
    * 切换单向视频

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258241751
+ * CRTC v1.10.11-beta.20258241932
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016483502 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016483864 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016483502');
+debug('version %s', '1.10.11-beta.405016483864');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016483502';
+    return '1.10.11-beta.405016483864';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19416,25 +19416,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _context3.abrupt("return");
             case 6:
               if (!videoStream) {
-                _context3.next = 11;
+                _context3.next = 12;
                 break;
               }
+              console.warn('bbbbbbbbbbbbbbbbb');
               _this5._customMediaStream = true;
               stream = videoStream;
-              _context3.next = 14;
+              _context3.next = 16;
               break;
-            case 11:
-              _context3.next = 13;
+            case 12:
+              console.warn('aaaaaaaaaaaaaaaaaaaaaaaaaa');
+              _context3.next = 15;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
               })["catch"](function (error) {
                 throw error;
               });
-            case 13:
+            case 15:
               stream = _context3.sent;
-            case 14:
+            case 16:
               if (!stream) {
-                _context3.next = 21;
+                _context3.next = 23;
                 break;
               }
               // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
@@ -19453,7 +19455,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this5._connection.addStream(stream);
               }
               return _context3.abrupt("return", true);
-            case 21:
+            case 23:
             case "end":
               return _context3.stop();
           }
