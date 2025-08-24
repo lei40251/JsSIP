@@ -20,6 +20,7 @@ let safari_r = false;
 let options;
 
 let useUpdate = true;
+let haveACamera = false;
 
 // 当前模式
 let curMode;
@@ -660,7 +661,7 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  // e.session.on('upgradeToVideo', (d) => { d.reject(); });
+  e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
 
   /**
     * confirmed
@@ -1582,6 +1583,44 @@ function setStatus(text)
   statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
 }
 
+// 检查摄像头状态
+async function checkCameraStatus()
+{
+  try
+  {
+    // 先检查是否有摄像头设备
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter((device) => device.kind === 'videoinput');
+
+    if (videoDevices.length === 0)
+    {
+      return '系统没有摄像头';
+    }
+
+    // 尝试访问摄像头
+    await navigator.mediaDevices.getUserMedia({ video: true }).then((mediastream) => { mediastream && mediastream.getTracks().forEach((t) => t.stop()); });
+    haveACamera = true;
+
+    return '摄像头可以正常使用';
+
+  }
+  catch (error)
+  {
+    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError')
+    {
+      return '系统没有摄像头';
+    }
+    else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
+    {
+      return '用户拒绝了摄像头权限';
+    }
+    else
+    {
+      return `摄像头错误: ${error.name}`;
+    }
+  }
+}
+
 /**
  * 更新摄像头下拉列表
  */
@@ -1599,6 +1638,8 @@ function updateDevices()
 
       document.querySelector('#cameras').innerHTML = option;
     });
+
+  checkCameraStatus();
 
   // 移动端不支持切换麦克风
   CRTC.Utils.getMicrophones()
