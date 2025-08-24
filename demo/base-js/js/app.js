@@ -661,7 +661,7 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
+  // e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
 
   /**
     * confirmed
@@ -864,13 +864,10 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 视频接听
+   * 单视频接听
    */
   document.querySelector('#onlyVideoAudio').onclick = async function()
   {
-    const tmpStream = new MediaStream();
-
-    tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     e.session.answer({
       mediaConstraints : {
         audio : false,
@@ -881,6 +878,31 @@ ua.on('newRTCSession', function(e)
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures
+    });
+
+    setStatus('video answer');
+  };
+
+  /**
+   * 自定义单视频接听
+   */
+  document.querySelector('#onlyCommVideo').onclick = async function()
+  {
+    const tmpStream = new MediaStream();
+
+    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+
+    e.session.answer({
+      mediaConstraints : {
+        audio : false,
+        video : true
+      },
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : extraFeatures,
+      mediaStream         : tmpStream
     });
 
     setStatus('video answer');
@@ -948,13 +970,6 @@ ua.on('newRTCSession', function(e)
   {
     e.session.switchDevice('audio', this.options[this.selectedIndex].value);
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
-  };
-
-  document.querySelector('#useupdate').onchange = function()
-  {
-    this.options[this.selectedIndex].value !== 'update' && (useUpdate = false);
-    console.log(this.options[this.selectedIndex]);
-    setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
   };
 
   let camFlag = true;
@@ -1276,6 +1291,14 @@ ua.on('newRTCSession', function(e)
 document.querySelector('.resume').onclick = function()
 {
   document.querySelectorAll('video').forEach((video) => video.play().catch());
+};
+
+// useUpdate
+document.querySelector('#useupdate').onchange = function()
+{
+  this.options[this.selectedIndex].value !== 'update' ? useUpdate = false : useUpdate = true;
+  console.log(this.options[this.selectedIndex]);
+  setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
 /**

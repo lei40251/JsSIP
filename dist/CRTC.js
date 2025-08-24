@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258241126
+ * CRTC v1.10.11-beta.20258241751
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016482252 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016483502 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016482252');
+debug('version %s', '1.10.11-beta.405016483502');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016482252';
+    return '1.10.11-beta.405016483502';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19149,7 +19149,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                * 判断是视频接听还是音频接听
                * @author: lei
                */
-              if (!mediaConstraints.video) {
+              if (!mediaConstraints.video && mediaStream.getVideoTracks().length === 0) {
                 _this4._localToAudio = true;
               }
               _context2.next = 7;
@@ -19332,7 +19332,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
         if (!mediaConstraints.video) {
-          desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
+          // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
+          desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
         }
         if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
           _this4._floorId = 2;
@@ -19385,7 +19386,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
               if (!(_this5._localMediaStream.getVideoTracks().length > 0)) {
-                _context3.next = 3;
+                _context3.next = 4;
                 break;
               }
               _this5._connection.getTransceivers().forEach(function (t) {
@@ -19402,34 +19403,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   t.direction = 'sendrecv';
                 }
               });
-              return _context3.abrupt("return");
-            case 3:
               if (!options.recvOnly) {
-                _context3.next = 5;
+                _context3.next = 4;
                 break;
               }
               return _context3.abrupt("return");
-            case 5:
+            case 4:
+              if (!options.recvOnly) {
+                _context3.next = 6;
+                break;
+              }
+              return _context3.abrupt("return");
+            case 6:
               if (!videoStream) {
-                _context3.next = 10;
+                _context3.next = 11;
                 break;
               }
               _this5._customMediaStream = true;
               stream = videoStream;
-              _context3.next = 13;
+              _context3.next = 14;
               break;
-            case 10:
-              _context3.next = 12;
+            case 11:
+              _context3.next = 13;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
               })["catch"](function (error) {
                 throw error;
               });
-            case 12:
-              stream = _context3.sent;
             case 13:
+              stream = _context3.sent;
+            case 14:
               if (!stream) {
-                _context3.next = 20;
+                _context3.next = 21;
                 break;
               }
               // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
@@ -19448,7 +19453,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this5._connection.addStream(stream);
               }
               return _context3.abrupt("return", true);
-            case 20:
+            case 21:
             case "end":
               return _context3.stop();
           }
@@ -23503,7 +23508,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
-      logger.debug("ontogglemode() ".concat(mode));
+      logger.debug("ontogglemode() ".concat(mode, " ").concat(this._mode));
       if (mode === this._mode) {
         return;
       }
