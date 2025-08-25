@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258251049
+ * CRTC v1.10.11-beta.20258251317
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016502098 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016502634 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016502098');
+debug('version %s', '1.10.11-beta.405016502634');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016502098';
+    return '1.10.11-beta.405016502634';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -20342,6 +20342,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._onunmute({
           audio: audioUnMuted,
           video: videoUnMuted
+        });
+      }
+    }
+
+    /**
+     * 设置视频内容提示，主要用于提升在不同场景下的视频编码质量
+     */
+  }, {
+    key: "setVideoContentHint",
+    value: function setVideoContentHint(hint, shared) {
+      logger.debug('setVideoContentHint()', hint);
+      var hints = ['detail', 'text', 'motion'];
+      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
+        return false;
+      }
+      if (!this._isReadyToReOffer()) {
+        return false;
+      }
+      if (hints[hint] !== -1) {
+        var tracks;
+        if (shared) {
+          tracks = this._localShareStream.getVideoTracks();
+        } else {
+          tracks = this._localMediaStream.getVideoTracks();
+        }
+        tracks.forEach(function (track) {
+          if ('contentHint' in track) {
+            track.contentHint = hint;
+          } else {
+            return false;
+          }
         });
       }
     }

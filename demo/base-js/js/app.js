@@ -804,6 +804,13 @@ ua.on('newRTCSession', function(e)
 
   //  ***** DOM 事件绑定 *****
 
+  // 保清晰/保流畅
+  document.querySelector('#videoHint').onchange = function()
+  {
+    e.session.setVideoContentHint(this.options[this.selectedIndex].value);
+    setStatus(`${this.options[this.selectedIndex].text}`);
+  };
+
   /**
    * 音频接听
    */
