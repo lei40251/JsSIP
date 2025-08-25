@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258241932
+ * CRTC v1.10.11-beta.20258251049
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016483864 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016502098 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016483864');
+debug('version %s', '1.10.11-beta.405016502098');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016483864';
+    return '1.10.11-beta.405016502098';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19149,7 +19149,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                * 判断是视频接听还是音频接听
                * @author: lei
                */
-              if (!mediaConstraints.video && mediaStream.getVideoTracks().length === 0) {
+              if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
                 _this4._localToAudio = true;
               }
               _context2.next = 7;

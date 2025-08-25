@@ -661,7 +661,17 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('upgradeToVideo', (d) => { haveACamera || d.reject(); });
+  e.session.on('upgradeToVideo', (d) =>
+  {
+    if (!haveACamera)
+    {
+      d.reject();
+    }
+    else
+    {
+      d.accept();
+    }
+  });
 
   /**
     * confirmed
