@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258261013
+ * CRTC v1.10.11-beta.20258261335
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016522026 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016522670 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016522026');
+debug('version %s', '1.10.11-beta.405016522670');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016522026';
+    return '1.10.11-beta.405016522670';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21114,7 +21114,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else if (!_this17._canSend) {
             logger.warn("iceConnectionState ".concat(state));
             // RTCPeerConnection failed断开后启动重新协商
-            state !== 'connected' && self.renegotiate({
+            self.renegotiate({
               rtcOfferConstraints: {
                 iceRestart: true
               }
@@ -21415,6 +21415,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this18._ontogglemode('video');
               }
               if (_m.port === 0) {
+                delete _m.connection;
                 _m.direction = 'sendrecv';
               }
             }
@@ -21748,6 +21749,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       function sendAnswer(desc) {
         var _this21 = this;
         var extraHeaders = ["Contact: ".concat(this._contact)];
+
+        // 5G Headers
+        if (this._ua.sk[7] >= 3) {
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+        }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
@@ -21910,6 +21917,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       function sendAnswer(desc) {
         var extraHeaders = ["Contact: ".concat(this._contact)];
+
+        // 5G Headers
+        if (this._ua.sk[7] >= 3) {
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+        }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
         request.reply(200, null, extraHeaders, desc);
 
