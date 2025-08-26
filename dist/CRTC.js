@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258261722
+ * CRTC v1.10.11-beta.20258262040
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016523444 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016524080 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016523444');
+debug('version %s', '1.10.11-beta.405016524080');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016523444';
+    return '1.10.11-beta.405016524080';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19408,17 +19408,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 break;
               }
               _this5._connection.getTransceivers().forEach(function (t) {
+                // 双向视频
+                t.direction = 'sendrecv';
+
                 // 单向视频，仅发送
-                if (options.sendOnly) {
+                if (t.sender && t.sender.track && t.sender.track.kind === 'video' && options.sendOnly) {
                   t.direction = 'sendonly';
                 }
+
                 // 单向视频，仅接收
-                else if (options.recvOnly) {
+                if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && options.recvOnly) {
                   t.direction = 'recvonly';
-                }
-                // 双向视频
-                else {
-                  t.direction = 'sendrecv';
                 }
               });
               if (!options.recvOnly) {
@@ -19502,13 +19502,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               videoTracks = stream.getVideoTracks();
               _this5._localMediaStream.addTrack(videoTracks[0]);
-
-              // 兼容低版本浏览器不支持addTrack的情况
-              if (RTCPeerConnection.prototype.addTrack) {
-                _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
-              } else {
-                _this5._connection.addStream(stream);
-              }
+              _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
               return _context3.abrupt("return", true);
             case 40:
             case "end":
@@ -19528,7 +19522,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           opts = {
             rtcOfferConstraints: {
               iceRestart: true,
-              offerToReceiveAudio: true,
               offerToReceiveVideo: false
             }
           };
@@ -19539,7 +19532,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           opts = {
             rtcOfferConstraints: {
               iceRestart: true,
-              offerToReceiveAudio: true,
               offerToReceiveVideo: true
             }
           };
