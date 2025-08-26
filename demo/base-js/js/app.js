@@ -216,7 +216,8 @@ ua.on('newRTCSession', function(e)
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
 
-    d.sdp = d.sdp.replace(/a=extmap:\d.* urn:3gpp:video-orientation\r\n/g, '');
+    d.sdp = d.sdp.replace(/a=extmap:\d+ urn:3gpp:video-orientation\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=extmap:.*\r\n/g, '');
 
     if (d.originator === 'local')
     {
@@ -257,7 +258,7 @@ ua.on('newRTCSession', function(e)
       // a=rtpmap:106 H264/90000
       // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
       // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
-      d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
+      // d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
     }
   });
 
@@ -901,7 +902,7 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 自定义单视频接听
+   * 自定义视频接听
    */
   document.querySelector('#onlyCommVideo').onclick = async function()
   {
@@ -912,6 +913,27 @@ ua.on('newRTCSession', function(e)
     e.session.answer({
       mediaConstraints : {
         audio : false,
+        video : true
+      },
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : extraFeatures,
+      mediaStream         : tmpStream
+    });
+
+    setStatus('video answer');
+  };
+  document.querySelector('#audioCommVideo').onclick = async function()
+  {
+    const tmpStream = new MediaStream();
+
+    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+
+    e.session.answer({
+      mediaConstraints : {
+        audio : true,
         video : true
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
@@ -1693,7 +1715,7 @@ function updateDevices()
       document.querySelector('#cameras').innerHTML = option;
     });
 
-  checkCameraStatus();
+  // checkCameraStatus();
 
   // 移动端不支持切换麦克风
   CRTC.Utils.getMicrophones()

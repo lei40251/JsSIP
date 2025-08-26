@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258251317
+ * CRTC v1.10.11-beta.20258261013
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016502634 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016522026 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016502634');
+debug('version %s', '1.10.11-beta.405016522026');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016502634';
+    return '1.10.11-beta.405016522026';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19267,10 +19267,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(),
               videoTrack = _Utils$generateAnEmpt.videoTrack;
             _this4._bfcpVideoTrack = videoTrack;
-            // this._bfcpVideoTrack = this._createCanvasVideoTrack();
             _this4._connection.addTrack(_this4._bfcpVideoTrack, _this4._localMediaStream);
-            // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-
             _this4._connection.ondatachannel = function (event) {
               _this4._initDataChannel(event);
             };
@@ -19369,7 +19366,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._ua.sk[7] < 2) {
         return;
       }
-      var videoConstraints = options.videoConstraints ? Object.assign(this._inviteMediaConstraints.video, options.videoConstraints) : this._inviteMediaConstraints ? this._inviteMediaConstraints.video : {
+      var videoConstraints = options.videoConstraints ? Object.assign(this._inviteMediaConstraints ? this._inviteMediaConstraints.video : {}, options.videoConstraints) : this._inviteMediaConstraints ? this._inviteMediaConstraints.video : {
         video: true
       };
       var videoStream = options.videoStream || null;
@@ -19381,7 +19378,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._localToAudio = false;
       this._localToVideo = true;
       return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-        var stream, ua, videoTracks;
+        var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks;
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
@@ -19392,11 +19389,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this5._connection.getTransceivers().forEach(function (t) {
                 // 单向视频，仅发送
                 if (options.sendOnly) {
-                  t.direction = 'sendOnly';
+                  t.direction = 'sendonly';
                 }
                 // 单向视频，仅接收
                 else if (options.recvOnly) {
-                  t.direction = 'recvOnly';
+                  t.direction = 'recvonly';
                 }
                 // 双向视频
                 else {
@@ -19416,29 +19413,66 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _context3.abrupt("return");
             case 6:
               if (!videoStream) {
-                _context3.next = 12;
+                _context3.next = 10;
                 break;
               }
-              console.warn('bbbbbbbbbbbbbbbbb');
-              _this5._customMediaStream = true;
               stream = videoStream;
-              _context3.next = 16;
+              _context3.next = 13;
               break;
-            case 12:
-              console.warn('aaaaaaaaaaaaaaaaaaaaaaaaaa');
-              _context3.next = 15;
+            case 10:
+              _context3.next = 12;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
               })["catch"](function (error) {
                 throw error;
               });
-            case 15:
+            case 12:
               stream = _context3.sent;
-            case 16:
+            case 13:
               if (!stream) {
-                _context3.next = 23;
+                _context3.next = 40;
                 break;
               }
+              if (!_this5._customMediaStream) {
+                _context3.next = 33;
+                break;
+              }
+              oldVideoTrack = _this5._localMediaStream.getVideoTracks()[0];
+              newVideoTrack = stream.getVideoTracks()[0];
+              if (!oldVideoTrack) {
+                _context3.next = 33;
+                break;
+              }
+              _this5._localMediaStream.removeTrack(oldVideoTrack);
+              _this5._localMediaStream.addTrack(newVideoTrack);
+              haveVideoTrackToSend = false;
+              senders = _this5._connection.getSenders();
+              i = 0;
+            case 23:
+              if (!(i < senders.length)) {
+                _context3.next = 31;
+                break;
+              }
+              if (!(senders[i].track.kind === 'video')) {
+                _context3.next = 28;
+                break;
+              }
+              senders[i].replaceTrack(newVideoTrack);
+              haveVideoTrackToSend = true;
+              return _context3.abrupt("break", 31);
+            case 28:
+              i++;
+              _context3.next = 23;
+              break;
+            case 31:
+              if (!haveVideoTrackToSend) {
+                _context3.next = 33;
+                break;
+              }
+              return _context3.abrupt("return", true);
+            case 33:
+              _this5._customMediaStream = true;
+
               // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
@@ -19455,7 +19489,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this5._connection.addStream(stream);
               }
               return _context3.abrupt("return", true);
-            case 23:
+            case 40:
             case "end":
               return _context3.stop();
           }
@@ -19848,8 +19882,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._streamInactiveHandle(dual);
               this._localShareStream.getVideoTracks().forEach(function (track) {
                 if (dual) {
-                  // this._localShareRTPSender = this._connection.addTrack(track, element.captureStream(0));
-                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
                   var sender = _this8._connection.getSenders().find(function (s) {
                     return s.track == _this8._bfcpVideoTrack;
                   });
@@ -19885,9 +19917,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._streamInactiveHandle(dual);
               this._localShareStream.getVideoTracks().forEach(function (track) {
                 if (dual) {
-                  // this._localShareRTPSender = this._connection.addTrack(track, canvas.captureStream(15));
-                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
-
                   var sender = _this8._connection.getSenders().find(function (s) {
                     return s.track == _this8._bfcpVideoTrack;
                   });
@@ -19923,8 +19952,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._streamInactiveHandle(dual);
               this._localShareStream.getVideoTracks().forEach(function (track) {
                 if (dual) {
-                  // this._localShareRTPSender = this._connection.addTrack(track, canvas.captureStream(15));
-                  // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
                   var sender = _this8._connection.getSenders().find(function (s) {
                     return s.track == _this8._bfcpVideoTrack;
                   });
@@ -19975,8 +20002,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       if (track.kind === 'audio') {
                         _this8._addShareAudioToBfcpAudioTrack(stream);
                       } else {
-                        // this._localShareRTPSender = this._connection.addTrack(track, stream);
-                        // this.renegotiate({ rtcOfferConstraints: { iceRestart: true } });
                         var sender = _this8._connection.getSenders().find(function (s) {
                           return s.track == _this8._bfcpVideoTrack;
                         });
@@ -21039,6 +21064,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (!successfullyConnected) {
               setTimeout(function () {
                 if (self._connection.connectionState === 'connecting') {
+                  logger.warn("start iceConnectionState ".concat(self._connection.connectionState));
                   self.renegotiate({
                     rtcOfferConstraints: {
                       iceRestart: true
@@ -21086,8 +21112,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
           } else if (!_this17._canSend) {
+            logger.warn("iceConnectionState ".concat(state));
             // RTCPeerConnection failed断开后启动重新协商
-            self.renegotiate({
+            state !== 'connected' && self.renegotiate({
               rtcOfferConstraints: {
                 iceRestart: true
               }
@@ -21345,7 +21372,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               if (_this18._localToAudio || m.direction == 'inactive') {
                 m.port = 0;
-                // m.direction = 'inactive';
               }
               if (m.port !== 0) {
                 if (_this18._mode === '') {
@@ -21355,6 +21381,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
                 _this18._localToAudio = false;
                 _this18._localToVideo = true;
+              } else {
+                m.direction = 'sendrecv';
               }
             }
           } catch (err) {
@@ -21377,19 +21405,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 continue;
               }
               var port = _m.port;
-              // const direction = m.direction;
-
               if (_this18._localToAudio || _m.direction === 'inactive') {
                 _m.port = 0;
-
-                // m.direction = 'inactive';
                 if (_this18._remoteHold) {
                   _m.port = port;
-                  // m.direction = direction;
                 }
                 _this18._ontogglemode('audio');
               } else if (!_this18._remoteToAudio) {
                 _this18._ontogglemode('video');
+              }
+              if (_m.port === 0) {
+                _m.direction = 'sendrecv';
               }
             }
           } catch (err) {
@@ -21918,6 +21944,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
           }
         }
+
+        // for (const m of sdp.media)
+        // {
+        //   if (m.type === 'audio')
+        //   {
+        //     continue;
+        //   }
+
+        //   if (this._localToAudio || this._remoteToAudio)
+        //   {
+        //     m.port = 0;
+        //     m.direction = 'inactive';
+        //     break;
+        //   }
+        // }
       } catch (err) {
         _iterator9.e(err);
       } finally {
@@ -21977,8 +22018,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          var videoConstraints = _this24._inviteMediaConstraints.video ? {
-            video: _this24._inviteMediaConstraints.video
+          var videoConstraints = _this24._inviteMediaConstraints ? {
+            video: _this24._inviteMediaConstraints.video || true
           } : {
             video: true
           };
@@ -22956,10 +22997,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
 
           /**
-          * 音视频切换相关
-          * 远端接听模式
-          * @author: lei
-          */
+           * 音视频切换相关
+           * 远端接听模式
+           * @author: lei
+           */
           var sdp_body = sdp_transform.parse(response.body);
           var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
             _step12;
@@ -24009,11 +24050,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       setTimeout(function () {
         // 判断dc如果断开1秒后ice状态正常则重连dc
         if (_this45.connection.iceConnectionState === 'connected') {
-          _this45.renegotiate({
-            rtcOfferConstraints: {
-              iceRestart: true
-            }
-          });
+          _this45.renegotiate();
         } else {
           // DC 状态设置为未准备好
           _this45._dataChannelReady = false;
@@ -24162,11 +24199,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 异常重连
         if (_this47.connection.iceConnectionState === 'connected') {
-          _this47.renegotiate({
-            rtcOfferConstraints: {
-              iceRestart: true
-            }
-          });
+          _this47.renegotiate();
         }
       };
 
