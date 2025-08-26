@@ -964,7 +964,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo({ videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo(() => { setStatus(`切换视频模式完成${curMode}`); });
     stats && stats.reset();
   };
 

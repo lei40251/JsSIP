@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258261335
+ * CRTC v1.10.11-beta.20258261722
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016522670 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016523444 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016522670');
+debug('version %s', '1.10.11-beta.405016523444');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016522670';
+    return '1.10.11-beta.405016523444';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -19358,17 +19358,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      */
   }, {
     key: "upgradeToVideo",
-    value: function upgradeToVideo() {
+    value: function upgradeToVideo(options, done) {
       var _this5 = this;
-      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
       logger.debug('upgradeToVideo()');
       if (this._ua.sk[7] < 2) {
         return;
       }
-      var videoConstraints = options.videoConstraints ? Object.assign(this._inviteMediaConstraints ? this._inviteMediaConstraints.video : {}, options.videoConstraints) : this._inviteMediaConstraints ? this._inviteMediaConstraints.video : {
+      if (!options) {
+        options = {};
+      }
+      if (!done) {
+        done = function done() {};
+      }
+
+      // 优化处理切换到视频模式的视频约束条件
+      var videoConstraints = {
         video: true
       };
+
+      // 处理options.videoConstraints
+      if (options.videoConstraints) {
+        // 确保必要的对象存在
+        this._inviteMediaConstraints = this._inviteMediaConstraints || {};
+        this._inviteMediaConstraints.video = this._inviteMediaConstraints.video || {};
+
+        // 合并属性
+        Object.assign(this._inviteMediaConstraints.video, options.videoConstraints);
+        videoConstraints = this._inviteMediaConstraints.video;
+      }
+      // 如果options.videoConstraints不存在，但this._inviteMediaConstraints.video存在
+      else if (this._inviteMediaConstraints && this._inviteMediaConstraints.video) {
+        videoConstraints = this._inviteMediaConstraints.video;
+      }
       var videoStream = options.videoStream || null;
 
       // Check Session Status.
