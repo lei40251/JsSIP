@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258262040
+ * CRTC v1.10.11-beta.20258271535
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016524080 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016543070 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016524080');
+debug('version %s', '1.10.11-beta.405016543070');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016524080';
+    return '1.10.11-beta.405016543070';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21306,7 +21306,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: connection.localDescription.sdp
           };
           _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-          logger.debug('emit "sdp"');
+          logger.debug("complete emit \"sdp\"".concat(e.sdp));
           _this18.emit('sdp', e);
           return Promise.resolve(e.sdp);
         }
@@ -21331,7 +21331,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: connection.localDescription.sdp
             };
             _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-            logger.debug('emit "sdp"');
+            logger.debug('ready emit "sdp"');
             _this18.emit('sdp', e);
             resolve(e.sdp);
           };
@@ -21625,7 +21625,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
           sendAnswer.call(_this19, sdp);
-        })["catch"](function () {
+        })["catch"](function (e) {
+          logger.warn(JSON.stringify(e));
           request.reply(500);
         });
         return;
@@ -21772,12 +21773,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
         }
-
-        // 适配通用情况下的SDP H224
-        applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
-        logger.debug('OLD SDP: ', desc);
-        desc = Utils.reorderApplicationMedia(desc, applicationIndex);
-        logger.debug('NEW Answer SDP: ', desc);
+        if (this._enableBFCP) {
+          // 适配通用情况下的SDP H224
+          applicationIndex && applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
+          logger.debug('OLD SDP: ', desc);
+          desc = Utils.reorderApplicationMedia(desc, applicationIndex);
+          logger.debug('NEW Answer SDP: ', desc);
+        }
         request.reply(200, null, extraHeaders, desc, function () {
           _this21._status = C.STATUS_WAITING_FOR_ACK;
           _this21._setInvite2xxTimer(request, desc);

@@ -46,6 +46,7 @@ let cusMediaStream = new MediaStream();
 const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
 const env = handleGetQuery('env');
+const noremb = handleGetQuery('noremb') || false;
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 
@@ -211,7 +212,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('sdp', function(d)
   {
     // 呼叫VoLTE手机号需要
-    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, '');
+    noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, ''));
     // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
