@@ -7,6 +7,8 @@ CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
 // CRTC.debug.disable('CRTC:*');
 
+const no_camera_svg = '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1756366745939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10589" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"><path d="M865.08627 773.036973l-0.83027 0.996324a35.424865 35.424865 0 0 0-17.380324-4.649513 36.006054 36.006054 0 0 0-2.767568 71.956757c8.468757 7.140324 13.062919 14.612757 13.062919 22.417297 0 45.111351-152.050162 81.643243-339.635892 81.643243-130.739892 0-244.154811-17.767784-300.945297-43.782919l-50.425081 50.36973C241.442595 995.272649 370.632649 1024 517.535135 1024c232.475676 0 420.67027-71.956757 420.67027-160.518919 0-33.542919-27.011459-64.70573-73.119135-90.444108zM965.881081 49.816216a33.210811 33.210811 0 0 0-46.937946 0L58.118919 910.751135a33.210811 33.210811 0 0 0 46.827243 46.827243L965.881081 96.643459a33.210811 33.210811 0 0 0 0-46.827243zM251.350486 647.610811a363.935135 363.935135 0 0 1-73.229837-221.405406c0-195.611676 148.895135-354.248649 339.414486-354.248648a329.728 329.728 0 0 1 222.955243 86.126702l51.58746-51.532108A407.164541 407.164541 0 0 0 517.535135 0c-229.265297 0-415.135135 190.796108-415.135135 426.205405a431.076324 431.076324 0 0 0 96.754162 273.380325z m382.643892-382.588541a199.264865 199.264865 0 0 0-278.14054 278.140541l120.665946-120.942703a83.027027 83.027027 0 1 1 53.635459-53.635459zM716.8 426.205405a207.622919 207.622919 0 0 0-1.439135-23.635027l-221.405406 221.405406a207.622919 207.622919 0 0 0 23.579676 1.494486 199.264865 199.264865 0 0 0 199.264865-199.264865z m-398.861838 373.732325A404.618378 404.618378 0 0 0 517.535135 852.410811c229.265297 0 415.135135-190.796108 415.135135-426.205406a433.34573 433.34573 0 0 0-45.996973-194.947459L830.380973 287.827027a371.407568 371.407568 0 0 1 26.568649 138.378378c0 195.611676-148.895135 354.248649-339.414487 354.248649a329.783351 329.783351 0 0 1-146.127567-33.819676z" fill="#8a8a8a" p-id="10590"></path></svg>';
+
 // 通话统计
 let stats;
 // 是否存在远端回铃音
@@ -1426,7 +1428,7 @@ async function call(type, direction, mediaStream)
     }
 
     // 自定义视频
-    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }).videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
 
@@ -1434,7 +1436,7 @@ async function call(type, direction, mediaStream)
     // 系统麦克风和摄像头
     options['mediaConstraints'] = {
       audio : type === 'callnullvideo' ? true : false,
-      video : type === 'callnullaudio' ? videoConstraints : false
+      video : type === 'callnullaudio' ? videoConstraints : true
     };
   }
 
@@ -1716,7 +1718,7 @@ function updateDevices()
       document.querySelector('#cameras').innerHTML = option;
     });
 
-  // checkCameraStatus();
+  checkCameraStatus();
 
   // 移动端不支持切换麦克风
   CRTC.Utils.getMicrophones()

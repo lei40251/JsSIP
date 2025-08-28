@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.20258271535
+ * CRTC v1.10.11-beta.2025828171
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405016543070 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405016563402 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405016543070');
+debug('version %s', '1.10.11-beta.405016563402');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405016543070';
+    return '1.10.11-beta.405016563402';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -26124,17 +26124,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function start() {
       var _this2 = this;
       this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-        var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        var inform, transceivers, _loop, _iterator, _step, transceiver;
+        return _regeneratorRuntime().wrap(function _callee$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
             case 0:
               inform = false; // 全局停止统计信息输出
               if (!(window.CRTCStats === 'stop')) {
-                _context.next = 4;
+                _context2.next = 4;
                 break;
               }
               clearInterval(_this2._statsTimer);
-              return _context.abrupt("return");
+              return _context2.abrupt("return");
             case 4:
               _this2._data = '';
               if (_this2._count === 0) {
@@ -26143,49 +26143,70 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 inform = true;
               }
               _this2._count--;
-              _context.next = 9;
+              _context2.next = 9;
               return _this2._pc.getTransceivers();
             case 9:
-              transceivers = _context.sent;
+              transceivers = _context2.sent;
+              console.warn('transceivers', transceivers);
+              _loop = /*#__PURE__*/_regeneratorRuntime().mark(function _loop() {
+                var senderReports, receiverReports, rp;
+                return _regeneratorRuntime().wrap(function _loop$(_context) {
+                  while (1) switch (_context.prev = _context.next) {
+                    case 0:
+                      _context.next = 2;
+                      return transceiver.sender.getStats();
+                    case 2:
+                      senderReports = _context.sent;
+                      _context.next = 5;
+                      return transceiver.receiver.getStats();
+                    case 5:
+                      receiverReports = _context.sent;
+                      rp = '';
+                      receiverReports.forEach(function (r) {
+                        rp += JSON.stringify(r);
+                      });
+                      //
+                      // console.warn('rp: ', rp);
+
+                      // console.warn('receiv: ', receiverReports);
+                      if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
+                        _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
+                        _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
+                      } else {
+                        transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
+                        _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
+                      }
+                    case 9:
+                    case "end":
+                      return _context.stop();
+                  }
+                }, _loop);
+              });
               _iterator = _createForOfIteratorHelper(transceivers);
-              _context.prev = 11;
+              _context2.prev = 13;
               _iterator.s();
-            case 13:
+            case 15:
               if ((_step = _iterator.n()).done) {
-                _context.next = 24;
+                _context2.next = 20;
                 break;
               }
               transceiver = _step.value;
-              _context.next = 17;
-              return transceiver.sender.getStats();
-            case 17:
-              senderReports = _context.sent;
-              _context.next = 20;
-              return transceiver.receiver.getStats();
+              return _context2.delegateYield(_loop(), "t0", 18);
+            case 18:
+              _context2.next = 15;
+              break;
             case 20:
-              receiverReports = _context.sent;
-              if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
-                _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
-                _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
-              } else {
-                transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
-                _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
-              }
+              _context2.next = 25;
+              break;
             case 22:
-              _context.next = 13;
-              break;
-            case 24:
-              _context.next = 29;
-              break;
-            case 26:
-              _context.prev = 26;
-              _context.t0 = _context["catch"](11);
-              _iterator.e(_context.t0);
-            case 29:
-              _context.prev = 29;
+              _context2.prev = 22;
+              _context2.t1 = _context2["catch"](13);
+              _iterator.e(_context2.t1);
+            case 25:
+              _context2.prev = 25;
               _iterator.f();
-              return _context.finish(29);
-            case 32:
+              return _context2.finish(25);
+            case 28:
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
@@ -26200,18 +26221,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 logger.error(error.toString());
               }
               if (!_this2._data) {
-                _context.next = 37;
+                _context2.next = 33;
                 break;
               }
               logger.debug(_this2._data);
-              return _context.abrupt("return");
-            case 37:
+              return _context2.abrupt("return");
+            case 33:
               _this2._createReport();
-            case 38:
+            case 34:
             case "end":
-              return _context.stop();
+              return _context2.stop();
           }
-        }, _callee, null, [[11, 26, 29, 32]]);
+        }, _callee, null, [[13, 22, 25, 28]]);
       })), this._delay * 1000);
     }
   }, {
@@ -29884,29 +29905,105 @@ exports.generateAnEmptyVideoTrack = function () {
 };
 
 // 输出一个黑图视频
-exports.generateAnBlackVideoTrack = function () {
+exports.generateAnBlackVideoTrack = function (options) {
+  options || (options = {});
   sessionStorage.clear('stopBlackTrack');
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
-  canvas.setAttribute('style', 'diaplay:none');
+  var width = options.width || 640;
+  var height = options.height || 480;
+  var fps = options.fps || 5;
+  var color = options.color || 'black';
+  var svgSource = options.svgSource || null; // SVG图片源参数
+
+  canvas.setAttribute('style', 'display:none');
+  canvas.width = width;
+  canvas.height = height;
+
+  // 创建一个图像对象用于加载SVG
+  var img = null;
+  if (svgSource) {
+    img = new Image();
+
+    // 处理不同类型的SVG源
+    if (typeof svgSource === 'string') {
+      // 如果是URL或SVG字符串
+      if (svgSource.startsWith('http') || svgSource.startsWith('data:')) {
+        // 如果是URL或data URL
+        img.src = svgSource;
+      } else if (svgSource.includes('<svg')) {
+        // 如果是SVG字符串，转换为data URL
+        var svgBlob = new Blob([svgSource], {
+          type: 'image/svg+xml'
+        });
+        img.src = URL.createObjectURL(svgBlob);
+      }
+    } else if (svgSource instanceof Blob || svgSource instanceof File) {
+      // 如果是Blob或File对象
+      img.src = URL.createObjectURL(svgSource);
+    }
+  }
   var _drawToCanvas2 = function drawToCanvas() {
     if (sessionStorage.getItem('stopBlackTrack')) {
       return;
     }
-    canvas.width = 640;
-    canvas.height = 480;
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, 640, 480);
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, width, height);
+
+    // 如果有SVG图片且已加载完成，则在画布中间绘制图片
+    if (img && img.complete && img.naturalWidth !== 0) {
+      // 计算图片在画布中的位置，使其居中
+      var imgWidth = img.naturalWidth;
+      var imgHeight = img.naturalHeight;
+
+      // 计算缩放比例，确保图片适合画布
+      var scale = Math.min(width * 0.4 / imgWidth,
+      // 使图片宽度最多占画布的80%
+      height * 0.4 / imgHeight // 使图片高度最多占画布的80%
+      );
+      var scaledWidth = imgWidth * scale;
+      var scaledHeight = imgHeight * scale;
+
+      // 计算居中位置
+      var x = (width - scaledWidth) / 2;
+      var y = (height - scaledHeight) / 2;
+
+      // 绘制图片
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+    }
     window.requestAnimationFrame(_drawToCanvas2);
   };
   _drawToCanvas2();
 
   // 捕获 Canvas 的视频流
-  var videoStream = canvas.captureStream(5);
+  var videoTrack = canvas.captureStream(fps).getVideoTracks()[0];
+  try {
+    videoTrack.applyConstraints({
+      width: {
+        exact: width
+      },
+      height: {
+        exact: height
+      },
+      frameRate: {
+        ideal: fps
+      }
+    });
+  } catch (error) {
+    console.warn(error);
+  }
 
   // 返回视频轨道和清理函数
   return {
-    videoTrack: videoStream.getVideoTracks()[0]
+    videoTrack: videoTrack,
+    // 添加清理函数
+    cleanup: function cleanup() {
+      sessionStorage.setItem('stopBlackTrack', 'true');
+      // 如果使用了URL.createObjectURL，需要释放
+      if (img && img.src.startsWith('blob:')) {
+        URL.revokeObjectURL(img.src);
+      }
+    }
   };
 };
 // 停止黑屏视频
