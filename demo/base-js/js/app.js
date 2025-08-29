@@ -116,6 +116,8 @@ ua.on('failed', function(data)
 {
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
+
+  localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
 });
 
 /**
@@ -364,6 +366,10 @@ ua.on('newRTCSession', function(e)
         }
       });
     }
+    // else
+    // {
+    //   localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
+    // }
 
     stats && stats.reset();
     // 获取媒体流
@@ -484,6 +490,8 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
 
     cusMediaStream = new MediaStream();
+
+    localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -541,6 +549,8 @@ ua.on('newRTCSession', function(e)
 
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
+
+    localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -1539,6 +1549,8 @@ function generateAnEmptyAudioTrack()
  */
 function getStreams(pc)
 {
+  localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
+
   // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
   // 远端媒体流
