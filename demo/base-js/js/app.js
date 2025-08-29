@@ -117,7 +117,7 @@ ua.on('failed', function(data)
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
 
-  localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
+  // localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
 });
 
 /**
@@ -366,10 +366,10 @@ ua.on('newRTCSession', function(e)
         }
       });
     }
-    // else
-    // {
-    //   localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
-    // }
+    else
+    {
+      localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
+    }
 
     stats && stats.reset();
     // 获取媒体流
@@ -977,7 +977,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo(() => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo({ useUpdate: useUpdate }, () => { setStatus(`切换视频模式完成${curMode}`); });
     stats && stats.reset();
   };
 
@@ -1549,7 +1549,8 @@ function generateAnEmptyAudioTrack()
  */
 function getStreams(pc)
 {
-  localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
+  // localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
+  // document.querySelector('#localVideo').srcObject && console.warn(document.querySelector('#localVideo').srcObject.getTracks()[0]);
 
   // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
