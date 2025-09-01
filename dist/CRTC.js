@@ -1,10 +1,3287 @@
+<<<<<<< HEAD
 /*
  * CRTC v1.10.9-beta.250331.202541945
+ * the Javascript WebRTC and SIP library
+ * Copyright: 2012-2025 
+=======
+/*
+ * CRTC v1.10.11-beta.20258291820
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+"use strict";
+
+/**
+ * bfcp-lib: A simple library for BFCP protocol
+ * @module bfcp-lib
+>>>>>>> CRTC-new-dev
+ */
+
+var User = require('./lib/user/user.js');
+var Primitive = require('./lib/messages/primitive.js');
+var RequestStatusValue = require('./lib/messages/requestStatusValue.js');
+var AttributeName = require('./lib/attributes/name.js');
+var BFCPLib = {
+  'User': User,
+  'Primitive': Primitive,
+  'RequestStatusValue': RequestStatusValue,
+  'AttributeName': AttributeName
+};
+module.exports = BFCPLib;
+},{"./lib/attributes/name.js":9,"./lib/messages/primitive.js":26,"./lib/messages/requestStatusValue.js":27,"./lib/user/user.js":30}],2:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Complements = require('../parser/complements.js');
+var Format = require('./format.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * Attribute class is a abstraction of the Attribute as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib
+ */
+var Attribute = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Attribute.Type}   type    Attribute Type
+   * @param {bfcp-lib.Attribute.Length} length  Attribute length in octets
+   * @param {bfcp-lib.Attribute.Format} format  Attribute format
+   * @param {Object}                    content The attribute content, which
+   *  can be an Integer, or other attributes, depending of the format
+   */
+  function Attribute(type, length, format, content) {
+    _classCallCheck(this, Attribute);
+    this._type = type;
+    this._length = length;
+    this._format = format;
+    this._content = content;
+  }
+
+  /**
+   * Gets the Type of the Attribute
+   * @return {bfcp-lib.Attribute.Type} The Type
+   * @public
+   */
+  return _createClass(Attribute, [{
+    key: "type",
+    get: function get() {
+      return this._type;
+    },
+    set: function set(type) {
+      this._type = type;
+    }
+
+    /**
+     * Gets the Length of the Attribute
+     * @return {bfcp-lib.Attribute.Length} The Length in octets
+     * @public
+     */
+  }, {
+    key: "length",
+    get: function get() {
+      return this._length;
+    },
+    set: function set(length) {
+      this._length = length;
+    }
+
+    /**
+     * Gets the Format of the Attribute
+     * @return {bfcp-lib.Attribute.Format} The Format
+     * @public
+     */
+  }, {
+    key: "format",
+    get: function get() {
+      return this._format;
+    },
+    set: function set(format) {
+      this._format = format;
+    }
+
+    /**
+     * Gets the content of the Attribute, which can be an Integer or other
+     * Attributes, depending on the format
+     * @return {Object} The content
+     * @public
+     */
+  }, {
+    key: "content",
+    get: function get() {
+      return this._content;
+    },
+    set: function set(content) {
+      this._content = content;
+    }
+
+    /**
+     * Encodes this Attribute instance from object oriented format to the binary
+     * format.
+     * @return {String} Binary string representing the BFCP Attribute
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var type = Complements.complementBinary(this.type.toString(2), 7);
+      var m = '1';
+      var length = Complements.complementBinary(this.length.toString(2), 8);
+      var content = null;
+      switch (this.format) {
+        case Format.Unsigned16:
+          content = Complements.complementBinary(this.content.toString(2), 16);
+          break;
+        case Format.Grouped:
+          content = this._encodeGroupedAttributeContent();
+          break;
+        case Format.OctetString:
+          content = this._encodeOctetStringContent();
+          break;
+        case Format.OctetString16:
+          content = this._encodeOctetString16Content();
+          break;
+        default:
+          throw new Error("I can't encode this attribute. Format unknown.");
+      }
+      return Complements.complementPadding(type + m + length + content);
+    }
+
+    /**
+     * Encodes the Grouped type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeGroupedAttributeContent",
+    value: function _encodeGroupedAttributeContent() {
+      var newContent = '';
+      var _iterator = _createForOfIteratorHelper(this.content),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var attribute = _step.value;
+          if (attribute instanceof Attribute) {
+            newContent = newContent + attribute.encode();
+          } else if (typeof attribute === 'string' || typeof attribute === 'number') {
+            newContent = newContent + Complements.complementBinary(attribute.toString(2), 16);
+          } else {
+            throw new Error('Unknown attribute!');
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      return newContent;
+    }
+
+    /**
+     * Encodes the OctetString type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeOctetStringContent",
+    value: function _encodeOctetStringContent() {
+      var newContent = '';
+      switch (this.type) {
+        case Type.SupportedAttributes:
+          var _iterator2 = _createForOfIteratorHelper(this.content),
+            _step2;
+          try {
+            for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+              var attributeType = _step2.value;
+              newContent = "".concat(newContent + Complements.complementBinary(attributeType.toString(2), 7), "0");
+            }
+          } catch (err) {
+            _iterator2.e(err);
+          } finally {
+            _iterator2.f();
+          }
+          return newContent;
+        case Type.SupportedPrimitives:
+          var _iterator3 = _createForOfIteratorHelper(this.content),
+            _step3;
+          try {
+            for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+              var primitiveType = _step3.value;
+              newContent = newContent + Complements.complementBinary(primitiveType.toString(2), 8);
+            }
+          } catch (err) {
+            _iterator3.e(err);
+          } finally {
+            _iterator3.f();
+          }
+          return newContent;
+        default:
+          throw new Error("I can't encode this octet string attribute. Type unknown.");
+      }
+    }
+
+    /**
+     * Encodes the OctetString16 type attribute content.
+     * @return {String} Binary string representing the BFCP object content
+     * @private
+     */
+  }, {
+    key: "_encodeOctetString16Content",
+    value: function _encodeOctetString16Content() {
+      switch (this.type) {
+        case Type.RequestStatus:
+          {
+            var requestStatus = Complements.complementBinary(this.content[0].toString(2), 8);
+            var queuePosition = Complements.complementBinary(this.content[1].toString(2), 8);
+            return requestStatus + queuePosition;
+          }
+        default:
+          throw new Error("I can't encode this octet string 16 attribute. Type unknown.");
+      }
+    }
+  }]);
+}();
+module.exports = Attribute;
+},{"../parser/complements.js":28,"./format.js":7,"./type.js":13}],3:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorId class is a abstraction of the FloorId attribute
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.2
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorId = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorId The floor id
+   */
+  function FloorId(floorId) {
+    _classCallCheck(this, FloorId);
+    return _callSuper(this, FloorId, [Type.FloorId, Length.FloorId, Format.Unsigned16, floorId]);
+  }
+  _inherits(FloorId, _Attribute);
+  return _createClass(FloorId);
+}(Attribute);
+module.exports = FloorId;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],4:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestId class is a abstraction of the FloorRequestId attribute
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.3
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestId = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorRequestId The floor request id
+   */
+  function FloorRequestId(floorRequestId) {
+    _classCallCheck(this, FloorRequestId);
+    return _callSuper(this, FloorRequestId, [Type.FloorRequestId, Length.FloorRequestId, Format.Unsigned16, floorRequestId]);
+  }
+  _inherits(FloorRequestId, _Attribute);
+  return _createClass(FloorRequestId);
+}(Attribute);
+module.exports = FloorRequestId;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],5:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var FloorRequestStatus = require('./floorRequestStatus.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestInformation class is a abstraction of the FloorRequestInformation
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.15
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestInformation = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {Integer} requestStatus  The request status
+   */
+  function FloorRequestInformation(floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestInformation);
+    var content = [];
+    content.push(floorRequestId);
+    content.push(new FloorRequestStatus(floorId, requestStatus));
+    return _callSuper(this, FloorRequestInformation, [Type.FloorRequestInformation, Length.FloorRequestInformation, Format.Grouped, content]);
+  }
+  _inherits(FloorRequestInformation, _Attribute);
+  return _createClass(FloorRequestInformation);
+}(Attribute);
+module.exports = FloorRequestInformation;
+},{"./attribute.js":2,"./floorRequestStatus.js":6,"./format.js":7,"./length.js":8,"./type.js":13}],6:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var RequestStatus = require('./requestStatus.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatus class is a abstraction of the FloorRequestStatus
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.17
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var FloorRequestStatus = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} floorId       The floor id
+   * @param {Integer} requestStatus The request status
+   */
+  function FloorRequestStatus(floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestStatus);
+    var content = [];
+    content.push(floorId);
+    content.push(new RequestStatus(requestStatus));
+    return _callSuper(this, FloorRequestStatus, [Type.FloorRequestStatus, Length.FloorRequestStatus, Format.Grouped, content]);
+  }
+  _inherits(FloorRequestStatus, _Attribute);
+  return _createClass(FloorRequestStatus);
+}(Attribute);
+module.exports = FloorRequestStatus;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./requestStatus.js":10,"./type.js":13}],7:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Format class is a abstraction of the attribute Format as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Format = /*#__PURE__*/function () {
+  function Format() {
+    _classCallCheck(this, Format);
+  }
+  return _createClass(Format, null, [{
+    key: "Unsigned16",
+    get:
+    /**
+     * Gets Unsigned16 Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+    function get() {
+      return 'Unsigned16';
+    }
+
+    /**
+     * Gets OctetString16 Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OctetString16",
+    get: function get() {
+      return 'OctetString16';
+    }
+
+    /**
+     * Gets OctetString Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OctetString",
+    get: function get() {
+      return 'OctetString';
+    }
+
+    /**
+     * Gets Grouped Format string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Grouped",
+    get: function get() {
+      return 'Grouped';
+    }
+  }]);
+}();
+module.exports = Format;
+},{}],8:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Length class is a abstract representation of the attributes length as
+ * defined in the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Length = /*#__PURE__*/function () {
+  function Length() {
+    _classCallCheck(this, Length);
+  }
+  return _createClass(Length, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 4;
+    }
+
+    /**
+     * Gets FloorId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets FloorRequestId Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets Priority Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets RequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets ErrorCode Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets ErrorInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets StatusInfo Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets SupportedAttributes Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets SupportedPrimitives Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets UserDisplayName Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets UserUri Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets BeneficiaryInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorRequestInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets RequestedByInformation Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 16;
+    }
+
+    /**
+     * Gets FloorRequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets OverallRequestStatus Length in octets as integer
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 18;
+    }
+  }]);
+}();
+module.exports = Length;
+},{}],9:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Name class is a abstraction of the attribute Names
+ * @memberof bfcp-lib.Name
+ * @static
+ */
+var Name = /*#__PURE__*/function () {
+  function Name() {
+    _classCallCheck(this, Name);
+  }
+  return _createClass(Name, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+    function get() {
+      return 'BeneficiaryId';
+    }
+
+    /**
+     * Gets FloorId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 'FloorId';
+    }
+
+    /**
+     * Gets FloorRequestId Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 'FloorRequestId';
+    }
+
+    /**
+     * Gets Priority Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 'Priority';
+    }
+
+    /**
+     * Gets RequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 'RequestStatus';
+    }
+
+    /**
+     * Gets ErrorCode Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 'ErrorCode';
+    }
+
+    /**
+     * Gets ErrorInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 'ErrorInfo';
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 'ParticipantProvidedInfo';
+    }
+
+    /**
+     * Gets StatusInfo Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 'StatusInfo';
+    }
+
+    /**
+     * Gets SupportedAttributes Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 'SupportedAttributes';
+    }
+
+    /**
+     * Gets SupportedPrimitives Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 'SupportedPrimitives';
+    }
+
+    /**
+     * Gets UserDisplayName Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 'UserDisplayName';
+    }
+
+    /**
+     * Gets UserUri Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 'UserUri';
+    }
+
+    /**
+     * Gets BeneficiaryInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 'BeneficiaryInformation';
+    }
+
+    /**
+     * Gets FloorRequestInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 'FloorRequestInformation';
+    }
+
+    /**
+     * Gets RequestedByInformation Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 'RequestedByInformation';
+    }
+
+    /**
+     * Gets FloorRequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 'FloorRequestStatus';
+    }
+
+    /**
+     * Gets OverallRequestStatus Name string
+     * @type {String}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 'OverallRequestStatus';
+    }
+  }]);
+}();
+module.exports = Name;
+},{}],10:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * RequestStatus class is a abstraction of the RequestStatus attribute as
+ * defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.5
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var RequestStatus = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {Integer} requestStatus The request status
+   * @param {Integer} queuePosition The queue position
+   */
+  function RequestStatus(requestStatus, queuePosition) {
+    _classCallCheck(this, RequestStatus);
+    if (queuePosition == null || queuePosition == undefined) {
+      queuePosition = 0;
+    }
+    var content = [requestStatus, queuePosition];
+    return _callSuper(this, RequestStatus, [Type.RequestStatus, Length.RequestStatus, Format.OctetString16, content]);
+  }
+  _inherits(RequestStatus, _Attribute);
+  return _createClass(RequestStatus);
+}(Attribute);
+module.exports = RequestStatus;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],11:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * SupportedAttributes class is a abstraction of the SupportedAttributes
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.10
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var SupportedAttributes = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Attribute.Type[]} attributes A Attribute Type list
+   * representing the supported attributes
+   */
+  function SupportedAttributes(attributes) {
+    _classCallCheck(this, SupportedAttributes);
+    var supAttributes = [];
+    if (!attributes || attributes == undefined) {
+      supAttributes = [Type.BeneficiaryId, Type.FloorId, Type.FloorRequestId, Type.Priority, Type.RequestStatus, Type.ErrorCode, Type.ErrorInfo, Type.ParticipantProvidedInfo, Type.StatusInfo, Type.SupportedAttributes, Type.SupportedPrimitives, Type.UserDisplayName, Type.UserUri, Type.RequestedByInformation, Type.FloorRequestInformation, Type.RequestedByInformation, Type.FloorRequestStatus, Type.OverallRequestStatus];
+    } else {
+      supAttributes = attributes;
+    }
+    var length = supAttributes.length + Length.SupportedAttributes;
+    return _callSuper(this, SupportedAttributes, [Type.SupportedAttributes, length, Format.OctetString, supAttributes]);
+  }
+  _inherits(SupportedAttributes, _Attribute);
+  return _createClass(SupportedAttributes);
+}(Attribute);
+module.exports = SupportedAttributes;
+},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],12:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var Attribute = require('./attribute.js');
+var Format = require('./format.js');
+var Length = require('./length.js');
+var Primitive = require('../messages/primitive.js');
+var Type = require('./type.js');
+
+/**
+ * @classdesc
+ * SupportedPrimitives class is a abstraction of the SupportedPrimitives
+ * attribute as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.11
+ * @extends Attribute
+ * @memberof bfcp-lib.Attribute
+ */
+var SupportedPrimitives = /*#__PURE__*/function (_Attribute) {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.Primitive} primitives A Message Primitive list
+   * representing the supported primitives (messages)
+   */
+  function SupportedPrimitives(primitives) {
+    _classCallCheck(this, SupportedPrimitives);
+    var supPrimitives = [];
+    if (!primitives || primitives == undefined) {
+      supPrimitives = [Primitive.FloorRequest,
+      // Primitive.FloorRelease,
+      // Primitive.FloorRequestQuery,
+      Primitive.FloorRequestStatus,
+      // Primitive.UserQuery,
+      // Primitive.UserStatus,
+      // Primitive.FloorQuery,
+      Primitive.FloorStatus, Primitive.Hello, Primitive.HelloAck, Primitive.Error, Primitive.FloorRequestStatusAck
+      // Primitive.FloorStatusAck
+      // Primitive.Goodbye,
+      // Primitive.GoodbyeAck
+      ];
+    } else {
+      supPrimitives = primitives;
+    }
+    var length = supPrimitives.length + Length.SupportedPrimitives;
+    return _callSuper(this, SupportedPrimitives, [Type.SupportedPrimitives, length, Format.OctetString, supPrimitives]);
+  }
+  _inherits(SupportedPrimitives, _Attribute);
+  return _createClass(SupportedPrimitives);
+}(Attribute);
+module.exports = SupportedPrimitives;
+},{"../messages/primitive.js":26,"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],13:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Type class is a abstraction of the Attribute Type as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2
+ * @memberof bfcp-lib.Attribute
+ * @static
+ */
+var Type = /*#__PURE__*/function () {
+  function Type() {
+    _classCallCheck(this, Type);
+  }
+  return _createClass(Type, null, [{
+    key: "BeneficiaryId",
+    get:
+    /**
+     * Gets BeneficiaryId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorId",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets FloorRequestId Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestId",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Priority Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Priority",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets RequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestStatus",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets ErrorCode Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorCode",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets ErrorInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ErrorInfo",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets ParticipantProvidedInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ParticipantProvidedInfo",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets StatusInfo Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "StatusInfo",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets SupportedAttributes Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedAttributes",
+    get: function get() {
+      return 10;
+    }
+
+    /**
+     * Gets SupportedPrimitives Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "SupportedPrimitives",
+    get: function get() {
+      return 11;
+    }
+
+    /**
+     * Gets UserDisplayName Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserDisplayName",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets UserUri Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserUri",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets BeneficiaryInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "BeneficiaryInformation",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorRequestInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestInformation",
+    get: function get() {
+      return 15;
+    }
+
+    /**
+     * Gets RequestedByInformation Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "RequestedByInformation",
+    get: function get() {
+      return 16;
+    }
+
+    /**
+     * Gets FloorRequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 17;
+    }
+
+    /**
+     * Gets OverallRequestStatus Type
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "OverallRequestStatus",
+    get: function get() {
+      return 18;
+    }
+  }]);
+}();
+module.exports = Type;
+},{}],14:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Complements = require('../parser/complements.js');
+
+/**
+ * @classdesc
+ * CommonHeader class is a abstraction of the CommonHeader as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ */
+var CommonHeader = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.Primitive} primitive     The Message Primitive
+   * @param {Integer}                    payloadLength The length of the message
+   *                                                   in 4-octet, excluding the CommonHeader
+   * @param {Integer}                    conferenceId  The conference id
+   * @param {Integer}                    transactionId The transaction id
+   * @param {Integer}                    userId        The user id
+   */
+  function CommonHeader(primitive, payloadLength, conferenceId, transactionId, userId) {
+    _classCallCheck(this, CommonHeader);
+    this._primitive = primitive;
+    this._payloadLength = payloadLength;
+    this._conferenceId = conferenceId;
+    this._transactionId = transactionId;
+    this._userId = userId;
+  }
+
+  /**
+   * Gets the message primitive
+   * @return {bfcp-lib.Message.Primitive} Message Primitive
+   * @public
+   */
+  return _createClass(CommonHeader, [{
+    key: "primitive",
+    get: function get() {
+      return this._primitive;
+    },
+    set: function set(primitive) {
+      this._primitive = primitive;
+    }
+
+    /**
+     * Gets the message length in 4-octet (32 bits), excluding the commonHeader
+     * @return {Integer} The message length
+     * @public
+     */
+  }, {
+    key: "payloadLength",
+    get: function get() {
+      return this._payloadLength;
+    },
+    set: function set(payloadLength) {
+      this._payloadLength = payloadLength;
+    }
+
+    /**
+     * Gets the conference id
+     * @return {Integer} Conference id
+     * @public
+     */
+  }, {
+    key: "conferenceId",
+    get: function get() {
+      return this._conferenceId;
+    },
+    set: function set(conferenceId) {
+      this._conferenceId = conferenceId;
+    }
+
+    /**
+     * Gets the transaction id
+     * @return {Integer} Transaction id
+     * @public
+     */
+  }, {
+    key: "transactionId",
+    get: function get() {
+      return this._transactionId;
+    },
+    set: function set(transactionId) {
+      this._transactionId = transactionId;
+    }
+
+    /**
+     * Gets the user id
+     * @return {Integer} User id
+     * @public
+     */
+  }, {
+    key: "userId",
+    get: function get() {
+      return this._userId;
+    },
+    set: function set(userId) {
+      this._userId = userId;
+    }
+
+    /**
+     * Encodes this CommonHeader instance from object oriented format to the
+     * binary format.
+     * @return {String} Binary string representing the BFCP CommonHeader
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var ver = '001';
+      var reserved = '00000';
+      var primitive = Complements.complementBinary(this.primitive.toString(2), 8);
+      var payloadLength = Complements.complementBinary(this.payloadLength.toString(2), 16);
+      var conferenceId = Complements.complementBinary(this.conferenceId.toString(2), 32);
+      var transactionId = Complements.complementBinary(this.transactionId.toString(2), 16);
+      var userId = Complements.complementBinary(this.userId.toString(2), 16);
+      return ver + reserved + primitive + payloadLength + conferenceId + transactionId + userId;
+    }
+  }]);
+}();
+module.exports = CommonHeader;
+},{"../parser/complements.js":28}],15:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorQuery class is a abstraction of the FloorQuery Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.7
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorQuery = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorQuery(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorQuery);
+    return _callSuper(this, FloorQuery, [new CommonHeader(Primitive.FloorQuery, PayloadLength.FloorQuery, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorQuery, _Message);
+  return _createClass(FloorQuery);
+}(Message);
+module.exports = FloorQuery;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],16:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestId = require('../attributes/floorRequestId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRelease class is a abstraction of the FloorRelease Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.2
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRelease = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorRequestId The floor request id
+   */
+  function FloorRelease(conferenceId, transactionId, userId, floorRequestId) {
+    _classCallCheck(this, FloorRelease);
+    return _callSuper(this, FloorRelease, [new CommonHeader(Primitive.FloorRelease, PayloadLength.FloorRelease, conferenceId, transactionId, userId), [new FloorRequestId(floorRequestId)]]);
+  }
+  _inherits(FloorRelease, _Message);
+  return _createClass(FloorRelease);
+}(Message);
+module.exports = FloorRelease;
+},{"../attributes/floorRequestId.js":4,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],17:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequest class is a abstraction of the FloorRequest Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.1
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequest = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorRequest(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorRequest);
+    return _callSuper(this, FloorRequest, [new CommonHeader(Primitive.FloorRequest, PayloadLength.FloorRequest, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorRequest, _Message);
+  return _createClass(FloorRequest);
+}(Message);
+module.exports = FloorRequest;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],18:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatus class is a abstraction of the FloorRequestStatus Message
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.4
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequestStatus = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integet} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+   */
+  function FloorRequestStatus(conferenceId, transactionId, userId, floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorRequestStatus);
+    return _callSuper(this, FloorRequestStatus, [new CommonHeader(Primitive.FloorRequestStatus, PayloadLength.FloorRequestStatus, conferenceId, transactionId, userId), [new FloorRequestInformation(floorRequestId, floorId, requestStatus)]]);
+  }
+  _inherits(FloorRequestStatus, _Message);
+  return _createClass(FloorRequestStatus);
+}(Message);
+module.exports = FloorRequestStatus;
+},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],19:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorRequestStatusAck class is a abstraction of the FloorRequestStatusAck Message
+ * extended from the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorRequestStatusAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorRequestStatusAck(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorRequestStatusAck);
+    return _callSuper(this, FloorRequestStatusAck, [new CommonHeader(Primitive.FloorRequestStatusAck, PayloadLength.FloorRequestStatusAck, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorRequestStatusAck, _Message);
+  return _createClass(FloorRequestStatusAck);
+}(Message);
+module.exports = FloorRequestStatusAck;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],20:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorStatus class is a abstraction of the FloorStatus Message
+ * as defined in the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.8
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorStatus = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integet} floorRequestId The floor request id
+   * @param {Integer} floorId        The floor id
+   * @param {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+   */
+  function FloorStatus(conferenceId, transactionId, userId, floorRequestId, floorId, requestStatus) {
+    _classCallCheck(this, FloorStatus);
+    return _callSuper(this, FloorStatus, [new CommonHeader(Primitive.FloorStatus, PayloadLength.FloorStatus, conferenceId, transactionId, userId), [new FloorRequestInformation(floorRequestId, floorId, requestStatus)]]);
+  }
+  _inherits(FloorStatus, _Message);
+  return _createClass(FloorStatus);
+}(Message);
+module.exports = FloorStatus;
+},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],21:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * FloorStatusAck class is a abstraction of the FloorStatusAck Message
+ * extended from the RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var FloorStatusAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId   The conference id
+   * @param {Integer} transactionId  The transaction id
+   * @param {Integer} userId         The user id
+   * @param {Integer} floorId        The floor id
+   */
+  function FloorStatusAck(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, FloorStatusAck);
+    return _callSuper(this, FloorStatusAck, [new CommonHeader(Primitive.FloorStatusAck, PayloadLength.FloorStatusAck, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(FloorStatusAck, _Message);
+  return _createClass(FloorStatusAck);
+}(Message);
+module.exports = FloorStatusAck;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],22:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var FloorId = require('../attributes/floorId.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+
+/**
+ * @classdesc
+ * Hello class is a abstraction of the Hello Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.11
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var Hello = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId  The conference id
+   * @param {Integer} transactionId The transaction id
+   * @param {Integer} userId        The user id
+   * @param {Integer} floorId       The floor id
+   */
+  function Hello(conferenceId, transactionId, userId, floorId) {
+    _classCallCheck(this, Hello);
+    return _callSuper(this, Hello, [new CommonHeader(Primitive.Hello, PayloadLength.Hello, conferenceId, transactionId, userId), [new FloorId(floorId)]]);
+  }
+  _inherits(Hello, _Message);
+  return _createClass(Hello);
+}(Message);
+module.exports = Hello;
+},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],23:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var CommonHeader = require('./commonHeader.js');
+var Message = require('./message.js');
+var PayloadLength = require('./payloadLength.js');
+var Primitive = require('./primitive.js');
+var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
+var SupportedAttributes = require('../attributes/supportedAttributes.js');
+
+/**
+ * @classdesc
+ * HelloAck class is a abstraction of the HelloAck Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3.12
+ * @extends Message
+ * @memberof bfcp-lib.Message
+ */
+var HelloAck = /*#__PURE__*/function (_Message) {
+  /**
+   * @constructor
+   * @param {Integer} conferenceId  The conference id
+   * @param {Integer} transactionId The transaction id
+   * @param {Integer} userId        The user id
+   */
+  function HelloAck(conferenceId, transactionId, userId) {
+    _classCallCheck(this, HelloAck);
+    return _callSuper(this, HelloAck, [new CommonHeader(Primitive.HelloAck, PayloadLength.HelloAck, conferenceId, transactionId, userId), [new SupportedPrimitives(), new SupportedAttributes()]]);
+  }
+  _inherits(HelloAck, _Message);
+  return _createClass(HelloAck);
+}(Message);
+module.exports = HelloAck;
+},{"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],24:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Message class is a abstraction of the Message as defined in the
+ * RFC 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.3
+ * @memberof bfcp-lib
+ */
+var Message = /*#__PURE__*/function () {
+  /**
+   * @constructor
+   * @param {bfcp-lib.Message.CommonHeader} commonHeader The message common header
+   * @param {bfcp-lib.Attribute[]}  attributes   The message list of attributes
+   */
+  function Message(commonHeader, attributes) {
+    _classCallCheck(this, Message);
+    this._commonHeader = commonHeader;
+    this._attributes = attributes;
+  }
+
+  /**
+   * Gets the Message CommonHeader
+   * @return {bfcp-lib.Message.CommonHeader} The CommonHeader object
+   * @public
+   */
+  return _createClass(Message, [{
+    key: "commonHeader",
+    get: function get() {
+      return this._commonHeader;
+    },
+    set: function set(commonHeader) {
+      this._commonHeader = commonHeader;
+    }
+
+    /**
+     * Gets the Message attributes
+     * @return {bfcp-lib.Attribute[]} The Attributes List
+     * @public
+     */
+  }, {
+    key: "attributes",
+    get: function get() {
+      return this._attributes;
+    },
+    set: function set(attributes) {
+      this._attributes = attributes;
+    }
+
+    /**
+     * Gets the message attribute that contains the name received. If this
+     * message haven't this attribute, returns null.
+     * @param  {bfcp-lib.Attribute.Name} attributeName The attribute Name
+     * @return {bfcp-lib.Attribute}      The attribute
+     * @public
+     */
+  }, {
+    key: "getAttribute",
+    value: function getAttribute(attributeName) {
+      var _iterator = _createForOfIteratorHelper(this.attributes),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var attribute = _step.value;
+          if (attribute.constructor.name == attributeName) {
+            return attribute;
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      return null;
+    }
+
+    /**
+     * Encodes this Message instance from object oriented format to the binary
+     * format.This process envolve encode the CommonHeader and all attributes.
+     * @return {String} Binary string representing the BFCP Message
+     * @public
+     */
+  }, {
+    key: "encode",
+    value: function encode() {
+      var commonHeader = this.commonHeader.encode();
+      var attributes = '';
+      var _iterator2 = _createForOfIteratorHelper(this.attributes),
+        _step2;
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var attribute = _step2.value;
+          attributes = attributes + attribute.encode();
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+      var message = commonHeader + attributes;
+      var size = message.length / 8;
+      var octets = [];
+      for (var i = 0; i < size; i++) {
+        octets.push(parseInt(message.substring(0 + 8 * i, 8 + 8 * i), 2));
+      }
+      return octets;
+    }
+  }]);
+}();
+module.exports = Message;
+},{}],25:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * PayloadLength class is a abstraction of the Message Payload Length as defined in
+ * the RFCP 4582 - BFCP, in 4-octets units
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var PayloadLength = /*#__PURE__*/function () {
+  function PayloadLength() {
+    _classCallCheck(this, PayloadLength);
+  }
+  return _createClass(PayloadLength, null, [{
+    key: "FloorRequest",
+    get:
+    /**
+     * Gets FloorRequest payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRelease payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRelease",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRequestQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorRequestStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets UserQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets UserStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserStatus",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorQuery payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorQuery",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorStatus payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets ChairAction payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairAction",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets ChairActionAck payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairActionAck",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets Hello payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Hello",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets HelloAck payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "HelloAck",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Error payload length
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Error",
+    get: function get() {
+      return -1;
+    }
+
+    /**
+     * Gets FloorRequestStatusAck payload length
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatusAck",
+    get: function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorStatusAck payload length
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatusAck",
+    get: function get() {
+      return 1;
+    }
+  }]);
+}();
+module.exports = PayloadLength;
+},{}],26:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Primitive class is a abstraction of the Message Primitive as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.1
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var Primitive = /*#__PURE__*/function () {
+  function Primitive() {
+    _classCallCheck(this, Primitive);
+  }
+  return _createClass(Primitive, null, [{
+    key: "FloorRequest",
+    get:
+    /**
+     * Gets FloorRequest Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets FloorRelease Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRelease",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets FloorRequestQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestQuery",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets FloorRequestStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatus",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets UserQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserQuery",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets UserStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "UserStatus",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets FloorQuery Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorQuery",
+    get: function get() {
+      return 7;
+    }
+
+    /**
+     * Gets FloorStatus Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatus",
+    get: function get() {
+      return 8;
+    }
+
+    /**
+     * Gets ChairAction Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairAction",
+    get: function get() {
+      return 9;
+    }
+
+    /**
+     * Gets ChairActionAck Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "ChairActionAck",
+    get: function get() {
+      return 10;
+    }
+
+    /**
+     * Gets Hello Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Hello",
+    get: function get() {
+      return 11;
+    }
+
+    /**
+     * Gets HelloAck Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "HelloAck",
+    get: function get() {
+      return 12;
+    }
+
+    /**
+     * Gets Error Primitive
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Error",
+    get: function get() {
+      return 13;
+    }
+
+    /**
+     * Gets FloorRequestStatusAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorRequestStatusAck",
+    get: function get() {
+      return 14;
+    }
+
+    /**
+     * Gets FloorStatusAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "FloorStatusAck",
+    get: function get() {
+      return 15;
+    }
+
+    /**
+     * Gets Goodbye Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Goodbye",
+    get: function get() {
+      return 16;
+    }
+
+    /**
+     * Gets GoodbyeAck Primitive
+     * (EXTENDED FROM RFC)
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "GoodbyeAck",
+    get: function get() {
+      return 17;
+    }
+  }]);
+}();
+module.exports = Primitive;
+},{}],27:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * RequestStatusValue class is a abstraction of the Message Request Status as defined in
+ * the RFCP 4582 - BFCP
+ * https://tools.ietf.org/html/rfc4582#section-5.2.5
+ * @memberof bfcp-lib.Message
+ * @static
+ */
+var RequestStatusValue = /*#__PURE__*/function () {
+  function RequestStatusValue() {
+    _classCallCheck(this, RequestStatusValue);
+  }
+  return _createClass(RequestStatusValue, null, [{
+    key: "Pending",
+    get:
+    /**
+     * Gets Pending value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+    function get() {
+      return 1;
+    }
+
+    /**
+     * Gets Accepted value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Accepted",
+    get: function get() {
+      return 2;
+    }
+
+    /**
+     * Gets Granted value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Granted",
+    get: function get() {
+      return 3;
+    }
+
+    /**
+     * Gets Denied value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Denied",
+    get: function get() {
+      return 4;
+    }
+
+    /**
+     * Gets Cancelled value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Cancelled",
+    get: function get() {
+      return 5;
+    }
+
+    /**
+     * Gets Released value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Released",
+    get: function get() {
+      return 6;
+    }
+
+    /**
+     * Gets Revoked value
+     * @type {Integer}
+     * @static
+     * @public
+     */
+  }, {
+    key: "Revoked",
+    get: function get() {
+      return 7;
+    }
+  }]);
+}();
+module.exports = RequestStatusValue;
+},{}],28:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * @classdesc
+ * Complements class is a static class to handle string (binary) operations of
+ * complement (used to make a formated binary string from a not formated one).
+ * @memberof bfcp-lib
+ * @static
+ */
+var Complements = /*#__PURE__*/function () {
+  function Complements() {
+    _classCallCheck(this, Complements);
+  }
+  return _createClass(Complements, null, [{
+    key: "complementBinary",
+    value:
+    /**
+     * Complements the binary string with '0' at it begin until have reached the
+     * necessary string length.
+     * @param  {String}  binary The binary string
+     * @param  {Integer} length The necessary length
+     * @return {String}         The binary string with the correct length
+     * @static
+     * @public
+     */
+    function complementBinary(binary, length) {
+      var complement = length - binary.length;
+      if (complement <= 0) {
+        return binary;
+      }
+      var complementString = '0'.repeat(complement);
+      return complementString + binary;
+    }
+
+    /**
+     * Complements the binary string with 8 bits of '0' at it end have reached
+     * the 32bits format. (padding)
+     * @param  {String} content The binary string
+     * @return {String}         The binary string with the correct format
+     * @static
+     * @public
+     */
+  }, {
+    key: "complementPadding",
+    value: function complementPadding(content) {
+      while (content.length < 100000 && content.length % 32 != 0) {
+        content = "".concat(content, "00000000");
+      }
+      return content;
+    }
+  }]);
+}();
+module.exports = Complements;
+},{}],29:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var FloorRequest = require('../messages/floorRequest.js');
+var FloorRelease = require('../messages/floorRelease.js');
+var FloorRequestStatusMsg = require('../messages/floorRequestStatus.js');
+var FloorStatus = require('../messages/floorStatus.js');
+var Hello = require('../messages/hello.js');
+var HelloAck = require('../messages/helloAck.js');
+var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
+var FloorStatusAck = require('../messages/floorStatusAck.js');
+var FloorQuery = require('../messages/floorQuery.js');
+var AttributeType = require('../attributes/type.js');
+var FloorId = require('../attributes/floorId.js');
+var FloorRequestId = require('../attributes/floorRequestId.js');
+var FloorRequestStatusAtr = require('../attributes/floorRequestStatus.js');
+var SupportedAttributes = require('../attributes/supportedAttributes.js');
+var SupportedPrimitives = require('../attributes/supportedPrimitives.js');
+var FloorRequestInformation = require('../attributes/floorRequestInformation.js');
+var Primitive = require('../messages/primitive.js');
+var CommonHeader = require('../messages/commonHeader.js');
+var Complements = require('../parser/complements.js');
+var RequestStatus = require('../attributes/requestStatus.js');
+
+/**
+ * @classdesc
+ * Parser class is a static class to handle all the operations needed to parse
+ * a binary string (BFCP Message) to the correspondent Object Oriented instance.
+ * @memberof bfcp-lib
+ * @static
+ */
+var Parser = /*#__PURE__*/function () {
+  function Parser() {
+    _classCallCheck(this, Parser);
+  }
+  return _createClass(Parser, null, [{
+    key: "_parseCommonHeader",
+    value:
+    /**
+     * Parses the CommonHeader bits of the message to a CommonHeader Object.
+     * @param  {String} commonHeader Binary string representing the CommonHeader
+     * @return {bfcp-lib.Message.CommonHeader} The CommonHeader object
+     * @static
+     * @private
+     */
+    function _parseCommonHeader(commonHeader) {
+      var primitive = parseInt(commonHeader.substring(8, 16), 2);
+      var payloadLength = parseInt(commonHeader.substring(16, 32), 2);
+      var conferenceId = parseInt(commonHeader.substring(32, 64), 2);
+      var transactionId = parseInt(commonHeader.substring(64, 80), 2);
+      var userId = parseInt(commonHeader.substring(80, 96), 2);
+      return new CommonHeader(primitive, payloadLength, conferenceId, transactionId, userId);
+    }
+
+    /**
+     * Parses the Attributes bits of the message to a Attribute list object.
+     * @param  {String} attributes Binary string representing the Attributes
+     * @return {bfcp-lib.Attribute[]} The Attribute list object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseAttributes",
+    value: function _parseAttributes(attributes) {
+      var attributeList = [];
+      while (attributes != '') {
+        var type = parseInt(attributes.substring(0, 7), 2);
+        var length = parseInt(attributes.substring(8, 16), 2);
+        var attribute = attributes.substring(0, length * 8);
+        // let content;
+
+        switch (type) {
+          case AttributeType.FloorId:
+            attributeList.push(Parser._parseFloorId(attribute.substring(16)));
+            break;
+          case AttributeType.SupportedAttributes:
+            attributeList.push(Parser._parseSupportedAttributes(attribute.substring(16)));
+            break;
+          case AttributeType.SupportedPrimitives:
+            attributeList.push(Parser._parseSupportedPrimitives(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestStatus:
+            attributeList.push(Parser._parseFloorRequestStatus(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestInformation:
+            attributeList.push(Parser._parseFloorRequestInformation(attribute.substring(16)));
+            break;
+          case AttributeType.RequestStatus:
+            attributeList.push(Parser._parseRequestStatus(attribute.substring(16)));
+            break;
+          case AttributeType.FloorRequestId:
+            attributeList.push(Parser._parseFloorRequestId(attribute.substring(16)));
+            break;
+          default:
+            console.warn('I cant parse this attribute!');
+          // throw new Error('I cant parse this attribute!');
+        }
+        var size = length * 8;
+        while (size % 32 != 0) {
+          size = size + 8;
+        }
+        attributes = attributes.substring(size);
+      }
+      return attributeList;
+    }
+
+    /**
+     * Parses the FloorID bits of the message to a FloorId Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorId} FloorId object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorId",
+    value: function _parseFloorId(content) {
+      return new FloorId(parseInt(content, 2));
+    }
+
+    /**
+     * Parses the SupportedAttributes bits of the message to a
+     * SupportedAttributes Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.SupportedAttributes} SupportedAttributes object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseSupportedAttributes",
+    value: function _parseSupportedAttributes(content) {
+      var attributeTypes = [];
+      for (var i = 1; i < content.length / 8 + 1; i++) {
+        var binType = content.substring(8 * (i - 1), 8 * i);
+        attributeTypes.push(parseInt(binType.substring(0, 7), 2));
+      }
+      return new SupportedAttributes(attributeTypes);
+    }
+
+    /**
+     * Parses the SupportedPrimitives bits of the message to a
+     * SupportedPrimitives Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.SupportedPrimitives} SupportedPrimitives object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseSupportedPrimitives",
+    value: function _parseSupportedPrimitives(content) {
+      var primitives = [];
+      for (var i = 1; i < content.length / 8 + 1; i++) {
+        var binPrimitive = content.substring(8 * (i - 1), 8 * i);
+        primitives.push(parseInt(binPrimitive, 2));
+      }
+      return new SupportedPrimitives(primitives);
+    }
+
+    /**
+     * Parses the FloorRequestStatus bits of the message to a
+     * FloorRequestStatus Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestStatus} FloorRequestStatus object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestStatus",
+    value: function _parseFloorRequestStatus(content) {
+      return new FloorRequestStatusAtr(parseInt(content, 2));
+    }
+
+    /**
+     * Parses the FloorRequestInformation bits of the message to a
+     * FloorRequestInformation Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestInformation} FloorRequestInformation object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestInformation",
+    value: function _parseFloorRequestInformation(content) {
+      return new FloorRequestInformation(parseInt(content.substring(0, 16), 2), parseInt(content.substring(32, 48), 2), parseInt(content.substring(64, 72), 2));
+    }
+
+    /**
+     * Parses the RequestStatus bits of the message to a RequestStatus Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.RequestStatus} RequestStatus object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseRequestStatus",
+    value: function _parseRequestStatus(content) {
+      return new RequestStatus(parseInt(content.substring(0, 8), 2), parseInt(content.substring(8, 16), 2));
+    }
+
+    /**
+     * Parses the FloorRequestId bits of the message to a FloorRequestId Object.
+     * @param  {String} content The binary string
+     * @return {bfcp-lib.Attribute.FloorRequestId} FloorRequestId object
+     * @static
+     * @private
+     */
+  }, {
+    key: "_parseFloorRequestId",
+    value: function _parseFloorRequestId(content) {
+      return new FloorRequestId(parseInt(content.substring(0, 16), 2));
+    }
+
+    /**
+     * Parses an BFCP Message as received in a TCP/UDP socket to a Object Oriented
+     * BFCP Message. Must receive the message as a Buffer, like when it arrives
+     * from the TCP/UDP socket.
+     * @param  {Buffer} message The buffered Message
+     * @return {bfcp-lib.Message} Object Oriented BFCP Message
+     * @throws Will throw an Error if the Message couldn't be parsed.
+     */
+  }, {
+    key: "parseMessage",
+    value: function parseMessage(message) {
+      try {
+        var binaryMessage = '';
+        var _iterator = _createForOfIteratorHelper(message),
+          _step;
+        try {
+          for (_iterator.s(); !(_step = _iterator.n()).done;) {
+            var value = _step.value;
+            binaryMessage = binaryMessage + Complements.complementBinary(value.toString(2), 8);
+          }
+        } catch (err) {
+          _iterator.e(err);
+        } finally {
+          _iterator.f();
+        }
+        var commonHeader = Parser._parseCommonHeader(binaryMessage.substring(0, 96));
+        var attributes = Parser._parseAttributes(binaryMessage.substring(96));
+        switch (commonHeader.primitive) {
+          case Primitive.Hello:
+            {
+              var hello = new Hello();
+              hello.commonHeader = commonHeader;
+              hello.attributes = attributes;
+              return hello;
+            }
+          case Primitive.HelloAck:
+            {
+              var helloAck = new HelloAck();
+              helloAck.commonHeader = commonHeader;
+              helloAck.attributes = attributes;
+              return helloAck;
+            }
+          case Primitive.FloorRequest:
+            {
+              var floorRequest = new FloorRequest();
+              floorRequest.commonHeader = commonHeader;
+              floorRequest.attributes = attributes;
+              return floorRequest;
+            }
+          case Primitive.FloorRequestStatus:
+            {
+              var floorRequestStatus = new FloorRequestStatusMsg();
+              floorRequestStatus.commonHeader = commonHeader;
+              floorRequestStatus.attributes = attributes;
+              return floorRequestStatus;
+            }
+          case Primitive.FloorRelease:
+            {
+              var floorRelease = new FloorRelease();
+              floorRelease.commonHeader = commonHeader;
+              floorRelease.attributes = attributes;
+              return floorRelease;
+            }
+          case Primitive.FloorStatus:
+            {
+              var floorStatus = new FloorStatus();
+              floorStatus.commonHeader = commonHeader;
+              floorStatus.attributes = attributes;
+              return floorStatus;
+            }
+          case Primitive.FloorRequestStatusAck:
+            {
+              var floorRequestStatusAck = new FloorRequestStatusAck();
+              floorRequestStatusAck.commonHeader = commonHeader;
+              floorRequestStatusAck.attributes = attributes;
+              return floorRequestStatusAck;
+            }
+          case Primitive.FloorStatusAck:
+            {
+              var floorStatusAck = new FloorStatusAck();
+              floorStatusAck.commonHeader = commonHeader;
+              floorStatusAck.attributes = attributes;
+              return floorStatusAck;
+            }
+          case Primitive.FloorQuery:
+            {
+              var floorQuery = new FloorQuery();
+              floorQuery.commonHeader = commonHeader;
+              floorQuery.attributes = attributes;
+              return floorQuery;
+            }
+          default:
+            throw new Error("I can't decode this message. Unknown primitive.");
+        }
+      } catch (error) {
+        throw new Error('Problem parsing message. ', error);
+      }
+    }
+  }]);
+}();
+module.exports = Parser;
+},{"../attributes/floorId.js":3,"../attributes/floorRequestId.js":4,"../attributes/floorRequestInformation.js":5,"../attributes/floorRequestStatus.js":6,"../attributes/requestStatus.js":10,"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"../attributes/type.js":13,"../messages/commonHeader.js":14,"../messages/floorQuery.js":15,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../parser/complements.js":28}],30:[function(require,module,exports){
+(function (Buffer){(function (){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var FloorRequestStatus = require('../messages/floorRequestStatus.js');
+var FloorStatus = require('../messages/floorStatus.js');
+var Primitive = require('../messages/primitive.js');
+var Hello = require('../messages/hello.js');
+var FloorRequest = require('../messages/floorRequest.js');
+var HelloAck = require('../messages/helloAck.js');
+var RequestStatusValue = require('../messages/requestStatusValue.js');
+var Parser = require('../parser/parser.js');
+var AttrName = require('../attributes/name.js');
+var FloorRelease = require('../messages/floorRelease.js');
+var FloorRequestStatusAck = require('../messages/floorRequestStatusAck.js');
+var FloorStatusAck = require('../messages/floorStatusAck.js');
+
+/**
+ * @classdesc
+ * This class is a abstract representation of a User in the BFCP environment,
+ * and is used as the primary interface to this library. A User receive and
+ * returns BFCP messages totally in the binary form, as like when receiving
+ * from TCP/UDP sockets, so the application who utilize it doesn't need to
+ * know anything about the codification and decodification of BFCP messages.
+ * @memberof bfcp-lib
+ */
+var User = /*#__PURE__*/function () {
+  /**
+   * @param {String} userId       A string representing the User ID
+   * @param {String} conferenceId A string representing the Conference ID
+   * @constructor
+   */
+  function User(userId, conferenceId) {
+    _classCallCheck(this, User);
+    this._userId = parseInt(userId);
+    this._conferenceId = parseInt(conferenceId);
+    this._currentMessage = null;
+    this._currentTransactionId = 0;
+    this._floorRequestId = 0;
+  }
+
+  /**
+   * Gets the User ID
+   * @return {Integer} User ID
+   */
+  return _createClass(User, [{
+    key: "userId",
+    get: function get() {
+      return this._userId;
+    },
+    set: function set(userId) {
+      this._userId = userId;
+    }
+
+    /**
+     * Gets the Conference ID
+     * @return {Integer} Conference ID
+     */
+  }, {
+    key: "conferenceId",
+    get: function get() {
+      return this._conferenceId;
+    },
+    set: function set(conferenceId) {
+      this._conferenceId = conferenceId;
+    }
+
+    /**
+     * Gets the current message
+     * @return {bfcp-lib.Message} This User last message received by the method
+     * 'receiveMessage'
+     */
+  }, {
+    key: "currentMessage",
+    get: function get() {
+      return this._currentMessage;
+    },
+    set: function set(currentMessage) {
+      this._currentMessage = currentMessage;
+    }
+
+    /**
+     * Gets the current transaction id
+     * @return {Integer} Current transaction id
+     */
+  }, {
+    key: "currentTransactionId",
+    get: function get() {
+      return this._currentTransactionId;
+    },
+    set: function set(currentTransactionId) {
+      this._currentTransactionId = currentTransactionId;
+    }
+
+    /**
+     * Gets the wanted floor id
+     * @return {Integer} This user last wanted floor id received by a
+     * FloorRequest Message
+     */
+  }, {
+    key: "wantedFloorId",
+    get: function get() {
+      return this._wantedFloorId;
+    },
+    set: function set(wantedFloorId) {
+      this._wantedFloorId = wantedFloorId;
+    }
+
+    /**
+     * Gets the actual floor request id
+     * @return {Integer} Floor request id
+     * @static
+     */
+  }, {
+    key: "receiveMessage",
+    value:
+    /**
+     * Receives a buffered message, parses it to a BFCP Message Object,
+     * sets it as the current message and returns it.
+     * @param  {Buffer} message The buffered Message
+     * @return {bfcp-lib.Message} The BFCP Message Object
+     * @public
+     */
+    function receiveMessage(message) {
+      try {
+        var bfcpMessage = Parser.parseMessage(message);
+        this.currentMessage = bfcpMessage;
+        return bfcpMessage;
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // 心跳消息
+  }, {
+    key: "helloMessage",
+    value: function helloMessage(transactionId, floorId) {
+      var hello = new Hello(this.conferenceId, transactionId, this.userId, floorId);
+      return Buffer.from(hello.encode());
+    }
+
+    /**
+     * Gets a buffered HelloAck message
+     * @param  {bfcp-lib.Message.Hello} helloMessage The Hello message that the HelloAck
+     * will respond to.
+     * @return {bfcp-lib.Message.HelloAck}  The HelloAck buffered message
+     * @public
+     */
+  }, {
+    key: "helloAckMessage",
+    value: function helloAckMessage(helloMessage) {
+      var helloAck = new HelloAck(this.conferenceId, helloMessage.commonHeader.transactionId, this.userId);
+      return Buffer.from(helloAck.encode());
+    }
+
+    // FloorRequest 请求
+  }, {
+    key: "floorRequestMessage",
+    value: function floorRequestMessage(transactionId, floorId) {
+      var floorRequest = new FloorRequest(this.conferenceId, transactionId, this.userId, floorId);
+      return Buffer.from(floorRequest.encode());
+    }
+
+    // FloorRelease 请求
+  }, {
+    key: "floorReleaseMessage",
+    value: function floorReleaseMessage(transactionId, floorRequestId) {
+      var floorRelease = new FloorRelease(this.conferenceId, transactionId, this.userId, floorRequestId);
+      return Buffer.from(floorRelease.encode());
+    }
+
+    // FloorRequestStatusAck 请求
+  }, {
+    key: "floorRequestStatusAckMessage",
+    value: function floorRequestStatusAckMessage(floorRequestStatusMessage) {
+      var wantedFloorId = floorRequestStatusMessage.getAttribute('FloorRequestInformation').content[1].content[0];
+      var floorRequestStatusAck = new FloorRequestStatusAck(this.conferenceId, floorRequestStatusMessage.commonHeader.transactionId, this.userId, wantedFloorId);
+      return Buffer.from(floorRequestStatusAck.encode());
+    }
+
+    /**
+     * Gets a buffered FloorRequestStatus message
+     * @param  {bfcp-lib.Message.FloorRequest | bfcp-lib.Message.FloorRelease} message
+     * The FloorRequest or Release message that the FloorRequestStatus will respond to.
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorRequestStatus} The FloorRequestStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorRequestStatusMessage",
+    value: function floorRequestStatusMessage(message, floorId, requestStatus) {
+      var floorRequestId;
+      if (message.commonHeader.primitive == Primitive.FloorRequest) {
+        if (requestStatus == RequestStatusValue.Granted) {
+          User.incFloorRequestId();
+        }
+        floorRequestId = User.getFloorRequestId();
+      } else {
+        floorRequestId = message.getAttribute(AttrName.FloorRequestId).content;
+      }
+      // eslint-disable-next-line max-len
+      var floorRequestStatus = new FloorRequestStatus(this.conferenceId, message.commonHeader.transactionId, this.userId, floorRequestId, floorId, requestStatus);
+      return Buffer.from(floorRequestStatus.encode());
+    }
+
+    /**
+     * Gets a buffered FloorStatus message
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorStatus} The FloorStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorStatusMessage",
+    value: function floorStatusMessage(floorId, requestStatus, transactionId) {
+      if (this.currentMessage) {
+        if (this.currentMessage.commonHeader.transactionId > this.currentTransactionId) {
+          this.currentTransactionId = this.currentMessage.commonHeader.transactionId;
+        }
+      }
+      var ctid = this.currentTransactionId++;
+      if (transactionId) {
+        ctid = transactionId;
+      }
+      var floorStatus = new FloorStatus(this.conferenceId, ctid, this.userId, User.getFloorRequestId(), floorId, requestStatus);
+      return Buffer.from(floorStatus.encode());
+    }
+
+    /**
+     * Gets a buffered FloorStatus message
+     * @param  {Integer} floorId The floor id
+     * @param  {bfcp-lib.Message.RequestStatusValue} requestStatus The request status
+     * @return {bfcp-lib.Message.FloorStatus} The FloorStatus buffered message
+     * @public
+     */
+  }, {
+    key: "floorStatusAckMessage",
+    value: function floorStatusAckMessage(floorId, floorStatusMessage) {
+      var floorStatusAck = new FloorStatusAck(this.conferenceId, floorStatusMessage.commonHeader.transactionId, this.userId, floorId);
+      return Buffer.from(floorStatusAck.encode());
+    }
+  }], [{
+    key: "getFloorRequestId",
+    value: function getFloorRequestId() {
+      return this.FloorRequestId;
+    }
+
+    /**
+     * Increments the actual floor request id
+     */
+  }, {
+    key: "incFloorRequestId",
+    value: function incFloorRequestId() {
+      this.FloorRequestId++;
+    }
+
+    // 将十六进制字符串转换为 Uint8Array
+  }, {
+    key: "hexStringToUint8Array",
+    value: function hexStringToUint8Array(hexString) {
+      // 去掉空格和换行符
+      hexString = hexString.replace(/\s+/g, '');
+
+      // 检查长度是否为偶数
+      if (hexString.length % 2 !== 0) {
+        throw new Error('Invalid hex string length.');
+      }
+
+      // 将十六进制字符串转换为 Uint8Array
+      var length = hexString.length / 2;
+      var uint8Array = new Uint8Array(length);
+      for (var i = 0; i < length; i++) {
+        var _byte = hexString.substr(i * 2, 2);
+        uint8Array[i] = parseInt(_byte, 16);
+      }
+      return uint8Array; // 返回 Uint8Array，而不是二进制字符串
+    }
+  }, {
+    key: "base64ToUint8Array",
+    value: function base64ToUint8Array(base64String) {
+      // 去掉空格和换行符
+      base64String = base64String.replace(/\s+/g, '');
+
+      // 使用 atob 解码 Base64 字符串
+      var binaryString = atob(base64String);
+
+      // 将二进制字符串转换为 Uint8Array
+      var length = binaryString.length;
+      var uint8Array = new Uint8Array(length);
+      for (var i = 0; i < length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i); // 获取每个字符的 ASCII 码
+      }
+      return uint8Array;
+    }
+  }]);
+}();
+User.FloorRequestId = 0;
+module.exports = User;
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":66}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -265,15 +3542,46 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":2,"./Exceptions":6,"./Grammar":7,"./Socket":23,"./URI":29,"./Utils":30}],2:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":54,"./URI":60,"./Utils":61}],32:[function(require,module,exports){
 "use strict";
 
-var pkg = require('../package.json');
 module.exports = {
-  USER_AGENT: "UA/".concat(pkg.version, " (Web)"),
+  USER_AGENT: 'UA/1.10.11-beta.405016583640 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
+  // DataChannel
+  MAX_BUFFERED_AMOUNT: 16 * 1024,
+  CHANNEL_CLOSING_TIMEOUT: 5 * 1000,
+  // BFCP相关
+  BFCP: 'BFCP',
+  // BFCP心跳间隔，默认30秒
+  BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
+  // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
+  MAX_RETRY_ATTEMPTS: 4,
+  // BFCP控制的流transceiver索引号
+  BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
+  BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
+  ANIMATION_ID: 'animationId',
+  CMODE: {
+    PAPHONE: 'paphone'
+  },
+  // 不同清晰度对应H264的levleId和AS值
+  SDP_LEVELID_AS: {
+    BP720P: {
+      LEVELID: '42c01f',
+      AS: 2162,
+      VIDEOCONSTRAINTS: {
+        width: 1280,
+        height: 720,
+        frameRate: 15
+      }
+    },
+    BP480P: {
+      LEVELID: '42c01e',
+      AS: 960
+    }
+  },
   // End and Failure causes.
   causes: {
     // Generic error causes.
@@ -465,7 +3773,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{"../package.json":43}],3:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -745,7 +4053,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Dialog;
 }();
-},{"./Constants":2,"./Dialog/RequestSender":4,"./Logger":9,"./SIPMessage":22,"./Transactions":26,"./Utils":30}],4:[function(require,module,exports){
+},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":53,"./Transactions":57,"./Utils":61}],34:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -857,7 +4165,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return DialogRequestSender;
 }();
-},{"../Constants":2,"../RequestSender":21,"../Transactions":26}],5:[function(require,module,exports){
+},{"../Constants":32,"../RequestSender":52,"../Transactions":57}],35:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -1051,7 +4359,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return DigestAuthentication;
 }();
-},{"./Logger":9,"./Utils":30}],6:[function(require,module,exports){
+},{"./Logger":39,"./Utils":61}],36:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -1135,7 +4443,7 @@ module.exports = {
   NotSupportedError: NotSupportedError,
   NotReadyError: NotReadyError
 };
-},{}],7:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -13543,10 +16851,9 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":11,"./URI":29}],8:[function(require,module,exports){
+},{"./NameAddrHeader":42,"./URI":60}],38:[function(require,module,exports){
 "use strict";
 
-var pkg = require('../package.json');
 var C = require('./Constants');
 var Exceptions = require('./Exceptions');
 var Utils = require('./Utils');
@@ -13557,7 +16864,9 @@ var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
-debug('version %s', pkg.version);
+var BFCPLib = require('./BFCP');
+var Mixer = require('./Mixer');
+debug('version %s', '1.10.11-beta.405016583640');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -13578,6 +16887,7 @@ debug('version %s', pkg.version);
  * Expose the CRTC module.
  */
 module.exports = {
+  BFCPLib: BFCPLib,
   C: C,
   Exceptions: Exceptions,
   Utils: Utils,
@@ -13585,18 +16895,19 @@ module.exports = {
   URI: URI,
   NameAddrHeader: NameAddrHeader,
   WebSocketInterface: WebSocketInterface,
+  Mixer: Mixer,
   Grammar: Grammar,
   getStats: getStats,
   // Expose the debug module.
   debug: require('debug'),
   get name() {
-    return pkg.title;
+    return 'CRTC';
   },
   get version() {
-    return pkg.version;
+    return '1.10.11-beta.405016583640';
   }
 };
-},{"../package.json":43,"./Constants":2,"./Exceptions":6,"./Grammar":7,"./NameAddrHeader":11,"./Stats":24,"./UA":28,"./URI":29,"./Utils":30,"./WebSocketInterface":31,"debug":34}],9:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -13646,7 +16957,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Logger;
 }();
-},{"debug":34}],10:[function(require,module,exports){
+},{"debug":67}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -13910,7 +17221,280 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Message;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./URI":29,"./Utils":30,"events":33}],11:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":65}],41:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Logger = require('./Logger');
+var logger = new Logger('MediaStreamMixer');
+module.exports = /*#__PURE__*/function () {
+  function MediaStreamMixer(videos) {
+    var _this = this;
+    _classCallCheck(this, MediaStreamMixer);
+    logger.debug("constructor: ".concat(videos.length));
+
+    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
+    var tmpVideos = [];
+    videos.forEach(function (video) {
+      if (video instanceof HTMLMediaElement) {
+        tmpVideos.push(video);
+      } else {
+        tmpVideos.push(_this._mediaStreamToVideoElement(video));
+      }
+    });
+    // 需要混屏的全部 HTMLMediaElement 数组
+    this._videos = tmpVideos;
+    // 是否停止绘制视频帧
+    this._isStopDrawingFrames = false;
+
+    // 停止时使用
+    this._audioSources;
+    this._audioDestination;
+    this._audioContext;
+
+    // 初始化混屏用的画布
+    this._canvas = document.createElement('canvas');
+    this._context = this._canvas.getContext('2d');
+    this._canvas.setAttribute('style', 'display:none');
+  }
+
+  // 计算缩放后的视频分辨率
+  return _createClass(MediaStreamMixer, [{
+    key: "_scaleVideo",
+    value: function _scaleVideo(width, height) {
+      var targetWidth = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 640;
+      var targetHeight = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 480;
+      var newWidth, newHeight, scale;
+
+      // 始终按比例缩放（无论原始尺寸是否小于目标尺寸）
+      if (width / height >= targetWidth / targetHeight) {
+        scale = targetWidth / width; // 以宽度为基准缩放
+        newHeight = height * scale;
+        newWidth = targetWidth;
+      } else {
+        scale = targetHeight / height; // 以高度为基准缩放
+        newWidth = width * scale;
+        newHeight = targetHeight;
+      }
+
+      // 计算居中偏移量（若缩放后尺寸仍小于目标尺寸）
+      var offsetX = Math.max(0, (targetWidth - newWidth) / 2);
+      var offsetY = Math.max(0, (targetHeight - newHeight) / 2);
+      return {
+        width: newWidth,
+        height: newHeight,
+        offsetX: offsetX,
+        offsetY: offsetY
+      };
+    }
+
+    /**
+     * 视频绘制到画布
+     */
+  }, {
+    key: "_drawImage",
+    value: function _drawImage(video, idx) {
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      console.warn('idx: ', idx);
+      var x = 0;
+      var y = 0;
+      if (idx === 1) {
+        x = 640;
+      }
+      if (idx === 2) {
+        y = 480;
+      }
+      if (idx === 3) {
+        x = 640;
+        y = 480;
+      }
+      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight);
+      this._context.drawImage(video, x + newVideo.offsetX, y + newVideo.offsetY, newVideo.width, newVideo.height);
+    }
+
+    /**
+     * 将视频流渲染到画布
+     */
+  }, {
+    key: "_drawVideosToCanvas",
+    value: function _drawVideosToCanvas() {
+      var _this2 = this;
+      // 是否已经停止
+      if (this._isStopDrawingFrames) {
+        return;
+      }
+      var renderVideos = this._videos.filter(function (video) {
+        if (!video.srcObject) return false;
+
+        // 检查流是否活跃且包含视频轨道
+        return video.srcObject.active && video.srcObject.getVideoTracks().length > 0;
+      });
+
+      // 根据视频数量生成画布高的倍数
+      var height = 1;
+      if (renderVideos.length >= 3) {
+        height = 2;
+      }
+
+      // 设置画布宽高
+      this._canvas.width = renderVideos.length >= 2 ? 1280 : 640;
+      this._canvas.height = 480 * height;
+      renderVideos.forEach(function (video, idx) {
+        // 开始绘制当前视频帧
+        _this2._drawImage(video, idx);
+      });
+
+      // 开始帧动画开始混流
+      window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
+    }
+
+    // 将MediaStream转换为 HTMLVideoElement
+  }, {
+    key: "_mediaStreamToVideoElement",
+    value: function _mediaStreamToVideoElement(mediaStream) {
+      var video = document.createElement('video');
+      video.setAttribute('style', 'display:none');
+      video.muted = true;
+      video.autoplay = true;
+      video.setAttribute('playsinline', '');
+      video.srcObject = mediaStream.mediaStream || mediaStream;
+      video.play()["catch"](function () {
+        logger.error('video play error');
+      });
+      return video;
+    }
+
+    // 停止合流
+  }, {
+    key: "stop",
+    value: function stop() {
+      logger.debug('stop');
+      this._videos = [];
+      this._isStopDrawingFrames = true;
+      if (this._audioSources.length) {
+        this._audioSources.forEach(function (source) {
+          source.disconnect();
+        });
+        this._audioSources = [];
+      }
+      if (this._audioDestination) {
+        this._audioDestination.disconnect();
+        this._audioDestination = null;
+      }
+      if (this._audioContext) {
+        this._audioContext.close();
+      }
+      this._audioContext = null;
+
+      // 清理画布
+      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+      // 停止画布导出的视频流
+      if (this._canvas.stream) {
+        this._canvas.stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        this._canvas.stream = null;
+      }
+    }
+
+    // 添加媒体
+  }, {
+    key: "appendStream",
+    value: function appendStream(videos) {
+      var _this3 = this;
+      logger.debug('appendStream');
+      if (!videos) {
+        // eslint-disable-next-line no-throw-literal
+        throw 'First parameter is required.';
+      }
+      if (!(videos instanceof Array)) {
+        videos = [videos];
+      }
+      videos.forEach(function (video) {
+        if (video instanceof HTMLMediaElement) {
+          _this3._videos.push(video);
+        } else {
+          _this3._videos.push(_this3._mediaStreamToVideoElement(video));
+        }
+      });
+    }
+
+    // 获取音视频混合的媒体流
+  }, {
+    key: "getMixedStream",
+    value: function getMixedStream() {
+      logger.debug('getMixedStream()');
+      this._isStopDrawingFrames = false;
+      var mixedVideoStream = this.getVideoStream();
+      var mixedAudioStream = this.getAudioStream();
+      if (mixedAudioStream) {
+        mixedAudioStream.getAudioTracks().forEach(function (track) {
+          mixedVideoStream.addTrack(track);
+        });
+      }
+      return mixedVideoStream;
+    }
+
+    // 获取混合后的视频流
+  }, {
+    key: "getVideoStream",
+    value: function getVideoStream() {
+      logger.debug('getVideoStream()');
+
+      // 开始帧动画开始混流
+      this._drawVideosToCanvas();
+      var videoStream = new MediaStream();
+      var capturedStream = this._canvas.captureStream();
+      capturedStream.getVideoTracks().forEach(function (track) {
+        videoStream.addTrack(track);
+      });
+
+      // 用于停止混合时
+      this._canvas.stream = capturedStream;
+      return videoStream;
+    }
+
+    // 获取混合后的音频流
+  }, {
+    key: "getAudioStream",
+    value: function getAudioStream() {
+      var _this4 = this;
+      logger.debug('getAudioStream()');
+      this._audioSources = [];
+      this._audioContext = new AudioContext();
+
+      // TODO:可以分别混合音频
+      // if (this._useGainNode === true)
+      // {
+      //   this._gainNode = this._audioContext.createGain();
+      //   this._gainNode.connect(this._audioContext.destination);
+      //   this._gainNode.gain.value = 0; // don't hear this
+      // }
+
+      this._videos.forEach(function (video) {
+        if (video.srcObject.getAudioTracks().length > 0) {
+          var audioSource = _this4._audioContext.createMediaStreamSource(video.srcObject);
+          _this4._audioSources.push(audioSource);
+        }
+      });
+      this._audioDestination = this._audioContext.createMediaStreamDestination();
+      this._audioSources.forEach(function (audioSource) {
+        audioSource.connect(_this4._audioDestination);
+      });
+      return this._audioDestination.stream;
+    }
+  }]);
+}();
+},{"./Logger":39}],42:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -14031,7 +17615,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return NameAddrHeader;
 }();
-},{"./Grammar":7,"./URI":29}],12:[function(require,module,exports){
+},{"./Grammar":37,"./URI":60}],43:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -14288,7 +17872,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Options;
 }(EventEmitter);
-},{"./Constants":2,"./Exceptions":6,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30,"events":33}],13:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":65}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -14563,14 +18147,17 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":7,"./Logger":9,"./SIPMessage":22}],14:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./SIPMessage":53}],45:[function(require,module,exports){
 "use strict";
 
+/* eslint-disable max-len */
 // 密钥
-// eslint-disable-next-line max-len
-var pk = [45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45];
+var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66];
+// const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
+
 module.exports = pk;
-},{}],15:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
+(function (Buffer){(function (){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -14610,7 +18197,12 @@ var RTCSession_Info = require('./RTCSession/Info');
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
+var BFCPLib = require('./BFCP/index');
 var logger = new Logger('RTCSession');
+var BFCPUser = BFCPLib.User;
+var Primitive = BFCPLib.Primitive;
+var AttributeName = BFCPLib.AttributeName;
+var RequestStatusValue = BFCPLib.RequestStatusValue;
 var C = {
   // RTCSession states.
   STATUS_NULL: 0,
@@ -14645,6 +18237,61 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._contact = null;
     _this._from_tag = null;
     _this._to_tag = null;
+
+    // 适配183音频后200ok无sdp
+    _this._ealyAudio;
+
+    // DataChannel
+    _this._dataChannel = null;
+    _this._dataChannelName = CRTC_C.BFCP;
+    _this._dataChannelReady = false;
+    _this._dataChannelConfig = {
+      ordered: false,
+      maxRetransmits: 0
+    }; // 乱序，不可靠
+    _this._dataChannelMsgs = {};
+
+    // 是否启用BFCP
+    _this._enableBFCP = false;
+    // 用于解析BFCP消息的User对象
+    _this._bfcpUser = null;
+    // BFCP控制的floorId，SDP协商获得
+    _this._floorId = null;
+    // BFCP服务类型，默认c-s，根据SDP协商修改
+    _this._floorctrl = null;
+    // 本端发送给BFCP服务器的流的mid
+    _this._mStream = null;
+    // 服务端发送给本端的流的label，根据SDP协商获得，用于获取远端辅流
+    _this._mstrm = null;
+    // 远端的辅流在PC中的transceiver索引号，根据前面label及SDP计算得到
+    _this._transceiverIndex = null;
+    // SDP协商过程中远端给的userId
+    _this._bfcpUserId = null;
+    // SDP协商过程中远端给的confId
+    _this._confId = null;
+    // 本端发送floorRequest收到响应里面的，用于后续释放资源
+    _this._floorRequestId = null;
+    // 发送BFCP消息事务ID，起始值为1-9的随机整数
+    _this._transactionId = 1;
+    // BFCP的心跳定时器
+    _this._bfcpHeatbeatTimer = null;
+    // BFCP协商时的视频轨道，用于后面替换
+    _this._bfcpVideoTrack = null;
+    // BFCP控制的流，接通后立即获取
+    _this._bfcpStream = null;
+    // 是否已经收到共享
+    _this._remoteShared = false;
+    // bfcp使用的混音音频
+    _this._bfcpAudioDestination = null;
+    _this._bfcpAudioSources = [];
+    _this._bfcpMediastreams = [];
+    _this._bfcpAudioCtx = null;
+
+    // SDP协商的分辨率速率
+    _this._sdpResolution = 'BP480P';
+
+    // 适配 DTMF payload 值
+    _this._dtmf_payload = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
 
@@ -14682,13 +18329,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._restoreCameraTrackCanvas = null;
     _this._restoreCameraTrackCtx = null;
     _this._restoreCameraTrackDraw = null;
+    _this._boundReplaceVideoToCanvas = _this._replaceVideoToCanvas.bind(_this);
+    _this._boundReplaceMicToAudios = _this._replaceMicToAudio.bind(_this);
 
     // 定制模式
     _this._customizedMode = null;
 
     // 本地分享媒体：图片、视频、屏幕等.
     _this._localShareRTPSender = null;
-    _this._localShareStream = null;
+    _this._localShareStream = new MediaStream();
     _this._localShareStreamLocallyGenerated = false;
 
     // 本地摄像头
@@ -14898,12 +18547,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
-
-      // 定制模式
-      this._customizedMode = options.cMode;
+      var extraFeatures = options.extraFeatures || null;
       this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
-        audio: true,
-        video: true
+        audio: false,
+        video: false
       });
       this._rtcOfferConstraints = rtcOfferConstraints;
       this._rtcAnswerConstraints = options.rtcAnswerConstraints || null;
@@ -14939,6 +18586,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         return false;
       }
+
+      // SDP协商的分辨率速率
+      if (extraFeatures) {
+        if (extraFeatures.indexOf('BP480P') !== -1) {
+          this._sdpResolution = 'BP480P';
+          this._ua.transport.sdpResolution = 'BP480P';
+        }
+        if (extraFeatures.indexOf('BP720P') !== -1) {
+          this._sdpResolution = 'BP720P';
+          this._ua.transport.sdpResolution = 'BP720P';
+        }
+      }
+
+      // 是否启用BFCP
+      this._enableBFCP = false;
+      if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+        this._enableBFCP = true;
+        this._bfcpUser = new BFCPUser(this._ua.contact.uri.user, target.user);
+      }
+
+      // 定制模式
+      this._customizedMode = options.cMode;
 
       // Session Timers.
       if (this._sessionTimers.enabled) {
@@ -15000,33 +18669,43 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 适配浏览器M79以后Chrome默认使用mDNS主机名隐藏WebRTC暴露的本地IP
       return Promise.resolve()
       // Get a stream if required.
+<<<<<<< HEAD
       .then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
         var currMediaConstraints, mStream, sendStream, mics, ua;
+=======
+      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var mStream, currMediaConstraints, tStream, sendStream, mics, ua;
+>>>>>>> CRTC-new-dev
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
-              if (!mediaStream) {
-                _context.next = 5;
-                break;
-              }
-              // 自定义媒体流模式
-              _this2._customMediaStream = true;
-              return _context.abrupt("return", mediaStream);
-            case 5:
-              if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 26;
-                break;
-              }
-              // 非自定义媒体流模式
+              mStream = new MediaStream(); // 非自定义媒体流模式
               _this2._customMediaStream = false;
+
+              // A stream is given, let the app set events such as 'peerconnection' and 'connecting'.
+              if (mediaStream) {
+                // 自定义媒体流模式
+                _this2._customMediaStream = true;
+                mediaStream.getTracks().forEach(function (track) {
+                  logger.warn("There are two ".concat(_this2._inviteMediaConstraints.audio ? 'audio' : 'video', " tracks in the input, please check the parameters"));
+                  _this2._inviteMediaConstraints[track.kind] = false;
+                  mStream.addTrack(track, mStream);
+                });
+              }
+
+              // Request for user media access.
+              if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
+                _context.next = 13;
+                break;
+              }
               _this2._localMediaStreamLocallyGenerated = true;
 
               // 判断授权是否包含视频
               if (Number(_this2._ua.sk[7]) < 1) {
                 delete _this2._inviteMediaConstraints.video;
               }
-              mStream = new MediaStream(); // 兼容安卓微信Bug，开始不获取麦克风媒体
-              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1) {
+              // 兼容安卓微信Bug，开始不获取麦克风媒体
+              if (navigator.userAgent.indexOf('WeChat') != -1) {
                 currMediaConstraints = {
                   audio: false,
                   video: _this2._inviteMediaConstraints.video || false
@@ -15034,11 +18713,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } else {
                 currMediaConstraints = _this2._inviteMediaConstraints;
               }
+              logger.debug('currMediaConstraints: ', JSON.stringify(currMediaConstraints));
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 15;
+                _context.next = 13;
                 break;
               }
-              _context.next = 14;
+              _context.next = 11;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -15047,18 +18727,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 logger.warn('emit "getusermediafailed" [error:%o]', error);
                 logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                 _this2.emit('getusermediafailed', error);
-                throw error;
+                var e = new Error("getusermediafailed, ".concat(error.message), {
+                  cause: error.message
+                });
+                e.name = error.name;
+                throw e;
               });
-            case 14:
-              mStream = _context.sent;
-            case 15:
+            case 11:
+              tStream = _context.sent;
+              tStream.getTracks().forEach(function (track) {
+                mStream.addTrack(track, mStream);
+              });
+            case 13:
               sendStream = new MediaStream();
-              _context.next = 18;
+              _context.next = 16;
               return Utils.getMicrophones();
-            case 18:
+            case 16:
               mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
-              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+              if (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                 sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
                 mStream.getVideoTracks().length > 0 && sendStream.addTrack(mStream.getVideoTracks()[0]);
                 _this2._replaceAudioTrack = true;
@@ -15070,13 +18757,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 25;
+                _context.next = 23;
                 break;
               }
               return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
-            case 25:
+            case 23:
               return _context.abrupt("return", sendStream);
-            case 26:
+            case 24:
             case "end":
               return _context.stop();
           }
@@ -15255,6 +18942,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
 
+      // 更新BFCP的floorctrl
+      var lines = request.body.split(/\r?\n/);
+      var line = lines.find(function (l) {
+        return l.trim().startsWith('a=floorctrl:') && l.includes(':');
+      });
+      if (line) {
+        switch (line.split(':')[1].trim()) {
+          case 'c-s':
+          case 'c-only':
+            this._floorctrl = 's-only';
+            break;
+          case 's-only':
+            this._floorctrl = 'c-only';
+            break;
+          default:
+            break;
+        }
+      }
+
       // Fire 'newRTCSession' event.
       this._newRTCSession('remote', request);
 
@@ -15290,6 +18996,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcConstraints = options.rtcConstraints || null;
       var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
       var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
+      var extraFeatures = options.extraFeatures || null;
+
+      // 是否启用BFCP
+      this._enableBFCP = false;
+      if (extraFeatures && extraFeatures.indexOf(CRTC_C.BFCP) !== -1) {
+        this._enableBFCP = true;
+        this._bfcpUser = new BFCPUser(this.local_identity.uri.user, this.remote_identity.uri.user);
+      }
+
+      // SDP协商的分辨率速率
+      if (extraFeatures) {
+        if (extraFeatures.indexOf('BP480P') !== -1) {
+          this._sdpResolution = 'BP480P';
+          this._ua.transport.sdpResolution = 'BP480P';
+        }
+        if (extraFeatures.indexOf('BP720P') !== -1) {
+          this._sdpResolution = 'BP720P';
+          this._ua.transport.sdpResolution = 'BP720P';
+        }
+      }
       var tracks;
       var peerHasAudioLine = false;
       var peerHasVideoLine = false;
@@ -15432,14 +19158,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
-              if (!mediaStream) {
-                _context2.next = 4;
-                break;
-              }
-              return _context2.abrupt("return", mediaStream);
-            case 4:
+              // 根据自定义流确定是否需要获取对应设备的流
+              mediaStream && mediaStream.getTracks().forEach(function (track) {
+                mediaConstraints[track.kind] = false;
+              });
+
+              // Audio and/or video requested, prompt getUserMedia.
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
-                _context2.next = 17;
+                _context2.next = 16;
                 break;
               }
               _this4._localMediaStreamLocallyGenerated = true;
@@ -15454,10 +19180,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                * 判断是视频接听还是音频接听
                * @author: lei
                */
-              if (!mediaConstraints.video) {
+              if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
                 _this4._localToAudio = true;
               }
-              _context2.next = 10;
+              _context2.next = 7;
               return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
                 if (_this4._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -15469,16 +19195,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this4.emit('getusermediafailed', error);
                 throw new Error('getUserMedia() failed');
               });
-            case 10:
+            case 7:
               mStream = _context2.sent;
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context2.next = 16;
+                _context2.next = 13;
                 break;
               }
               return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
-            case 16:
+            case 13:
               return _context2.abrupt("return", mStream);
+            case 14:
+              _context2.next = 17;
+              break;
+            case 16:
+              return _context2.abrupt("return", mediaStream);
             case 17:
             case "end":
               return _context2.stop();
@@ -15489,6 +19220,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       .then(function (stream) {
         if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
+        }
+
+        // 如果有自定义流，使用自定义流对应音视频轨道
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(function (track) {
+            stream.addTrack(track, stream);
+          });
         }
         _this4._localMediaStream = stream;
         if (stream) {
@@ -15552,6 +19290,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else {
             _this4._connection.addStream(stream);
           }
+
+          /**
+           * 是否启用 DataChannel
+           **/
+          if (_this4._enableBFCP) {
+            var _Utils$generateAnEmpt = Utils.generateAnEmptyVideoTrack(),
+              videoTrack = _Utils$generateAnEmpt.videoTrack;
+            _this4._bfcpVideoTrack = videoTrack;
+            _this4._connection.addTrack(_this4._bfcpVideoTrack, _this4._localMediaStream);
+            _this4._connection.ondatachannel = function (event) {
+              _this4._initDataChannel(event);
+            };
+          }
         }
       })
       // Set remote description.
@@ -15592,14 +19343,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // TODO: Is this event already useful?
         _this4._connecting(request);
         if (!_this4._late_sdp) {
-          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function () {
+          return _this4._createLocalDescription('answer', rtcAnswerConstraints)["catch"](function (error) {
             request.reply(500);
-            throw new Error('_createLocalDescription() failed');
+            throw new Error("_createLocalDescription() failed ".concat(error.message));
           });
         } else {
-          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function () {
+          return _this4._createLocalDescription('offer', _this4._rtcOfferConstraints)["catch"](function (error) {
             request.reply(500);
-            throw new Error('_createLocalDescription() failed');
+            throw new Error("_createLocalDescription() failed ".concat(error.message));
           });
         }
       })
@@ -15609,7 +19360,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
         if (!mediaConstraints.video) {
-          desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
+          // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
+          desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
+        }
+        if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
+          _this4._floorId = 2;
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this4._floorctrl, "\r\na=floorid:").concat(_this4._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
         }
         _this4._handleSessionTimersInIncomingRequest(request, extraHeaders);
         request.reply(200, null, extraHeaders, desc, function () {
@@ -15633,12 +19389,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      */
   }, {
     key: "upgradeToVideo",
-    value: function upgradeToVideo() {
+    value: function upgradeToVideo(options, done) {
       var _this5 = this;
       logger.debug('upgradeToVideo()');
       if (this._ua.sk[7] < 2) {
         return;
       }
+      if (!options) {
+        options = {};
+      }
+      if (!done) {
+        done = function done() {};
+      }
+
+      // 优化处理切换到视频模式的视频约束条件
+      var videoConstraints = {
+        video: true
+      };
+
+      // 处理options.videoConstraints
+      if (options.videoConstraints) {
+        // 确保必要的对象存在
+        this._inviteMediaConstraints = this._inviteMediaConstraints || {};
+        this._inviteMediaConstraints.video = this._inviteMediaConstraints.video || {};
+
+        // 合并属性
+        Object.assign(this._inviteMediaConstraints.video, options.videoConstraints);
+        videoConstraints = this._inviteMediaConstraints.video;
+      }
+      // 如果options.videoConstraints不存在，但this._inviteMediaConstraints.video存在
+      else if (this._inviteMediaConstraints && this._inviteMediaConstraints.video) {
+        videoConstraints = this._inviteMediaConstraints.video;
+      }
+      var videoStream = options.videoStream || null;
 
       // Check Session Status.
       if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
@@ -15646,31 +19429,150 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._localToAudio = false;
       this._localToVideo = true;
-      navigator.mediaDevices.getUserMedia({
-        video: true
-      }).then(function (stream) {
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          stream = Utils.getStreamThroughCanvas(stream);
-        }
-        var videoTracks = stream.getVideoTracks();
-        _this5._localMediaStream.addTrack(videoTracks[0]);
+      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+        var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks;
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              if (!(_this5._localMediaStream.getVideoTracks().length > 0)) {
+                _context3.next = 4;
+                break;
+              }
+              _this5._connection.getTransceivers().forEach(function (t) {
+                // 双向视频
+                t.direction = 'sendrecv';
 
-        // 兼容低版本浏览器不支持addTrack的情况
-        if (RTCPeerConnection.prototype.addTrack) {
-          _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
-        } else {
-          _this5._connection.addStream(stream);
-        }
-      }).then(function () {
+                // 单向视频，仅发送
+                if (t.sender && t.sender.track && t.sender.track.kind === 'video' && options.sendOnly) {
+                  t.direction = 'sendonly';
+                }
+
+                // 单向视频，仅接收
+                if (t.receiver && t.receiver.track && t.receiver.track.kind === 'video' && options.recvOnly) {
+                  t.direction = 'recvonly';
+                }
+              });
+              if (!options.recvOnly) {
+                _context3.next = 4;
+                break;
+              }
+              return _context3.abrupt("return");
+            case 4:
+              if (!options.recvOnly) {
+                _context3.next = 6;
+                break;
+              }
+              return _context3.abrupt("return");
+            case 6:
+              if (!videoStream) {
+                _context3.next = 10;
+                break;
+              }
+              stream = videoStream;
+              _context3.next = 13;
+              break;
+            case 10:
+              _context3.next = 12;
+              return navigator.mediaDevices.getUserMedia({
+                video: videoConstraints
+              })["catch"](function (error) {
+                throw error;
+              });
+            case 12:
+              stream = _context3.sent;
+            case 13:
+              if (!stream) {
+                _context3.next = 40;
+                break;
+              }
+              if (!_this5._customMediaStream) {
+                _context3.next = 33;
+                break;
+              }
+              oldVideoTrack = _this5._localMediaStream.getVideoTracks()[0];
+              newVideoTrack = stream.getVideoTracks()[0];
+              if (!oldVideoTrack) {
+                _context3.next = 33;
+                break;
+              }
+              _this5._localMediaStream.removeTrack(oldVideoTrack);
+              _this5._localMediaStream.addTrack(newVideoTrack);
+              haveVideoTrackToSend = false;
+              senders = _this5._connection.getSenders();
+              i = 0;
+            case 23:
+              if (!(i < senders.length)) {
+                _context3.next = 31;
+                break;
+              }
+              if (!(senders[i].track.kind === 'video')) {
+                _context3.next = 28;
+                break;
+              }
+              senders[i].replaceTrack(newVideoTrack);
+              haveVideoTrackToSend = true;
+              return _context3.abrupt("break", 31);
+            case 28:
+              i++;
+              _context3.next = 23;
+              break;
+            case 31:
+              if (!haveVideoTrackToSend) {
+                _context3.next = 33;
+                break;
+              }
+              return _context3.abrupt("return", true);
+            case 33:
+              _this5._customMediaStream = true;
+
+              // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+
+              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+              if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+                stream = Utils.getStreamThroughCanvas(stream);
+              }
+              videoTracks = stream.getVideoTracks();
+              _this5._localMediaStream.addTrack(videoTracks[0]);
+              _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
+              return _context3.abrupt("return", true);
+            case 40:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3);
+      }))).then(function () {
         _this5._iceReady = false;
-        _this5.renegotiate({
+        var opts = {
           rtcOfferConstraints: {
             iceRestart: true
           }
-        });
+        };
+
+        // 单向视频，仅发送
+        if (options.sendOnly) {
+          opts = {
+            rtcOfferConstraints: {
+              iceRestart: true,
+              offerToReceiveVideo: false
+            }
+          };
+        }
+
+        // 单向视频，仅接收
+        if (options.recvOnly) {
+          opts = {
+            rtcOfferConstraints: {
+              iceRestart: true,
+              offerToReceiveVideo: true
+            }
+          };
+        }
+
+        // 使用update还是reinvite
+        if (options.useUpdate) {
+          opts['useUpdate'] = true;
+        }
+        _this5.renegotiate(opts, done);
       });
     }
 
@@ -15682,7 +19584,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function demoteToAudio() {
       var _this6 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      var done = arguments.length > 1 ? arguments[1] : undefined;
+      var done = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : function () {};
       logger.debug('demoteToAudio()');
 
       // Check Session Status.
@@ -15707,7 +19609,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           _this6.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
-            reason_phrase: 'Hold Failed'
+            reason_phrase: 'DemoteToAudio Failed'
           });
         }
       };
@@ -15731,34 +19633,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      */
   }, {
     key: "switchDevice",
+<<<<<<< HEAD
     value: function () {
       var _switchDevice = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3(type, deviceId) {
+=======
+    value: (function () {
+      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(type, deviceId) {
+>>>>>>> CRTC-new-dev
         var _this7 = this;
-        var cameras, constraints;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+        var cameras, constraints, _constraints;
+        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context3.next = 3;
+                _context5.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context3.next = 14;
+                _context5.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context3.next = 9;
+                _context5.next = 9;
                 break;
               }
-              _context3.next = 7;
+              _context5.next = 7;
               return Utils.getCameras();
             case 7:
-              cameras = _context3.sent;
+              cameras = _context5.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
@@ -15770,30 +19677,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context3.abrupt("return", Promise.resolve().then(function () {
+              return _context5.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
                 if (deviceId) {
-                  videoConstraints = {
-                    deviceId: {
-                      exact: deviceId
-                    }
-                  };
-                } else if (_this7._localCameras.length === 2) {
-                  // 不传deviceId情况下，如果有两个摄像头则使用facingMode参数
-                  var facingMode;
-                  if (_this7._selectedLocalCameras === 'user') {
-                    facingMode = 'environment';
-                    _this7._selectedLocalCameras = 'environment';
-                  } else {
-                    facingMode = 'user';
-                    _this7._selectedLocalCameras = 'user';
+                  if (deviceId !== 'user' && deviceId !== 'environment') {
+                    videoConstraints = {
+                      deviceId: {
+                        exact: deviceId
+                      }
+                    };
                   }
-                  // 两个摄像头使用facingMode参数切换
-                  videoConstraints = {
-                    facingMode: facingMode
-                  };
+                  // 使用facingMode参数
+                  else if (navigator.mediaDevices.getSupportedConstraints()['facingMode']) {
+                    // 两个摄像头使用facingMode参数切换
+                    videoConstraints = {
+                      facingMode: deviceId
+                    };
+                  }
                 } else if (_this7._localCameras.length > 2) {
                   // 多于两个摄像头，则轮询摄像头列表
                   var did;
@@ -15816,45 +19718,127 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return;
                 }
                 _this7._connection.getSenders().find(function (s) {
-                  logger.debug("kind: ".concat(s.track.kind));
-                  if (s.track.kind == 'video') {
-                    s.track.stop();
+                  logger.debug("kind: ".concat(s.track && s.track.kind));
+                  if (s.track && s.track.kind == 'video') {
+                    if (_this7._enableBFCP) {
+                      // 启用了BFCP，区分一下BFCP控制的视频轨道
+                      // eslint-disable-next-line max-len
+                      s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]) && s.track.stop();
+                    } else {
+                      s.track.stop();
+                    }
                   }
                 });
                 _this7._localMediaStreamLocallyGenerated = true;
                 constraints.video = videoConstraints;
-                return navigator.mediaDevices.getUserMedia(constraints)["catch"](function (error) {
+                constraints.video = Object.assign(_this7._inviteMediaConstraints.video, constraints.video);
+                return constraints;
+              }).then(/*#__PURE__*/function () {
+                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(videoConstraints) {
+                  var sender, stream, ua, videoTrack;
+                  return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+                    while (1) switch (_context4.prev = _context4.next) {
+                      case 0:
+                        sender = _this7._connection.getSenders().find(function (s) {
+                          if (_this7._enableBFCP) {
+                            // 启用了BFCP，区分一下BFCP控制的视频轨道
+                            return s.track.kind == 'video' && s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]);
+                          } else {
+                            return s.track.kind == 'video';
+                          }
+                        }); // 先释放原来的设备再获取新的
+                        sender.track.stop();
+                        _context4.next = 4;
+                        return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
+                          logger.error('emit "getusermediafailed" [error:%o]', error);
+                          logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                          _this7.emit('getusermediafailed', error);
+                          throw new Error('getUserMedia() failed');
+                        });
+                      case 4:
+                        stream = _context4.sent;
+                        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+                        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+                          stream = Utils.getStreamThroughCanvas(stream);
+                        }
+                        try {
+                          _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
+                        } catch (error) {
+                          logger.error(error);
+                        }
+                        videoTrack = stream.getVideoTracks()[0];
+                        _this7._localMediaStream.addTrack(videoTrack);
+                        sender.replaceTrack(videoTrack);
+                        _this7.emit('cameraChanged', {
+                          videoStream: stream
+                        });
+                        return _context4.abrupt("return", stream);
+                      case 13:
+                      case "end":
+                        return _context4.stop();
+                    }
+                  }, _callee4);
+                }));
+                return function (_x3) {
+                  return _ref4.apply(this, arguments);
+                };
+              }()));
+            case 14:
+              if (!(type === 'audio' && deviceId)) {
+                _context5.next = 19;
+                break;
+              }
+              _constraints = {
+                audio: true,
+                video: false
+              };
+              return _context5.abrupt("return", Promise.resolve().then(function () {
+                var audioConstraints = {
+                  deviceId: {
+                    exact: deviceId
+                  }
+                };
+                _this7._connection.getSenders().find(function (s) {
+                  logger.debug("kind: ".concat(s.track.kind));
+                  if (s.track.kind == 'audio') {
+                    s.track.stop();
+                  }
+                });
+                _this7._localMediaStreamLocallyGenerated = true;
+                _constraints.audio = audioConstraints;
+                return navigator.mediaDevices.getUserMedia(_constraints)["catch"](function (error) {
                   logger.error('emit "getusermediafailed" [error:%o]', error);
                   logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                   _this7.emit('getusermediafailed', error);
                   throw new Error('getUserMedia() failed');
                 });
               }).then(function (stream) {
-                // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-                var ua;
-                navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-                if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-                  stream = Utils.getStreamThroughCanvas(stream);
+                try {
+                  _this7._localMediaStream.removeTrack(_this7._localMediaStream.getAudioTracks()[0]);
+                } catch (error) {
+                  logger.error(error);
                 }
-                _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
-                var videoTrack = stream.getVideoTracks()[0];
-                _this7._localMediaStream.addTrack(videoTrack);
+                var audioTrack = stream.getAudioTracks()[0];
+                _this7._localMediaStream.addTrack(audioTrack);
                 var sender = _this7._connection.getSenders().find(function (s) {
-                  return s.track.kind == 'video';
+                  return s.track.kind == 'audio';
                 });
-                sender.replaceTrack(videoTrack);
-                _this7.emit('cameraChanged', {
-                  videoStream: stream
+                sender.replaceTrack(audioTrack);
+                _this7.emit('audiointputChanged', {
+                  audioStream: stream
                 });
                 return stream;
               }));
-            case 14:
-              return _context3.abrupt("return", false);
-            case 15:
+            case 19:
+              logger.error('Invalid parameters');
+
+              // 参数错误
+              return _context5.abrupt("return", Promise.reject('Invalid parameters'));
+            case 21:
             case "end":
-              return _context3.stop();
+              return _context5.stop();
           }
-        }, _callee3, this);
+        }, _callee5, this);
       }));
       function switchDevice(_x, _x2) {
         return _switchDevice.apply(this, arguments);
@@ -15866,166 +19850,260 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
      */
   }, {
     key: "share",
-    value: function share(type, id, assembly, dual) {
-      var _this8 = this;
-      logger.debug('share()');
+    value: (function () {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(type, id, assembly, dual, skip) {
+        var _this8 = this;
+        var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
+            case 0:
+              renderHtml = function _renderHtml(canvas, ctx) {
+                assembly(document.querySelector(id), {
+                  allowTaint: true,
+                  logging: false
+                }).then(function (cvs) {
+                  canvas.width = cvs.width;
+                  canvas.height = cvs.height;
+                  ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
+                }).then(function () {
+                  renderHtml(canvas, ctx);
+                });
+              };
+              logger.debug('share()');
 
-      // Check Session Status.
-      if (this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED) {
-        throw new Exceptions.InvalidStateError(this._status);
-      }
-      var timer;
-      var element = document.querySelector(id);
-
-      // 分享页面元素
-      function renderHtml(canvas, ctx) {
-        assembly(document.querySelector(id), {
-          allowTaint: true,
-          logging: false
-        }).then(function (cvs) {
-          canvas.width = cvs.width;
-          canvas.height = cvs.height;
-          ctx.drawImage(cvs, 0, 0, cvs.width, cvs.height);
-        }).then(function () {
-          renderHtml(canvas, ctx);
-        });
-      }
-
-      // 分享视频
-      if (type === 'video') {
-        logger.debug('share video');
-        this._localShareStream = element.captureStream(0);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, element.captureStream(0));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              // 双流必须开启BFCP支持
+              if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
+                _context6.next = 4;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享图片
-      else if (type === 'pic') {
-        logger.debug('share pic');
-        if (timer) {
-          clearInterval(timer);
-        }
-        var canvas = document.createElement('canvas');
-        canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
-        canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
-        var ctx = canvas.getContext('2d');
-        timer = setInterval(function () {
-          // eslint-disable-next-line max-len
-          ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
-        }, 100);
-        this._localShareStream = canvas.captureStream(15);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, canvas.captureStream(15));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              return _context6.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
+            case 4:
+              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
+                _context6.next = 6;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享页面元素
-      else if (type === 'html') {
-        logger.debug('share html');
-        if (!assembly) {
-          return;
-        }
-        var _canvas = document.createElement('canvas');
-        _canvas.width = 1;
-        _canvas.height = 1;
-        var _ctx = _canvas.getContext('2d');
-        renderHtml(_canvas, _ctx);
-        this._localShareStream = _canvas.captureStream(15);
-        this._localShareStreamLocallyGenerated = true;
-        this._streamInactiveHandle(dual);
-        this._localShareStream.getVideoTracks().forEach(function (track) {
-          if (dual) {
-            _this8._localShareRTPSender = _this8._connection.addTrack(track, _canvas.captureStream(15));
-            _this8.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
+              return _context6.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
+            case 6:
+              element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
+              _context6.prev = 7;
+              if (!(this._enableBFCP && !skip)) {
+                _context6.next = 21;
+                break;
               }
-            });
-          } else {
-            var sender = _this8._connection.getSenders().find(function (s) {
-              return s.track.kind == 'video' && s.track.readyState !== 'ended';
-            });
-            sender.replaceTrack(track);
-          }
-        });
-      }
-      // 分享屏幕
-      else if (type === 'screen') {
-        logger.debug('share screen');
+              _context6.next = 11;
+              return this._sendFloorRequest();
+            case 11:
+              floorResponse = _context6.sent;
+              this._handleFloorRequestStatusMessage(floorResponse);
+              // Log the response for debugging purposes
+              logger.debug('Floor request response:', floorResponse);
+              status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+              if (!(status != RequestStatusValue.Granted)) {
+                _context6.next = 17;
+                break;
+              }
+              return _context6.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
+            case 17:
+              // 保存一下状态
+              this._bfcpRequestStatus = status;
 
-        // 判断浏览器是否兼容获取屏幕分享
-        if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
-          logger.warn('getDisplayMedia is not supported');
-          this.emit('getdisplaymediafailed');
-        }
-        this._localShareStreamLocallyGenerated = true;
-
-        // 分享屏幕 默认帧率 5
-        return navigator.mediaDevices.getDisplayMedia({
-          video: {
-            frameRate: 5
-          }
-        }).then(function (stream) {
-          _this8._localShareRTPSender = null;
-          _this8._localShareStream = stream;
-          _this8._streamInactiveHandle(dual);
-
-          // 替换流方式分享屏幕
-          stream.getVideoTracks().forEach(function (track) {
-            if (dual) {
-              _this8._localShareRTPSender = _this8._connection.addTrack(track, stream);
-              _this8.renegotiate({
-                rtcOfferConstraints: {
-                  iceRestart: true
+              // 主动踢掉远端的共享
+              this._remoteShared = false;
+              this.emit('remoteUnShared');
+              this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
+            case 21:
+              _context6.next = 27;
+              break;
+            case 23:
+              _context6.prev = 23;
+              _context6.t0 = _context6["catch"](7);
+              logger.error('Error while processing floor request:', _context6.t0.message || _context6.t0);
+              return _context6.abrupt("return", Promise.reject("Floor request failed: ".concat(_context6.t0.message || 'Unknown error')));
+            case 27:
+              if (!(type === 'video')) {
+                _context6.next = 35;
+                break;
+              }
+              logger.debug('share video');
+              this._localShareStream = element.captureStream(0);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                } else {
+                  var _sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender.replaceTrack(track);
                 }
               });
-            } else {
-              var sender = _this8._connection.getSenders().find(function (s) {
-                return s.track.kind == 'video' && s.track.readyState !== 'ended';
+              _context6.next = 68;
+              break;
+            case 35:
+              if (!(type === 'pic')) {
+                _context6.next = 49;
+                break;
+              }
+              logger.debug('share pic');
+              if (timer) {
+                clearInterval(timer);
+              }
+              canvas = document.createElement('canvas');
+              canvas.width = element.naturalWidth ? element.naturalWidth : element.width;
+              canvas.height = element.naturalHeight ? element.naturalHeight : element.height;
+              ctx = canvas.getContext('2d');
+              timer = setInterval(function () {
+                // eslint-disable-next-line max-len
+                ctx.drawImage(element, 0, 0, element.naturalWidth ? element.naturalWidth : element.width, element.naturalHeight ? element.naturalHeight : element.height);
+              }, 100);
+              this._localShareStream = canvas.captureStream(15);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                } else {
+                  var _sender2 = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender2.replaceTrack(track);
+                }
               });
-              sender.replaceTrack(track);
-            }
-          });
-          return stream;
-        })["catch"](function (error) {
-          logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
-          logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this8.emit('getdisplaymediafailed', error);
-          throw new Error('getDisplayMedia() failed');
-        });
-      }
-    }
+              _context6.next = 68;
+              break;
+            case 49:
+              if (!(type === 'html')) {
+                _context6.next = 64;
+                break;
+              }
+              logger.debug('share html');
+              if (assembly) {
+                _context6.next = 53;
+                break;
+              }
+              return _context6.abrupt("return");
+            case 53:
+              _canvas = document.createElement('canvas');
+              _canvas.width = 1;
+              _canvas.height = 1;
+              _ctx = _canvas.getContext('2d');
+              renderHtml(_canvas, _ctx);
+              this._localShareStream = _canvas.captureStream(15);
+              this._localShareStreamLocallyGenerated = true;
+              this._streamInactiveHandle(dual);
+              this._localShareStream.getVideoTracks().forEach(function (track) {
+                if (dual) {
+                  var sender = _this8._connection.getSenders().find(function (s) {
+                    return s.track == _this8._bfcpVideoTrack;
+                  });
+                  sender.replaceTrack(track);
+                  // this._bfct = track;
+                } else {
+                  var _sender3 = _this8._connection.getSenders().find(function (s) {
+                    return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                  });
+                  _sender3.replaceTrack(track);
+                }
+              });
+              _context6.next = 68;
+              break;
+            case 64:
+              if (!(type === 'screen')) {
+                _context6.next = 68;
+                break;
+              }
+              logger.debug('share screen');
 
+              // 判断浏览器是否兼容获取屏幕分享
+              if (!(navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices)) {
+                logger.warn('getDisplayMedia is not supported');
+                this.emit('getdisplaymediafailed');
+              }
+
+              // 分享屏幕 默认帧率 15
+              return _context6.abrupt("return", navigator.mediaDevices.getDisplayMedia({
+                video: {
+                  width: {
+                    max: 1920
+                  },
+                  height: {
+                    max: 1080
+                  },
+                  frameRate: 15
+                },
+                audio: true
+              }).then(function (stream) {
+                _this8._localShareRTPSender = null;
+                _this8._localShareStream = stream;
+                _this8._streamInactiveHandle(dual);
+                if (dual) {
+                  if (_this8._bfcpRequestStatus === RequestStatusValue.Granted) {
+                    // BFCP 双流方式分享屏幕
+                    stream.getTracks().forEach(function (track) {
+                      if (track.kind === 'audio') {
+                        _this8._addShareAudioToBfcpAudioTrack(stream);
+                      } else {
+                        var sender = _this8._connection.getSenders().find(function (s) {
+                          return s.track == _this8._bfcpVideoTrack;
+                        });
+                        sender.replaceTrack(track);
+                      }
+                    });
+                    _this8._localShareStreamLocallyGenerated = true;
+                    return stream;
+                  } else {
+                    // 如果共享权限已经被撤销则自动取消共享
+                    _this8.unShare();
+                    return Promise.reject(new Error('Yours sharing permission has been revoked.'));
+                  }
+                } else {
+                  // 替换流方式分享屏幕
+                  stream.getTracks().forEach(function (track) {
+                    var sender = _this8._connection.getSenders().find(function (s) {
+                      return s.track.kind == 'video' && s.track.readyState !== 'ended';
+                    });
+                    sender.replaceTrack(track);
+                  });
+                  _this8._localShareStreamLocallyGenerated = true;
+                  return stream;
+                }
+              })["catch"](function (error) {
+                if (error.message || error.message.indexOf('user gesture handler') !== -1) {
+                  setTimeout(function () {
+                    // BFCP 释放资源
+                    _this8._localShareStreamLocallyGenerated || _this8._enableBFCP && _this8._sendFloorRelease();
+                  }, 10000);
+                } else {
+                  // BFCP 释放资源
+                  _this8._enableBFCP && _this8._sendFloorRelease();
+                }
+                logger.warn('emit "getdisplaymediafailed" [error:%o]', error);
+                logger.warn("emit \"getdisplaymediafailed\" [error:%o]".concat(JSON.stringify(error)));
+                _this8.emit('getdisplaymediafailed', error);
+                throw error;
+              }));
+            case 68:
+            case "end":
+              return _context6.stop();
+          }
+        }, _callee6, this, [[7, 23]]);
+      }));
+      function share(_x4, _x5, _x6, _x7, _x8) {
+        return _share.apply(this, arguments);
+      }
+      return share;
+    }()
     /**
      * 停止分享媒体
      */
+    )
   }, {
     key: "unShare",
     value: function unShare() {
@@ -16114,8 +20192,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var dialog = this._dialog;
 
             // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref3) {
-              var method = _ref3.method;
+            this.receiveRequest = function (_ref5) {
+              var method = _ref5.method;
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
@@ -16342,6 +20420,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
+     * 设置视频内容提示，主要用于提升在不同场景下的视频编码质量
+     */
+  }, {
+    key: "setVideoContentHint",
+    value: function setVideoContentHint(hint, shared) {
+      logger.debug('setVideoContentHint()', hint);
+      var hints = ['detail', 'text', 'motion'];
+      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
+        return false;
+      }
+      if (!this._isReadyToReOffer()) {
+        return false;
+      }
+      if (hints[hint] !== -1) {
+        var tracks;
+        if (shared) {
+          tracks = this._localShareStream.getVideoTracks();
+        } else {
+          tracks = this._localMediaStream.getVideoTracks();
+        }
+        tracks.forEach(function (track) {
+          if ('contentHint' in track) {
+            track.contentHint = hint;
+          } else {
+            return false;
+          }
+        });
+      }
+    }
+
+    /**
      * Hold
      */
   }, {
@@ -16535,6 +20644,93 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function sendRequest(method, options) {
       logger.debug('sendRequest()');
       return this._dialog.sendRequest(method, options);
+    }
+
+    /**
+     * Send a BFCP FloorRequest
+     */
+  }, {
+    key: "_sendFloorRequest",
+    value: function _sendFloorRequest() {
+      logger.debug('sendFloorRequest()');
+      var currentTransactionId = this._transactionId;
+      this._transactionId++;
+      var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
+      return this._dataChannelSend(floorRequest, currentTransactionId);
+    }
+
+    // TODO: 测试用
+  }, {
+    key: "sendFloorStatus",
+    value: function sendFloorStatus(status) {
+      logger.debug('_sendFloorStatus()');
+      var currentTransactionId = this._transactionId;
+      this._transactionId++;
+      var floorStatus = this._bfcpUser.floorStatusMessage(this._floorId, status, currentTransactionId);
+      return this._dataChannelSend(floorStatus, currentTransactionId);
+    }
+  }, {
+    key: "_sendFloorStatusAck",
+    value: function _sendFloorStatusAck(message) {
+      logger.debug('_sendFloorStatusAck()');
+      var floorStatus = this._bfcpUser.floorStatusAckMessage(this._floorId, message);
+      return this._sendDataChannelMessage(floorStatus);
+    }
+
+    /**
+     * Send a BFCP Hello
+     */
+  }, {
+    key: "_sendHello",
+    value: function _sendHello() {
+      logger.debug('sendHello()');
+      var currentTransactionId = this._transactionId;
+      this._transactionId++;
+      var hello = this._bfcpUser.helloMessage(currentTransactionId, this._floorId);
+      return this._dataChannelSend(hello, currentTransactionId);
+    }
+
+    /**
+     * Send a BFCP FloorRelease
+     */
+  }, {
+    key: "_sendFloorRelease",
+    value: function _sendFloorRelease() {
+      logger.debug('sendFloorRelease()');
+      var currentTransactionId = this._transactionId;
+      this._transactionId++;
+      var floorRelease = this._bfcpUser.floorReleaseMessage(currentTransactionId, this._floorRequestId);
+      return this._dataChannelSend(floorRelease, currentTransactionId);
+    }
+
+    // BFCP用的混音相关方法
+  }, {
+    key: "_createBfcpAudioTrack",
+    value: function _createBfcpAudioTrack(mediaStream) {
+      this._bfcpAudioCtx = new AudioContext();
+      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+      this._bfcpAudioSources.push(audioSource);
+      this._bfcpAudioDestination = this._bfcpAudioCtx.createMediaStreamDestination();
+      audioSource.connect(this._bfcpAudioDestination);
+      return this._bfcpAudioDestination.stream.getAudioTracks()[0];
+    }
+  }, {
+    key: "_addShareAudioToBfcpAudioTrack",
+    value: function _addShareAudioToBfcpAudioTrack(mediaStream) {
+      var audioSource = this._bfcpAudioCtx.createMediaStreamSource(mediaStream);
+      this._bfcpAudioSources.push(audioSource);
+      audioSource.connect(this._bfcpAudioDestination);
+    }
+  }, {
+    key: "_distoryBfcpAudioTrack",
+    value: function _distoryBfcpAudioTrack() {
+      if (this._bfcpAudioSources.length > 0) {
+        this._bfcpAudioSources.forEach(function (audioSource) {
+          return audioSource.disconnect();
+        });
+        this._bfcpAudioSources = [];
+        this._bfcpAudioDestination = null;
+      }
     }
 
     /**
@@ -16784,12 +20980,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('close()');
       // Close local MediaStream if it was not given by the user.
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
-        logger.debug('close() | closing local MediaStream');
+        logger.warn('close() | closing local MediaStream');
         Utils.closeMediaStream(this._localMediaStream);
       }
+
+      // 销毁BFCP相关媒体
+      this._distoryBfcpAudioTrack();
+      this._bfcpMediastreams.length > 0 && this._bfcpMediastreams.forEach(function (mediaStream) {
+        logger.debug('close() | closing local bfcp MediaStream');
+        Utils.closeMediaStream(mediaStream);
+      });
       if (this._localShareStream) {
-        logger.debug('close() | closing local MediaStream');
+        logger.debug('close() | closing local share MediaStream');
         Utils.closeMediaStream(this._localShareStream);
+      }
+      if (this._bfcpStream) {
+        logger.debug('close() | closing local bfcp MediaStream');
+        Utils.closeMediaStream(this._bfcpStream);
       }
       if (this._status === C.STATUS_TERMINATED) {
         return;
@@ -16905,6 +21112,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (!successfullyConnected) {
               setTimeout(function () {
                 if (self._connection.connectionState === 'connecting') {
+                  logger.warn("start iceConnectionState ".concat(self._connection.connectionState));
                   self.renegotiate({
                     rtcOfferConstraints: {
                       iceRestart: true
@@ -16919,11 +21127,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             window.addEventListener('setItemEvent', function (e) {
               if (e.key === 'needReinvite' && e.newValue === 1 && !self._canSend) {
                 self._canSend = true;
-                sessionStorage.removeItem('needReinvite');
                 self.renegotiate({
                   changeViaHost: true
                 });
-                console.warn('aaaaaaaaaaaaaaaaaaaaaaaaa');
                 setTimeout(function () {
                   self._canSend = false;
                 }, 1000);
@@ -16954,6 +21160,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
           } else if (!_this17._canSend) {
+            logger.warn("iceConnectionState ".concat(state));
             // RTCPeerConnection failed断开后启动重新协商
             self.renegotiate({
               rtcOfferConstraints: {
@@ -17017,8 +21224,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   delH264Payload.push(fmtp.payload);
                 }
 
-                // paphone 定制过滤掉 packetization-mode=1 的payload
-                if (_this18._customizedMode === 'paphone' && fmtp.config.indexOf('packetization-mode=1') !== -1) {
+                // packetization-mode 规则：
+                // 1) paphone    => 保留 0，删除 1
+                // 2) 单向视频（可能多发关键帧）    => 保留 0，删除 1
+                // 3) 否则       => 保留 1，删除 0
+                var keepZero = _this18._customizedMode === 'paphone' || constraints && constraints.offerToReceiveVideo === false;
+                var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
+                if (shouldDelete) {
                   delH264Payload.push(fmtp.payload);
                 }
               });
@@ -17032,6 +21244,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   delH264Payload.push(fmtp.payload);
                 }
               });
+
+              // paphone H264 payload 为124，去掉其他payload为124的媒体
+              if (media.rtp && _this18._customizedMode === 'paphone') {
+                media.rtp.forEach(function (item) {
+                  item.payload === 124 && String(item.codec).toLowerCase() !== 'h264' && delH264Payload.push(124);
+                });
+              }
               media.payloads = payloads.filter(function (x) {
                 return !delH264Payload.some(function (i) {
                   return i == x;
@@ -17043,6 +21262,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
               if (media.rtp) {
+                // 是否存在 payload=124 且 codec 为 h264（忽略大小写）
+                var hasOther124 = media.rtp.some(function (item) {
+                  return item.payload === 124 && String(item.codec).toLowerCase() !== 'h264';
+                });
+
+                // paphone H264 payload 为124，去掉其他payload为124的媒体
+                _this18._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
                 media.rtp = media.rtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
@@ -17059,9 +21285,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
             if (_this18._ua.sk[7] >= 3) {
-              delete media.ext;
+              // 删除 extmap 仅保留 urn:3gpp:video-orientation
+              if (media.ext) {
+                media.ext = media.ext.filter(function (ext) {
+                  return ext.uri === 'urn:3gpp:video-orientation';
+                });
+              }
               if (media.type === 'video') {
-                // media.ext = [ { value: 13, uri: 'urn:3gpp:video-orientation' } ];
                 media.invalid = [{
                   value: 'tcap:1 RTP/AVPF'
                 }, {
@@ -17075,6 +21305,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp.groups[0].mids = mids.join(' ');
           desc.sdp = sdp_transform.write(sdp);
         }
+<<<<<<< HEAD
         var bw = 0;
         sdp.media.forEach(function (media) {
           /**
@@ -17098,14 +21329,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           type: 'AS',
           limit: bw
         }];
+=======
+>>>>>>> CRTC-new-dev
         desc.sdp = sdp_transform.write(sdp);
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
         _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
-        // 修改为只支持 42c01e
-        desc.sdp = desc.sdp.replace(/42e01f/g, '42c01e');
+        // 非BFCP修改为根据配置参数设置 profile-level-id
+        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID)));
+
+        // 兼容 Firefox 去掉 bundle
+        if (Utils.isFirefox() && type === 'offer') {
+          desc.sdp = desc.sdp.replace(/a=bundle-only\r\n/g, '');
+          desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
+        }
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
@@ -17128,7 +21367,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             type: type,
             sdp: connection.localDescription.sdp
           };
-          logger.debug('emit "sdp"');
+          _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          logger.debug("complete emit \"sdp\"".concat(e.sdp));
           _this18.emit('sdp', e);
           return Promise.resolve(e.sdp);
         }
@@ -17152,12 +21392,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               type: type,
               sdp: connection.localDescription.sdp
             };
-            logger.debug('emit "sdp"');
+            _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+            logger.debug('ready emit "sdp"');
             _this18.emit('sdp', e);
             resolve(e.sdp);
           };
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
+            logger.debug("".concat(new Date().toISOString(), " icecandidate: ").concat(JSON.stringify(candidate)));
             if (candidate) {
               // 两秒后如果没有收集结束，则强制结束
               setTimeout(function () {
@@ -17174,6 +21416,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           });
           connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
+            logger.debug("".concat(new Date().toISOString(), " icegatheringstatechange: ").concat(connection.iceGatheringState, " ").concat(finished));
             if (connection.iceGatheringState === 'complete' && !finished) {
               ready();
             }
@@ -17182,13 +21425,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (connection.iceGatheringState === 'gathering') {
               setTimeout(function () {
                 !finished && ready();
-              }, 5000);
+              }, 500);
             }
           });
         });
       }).then(function (sdp) {
         // 去掉IPV6
-        sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
+        // sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
+
         var sdp_desc = sdp_transform.parse(sdp);
         if (type === 'offer') {
           _this18._localToAudio === '' && (_this18._localToAudio = true);
@@ -17203,13 +21447,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               if (_this18._localToAudio || m.direction == 'inactive') {
                 m.port = 0;
-                // m.direction = 'inactive';
               }
 
               if (m.port !== 0) {
-                _this18._mode === '' && (_this18._mode = 'video');
+                if (_this18._mode === '') {
+                  _this18._mode = 'video';
+                } else {
+                  _this18._ontogglemode('video');
+                }
                 _this18._localToAudio = false;
                 _this18._localToVideo = true;
+              } else {
+                m.direction = 'sendrecv';
               }
             }
           } catch (err) {
@@ -17232,21 +21481,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 continue;
               }
               var port = _m.port;
-              // const direction = m.direction;
-
-              if (_this18._localToAudio) {
-                if (_m.direction != 'recvonly') {
-                  _m.port = 0;
-                }
-                // m.direction = 'inactive';
+              if (_this18._localToAudio || _m.direction === 'inactive') {
+                _m.port = 0;
                 if (_this18._remoteHold) {
                   _m.port = port;
-                  // m.direction = direction;
                 }
 
                 _this18._ontogglemode('audio');
               } else if (!_this18._remoteToAudio) {
                 _this18._ontogglemode('video');
+              }
+              if (_m.port === 0) {
+                delete _m.connection;
+                _m.direction = 'sendrecv';
               }
             }
           } catch (err) {
@@ -17255,16 +21502,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             _iterator6.f();
           }
         }
+        var _bandAS = 0;
+        var _bandRR = 0;
+        var _bandRS = 0;
+
+        /**
+         * 处理5G外呼sdp
+         * 华为MCU对接需要带 b=AS
+         */
         sdp_desc.media.forEach(function (media) {
-          /**
-            * 处理5G外呼sdp过大问题,
-            * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
-            */
-          if (_this18._ua.sk[7] >= 3) {
-            if (media.type === 'video') {
+          if (media.type === 'video') {
+            /**
+             * 处理5G和非5G的SDP
+             */
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS;
+              _bandRR += 6000;
+              _bandRS += 8000;
               media.bandwidth = [{
                 type: 'AS',
-                limit: 960
+                limit: CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS
               }, {
                 type: 'RR',
                 limit: 6000
@@ -17277,7 +21534,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }, {
                 value: 'pcfg:1 t=1'
               }];
-            } else if (media.type === 'audio') {
+            } else {
+              var bwidth = 1024;
+              media.mid === 2 && (bwidth = 2048);
+              _bandAS += bwidth;
+              media.bandwidth || (media.bandwidth = [{
+                type: 'AS',
+                limit: bwidth
+              }]);
+            }
+          } else if (media.type === 'audio') {
+            /**
+             * 处理5G和非5G的SDP
+             */
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += 90;
+              _bandRR += 600;
+              _bandRS += 2000;
               media.bandwidth = [{
                 type: 'AS',
                 limit: 90
@@ -17289,18 +21562,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 limit: 2000
               }];
             }
-            sdp_desc.bandwidth = [{
-              type: 'AS',
-              limit: 1050
-            }, {
-              type: 'RR',
-              limit: 6600
-            }, {
-              type: 'RS',
-              limit: 10000
-            }];
           }
         });
+
+        /**
+         * 处理5G和非5G的SDP
+         */
+        if (_this18._ua.sk[7] >= 3) {
+          sdp_desc.bandwidth = [{
+            type: 'AS',
+            limit: _bandAS
+          }, {
+            type: 'RR',
+            limit: _bandRR
+          }, {
+            type: 'RS',
+            limit: _bandRS
+          }];
+        }
         return sdp_transform.write(sdp_desc);
       });
     }
@@ -17375,6 +21654,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         callback: undefined,
         reject: reject.bind(this)
       };
+      var applicationIndex;
       var rejected = false;
       function reject() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -17409,7 +21689,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
           sendAnswer.call(_this19, sdp);
-        })["catch"](function () {
+        })["catch"](function (e) {
+          logger.warn(JSON.stringify(e));
           request.reply(500);
         });
         return;
@@ -17433,10 +21714,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._processInDialogSdpOffer(request)
         // Send answer.
         .then(function (desc) {
-          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
-            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+          /**
+           * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
+           * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
+           * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
+           * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
+           */
+          if (_this20._ua.sk[7] >= 3 && desc) {
+            desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
+            // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
+          }
+          if (_this20._enableBFCP && _this20._floorctrl == 's-only') {
+            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this20._floorctrl, "\r\na=floorid:").concat(_this20._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
           }
           if (_this20._status === C.STATUS_TERMINATED) {
             return;
@@ -17455,6 +21746,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (request.body) {
         var waiting = false;
         var mediaIndex = 0;
+
+        // 适配通用情况下的SDP H224
+        var _Utils$getApplication = Utils.getApplicationMediaPositions(request.body),
+          originalIndexes = _Utils$getApplication.originalIndexes,
+          sdp = _Utils$getApplication.sdp;
+        applicationIndex = originalIndexes;
+        request.body = sdp;
+        logger.debug('applicationIndex: ', applicationIndex);
+        logger.debug('NEW Reinvite SDP: ', sdp);
         var sdp_request = sdp_transform.parse(request.body);
 
         // request['mode'] = 'audio';
@@ -17470,9 +21770,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               continue;
             }
             mediaIndex++;
-
-            // waiting = true;
-
             if (mediaIndex == 1 && (m.port === 0 || m.port === 0 && this._mode === 'video')) {
               this._ontogglemode('audio');
               // this._localToAudio = true;
@@ -17530,9 +21827,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       function sendAnswer(desc) {
         var _this21 = this;
         var extraHeaders = ["Contact: ".concat(this._contact)];
+
+        // 5G Headers
+        if (this._ua.sk[7] >= 3) {
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+        }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
         if (this._late_sdp) {
           desc = this._mangleOffer(desc);
+        }
+        if (this._enableBFCP) {
+          // 适配通用情况下的SDP H224
+          applicationIndex && applicationIndex[1] !== -1 && (desc += 'm=application 0 UDP/TLS/RTP/SAVPF 100\r\na=rtpmap:100 H224/4800\r\na=inactive\r\n');
+          logger.debug('OLD SDP: ', desc);
+          desc = Utils.reorderApplicationMedia(desc, applicationIndex);
+          logger.debug('NEW Answer SDP: ', desc);
         }
         request.reply(200, null, extraHeaders, desc, function () {
           _this21._status = C.STATUS_WAITING_FOR_ACK;
@@ -17599,8 +21909,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._processInDialogSdpOffer(request)
         // Send answer.
         .then(function (desc) {
-          if (request.body.indexOf('tcap:1 RTP/AVPF') && desc) {
-            desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
+          /**
+           * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
+           * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
+           * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
+           * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
+           */
+          if (_this22._ua.sk[7] >= 3 && desc) {
+            desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
+            // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
@@ -17679,6 +21996,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       function sendAnswer(desc) {
         var extraHeaders = ["Contact: ".concat(this._contact)];
+
+        // 5G Headers
+        if (this._ua.sk[7] >= 3) {
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+        }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
         request.reply(200, null, extraHeaders, desc);
 
@@ -17713,12 +22036,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             break;
           }
         }
+
+        // for (const m of sdp.media)
+        // {
+        //   if (m.type === 'audio')
+        //   {
+        //     continue;
+        //   }
+
+        //   if (this._localToAudio || this._remoteToAudio)
+        //   {
+        //     m.port = 0;
+        //     m.direction = 'inactive';
+        //     break;
+        //   }
+        // }
       } catch (err) {
         _iterator9.e(err);
       } finally {
         _iterator9.f();
       }
       var newSdp = this._sdpAddMid(request.body);
+      if (this._dtmf_payload) {
+        newSdp = Utils.replaceDtmfPayloads(newSdp, this._dtmf_payload);
+      }
+      logger.debug('new DTMF SDP: ', newSdp);
       var e = {
         originator: 'remote',
         type: 'offer',
@@ -17764,21 +22106,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
 
         // 适配 100rel 调整 hold 的判断
-        if (_this24._remoteToVideo && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
+        if (_this24._remoteToVideo && !_this24._localToAudio && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
           if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          return navigator.mediaDevices.getUserMedia({
+          var videoConstraints = _this24._inviteMediaConstraints ? {
+            video: _this24._inviteMediaConstraints.video || true
+          } : {
             video: true
-          })["catch"](function (error) {
+          };
+
+          // if (CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS)
+          // {
+          //   videoConstraints['video'] = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS;
+          // }
+
+          return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
             if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
-            _this24._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+
+            // this._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
+
             logger.warn('emit "getusermediafailed" [error:%o]', error);
             logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
             _this24.emit('getusermediafailed', error);
-            throw error;
+            return false;
+            // throw error;
           });
         }
       }).then(function (stream) {
@@ -17790,15 +22144,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             stream = Utils.getStreamThroughCanvas(stream);
           }
           stream.getVideoTracks().forEach(function (track) {
-            _this24._localMediaStream.addTrack(track);
+            try {
+              _this24._localMediaStream.addTrack(track);
+            } catch (error) {
+              logger.warn("_processInDialogSdpOffer() failed local stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+            }
 
             // 兼容低版本浏览器不支持addTrack的情况
             if (RTCPeerConnection.prototype.addTrack) {
-              _this24._connection.addTrack(track, stream);
+              try {
+                _this24._connection.addTrack(track, stream);
+              } catch (error) {
+                logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+              }
             } else {
               _this24._connection.addStream(stream);
             }
           });
+          _this24._iceReady = false;
         } else {
           // 兼容低版本浏览器不支持addTrack的情况
           // eslint-disable-next-line no-lonely-if
@@ -17810,7 +22173,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 return sender.track === videoTrack;
               });
               if (!trackAlreadyAdded) {
-                _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                try {
+                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
+                } catch (error) {
+                  logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
+                }
               } else {
                 logger.warn('Track is already added to the peer connection.');
               }
@@ -17818,8 +22185,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } else {
             _this24._connection.addStream(_this24._localMediaStream);
           }
+          _this24._iceReady = true;
         }
-        _this24._iceReady = false;
       })
       // Create local description.
       .then(function () {
@@ -17874,27 +22241,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       });
       function _accept(initCallback) {
+        var _this26 = this;
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
         initCallback = typeof initCallback === 'function' ? initCallback : null;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
+        if (this._enableBFCP) {
+          initCallback && initCallback();
+          return;
+        }
         var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref4) {
-          var response = _ref4.response;
-          notifier.notify(response.status_code, response.reason_phrase);
+        session.on('progress', function (_ref6) {
+          var response = _ref6.response;
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
-        session.on('accepted', function (_ref5) {
-          var response = _ref5.response;
-          notifier.notify(response.status_code, response.reason_phrase);
+        session.on('accepted', function (_ref7) {
+          var response = _ref7.response;
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+
+          // 华为MCU需要挂断
+          _this26._enableBFCP && _this26.terminate();
         });
-        session.on('_failed', function (_ref6) {
-          var message = _ref6.message,
-            cause = _ref6.cause;
+        session.on('_failed', function (_ref8) {
+          var message = _ref8.message,
+            cause = _ref8.cause;
           if (message) {
-            notifier.notify(message.status_code, message.reason_phrase);
+            _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
-            notifier.notify(487, cause);
+            _this26._enableBFCP || notifier.notify(487, cause);
           }
         });
 
@@ -17968,10 +22343,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this27 = this;
+      var _this28 = this;
       logger.debug('receiveReplaces()');
       function _accept2(initCallback) {
-        var _this26 = this;
+        var _this27 = this;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
@@ -17979,7 +22354,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // Terminate the current session when the new one is confirmed.
         session.on('confirmed', function () {
-          _this26.terminate();
+          _this27.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -17992,10 +22367,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this27, initCallback);
+          _accept2.call(_this28, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this27);
+          _reject2.call(_this28);
         }
       });
     }
@@ -18006,67 +22381,127 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(rtcOfferConstraints, mediaStream) {
-      var _this28 = this;
+      var _this29 = this;
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this28.onRequestTimeout();
+          _this29.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this28.onTransportError();
+          _this29.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this28._request = request;
+          _this29._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this28._receiveInviteResponse(response);
+          _this29._receiveInviteResponse(response);
         }
       });
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
+<<<<<<< HEAD
       Promise.resolve().then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
         return _regeneratorRuntime().wrap(function _callee4$(_context4) {
           while (1) switch (_context4.prev = _context4.next) {
+=======
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
+        var stream, _Utils$generateAnEmpt2, videoTrack;
+        return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+          while (1) switch (_context7.prev = _context7.next) {
+>>>>>>> CRTC-new-dev
             case 0:
-              if (!(_this28._status === C.STATUS_TERMINATED)) {
-                _context4.next = 2;
+              if (!(_this29._status === C.STATUS_TERMINATED)) {
+                _context7.next = 2;
                 break;
               }
               throw new Error('terminated');
             case 2:
-              _this28._localMediaStream = mediaStream;
-              if (_this28._localMediaStream) {
+              // 兼容BFCP需要做音频混音
+              if (_this29._enableBFCP) {
+                stream = new MediaStream([_this29._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
+                _this29._bfcpMediastreams.push(mediaStream);
+                _this29._localMediaStream = stream;
+              } else {
+                _this29._localMediaStream = mediaStream;
+              }
+              if (_this29._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
-                  _this28._localMediaStream.getTracks().forEach(function (track) {
-                    _this28._connection.addTrack(track, _this28._localMediaStream);
+                  _this29._localMediaStream.getAudioTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
+                  });
+                  _this29._localMediaStream.getVideoTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
                 } else {
-                  _this28._connection.addStream(_this28._localMediaStream);
+                  _this29._connection.addStream(_this29._localMediaStream);
                 }
               }
 
+              /**
+               * 是否启用 DataChannel
+               **/
+              if (_this29._enableBFCP) {
+                _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack;
+                _this29._bfcpVideoTrack = videoTrack;
+                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
+                _this29._initDataChannel();
+              }
+
               // TODO: should this be triggered here?
-              _this28._connecting(_this28._request);
-              return _context4.abrupt("return", _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-                _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+              _this29._connecting(_this29._request);
+              return _context7.abrupt("return", _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+                _this29._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
-            case 6:
+            case 7:
             case "end":
-              return _context4.stop();
+              return _context7.stop();
           }
-        }, _callee4);
+        }, _callee7);
       }))).then(function (desc) {
-        if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
+        if (_this29._is_canceled || _this29._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        _this28._request.body = desc;
-        _this28._status = C.STATUS_INVITE_SENT;
-        logger.debug('emit "sending" [request:%o]', _this28._request);
+
+        // 添加BFCP所需属性
+        if (_this29._enableBFCP) {
+          // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
+          var supportedMSTC = false;
+          if ('MediaStreamTrackGenerator' in window) {
+            supportedMSTC = true;
+          }
+          _this29._connection.getTransceivers().forEach(function (transceiver) {
+            var track = transceiver.sender.track;
+            if (!track) {
+              return;
+            }
+            if (supportedMSTC) {
+              // eslint-disable-next-line no-undef
+              if (track instanceof MediaStreamTrackGenerator || _this29._isCanvasTrack(track)) {
+                _this29._mStream = transceiver.mid;
+                sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
+              }
+            } else if (_this29._isCanvasTrack(track)) {
+              _this29._mStream = transceiver.mid;
+              sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
+            }
+          });
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
+
+          // 添加主辅流标志
+          desc = _this29._addMediastreamFlag(desc, _this29._mStream);
+        }
+        _this29._request.body = desc;
+        _this29._status = C.STATUS_INVITE_SENT;
+
+        // 获取DTMF的payload
+        !_this29._dtmf_payload && (_this29._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc));
+        logger.debug("dtmf payload".concat(JSON.stringify(_this29._dtmf_payload)));
+        logger.debug('emit "sending" [request:%o]', _this29._request);
         var cache = [];
-        logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this28._request, function (key, value) {
+        logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this29._request, function (key, value) {
           if (_typeof(value) === 'object' && value !== null) {
             if (cache.indexOf(value) !== -1) {
               // 移除
@@ -18079,12 +22514,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })));
 
         // Emit 'sending' so the app can mangle the body before the request is sent.
-        _this28.emit('sending', {
-          request: _this28._request
+        _this29.emit('sending', {
+          request: _this29._request
         });
         request_sender.send();
       })["catch"](function (error) {
-        if (_this28._status === C.STATUS_TERMINATED) {
+        if (_this29._status === C.STATUS_TERMINATED) {
           return;
         }
         logger.warn(error);
@@ -18113,7 +22548,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this29 = this;
+      var _this30 = this;
       logger.debug('receiveInviteResponse()');
 
       // Handle 2XX retransmissions and responses from forked requests.
@@ -18174,13 +22609,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._status = C.STATUS_1XX_RECEIVED;
             if (!response.body) {
               Promise.resolve().then(function () {
-                if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
-                  _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
+                  _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                     RSeq: response.getHeader('rseq')
                   });
                 }
               }).then(function () {
-                _this29._progress('remote', response);
+                _this30._progress('remote', response);
               });
               break;
             }
@@ -18197,21 +22632,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              _this29._connection.setRemoteDescription(answer);
+              _this30._connection.setRemoteDescription(answer);
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
-              if (response.getHeader('require') === '100rel' && Boolean(response.getHeader('rseq'))) {
-                _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+              if (e.sdp.indexOf('m=video 0 ') !== -1) {
+                _this30._ealyAudio = true;
+              }
+              if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
+                _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                   RSeq: response.getHeader('rseq')
                 });
               }
             }).then(function () {
-              return _this29._progress('remote', response);
+              return _this30._progress('remote', response);
             })["catch"](function (error) {
               logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
               logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-              _this29.emit('peerconnection:setremotedescriptionfailed', error);
+              _this30.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -18227,6 +22665,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // 以下修改为兼容 VoLTE 的 200ok 不带 SDP 的情况
             if (!response.body) {
               this._accepted('remote', response);
+              if (this._ealyAudio) {
+                this._ontogglemode('audio');
+              }
+
               // 适配 100rel 调整 ack 的 cseq
               this.sendRequest(CRTC_C.ACK);
               this._confirmed('local', null);
@@ -18234,10 +22676,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             /**
-             * 音视频切换相关
-             * 根据sdp判断用户Answer的通话模式，并触发mode事件
-             * @author: lei
-             */
+               * 音视频切换相关
+               * 根据sdp判断用户Answer的通话模式，并触发mode事件
+               * @author: lei
+               */
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
@@ -18272,6 +22714,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             };
             logger.debug('emit "sdp"');
             this.emit('sdp', _e);
+            if (this._enableBFCP) {
+              // 获取响应中BFCP相关属性
+              this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
+              this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
+              this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
+              this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
+              this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
+
+              // 把协商来的userId 和 confId赋值给bfcpUser对象
+              this._bfcpUser.userId = Number(this._bfcpUserId);
+              this._bfcpUser.conferenceId = Number(this._confId);
+            }
             var _answer = new RTCSessionDescription({
               type: 'answer',
               sdp: _e.sdp
@@ -18279,60 +22733,67 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this29._connection.signalingState === 'stable') {
-                return _this29._connection.createOffer(_this29._rtcOfferConstraints).then(function (offer) {
-                  return _this29._connection.setLocalDescription(offer);
+              if (_this30._connection.signalingState === 'stable') {
+                return _this30._connection.createOffer(_this30._rtcOfferConstraints).then(function (offer) {
+                  return _this30._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this29._acceptAndTerminate(response, 500, error.toString());
-                  _this29._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
+                  _this30._acceptAndTerminate(response, 500, error.toString());
+                  _this30._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
+<<<<<<< HEAD
               _this29._connection.setRemoteDescription(_answer).then( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee5() {
+=======
+              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
+>>>>>>> CRTC-new-dev
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-                  while (1) switch (_context5.prev = _context5.next) {
+                return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+                  while (1) switch (_context8.prev = _context8.next) {
                     case 0:
                       // Handle Session Timers.
-                      _this29._handleSessionTimersInIncomingResponse(response);
-                      _this29._accepted('remote', response);
-                      _this29.sendRequest(CRTC_C.ACK);
-                      _this29._confirmed('local', null);
+                      _this30._handleSessionTimersInIncomingResponse(response);
+                      _this30._accepted('remote', response);
+                      _this30.sendRequest(CRTC_C.ACK);
+                      _this30._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context5.next = 6;
+                      _context8.next = 6;
                       return Utils.getMicrophones();
                     case 6:
-                      mics = _context5.sent;
-                      if (_this29._replaceAudioTrack && (navigator.userAgent.indexOf('WeChat') != -1 || navigator.userAgent.indexOf('ArkWeb') != -1)) {
+                      mics = _context8.sent;
+                      if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
-                          audio: _this29._inviteMediaConstraints.audio || true,
+                          audio: _this30._inviteMediaConstraints.audio || true,
                           video: false
                         }).then(function (stream) {
-                          var sender = _this29._connection.getSenders().find(function (s) {
+                          var sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           sender.replaceTrack(stream.getAudioTracks()[0]);
                         });
-                      } else if (_this29._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                        if (_this29._localMediaStream) {
-                          sender = _this29._connection.getSenders().find(function (s) {
+                      } else if (_this30._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                        if (_this30._localMediaStream) {
+                          sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
-                          sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]);
+                          sender.replaceTrack(_this30._localMediaStream.getAudioTracks()[0]);
                         }
                       }
-                    case 8:
+
+                      // 开启 BFCP，自动发送reInvite
+                      _this30._enableBFCP && _this30.renegotiate();
+                    case 9:
                     case "end":
-                      return _context5.stop();
+                      return _context8.stop();
                   }
-                }, _callee5);
+                }, _callee8);
               })))["catch"](function (error) {
-                _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
-                _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
                 logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-                _this29.emit('peerconnection:setremotedescriptionfailed', error);
+                _this30.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -18351,7 +22812,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this30 = this;
+      var _this31 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -18373,41 +22834,47 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
       }
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this30._createLocalDescription('offer', rtcOfferConstraints);
+        return _this31._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this30._mangleOffer(sdp);
+        sdp = _this31._mangleOffer(sdp);
+
+        // 添加BFCP所需属性
+        _this31._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this31._floorctrl, "\r\na=floorid:").concat(_this31._floorId, " m-stream:").concat(_this31._mStream, "\r\n")));
+        // 添加主辅流标志
+        sdp = _this31._addMediastreamFlag(sdp, _this31._mStream);
         var e = {
           originator: 'local',
           type: 'offer',
           sdp: sdp
         };
+        _this31._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
         logger.debug('emit "sdp"');
-        _this30.emit('sdp', e);
+        _this31.emit('sdp', e);
 
         // 新增reinvite时更新via_host
-        options.changeViaHost && _this30._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
-        extraHeaders.push("Contact: ".concat(_this30._ua.contact.toString()));
-        _this30.sendRequest(CRTC_C.INVITE, {
+        options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
+        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
+        _this31.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this30, response);
+              onSucceeded.call(_this31, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this30, response);
+              onFailed.call(_this31, response);
             },
             onTransportError: function onTransportError() {
-              _this30.onTransportError(); // Do nothing because session ends.
+              _this31.onTransportError(); // Do nothing because session ends.
             },
 
             onRequestTimeout: function onRequestTimeout() {
-              _this30.onRequestTimeout(); // Do nothing because session ends.
+              _this31.onRequestTimeout(); // Do nothing because session ends.
             },
 
             onDialogError: function onDialogError() {
-              _this30.onDialogError(); // Do nothing because session ends.
+              _this31.onDialogError(); // Do nothing because session ends.
             }
           }
         });
@@ -18415,7 +22882,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         onFailed();
       });
       function onSucceeded(response) {
-        var _this31 = this;
+        var _this32 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -18436,6 +22903,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } else if (!response.hasHeader('Content-Type') || response.getHeader('Content-Type').toLowerCase() !== 'application/sdp') {
           onFailed.call(this);
           return;
+        }
+
+        // BFCP 控制的媒体 transceiver 索引号
+        this._transceiverIndex = Utils.findLabelIndexByMstrm(response.body);
+        if (this._transceiverIndex && this._transceiverIndex !== -1) {
+          sessionStorage.setItem(CRTC_C.BFCP_TRANSCEIVER_INDEX, this._transceiverIndex);
+          try {
+            this._bfcpStream = Utils.getStreams(this._connection, 'shared');
+            logger.debug("sessionStorage setItem ".concat(CRTC_C.BFCP_TRANSCEIVER_INDEX, ": ").concat(this._transceiverIndex));
+          } catch (error) {
+            logger.error("Failed to set item in sessionStorage:".concat(error));
+          }
         }
 
         /**
@@ -18482,16 +22961,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this31._connection.setRemoteDescription(answer);
+          return _this32._connection.setRemoteDescription(answer);
         }).then(function () {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this31);
+          onFailed.call(_this32);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
           logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this31.emit('peerconnection:setremotedescriptionfailed', error);
+          _this32.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
       function onFailed(response) {
@@ -18507,7 +22986,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this32 = this;
+      var _this33 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendUpdate()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -18530,42 +23009,43 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this32._createLocalDescription('offer', rtcOfferConstraints);
+          return _this33._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this32._mangleOffer(sdp);
+          sdp = _this33._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
             sdp: sdp
           };
+          _this33._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
           logger.debug('emit "sdp"');
-          _this32.emit('sdp', e);
-          _this32.sendRequest(CRTC_C.UPDATE, {
+          _this33.emit('sdp', e);
+          _this33.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this32, response);
+                onSucceeded.call(_this33, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this32, response);
+                onFailed.call(_this33, response);
               },
               onTransportError: function onTransportError() {
-                _this32.onTransportError(); // Do nothing because session ends.
+                _this33.onTransportError(); // Do nothing because session ends.
               },
 
               onRequestTimeout: function onRequestTimeout() {
-                _this32.onRequestTimeout(); // Do nothing because session ends.
+                _this33.onRequestTimeout(); // Do nothing because session ends.
               },
 
               onDialogError: function onDialogError() {
-                _this32.onDialogError(); // Do nothing because session ends.
+                _this33.onDialogError(); // Do nothing because session ends.
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this32);
+          onFailed.call(_this33);
         });
       }
 
@@ -18575,28 +23055,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: extraHeaders,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this32, response);
+              onSucceeded.call(_this33, response);
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this32, response);
+              onFailed.call(_this33, response);
             },
             onTransportError: function onTransportError() {
-              _this32.onTransportError(); // Do nothing because session ends.
+              _this33.onTransportError(); // Do nothing because session ends.
             },
 
             onRequestTimeout: function onRequestTimeout() {
-              _this32.onRequestTimeout(); // Do nothing because session ends.
+              _this33.onRequestTimeout(); // Do nothing because session ends.
             },
 
             onDialogError: function onDialogError() {
-              _this32.onDialogError(); // Do nothing because session ends.
+              _this33.onDialogError(); // Do nothing because session ends.
             }
           }
         });
       }
 
       function onSucceeded(response) {
-        var _this33 = this;
+        var _this34 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -18605,6 +23085,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (succeeded) {
           return;
         }
+
+        // 单向视频将收到的sdp内packetization-mode=1改为0
+        // if (response.body && rtcOfferConstraints.offerToReceiveVideo === false)
+        // {
+        //   response.body = response.body.replace(/packetization-mode=1/g, 'packetization-mode=0');
+        // }
 
         // Handle Session Timers.
         this._handleSessionTimersInIncomingResponse(response);
@@ -18620,10 +23106,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
 
           /**
-          * 音视频切换相关
-          * 远端接听模式
-          * @author: lei
-          */
+           * 音视频切换相关
+           * 远端接听模式
+           * @author: lei
+           */
           var sdp_body = sdp_transform.parse(response.body);
           var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
             _step12;
@@ -18661,16 +23147,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this33._connection.setRemoteDescription(answer);
+            return _this34._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this33);
+            onFailed.call(_this34);
             logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
             logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this33.emit('peerconnection:setremotedescriptionfailed', error);
+            _this34.emit('peerconnection:setremotedescriptionfailed', error);
           });
         }
         // No SDP answer.
@@ -18807,13 +23293,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._toggleMuteVideo(!enableVideo);
     }
 
+    // 给SDP添加主辅流标志
+  }, {
+    key: "_addMediastreamFlag",
+    value: function _addMediastreamFlag(sdp) {
+      var targetMid = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '3';
+      // 仅处理video媒体块，排除application块
+      var videoPattern = new RegExp('(m=video[\\s\\S]*?^a=mid:(\\d+)\\r?\\n)', 'gm');
+      sdp = sdp.replace(videoPattern, function (match, p1, mid) {
+        // 根据mid设置content值
+        var content = mid === targetMid ? 'slides' : 'main';
+        return "".concat(p1, "a=content:").concat(content, "\r\n");
+      });
+      return sdp;
+    }
+
     // 如果是音频模式，则关闭本地视频
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
+      var _this35 = this;
+      logger.debug("setLocalMedia() ".concat(mode));
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
+          _this35._localMediaStream.removeTrack(track);
         });
         this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -18823,41 +23327,54 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_streamInactiveHandle",
     value: function _streamInactiveHandle(dual) {
-      var _this34 = this;
-      // 分享屏幕点击系统停止按钮后停止分享
-      this._localShareStream.addEventListener('inactive', function () {
-        if (_this34._localShareStream && _this34._localShareStreamLocallyGenerated) {
+      var _this36 = this;
+      var ended = false;
+      var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
+        if (_this36._localShareStream && _this36._localShareStreamLocallyGenerated) {
           if (dual) {
-            _this34._connection.getTransceivers().forEach(function (transeiver) {
+            _this36._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this34._localShareStream.getTracks()[0].id) {
-                  if (!transeiver.stopped) {
-                    transeiver.direction = 'inactive';
-                  }
-                  transeiver.sender.track.stop();
+                if (transeiver.sender.track.id === _this36._localShareStream.getVideoTracks()[0].id) {
+                  _this36._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this36._bfcpVideoTrack);
                 }
               }
             });
-            _this34._localShareStream = null;
-            _this34._localShareStreamLocallyGenerated = false;
-            _this34._connection.removeTrack(_this34._localShareRTPSender);
-            _this34.renegotiate({
-              rtcOfferConstraints: {
-                iceRestart: true
-              }
-            });
+            _this36._localShareStream = null;
+            _this36._localShareStreamLocallyGenerated = false;
+
+            // BFCP 释放资源，当被取消权限以后不再用发送release
+            _this36._bfcpRequestStatus !== RequestStatusValue.Revoked && _this36._sendFloorRelease();
           } else {
-            _this34._localMediaStream.getVideoTracks().forEach(function (track) {
-              var sender = _this34._connection.getSenders().find(function (s) {
+            _this36._localMediaStream.getVideoTracks().forEach(function (track) {
+              var sender = _this36._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              track.readyState === 'live' && sender.replaceTrack(track);
+              track.readyState === 'live' && _this36._connection.connectionState === 'connected' && sender.replaceTrack(track);
             });
-            _this34._localShareStreamLocallyGenerated = false;
+            _this36._localShareStreamLocallyGenerated = false;
           }
-          _this34._localShareStream = null;
-          _this34._localShareStreamLocallyGenerated = false;
+          _this36._localShareStream = null;
+          _this36._localShareStreamLocallyGenerated = false;
         }
+      };
+
+      // safari 等场景ended 或者 inactive 事件不会触发
+      var timer = setInterval(function () {
+        if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0].readyState === 'ended') {
+          clearInterval(timer);
+          ended || mediaStreamTrackEndedHandler();
+          ended = true;
+        }
+      }, 200);
+
+      // 分享屏幕点击系统停止按钮后停止分享
+      this._localShareStream.getVideoTracks()[0].addEventListener('ended', function () {
+        ended || mediaStreamTrackEndedHandler();
+        ended = true;
+      });
+      this._localShareStream.addEventListener('inactive', function () {
+        ended || mediaStreamTrackEndedHandler();
+        ended = true;
       });
     }
 
@@ -18909,7 +23426,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this35 = this;
+      var _this37 = this;
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
       clearTimeout(this._sessionTimers.timer);
@@ -18917,17 +23434,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm the refresher.
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this35._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
-          if (!_this35._isReadyToReOffer()) {
+          if (!_this37._isReadyToReOffer()) {
             return;
           }
           logger.debug('runSessionTimer() | sending session refresh request');
-          if (_this35._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this35._sendUpdate();
+          if (_this37._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
+            _this37._sendUpdate();
           } else {
-            _this35._sendReinvite();
+            _this37._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       }
@@ -18935,11 +23452,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this35._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
           logger.warn('runSessionTimer() | timer expired, terminating the session');
-          _this35.terminate({
+          _this37.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
             reason_phrase: 'Session Timer Expired'
@@ -18969,7 +23486,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_toggleMuteVideo",
     value: function _toggleMuteVideo(mute) {
+      var _this38 = this;
       var senders = this._connection.getSenders().filter(function (sender) {
+        if (_this38._enableBFCP) {
+          // 检查是否存在视频轨道
+          if (!sender.track || sender.track.kind !== 'video') {
+            return false;
+          }
+
+          // 获取本地共享流的视频轨道ID
+          var localShareTrackId = null;
+          if (_this38._localShareStream && _this38._localShareStream.getVideoTracks() && _this38._localShareStream.getVideoTracks()[0]) {
+            localShareTrackId = _this38._localShareStream.getVideoTracks()[0].id;
+          }
+
+          // 验证视频轨道条件
+          return !_this38._isCanvasTrack(sender.track) && sender.track !== _this38._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+        }
         return sender.track && sender.track.kind === 'video';
       });
       var _iterator17 = _createForOfIteratorHelper(senders),
@@ -19031,8 +23564,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('session confirmed');
       this._is_confirmed = true;
 
-      // 如果是SDK调用媒体设备，则启动媒体状态监测
-      this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
+      // 如果是SDK调用媒体设备，则启动媒体状态监测,停用媒体状态检测
+      // this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
+
       logger.debug('emit "confirmed"');
       this.emit('confirmed', {
         originator: originator,
@@ -19054,12 +23588,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 停止全部统计信息事件
       window.CRTCStats = 'stop';
+      this._dataChannel && this._dataChannel.close();
+      this._dataChannel = null;
       if (this._inviteVideoTrackStatsTimer) {
         clearInterval(this._inviteVideoTrackStatsTimer);
       }
       if (this._answerVideoTrackStatsTimer) {
         clearInterval(this._answerVideoTrackStatsTimer);
       }
+
+      // DC 状态设置为未准备好
+      this._dataChannelReady = false;
+      // 停止发送心跳
+      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
+      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+      // 停止检测close状态
+      this._closingInterval && clearInterval(this._closingInterval);
     }
   }, {
     key: "_failed",
@@ -19076,6 +23621,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 停止全部统计信息事件
       window.CRTCStats = 'stop';
+      this._dataChannel && this._dataChannel.close();
+      this._dataChannel = null;
       this._close();
       logger.debug('emit "failed"');
       this.emit('failed', {
@@ -19083,6 +23630,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         message: message || null,
         cause: cause
       });
+
+      // DC 状态设置为未准备好
+      this._dataChannelReady = false;
+      // 停止发送心跳
+      this._bfcpHeatbeatTimer && clearInterval(this._bfcpHeatbeatTimer);
+      this._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+      // 停止检测close状态
+      this._closingInterval && clearInterval(this._closingInterval);
     }
   }, {
     key: "_onhold",
@@ -19106,9 +23662,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref9) {
-      var audio = _ref9.audio,
-        video = _ref9.video;
+    value: function _onmute(_ref11) {
+      var audio = _ref11.audio,
+        video = _ref11.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -19119,9 +23675,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref10) {
-      var audio = _ref10.audio,
-        video = _ref10.video;
+    value: function _onunmute(_ref12) {
+      var audio = _ref12.audio,
+        video = _ref12.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
@@ -19135,6 +23691,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_ontogglemode",
     value: function _ontogglemode(mode) {
+      logger.debug("ontogglemode() ".concat(mode, " ").concat(this._mode));
       if (mode === this._mode) {
         return;
       }
@@ -19154,9 +23711,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_sdpAddMid",
     value: function _sdpAddMid(sdp) {
       if (sdp.indexOf('a=mid:0') === -1) {
-        var regex = /(m=audio.*\r?\n)([\s\S]*?)(m=video.*\r?\n)([\s\S]*?)(?=(m=|$))/g;
-        var replacement = '$1a=mid:0\r\n$2$3a=mid:1\r\n$4';
-        return sdp.replace(regex, replacement);
+        // 新增多个媒体及Datachannel的mid
+        var midCounter = 0;
+        var newSdp = sdp.replace(/(^m=[^\r\n]+)/gm, function (match) {
+          return "".concat(match, "\r\na=mid:").concat(midCounter++);
+        });
+        logger.debug('new sdp: ', newSdp);
+        return newSdp;
       } else {
         return sdp;
       }
@@ -19189,36 +23750,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceAudioToMic",
     value: function _replaceAudioToMic() {
-      var _this36 = this;
+      var _this39 = this;
       // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: this._inviteMediaConstraints.audio || true,
         video: false
       }).then(function (stream) {
-        _this36._connection.getSenders().forEach(function (sender) {
+        _this39._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this36.isMuted().audio;
+            stream.getAudioTracks()[0].enabled = _this39.isMuted().audio;
 
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
             // 本地播放本地音频轨道
-            _this36._localMediaStream.removeTrack(_this36._localMediaStream.getAudioTracks()[0]);
-            _this36._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getAudioTracks()[0]);
+            _this39._localMediaStream.addTrack(stream.getAudioTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this36.emit('localMediastreamUpdate', _this36._localMediaStream);
+            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this36._replaceMicToAudio);
-            stream.getAudioTracks()[0].addEventListener('ended', _this36._replaceMicToAudio);
+            stream.getAudioTracks()[0].addEventListener('mute', _this39._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this39._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
         logger.error("replaceAudioToMic error: ".concat(JSON.stringify(error)));
-        _this36._replaceAudioToMic();
+        _this39._replaceAudioToMic();
       });
     }
 
@@ -19228,7 +23789,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceMicToAudio",
     value: function _replaceMicToAudio() {
-      var _this37 = this;
+      var _this40 = this;
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -19237,24 +23798,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this37._replaceMicToAudio);
-          sender.track.removeEventListener('ended', _this37._replaceMicToAudio);
+          sender.track.removeEventListener('mute', _this40._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this40._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
 
           // 替换音频轨道
-          sender.replaceTrack(_this37._generateAnEmptyAudioTrack());
+          sender.replaceTrack(_this40._generateAnEmptyAudioTrack());
 
           // 本地播放本地音频轨道
-          _this37._localMediaStream.removeTrack(_this37._localMediaStream.getVideoTracks()[0]);
-          _this37._localMediaStream.addTrack(_this37._generateAnEmptyAudioTrack());
+          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
+          _this40._localMediaStream.addTrack(_this40._generateAnEmptyAudioTrack());
 
           // 触发本地媒体更新事件
-          _this37.emit('localMediastreamUpdate', _this37._localMediaStream);
+          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
 
           // 开始尝试获取麦克风体并恢复
-          _this37._replaceAudioToMic();
+          _this40._replaceAudioToMic();
         }
       });
     }
@@ -19265,38 +23826,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceCanvasToVideo",
     value: function _replaceCanvasToVideo() {
-      var _this38 = this;
+      var _this41 = this;
       // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: false,
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
-        _this38._connection.getSenders().forEach(function (sender) {
+        _this41._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this38._restoreCameraTrackDraw);
-            _this38._restoreCameraTrackCtx.clearRect(0, 0, _this38._inviteMediaConstraints.width || 640, _this38._inviteMediaConstraints.height || 480);
+            window.cancelAnimationFrame(_this41._restoreCameraTrackDraw);
+            _this41._restoreCameraTrackCtx.clearRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
             // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this38.isMuted().video;
+            stream.getVideoTracks()[0].enabled = _this41.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
             // 本地播放本地视频轨道
-            _this38._localMediaStream.removeTrack(_this38._localMediaStream.getVideoTracks()[0]);
-            _this38._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+            _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
+            _this41._localMediaStream.addTrack(stream.getVideoTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
+            _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this38._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this38._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
         logger.error("replaceCanvasToVideo error: ".concat(JSON.stringify(error)));
-        _this38._replaceCanvasToVideo();
+        _this41._replaceCanvasToVideo();
       });
     }
 
@@ -19306,7 +23867,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
-      var _this39 = this;
+      var _this42 = this;
+      logger.debug('_replaceVideoToCanvas()');
+
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -19318,35 +23881,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._restoreCameraTrackCtx = this._restoreCameraTrackCanvas.getContext('2d');
 
       // 开始绘制纯色
+<<<<<<< HEAD
       var drawToCanvas = function drawToCanvas() {
         _this39._restoreCameraTrackCanvas.width = _this39._inviteMediaConstraints.width || 640;
         _this39._restoreCameraTrackCanvas.height = _this39._inviteMediaConstraints.height || 480;
         _this39._restoreCameraTrackCtx.fillStyle = 'blue';
         _this39._restoreCameraTrackCtx.fillRect(0, 0, _this39._inviteMediaConstraints.width || 640, _this39._inviteMediaConstraints.height || 480);
         _this39._restoreCameraTrackDraw = window.requestAnimationFrame(drawToCanvas);
+=======
+      var _drawToCanvas = function drawToCanvas() {
+        _this42._restoreCameraTrackCanvas.width = _this42._inviteMediaConstraints.width || 640;
+        _this42._restoreCameraTrackCanvas.height = _this42._inviteMediaConstraints.height || 480;
+        _this42._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this42._restoreCameraTrackCtx.fillRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
+        _this42._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
+>>>>>>> CRTC-new-dev
       };
       drawToCanvas();
 
       // 从画布获取15fps视频流
       var newStream = this._restoreCameraTrackCanvas.captureStream(15);
       this._connection.getSenders().forEach(function (sender) {
-        if (sender.track && sender.track.kind == 'video') {
+        // eslint-disable-next-line no-undef
+        if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this39._replaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this39._replaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this42._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this42._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
           // 本地播放本地视频轨道
-          _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
-          _this39._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
+          _this42._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
           // 触发本地媒体更新事件
-          _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+          _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
           // 开始尝试获取摄像头媒体并恢复
-          _this39._replaceCanvasToVideo();
+          _this42._replaceCanvasToVideo();
         }
       });
     }
@@ -19357,7 +23930,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this40 = this;
+      var _this43 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -19369,14 +23942,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           timer = null;
 
           // 如果设备变化则替换轨道流
-          _this40._connection.getSenders().forEach(function (sender) {
+          _this43._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this40._replaceVideoToCanvas();
+              _this43._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this40._replaceMicToAudio();
+              _this43._replaceMicToAudio();
             }
           });
         }, 300);
@@ -19385,27 +23958,383 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 先判断现在PC里面的媒体是否已经是muted
       this._connection.getSenders().forEach(function (sender) {
         // 视频轨道
-        if (sender.track && sender.track.kind === 'video') {
+        if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
-            _this40._replaceVideoToCanvas();
-          } else {
+            _this43._replaceVideoToCanvas();
+          } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this40._replaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this40._replaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this43._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this43._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this40._replaceMicToAudio();
+            _this43._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this40._replaceMicToAudio);
-            sender.track.addEventListener('ended', _this40._replaceMicToAudio);
+            sender.track.addEventListener('mute', _this43._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this43._boundReplaceMicToAudios);
           }
         }
       });
+    }
+
+    /**
+     * BFCP && DataChannel
+     */
+
+    /**
+     * 处理 Hello 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleHelloMessage",
+    value: function _handleHelloMessage(message) {
+      logger.debug("BFCP send HACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      var response = this._bfcpUser.helloAckMessage(message);
+      this._sendDataChannelMessage(response);
+    }
+
+    /**
+     * 处理 FloorRequestStatus 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorRequestStatusMessage",
+    value: function _handleFloorRequestStatusMessage(message) {
+      logger.debug("BFCP send FloorRequestStatusACK: Transaction ID: ".concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+      var response = this._bfcpUser.floorRequestStatusAckMessage(message);
+      this._sendDataChannelMessage(response);
+
+      // 处理本端分享被撤销的情况
+      var status = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+      if (status === RequestStatusValue.Revoked) {
+        this._bfcpRequestStatus = status;
+        // 已经共享了的自动取消共享
+        if (this._localShareStreamLocallyGenerated) {
+          this.unShare();
+        }
+      }
+    }
+
+    /**
+     * 处理 FloorStatus 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorStatusMessage",
+    value: function _handleFloorStatusMessage(message) {
+      // 不再回ack，根据support里面是否支持做出这个决定
+      // this._sendFloorStatusAck(message);
+      var floorStatus = message.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
+
+      // 根据状态触发事件
+      if (floorStatus === RequestStatusValue.Granted && !this._remoteShared) {
+        this._remoteShared = true;
+        this.emit('remoteShared', {
+          sharedStream: this._bfcpStream
+        });
+      } else if (floorStatus === RequestStatusValue.Released && this._remoteShared) {
+        this._remoteShared = false;
+        this.emit('remoteUnShared');
+      } else {
+        logger.warn("Unknown floor status: ".concat(floorStatus));
+      }
+    }
+
+    /**
+     * 处理 FloorRequest 消息
+     * @param {Object} message - 接收到的消息对象
+     */
+  }, {
+    key: "_handleFloorRequestMessage",
+    value: function _handleFloorRequestMessage(message) {
+      var _this44 = this;
+      var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
+      if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
+        // 自动接受请求
+        var response = this._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+        this._sendDataChannelMessage(response, message.commonHeader.transactionId);
+      } else {
+        // 触发事件，允许外部处理
+        this.emit('floorRequest', {
+          message: message,
+          accept: function accept() {
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
+          },
+          reject: function reject() {
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
+          }
+        });
+      }
+    }
+
+    /**
+     * 发送消息到数据通道
+     * @param {Buffer} message - 要发送的消息
+     * @param {number} [transactionId] - 可选的事务 ID
+     */
+  }, {
+    key: "_sendDataChannelMessage",
+    value: function _sendDataChannelMessage(message, transactionId) {
+      logger.debug("Sending message ".concat(Utils.uint8ArrayToBase64(message), " with Transaction ID: ").concat(transactionId, ", Timestamp: ").concat(Date.now()));
+      this._dataChannel.send(message);
+    }
+
+    /**
+     * 处理数据通道接收到的消息。
+     *
+     * @param {Object} event - 数据通道消息事件对象。
+     * @param {ArrayBuffer|string} event.data - 接收到的消息数据，通常为 ArrayBuffer 类型。
+     *
+     * 该方法会解析消息并根据消息类型执行相应逻辑。如果数据通道未准备好或消息格式不正确，则忽略处理。
+     */
+  }, {
+    key: "_onChannelMessage",
+    value: function _onChannelMessage(event) {
+      logger.debug('onChannelMessage()');
+
+      // 如果数据通道未准备好，则忽略消息
+      if (!this._dataChannelReady) {
+        logger.warn('onChannelMessage(): Data channel is not ready, ignoring message.');
+        return;
+      }
+      var data = event.data;
+
+      // 确保接收到的数据是 ArrayBuffer 类型
+      if (!(data instanceof ArrayBuffer)) {
+        logger.warn('onChannelMessage(): Received non-ArrayBuffer message, ignoring.');
+        return;
+      }
+      try {
+        // 将 ArrayBuffer 转换为 Buffer 并解析消息
+        var bufferData = Buffer.from(data);
+        logger.debug('recv unit8: ', Utils.uint8ArrayToBase64(bufferData));
+
+        // 适配 0002 0000  的包
+        if (Utils.uint8ArrayToBase64(bufferData) === 'AgAAAA==') {
+          return;
+        }
+        var message = this._bfcpUser.receiveMessage(bufferData);
+
+        // 输出日志：收到消息内容及tid，时间戳
+        logger.debug("BFCP recv: ".concat(JSON.stringify(message), ", Transaction ID: ").concat(message.commonHeader.transactionId, ", Timestamp: ").concat(Date.now()));
+
+        // 处理已注册的事务消息
+        if (this._dataChannelMsgs[message.commonHeader.transactionId]) {
+          // 记录BFCP消息响应时间
+          logger.debug("bfcp response time: transactionId(".concat(message.commonHeader.transactionId, "), time(").concat(Date.now() - this._dataChannelMsgs[message.commonHeader.transactionId].sendAt, "ms)"));
+          this._dataChannelMsgs[message.commonHeader.transactionId].received = true;
+          this._dataChannelMsgs[message.commonHeader.transactionId].resolve(message);
+          delete this._dataChannelMsgs[message.commonHeader.transactionId];
+          return;
+        }
+
+        // 根据消息类型执行相应逻辑
+        switch (message.commonHeader.primitive) {
+          case Primitive.Hello:
+            this._handleHelloMessage(message);
+            break;
+          case Primitive.FloorRequestStatus:
+            this._handleFloorRequestStatusMessage(message);
+            break;
+          case Primitive.FloorStatus:
+            this._handleFloorStatusMessage(message);
+            break;
+          case Primitive.FloorRequest:
+            this._handleFloorRequestMessage(message);
+            break;
+          default:
+            logger.debug("onChannelMessage(): do not require processing type: ".concat(message.commonHeader.primitive));
+            break;
+        }
+      } catch (error) {
+        logger.error('onChannelMessage(): Error while processing message.', error);
+      }
+    }
+
+    /**
+     * DC 关闭后清理
+     */
+  }, {
+    key: "_onChannelClose",
+    value: function _onChannelClose() {
+      var _this45 = this;
+      logger.debug('datachannel closed.');
+      setTimeout(function () {
+        // 判断dc如果断开1秒后ice状态正常则重连dc
+        if (_this45.connection.iceConnectionState === 'connected') {
+          _this45.renegotiate();
+        } else {
+          // DC 状态设置为未准备好
+          _this45._dataChannelReady = false;
+          // 停止发送心跳
+          clearInterval(_this45._bfcpHeatbeatTimer);
+          _this45._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+
+          // 停止检测close状态
+          clearInterval(_this45._closingInterval);
+        }
+      }, 1000);
+    }
+
+    /**
+     * DC 发送消息
+     * @param {*} message
+     * @param {*} transactionId
+     * @returns
+     */
+  }, {
+    key: "_dataChannelSend",
+    value: function _dataChannelSend(message, transactionId) {
+      var _this46 = this;
+      logger.debug("dataChannelSend() ".concat(transactionId));
+      return new Promise(function (resolve, reject) {
+        // DataChannel 未准备好
+        if (!_this46._dataChannelReady) {
+          reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
+          logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
+          return;
+        }
+
+        // 保存发送的处理中的 DC 消息，收到响应后删除
+        if (!_this46._dataChannelMsgs[transactionId]) {
+          _this46._dataChannelMsgs[transactionId] = {
+            retries: 0,
+            sendAt: Date.now(),
+            message: message,
+            received: false,
+            resolve: resolve,
+            reject: reject
+          };
+        }
+        var messageState = _this46._dataChannelMsgs[transactionId];
+
+        // 如果已经超出最大重试次数，则报告错误
+        if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
+          logger.warn("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+          messageState.reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+          return;
+        }
+
+        // 输出日志：发送消息次数及tid，时间戳
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this46._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this46._bfcpUser.receiveMessage(messageState.message);
+
+        // DC 消息超时重试, FloorRelease消息不重发
+        if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
+          setTimeout(function () {
+            // 如果没有收到响应，则重试
+            if (messageState && !messageState.received) {
+              messageState.retries++;
+              // 增加重试的间隔
+              _this46._dataChannelSend(messageState.message, transactionId);
+            }
+          }, Math.pow(2, messageState.retries) * 500);
+        }
+        _this46._dataChannel && _this46._dataChannel.send(messageState.message);
+      });
+    }
+
+    // 检查是否为画布流的通用方法
+  }, {
+    key: "_isCanvasTrack",
+    value: function _isCanvasTrack(track) {
+      // 检查track的settings中是否包含canvas相关信息
+      var settings = track.getSettings();
+
+      // Firefox中canvas轨道的label通常包含"MediaStreamTrack"且不会有deviceId
+      // 同时增加对Firefox中CanvasCaptureMediaStreamTrack的检查
+      return !settings.deviceId || settings.deviceId === 'canvas' || track.label.toLowerCase().includes('canvas') || track.constructor && track.constructor.name === 'CanvasCaptureMediaStreamTrack' || !settings.deviceId && track.label.includes('MediaStreamTrack');
+    }
+
+    /**
+     * 初始化 DataChannel
+     */
+  }, {
+    key: "_initDataChannel",
+    value: function _initDataChannel(event) {
+      var _this47 = this;
+      logger.debug("initDataChannel()".concat(JSON.stringify(event)));
+
+      // 内部变量
+      var datachannel;
+
+      /**
+       * 异常处理
+       */
+      if (event && event.channel) {
+        this._dataChannel = datachannel = event.channel;
+      } else {
+        // 如果是DataChannel的发起方则创建DataChannel
+        this._dataChannel = datachannel = this._connection.createDataChannel(this._dataChannelName, this._dataChannelConfig);
+      }
+      // 特殊场景存在createDataChannel不成功的问题 See: https://github.com/feross/simple-peer/issues/163
+      if (!datachannel) {
+        logger.error('Data channel event is missing `channel` property');
+        return;
+      }
+
+      /**
+       * 设置DC默认属性
+       */
+      datachannel.binaryType = 'arraybuffer';
+      this._dataChannelName = datachannel.label;
+
+      /**
+       * 事件监听
+       */
+      datachannel.onmessage = function (ev) {
+        // 收到数据
+        _this47._onChannelMessage(ev);
+      };
+
+      // 端口状态处于 established 的时候会触发
+      datachannel.onopen = function () {
+        logger.warn('datachannel opened.');
+        _this47._dataChannelReady = true;
+        // 开始发送心跳消息
+        _this47._sendHello();
+        _this47._bfcpHeatbeatTimer = setInterval(function () {
+          _this47._sendHello();
+        }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+      };
+      datachannel.onclose = function () {
+        // 底层链路被关闭的时候会触发
+        _this47._onChannelClose();
+      };
+
+      // 遇到错误的时候会触发
+      datachannel.onerror = function (ev) {
+        logger.error('datachannel error.');
+        var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
+        _this47._dataChannelReady = false;
+        logger.warn('data err: ', err);
+
+        // 异常重连
+        if (_this47.connection.iceConnectionState === 'connected') {
+          _this47.renegotiate();
+        }
+      };
+
+      // HACK: Chrome will sometimes get stuck in readyState "closing", let's check for this condition
+      // https://bugs.chromium.org/p/chromium/issues/detail?id=882743
+      var isClosing = false;
+      this._closingInterval = setInterval(function () {
+        // No "onclosing" event
+        if (datachannel && datachannel.readyState === 'closing') {
+          // closing timed out: equivalent to onclose firing
+          if (isClosing) _this47._onChannelClose();
+          isClosing = true;
+        } else {
+          isClosing = false;
+        }
+      }, CRTC_C.CHANNEL_CLOSING_TIMEOUT);
+      return datachannel;
     }
   }], [{
     key: "C",
@@ -19419,7 +24348,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return RTCSession;
 }(EventEmitter);
-},{"./Constants":2,"./Dialog":3,"./Exceptions":6,"./Logger":9,"./RTCSession/DTMF":16,"./RTCSession/Info":17,"./RTCSession/ReferNotifier":18,"./RTCSession/ReferSubscriber":19,"./RequestSender":21,"./SIPMessage":22,"./Timers":25,"./Transactions":26,"./URI":29,"./Utils":30,"events":33,"sdp-transform":40}],16:[function(require,module,exports){
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":66,"events":65,"sdp-transform":74}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -19588,7 +24518,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":2,"../Exceptions":6,"../Logger":9,"../Utils":30,"events":33}],17:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":65}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -19699,7 +24629,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return Info;
 }(EventEmitter);
-},{"../Constants":2,"../Exceptions":6,"../Utils":30,"events":33}],18:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":65}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -19757,7 +24687,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return ReferNotifier;
 }();
-},{"../Constants":2,"../Logger":9}],19:[function(require,module,exports){
+},{"../Constants":32,"../Logger":39}],50:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -19915,7 +24845,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return ReferSubscriber;
 }(EventEmitter);
-},{"../Constants":2,"../Grammar":7,"../Logger":9,"../Utils":30,"events":33}],20:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":65}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -20248,7 +25178,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Registrator;
 }();
-},{"./Constants":2,"./Logger":9,"./RequestSender":21,"./SIPMessage":22,"./Utils":30}],21:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61}],52:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -20401,7 +25331,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return RequestSender;
 }();
-},{"./Constants":2,"./DigestAuthentication":5,"./Logger":9,"./Transactions":26}],22:[function(require,module,exports){
+},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":57}],53:[function(require,module,exports){
 "use strict";
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); Object.defineProperty(subClass, "prototype", { writable: false }); if (superClass) _setPrototypeOf(subClass, superClass); }
@@ -21157,7 +26087,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":2,"./Grammar":7,"./Logger":9,"./NameAddrHeader":11,"./Utils":30,"sdp-transform":40}],23:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":74}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -21225,9 +26155,10 @@ exports.isSocket = function (socket) {
   }
   return true;
 };
-},{"./Grammar":7,"./Logger":9,"./Utils":30}],24:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./Utils":61}],55:[function(require,module,exports){
 "use strict";
 
+<<<<<<< HEAD
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return exports; }; var exports = {}, Op = Object.prototype, hasOwn = Op.hasOwnProperty, defineProperty = Object.defineProperty || function (obj, key, desc) { obj[key] = desc.value; }, $Symbol = "function" == typeof Symbol ? Symbol : {}, iteratorSymbol = $Symbol.iterator || "@@iterator", asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator", toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag"; function define(obj, key, value) { return Object.defineProperty(obj, key, { value: value, enumerable: !0, configurable: !0, writable: !0 }), obj[key]; } try { define({}, ""); } catch (err) { define = function define(obj, key, value) { return obj[key] = value; }; } function wrap(innerFn, outerFn, self, tryLocsList) { var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator, generator = Object.create(protoGenerator.prototype), context = new Context(tryLocsList || []); return defineProperty(generator, "_invoke", { value: makeInvokeMethod(innerFn, self, context) }), generator; } function tryCatch(fn, obj, arg) { try { return { type: "normal", arg: fn.call(obj, arg) }; } catch (err) { return { type: "throw", arg: err }; } } exports.wrap = wrap; var ContinueSentinel = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var IteratorPrototype = {}; define(IteratorPrototype, iteratorSymbol, function () { return this; }); var getProto = Object.getPrototypeOf, NativeIteratorPrototype = getProto && getProto(getProto(values([]))); NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol) && (IteratorPrototype = NativeIteratorPrototype); var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype); function defineIteratorMethods(prototype) { ["next", "throw", "return"].forEach(function (method) { define(prototype, method, function (arg) { return this._invoke(method, arg); }); }); } function AsyncIterator(generator, PromiseImpl) { function invoke(method, arg, resolve, reject) { var record = tryCatch(generator[method], generator, arg); if ("throw" !== record.type) { var result = record.arg, value = result.value; return value && "object" == _typeof(value) && hasOwn.call(value, "__await") ? PromiseImpl.resolve(value.__await).then(function (value) { invoke("next", value, resolve, reject); }, function (err) { invoke("throw", err, resolve, reject); }) : PromiseImpl.resolve(value).then(function (unwrapped) { result.value = unwrapped, resolve(result); }, function (error) { return invoke("throw", error, resolve, reject); }); } reject(record.arg); } var previousPromise; defineProperty(this, "_invoke", { value: function value(method, arg) { function callInvokeWithMethodAndArg() { return new PromiseImpl(function (resolve, reject) { invoke(method, arg, resolve, reject); }); } return previousPromise = previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(innerFn, self, context) { var state = "suspendedStart"; return function (method, arg) { if ("executing" === state) throw new Error("Generator is already running"); if ("completed" === state) { if ("throw" === method) throw arg; return doneResult(); } for (context.method = method, context.arg = arg;;) { var delegate = context.delegate; if (delegate) { var delegateResult = maybeInvokeDelegate(delegate, context); if (delegateResult) { if (delegateResult === ContinueSentinel) continue; return delegateResult; } } if ("next" === context.method) context.sent = context._sent = context.arg;else if ("throw" === context.method) { if ("suspendedStart" === state) throw state = "completed", context.arg; context.dispatchException(context.arg); } else "return" === context.method && context.abrupt("return", context.arg); state = "executing"; var record = tryCatch(innerFn, self, context); if ("normal" === record.type) { if (state = context.done ? "completed" : "suspendedYield", record.arg === ContinueSentinel) continue; return { value: record.arg, done: context.done }; } "throw" === record.type && (state = "completed", context.method = "throw", context.arg = record.arg); } }; } function maybeInvokeDelegate(delegate, context) { var methodName = context.method, method = delegate.iterator[methodName]; if (undefined === method) return context.delegate = null, "throw" === methodName && delegate.iterator["return"] && (context.method = "return", context.arg = undefined, maybeInvokeDelegate(delegate, context), "throw" === context.method) || "return" !== methodName && (context.method = "throw", context.arg = new TypeError("The iterator does not provide a '" + methodName + "' method")), ContinueSentinel; var record = tryCatch(method, delegate.iterator, context.arg); if ("throw" === record.type) return context.method = "throw", context.arg = record.arg, context.delegate = null, ContinueSentinel; var info = record.arg; return info ? info.done ? (context[delegate.resultName] = info.value, context.next = delegate.nextLoc, "return" !== context.method && (context.method = "next", context.arg = undefined), context.delegate = null, ContinueSentinel) : info : (context.method = "throw", context.arg = new TypeError("iterator result is not an object"), context.delegate = null, ContinueSentinel); } function pushTryEntry(locs) { var entry = { tryLoc: locs[0] }; 1 in locs && (entry.catchLoc = locs[1]), 2 in locs && (entry.finallyLoc = locs[2], entry.afterLoc = locs[3]), this.tryEntries.push(entry); } function resetTryEntry(entry) { var record = entry.completion || {}; record.type = "normal", delete record.arg, entry.completion = record; } function Context(tryLocsList) { this.tryEntries = [{ tryLoc: "root" }], tryLocsList.forEach(pushTryEntry, this), this.reset(!0); } function values(iterable) { if (iterable) { var iteratorMethod = iterable[iteratorSymbol]; if (iteratorMethod) return iteratorMethod.call(iterable); if ("function" == typeof iterable.next) return iterable; if (!isNaN(iterable.length)) { var i = -1, next = function next() { for (; ++i < iterable.length;) if (hasOwn.call(iterable, i)) return next.value = iterable[i], next.done = !1, next; return next.value = undefined, next.done = !0, next; }; return next.next = next; } } return { next: doneResult }; } function doneResult() { return { value: undefined, done: !0 }; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, defineProperty(Gp, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), defineProperty(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction"), exports.isGeneratorFunction = function (genFun) { var ctor = "function" == typeof genFun && genFun.constructor; return !!ctor && (ctor === GeneratorFunction || "GeneratorFunction" === (ctor.displayName || ctor.name)); }, exports.mark = function (genFun) { return Object.setPrototypeOf ? Object.setPrototypeOf(genFun, GeneratorFunctionPrototype) : (genFun.__proto__ = GeneratorFunctionPrototype, define(genFun, toStringTagSymbol, "GeneratorFunction")), genFun.prototype = Object.create(Gp), genFun; }, exports.awrap = function (arg) { return { __await: arg }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, asyncIteratorSymbol, function () { return this; }), exports.AsyncIterator = AsyncIterator, exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) { void 0 === PromiseImpl && (PromiseImpl = Promise); var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl); return exports.isGeneratorFunction(outerFn) ? iter : iter.next().then(function (result) { return result.done ? result.value : iter.next(); }); }, defineIteratorMethods(Gp), define(Gp, toStringTagSymbol, "Generator"), define(Gp, iteratorSymbol, function () { return this; }), define(Gp, "toString", function () { return "[object Generator]"; }), exports.keys = function (val) { var object = Object(val), keys = []; for (var key in object) keys.push(key); return keys.reverse(), function next() { for (; keys.length;) { var key = keys.pop(); if (key in object) return next.value = key, next.done = !1, next; } return next.done = !0, next; }; }, exports.values = values, Context.prototype = { constructor: Context, reset: function reset(skipTempReset) { if (this.prev = 0, this.next = 0, this.sent = this._sent = undefined, this.done = !1, this.delegate = null, this.method = "next", this.arg = undefined, this.tryEntries.forEach(resetTryEntry), !skipTempReset) for (var name in this) "t" === name.charAt(0) && hasOwn.call(this, name) && !isNaN(+name.slice(1)) && (this[name] = undefined); }, stop: function stop() { this.done = !0; var rootRecord = this.tryEntries[0].completion; if ("throw" === rootRecord.type) throw rootRecord.arg; return this.rval; }, dispatchException: function dispatchException(exception) { if (this.done) throw exception; var context = this; function handle(loc, caught) { return record.type = "throw", record.arg = exception, context.next = loc, caught && (context.method = "next", context.arg = undefined), !!caught; } for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i], record = entry.completion; if ("root" === entry.tryLoc) return handle("end"); if (entry.tryLoc <= this.prev) { var hasCatch = hasOwn.call(entry, "catchLoc"), hasFinally = hasOwn.call(entry, "finallyLoc"); if (hasCatch && hasFinally) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } else if (hasCatch) { if (this.prev < entry.catchLoc) return handle(entry.catchLoc, !0); } else { if (!hasFinally) throw new Error("try statement without catch or finally"); if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc); } } } }, abrupt: function abrupt(type, arg) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) { var finallyEntry = entry; break; } } finallyEntry && ("break" === type || "continue" === type) && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc && (finallyEntry = null); var record = finallyEntry ? finallyEntry.completion : {}; return record.type = type, record.arg = arg, finallyEntry ? (this.method = "next", this.next = finallyEntry.finallyLoc, ContinueSentinel) : this.complete(record); }, complete: function complete(record, afterLoc) { if ("throw" === record.type) throw record.arg; return "break" === record.type || "continue" === record.type ? this.next = record.arg : "return" === record.type ? (this.rval = this.arg = record.arg, this.method = "return", this.next = "end") : "normal" === record.type && afterLoc && (this.next = afterLoc), ContinueSentinel; }, finish: function finish(finallyLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.finallyLoc === finallyLoc) return this.complete(entry.completion, entry.afterLoc), resetTryEntry(entry), ContinueSentinel; } }, "catch": function _catch(tryLoc) { for (var i = this.tryEntries.length - 1; i >= 0; --i) { var entry = this.tryEntries[i]; if (entry.tryLoc === tryLoc) { var record = entry.completion; if ("throw" === record.type) { var thrown = record.arg; resetTryEntry(entry); } return thrown; } } throw new Error("illegal catch attempt"); }, delegateYield: function delegateYield(iterable, resultName, nextLoc) { return this.delegate = { iterator: values(iterable), resultName: resultName, nextLoc: nextLoc }, "next" === this.method && (this.arg = undefined), ContinueSentinel; } }, exports; }
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -21244,9 +26175,32 @@ function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) ===
 function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
 function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
 function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+=======
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/* eslint-disable max-len */
+>>>>>>> CRTC-new-dev
 var EventEmitter = require('events').EventEmitter;
 var Utils = require('./Utils');
 var Logger = require('./Logger');
+var CRTC_C = require('./Constants');
 var logger = new Logger('Stats');
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(getStats, _EventEmitter);
@@ -21263,66 +26217,30 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // 多少次getStats后发送完整statsReport
     _this._count = _this._interval;
+
+    // 存储 mediaSourceId 和 trackIdentifier 的对应关系
+    _this._mediaSourceIdToTrackIdentifier = new Map();
+
+    // 远端共享的 trackIdentifier
+    _this._remoteSharedTrackIdentifier = null;
+    _this._remoteInboundRtps = new Map();
+
+    // 本端共享的 trackIdentifier
+    _this._localSharedTrackIdentifier = null;
     _this._statsTimer;
-    _this._stats = {
-      transport: {
-        RTT: null
+
+    // 新的统计信息
+    _this._newStats = {
+      rtt: null,
+      upStreams: {
+        audio: {},
+        video: {},
+        shared: {}
       },
-      audio: {
-        bytesSent: null,
-        packetsSent: null,
-        packetsSentLost: null,
-        bytesReceived: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        // uplinkRTT           : null,
-        uplinkLoss: null,
-        uplinkSpeed: null,
-        // downlinkRTT         : null,
-        downlinkLoss: null,
-        downlinkSpeed: null
-      },
-      video: {
-        packetsSent: null,
-        packetsSentLost: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        bytesSent: null,
-        bytesReceived: null,
-        // uplinkRTT           : null,
-        uplinkLoss: null,
-        uplinkSpeed: null,
-        // downlinkRTT         : null,
-        downlinkLoss: null,
-        downlinkSpeed: null,
-        framesEncoded: null,
-        framesDecoded: null,
-        framesSent: null,
-        framesReceived: null,
-        upFramesPerSecond: null,
-        downFramesPerSecond: null,
-        upFrameHeight: null,
-        upFrameWidth: null,
-        downFrameHeight: null,
-        downFrameWidth: null
-      }
-    };
-    _this._cStats = {
-      audio: {
-        bytesSent: null,
-        packetsSent: null,
-        packetsSentLost: null,
-        bytesReceived: null,
-        packetsReceived: null,
-        packetsReceivedLost: null
-      },
-      video: {
-        packetsSent: null,
-        packetsSentLost: null,
-        packetsReceived: null,
-        packetsReceivedLost: null,
-        bytesSent: null,
-        bytesReceived: null
+      downStreams: {
+        audio: {},
+        video: {},
+        shared: {}
       }
     };
     _this.start();
@@ -21332,29 +26250,79 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "start",
     value: function start() {
       var _this2 = this;
+<<<<<<< HEAD
       this._statsTimer = setInterval( /*#__PURE__*/_asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+=======
+      this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports;
+>>>>>>> CRTC-new-dev
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
             case 0:
+              inform = false; // 全局停止统计信息输出
               if (!(window.CRTCStats === 'stop')) {
-                _context.next = 3;
+                _context.next = 4;
                 break;
               }
               clearInterval(_this2._statsTimer);
               return _context.abrupt("return");
-            case 3:
-              _this2._pc.getStats().then(function (stats) {
-                _this2.parseReport(stats);
-                if (_this2._count === 0) {
-                  // 第二次开始间隔5-10次输出一次完整report
-                  _this2._count = _this2._interval + (Math.random() * 5 | 0);
-                  _this2.parseReport(stats, true);
-                }
-                _this2._count--;
-              });
+            case 4:
+              _this2._data = '';
+              if (_this2._count === 0) {
+                // 第二次开始间隔5-10次输出一次完整report
+                _this2._count = _this2._interval + (Math.random() * 5 | 0);
+                inform = true;
+              }
+              _this2._count--;
+              _context.next = 9;
+              return _this2._pc.getTransceivers();
+            case 9:
+              transceivers = _context.sent;
+              _iterator = _createForOfIteratorHelper(transceivers);
+              _context.prev = 11;
+              _iterator.s();
+            case 13:
+              if ((_step = _iterator.n()).done) {
+                _context.next = 24;
+                break;
+              }
+              transceiver = _step.value;
+              _context.next = 17;
+              return transceiver.sender.getStats();
+            case 17:
+              senderReports = _context.sent;
+              _context.next = 20;
+              return transceiver.receiver.getStats();
+            case 20:
+              receiverReports = _context.sent;
+              if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
+                _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
+                _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
+              } else {
+                transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
+                _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
+              }
+            case 22:
+              _context.next = 13;
+              break;
+            case 24:
+              _context.next = 29;
+              break;
+            case 26:
+              _context.prev = 26;
+              _context.t0 = _context["catch"](11);
+              _iterator.e(_context.t0);
+            case 29:
+              _context.prev = 29;
+              _iterator.f();
+              return _context.finish(29);
+            case 32:
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
+                  if (!s.track) {
+                    return;
+                  }
                   var trackStatus = "id: ".concat(s.track.id, ", enabled: ").concat(s.track.enabled, ", label: ").concat(s.track.label, ",kind: ").concat(s.track.kind, ",muted: ").concat(s.track.muted, ",readyState: ").concat(s.track.readyState, ",transport: ").concat(s.transport.state && s.transport.state, ";");
                   logger.debug("curr ".concat(s.track.kind, " track status: ").concat(trackStatus));
                   logger.debug("settings: ".concat(JSON.stringify(s.track.getSettings()), " ***** constraints: ").concat(JSON.stringify(s.track.getConstraints()), " ***** capabilities: ").concat(JSON.stringify(s.track.getCapabilities ? s.track.getCapabilities() : {})));
@@ -21362,293 +26330,267 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               } catch (error) {
                 logger.error(error.toString());
               }
-            case 6:
+              if (!_this2._data) {
+                _context.next = 37;
+                break;
+              }
+              logger.debug(_this2._data);
+              return _context.abrupt("return");
+            case 37:
+              _this2._createReport();
+            case 38:
             case "end":
               return _context.stop();
           }
-        }, _callee);
+        }, _callee, null, [[11, 26, 29, 32]]);
       })), this._delay * 1000);
     }
   }, {
     key: "stop",
     value: function stop() {
       clearInterval(this._statsTimer);
-      this._count = 5;
+      this._count = this._interval;
     }
   }, {
     key: "reset",
-    value: function reset() {
-      this._stats = {
-        transport: {
-          RTT: null
-        },
-        audio: {
-          bytesSent: null,
-          packetsSent: null,
-          packetsSentLost: null,
-          bytesReceived: null,
-          packetsReceived: null,
-          packetsReceivedLost: null,
-          // uplinkRTT           : null,
-          uplinkLoss: null,
-          uplinkSpeed: null,
-          // downlinkRTT         : null,
-          downlinkLoss: null,
-          downlinkSpeed: null
-        },
-        video: {
-          packetsSent: null,
-          packetsSentLost: null,
-          packetsReceived: null,
-          packetsReceivedLost: null,
-          bytesSent: null,
-          bytesReceived: null,
-          // uplinkRTT           : null,
-          uplinkLoss: null,
-          uplinkSpeed: null,
-          // downlinkRTT         : null,
-          downlinkLoss: null,
-          downlinkSpeed: null,
-          framesEncoded: null,
-          framesDecoded: null,
-          framesSent: null,
-          framesReceived: null,
-          upFramesPerSecond: null,
-          downFramesPerSecond: null,
-          upFrameHeight: null,
-          upFrameWidth: null,
-          downFrameHeight: null,
-          downFrameWidth: null
-        }
-      };
-    }
+    value: function reset() {}
 
-    // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
-    // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
+    // 解析上行统计报告
   }, {
-    key: "parseReport",
-    value: function parseReport(stats, inform) {
+    key: "_parseSenderReport",
+    value: function _parseSenderReport(reports, sender, shared, inform) {
       var _this3 = this;
-      var data = null;
-      stats.forEach(function (report) {
+      var type;
+      var tmpObject = {};
+      shared ? type = 'shared' : type = sender.track.kind;
+
+      // 前一次的统计结果
+      var previewStats = this._newStats.upStreams[type];
+      var calc_bytesSent;
+      var calc_packetsSent;
+      var calc_packetsLost;
+      var fractionLost;
+      reports.forEach(function (report) {
         if (inform) {
-          data += JSON.stringify(report);
+          _this3._data += JSON.stringify(report);
           return;
         }
         switch (report.type) {
-          case 'remote-inbound-rtp':
-            if (!report['packetsLost']) {
-              break;
-            }
-            if (report.kind === 'video') {
-              _this3._cStats.video.packetsSentLost = report['packetsLost'] - (_this3._stats.video.packetsSentLost ? _this3._stats.video.packetsSentLost : 0);
-              _this3._stats.video.packetsSentLost = report['packetsLost'];
-            } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsSentLost = report['packetsLost'] - (_this3._stats.audio.packetsSentLost ? _this3._stats.audio.packetsSentLost : 0);
-              _this3._stats.audio.packetsSentLost = report['packetsLost'];
-            }
-            break;
-          case 'candidate-pair':
-            if (report['state'] !== 'succeeded') {
-              break;
-            } else {
-              _this3._stats.transport.RTT = Math.floor(1e3 * report['currentRoundTripTime']);
-            }
-            break;
           case 'outbound-rtp':
-            if (report.kind === 'video') {
-              _this3._cStats.video.packetsSent = report['packetsSent'] - (_this3._stats.video.packetsSent ? _this3._stats.video.packetsSent : 0);
-              _this3._cStats.video.bytesSent = report['bytesSent'] - (_this3._stats.video.bytesSent ? _this3._stats.video.bytesSent : 0);
-              _this3._stats.video.packetsSent = report['packetsSent'];
-              _this3._stats.video.bytesSent = report['bytesSent'];
-              _this3._stats.video.upFrameHeight = report['frameHeight'];
-              _this3._stats.video.upFrameWidth = report['frameWidth'];
-              _this3._stats.video.framesEncoded = report['framesEncoded'];
-              _this3._stats.video.framesSent = report['framesSent'];
-              _this3._stats.video.upFramesPerSecond = report['framesPerSecond'];
-            } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsSent = report['packetsSent'] - (_this3._stats.audio.packetsSent ? _this3._stats.audio.packetsSent : 0);
-              _this3._cStats.audio.bytesSent = report['bytesSent'] - (_this3._stats.audio.bytesSent ? _this3._stats.audio.bytesSent : 0);
-              _this3._stats.audio.packetsSent = report['packetsSent'];
-              _this3._stats.audio.bytesSent = report['bytesSent'];
+            {
+              // 用于计算速率和丢包的值
+              calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
+              calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
+
+              // 当前报告的原始值
+              tmpObject['bytesSent'] = report['bytesSent'];
+              tmpObject['packetsSent'] = report['packetsSent'] || 0;
+              if (report['kind'] === 'video') {
+                report['framesSent'] && (tmpObject['framesSent'] = report['framesSent']);
+                tmpObject['framesEncoded'] = report['framesEncoded'] || null;
+                tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
+                tmpObject['frameHeight'] = report['frameHeight'] || sender.track && sender.track.getSettings()['height'] || null;
+                tmpObject['frameWidth'] = report['frameWidth'] || sender.track && sender.track.getSettings()['width'] || null;
+              }
+              break;
             }
+          case 'remote-inbound-rtp':
+            calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
+            fractionLost = 'fractionLost' in report ? report['fractionLost'] : null;
+            _this3._newStats.rtt = report['roundTripTime'] && Math.floor(1e3 * report['roundTripTime']);
+            if ('jitter' in report) {
+              tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
+            }
+            tmpObject['packetsLost'] = report['packetsLost'];
             break;
-          case 'inbound-rtp':
-            if (report.kind === 'video') {
-              _this3._cStats.video.packetsReceived = report['packetsReceived'] - (_this3._stats.video.packetsReceived ? _this3._stats.video.packetsReceived : 0);
-              _this3._cStats.video.bytesReceived = report['bytesReceived'] - (_this3._stats.video.bytesReceived ? _this3._stats.video.bytesReceived : 0);
-              _this3._cStats.video.packetsReceivedLost = report['packetsLost'] - (_this3._stats.video.packetsReceivedLost ? _this3._stats.video.packetsReceivedLost : 0);
-              _this3._stats.video.packetsReceived = report['packetsReceived'];
-              _this3._stats.video.bytesReceived = report['bytesReceived'];
-              _this3._stats.video.packetsReceivedLost = report['packetsLost'];
-              _this3._stats.video.downFrameHeight = report['frameHeight'];
-              _this3._stats.video.downFrameWidth = report['frameWidth'];
-              _this3._stats.video.framesDecoded = report['framesDecoded'];
-              _this3._stats.video.framesReceived = report['framesReceived'];
-              _this3._stats.video.downFramesPerSecond = report['framesPerSecond'];
-            } else if (report.kind === 'audio') {
-              _this3._cStats.audio.packetsReceived = report['packetsReceived'] - (_this3._stats.audio.packetsReceived ? _this3._stats.audio.packetsReceived : 0);
-              _this3._cStats.audio.bytesReceived = report['bytesReceived'] - (_this3._stats.audio.bytesReceived ? _this3._stats.audio.bytesReceived : 0);
-              _this3._cStats.audio.packetsReceivedLost = report['packetsLost'] - (_this3._stats.audio.packetsReceivedLost ? _this3._stats.audio.packetsReceivedLost : 0);
-              _this3._stats.audio.packetsReceived = report['packetsReceived'];
-              _this3._stats.audio.bytesReceived = report['bytesReceived'];
-              _this3._stats.audio.packetsReceivedLost = report['packetsLost'];
-            }
+          case 'codec':
+            tmpObject['mimeType'] = report['mimeType'].split('/')[1];
             break;
           default:
             break;
         }
       });
-      if (data) {
-        logger.debug(data);
-        return;
-      }
 
-      // 语音上行丢包率
-      if (this._cStats.audio.packetsSent === null) {
-        this._stats.audio.uplinkLoss = null;
-      } else if (this._cStats.audio.packetsSentLost === null) {
-        this._stats.audio.uplinkLoss = null;
+      // 当前周期的计算值
+      var loss = 0;
+      if (!calc_packetsSent || calc_packetsLost === null) {
+        loss = null;
+      } else if (fractionLost) {
+        loss = Math.floor(fractionLost * 100);
       } else {
-        var audioUplinkLoss = 0;
-        if (this._cStats.audio.packetsSent === 0) {
-          audioUplinkLoss = 100;
-        } else {
-          audioUplinkLoss = Math.floor(this._cStats.audio.packetsSentLost * 100 / (this._cStats.audio.packetsSentLost + this._cStats.audio.packetsSent));
-        }
-        if (audioUplinkLoss >= 0) {
-          this._stats.audio.uplinkLoss = audioUplinkLoss;
-        }
+        loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
       }
+      tmpObject['calc_loss'] = loss;
+      tmpObject['calc_speed'] = !calc_bytesSent ? null : calc_bytesSent / this._delay * 8;
+      !tmpObject['frameWidth'] && type !== 'audio' && (tmpObject = {});
 
-      // 语音上行速率
-      if (this._cStats.audio.bytesSent === null) {
-        this._stats.audio.uplinkSpeed = null;
-      } else {
-        this._stats.audio.uplinkSpeed = this._cStats.audio.bytesSent / this._delay * 8;
-      }
+      // 合并统计结果
+      (calc_packetsSent || calc_packetsSent === 0) && (this._newStats.upStreams[type] = tmpObject);
+    }
 
-      // 语音下行丢包率
-      if (this._cStats.audio.packetsReceived === null) {
-        this._stats.audio.downlinkLoss = null;
-      } else if (this._cStats.audio.packetsReceivedLost === null) {
-        this._stats.audio.downlinkLoss = null;
-      } else {
-        var audioDownlinkLoss = 0;
-        if (this._cStats.audio.packetsReceived === 0) {
-          audioDownlinkLoss = 100;
-        } else {
-          audioDownlinkLoss = Math.floor(this._cStats.audio.packetsReceivedLost * 100 / (this._cStats.audio.packetsReceivedLost + this._cStats.audio.packetsReceived));
-        }
-        if (audioDownlinkLoss >= 0) {
-          this._stats.audio.downlinkLoss = audioDownlinkLoss;
-        }
-      }
+    // 解析下行统计报告
+  }, {
+    key: "_parseReceiverReport",
+    value: function _parseReceiverReport(reports, receiver, shared, inform) {
+      var _this4 = this;
+      var type;
+      var tmpObject = {};
+      shared ? type = 'shared' : type = receiver.track.kind;
 
-      // 语音下行速率
-      if (this._cStats.audio.bytesReceived === null) {
-        this._stats.audio.downlinkSpeed = null;
-      } else {
-        this._stats.audio.downlinkSpeed = this._cStats.audio.bytesReceived / this._delay * 8;
-      }
+      // 前一次的统计结果
+      var previewStats = this._newStats.downStreams[type];
 
-      // 视频上行丢包率
-      if (this._cStats.video.packetsSent === null) {
-        this._stats.video.uplinkLoss = null;
-      } else if (this._cStats.video.packetsSentLost === null) {
-        this._stats.video.uplinkLoss = null;
-      } else {
-        var videoUplinkLoss = 0;
-        if (this._cStats.video.packetsSent === 0) {
-          videoUplinkLoss = 100;
-        } else {
-          videoUplinkLoss = Math.floor(this._cStats.video.packetsSentLost * 100 / (this._cStats.video.packetsSentLost + this._cStats.video.packetsSent));
+      // 用于计算速率和丢包的值
+      var calc_bytesReceived;
+      var calc_packetsReceived;
+      var calc_packetsLost;
+      reports.forEach(function (report) {
+        if (inform) {
+          _this4._data += JSON.stringify(report);
+          return;
         }
-        if (videoUplinkLoss >= 0) {
-          this._stats.video.uplinkLoss = videoUplinkLoss;
-        }
-      }
+        switch (report.type) {
+          case 'inbound-rtp':
+            {
+              // 用于计算速率和丢包的值
+              calc_bytesReceived = report['bytesReceived'] - (previewStats.bytesReceived || 0);
+              calc_packetsReceived = report['packetsReceived'] - (previewStats.packetsReceived || 0);
+              calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
 
-      // 视频上行速率
-      if (this._cStats.video.bytesSent === null) {
-        this._stats.video.uplinkSpeed = null;
-      } else {
-        this._stats.video.uplinkSpeed = this._cStats.video.bytesSent / this._delay * 8;
-      }
-
-      // 视频下行丢包率
-      if (this._cStats.video.packetsReceived === null || this._cStats.video.packetsReceivedLost === null) {
-        this._stats.video.downlinkLoss = null;
-      } else {
-        var videoDownlinkLoss = 0;
-        if (this._cStats.video.packetsReceived === 0) {
-          videoDownlinkLoss = 100;
-        } else {
-          videoDownlinkLoss = Math.floor(this._cStats.video.packetsReceivedLost * 100 / (this._cStats.video.packetsReceivedLost + this._cStats.video.packetsReceived));
+              // 当前报告的原始值
+              tmpObject['bytesReceived'] = report['bytesReceived'];
+              tmpObject['packetsReceived'] = report['packetsReceived'] || 0;
+              tmpObject['packetsLost'] = report['packetsLost'];
+              if ('jitter' in report) {
+                tmpObject['jitter'] = Math.floor(1e3 * report['jitter']);
+              }
+              if (report['kind'] === 'video') {
+                report['framesReceived'] && (tmpObject['framesReceived'] = report['framesReceived']);
+                tmpObject['framesDecoded'] = report['framesDecoded'] || null;
+                report['framerateMean'] && (tmpObject['framesPerSecond'] = Math.ceil(report['framerateMean']));
+                report['framesPerSecond'] && (tmpObject['framesPerSecond'] = report['framesPerSecond']);
+                // tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : null;
+                report['frameHeight'] && (tmpObject['frameHeight'] = report['frameHeight']);
+                report['frameWidth'] && (tmpObject['frameWidth'] = report['frameWidth']);
+              }
+              break;
+            }
+          case 'codec':
+            tmpObject['mimeType'] = report['mimeType'].split('/')[1];
+            break;
+          default:
+            break;
         }
-        if (videoDownlinkLoss >= 0) {
-          this._stats.video.downlinkLoss = videoDownlinkLoss;
-        }
-      }
+      });
 
-      // 视频下行速率
-      if (this._cStats.video.bytesReceived === null) {
-        this._stats.video.downlinkSpeed = null;
+      // 当前周期的计算值
+      var loss = 0;
+      if (!calc_bytesReceived || calc_packetsLost === null) {
+        loss = null;
       } else {
-        this._stats.video.downlinkSpeed = this._cStats.video.bytesReceived / this._delay * 8;
+        loss = Math.floor(calc_packetsLost * 100 / (calc_packetsReceived + calc_packetsLost));
       }
-      function parseStatsReport(report) {
-        var rp = {
-          transport: {
-            RTT: report.transport.RTT
-          },
+      tmpObject['calc_loss'] = loss;
+      tmpObject['calc_speed'] = !calc_bytesReceived ? null : calc_bytesReceived / this._delay * 8;
+      calc_packetsReceived === 0 && (tmpObject = {
+        packetsReceived: tmpObject['packetsReceived']
+      });
+      // 合并统计结果
+      (calc_packetsReceived || calc_packetsReceived === 0) && (this._newStats.downStreams[type] = tmpObject);
+    }
+
+    // 参考 https://blog.csdn.net/weixin_41821317/article/details/117261117
+    // https://www.twilio.com/blog/2016/03/chrome-vs-firefox-webrtc-stats-api-with-twilio-video.html
+  }, {
+    key: "_createReport",
+    value: function _createReport() {
+      var newReport = formatStats(this._newStats);
+      logger.debug(JSON.stringify(this._newStats));
+      this.emit('report', {
+        RTT: newReport.rtt,
+        upStreams: newReport.upStreams,
+        downStreams: newReport.downStreams
+      });
+      function formatStats(oldStats) {
+        // 创建新的stats对象结构
+        var newStats = {
+          rtt: oldStats.rtt,
           audio: {
-            bytesSent: report.audio.bytesSent,
-            packetsSent: report.audio.packetsSent,
-            uplinkLoss: report.audio.uplinkLoss,
-            uplinkSpeed: report.audio.uplinkSpeed,
-            bytesReceived: report.audio.bytesReceived,
-            packetsReceived: report.audio.packetsReceived,
-            downlinkLoss: report.audio.downlinkLoss,
-            downlinkSpeed: report.audio.downlinkSpeed
+            calc_uplink_loss: 0,
+            calc_downlink_loss: 0
           },
           video: {
-            bytesSent: report.video.bytesSent,
-            packetsSent: report.video.packetsSent,
-            framesSent: report.video.framesSent,
-            framesEncoded: report.video.framesEncoded,
-            upFrameWidth: report.video.upFrameWidth,
-            upFrameHeight: report.video.upFrameHeight,
-            uplinkLoss: report.video.uplinkLoss,
-            uplinkSpeed: report.video.uplinkSpeed,
-            bytesReceived: report.video.bytesReceived,
-            packetsReceived: report.video.packetsReceived,
-            framesReceived: report.video.framesReceived,
-            framesDecoded: report.video.framesDecoded,
-            upFramesPerSecond: report.video.upFramesPerSecond,
-            downFramesPerSecond: report.video.downFramesPerSecond,
-            downFrameWidth: report.video.downFrameWidth,
-            downFrameHeight: report.video.downFrameHeight,
-            downlinkLoss: report.video.downlinkLoss,
-            downlinkSpeed: report.video.downlinkSpeed
+            calc_uplink_loss: 0,
+            calc_downlink_loss: 0
+          },
+          upStreams: [],
+          downStreams: []
+        };
+
+        // 处理视频上下行流数据
+        var oldUpStreams = oldStats.upStreams;
+        var oldDownStreams = oldStats.downStreams;
+        var maxUpLinkLoss = 0;
+        var maxDownLinkLoss = 0;
+        newStats.upStreams.push({
+          type: 'audio',
+          mimeType: oldUpStreams['audio'].mimeType,
+          bytesSent: oldUpStreams['audio'].bytesSent,
+          packetsSent: oldUpStreams['audio'].packetsSent,
+          loss: oldUpStreams['audio'].calc_loss,
+          jitter: oldUpStreams['audio'].jitter,
+          speed: (oldUpStreams['audio'].calc_speed / 1000).toFixed(1)
+        });
+        newStats.downStreams.push({
+          type: 'audio',
+          mimeType: oldDownStreams['audio'].mimeType,
+          bytesReceived: oldDownStreams['audio'].bytesReceived,
+          packetsReceived: oldDownStreams['audio'].packetsReceived,
+          loss: oldDownStreams['audio'].calc_loss,
+          jitter: oldDownStreams['audio'].jitter,
+          speed: (oldDownStreams['audio'].calc_speed / 1000).toFixed(1)
+        });
+
+        // 计算video和shared的总和
+        for (var _i = 0, _arr = ['video', 'shared']; _i < _arr.length; _i++) {
+          var type = _arr[_i];
+          if (Object.keys(oldUpStreams[type]).length > 1) {
+            maxUpLinkLoss = Math.max(maxUpLinkLoss, oldUpStreams[type].calc_loss || 0);
+            // 添加到新的upStreams数组
+            newStats.upStreams.push({
+              type: type,
+              mimeType: oldUpStreams[type].mimeType,
+              framesSent: oldUpStreams[type].framesSent,
+              framesEncoded: oldUpStreams[type].framesEncoded,
+              framesPerSecond: oldUpStreams[type].framesPerSecond,
+              frameHeight: oldUpStreams[type].frameHeight,
+              frameWidth: oldUpStreams[type].frameWidth,
+              loss: oldUpStreams[type].calc_loss,
+              jitter: oldUpStreams[type].jitter,
+              speed: (oldUpStreams[type].calc_speed / 1000).toFixed(1)
+            });
           }
-        };
-        return {
-          RTT: rp.transport.RTT,
-          upFrameWidth: rp.video.upFrameWidth,
-          upFrameHeight: rp.video.upFrameHeight,
-          upFramesPerSecond: rp.video.upFramesPerSecond,
-          downFramesPerSecond: rp.video.downFramesPerSecond,
-          downFrameWidth: rp.video.downFrameWidth,
-          downFrameHeight: rp.video.downFrameHeight,
-          uplinkSpeed: "".concat(((rp.video.uplinkSpeed + rp.audio.uplinkSpeed) / 1000).toFixed(1), "kbps"),
-          downlinkSpeed: "".concat(((rp.video.downlinkSpeed + rp.audio.downlinkSpeed) / 1000).toFixed(1), "kbps"),
-          downlinkLoss: "".concat(rp.audio.downlinkLoss > rp.video.downlinkLoss ? rp.audio.downlinkLoss : rp.video.downlinkLoss, "%"),
-          uplinkLoss: "".concat(rp.audio.uplinkLoss > rp.video.uplinkLoss ? rp.audio.uplinkLoss : rp.video.uplinkLoss, "%")
-        };
+          if (Object.keys(oldDownStreams[type]).length > 1) {
+            maxDownLinkLoss = Math.max(maxDownLinkLoss, oldDownStreams[type].calc_loss || 0);
+            // 添加到新的downStreams数组
+            newStats.downStreams.push({
+              type: type,
+              mimeType: oldDownStreams[type].mimeType,
+              framesReceived: oldDownStreams[type].framesReceived,
+              framesDecoded: oldDownStreams[type].framesDecoded,
+              framesPerSecond: oldDownStreams[type].framesPerSecond,
+              frameHeight: oldDownStreams[type].frameHeight,
+              frameWidth: oldDownStreams[type].frameWidth,
+              loss: oldDownStreams[type].calc_loss,
+              jitter: oldDownStreams[type].jitter,
+              speed: (oldDownStreams[type].calc_speed / 1000).toFixed(1)
+            });
+          }
+        }
+        newStats.video.calc_uplink_loss = maxUpLinkLoss;
+        newStats.video.calc_downlink_loss = maxDownLinkLoss;
+        return newStats;
       }
-      logger.debug(JSON.stringify(this._stats));
-      this.emit('report', parseStatsReport(this._stats));
 
       // 发送网络质量报告
       var RTT = [];
@@ -21656,16 +26598,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var uplinkNetworkQuality = [];
       var downlinkNetworkQuality = [];
       var downlinkLoss = [];
-      RTT.push(this._stats.transport.RTT);
+      RTT.push(newReport.rtt);
       // eslint-disable-next-line max-len
-      uplinkLoss.push(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss);
+      uplinkLoss.push(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss);
       // eslint-disable-next-line max-len
-      uplinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.uplinkLoss > this._stats.video.uplinkLoss ? this._stats.audio.uplinkLoss : this._stats.video.uplinkLoss, this._stats.transport.RTT));
+      uplinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_uplink_loss > newReport.video.calc_uplink_loss ? newReport.audio.calc_uplink_loss : newReport.video.calc_uplink_loss, newReport.rtt));
 
       // eslint-disable-next-line max-len
-      downlinkLoss.push(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss);
+      downlinkLoss.push(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss);
       // eslint-disable-next-line max-len
-      downlinkNetworkQuality.push(Utils.getNetworkQuality(this._stats.audio.downlinkLoss > this._stats.video.downlinkLoss ? this._stats.audio.downlinkLoss : this._stats.video.downlinkLoss, this._stats.transport.RTT));
+      downlinkNetworkQuality.push(Utils.getNetworkQuality(newReport.audio.calc_downlink_loss > newReport.video.calc_downlink_loss ? newReport.audio.calc_downlink_loss : newReport.video.calc_downlink_loss, newReport.rtt));
       this._networkQuality = {
         // eslint-disable-next-line max-len
         uplinkNetworkQuality: uplinkNetworkQuality.length > 0 ? Math.floor(uplinkNetworkQuality.reduce(function (pre, cur) {
@@ -21693,7 +26635,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
   return getStats;
 }(EventEmitter);
-},{"./Logger":9,"./Utils":30,"events":33}],25:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":65}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -21714,7 +26656,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],26:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -22423,7 +27365,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":2,"./Logger":9,"./SIPMessage":22,"./Timers":25,"events":33}],27:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":65}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -22481,6 +27423,11 @@ module.exports = /*#__PURE__*/function () {
     this.recovery_timer = null;
     this.close_requested = false;
 
+    // 适配部分浏览器的SDP 的 DC 参数，适配 Firefox
+    this._sctp_port = null;
+    this._max_message_size = null;
+    this._sdpResolution = 'BP480P';
+
     // It seems that TextDecoder is not available in some versions of React-Native.
     // See https://github.com/versatica/JsSIP/issues/695
     try {
@@ -22510,6 +27457,17 @@ module.exports = /*#__PURE__*/function () {
 
     // Get the socket with higher weight.
     this._getSocket();
+    var orignalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = function (key) {
+      var setItemEvent = new CustomEvent('setItemEvent');
+      setItemEvent.key = key;
+      for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        newValue[_key - 1] = arguments[_key];
+      }
+      setItemEvent.newValue = newValue[0];
+      window.dispatchEvent(setItemEvent);
+      orignalSetItem.apply(this, [key].concat(newValue));
+    };
   }
 
   /**
@@ -22529,6 +27487,14 @@ module.exports = /*#__PURE__*/function () {
     key: "sip_uri",
     get: function get() {
       return this.socket.sip_uri;
+    }
+  }, {
+    key: "sdpResolution",
+    get: function get() {
+      return this._sdpResolution;
+    },
+    set: function set(value) {
+      this._sdpResolution = value;
     }
   }, {
     key: "connect",
@@ -22591,10 +27557,30 @@ module.exports = /*#__PURE__*/function () {
       var message = data.toString();
 
       // 统一修改发出的SDP
+      message = Utils.processSdp(message);
       message = message.replace(/a=group:BUNDLE.*\r\n/, '');
+      message = message.replace(/a=candidate.*typ host.*\r?\n/gm, '');
+      // 去掉IPV6
+      message = message.replace(/a=candidate:.*:.*\r\n/g, '');
+
+      // 修改端口，适配 icecandidate 收集未完成的情况
+      message = message.replace(/m=audio 9 /, 'm=audio 11028 ');
+      message = message.replace(/m=video 9 /, 'm=video 11029 ');
+
+      // 修正rtcpmux的ip问题
+      message = Utils.fixRtcpLines(message);
 
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);
+      var sctpPortMatch = message.match(/a=sctp-port:(\d+)/);
+      var maxMessageSizeMatch = message.match(/a=max-message-size:(\d+)/);
+
+      // 提取SCTP端口
+      sctpPortMatch && sctpPortMatch[1] && (this._sctp_port = sctpPortMatch[1]); // 结果: "5000"
+      // 提取最大消息大小
+      maxMessageSizeMatch && maxMessageSizeMatch[1] && (this._max_message_size = maxMessageSizeMatch[1]); // 结果: "1073741823"
+
+      logger.debug('scpt,max_message_size: ', this._sctp_port, this._max_message_size);
       logger.debug("sending message:\n\n".concat(message, "\n"));
       return this.socket.send(message);
     }
@@ -22676,7 +27662,10 @@ module.exports = /*#__PURE__*/function () {
       // 信令连接成功，如果重试次数不为零则为重连，延迟1秒后调用reinvite
       if (this.recover_attempts !== 0) {
         setTimeout(function () {
-          sessionStorage.setItem('needReinvite', 1);
+          var setItemEvent = new CustomEvent('setItemEvent');
+          setItemEvent.key = 'needReinvite';
+          setItemEvent.newValue = 1;
+          window.dispatchEvent(setItemEvent);
         }, 200);
       }
       this.recover_attempts = 0;
@@ -22741,11 +27730,40 @@ module.exports = /*#__PURE__*/function () {
       }
 
       // 统一修改收到的SDP
-      if (data.indexOf('a=inactive') !== -1) {
-        data = data.replace(/m=video \d*/, 'm=video 0');
-        // 修复修改SDP后的Header头
-        data = Utils.fixContentLength(data);
+      data = data.replace(/b=(AS|RS|RR):\d.*\r?\n/g, '');
+      data = data.replace(/(m=video[^\r\n]*(?:[\s\S]*?(?=\r?\nm=|$)))/gm, function (match) {
+        if (match.includes('a=inactive')) {
+          // 替换该视频块中的m=video行的端口为0
+          return match.replace(/m=video \d+/g, 'm=video 0');
+        }
+        return match;
+      });
+
+      // 适配paphone
+      data = data.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, 'level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f');
+      data = data.replace(/420D0D/g, '42e01f');
+
+      // data += 'a=sctp-port:5000\r\na=max-message-size:1073741823\r\n';
+
+      // 兼容hwcloudlink，修改收到的 profile
+      data = data.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[this._sdpResolution].LEVELID));
+      // eslint-disable-next-line max-len
+      // data = data.replace(/(a=fmtp:\d+\s+profile-level-id=[\w\d]+[\s\S]*?a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/, '$142c01e');
+
+      // 修复BFCP用到的SDP信息
+      data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+
+      // 检查并添加SCTP参数,适配Firefox
+      if (data.includes('UDP/DTLS/SCTP webrtc-datachannel')) {
+        var hasSctpPort = /a=sctp-port:\d+/.test(data);
+        var hasMaxMessageSize = /a=max-message-size:\d+/.test(data);
+        if (!hasSctpPort || !hasMaxMessageSize) {
+          data = data.replace(/(SCTP webrtc-datachannel\r\n)/g, "$1a=sctp-port:".concat(this._sctp_port, "\r\na=max-message-size:").concat(this._max_message_size, "\r\n"));
+        }
       }
+
+      // 修复修改SDP后的Header头
+      data = Utils.fixContentLength(data);
       logger.debug("modified message:\n\n".concat(data, "\n"));
       this.ondata({
         transport: this,
@@ -22755,7 +27773,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return Transport;
 }();
-},{"./Constants":2,"./Logger":9,"./Socket":23,"./Utils":30}],28:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Socket":54,"./Utils":61}],59:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -22820,17 +27838,6 @@ function generateDate() {
   }
   return "".concat(tYear).concat(m).concat(d);
 }
-var orignalSetItem = sessionStorage.setItem;
-sessionStorage.setItem = function (key) {
-  var setItemEvent = new CustomEvent('setItemEvent');
-  setItemEvent.key = key;
-  for (var _len = arguments.length, newValue = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    newValue[_key - 1] = arguments[_key];
-  }
-  setItemEvent.newValue = newValue[0];
-  window.dispatchEvent(setItemEvent);
-  orignalSetItem.apply(this, [key].concat(newValue));
-};
 
 /**
  * The User-Agent class.
@@ -23911,7 +28918,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":1,"./Constants":2,"./Exceptions":6,"./Logger":9,"./Message":10,"./Options":12,"./Parser":13,"./Pk":14,"./RTCSession":15,"./Registrator":20,"./SIPMessage":22,"./Transactions":26,"./Transport":27,"./URI":29,"./Utils":30,"./sanityCheck":32,"events":33,"jsencrypt":36}],29:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":65,"jsencrypt":70}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -24143,13 +29150,27 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return URI;
 }();
-},{"./Constants":2,"./Grammar":7,"./Utils":30}],30:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Utils":61}],61:[function(require,module,exports){
 "use strict";
 
+<<<<<<< HEAD
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
 function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+=======
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+>>>>>>> CRTC-new-dev
 var CRTC_C = require('./Constants');
 var URI = require('./URI');
 var Grammar = require('./Grammar');
@@ -24560,7 +29581,6 @@ exports.closeMediaStream = function (stream) {
   if (!stream) {
     return;
   }
-
   // Latest spec states that MediaStream has no stop() method and instead must
   // call stop() on every MediaStreamTrack.
   try {
@@ -24632,28 +29652,48 @@ exports.cloneObject = function (obj) {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情
  *
  */
-exports.getCameras = function () {
-  var cams = [];
-  return Promise.resolve().then(function () {
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(function (devices) {
-    return devices.filter(function (dev) {
-      return dev.kind === 'videoinput';
-    });
-  }).then(function (cameras) {
-    cameras.forEach(function (cam, index) {
-      var label = "camera ".concat(index + 1);
-      cams.push({
-        kind: cam.kind,
-        label: cam.label == '' ? label : cam.label,
-        deviceId: cam.deviceId
-      });
-    });
-    return cams;
-  })["catch"](function (e) {
-    return e;
-  });
-};
+exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+  var devices, cameras;
+  return _regeneratorRuntime().wrap(function _callee$(_context) {
+    while (1) switch (_context.prev = _context.next) {
+      case 0:
+        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
+          _context.next = 2;
+          break;
+        }
+        return _context.abrupt("return", {
+          error: 'The current browser does not support device enumeration function.'
+        });
+      case 2:
+        _context.prev = 2;
+        _context.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context.sent;
+        // 筛选出视频输入设备（摄像头）
+        cameras = devices.filter(function (device) {
+          return device.kind === 'videoinput';
+        }).map(function (cam, index) {
+          return {
+            kind: cam.kind,
+            label: cam.label || "camera ".concat(index + 1),
+            // 默认标签
+            deviceId: cam.deviceId
+          };
+        });
+        return _context.abrupt("return", cameras);
+      case 10:
+        _context.prev = 10;
+        _context.t0 = _context["catch"](2);
+        return _context.abrupt("return", {
+          error: _context.t0.message
+        });
+      case 13:
+      case "end":
+        return _context.stop();
+    }
+  }, _callee, null, [[2, 10]]);
+}));
 
 /**
  * 返回麦克风设备列表
@@ -24664,87 +29704,219 @@ exports.getCameras = function () {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-exports.getMicrophones = function () {
-  var mics = [];
-  return Promise.resolve().then(function () {
-    return navigator.mediaDevices.enumerateDevices();
-  }).then(function (devices) {
-    return devices.filter(function (dev) {
-      return dev.kind === 'audioinput';
-    });
-  }).then(function (microphones) {
-    microphones.forEach(function (mic, index) {
-      var label = "microphone ".concat(index + 1);
-      mics.push({
-        kind: mic.kind,
-        label: mic.label == '' ? label : mic.label,
-        deviceId: mic.deviceId
-      });
-    });
-    return mics;
-  })["catch"](function (e) {
-    return e;
-  });
-};
+exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+  var devices, microphones;
+  return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+    while (1) switch (_context2.prev = _context2.next) {
+      case 0:
+        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
+          _context2.next = 2;
+          break;
+        }
+        return _context2.abrupt("return", {
+          error: 'The current browser does not support device enumeration function.'
+        });
+      case 2:
+        _context2.prev = 2;
+        _context2.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context2.sent;
+        // 筛选出音频输入设备（麦克风）
+        microphones = devices.filter(function (device) {
+          return device.kind === 'audioinput';
+        }).map(function (mic, index) {
+          return {
+            kind: mic.kind,
+            label: mic.label || "microphone ".concat(index + 1),
+            // 默认标签
+            deviceId: mic.deviceId
+          };
+        });
+        return _context2.abrupt("return", microphones);
+      case 10:
+        _context2.prev = 10;
+        _context2.t0 = _context2["catch"](2);
+        return _context2.abrupt("return", {
+          error: _context2.t0.message
+        });
+      case 13:
+      case "end":
+        return _context2.stop();
+    }
+  }, _callee2, null, [[2, 10]]);
+}));
 
 /**
- * 获取 RTCPeerConnection 收发的音视频媒体流
+ * 返回音频输出设备列表
  *
- * @param {RTCPeerConnection} pc - 要操作的 RTCPeerConnection
- * @param {string} type - 'local' 发送的媒体流；'remote' 接收的媒体流
+ * 该接口不支持在 http 协议下使用，请使用 https 协议部署您的网站
+ * <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia#Privacy_and_security"> Privacy and security </a>。<br>
+ * '出于安全的考虑，在用户未授权摄像头或麦克风访问权限前，label 及 deviceId 字段可能都是空的。<br>
+ * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
+ *
  */
-exports.getStreams = function (pc, type) {
+exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+  var devices, speakers;
+  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+    while (1) switch (_context3.prev = _context3.next) {
+      case 0:
+        if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
+          _context3.next = 2;
+          break;
+        }
+        return _context3.abrupt("return", {
+          error: 'The current browser does not support device enumeration function.'
+        });
+      case 2:
+        _context3.prev = 2;
+        _context3.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context3.sent;
+        // 筛选出音频输出设备
+        speakers = devices.filter(function (device) {
+          return device.kind === 'audiooutput';
+        }).map(function (speaker, index) {
+          return {
+            kind: speaker.kind,
+            label: speaker.label || "speaker ".concat(index + 1),
+            // 默认标签
+            deviceId: speaker.deviceId
+          };
+        });
+        return _context3.abrupt("return", speakers);
+      case 10:
+        _context3.prev = 10;
+        _context3.t0 = _context3["catch"](2);
+        return _context3.abrupt("return", {
+          error: _context3.t0.message
+        });
+      case 13:
+      case "end":
+        return _context3.stop();
+    }
+  }, _callee3, null, [[2, 10]]);
+}));
+
+/**
+ * 获取音视频流（音频流、视频流或媒体流）。
+ *
+ * @param {RTCPeerConnection} pc - RTCPeerConnection 实例，用于管理 WebRTC 连接。
+ * @param {string} type - 流类型，可选值：
+ *   - 'remote': 获取远程流（通过 getReceivers 方法）。
+ *   - 'slides': 获取幻灯片流（通过 sessionStorage 中的索引定位特定接收器）。
+ *   - 'local': 获取本地流（通过 getSenders 方法）。
+ *   - 默认：兼容旧版 API，使用 getRemoteStreams 方法获取远程流。
+ *
+ * @returns {Object|null} 返回包含音频流、视频流和媒体流的对象，格式如下：
+ *   {
+ *     audioStream: MediaStream,  // 音频流
+ *     videoStream: MediaStream,  // 视频流
+ *     mediaStream: MediaStream   // 媒体流（包含所有轨道）
+ *   }
+ *   如果发生错误或参数无效，则返回 null。
+ */
+exports.getStreams = function (pc, type, i) {
+  // 检查 pc 是否有效
+  if (!pc || !(pc instanceof RTCPeerConnection)) {
+    console.warn('Invalid RTCPeerConnection object:', pc);
+    return null;
+  }
   var videoStream = new MediaStream();
   var audioStream = new MediaStream();
   var mediaStream = new MediaStream();
   var result;
-  if (type === 'remote' && RTCPeerConnection.prototype.getReceivers) {
-    pc.getReceivers().forEach(function (receiver) {
-      if (receiver.track && receiver.track.readyState === 'live') {
-        mediaStream.addTrack(receiver.track);
-        if (receiver.track.kind === 'audio') {
-          audioStream.addTrack(receiver.track);
-        } else {
-          videoStream.addTrack(receiver.track);
-        }
+  try {
+    if (type === 'remote' && typeof pc.getReceivers === 'function') {
+      // 处理辅流
+      var streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      i && (streamIndex = i);
+
+      // 处理远程流
+      var receivers = pc.getReceivers();
+      if (Array.isArray(receivers)) {
+        receivers.forEach(function (receiver, index) {
+          if (receiver.track && receiver.track.readyState === 'live' && index != streamIndex) {
+            mediaStream.addTrack(receiver.track);
+            if (receiver.track.kind === 'audio') {
+              audioStream.addTrack(receiver.track);
+            } else {
+              videoStream.addTrack(receiver.track);
+            }
+          }
+        });
       }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream,
-      mediaStream: mediaStream
-    };
-  } else if (type === 'local' && RTCPeerConnection.prototype.getSenders) {
-    pc.getSenders().forEach(function (sender) {
-      if (sender.track && sender.track.readyState === 'live') {
-        if (sender.track.kind === 'audio') {
-          audioStream.addTrack(sender.track);
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
+    } else if (type === 'shared' && typeof pc.getReceivers === 'function') {
+      // 处理辅流
+      var _streamIndex = sessionStorage.getItem(CRTC_C.BFCP_TRANSCEIVER_INDEX);
+      i && (_streamIndex = i);
+      if (_streamIndex !== -1 && _streamIndex !== null && !isNaN(_streamIndex)) {
+        var _receivers = pc.getReceivers();
+        var index = parseInt(_streamIndex, 10);
+        if (Array.isArray(_receivers) && _receivers[index] && _receivers[index].track) {
+          var track = _receivers[index].track;
+          if (track.readyState === 'live') {
+            mediaStream.addTrack(track);
+            videoStream.addTrack(track);
+          }
         } else {
-          videoStream.addTrack(sender.track);
+          console.warn("Invalid stream index: ".concat(_streamIndex));
         }
+      } else {
+        console.warn('BFCP_TRANSCEIVER_INDEX is not set or invalid.');
       }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream
-    };
-  } else {
-    var stream = pc.getRemoteStreams()[0];
-    stream.getTracks().forEach(function (track) {
-      if (track.readyState === 'live') {
-        mediaStream.addTrack(track);
-        if (track.kind === 'audio') {
-          audioStream.addTrack(track);
-        } else {
-          videoStream.addTrack(track);
+      result = {
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
+    } else if (type === 'local' && typeof pc.getSenders === 'function') {
+      var shareStreamIndex = sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX);
+
+      // 处理本地流
+      var senders = pc.getSenders();
+      if (Array.isArray(senders)) {
+        senders.forEach(function (sender, index) {
+          if (sender.track && sender.track.readyState === 'live') {
+            if (sender.track.kind === 'audio') {
+              audioStream.addTrack(sender.track);
+            } else if (sender.track && sender.track.readyState === 'live' && shareStreamIndex !== index) {
+              videoStream.addTrack(sender.track);
+            }
+          }
+        });
+      }
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream
+      };
+    } else {
+      // 兼容旧版 API
+      var stream = pc.getRemoteStreams()[0];
+      stream.getTracks().forEach(function (track) {
+        if (track.readyState === 'live') {
+          mediaStream.addTrack(track);
+          if (track.kind === 'audio') {
+            audioStream.addTrack(track);
+          } else {
+            videoStream.addTrack(track);
+          }
         }
-      }
-    });
-    result = {
-      audioStream: audioStream,
-      videoStream: videoStream,
-      mediaStream: mediaStream
-    };
+      });
+      result = {
+        audioStream: audioStream,
+        videoStream: videoStream,
+        mediaStream: mediaStream
+      };
+    }
+  } catch (error) {
+    console.warn('Error occurred while processing streams:', error);
+    return null;
   }
   return result;
 };
@@ -24810,6 +29982,226 @@ exports.getStreamThroughCanvas = function (stream) {
   return newStream;
 };
 
+// 使用 canvas.captureStream 创建空视频轨道的辅助函数
+var createCanvasVideoTrack = function createCanvasVideoTrack() {
+  var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+    _ref4$width = _ref4.width,
+    width = _ref4$width === void 0 ? 64 : _ref4$width,
+    _ref4$height = _ref4.height,
+    height = _ref4$height === void 0 ? 48 : _ref4$height;
+  // 创建 Canvas 元素
+  var canvas = document.createElement('canvas');
+  // 适配部分情况需要绘制内容后才可以调用captureStream方法，比如：Firefox v86.0
+  var ctx = canvas.getContext('2d');
+  canvas.width = width;
+  canvas.height = height;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 捕获 Canvas 的视频流
+  var videoStream = canvas.captureStream(1);
+  canvas = null;
+  videoStream.getVideoTracks()[0].stop();
+
+  // 返回视频轨道和清理函数
+  return {
+    videoTrack: videoStream.getVideoTracks()[0]
+  };
+};
+
+/**
+ * 生成空视频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
+ * canvas 生成还是浏览器api直接生成
+ *
+ * MediaStreamTrackGenerator 生成的视频muted=false 不能满足要求，暂时改为canvas直接生成
+ */
+exports.generateAnEmptyVideoTrack = function () {
+  if ('MediaStreamTrackGenerator' in window) {
+    // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+    try {
+      // eslint-disable-next-line no-undef
+      var trackGenerator = new MediaStreamTrackGenerator({
+        kind: 'video'
+      });
+      return {
+        videoTrack: trackGenerator
+      };
+    } catch (error) {
+      return createCanvasVideoTrack();
+    }
+  } else {
+    // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+    return createCanvasVideoTrack();
+  }
+};
+
+// 输出一个黑图视频
+exports.generateAnBlackVideoTrack = function (options) {
+  options || (options = {});
+  sessionStorage.clear('stopBlackTrack');
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  var width = options.width || 640;
+  var height = options.height || 480;
+  var fps = options.fps || 5;
+  var color = options.color || 'black';
+  var svgSource = options.svgSource || null; // SVG图片源参数
+
+  canvas.setAttribute('style', 'display:none');
+  canvas.width = width;
+  canvas.height = height;
+
+  // 创建一个图像对象用于加载SVG
+  var img = null;
+  if (svgSource) {
+    img = new Image();
+
+    // 处理不同类型的SVG源
+    if (typeof svgSource === 'string') {
+      // 如果是URL或SVG字符串
+      if (svgSource.startsWith('http') || svgSource.startsWith('data:')) {
+        // 如果是URL或data URL
+        img.src = svgSource;
+      } else if (svgSource.includes('<svg')) {
+        // 如果是SVG字符串，转换为data URL
+        var svgBlob = new Blob([svgSource], {
+          type: 'image/svg+xml'
+        });
+        img.src = URL.createObjectURL(svgBlob);
+      }
+    } else if (svgSource instanceof Blob || svgSource instanceof File) {
+      // 如果是Blob或File对象
+      img.src = URL.createObjectURL(svgSource);
+    }
+  }
+  var _drawToCanvas2 = function drawToCanvas() {
+    if (sessionStorage.getItem('stopBlackTrack')) {
+      return;
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, width, height);
+
+    // 如果有SVG图片且已加载完成，则在画布中间绘制图片
+    if (img && img.complete && img.naturalWidth !== 0) {
+      // 计算图片在画布中的位置，使其居中
+      var imgWidth = img.naturalWidth;
+      var imgHeight = img.naturalHeight;
+
+      // 计算缩放比例，确保图片适合画布
+      var scale = Math.min(width * 0.4 / imgWidth,
+      // 使图片宽度最多占画布的80%
+      height * 0.4 / imgHeight // 使图片高度最多占画布的80%
+      );
+      var scaledWidth = imgWidth * scale;
+      var scaledHeight = imgHeight * scale;
+
+      // 计算居中位置
+      var x = (width - scaledWidth) / 2;
+      var y = (height - scaledHeight) / 2;
+
+      // 绘制图片
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+    }
+    window.requestAnimationFrame(_drawToCanvas2);
+  };
+  _drawToCanvas2();
+
+  // 捕获 Canvas 的视频流
+  var videoTrack = canvas.captureStream(fps).getVideoTracks()[0];
+  try {
+    videoTrack.applyConstraints({
+      width: {
+        exact: width
+      },
+      height: {
+        exact: height
+      },
+      frameRate: {
+        ideal: fps
+      }
+    });
+  } catch (error) {
+    console.warn(error);
+  }
+
+  // 返回视频轨道和清理函数
+  return {
+    videoTrack: videoTrack,
+    // 添加清理函数
+    cleanup: function cleanup() {
+      sessionStorage.setItem('stopBlackTrack', 'true');
+      // 如果使用了URL.createObjectURL，需要释放
+      if (img && img.src.startsWith('blob:')) {
+        URL.revokeObjectURL(img.src);
+      }
+    }
+  };
+};
+// 停止黑屏视频
+exports.stopBlackVideo = function () {
+  sessionStorage.setItem('stopBlackTrack', true);
+};
+
+// 创建一个静音音频轨道
+var createSilentAudioTrack = /*#__PURE__*/function () {
+  var _ref5 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
+    var audio, audioContext, destination, source;
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
+        case 0:
+          audio = new Audio();
+          audioContext = new AudioContext();
+          destination = audioContext.createMediaStreamDestination();
+          source = audioContext.createMediaElementSource(audio);
+          audio.loop = true;
+          audio.crossOrigin = 'anonymous';
+          audio.play()["catch"](function (error) {
+            console.warn("new Audio() error: ".concat(JSON.stringify(error)));
+          });
+          source.connect(destination);
+          return _context4.abrupt("return", {
+            state: audioContext.state,
+            audioContext: audioContext,
+            audioTrack: destination.stream.getAudioTracks()[0]
+          });
+        case 9:
+        case "end":
+          return _context4.stop();
+      }
+    }, _callee4);
+  }));
+  return function createSilentAudioTrack() {
+    return _ref5.apply(this, arguments);
+  };
+}();
+
+/**
+ * 生成空音频流，根据是否支持 MediaStreamTrackGenerator 选择不同的方式
+ * AudioContext 生成还是浏览器api直接生成
+ */
+exports.generateAnEmptyAudioTrack = function () {
+  // if ('MediaStreamTrackGenerator' in window)
+  // {
+  //   // 如果支持 MediaStreamTrackGenerator，则使用它创建空视频轨道
+  //   try
+  //   {
+  //     // eslint-disable-next-line no-undef
+  //     const trackGenerator = new MediaStreamTrackGenerator({ kind: 'audio' });
+
+  //     return { state: null, audioTrack: trackGenerator };
+  //   }
+  //   catch (error)
+  //   {
+  //     return createSilentAudioTrack();
+  //   }
+  // }
+  // else
+  // {
+  // 如果不支持 MediaStreamTrackGenerator，则使用 canvas.captureStream()
+  return createSilentAudioTrack();
+  // }
+};
+
 /**
  * 计算网络质量
  *
@@ -24866,7 +30258,437 @@ exports.compatiblePayload = function (sdp) {
   var newSdp = updatedLines.join('\n');
   return newSdp;
 };
-},{"./Constants":2,"./Grammar":7,"./URI":29}],31:[function(require,module,exports){
+
+/**
+ * 从sdp解析出指定content的索引
+ */
+exports.findLabelIndexByMstrm = function (sdp) {
+  // Step 0: 输入参数校验
+  if (typeof sdp !== 'string' || !sdp.trim()) {
+    throw new Error('Invalid SDP input: SDP must be a non-empty string.');
+  }
+
+  // Step 1: 解析 SDP 并生成 labelMap
+  var lines = sdp.split('\n');
+  var labelMap = [];
+  var currentMediaType = null;
+  var currentContent = null;
+  try {
+    var _iterator4 = _createForOfIteratorHelper(lines),
+      _step4;
+    try {
+      for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+        var line = _step4.value;
+        if (line.startsWith('m=')) {
+          // 提取媒体类型（如 audio、video）
+          var mediaType = line.split(' ')[0].substring(2);
+
+          // 只处理 audio 和 video 类型
+          if (mediaType === 'audio' || mediaType === 'video') {
+            currentMediaType = mediaType;
+            currentContent = 'unknown'; // 默认内容类型
+
+            // 将当前媒体类型添加到数组中
+            labelMap.push({
+              label: null,
+              // 默认没有 label
+              mediaType: currentMediaType,
+              content: currentContent
+            });
+          } else {
+            currentMediaType = null;
+            currentContent = null;
+          }
+        } else if (currentMediaType && line.startsWith('a=content:')) {
+          // 提取内容类型（如 main、slides）
+          currentContent = line.split(':')[1];
+
+          // 更新最后一个元素的内容类型
+          if (labelMap.length > 0) {
+            labelMap[labelMap.length - 1].content = currentContent;
+          }
+        } else if (currentMediaType && line.startsWith('a=label:')) {
+          // 提取 label 值
+          var labelMatch = line.match(/^a=label:(\S+)/);
+          var label = labelMatch ? labelMatch[1].trim() : '';
+
+          // 更新最后一个元素的 label
+          if (labelMap.length > 0) {
+            labelMap[labelMap.length - 1].label = label;
+          }
+        }
+      }
+    } catch (err) {
+      _iterator4.e(err);
+    } finally {
+      _iterator4.f();
+    }
+  } catch (error) {
+    throw new Error("Error parsing SDP: ".concat(error.message));
+  }
+
+  // Step 2: 提取所有 mstrm 值并找到对应的 label 索引
+  try {
+    var _loop = function _loop() {
+        if (_line.includes('mstrm:')) {
+          // 提取 mstrm 的值
+          var mstrmMatch = _line.match(/mstrm:(\d+)/);
+          if (mstrmMatch) {
+            var mstrm = mstrmMatch[1];
+
+            // 在 labelMap 中查找对应的 label 索引
+            var index = labelMap.findIndex(function (item) {
+              return item.label === mstrm;
+            });
+            if (index !== -1) {
+              return {
+                v: index
+              }; // 返回第一个匹配的索引
+            }
+          }
+        }
+      },
+      _ret;
+    var _iterator5 = _createForOfIteratorHelper(lines),
+      _step5;
+    try {
+      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+        var _line = _step5.value;
+        _ret = _loop();
+        if (_ret) return _ret.v;
+      }
+    } catch (err) {
+      _iterator5.e(err);
+    } finally {
+      _iterator5.f();
+    }
+  } catch (error) {
+    throw new Error("Error matching mstrm to label: ".concat(error.message));
+  }
+  return -1; // 如果未找到，返回 -1
+};
+exports.uint8ArrayToBase64 = function (uint8Array) {
+  var binary = '';
+  for (var i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
+};
+exports.uint8ArrayToBinaryString = function (uint8Array) {
+  return Array.from(uint8Array, function (_byte) {
+    return _byte.toString(2).padStart(8, '0');
+  } // 将每个字节转为8位二进制字符串
+  ).join(' '); // 可选：用空格分隔每个字节，增强可读性
+};
+exports.getApplicationMediaPositions = function (sdp) {
+  // 将SDP按媒体块分割
+  var sections = sdp.split(/m=/);
+  var header = sections.shift();
+  var mediaSections = sections.map(function (s) {
+    return "m=".concat(s);
+  });
+
+  // 获取第一个媒体的ice凭证
+  var firstMediaIceUfragMatch = mediaSections[0].match(/a=ice-ufrag:([^\r\n]+)/);
+  var firstMediaIcePwdMatch = mediaSections[0].match(/a=ice-pwd:([^\r\n]+)/);
+  var firstMediaIceUfrag = firstMediaIceUfragMatch ? firstMediaIceUfragMatch[1] : null;
+  var firstMediaIcePwd = firstMediaIcePwdMatch ? firstMediaIcePwdMatch[1] : null;
+
+  // 获取原始索引位置
+  var bfcpIndex = mediaSections.findIndex(function (s) {
+    return s.includes('application') && s.includes('webrtc-datachannel');
+  });
+  var h224Index = mediaSections.findIndex(function (s) {
+    return s.includes('application') && s.includes('H224');
+  });
+  var tcpBfcpInde = mediaSections.findIndex(function (s) {
+    return s.includes('application') && s.includes('TCP/TLS/BFCP');
+  });
+  var indexesToRemove = [h224Index, tcpBfcpInde].filter(function (i) {
+    return i !== -1;
+  }).sort(function (a, b) {
+    return b - a;
+  }); // 降序排序
+
+  indexesToRemove.forEach(function (index) {
+    // 删除对应索引
+    mediaSections.splice(index, 1);
+  });
+
+  // 如果存在BFCP媒体块，移动到最后
+  if (bfcpIndex !== -1) {
+    var bfcpSection = mediaSections.splice(bfcpIndex, 1)[0];
+    mediaSections.push(bfcpSection);
+  }
+
+  // 为每个没有ice凭证的媒体块添加ice凭证，并为视频媒体添加rtcp-mux
+  mediaSections.forEach(function (section, index) {
+    var updatedSection = section;
+
+    // 添加ice凭证
+    if (firstMediaIceUfrag && firstMediaIcePwd && !section.includes('a=ice-ufrag:')) {
+      updatedSection = updatedSection.replace(/(\r\n|\r|\n)/, "$1a=ice-ufrag:".concat(firstMediaIceUfrag, "\r\na=ice-pwd:").concat(firstMediaIcePwd, "\r\n"));
+    }
+
+    // 为视频媒体添加rtcp-mux
+    if (section.startsWith('m=video') && !section.includes('a=rtcp-mux')) {
+      updatedSection = updatedSection.replace(/(\r\n|\r|\n)/, '$1a=rtcp-mux\r\n');
+    }
+    mediaSections[index] = updatedSection;
+  });
+
+  // 重新组合SDP
+  var newSdp = header + mediaSections.join('');
+
+  // 返回原始索引位置和处理后的SDP
+  return {
+    originalIndexes: [bfcpIndex, h224Index, tcpBfcpInde],
+    sdp: newSdp
+  };
+};
+exports.reorderApplicationMedia = function (sdp, positions) {
+  var _positions = _slicedToArray(positions, 2),
+    bfcpIndex = _positions[0],
+    h224Index = _positions[1];
+  // 将SDP按媒体块分割
+  var sections = sdp.split(/m=/);
+  var header = sections.shift();
+  var mediaSections = sections.map(function (s) {
+    return "m=".concat(s);
+  });
+
+  // 找到BFCP和H224的媒体块
+  var bfcpSection = mediaSections.find(function (s) {
+    return s.includes('application') && s.includes('BFCP');
+  });
+  var h224Section = mediaSections.find(function (s) {
+    return s.includes('application') && s.includes('H224');
+  });
+
+  // 移除原来的application媒体块
+  var filteredSections = mediaSections.filter(function (s) {
+    return !(s.includes('application') && (s.includes('BFCP') || s.includes('H224')));
+  });
+
+  // 在指定位置插入application媒体块
+  if (bfcpSection) {
+    filteredSections.splice(bfcpIndex, 0, bfcpSection);
+  }
+  if (h224Section) {
+    filteredSections.splice(h224Index, 0, h224Section);
+  }
+
+  // 重新组合SDP
+  return header + filteredSections.join('');
+};
+
+// rtcp-fb 改为 *
+exports.processSdp = function (sdp) {
+  // 将SDP按行分割
+  var lines = sdp.split('\n');
+  var processedLines = [];
+  // let currentMediaType = ''; // 用于标记当前处理的媒体类型
+  var seenRtcpFb = new Set(); // 用于存储当前媒体块中的rtcp-fb规则
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+
+    // 检查是否进入新的媒体块
+    if (line.startsWith('m=')) {
+      // 清空已见过的rtcp-fb集合
+      seenRtcpFb.clear();
+      // currentMediaType = line;
+      processedLines.push(line);
+      continue;
+    }
+
+    // 处理rtcp-fb行
+    if (line.match(/^a=rtcp-fb:/)) {
+      // 将具体编码数字替换为*
+      line = line.replace(/^a=rtcp-fb:\d+/, 'a=rtcp-fb:*');
+
+      // 检查在当前媒体块中是否已经存在该规则
+      if (seenRtcpFb.has(line)) {
+        continue; // 跳过重复的行
+      }
+      seenRtcpFb.add(line);
+    }
+    processedLines.push(line);
+  }
+
+  // 重新组合SDP
+  return processedLines.join('\n');
+};
+
+// 是否Firefox浏览器
+exports.isFirefox = function () {
+  return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+};
+
+// 从SDP里面获取DTMF的payload
+exports.getDtmfPayloadAndClockRate = function (sdp) {
+  var lines = sdp.split('\n');
+  var dtmfInfo = new Map(); // 使用 Map 存储，确保 payload 唯一
+  var _iterator6 = _createForOfIteratorHelper(lines),
+    _step6;
+  try {
+    for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      var line = _step6.value;
+      // 匹配形如 "a=rtpmap:110 telephone-event/48000" 的行
+      var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+telephone-event\/(\d+)/);
+      if (rtpmapDtmfMatch) {
+        var payload = rtpmapDtmfMatch[1];
+        var clockRate = rtpmapDtmfMatch[2];
+        // 如果同一个 payload 有多个定义（尽管不常见），这里会取最后一个
+
+        dtmfInfo.set(payload, clockRate);
+      }
+    }
+
+    // 将 Map 转换为数组以便输出
+  } catch (err) {
+    _iterator6.e(err);
+  } finally {
+    _iterator6.f();
+  }
+  return Array.from(dtmfInfo, function (_ref6) {
+    var _ref7 = _slicedToArray(_ref6, 2),
+      payload = _ref7[0],
+      clockRate = _ref7[1];
+    return {
+      payload: payload,
+      clockRate: clockRate
+    };
+  });
+};
+
+// 修复sdp里面rtcp行缺少ip地址的问题
+exports.fixRtcpLines = function (sdp) {
+  return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, function (match, prefix) {
+    // 如果已经有IP地址，不做修改
+    if (/\d+\.\d+\.\d+\.\d+$/.test(match) || /[0-9a-fA-F:]+$/.test(match)) {
+      return match;
+    }
+
+    // 如果没有IP地址，添加默认的 0.0.0.0
+    return "".concat(prefix, " 0.0.0.0");
+  });
+};
+
+/**
+ * 根据提供的 payload 类型映射更新 SDP 字符串的 DTMF payload。
+ * @param {Array<Object>} payloadMappings 一个对象数组，每个对象包含 { payloadType: number, frequency: number }。
+ * @param {string} sdp 原始的 SDP 字符串。
+ * @returns {string} 更新后的 SDP 字符串。
+ */
+exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
+  var lines = sdp.split('\r\n');
+  var newSdpLines = [];
+
+  // 1. 预处理新的 DTMF 信息，方便按频率查找新 payload
+  // Map<clockRate, newPayload>
+  var newDtmfPayloadByClockRate = new Map();
+  payloadMappings.forEach(function (info) {
+    newDtmfPayloadByClockRate.set(info.clockRate, info.payload);
+  });
+
+  // 2. 预处理目标 SDP 中的原始 DTMF rtpmap 信息，用于将现有 payload 映射回其时钟频率
+  // Map<originalPayload, clockRate>
+  var originalDtmfRtpmapLookup = new Map();
+  lines.forEach(function (line) {
+    var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+telephone-event\/(\d+)/);
+    if (rtpmapDtmfMatch) {
+      var payload = rtpmapDtmfMatch[1];
+      var clockRate = rtpmapDtmfMatch[2];
+      originalDtmfRtpmapLookup.set(payload, clockRate);
+    }
+  });
+
+  // 3. 遍历目标 SDP 行并执行替换
+  var _iterator7 = _createForOfIteratorHelper(lines),
+    _step7;
+  try {
+    for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+      var line = _step7.value;
+      var processedLine = line;
+
+      // 尝试匹配 a=rtpmap:XX telephone-event/YYY 行
+      var rtpmapDtmfMatch = line.match(/^a=rtpmap:(\d+)\s+(telephone-event\/)(\d+)/);
+      if (rtpmapDtmfMatch) {
+        var codecAndSeparator = rtpmapDtmfMatch[2]; // "telephone-event/"
+        var clockRate = rtpmapDtmfMatch[3];
+
+        // 检查是否有新的 payload 对应这个时钟频率
+        if (newDtmfPayloadByClockRate.has(clockRate)) {
+          var newPayload = newDtmfPayloadByClockRate.get(clockRate);
+          processedLine = "a=rtpmap:".concat(newPayload, " ").concat(codecAndSeparator).concat(clockRate);
+        }
+      } else {
+        // 如果不是 DTMF rtpmap 行，则检查 m=audio 和 a=fmtp 行，因为它们也可能包含 DTMF payload
+
+        // 尝试匹配 m=audio 行
+        var audioMLineMatch = line.match(/^(m=audio\s+\d+\s+UDP\/TLS\/RTP\/SAVPF\s+)(.*)/);
+        if (audioMLineMatch) {
+          var prefix = audioMLineMatch[1];
+          var currentPayloadsStr = audioMLineMatch[2];
+          var currentPayloads = currentPayloadsStr.split(/\s+/);
+          var updatedAudioPayloads = [];
+          var _iterator8 = _createForOfIteratorHelper(currentPayloads),
+            _step8;
+          try {
+            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+              var p = _step8.value;
+              if (originalDtmfRtpmapLookup.has(p)) {
+                // 如果此 payload 是原始 SDP 中的 DTMF payload
+                var originalClockRate = originalDtmfRtpmapLookup.get(p);
+                if (newDtmfPayloadByClockRate.has(originalClockRate)) {
+                  // 并且有新的 payload 对应此频率，则进行替换
+                  updatedAudioPayloads.push(newDtmfPayloadByClockRate.get(originalClockRate));
+                } else {
+                  updatedAudioPayloads.push(p); // 否则保持原样
+                }
+              } else {
+                updatedAudioPayloads.push(p); // 非 DTMF payload 保持原样
+              }
+            }
+          } catch (err) {
+            _iterator8.e(err);
+          } finally {
+            _iterator8.f();
+          }
+          processedLine = prefix + updatedAudioPayloads.join(' ');
+        } else {
+          // 尝试匹配 a=fmtp:XX 行
+          var fmtpMatch = line.match(/^(a=fmtp:)(\d+)(\s+.*)/);
+          if (fmtpMatch) {
+            var _prefix = fmtpMatch[1]; // "a=fmtp:"
+            var originalFmtpPayload = fmtpMatch[2]; // 原始 fmtp 后面的 payload 号
+            var suffix = fmtpMatch[3]; // fmtp 参数部分
+
+            if (originalDtmfRtpmapLookup.has(originalFmtpPayload)) {
+              // 如果此 fmtp payload 是原始 SDP 中的 DTMF payload
+              var _originalClockRate = originalDtmfRtpmapLookup.get(originalFmtpPayload);
+              if (newDtmfPayloadByClockRate.has(_originalClockRate)) {
+                // 并且有新的 payload 对应此频率，则进行替换
+                var _newPayload = newDtmfPayloadByClockRate.get(_originalClockRate);
+                processedLine = "".concat(_prefix).concat(_newPayload).concat(suffix);
+              }
+              // 否则保持原样
+            }
+            // 否则保持原样 (非 DTMF fmtp 行)
+          }
+        }
+      }
+      newSdpLines.push(processedLine);
+    }
+  } catch (err) {
+    _iterator7.e(err);
+  } finally {
+    _iterator7.f();
+  }
+  return newSdpLines.join('\r\n');
+};
+},{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
 
 function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
@@ -25015,7 +30837,7 @@ module.exports = /*#__PURE__*/function () {
   }]);
   return WebSocketInterface;
 }();
-},{"./Grammar":7,"./Logger":9}],32:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39}],63:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
@@ -25224,7 +31046,159 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":2,"./Logger":9,"./SIPMessage":22,"./Utils":30}],33:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],64:[function(require,module,exports){
+'use strict'
+
+exports.byteLength = byteLength
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
+
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i]
+  revLookup[code.charCodeAt(i)] = i
+}
+
+// Support decoding URL-safe base64 strings, as Node.js does.
+// See: https://en.wikipedia.org/wiki/Base64#URL_applications
+revLookup['-'.charCodeAt(0)] = 62
+revLookup['_'.charCodeAt(0)] = 63
+
+function getLens (b64) {
+  var len = b64.length
+
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
+  }
+
+  // Trim off extra bytes after placeholder bytes are found
+  // See: https://github.com/beatgammit/base64-js/issues/42
+  var validLen = b64.indexOf('=')
+  if (validLen === -1) validLen = len
+
+  var placeHoldersLen = validLen === len
+    ? 0
+    : 4 - (validLen % 4)
+
+  return [validLen, placeHoldersLen]
+}
+
+// base64 is 4/3 + up to two characters of the original data
+function byteLength (b64) {
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function _byteLength (b64, validLen, placeHoldersLen) {
+  return ((validLen + placeHoldersLen) * 3 / 4) - placeHoldersLen
+}
+
+function toByteArray (b64) {
+  var tmp
+  var lens = getLens(b64)
+  var validLen = lens[0]
+  var placeHoldersLen = lens[1]
+
+  var arr = new Arr(_byteLength(b64, validLen, placeHoldersLen))
+
+  var curByte = 0
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  var len = placeHoldersLen > 0
+    ? validLen - 4
+    : validLen
+
+  var i
+  for (i = 0; i < len; i += 4) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 18) |
+      (revLookup[b64.charCodeAt(i + 1)] << 12) |
+      (revLookup[b64.charCodeAt(i + 2)] << 6) |
+      revLookup[b64.charCodeAt(i + 3)]
+    arr[curByte++] = (tmp >> 16) & 0xFF
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 2) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 2) |
+      (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  if (placeHoldersLen === 1) {
+    tmp =
+      (revLookup[b64.charCodeAt(i)] << 10) |
+      (revLookup[b64.charCodeAt(i + 1)] << 4) |
+      (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[curByte++] = (tmp >> 8) & 0xFF
+    arr[curByte++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] +
+    lookup[num >> 12 & 0x3F] +
+    lookup[num >> 6 & 0x3F] +
+    lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp =
+      ((uint8[i] << 16) & 0xFF0000) +
+      ((uint8[i + 1] << 8) & 0xFF00) +
+      (uint8[i + 2] & 0xFF)
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 2] +
+      lookup[(tmp << 4) & 0x3F] +
+      '=='
+    )
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + uint8[len - 1]
+    parts.push(
+      lookup[tmp >> 10] +
+      lookup[(tmp >> 4) & 0x3F] +
+      lookup[(tmp << 2) & 0x3F] +
+      '='
+    )
+  }
+
+  return parts.join('')
+}
+
+},{}],65:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -25749,7 +31723,1788 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],34:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
+(function (Buffer){(function (){
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <https://feross.org>
+ * @license  MIT
+ */
+/* eslint-disable no-proto */
+
+'use strict'
+
+var base64 = require('base64-js')
+var ieee754 = require('ieee754')
+
+exports.Buffer = Buffer
+exports.SlowBuffer = SlowBuffer
+exports.INSPECT_MAX_BYTES = 50
+
+var K_MAX_LENGTH = 0x7fffffff
+exports.kMaxLength = K_MAX_LENGTH
+
+/**
+ * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Print warning and recommend using `buffer` v4.x which has an Object
+ *               implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * We report that the browser does not support typed arrays if the are not subclassable
+ * using __proto__. Firefox 4-29 lacks support for adding new properties to `Uint8Array`
+ * (See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438). IE 10 lacks support
+ * for __proto__ and has a buggy typed array implementation.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = typedArraySupport()
+
+if (!Buffer.TYPED_ARRAY_SUPPORT && typeof console !== 'undefined' &&
+    typeof console.error === 'function') {
+  console.error(
+    'This browser lacks typed array (Uint8Array) support which is required by ' +
+    '`buffer` v5.x. Use `buffer` v4.x if you require old browser support.'
+  )
+}
+
+function typedArraySupport () {
+  // Can typed array instances can be augmented?
+  try {
+    var arr = new Uint8Array(1)
+    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function () { return 42 } }
+    return arr.foo() === 42
+  } catch (e) {
+    return false
+  }
+}
+
+Object.defineProperty(Buffer.prototype, 'parent', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.buffer
+  }
+})
+
+Object.defineProperty(Buffer.prototype, 'offset', {
+  enumerable: true,
+  get: function () {
+    if (!Buffer.isBuffer(this)) return undefined
+    return this.byteOffset
+  }
+})
+
+function createBuffer (length) {
+  if (length > K_MAX_LENGTH) {
+    throw new RangeError('The value "' + length + '" is invalid for option "size"')
+  }
+  // Return an augmented `Uint8Array` instance
+  var buf = new Uint8Array(length)
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+/**
+ * The Buffer constructor returns instances of `Uint8Array` that have their
+ * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
+ * `Uint8Array`, so the returned instances will have all the node `Buffer` methods
+ * and the `Uint8Array` methods. Square bracket notation works as expected -- it
+ * returns a single octet.
+ *
+ * The `Uint8Array` prototype remains unmodified.
+ */
+
+function Buffer (arg, encodingOrOffset, length) {
+  // Common case.
+  if (typeof arg === 'number') {
+    if (typeof encodingOrOffset === 'string') {
+      throw new TypeError(
+        'The "string" argument must be of type string. Received type number'
+      )
+    }
+    return allocUnsafe(arg)
+  }
+  return from(arg, encodingOrOffset, length)
+}
+
+// Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+if (typeof Symbol !== 'undefined' && Symbol.species != null &&
+    Buffer[Symbol.species] === Buffer) {
+  Object.defineProperty(Buffer, Symbol.species, {
+    value: null,
+    configurable: true,
+    enumerable: false,
+    writable: false
+  })
+}
+
+Buffer.poolSize = 8192 // not used by this implementation
+
+function from (value, encodingOrOffset, length) {
+  if (typeof value === 'string') {
+    return fromString(value, encodingOrOffset)
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return fromArrayLike(value)
+  }
+
+  if (value == null) {
+    throw TypeError(
+      'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+      'or Array-like Object. Received type ' + (typeof value)
+    )
+  }
+
+  if (isInstance(value, ArrayBuffer) ||
+      (value && isInstance(value.buffer, ArrayBuffer))) {
+    return fromArrayBuffer(value, encodingOrOffset, length)
+  }
+
+  if (typeof value === 'number') {
+    throw new TypeError(
+      'The "value" argument must not be of type number. Received type number'
+    )
+  }
+
+  var valueOf = value.valueOf && value.valueOf()
+  if (valueOf != null && valueOf !== value) {
+    return Buffer.from(valueOf, encodingOrOffset, length)
+  }
+
+  var b = fromObject(value)
+  if (b) return b
+
+  if (typeof Symbol !== 'undefined' && Symbol.toPrimitive != null &&
+      typeof value[Symbol.toPrimitive] === 'function') {
+    return Buffer.from(
+      value[Symbol.toPrimitive]('string'), encodingOrOffset, length
+    )
+  }
+
+  throw new TypeError(
+    'The first argument must be one of type string, Buffer, ArrayBuffer, Array, ' +
+    'or Array-like Object. Received type ' + (typeof value)
+  )
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(value, encodingOrOffset, length)
+}
+
+// Note: Change prototype *after* Buffer.from is defined to workaround Chrome bug:
+// https://github.com/feross/buffer/pull/148
+Buffer.prototype.__proto__ = Uint8Array.prototype
+Buffer.__proto__ = Uint8Array
+
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be of type number')
+  } else if (size < 0) {
+    throw new RangeError('The value "' + size + '" is invalid for option "size"')
+  }
+}
+
+function alloc (size, fill, encoding) {
+  assertSize(size)
+  if (size <= 0) {
+    return createBuffer(size)
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string'
+      ? createBuffer(size).fill(fill, encoding)
+      : createBuffer(size).fill(fill)
+  }
+  return createBuffer(size)
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(size, fill, encoding)
+}
+
+function allocUnsafe (size) {
+  assertSize(size)
+  return createBuffer(size < 0 ? 0 : checked(size) | 0)
+}
+
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(size)
+}
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(size)
+}
+
+function fromString (string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8'
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('Unknown encoding: ' + encoding)
+  }
+
+  var length = byteLength(string, encoding) | 0
+  var buf = createBuffer(length)
+
+  var actual = buf.write(string, encoding)
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    buf = buf.slice(0, actual)
+  }
+
+  return buf
+}
+
+function fromArrayLike (array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0
+  var buf = createBuffer(length)
+  for (var i = 0; i < length; i += 1) {
+    buf[i] = array[i] & 255
+  }
+  return buf
+}
+
+function fromArrayBuffer (array, byteOffset, length) {
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('"offset" is outside of buffer bounds')
+  }
+
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('"length" is outside of buffer bounds')
+  }
+
+  var buf
+  if (byteOffset === undefined && length === undefined) {
+    buf = new Uint8Array(array)
+  } else if (length === undefined) {
+    buf = new Uint8Array(array, byteOffset)
+  } else {
+    buf = new Uint8Array(array, byteOffset, length)
+  }
+
+  // Return an augmented `Uint8Array` instance
+  buf.__proto__ = Buffer.prototype
+  return buf
+}
+
+function fromObject (obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0
+    var buf = createBuffer(len)
+
+    if (buf.length === 0) {
+      return buf
+    }
+
+    obj.copy(buf, 0, 0, len)
+    return buf
+  }
+
+  if (obj.length !== undefined) {
+    if (typeof obj.length !== 'number' || numberIsNaN(obj.length)) {
+      return createBuffer(0)
+    }
+    return fromArrayLike(obj)
+  }
+
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return fromArrayLike(obj.data)
+  }
+}
+
+function checked (length) {
+  // Note: cannot use `length < K_MAX_LENGTH` here because that fails when
+  // length is NaN (which is otherwise coerced to zero.)
+  if (length >= K_MAX_LENGTH) {
+    throw new RangeError('Attempt to allocate Buffer larger than maximum ' +
+                         'size: 0x' + K_MAX_LENGTH.toString(16) + ' bytes')
+  }
+  return length | 0
+}
+
+function SlowBuffer (length) {
+  if (+length != length) { // eslint-disable-line eqeqeq
+    length = 0
+  }
+  return Buffer.alloc(+length)
+}
+
+Buffer.isBuffer = function isBuffer (b) {
+  return b != null && b._isBuffer === true &&
+    b !== Buffer.prototype // so Buffer.isBuffer(Buffer.prototype) will be false
+}
+
+Buffer.compare = function compare (a, b) {
+  if (isInstance(a, Uint8Array)) a = Buffer.from(a, a.offset, a.byteLength)
+  if (isInstance(b, Uint8Array)) b = Buffer.from(b, b.offset, b.byteLength)
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
+    throw new TypeError(
+      'The "buf1", "buf2" arguments must be one of type Buffer or Uint8Array'
+    )
+  }
+
+  if (a === b) return 0
+
+  var x = a.length
+  var y = b.length
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i]
+      y = b[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+Buffer.isEncoding = function isEncoding (encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'latin1':
+    case 'binary':
+    case 'base64':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true
+    default:
+      return false
+  }
+}
+
+Buffer.concat = function concat (list, length) {
+  if (!Array.isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers')
+  }
+
+  if (list.length === 0) {
+    return Buffer.alloc(0)
+  }
+
+  var i
+  if (length === undefined) {
+    length = 0
+    for (i = 0; i < list.length; ++i) {
+      length += list[i].length
+    }
+  }
+
+  var buffer = Buffer.allocUnsafe(length)
+  var pos = 0
+  for (i = 0; i < list.length; ++i) {
+    var buf = list[i]
+    if (isInstance(buf, Uint8Array)) {
+      buf = Buffer.from(buf)
+    }
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers')
+    }
+    buf.copy(buffer, pos)
+    pos += buf.length
+  }
+  return buffer
+}
+
+function byteLength (string, encoding) {
+  if (Buffer.isBuffer(string)) {
+    return string.length
+  }
+  if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
+    return string.byteLength
+  }
+  if (typeof string !== 'string') {
+    throw new TypeError(
+      'The "string" argument must be one of type string, Buffer, or ArrayBuffer. ' +
+      'Received type ' + typeof string
+    )
+  }
+
+  var len = string.length
+  var mustMatch = (arguments.length > 2 && arguments[2] === true)
+  if (!mustMatch && len === 0) return 0
+
+  // Use a for loop to avoid recursion
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'latin1':
+      case 'binary':
+        return len
+      case 'utf8':
+      case 'utf-8':
+        return utf8ToBytes(string).length
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2
+      case 'hex':
+        return len >>> 1
+      case 'base64':
+        return base64ToBytes(string).length
+      default:
+        if (loweredCase) {
+          return mustMatch ? -1 : utf8ToBytes(string).length // assume utf8
+        }
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+Buffer.byteLength = byteLength
+
+function slowToString (encoding, start, end) {
+  var loweredCase = false
+
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return ''
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length
+  }
+
+  if (end <= 0) {
+    return ''
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0
+  start >>>= 0
+
+  if (end <= start) {
+    return ''
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  while (true) {
+    switch (encoding) {
+      case 'hex':
+        return hexSlice(this, start, end)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Slice(this, start, end)
+
+      case 'ascii':
+        return asciiSlice(this, start, end)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Slice(this, start, end)
+
+      case 'base64':
+        return base64Slice(this, start, end)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return utf16leSlice(this, start, end)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = (encoding + '').toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+// This property is used by `Buffer.isBuffer` (and the `is-buffer` npm package)
+// to detect a Buffer instance. It's not possible to use `instanceof Buffer`
+// reliably in a browserify context because there could be multiple different
+// copies of the 'buffer' package in use. This method works even for Buffer
+// instances that were created from another copy of the `buffer` package.
+// See: https://github.com/feross/buffer/issues/154
+Buffer.prototype._isBuffer = true
+
+function swap (b, n, m) {
+  var i = b[n]
+  b[n] = b[m]
+  b[m] = i
+}
+
+Buffer.prototype.swap16 = function swap16 () {
+  var len = this.length
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits')
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1)
+  }
+  return this
+}
+
+Buffer.prototype.swap32 = function swap32 () {
+  var len = this.length
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits')
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3)
+    swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
+Buffer.prototype.swap64 = function swap64 () {
+  var len = this.length
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits')
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7)
+    swap(this, i + 1, i + 6)
+    swap(this, i + 2, i + 5)
+    swap(this, i + 3, i + 4)
+  }
+  return this
+}
+
+Buffer.prototype.toString = function toString () {
+  var length = this.length
+  if (length === 0) return ''
+  if (arguments.length === 0) return utf8Slice(this, 0, length)
+  return slowToString.apply(this, arguments)
+}
+
+Buffer.prototype.toLocaleString = Buffer.prototype.toString
+
+Buffer.prototype.equals = function equals (b) {
+  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
+  if (this === b) return true
+  return Buffer.compare(this, b) === 0
+}
+
+Buffer.prototype.inspect = function inspect () {
+  var str = ''
+  var max = exports.INSPECT_MAX_BYTES
+  str = this.toString('hex', 0, max).replace(/(.{2})/g, '$1 ').trim()
+  if (this.length > max) str += ' ... '
+  return '<Buffer ' + str + '>'
+}
+
+Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
+  if (isInstance(target, Uint8Array)) {
+    target = Buffer.from(target, target.offset, target.byteLength)
+  }
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError(
+      'The "target" argument must be one of type Buffer or Uint8Array. ' +
+      'Received type ' + (typeof target)
+    )
+  }
+
+  if (start === undefined) {
+    start = 0
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0
+  }
+  if (thisStart === undefined) {
+    thisStart = 0
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index')
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0
+  }
+  if (thisStart >= thisEnd) {
+    return -1
+  }
+  if (start >= end) {
+    return 1
+  }
+
+  start >>>= 0
+  end >>>= 0
+  thisStart >>>= 0
+  thisEnd >>>= 0
+
+  if (this === target) return 0
+
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
+
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i]
+      y = targetCopy[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
+}
+
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf (buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
+  byteOffset = +byteOffset // Coerce to Number.
+  if (numberIsNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : (buffer.length - 1)
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1
+    else byteOffset = buffer.length - 1
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0
+    else return -1
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding)
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir)
+  } else if (typeof val === 'number') {
+    val = val & 0xFF // Search for a byte value [0-255]
+    if (typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset)
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset)
+      }
+    }
+    return arrayIndexOf(buffer, [ val ], byteOffset, encoding, dir)
+  }
+
+  throw new TypeError('val must be string, number or Buffer')
+}
+
+function arrayIndexOf (arr, val, byteOffset, encoding, dir) {
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase()
+    if (encoding === 'ucs2' || encoding === 'ucs-2' ||
+        encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1
+      }
+      indexSize = 2
+      arrLength /= 2
+      valLength /= 2
+      byteOffset /= 2
+    }
+  }
+
+  function read (buf, i) {
+    if (indexSize === 1) {
+      return buf[i]
+    } else {
+      return buf.readUInt16BE(i * indexSize)
+    }
+  }
+
+  var i
+  if (dir) {
+    var foundIndex = -1
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex
+        foundIndex = -1
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false
+          break
+        }
+      }
+      if (found) return i
+    }
+  }
+
+  return -1
+}
+
+Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true)
+}
+
+Buffer.prototype.lastIndexOf = function lastIndexOf (val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false)
+}
+
+function hexWrite (buf, string, offset, length) {
+  offset = Number(offset) || 0
+  var remaining = buf.length - offset
+  if (!length) {
+    length = remaining
+  } else {
+    length = Number(length)
+    if (length > remaining) {
+      length = remaining
+    }
+  }
+
+  var strLen = string.length
+
+  if (length > strLen / 2) {
+    length = strLen / 2
+  }
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16)
+    if (numberIsNaN(parsed)) return i
+    buf[offset + i] = parsed
+  }
+  return i
+}
+
+function utf8Write (buf, string, offset, length) {
+  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+function asciiWrite (buf, string, offset, length) {
+  return blitBuffer(asciiToBytes(string), buf, offset, length)
+}
+
+function latin1Write (buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length)
+}
+
+function base64Write (buf, string, offset, length) {
+  return blitBuffer(base64ToBytes(string), buf, offset, length)
+}
+
+function ucs2Write (buf, string, offset, length) {
+  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length)
+}
+
+Buffer.prototype.write = function write (string, offset, length, encoding) {
+  // Buffer#write(string)
+  if (offset === undefined) {
+    encoding = 'utf8'
+    length = this.length
+    offset = 0
+  // Buffer#write(string, encoding)
+  } else if (length === undefined && typeof offset === 'string') {
+    encoding = offset
+    length = this.length
+    offset = 0
+  // Buffer#write(string, offset[, length][, encoding])
+  } else if (isFinite(offset)) {
+    offset = offset >>> 0
+    if (isFinite(length)) {
+      length = length >>> 0
+      if (encoding === undefined) encoding = 'utf8'
+    } else {
+      encoding = length
+      length = undefined
+    }
+  } else {
+    throw new Error(
+      'Buffer.write(string, encoding, offset[, length]) is no longer supported'
+    )
+  }
+
+  var remaining = this.length - offset
+  if (length === undefined || length > remaining) length = remaining
+
+  if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
+    throw new RangeError('Attempt to write outside buffer bounds')
+  }
+
+  if (!encoding) encoding = 'utf8'
+
+  var loweredCase = false
+  for (;;) {
+    switch (encoding) {
+      case 'hex':
+        return hexWrite(this, string, offset, length)
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Write(this, string, offset, length)
+
+      case 'ascii':
+        return asciiWrite(this, string, offset, length)
+
+      case 'latin1':
+      case 'binary':
+        return latin1Write(this, string, offset, length)
+
+      case 'base64':
+        // Warning: maxLength not taken into account in base64Write
+        return base64Write(this, string, offset, length)
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return ucs2Write(this, string, offset, length)
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding)
+        encoding = ('' + encoding).toLowerCase()
+        loweredCase = true
+    }
+  }
+}
+
+Buffer.prototype.toJSON = function toJSON () {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  }
+}
+
+function base64Slice (buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf)
+  } else {
+    return base64.fromByteArray(buf.slice(start, end))
+  }
+}
+
+function utf8Slice (buf, start, end) {
+  end = Math.min(buf.length, end)
+  var res = []
+
+  var i = start
+  while (i < end) {
+    var firstByte = buf[i]
+    var codePoint = null
+    var bytesPerSequence = (firstByte > 0xEF) ? 4
+      : (firstByte > 0xDF) ? 3
+        : (firstByte > 0xBF) ? 2
+          : 1
+
+    if (i + bytesPerSequence <= end) {
+      var secondByte, thirdByte, fourthByte, tempCodePoint
+
+      switch (bytesPerSequence) {
+        case 1:
+          if (firstByte < 0x80) {
+            codePoint = firstByte
+          }
+          break
+        case 2:
+          secondByte = buf[i + 1]
+          if ((secondByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0x1F) << 0x6 | (secondByte & 0x3F)
+            if (tempCodePoint > 0x7F) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 3:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | (thirdByte & 0x3F)
+            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
+              codePoint = tempCodePoint
+            }
+          }
+          break
+        case 4:
+          secondByte = buf[i + 1]
+          thirdByte = buf[i + 2]
+          fourthByte = buf[i + 3]
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | (fourthByte & 0x3F)
+            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
+              codePoint = tempCodePoint
+            }
+          }
+      }
+    }
+
+    if (codePoint === null) {
+      // we did not generate a valid codePoint so insert a
+      // replacement char (U+FFFD) and advance only 1 byte
+      codePoint = 0xFFFD
+      bytesPerSequence = 1
+    } else if (codePoint > 0xFFFF) {
+      // encode to utf16 (surrogate pair dance)
+      codePoint -= 0x10000
+      res.push(codePoint >>> 10 & 0x3FF | 0xD800)
+      codePoint = 0xDC00 | codePoint & 0x3FF
+    }
+
+    res.push(codePoint)
+    i += bytesPerSequence
+  }
+
+  return decodeCodePointsArray(res)
+}
+
+// Based on http://stackoverflow.com/a/22747272/680742, the browser with
+// the lowest limit is Chrome, with 0x10000 args.
+// We go 1 magnitude less, for safety
+var MAX_ARGUMENTS_LENGTH = 0x1000
+
+function decodeCodePointsArray (codePoints) {
+  var len = codePoints.length
+  if (len <= MAX_ARGUMENTS_LENGTH) {
+    return String.fromCharCode.apply(String, codePoints) // avoid extra slice()
+  }
+
+  // Decode in chunks to avoid "call stack size exceeded".
+  var res = ''
+  var i = 0
+  while (i < len) {
+    res += String.fromCharCode.apply(
+      String,
+      codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
+    )
+  }
+  return res
+}
+
+function asciiSlice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i] & 0x7F)
+  }
+  return ret
+}
+
+function latin1Slice (buf, start, end) {
+  var ret = ''
+  end = Math.min(buf.length, end)
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i])
+  }
+  return ret
+}
+
+function hexSlice (buf, start, end) {
+  var len = buf.length
+
+  if (!start || start < 0) start = 0
+  if (!end || end < 0 || end > len) end = len
+
+  var out = ''
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i])
+  }
+  return out
+}
+
+function utf16leSlice (buf, start, end) {
+  var bytes = buf.slice(start, end)
+  var res = ''
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + (bytes[i + 1] * 256))
+  }
+  return res
+}
+
+Buffer.prototype.slice = function slice (start, end) {
+  var len = this.length
+  start = ~~start
+  end = end === undefined ? len : ~~end
+
+  if (start < 0) {
+    start += len
+    if (start < 0) start = 0
+  } else if (start > len) {
+    start = len
+  }
+
+  if (end < 0) {
+    end += len
+    if (end < 0) end = 0
+  } else if (end > len) {
+    end = len
+  }
+
+  if (end < start) end = start
+
+  var newBuf = this.subarray(start, end)
+  // Return an augmented `Uint8Array` instance
+  newBuf.__proto__ = Buffer.prototype
+  return newBuf
+}
+
+/*
+ * Need to make sure that buffer isn't trying to write out of bounds.
+ */
+function checkOffset (offset, ext, length) {
+  if ((offset % 1) !== 0 || offset < 0) throw new RangeError('offset is not uint')
+  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length')
+}
+
+Buffer.prototype.readUIntLE = function readUIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUIntBE = function readUIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    checkOffset(offset, byteLength, this.length)
+  }
+
+  var val = this[offset + --byteLength]
+  var mul = 1
+  while (byteLength > 0 && (mul *= 0x100)) {
+    val += this[offset + --byteLength] * mul
+  }
+
+  return val
+}
+
+Buffer.prototype.readUInt8 = function readUInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  return this[offset]
+}
+
+Buffer.prototype.readUInt16LE = function readUInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return this[offset] | (this[offset + 1] << 8)
+}
+
+Buffer.prototype.readUInt16BE = function readUInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  return (this[offset] << 8) | this[offset + 1]
+}
+
+Buffer.prototype.readUInt32LE = function readUInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return ((this[offset]) |
+      (this[offset + 1] << 8) |
+      (this[offset + 2] << 16)) +
+      (this[offset + 3] * 0x1000000)
+}
+
+Buffer.prototype.readUInt32BE = function readUInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] * 0x1000000) +
+    ((this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    this[offset + 3])
+}
+
+Buffer.prototype.readIntLE = function readIntLE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var val = this[offset]
+  var mul = 1
+  var i = 0
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readIntBE = function readIntBE (offset, byteLength, noAssert) {
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) checkOffset(offset, byteLength, this.length)
+
+  var i = byteLength
+  var mul = 1
+  var val = this[offset + --i]
+  while (i > 0 && (mul *= 0x100)) {
+    val += this[offset + --i] * mul
+  }
+  mul *= 0x80
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength)
+
+  return val
+}
+
+Buffer.prototype.readInt8 = function readInt8 (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 1, this.length)
+  if (!(this[offset] & 0x80)) return (this[offset])
+  return ((0xff - this[offset] + 1) * -1)
+}
+
+Buffer.prototype.readInt16LE = function readInt16LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset] | (this[offset + 1] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt16BE = function readInt16BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 2, this.length)
+  var val = this[offset + 1] | (this[offset] << 8)
+  return (val & 0x8000) ? val | 0xFFFF0000 : val
+}
+
+Buffer.prototype.readInt32LE = function readInt32LE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset]) |
+    (this[offset + 1] << 8) |
+    (this[offset + 2] << 16) |
+    (this[offset + 3] << 24)
+}
+
+Buffer.prototype.readInt32BE = function readInt32BE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+
+  return (this[offset] << 24) |
+    (this[offset + 1] << 16) |
+    (this[offset + 2] << 8) |
+    (this[offset + 3])
+}
+
+Buffer.prototype.readFloatLE = function readFloatLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, true, 23, 4)
+}
+
+Buffer.prototype.readFloatBE = function readFloatBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 4, this.length)
+  return ieee754.read(this, offset, false, 23, 4)
+}
+
+Buffer.prototype.readDoubleLE = function readDoubleLE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, true, 52, 8)
+}
+
+Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
+  offset = offset >>> 0
+  if (!noAssert) checkOffset(offset, 8, this.length)
+  return ieee754.read(this, offset, false, 52, 8)
+}
+
+function checkInt (buf, value, offset, ext, max, min) {
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance')
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+}
+
+Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var mul = 1
+  var i = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  byteLength = byteLength >>> 0
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    this[offset + i] = (value / mul) & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeUInt8 = function writeUInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0)
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeUInt16LE = function writeUInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt16BE = function writeUInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeUInt32LE = function writeUInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset + 3] = (value >>> 24)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 1] = (value >>> 8)
+  this[offset] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeUInt32BE = function writeUInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0)
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = 0
+  var mul = 1
+  var sub = 0
+  this[offset] = value & 0xFF
+  while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    var limit = Math.pow(2, (8 * byteLength) - 1)
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit)
+  }
+
+  var i = byteLength - 1
+  var mul = 1
+  var sub = 0
+  this[offset + i] = value & 0xFF
+  while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1
+    }
+    this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
+  }
+
+  return offset + byteLength
+}
+
+Buffer.prototype.writeInt8 = function writeInt8 (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80)
+  if (value < 0) value = 0xff + value + 1
+  this[offset] = (value & 0xff)
+  return offset + 1
+}
+
+Buffer.prototype.writeInt16LE = function writeInt16LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt16BE = function writeInt16BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000)
+  this[offset] = (value >>> 8)
+  this[offset + 1] = (value & 0xff)
+  return offset + 2
+}
+
+Buffer.prototype.writeInt32LE = function writeInt32LE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  this[offset] = (value & 0xff)
+  this[offset + 1] = (value >>> 8)
+  this[offset + 2] = (value >>> 16)
+  this[offset + 3] = (value >>> 24)
+  return offset + 4
+}
+
+Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000)
+  if (value < 0) value = 0xffffffff + value + 1
+  this[offset] = (value >>> 24)
+  this[offset + 1] = (value >>> 16)
+  this[offset + 2] = (value >>> 8)
+  this[offset + 3] = (value & 0xff)
+  return offset + 4
+}
+
+function checkIEEE754 (buf, value, offset, ext, max, min) {
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+  if (offset < 0) throw new RangeError('Index out of range')
+}
+
+function writeFloat (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 23, 4)
+  return offset + 4
+}
+
+Buffer.prototype.writeFloatLE = function writeFloatLE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeFloatBE = function writeFloatBE (value, offset, noAssert) {
+  return writeFloat(this, value, offset, false, noAssert)
+}
+
+function writeDouble (buf, value, offset, littleEndian, noAssert) {
+  value = +value
+  offset = offset >>> 0
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308)
+  }
+  ieee754.write(buf, value, offset, littleEndian, 52, 8)
+  return offset + 8
+}
+
+Buffer.prototype.writeDoubleLE = function writeDoubleLE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, true, noAssert)
+}
+
+Buffer.prototype.writeDoubleBE = function writeDoubleBE (value, offset, noAssert) {
+  return writeDouble(this, value, offset, false, noAssert)
+}
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function copy (target, targetStart, start, end) {
+  if (!Buffer.isBuffer(target)) throw new TypeError('argument should be a Buffer')
+  if (!start) start = 0
+  if (!end && end !== 0) end = this.length
+  if (targetStart >= target.length) targetStart = target.length
+  if (!targetStart) targetStart = 0
+  if (end > 0 && end < start) end = start
+
+  // Copy 0 bytes; we're done
+  if (end === start) return 0
+  if (target.length === 0 || this.length === 0) return 0
+
+  // Fatal error conditions
+  if (targetStart < 0) {
+    throw new RangeError('targetStart out of bounds')
+  }
+  if (start < 0 || start >= this.length) throw new RangeError('Index out of range')
+  if (end < 0) throw new RangeError('sourceEnd out of bounds')
+
+  // Are we oob?
+  if (end > this.length) end = this.length
+  if (target.length - targetStart < end - start) {
+    end = target.length - targetStart + start
+  }
+
+  var len = end - start
+
+  if (this === target && typeof Uint8Array.prototype.copyWithin === 'function') {
+    // Use built-in when available, missing from IE11
+    this.copyWithin(targetStart, start, end)
+  } else if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (var i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start]
+    }
+  } else {
+    Uint8Array.prototype.set.call(
+      target,
+      this.subarray(start, end),
+      targetStart
+    )
+  }
+
+  return len
+}
+
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill (val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start
+      start = 0
+      end = this.length
+    } else if (typeof end === 'string') {
+      encoding = end
+      end = this.length
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string')
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding)
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if ((encoding === 'utf8' && code < 128) ||
+          encoding === 'latin1') {
+        // Fast path: If `val` fits into a single byte, use that numeric value.
+        val = code
+      }
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255
+  }
+
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index')
+  }
+
+  if (end <= start) {
+    return this
+  }
+
+  start = start >>> 0
+  end = end === undefined ? this.length : end >>> 0
+
+  if (!val) val = 0
+
+  var i
+  if (typeof val === 'number') {
+    for (i = start; i < end; ++i) {
+      this[i] = val
+    }
+  } else {
+    var bytes = Buffer.isBuffer(val)
+      ? val
+      : Buffer.from(val, encoding)
+    var len = bytes.length
+    if (len === 0) {
+      throw new TypeError('The value "' + val +
+        '" is invalid for argument "value"')
+    }
+    for (i = 0; i < end - start; ++i) {
+      this[i + start] = bytes[i % len]
+    }
+  }
+
+  return this
+}
+
+// HELPER FUNCTIONS
+// ================
+
+var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g
+
+function base64clean (str) {
+  // Node takes equal signs as end of the Base64 encoding
+  str = str.split('=')[0]
+  // Node strips out invalid characters like \n and \t from the string, base64-js does not
+  str = str.trim().replace(INVALID_BASE64_RE, '')
+  // Node converts strings with length < 2 to ''
+  if (str.length < 2) return ''
+  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
+  while (str.length % 4 !== 0) {
+    str = str + '='
+  }
+  return str
+}
+
+function toHex (n) {
+  if (n < 16) return '0' + n.toString(16)
+  return n.toString(16)
+}
+
+function utf8ToBytes (string, units) {
+  units = units || Infinity
+  var codePoint
+  var length = string.length
+  var leadSurrogate = null
+  var bytes = []
+
+  for (var i = 0; i < length; ++i) {
+    codePoint = string.charCodeAt(i)
+
+    // is surrogate component
+    if (codePoint > 0xD7FF && codePoint < 0xE000) {
+      // last char was a lead
+      if (!leadSurrogate) {
+        // no lead yet
+        if (codePoint > 0xDBFF) {
+          // unexpected trail
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        } else if (i + 1 === length) {
+          // unpaired lead
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+          continue
+        }
+
+        // valid lead
+        leadSurrogate = codePoint
+
+        continue
+      }
+
+      // 2 leads in a row
+      if (codePoint < 0xDC00) {
+        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+        leadSurrogate = codePoint
+        continue
+      }
+
+      // valid surrogate pair
+      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000
+    } else if (leadSurrogate) {
+      // valid bmp char, but last char was a lead
+      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD)
+    }
+
+    leadSurrogate = null
+
+    // encode utf8
+    if (codePoint < 0x80) {
+      if ((units -= 1) < 0) break
+      bytes.push(codePoint)
+    } else if (codePoint < 0x800) {
+      if ((units -= 2) < 0) break
+      bytes.push(
+        codePoint >> 0x6 | 0xC0,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x10000) {
+      if ((units -= 3) < 0) break
+      bytes.push(
+        codePoint >> 0xC | 0xE0,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else if (codePoint < 0x110000) {
+      if ((units -= 4) < 0) break
+      bytes.push(
+        codePoint >> 0x12 | 0xF0,
+        codePoint >> 0xC & 0x3F | 0x80,
+        codePoint >> 0x6 & 0x3F | 0x80,
+        codePoint & 0x3F | 0x80
+      )
+    } else {
+      throw new Error('Invalid code point')
+    }
+  }
+
+  return bytes
+}
+
+function asciiToBytes (str) {
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF)
+  }
+  return byteArray
+}
+
+function utf16leToBytes (str, units) {
+  var c, hi, lo
+  var byteArray = []
+  for (var i = 0; i < str.length; ++i) {
+    if ((units -= 2) < 0) break
+
+    c = str.charCodeAt(i)
+    hi = c >> 8
+    lo = c % 256
+    byteArray.push(lo)
+    byteArray.push(hi)
+  }
+
+  return byteArray
+}
+
+function base64ToBytes (str) {
+  return base64.toByteArray(base64clean(str))
+}
+
+function blitBuffer (src, dst, offset, length) {
+  for (var i = 0; i < length; ++i) {
+    if ((i + offset >= dst.length) || (i >= src.length)) break
+    dst[i + offset] = src[i]
+  }
+  return i
+}
+
+// ArrayBuffer or Uint8Array objects from other contexts (i.e. iframes) do not pass
+// the `instanceof` check but they should be treated as of that type.
+// See: https://github.com/feross/buffer/issues/166
+function isInstance (obj, type) {
+  return obj instanceof type ||
+    (obj != null && obj.constructor != null && obj.constructor.name != null &&
+      obj.constructor.name === type.name)
+}
+function numberIsNaN (obj) {
+  // For IE11 support
+  return obj !== obj // eslint-disable-line no-self-compare
+}
+
+}).call(this)}).call(this,require("buffer").Buffer)
+},{"base64-js":64,"buffer":66,"ieee754":69}],67:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -26022,7 +33777,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":35,"_process":38}],35:[function(require,module,exports){
+},{"./common":68,"_process":72}],68:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -26298,7 +34053,94 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":37}],36:[function(require,module,exports){
+},{"ms":71}],69:[function(require,module,exports){
+/*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var nBits = -7
+  var i = isLE ? (nBytes - 1) : 0
+  var d = isLE ? -1 : 1
+  var s = buffer[offset + i]
+
+  i += d
+
+  e = s & ((1 << (-nBits)) - 1)
+  s >>= (-nBits)
+  nBits += eLen
+  for (; nBits > 0; e = (e * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & ((1 << (-nBits)) - 1)
+  e >>= (-nBits)
+  nBits += mLen
+  for (; nBits > 0; m = (m * 256) + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias
+  } else if (e === eMax) {
+    return m ? NaN : ((s ? -1 : 1) * Infinity)
+  } else {
+    m = m + Math.pow(2, mLen)
+    e = e - eBias
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen)
+}
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c
+  var eLen = (nBytes * 8) - mLen - 1
+  var eMax = (1 << eLen) - 1
+  var eBias = eMax >> 1
+  var rt = (mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0)
+  var i = isLE ? 0 : (nBytes - 1)
+  var d = isLE ? 1 : -1
+  var s = value < 0 || (value === 0 && 1 / value < 0) ? 1 : 0
+
+  value = Math.abs(value)
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0
+    e = eMax
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2)
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--
+      c *= 2
+    }
+    if (e + eBias >= 1) {
+      value += rt / c
+    } else {
+      value += rt * Math.pow(2, 1 - eBias)
+    }
+    if (value * c >= 2) {
+      e++
+      c /= 2
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0
+      e = eMax
+    } else if (e + eBias >= 1) {
+      m = ((value * c) - 1) * Math.pow(2, mLen)
+      e = e + eBias
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen)
+      e = 0
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = (e << mLen) | m
+  eLen += mLen
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128
+}
+
+},{}],70:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -31689,7 +39531,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],37:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -31853,7 +39695,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],38:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -32039,7 +39881,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],39:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -32535,7 +40377,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],40:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 
@@ -32548,7 +40390,11 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
+<<<<<<< HEAD
 },{"./parser":41,"./writer":42}],41:[function(require,module,exports){
+=======
+},{"./grammar":73,"./parser":75,"./writer":76}],75:[function(require,module,exports){
+>>>>>>> CRTC-new-dev
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -32674,7 +40520,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":39}],42:[function(require,module,exports){
+},{"./grammar":73}],76:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -32790,6 +40636,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
+<<<<<<< HEAD
 },{"./grammar":39}],43:[function(require,module,exports){
 module.exports={
   "name": "crtc",
@@ -32849,4 +40696,7 @@ module.exports={
   }
 }
 },{}]},{},[8])(8)
+=======
+},{"./grammar":73}]},{},[38])(38)
+>>>>>>> CRTC-new-dev
 });

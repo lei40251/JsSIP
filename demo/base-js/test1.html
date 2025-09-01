@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>控制 MediaStream 音量</title>
+</head>
+
+<body>
+  <button id="start">开始捕获媒体流</button>
+  <button id="setVolume">设置音量为 50%</button>
+  <button id="mute">静音</button>
+
+  <script>
+    let audioContext
+    let gainNode
+    let mediaStreamSource
+
+    // 开始捕获媒体流
+    document.getElementById('start').addEventListener('click', async () => {
+      try {
+        // 获取用户的媒体流（例如麦克风）
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+        // 创建 AudioContext
+        audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+        // 将 MediaStream 转换为音频源
+        mediaStreamSource = audioContext.createMediaStreamSource(stream)
+
+        // 创建 GainNode 用于控制音量
+        gainNode = audioContext.createGain()
+        gainNode.gain.value = 1.0 // 初始音量为最大
+
+        // 连接音频流 -> GainNode -> 输出设备
+        mediaStreamSource.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+
+        console.log('媒体流已捕获并连接到音频上下文')
+      } catch (error) {
+        console.error('无法获取媒体流:', error)
+      }
+    })
+
+    // 设置音量
+    document.getElementById('setVolume').addEventListener('click', () => {
+      if (gainNode) {
+        gainNode.gain.value = 0.5 // 设置音量为 50%
+        console.log('音量已设置为 50%')
+      } else {
+        console.warn('请先捕获媒体流')
+      }
+    })
+
+    // 静音
+    document.getElementById('mute').addEventListener('click', () => {
+      if (gainNode) {
+        gainNode.gain.value = 0.0 // 设置音量为 0（静音）
+        console.log('已静音')
+      } else {
+        console.warn('请先捕获媒体流')
+      }
+    });
+  </script>
+</body>
+
+</html>

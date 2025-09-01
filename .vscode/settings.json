@@ -1,12 +1,3 @@
 {
-  "cSpell.words": [
-    "crtc"
-  ],
-  "liveServer.settings.port": 5839,
-  "commentTranslate.source": "Google",
-  "clangd.arguments": [
-    "\"--compile-commands-dir=${workspaceFolder}/build\"",
-    "\"--query-driver=/usr/bin/clang,/usr/bin/c++\"",
-    "\"--header-insertion=never\""
-  ]
+  "liveServer.settings.port": 5501
 }

@@ -2,7 +2,7 @@
   "name": "crtc",
   "title": "CRTC",
   "description": "the Javascript WebRTC and SIP library",
-  "version": "1.10.9-beta.250331",
+  "version": "1.10.11-beta",
   "SIP_version": "3.9.0",
   "homepage": "",
   "contributors": [],
@@ -42,7 +42,8 @@
     "gulp-nodeunit-runner": "^0.2.2",
     "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
-    "gulp-uglify-es": "^1.0.4",
+    "gulp-replace": "^1.1.4",
+    "gulp-terser": "^2.1.0",
     "gulp-zip": "^5.1.0",
     "pegjs": "^0.7.0",
     "vinyl-buffer": "^1.0.1",
@@ -53,5 +54,6 @@
     "test": "node npm-scripts.js test",
     "prepublish": "node npm-scripts.js prepublish",
     "release": "node npm-scripts.js release"
-  }
+  },
+  "packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b"
 }

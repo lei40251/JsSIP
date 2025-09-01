@@ -317,6 +317,8 @@ export class RTCSession extends EventEmitter {
 
   unmute(options?: MediaConstraints): void;
 
+  setVideoContentHint(hint, share:boolean): void;
+
   isMuted(): MediaConstraints;
 
   refer(target: string | URI, options?: ReferOptions): void;

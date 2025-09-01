@@ -1,5 +1,5 @@
-import {URI} from './URI'
-import {causes} from './Constants'
+import { URI } from './URI'
+import { causes } from './Constants'
 
 export function str_utf8_length(str: string): number;
 
@@ -15,7 +15,9 @@ export function newTag(): string;
 
 export function newUUID(): string;
 
-export function getABU(str:string): any;
+export function generateAnEmptyVideoTrack(): MediaStreamTrack;
+
+export function getABU(str: string): any;
 
 export function hostType(host: string): string;
 
@@ -37,4 +39,20 @@ export function cloneArray<T = unknown>(arr: T[]): T[];
 
 export function cloneObject<T>(obj: T, fallback?: T): T;
 
-export function fixContentLength(data:string): string;
+export function fixContentLength(data: string): string;
+
+export function getApplicationMediaPositions(sdp: string): Array<string>;
+
+export function reorderApplicationMedia(sdp: string, positions: Array<string>): string;
+
+export function processSdp(sdp: string): string;
+
+export function generateAnEmptyVideoTrack(): MediaStreamTrack;
+
+export function generateAnEmptyAudioTrack(): MediaStreamTrack;
+
+export function isFirefox(): Boolean;
+
+export function getDtmfPayloadAndClockRate(): Array;
+
+export function replaceDtmfPayloads(): string;

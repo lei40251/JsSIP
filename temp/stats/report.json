@@ -1,0 +1,58 @@
+{
+  "rtt": 29,
+  "upStreams": {
+    "audio": {
+      "bytesSent": 136740,
+      "packetsSent": 795,
+      "calc_loss": 0,
+      "calc_speed": 68800,
+      "packetsLost": 0
+    },
+    "video": {
+      "bytesSent": 15267,
+      "packetsSent": 400,
+      "framesSent": null,
+      "framesEncoded": 373,
+      "framesPerSecond": 24,
+      "frameHeight": 480,
+      "frameWidth": 640,
+      "calc_loss": 0,
+      "calc_speed": 4600,
+      "packetsLost": 0
+    },
+    "shared": {
+      "bytesSent": 0,
+      "packetsSent": 0,
+      "calc_loss": null,
+      "calc_speed": null
+    }
+  },
+  "downStreams": {
+    "audio": {
+      "bytesReceived": 136396,
+      "packetsReceived": 793,
+      "packetsLost": 0,
+      "calc_loss": 0,
+      "calc_speed": 68112
+    },
+    "video": {
+      "bytesReceived": 98830,
+      "packetsReceived": 582,
+      "packetsLost": 4,
+      "framesReceived": null,
+      "framesDecoded": 448,
+      "framesPerSecond": 28,
+      "frameHeight": null,
+      "frameWidth": null,
+      "calc_loss": 0,
+      "calc_speed": 4956
+    },
+    "shared": {
+      "bytesReceived": 0,
+      "packetsReceived": 0,
+      "packetsLost": 0,
+      "calc_loss": null,
+      "calc_speed": null
+    }
+  }
+}

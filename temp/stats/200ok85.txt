@@ -1,0 +1,76 @@
+SIP/2.0 200 OK
+Via: SIP/2.0/WSS g9e705sdbhbj.invalid;rport=13532;branch=z9hG4bK82763;received=27.184.204.14
+To: <sip:9933658@cloudnetuc.vsbc.com>;tag=326BDA76-6819A7D600088DA0-C47FF6C0
+From: "7305" <sip:7305@cloudnetuc.vsbc.com>;tag=9h6lg9f19d
+Call-ID: ps2qqfvmdbpisajg38gb
+CSeq: 8536 INVITE
+Allow: INVITE,ACK,OPTIONS,BYE,CANCEL,REGISTER,INFO,PRACK,SUBSCRIBE,NOTIFY,UPDATE,REFER
+Conference-ID: 3458
+Contact: <sip:9933658@192.168.91.77:50600;transport=wss>;isfocus
+Content-Type: application/sdp
+Content-Length: 2146
+
+v=0
+o=- 0 2 IN IP4 192.168.91.77
+s=-
+c=IN IP4 192.168.91.77
+t=0 0
+m=audio 20050 UDP/TLS/RTP/SAVPF 8 126
+a=rtpmap:8 PCMA/8000
+a=rtpmap:126 telephone-event/8000
+a=fmtp:126 0-15
+a=sendrecv
+a=candidate:x 1 UDP 2130706431 192.168.91.77 20050 typ host
+a=candidate:x 2 UDP 2130706430 192.168.91.77 20051 typ host
+a=setup:passive
+a=fingerprint:sha-256 B1:8F:E4:EC:3E:83:56:98:B9:33:3B:25:98:AC:3F:BE:E3:7B:C9:86:EE:CB:7D:AB:EE:AB:C6:CA:ED:0E:3A:81
+a=ice-ufrag:2df41e22
+a=ice-pwd:741382602214527bb32625c0
+a=rtcp-mux
+m=video 20054 UDP/TLS/RTP/SAVPF 125
+b=TIAS:1024000
+a=rtpmap:125 H264/90000
+a=fmtp:125 profile-level-id=42801F;max-br=960;packetization-mode=1
+a=rtcp-fb:* ccm fir
+a=rtcp-fb:* nack
+a=rtcp-fb:* nack pli
+a=sendrecv
+a=candidate:x 1 UDP 2130706431 192.168.91.77 20054 typ host
+a=candidate:x 2 UDP 2130706430 192.168.91.77 20055 typ host
+a=setup:passive
+a=fingerprint:sha-256 B1:8F:E4:EC:3E:83:56:98:B9:33:3B:25:98:AC:3F:BE:E3:7B:C9:86:EE:CB:7D:AB:EE:AB:C6:CA:ED:0E:3A:81
+a=ice-ufrag:2df41e22
+a=ice-pwd:741382602214527bb32625c0
+a=rtcp-mux
+a=content:main
+a=label:11
+m=video 20008 UDP/TLS/RTP/SAVPF 106
+b=TIAS:512000
+a=rtpmap:106 H264/90000
+a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
+a=rtcp-fb:* ccm fir
+a=rtcp-fb:* nack
+a=rtcp-fb:* nack pli
+a=sendrecv
+a=candidate:x 1 UDP 2130706431 192.168.91.77 20008 typ host
+a=candidate:x 2 UDP 2130706430 192.168.91.77 20009 typ host
+a=setup:passive
+a=fingerprint:sha-256 B1:8F:E4:EC:3E:83:56:98:B9:33:3B:25:98:AC:3F:BE:E3:7B:C9:86:EE:CB:7D:AB:EE:AB:C6:CA:ED:0E:3A:81
+a=ice-ufrag:2df41e22
+a=ice-pwd:741382602214527bb32625c0
+a=rtcp-mux
+a=content:slides
+a=label:12
+m=application 20038 UDP/DTLS/SCTP/BFCP *
+c=IN IP4 192.168.91.77
+a=sendrecv
+a=candidate:x 1 UDP 2130706431 192.168.91.77 20038 typ host
+a=candidate:x 2 UDP 2130706430 192.168.91.77 20039 typ host
+a=setup:passive
+a=fingerprint:sha-256 B1:8F:E4:EC:3E:83:56:98:B9:33:3B:25:98:AC:3F:BE:E3:7B:C9:86:EE:CB:7D:AB:EE:AB:C6:CA:ED:0E:3A:81
+a=ice-ufrag:2df41e22
+a=ice-pwd:741382602214527bb32625c0
+a=floorctrl:s-only
+a=confid:3344760862
+a=floorid:2 mstrm:12
+a=userid:676
