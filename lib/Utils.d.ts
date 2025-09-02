@@ -56,3 +56,5 @@ export function isFirefox(): Boolean;
 export function getDtmfPayloadAndClockRate(): Array;
 
 export function replaceDtmfPayloads(): string;
+
+export function ensureVideoSdpAttrs(string): string;

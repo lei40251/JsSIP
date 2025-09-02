@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.2025912258
+ * CRTC v1.10.11-beta.2025921311
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405018024516 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405018042622 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405018024516');
+debug('version %s', '1.10.11-beta.405018042622');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405018024516';
+    return '1.10.11-beta.405018042622';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19644,7 +19644,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             done();
           }
         },
-        failed: function failed() {
+        failed: function failed(resp) {
+          try {
+            logger.warn('resp: ', JSON.stringify(resp));
+          } catch (error) {
+            logger.error('resp: ', error.toString());
+          }
           _this6.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
@@ -23022,7 +23027,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           onFailed.call(_this31);
         });
       }
-
       // No SDP.
       else {
         this.sendRequest(CRTC_C.UPDATE, {
@@ -23069,11 +23073,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // Must have SDP answer.
         if (sdpOffer) {
           if (!response.body) {
+            logger.warn('no body.');
             onFailed.call(this);
             return;
           } else if (!response.hasHeader('Content-Type') || response.getHeader('Content-Type').toLowerCase() !== 'application/sdp') {
+            logger.warn('not sdp.');
             onFailed.call(this);
             return;
+          }
+          var sdp = response.body;
+
+          // 适配特殊情况，本端切视频远端没有 video 0 的问题
+          if (this._localToAudio) {
+            sdp = Utils.ensureVideoSdpAttrs(sdp);
           }
 
           /**
@@ -23081,7 +23093,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 远端接听模式
            * @author: lei
            */
-          var sdp_body = sdp_transform.parse(response.body);
+          var sdp_body = sdp_transform.parse(sdp);
           var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
             _step10;
           try {
@@ -23105,7 +23117,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator10.f();
           }
-          var newSdp = this._sdpAddMid(response.body);
+          var newSdp = this._sdpAddMid(sdp);
           var e = {
             originator: 'remote',
             type: 'answer',
@@ -30576,6 +30588,151 @@ exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
     _iterator7.f();
   }
   return newSdpLines.join('\r\n');
+};
+
+// 修复本端切换音频，远端sdp的问题
+// 确保 SDP 的 video m-section 中包含以下行：
+// a=setup, a=fingerprint, a=ice-ufrag, a=ice-pwd, a=rtcp-mux
+exports.ensureVideoSdpAttrs = function (sdp) {
+  if (typeof sdp !== 'string') return sdp;
+  var eol = sdp.indexOf('\r\n') !== -1 ? '\r\n' : sdp.indexOf('\n') !== -1 ? '\n' : '\r\n';
+  var lines = sdp.split(/\r?\n/);
+
+  // 收集所有 m= 行的索引
+  var mIndices = [];
+  for (var i = 0; i < lines.length; i++) {
+    var t = (lines[i] || '').trim();
+    if (t.slice(0, 2) === 'm=') mIndices.push(i);
+  }
+
+  // 构建媒体分段
+  var sections = [];
+  if (mIndices.length > 0) {
+    for (var idx = 0; idx < mIndices.length; idx++) {
+      var start = mIndices[idx];
+      var end = idx + 1 < mIndices.length ? mIndices[idx + 1] : lines.length;
+      var firstLine = (lines[start] || '').trim().toLowerCase();
+      var kind = firstLine.indexOf('m=audio') === 0 ? 'audio' : firstLine.indexOf('m=video') === 0 ? 'video' : 'other';
+      sections.push({
+        start: start,
+        end: end,
+        kind: kind
+      });
+    }
+  }
+  function ensureFinalNewline(text, newline) {
+    return text.slice(-newline.length) === newline ? text : text + newline;
+  }
+  function getSectionLines(s) {
+    return lines.slice(s.start, s.end);
+  }
+  function hasAttr(sectionLines, regex) {
+    for (var j = 0; j < sectionLines.length; j++) {
+      var l = (sectionLines[j] || '').trim();
+      if (regex.test(l)) return true;
+    }
+    return false;
+  }
+  function getAttrLine(sectionLines, regex) {
+    for (var j = 0; j < sectionLines.length; j++) {
+      var l = (sectionLines[j] || '').trim();
+      if (regex.test(l)) return l;
+    }
+    return null;
+  }
+  var checks = [{
+    name: 'setup',
+    test: /^a=setup(?::|$)/i
+  }, {
+    name: 'fingerprint',
+    test: /^a=fingerprint(?::|$)/i
+  }, {
+    name: 'ice-ufrag',
+    test: /^a=ice-ufrag:/i
+  }, {
+    name: 'ice-pwd',
+    test: /^a=ice-pwd:/i
+  }, {
+    name: 'rtcp-mux',
+    test: /^a=rtcp-mux$/i
+  }];
+
+  // 没有任何 m= 行：在末尾追加一个 video m-line 即可（没有 audio 可复制）
+  if (sections.length === 0) {
+    var outLines0 = lines.slice();
+    outLines0.push('m=video 0 UDP/TLS/RTP/SAVPF 106');
+    return ensureFinalNewline(outLines0.join(eol), eol);
+  }
+
+  // 查找第一个 video 分段
+  var videoIdx = -1;
+  for (var sIdx = 0; sIdx < sections.length; sIdx++) {
+    if (sections[sIdx].kind === 'video') {
+      videoIdx = sIdx;
+      break;
+    }
+  }
+  if (videoIdx !== -1) {
+    var videoSec = sections[videoIdx];
+    var videoLines = getSectionLines(videoSec);
+
+    // 全部存在则直接返回
+    var allPresent = true;
+    for (var cIdx = 0; cIdx < checks.length; cIdx++) {
+      if (!hasAttr(videoLines, checks[cIdx].test)) {
+        allPresent = false;
+        break;
+      }
+    }
+    if (allPresent) return ensureFinalNewline(sdp, eol);
+
+    // 找到“前面最近”的 audio 分段
+    var audioSec = null;
+    for (var k = videoIdx - 1; k >= 0; k--) {
+      if (sections[k].kind === 'audio') {
+        audioSec = sections[k];
+        break;
+      }
+    }
+    if (!audioSec) return ensureFinalNewline(sdp, eol);
+    var audioLines = getSectionLines(audioSec);
+    var updatedVideo = videoLines.slice();
+
+    // 复制缺失项
+    for (var cc = 0; cc < checks.length; cc++) {
+      if (!hasAttr(updatedVideo, checks[cc].test)) {
+        var donor = getAttrLine(audioLines, checks[cc].test);
+        if (donor) updatedVideo.push(donor);
+      }
+    }
+
+    // 覆盖回原 SDP
+    var outLines = lines.slice();
+    var spliceArgs = [videoSec.start, videoSec.end - videoSec.start].concat(updatedVideo);
+    Array.prototype.splice.apply(outLines, spliceArgs);
+    return ensureFinalNewline(outLines.join(eol), eol);
+  } else {
+    // 不存在 video：在末尾追加，并从“前面最近的 audio（最后一个 audio）”复制
+    var outLines2 = lines.slice();
+    var insertPos = outLines2.length;
+    var lastAudio = null;
+    for (var m = sections.length - 1; m >= 0; m--) {
+      if (sections[m].kind === 'audio' && sections[m].end <= insertPos) {
+        lastAudio = sections[m];
+        break;
+      }
+    }
+    var videoNew = ['m=video 0 UDP/TLS/RTP/SAVPF 106'];
+    if (lastAudio) {
+      var audioLines2 = getSectionLines(lastAudio);
+      for (var ci = 0; ci < checks.length; ci++) {
+        var donor2 = getAttrLine(audioLines2, checks[ci].test);
+        if (donor2) videoNew.push(donor2);
+      }
+    }
+    Array.prototype.push.apply(outLines2, videoNew);
+    return ensureFinalNewline(outLines2.join(eol), eol);
+  }
 };
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
