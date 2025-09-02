@@ -1491,7 +1491,20 @@ async function call(type, direction, mediaStream)
     // 外呼未触发newRTCSession前取消呼叫
     document.querySelector('#cancel').onclick = function()
     {
-      session.terminate();
+      try
+      {
+        session.terminate();
+      }
+      catch (error)
+      {
+        if (error.message === 'Invalid status: 8' || error.message === 'Invalid status: 7')
+        {
+          console.warn('ended');
+        }
+        console.warn(error.message);
+      }
+
+      // session.terminate();
       // 关闭无设备的黑屏
       CRTC.Utils.stopBlackVideo();
       // 兼容mcu等候室用
