@@ -365,6 +365,9 @@ ua.on('newRTCSession', function(e)
           sender.setParameters(parameters);
         }
       });
+
+      // 获取媒体流
+      getStreams(e.session.connection);
     }
     else
     {
@@ -372,8 +375,6 @@ ua.on('newRTCSession', function(e)
     }
 
     stats && stats.reset();
-    // 获取媒体流
-    getStreams(e.session.connection);
   });
 
   /**
@@ -1564,18 +1565,18 @@ function generateAnEmptyAudioTrack()
  */
 function getStreams(pc)
 {
-  // localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
-  // document.querySelector('#localVideo').srcObject && console.warn(document.querySelector('#localVideo').srcObject.getTracks()[0]);
+  localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
+  document.querySelector('#localVideo').srcObject && console.warn(document.querySelector('#localVideo').srcObject.getTracks()[0]);
 
   // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
   // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
-  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
-  // const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
-  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
+  // const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
+  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
+  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
   let newCloneStream;
