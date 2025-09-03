@@ -29,7 +29,6 @@ let curMode;
 
 // 兼容mcu等候室用
 let cloneStream = null;
-let cusStream;
 let isRefer = false;
 
 const extraFeatures = [];
@@ -116,8 +115,6 @@ ua.on('failed', function(data)
 {
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
-
-  // localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
 });
 
 /**
@@ -366,15 +363,12 @@ ua.on('newRTCSession', function(e)
         }
       });
 
-      // 获取媒体流
-      getStreams(e.session.connection);
-    }
-    else
-    {
-      localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
     }
 
     stats && stats.reset();
+
+    // 获取媒体流
+    getStreams(e.session.connection);
   });
 
   /**
@@ -393,19 +387,19 @@ ua.on('newRTCSession', function(e)
     const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
     const tmpTracks = [];
 
-    cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
-
     if (localStream.audioStream.getAudioTracks().length > 0)
     {
-      // tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
-      tmpTracks.push(localStream.audioStream.getAudioTracks()[0]);
+      tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
+      // tmpTracks.push(localStream.audioStream.getAudioTracks()[0]);
     }
 
     if (d.videoStream.getVideoTracks().length > 0)
     {
-      // tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
-      tmpTracks.push(d.videoStream.getVideoTracks()[0]);
+      tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
+      // tmpTracks.push(d.videoStream.getVideoTracks()[0]);
     }
+
+    cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
 
     cloneStream = new MediaStream(tmpTracks);
     localVideo.srcObject = cloneStream;
@@ -491,8 +485,6 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
 
     cusMediaStream = new MediaStream();
-
-    localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -550,8 +542,6 @@ ua.on('newRTCSession', function(e)
 
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
-
-    localVideo.srcObject&&localVideo.srcObject.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -676,17 +666,17 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  e.session.on('upgradeToVideo', (d) =>
-  {
-    if (!haveACamera)
-    {
-      d.reject();
-    }
-    else
-    {
-      d.accept();
-    }
-  });
+  // e.session.on('upgradeToVideo', (d) =>
+  // {
+  //   if (!haveACamera)
+  //   {
+  //     d.reject();
+  //   }
+  //   else
+  //   {
+  //     d.accept();
+  //   }
+  // });
 
   /**
     * confirmed
@@ -1440,8 +1430,10 @@ async function call(type, direction, mediaStream)
       tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     }
 
+    window.novideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg });
+
     // 自定义视频
-    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }).videoTrack, tmpStream);
+    (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(novideo.videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
 
@@ -1477,6 +1469,8 @@ async function call(type, direction, mediaStream)
         // 收到远端媒体则设置远端回铃音
         earlyMedia = true;
 
+        console.warn('em: ', event.streams[0].getTracks(), event);
+
         remoteAudio.srcObject = event.streams[0];
 
         /**
@@ -1508,13 +1502,14 @@ async function call(type, direction, mediaStream)
       // session.terminate();
       // 关闭无设备的黑屏
       CRTC.Utils.stopBlackVideo();
+
       // 兼容mcu等候室用
       cloneStream && cloneStream.getTracks().forEach((track) =>
       {
         track.stop();
         localVideo.srcObject = null;
       });
-      cusStream && cusStream.getTracks().forEach((track) => track.stop());
+
       cloneStream = null;
     };
 
@@ -1565,9 +1560,6 @@ function generateAnEmptyAudioTrack()
  */
 function getStreams(pc)
 {
-  localVideo.srcObject && localVideo.srcObject.getTracks().forEach((track) => track.stop());
-  document.querySelector('#localVideo').srcObject && console.warn(document.querySelector('#localVideo').srcObject.getTracks()[0]);
-
   // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
   // 远端媒体流
@@ -1609,11 +1601,6 @@ function getStreams(pc)
     if (!isRefer)
     {
       // cloneStream.getTracks().forEach((track) => track.stop());
-    }
-    else
-    {
-      cusStream && cusStream.getTracks().forEach((track) => track.stop());
-      cusStream = new MediaStream(cloneStream.getTracks());
     }
   }
   isRefer = false;
