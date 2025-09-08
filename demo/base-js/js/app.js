@@ -341,16 +341,6 @@ ua.on('newRTCSession', function(e)
 
     if (d.mode == 'video')
     {
-      // 兼容部分手机初始黑屏问题
-      setTimeout(() =>
-      {
-        e.session.mute({ video: true });
-        setTimeout(() =>
-        {
-          e.session.unmute({ video: true });
-        }, 300);
-      }, 1000);
-
       e.session.connection.getSenders().forEach((sender) =>
       {
         if (sender.track && sender.track.kind === 'video')
@@ -750,19 +740,6 @@ ua.on('newRTCSession', function(e)
       document.querySelector('#NQ').innerText = `Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
-    // if (d.originator === 'local')
-    // {
-    //   // 兼容部分手机初始黑屏问题
-    //   setTimeout(() =>
-    //   {
-    //     e.session.mute({ video: true });
-    //     setTimeout(() =>
-    //     {
-    //       e.session.unmute({ video: true });
-    //     }, 300);
-    //   }, 1000);
-    // }
-
     // 获取媒体流
     getStreams(e.session.connection);
 
@@ -968,7 +945,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function()
   {
-    e.session.upgradeToVideo({ useUpdate: useUpdate }, () => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo({ useUpdate: false }, () => { setStatus(`切换视频模式完成${curMode}`); });
     stats && stats.reset();
   };
 
@@ -1437,7 +1414,6 @@ async function call(type, direction, mediaStream)
 
     options['mediaStream'] = tmpStream;
 
-    console.warn(tmpStream.getTracks());
     // 系统麦克风和摄像头
     options['mediaConstraints'] = {
       audio : type === 'callnullvideo' ? true : false,
@@ -1468,8 +1444,6 @@ async function call(type, direction, mediaStream)
       {
         // 收到远端媒体则设置远端回铃音
         earlyMedia = true;
-
-        console.warn('em: ', event.streams[0].getTracks(), event);
 
         remoteAudio.srcObject = event.streams[0];
 
@@ -1845,15 +1819,15 @@ function start()
 
 start();
 
-document.addEventListener('visibilitychange', function()
-{
-  if (document.hidden)
-  {
-    console.log('页面进入后台');
-  }
-  else
-  {
-    document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
-    console.warn('页面回到前台');
-  }
-});
+// document.addEventListener('visibilitychange', function()
+// {
+//   if (document.hidden)
+//   {
+//     console.log('页面进入后台');
+//   }
+//   else
+//   {
+//     document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
+//     console.warn('页面回到前台');
+//   }
+// });

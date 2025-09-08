@@ -764,7 +764,19 @@ WebRTC.prototype.toMCU = function(target)
   const other=[];
   const othStream = [];
 
-  othStream.push(document.querySelector('.localVideo').srcObject.clone());
+  const localVideoElement = document.querySelectorAll('.localVideo');
+
+  for (const lv of localVideoElement)
+  {
+    if (lv.srcObject.getVideoTracks().length>0)
+    {
+      othStream.push(lv.srcObject.clone());
+
+      break;
+    }
+  }
+
+  // othStream.push(document.querySelector('.localVideo').srcObject.clone());
 
   for (const key in _session)
   {

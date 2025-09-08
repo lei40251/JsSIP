@@ -1,5 +1,5 @@
 /*
- * CRTC v1.10.11-beta.2025931810
+ * CRTC v1.10.11-beta.2025951435
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.10.11-beta.405018063620 (Web)',
+  USER_AGENT: 'UA/1.10.11-beta.405018102870 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.10.11-beta.405018063620');
+debug('version %s', '1.10.11-beta.405018102870');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.10.11-beta.405018063620';
+    return '1.10.11-beta.405018102870';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19432,13 +19432,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "upgradeToVideo",
     value: function upgradeToVideo(options, done) {
       var _this5 = this;
-      logger.debug('upgradeToVideo()');
+      logger.debug('upgradeToVideo()', options, done);
       if (this._ua.sk[7] < 2) {
         return;
       }
       if (!options) {
         options = {};
       }
+      logger.debug('options: ', JSON.stringify(options));
       if (!done) {
         done = function done() {};
       }
@@ -19609,7 +19610,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (options.useUpdate) {
           opts['useUpdate'] = true;
         }
-        _this5.renegotiate(opts, done);
+        _this5.renegotiate(opts, function () {
+          done();
+          if (options.sendOnly) {
+            // 单向视频，每分钟发送一次关键帧
+            Utils.sendKeyFrames(_this5._connection, 1);
+          }
+        });
       });
     }
 
@@ -21467,6 +21474,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               if (_this16._localToAudio || m.direction == 'inactive') {
                 m.port = 0;
+                m.connection = {
+                  ip: '0.0.0.0',
+                  version: 4
+                };
               }
               if (m.port !== 0) {
                 if (_this16._mode === '') {
@@ -23553,6 +23564,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // this._localMediaStreamLocallyGenerated && this._checkMediaStreamStatus();
 
       logger.debug('emit "confirmed"');
+
+      // 主动发送关键帧，兼容部分手机接听时黑屏问题
+      Utils.sendKeyFrames(this._connection, 0.5, 2);
       this.emit('confirmed', {
         originator: originator,
         ack: ack || null
@@ -30751,6 +30765,68 @@ exports.ensureVideoSdpAttrs = function (sdp) {
     }
     Array.prototype.push.apply(outLines2, videoNew);
     return ensureFinalNewline(outLines2.join(eol), eol);
+  }
+};
+
+// 主动发送关键帧
+exports.sendKeyFrames = function (pc, interval, frequency) {
+  if (!pc) {
+    return;
+  }
+  var scaleResolutionDownBy = false;
+  var timer;
+  var start = function start(num) {
+    var executed = 0;
+    timer = setInterval(function () {
+      try {
+        pc.getSenders().forEach(function (sender) {
+          if (sender.track.kind === 'video') {
+            var parameters = sender.getParameters();
+            parameters.encodings[0].scaleResolutionDownBy = !scaleResolutionDownBy ? 1.001 : 1;
+            scaleResolutionDownBy = !scaleResolutionDownBy;
+            sender.setParameters(parameters);
+          }
+        });
+
+        // for (const sender of pc.getSenders())
+        // {
+        //   if (sender.track && sender.track.kind === 'video')
+        //   {
+        //     // 更通用：replaceTrack 同一条 track
+        //     await sender.replaceTrack(sender.track);
+
+        //     // 如果实现支持（Chrome 等）：直接请求关键帧
+        //     if (typeof sender.generateKeyFrame === 'function')
+        //     {
+        //       await sender.generateKeyFrame();
+        //     }
+        //   }
+        // }
+      } catch (error) {
+        clearInterval(timer);
+        console.warn(error.toString);
+      }
+      executed++;
+      if (frequency && executed >= frequency || num && executed >= num) {
+        clearInterval(timer);
+      }
+    }, interval * 1000);
+  };
+
+  // 停止发送关键帧
+  var stop = function stop() {
+    timer && clearInterval(timer);
+  };
+
+  // 定时发送
+  if (interval) {
+    start();
+    if (!frequency) {
+      return stop;
+    }
+  } else {
+    // 只发送一次
+    start(1);
   }
 };
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
