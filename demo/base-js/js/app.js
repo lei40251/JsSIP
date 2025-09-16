@@ -23,6 +23,7 @@ let options;
 
 let useUpdate = true;
 let haveACamera = false;
+let confirmed = false;
 
 // 当前模式
 let curMode;
@@ -175,6 +176,8 @@ ua.on('newRTCSession', function(e)
 {
   console.warn('nsession: ', e);
 
+  confirmed = false;
+
   if (tmpSession)
   {
     e.session.terminate({ status_code: 486 });
@@ -214,7 +217,7 @@ ua.on('newRTCSession', function(e)
   {
     // 呼叫VoLTE手机号需要
     noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, ''));
-    // d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, '');
+    noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, ''));
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
 
@@ -238,6 +241,8 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/packetization-mode=0/g, 'packetization-mode=1');
 
       // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:2');
+      // a=fmtp:109 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42c01f
+
     }
     else if (d.originator === 'remote')
     {
@@ -656,17 +661,17 @@ ua.on('newRTCSession', function(e)
     }
   });
 
-  // e.session.on('upgradeToVideo', (d) =>
-  // {
-  //   if (!haveACamera)
-  //   {
-  //     d.reject();
-  //   }
-  //   else
-  //   {
-  //     d.accept();
-  //   }
-  // });
+  e.session.on('upgradeToVideo', (d) =>
+  {
+    if (confirmed && !haveACamera)
+    {
+      d.reject();
+    }
+    else
+    {
+      d.accept();
+    }
+  });
 
   /**
     * confirmed
@@ -684,6 +689,8 @@ ua.on('newRTCSession', function(e)
     // {
     //   rtcSession.terminate();
     // }
+
+    confirmed = true;
 
     // 获取统计信息
     stats = new CRTC.getStats(e.session.connection);
