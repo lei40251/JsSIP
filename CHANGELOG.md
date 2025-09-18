@@ -1,5 +1,8 @@
 CHANGELOG
 =========
+### 1.11.1
+
+* 修复切换摄像头facingMode与deviceId混用的问题
 
 ### 1.11.0
 
