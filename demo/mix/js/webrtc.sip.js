@@ -677,10 +677,21 @@ WebRTC.prototype.call = function(linkman, mode)
       mediaConstraints.audio = true;
     }
   }
+
+  if (exts && exts.indexOf('BP720P') !== -1)
+  {
+    mediaConstraints['video'] = {
+      width     : 1280,
+      height    : 720,
+      frameRate : 15
+    };
+  }
+
   this.session = this.ua.call(`sip:${ linkman }@${ this.domain}`, {
     mediaConstraints : mediaConstraints,
     pcConfig         : pcConfig,
-    extraHeaders     : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ]
+    extraHeaders     : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    extraFeatures
   });
 };
 

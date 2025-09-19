@@ -16,10 +16,13 @@ function handleGetQuery(name)
   return null;
 }
 
+const extraFeatures = [];
 const env = handleGetQuery('env');
 const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
+const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 
+exts && exts.forEach((ext) => extraFeatures.push(ext));
 // RTCPeerConnection 的 RTCConfiguration 对象
 const pcConfig = {};
 
