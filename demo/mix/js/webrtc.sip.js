@@ -846,6 +846,8 @@ WebRTC.prototype.toMCU = function(target)
       sender.replaceTrack(lVs.getAudioTracks()[0]);
     }
   });
+
+  document.querySelector('#mixVideo').srcObject=lVs;
 };
 
 WebRTC.prototype.openMic = function(target)
