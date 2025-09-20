@@ -399,6 +399,10 @@ const _rtcSessionEvent = {
     //   e.sdp = e.sdp.replace(/a=setup:actpass/g, 'a=setup:actpass');
     // }
 
+    // 呼叫VoLTE手机号需要
+    noremb && (e.sdp = e.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, ''));
+    noremb && (e.sdp = e.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, ''));
+
     // e.sdp = e.sdp.replace(/a=ssrc.*\r\n/g, '');
     // e.sdp = e.sdp.replace(/a=msid.*\r\n/g, '');
     // e.sdp = e.sdp.replace(/a=mid.*\r\n/g, '');
@@ -449,15 +453,33 @@ const _rtcSessionEvent = {
     // _tmpTarget=null
 
     // 兼容部分手机初始黑屏问题
-    setTimeout(() =>
+    // setTimeout(() =>
+    // {
+    //   session.mute({ video: true });
+    //   // e.session.mute({ video: true });
+    //   setTimeout(() =>
+    //   {
+    //     session.unmute({ video: true });
+    //   }, 300);
+    // }, 1000);
+
+    // 根据分辨率设置速率
+    if (mbit)
     {
-      session.mute({ video: true });
-      // e.session.mute({ video: true });
-      setTimeout(() =>
+      session.connection.getSenders().forEach((sender) =>
       {
-        session.unmute({ video: true });
-      }, 300);
-    }, 1000);
+        if (sender.track && sender.track.kind === 'video')
+        {
+          const parameters = sender.getParameters();
+
+          parameters.encodings[0].maxBitrate = mbit * 1000;
+
+          sender.setParameters(parameters);
+
+          sender.track.contentHint = 'detail';
+        }
+      });
+    }
 
     _incomingSession = null;
   },

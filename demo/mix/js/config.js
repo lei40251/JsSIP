@@ -17,8 +17,11 @@ function handleGetQuery(name)
 }
 
 const extraFeatures = [];
-const env = handleGetQuery('env');
+
 const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
+const mbit = handleGetQuery('mbit') || 400;
+const env = handleGetQuery('env');
+const noremb = handleGetQuery('noremb') || false;
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 
