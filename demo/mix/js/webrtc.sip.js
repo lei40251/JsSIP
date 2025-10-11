@@ -896,6 +896,22 @@ WebRTC.prototype.openCam = function(target)
   }
 };
 
+WebRTC.prototype.toVideo = function(target)
+{
+  if (_session[target])
+  {
+    _session[target].upgradeToVideo({ useUpdate: false }, () => { console.warn('切换视频模式完成'); });
+  }
+};
+
+WebRTC.prototype.toAudio = function(target)
+{
+  if (_session[target])
+  {
+    _session[target].demoteToAudio({ useUpdate: false }, () => { console.warn('切换音频模式完成'); });
+  }
+};
+
 WebRTC.prototype.sendDTMF = function(message, target)
 {
   if (_session[target])

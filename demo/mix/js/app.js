@@ -559,6 +559,8 @@ function initDevice()
 // toggle camera
 function toggleCam(e)
 {
+  // webrtc.toVideo($(e).closest('.main')
+  //   .data('target'));
   const classes = e.classList;
 
   if (classes.contains('close-camera'))
@@ -584,6 +586,8 @@ function toggleCam(e)
 // toggle microphone
 function toggleMic(e)
 {
+  // webrtc.toAudio($(e).closest('.main')
+  //   .data('target'));
   const classes = e.classList;
 
   if (classes.contains('close-microphone'))
