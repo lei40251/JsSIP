@@ -44,6 +44,7 @@ const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
 
 let cusMediaStream = new MediaStream();
+let blackVideo = null;
 
 const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
@@ -896,7 +897,9 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+
+    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
     e.session.answer({
       mediaConstraints : {
@@ -917,7 +920,10 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+
+    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
     e.session.answer({
       mediaConstraints : {
@@ -963,7 +969,10 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+
+    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
@@ -986,7 +995,9 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    tmpStream.addTrack(CRTC.Utils.generateAnBlackVideoTrack().videoTrack, tmpStream);
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+
+    tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
@@ -1046,7 +1057,7 @@ ua.on('newRTCSession', function(e)
   {
     e.session.terminate();
 
-    CRTC.Utils.stopBlackVideo();
+    blackVideo && blackVideo.cleanup();
 
     try
     {
@@ -1428,7 +1439,9 @@ async function call(type, direction, mediaStream)
       tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     }
 
-    window.novideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg });
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+
+    window.novideo = blackVideo;
 
     // 自定义视频
     (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(novideo.videoTrack, tmpStream);
@@ -1496,7 +1509,7 @@ async function call(type, direction, mediaStream)
 
       // session.terminate();
       // 关闭无设备的黑屏
-      CRTC.Utils.stopBlackVideo();
+      blackVideo && blackVideo.cleanup();
 
       // 兼容mcu等候室用
       cloneStream && cloneStream.getTracks().forEach((track) =>

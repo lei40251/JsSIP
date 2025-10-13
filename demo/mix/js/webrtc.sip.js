@@ -444,12 +444,18 @@ const _rtcSessionEvent = {
     _tmpTarget = null;
     _incomingSession = null;
   },
+  confirmed : function(e, session, UAe)
+  {
+    // setTimeout(() =>
+    // {
+    _afterAccept(session, _tmpTarget);
+    // }, 800);
+  },
   accepted : function(e, session, UAe)
   {
     // var target = haveSession(_session);
     // _session[_tmpTarget] = session;
     _ringPause(session);
-    _afterAccept(session, _tmpTarget);
     // _tmpTarget=null
 
     // 兼容部分手机初始黑屏问题
