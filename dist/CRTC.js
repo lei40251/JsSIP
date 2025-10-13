@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.5-beta.202510131242
+ * CRTC v1.11.5-beta.202510131811
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.5-beta.405020262484 (Web)',
+  USER_AGENT: 'UA/1.11.5-beta.405020263622 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.5-beta.405020262484');
+debug('version %s', '1.11.5-beta.405020263622');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.5-beta.405020262484';
+    return '1.11.5-beta.405020263622';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -18496,6 +18496,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // Custom session empty object for high level use.
     _this._data = {};
+
+    // 监听浏览器切后台输出黑屏
+    _this._visibilitychangeVideoTrack = null;
+    _this._blackVideoTrack = null;
+    document.addEventListener('visibilitychange', function () {
+      // console.log('页面进入后台');
+      if (document.hidden) {
+        if (_this._connection && _this._is_confirmed && !_this._enableBFCP) {
+          _this._connection.getSenders().forEach(function (sender) {
+            if (sender.track.kind === 'video') {
+              _this._visibilitychangeVideoTrack = sender.track;
+              console.warn('track: ', sender.track);
+
+              // eslint-disable-next-line max-len
+              _this._blackVideoTrack = Utils.generateAnBlackVideoTrack({
+                hidden: true,
+                width: sender.track.getSettings().width,
+                height: sender.track.getSettings().height
+              });
+              sender.replaceTrack(_this._blackVideoTrack.videoTrack);
+            }
+          });
+        }
+      }
+      // console.warn('页面回到前台');
+      else if (_this._blackVideoTrack) {
+        _this._connection.getSenders().forEach(function (sender) {
+          if (sender.track.kind === 'video') {
+            sender.replaceTrack(_this._visibilitychangeVideoTrack);
+            _this._visibilitychangeVideoTrack = null;
+            _this._blackVideoTrack.cleanup();
+          }
+        });
+      }
+    });
     return _this;
   }
 
@@ -27934,6 +27969,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
     // Initialize registrator.
     _this._registrator = new Registrator(_this);
+
+    // 监听本地网络状态
+    window.addEventListener('offline', function (e) {
+      _this.emit('browser:navigator:offline', e);
+    });
+    window.addEventListener('online', function (e) {
+      _this.emit('browser:navigator:online', e);
+    });
     return _this;
   }
   _inherits(UA, _EventEmitter);
@@ -30021,75 +30064,60 @@ exports.generateAnEmptyVideoTrack = function () {
 // 输出一个黑图视频
 exports.generateAnBlackVideoTrack = function (options) {
   options || (options = {});
-  sessionStorage.clear('stopBlackTrack');
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
+  var hidden = options.hidden || false;
   var width = options.width || 640;
   var height = options.height || 480;
-  var fps = options.fps || 5;
+  var fps = options.fps || 1;
   var color = options.color || 'black';
-  var svgSource = options.svgSource || null; // SVG图片源参数
-
+  var svgSource = options.svgSource || null;
   canvas.setAttribute('style', 'display:none');
   canvas.width = width;
   canvas.height = height;
-
-  // 创建一个图像对象用于加载SVG
   var img = null;
+  var animationId = null; // 用于存储 requestAnimationFrame 的 ID
+  var timeoutId = null; // 用于存储 setTimeout 的 ID
+  var isRunning = true; // 用标志位控制循环
+
   if (svgSource) {
     img = new Image();
-
-    // 处理不同类型的SVG源
     if (typeof svgSource === 'string') {
-      // 如果是URL或SVG字符串
       if (svgSource.startsWith('http') || svgSource.startsWith('data:')) {
-        // 如果是URL或data URL
         img.src = svgSource;
       } else if (svgSource.includes('<svg')) {
-        // 如果是SVG字符串，转换为data URL
         var svgBlob = new Blob([svgSource], {
           type: 'image/svg+xml'
         });
         img.src = URL.createObjectURL(svgBlob);
       }
     } else if (svgSource instanceof Blob || svgSource instanceof File) {
-      // 如果是Blob或File对象
       img.src = URL.createObjectURL(svgSource);
     }
   }
   var _drawToCanvas2 = function drawToCanvas() {
-    if (sessionStorage.getItem('stopBlackTrack')) {
+    if (!isRunning) {
       return;
     }
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, width, height);
-
-    // 如果有SVG图片且已加载完成，则在画布中间绘制图片
     if (img && img.complete && img.naturalWidth !== 0) {
-      // 计算图片在画布中的位置，使其居中
       var imgWidth = img.naturalWidth;
       var imgHeight = img.naturalHeight;
-
-      // 计算缩放比例，确保图片适合画布
-      var scale = Math.min(width * 0.4 / imgWidth,
-      // 使图片宽度最多占画布的80%
-      height * 0.4 / imgHeight // 使图片高度最多占画布的80%
-      );
+      var scale = Math.min(width * 0.4 / imgWidth, height * 0.4 / imgHeight);
       var scaledWidth = imgWidth * scale;
       var scaledHeight = imgHeight * scale;
-
-      // 计算居中位置
       var x = (width - scaledWidth) / 2;
       var y = (height - scaledHeight) / 2;
-
-      // 绘制图片
       ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
     }
-    window.requestAnimationFrame(_drawToCanvas2);
+    if (hidden) {
+      timeoutId = setTimeout(_drawToCanvas2, 1000);
+    } else {
+      animationId = window.requestAnimationFrame(_drawToCanvas2);
+    }
   };
   _drawToCanvas2();
-
-  // 捕获 Canvas 的视频流
   var videoTrack = canvas.captureStream(fps).getVideoTracks()[0];
   try {
     videoTrack.applyConstraints({
@@ -30106,17 +30134,40 @@ exports.generateAnBlackVideoTrack = function (options) {
   } catch (error) {
     console.warn(error);
   }
-
-  // 返回视频轨道和清理函数
   return {
     videoTrack: videoTrack,
-    // 添加清理函数
     cleanup: function cleanup() {
-      sessionStorage.setItem('stopBlackTrack', 'true');
-      // 如果使用了URL.createObjectURL，需要释放
+      // 停止绘制循环
+      isRunning = false;
+
+      // 取消动画帧
+      if (animationId) {
+        window.cancelAnimationFrame(animationId);
+      }
+
+      // 清除定时器
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      // 停止视频轨道
+      if (videoTrack && videoTrack.readyState !== 'ended') {
+        videoTrack.stop();
+      }
+
+      // 清理 canvas
+      ctx.clearRect(0, 0, width, height);
+      if (canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
+      }
+
+      // 释放 URL 对象
       if (img && img.src.startsWith('blob:')) {
         URL.revokeObjectURL(img.src);
       }
+
+      // 清空引用
+      img = null;
     },
     reset: function reset() {
       try {
