@@ -559,55 +559,55 @@ function initDevice()
 // toggle camera
 function toggleCam(e)
 {
-  // webrtc.toVideo($(e).closest('.main')
-  //   .data('target'));
-  const classes = e.classList;
+  webrtc.toVideo($(e).closest('.main')
+    .data('target'));
+  // const classes = e.classList;
 
-  if (classes.contains('close-camera'))
-  {
-    webrtc.openCam(
-      $(e)
-        .closest('.main')
-        .data('target')
-    );
-    classes.toggle('close-camera');
-  }
-  else
-  {
-    webrtc.closeCam(
-      $(e)
-        .closest('.main')
-        .data('target')
-    );
-    classes.toggle('close-camera');
-  }
+  // if (classes.contains('close-camera'))
+  // {
+  //   webrtc.openCam(
+  //     $(e)
+  //       .closest('.main')
+  //       .data('target')
+  //   );
+  //   classes.toggle('close-camera');
+  // }
+  // else
+  // {
+  //   webrtc.closeCam(
+  //     $(e)
+  //       .closest('.main')
+  //       .data('target')
+  //   );
+  //   classes.toggle('close-camera');
+  // }
 }
 
 // toggle microphone
 function toggleMic(e)
 {
-  // webrtc.toAudio($(e).closest('.main')
-  //   .data('target'));
-  const classes = e.classList;
+  webrtc.toAudio($(e).closest('.main')
+    .data('target'));
+  // const classes = e.classList;
 
-  if (classes.contains('close-microphone'))
-  {
-    webrtc.openMic(
-      $(e)
-        .closest('.main')
-        .data('target')
-    );
-    classes.toggle('close-microphone');
-  }
-  else
-  {
-    webrtc.closeMic(
-      $(e)
-        .closest('.main')
-        .data('target')
-    );
-    classes.toggle('close-microphone');
-  }
+  // if (classes.contains('close-microphone'))
+  // {
+  //   webrtc.openMic(
+  //     $(e)
+  //       .closest('.main')
+  //       .data('target')
+  //   );
+  //   classes.toggle('close-microphone');
+  // }
+  // else
+  // {
+  //   webrtc.closeMic(
+  //     $(e)
+  //       .closest('.main')
+  //       .data('target')
+  //   );
+  //   classes.toggle('close-microphone');
+  // }
 }
 
 // toggle phone

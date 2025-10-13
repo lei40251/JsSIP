@@ -998,6 +998,13 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#cameras').onchange = function()
   {
+    if (cloneStream)
+    {
+      cloneStream.getVideoTracks().forEach((v) =>
+      {
+        v.stop();
+      });
+    }
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
@@ -1020,9 +1027,16 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#switchDevice').onclick = function()
   {
+    if (cloneStream)
+    {
+      cloneStream.getVideoTracks().forEach((v) =>
+      {
+        v.stop();
+      });
+    }
     e.session.switchDevice('camera', camFlag ? 'environment' : 'user');
     camFlag = !camFlag;
-    setStatus('switchDevice facingMode');
+    setStatus(`switchDevice facingMode ${ camFlag}`);
   };
 
   /**
