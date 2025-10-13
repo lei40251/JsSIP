@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.4.202510111557
+ * CRTC v1.11.5-beta.202510131242
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.4.405020223114 (Web)',
+  USER_AGENT: 'UA/1.11.5-beta.405020262484 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.4.405020223114');
+debug('version %s', '1.11.5-beta.405020262484');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.4.405020223114';
+    return '1.11.5-beta.405020262484';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -17484,20 +17484,33 @@ module.exports = /*#__PURE__*/function () {
     // 获取音视频混合的媒体流
   }, {
     key: "getMixedStream",
-    value: function getMixedStream() {
-      logger.debug('getMixedStream()');
-      this._isStopDrawingFrames = false;
-      var mixedVideoStream = this.getVideoStream();
-      var mixedAudioStream = this.getAudioStream();
-      if (mixedAudioStream) {
-        mixedAudioStream.getAudioTracks().forEach(function (track) {
-          mixedVideoStream.addTrack(track);
-        });
+    value: function () {
+      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var mixedVideoStream, mixedAudioStream;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              logger.debug('getMixedStream()');
+              this._isStopDrawingFrames = false;
+              mixedVideoStream = this.getVideoStream();
+              _context.n = 1;
+              return this.getAudioStream();
+            case 1:
+              mixedAudioStream = _context.v;
+              if (mixedAudioStream) {
+                mixedAudioStream.getAudioTracks().forEach(function (track) {
+                  mixedVideoStream.addTrack(track);
+                });
+              }
+              return _context.a(2, mixedVideoStream);
+          }
+        }, _callee, this);
+      }));
+      function getMixedStream() {
+        return _getMixedStream.apply(this, arguments);
       }
-      return mixedVideoStream;
-    }
-
-    // 获取混合后的视频流
+      return getMixedStream;
+    }() // 获取混合后的视频流
   }, {
     key: "getVideoStream",
     value: function getVideoStream() {
@@ -17520,11 +17533,11 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "getAudioStream",
     value: function () {
-      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         var _this4 = this;
         var seenStreams;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
             case 0:
               logger.debug('getAudioStream()');
 
@@ -17540,10 +17553,10 @@ module.exports = /*#__PURE__*/function () {
                 this._audioContext = new AudioContext();
               }
               if (!(this._audioContext.state === 'suspended')) {
-                _context.n = 1;
+                _context2.n = 1;
                 break;
               }
-              _context.n = 1;
+              _context2.n = 1;
               return this._audioContext.resume();
             case 1:
               this._audioSources = [];
@@ -17559,15 +17572,15 @@ module.exports = /*#__PURE__*/function () {
                 }
               });
               if (!(this._audioSources.length === 0)) {
-                _context.n = 2;
+                _context2.n = 2;
                 break;
               }
               logger.warn('No valid audio sources, skip audio stream creation');
-              return _context.a(2, null);
+              return _context2.a(2, null);
             case 2:
-              return _context.a(2, this._audioDestination.stream);
+              return _context2.a(2, this._audioDestination.stream);
           }
-        }, _callee, this);
+        }, _callee2, this);
       }));
       function getAudioStream() {
         return _getAudioStream.apply(this, arguments);
@@ -19843,7 +19856,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                             return s.track.kind == 'video';
                           }
                         }); // 先释放原来的设备再获取新的
-                        sender.track.stop();
+                        sender && sender.track && sender.track.stop();
                         _context4.n = 1;
                         return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
                           logger.error('emit "getusermediafailed" [error:%o]', error);
