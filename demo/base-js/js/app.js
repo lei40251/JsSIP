@@ -1853,15 +1853,15 @@ function start()
 
 start();
 
-// document.addEventListener('visibilitychange', function()
-// {
-//   if (document.hidden)
-//   {
-//     console.log('页面进入后台');
-//   }
-//   else
-//   {
-//     document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
-//     console.warn('页面回到前台');
-//   }
-// });
+document.addEventListener('visibilitychange', function()
+{
+  if (document.hidden)
+  {
+    console.log('页面进入后台');
+  }
+  else
+  {
+    // document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
+    console.warn('页面回到前台');
+  }
+});
