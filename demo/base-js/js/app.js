@@ -21,6 +21,8 @@ let tmpSession;
 let safari_r = false;
 let options;
 
+let camFlag = true;
+
 let useUpdate = true;
 let haveACamera = false;
 let confirmed = false;
@@ -1031,8 +1033,6 @@ ua.on('newRTCSession', function(e)
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
 
-  let camFlag = true;
-
   /**
    * 手机端用切换摄像头
    */
@@ -1374,6 +1374,8 @@ document.querySelector('#useupdate').onchange = function()
 async function call(type, direction, mediaStream)
 {
   telephone_event_pt = null;
+
+  camFlag = true;
 
   if (!ua.isRegistered())
   {

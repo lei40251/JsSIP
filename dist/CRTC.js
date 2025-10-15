@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.5.202510141025
+ * CRTC v1.11.6-beta.202510151820
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3274,7 +3274,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":65}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":66}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.5.405020282050 (Web)',
+  USER_AGENT: 'UA/1.11.6-beta.405020303640 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.5.405020282050');
+debug('version %s', '1.11.6-beta.405020303640');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,10 +16889,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.5.405020282050';
+    return '1.11.6-beta.405020303640';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17009,7 +17009,7 @@ module.exports = /*#__PURE__*/function () {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":66}],40:[function(require,module,exports){
+},{"debug":67}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17271,12 +17271,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":68}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":65}],41:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
@@ -17485,24 +17484,27 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "getMixedStream",
     value: function () {
-      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
         var mixedVideoStream, mixedAudioStream;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
             case 0:
               logger.debug('getMixedStream()');
               this._isStopDrawingFrames = false;
               mixedVideoStream = this.getVideoStream();
-              _context.n = 1;
+              _context.next = 5;
               return this.getAudioStream();
-            case 1:
-              mixedAudioStream = _context.v;
+            case 5:
+              mixedAudioStream = _context.sent;
               if (mixedAudioStream) {
                 mixedAudioStream.getAudioTracks().forEach(function (track) {
                   mixedVideoStream.addTrack(track);
                 });
               }
-              return _context.a(2, mixedVideoStream);
+              return _context.abrupt("return", mixedVideoStream);
+            case 8:
+            case "end":
+              return _context.stop();
           }
         }, _callee, this);
       }));
@@ -17533,11 +17535,11 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "getAudioStream",
     value: function () {
-      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
         var _this4 = this;
         var seenStreams;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
             case 0:
               logger.debug('getAudioStream()');
 
@@ -17553,12 +17555,12 @@ module.exports = /*#__PURE__*/function () {
                 this._audioContext = new AudioContext();
               }
               if (!(this._audioContext.state === 'suspended')) {
-                _context2.n = 1;
+                _context2.next = 5;
                 break;
               }
-              _context2.n = 1;
+              _context2.next = 5;
               return this._audioContext.resume();
-            case 1:
+            case 5:
               this._audioSources = [];
               this._audioDestination = this._audioContext.createMediaStreamDestination();
               seenStreams = new WeakSet();
@@ -17572,13 +17574,16 @@ module.exports = /*#__PURE__*/function () {
                 }
               });
               if (!(this._audioSources.length === 0)) {
-                _context2.n = 2;
+                _context2.next = 12;
                 break;
               }
               logger.warn('No valid audio sources, skip audio stream creation');
-              return _context2.a(2, null);
-            case 2:
-              return _context2.a(2, this._audioDestination.stream);
+              return _context2.abrupt("return", null);
+            case 12:
+              return _context2.abrupt("return", this._audioDestination.stream);
+            case 13:
+            case "end":
+              return _context2.stop();
           }
         }, _callee2, this);
       }));
@@ -17964,7 +17969,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":68}],44:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":65}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -18256,8 +18261,7 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
@@ -18377,6 +18381,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpAudioSources = [];
     _this._bfcpMediastreams = [];
     _this._bfcpAudioCtx = null;
+
+    // 用于华为安卓记录后摄
+    _this._environment = null;
 
     // SDP协商的分辨率速率
     _this._sdpResolution = 'BP480P';
@@ -18764,10 +18771,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 适配浏览器M79以后Chrome默认使用mDNS主机名隐藏WebRTC暴露的本地IP
       return Promise.resolve()
       // Get a stream if required.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
         var hasAudio, mStream, currMediaConstraints, tStream, sendStream, mics, ua;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
             case 0:
               mStream = new MediaStream(); // 非自定义媒体流模式
               _this2._customMediaStream = false;
@@ -18785,7 +18792,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // Request for user media access.
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.n = 2;
+                _context.next = 19;
                 break;
               }
               _this2._localMediaStreamLocallyGenerated = true;
@@ -18806,10 +18813,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               logger.debug('currMediaConstraints: ', JSON.stringify(currMediaConstraints));
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.n = 2;
+                _context.next = 19;
                 break;
               }
-              _context.n = 1;
+              _context.next = 12;
               return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -18824,17 +18831,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 e.name = error.name;
                 throw e;
               });
-            case 1:
-              tStream = _context.v;
+            case 12:
+              tStream = _context.sent;
+              if (!(currMediaConstraints.video && tStream)) {
+                _context.next = 18;
+                break;
+              }
+              _context.next = 16;
+              return Utils.getHuaweiAndroidEnvironment();
+            case 16:
+              _this2._environment = _context.sent;
+              logger.debug('environment id: ', _this2._environment);
+            case 18:
               tStream.getTracks().forEach(function (track) {
                 mStream.addTrack(track, mStream);
               });
-            case 2:
+            case 19:
               sendStream = new MediaStream();
-              _context.n = 3;
+              _context.next = 22;
               return Utils.getMicrophones();
-            case 3:
-              mics = _context.v;
+            case 22:
+              mics = _context.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 && hasAudio || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1 && hasAudio) {
                 sendStream.addTrack(_this2._generateAnEmptyAudioTrack());
@@ -18848,14 +18865,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.n = 4;
+                _context.next = 29;
                 break;
               }
-              return _context.a(2, Utils.getStreamThroughCanvas(sendStream));
-            case 4:
-              return _context.a(2, sendStream);
-            case 5:
-              return _context.a(2);
+              return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
+            case 29:
+              return _context.abrupt("return", sendStream);
+            case 30:
+            case "end":
+              return _context.stop();
           }
         }, _callee);
       }))).then(function (stream) {
@@ -19243,10 +19261,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._createRTCConnection(pcConfig, rtcConstraints);
       Promise.resolve()
       // Handle local MediaStream.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
         var mStream, ua;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
             case 0:
               // 根据自定义流确定是否需要获取对应设备的流
               mediaStream && mediaStream.getTracks().forEach(function (track) {
@@ -19255,7 +19273,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // Audio and/or video requested, prompt getUserMedia.
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
-                _context2.n = 4;
+                _context2.next = 21;
                 break;
               }
               _this4._localMediaStreamLocallyGenerated = true;
@@ -19273,7 +19291,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
                 _this4._localToAudio = true;
               }
-              _context2.n = 1;
+              _context2.next = 7;
               return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
                 if (_this4._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
@@ -19285,24 +19303,35 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this4.emit('getusermediafailed', error);
                 throw new Error('getUserMedia() failed');
               });
-            case 1:
-              mStream = _context2.v;
-              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context2.n = 2;
+            case 7:
+              mStream = _context2.sent;
+              if (!(mediaConstraints.video && mStream)) {
+                _context2.next = 13;
                 break;
               }
-              return _context2.a(2, Utils.getStreamThroughCanvas(mStream));
-            case 2:
-              return _context2.a(2, mStream);
-            case 3:
-              _context2.n = 5;
+              _context2.next = 11;
+              return Utils.getHuaweiAndroidEnvironment();
+            case 11:
+              _this4._environment = _context2.sent;
+              logger.debug('environment id: ', _this4._environment);
+            case 13:
+              navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+              if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
+                _context2.next = 18;
+                break;
+              }
+              return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
+            case 18:
+              return _context2.abrupt("return", mStream);
+            case 19:
+              _context2.next = 23;
               break;
-            case 4:
+            case 21:
               _this4._customMediaStream = true;
-              return _context2.a(2, mediaStream);
-            case 5:
-              return _context2.a(2);
+              return _context2.abrupt("return", mediaStream);
+            case 23:
+            case "end":
+              return _context2.stop();
           }
         }, _callee2);
       })))
@@ -19520,13 +19549,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._localToAudio = false;
       this._localToVideo = true;
-      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
         var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
             case 0:
               if (!(_this5._localMediaStream.getVideoTracks().length > 0)) {
-                _context3.n = 1;
+                _context3.next = 4;
                 break;
               }
               _this5._connection.getTransceivers().forEach(function (t) {
@@ -19544,47 +19573,56 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               });
               if (!options.recvOnly) {
-                _context3.n = 1;
+                _context3.next = 4;
                 break;
               }
-              return _context3.a(2);
-            case 1:
+              return _context3.abrupt("return");
+            case 4:
               if (!options.recvOnly) {
-                _context3.n = 2;
+                _context3.next = 6;
                 break;
               }
-              return _context3.a(2);
-            case 2:
+              return _context3.abrupt("return");
+            case 6:
               if (!videoStream) {
-                _context3.n = 3;
+                _context3.next = 11;
                 break;
               }
               stream = videoStream;
               _this5._customMediaStream = true;
-              _context3.n = 5;
+              _context3.next = 19;
               break;
-            case 3:
-              _context3.n = 4;
+            case 11:
+              _context3.next = 13;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
               })["catch"](function (error) {
                 throw error;
               });
-            case 4:
-              stream = _context3.v;
-            case 5:
+            case 13:
+              stream = _context3.sent;
               if (!stream) {
-                _context3.n = 10;
+                _context3.next = 19;
+                break;
+              }
+              _context3.next = 17;
+              return Utils.getHuaweiAndroidEnvironment();
+            case 17:
+              _this5._environment = _context3.sent;
+              logger.debug('environment id: ', _this5._environment);
+            case 19:
+              if (!stream) {
+                _context3.next = 45;
                 break;
               }
               if (!_this5._customMediaStream) {
-                _context3.n = 9;
+                _context3.next = 39;
                 break;
               }
               oldVideoTrack = _this5._localMediaStream.getVideoTracks()[0];
               newVideoTrack = stream.getVideoTracks()[0];
               if (!oldVideoTrack) {
-                _context3.n = 9;
+                _context3.next = 39;
                 break;
               }
               _this5._localMediaStream.removeTrack(oldVideoTrack);
@@ -19592,29 +19630,29 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               haveVideoTrackToSend = false;
               senders = _this5._connection.getSenders();
               i = 0;
-            case 6:
+            case 29:
               if (!(i < senders.length)) {
-                _context3.n = 8;
+                _context3.next = 37;
                 break;
               }
               if (!(senders[i].track.kind === 'video')) {
-                _context3.n = 7;
+                _context3.next = 34;
                 break;
               }
               senders[i].replaceTrack(newVideoTrack);
               haveVideoTrackToSend = true;
-              return _context3.a(3, 8);
-            case 7:
+              return _context3.abrupt("break", 37);
+            case 34:
               i++;
-              _context3.n = 6;
+              _context3.next = 29;
               break;
-            case 8:
+            case 37:
               if (!haveVideoTrackToSend) {
-                _context3.n = 9;
+                _context3.next = 39;
                 break;
               }
-              return _context3.a(2, true);
-            case 9:
+              return _context3.abrupt("return", true);
+            case 39:
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
                 stream = Utils.getStreamThroughCanvas(stream);
@@ -19622,9 +19660,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               videoTracks = stream.getVideoTracks();
               _this5._localMediaStream.addTrack(videoTracks[0]);
               _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
-              return _context3.a(2, true);
-            case 10:
-              return _context3.a(2);
+              return _context3.abrupt("return", true);
+            case 45:
+            case "end":
+              return _context3.stop();
           }
         }, _callee3);
       }))).then(function () {
@@ -19732,37 +19771,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchDevice",
     value: (function () {
-      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(type, deviceId) {
+      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(type, deviceId) {
         var _this7 = this;
         var cameras, constraints, _constraints;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
+        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               logger.debug("switchDevice(), type:".concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context5.n = 1;
+                _context5.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
-            case 1:
+            case 3:
               if (!(type === 'camera')) {
-                _context5.n = 4;
+                _context5.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context5.n = 3;
+                _context5.next = 9;
                 break;
               }
-              _context5.n = 2;
+              _context5.next = 7;
               return Utils.getCameras();
-            case 2:
-              cameras = _context5.v;
+            case 7:
+              cameras = _context5.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
-            case 3:
+            case 9:
               if (!this._selectedLocalCameras) {
                 this._selectedLocalCameras = 'user';
               }
@@ -19770,7 +19809,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context5.a(2, Promise.resolve().then(function () {
+              return _context5.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
@@ -19795,6 +19834,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                     videoConstraints = {
                       facingMode: deviceId
                     };
+
+                    // 兼容华为安卓切换后摄
+                    if (_this7._environment && deviceId === 'environment') {
+                      videoConstraints = {
+                        deviceId: {
+                          exact: _this7._environment
+                        }
+                      };
+                      logger.debug('switchDevice use: environment, ', _this7._environment);
+                    }
 
                     // 修复切换摄像头deviceId和faceingMode混用的问题
                     try {
@@ -19845,10 +19894,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 constraints.video = Object.assign(_this7._inviteMediaConstraints.video, constraints.video);
                 return constraints;
               }).then(/*#__PURE__*/function () {
-                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(videoConstraints) {
+                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(videoConstraints) {
                   var sender, stream, track, ua, videoTrack;
-                  return _regenerator().w(function (_context4) {
-                    while (1) switch (_context4.n) {
+                  return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+                    while (1) switch (_context4.prev = _context4.next) {
                       case 0:
                         logger.debug('videoConstraints', JSON.stringify(videoConstraints));
                         sender = _this7._connection.getSenders().find(function (s) {
@@ -19860,15 +19909,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           }
                         }); // 先释放原来的设备再获取新的
                         sender && sender.track && sender.track.stop();
-                        _context4.n = 1;
+                        _context4.next = 5;
                         return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
                           logger.error('emit "getusermediafailed" [error:%o]', error);
                           logger.error("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
                           _this7.emit('getusermediafailed', error);
                           throw new Error('getUserMedia() failed');
                         });
-                      case 1:
-                        stream = _context4.v;
+                      case 5:
+                        stream = _context4.sent;
                         try {
                           track = stream.getVideoTracks()[0];
                           logger.debug('stream: ', track.kind, track.label, track.readyState);
@@ -19893,7 +19942,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         _this7.emit('cameraChanged', {
                           videoStream: stream
                         });
-                        return _context4.a(2, stream);
+                        return _context4.abrupt("return", stream);
+                      case 15:
+                      case "end":
+                        return _context4.stop();
                     }
                   }, _callee4);
                 }));
@@ -19901,16 +19953,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   return _ref4.apply(this, arguments);
                 };
               }()));
-            case 4:
+            case 14:
               if (!(type === 'audio' && deviceId)) {
-                _context5.n = 5;
+                _context5.next = 19;
                 break;
               }
               _constraints = {
                 audio: true,
                 video: false
               };
-              return _context5.a(2, Promise.resolve().then(function () {
+              return _context5.abrupt("return", Promise.resolve().then(function () {
                 var audioConstraints = {
                   deviceId: {
                     exact: deviceId
@@ -19947,13 +19999,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
                 return stream;
               }));
-            case 5:
+            case 19:
               logger.error('Invalid parameters');
 
               // 参数错误
-              return _context5.a(2, Promise.reject('Invalid parameters'));
-            case 6:
-              return _context5.a(2);
+              return _context5.abrupt("return", Promise.reject('Invalid parameters'));
+            case 21:
+            case "end":
+              return _context5.stop();
           }
         }, _callee5, this);
       }));
@@ -19969,11 +20022,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "share",
     value: (function () {
-      var _share = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(type, id, assembly, dual, skip) {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(type, id, assembly, dual, skip) {
         var _this8 = this;
-        var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx, _t;
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.p = _context6.n) {
+        var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
             case 0:
               renderHtml = function _renderHtml(canvas, ctx) {
                 assembly(document.querySelector(id), {
@@ -19991,37 +20044,37 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 双流必须开启BFCP支持
               if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
-                _context6.n = 1;
+                _context6.next = 4;
                 break;
               }
-              return _context6.a(2, Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
-            case 1:
-              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context6.n = 2;
-                break;
-              }
-              return _context6.a(2, Promise.reject(new Exceptions.InvalidStateError(this._status)));
-            case 2:
-              element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
-              _context6.p = 3;
-              if (!(this._enableBFCP && !skip)) {
-                _context6.n = 6;
-                break;
-              }
-              _context6.n = 4;
-              return this._sendFloorRequest();
+              return _context6.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
             case 4:
-              floorResponse = _context6.v;
+              if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
+                _context6.next = 6;
+                break;
+              }
+              return _context6.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
+            case 6:
+              element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
+              _context6.prev = 7;
+              if (!(this._enableBFCP && !skip)) {
+                _context6.next = 21;
+                break;
+              }
+              _context6.next = 11;
+              return this._sendFloorRequest();
+            case 11:
+              floorResponse = _context6.sent;
               this._handleFloorRequestStatusMessage(floorResponse);
               // Log the response for debugging purposes
               logger.debug('Floor request response:', floorResponse);
               status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
               if (!(status != RequestStatusValue.Granted)) {
-                _context6.n = 5;
+                _context6.next = 17;
                 break;
               }
-              return _context6.a(2, Promise.reject("Floor request not accepted. Status: ".concat(status)));
-            case 5:
+              return _context6.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
+            case 17:
               // 保存一下状态
               this._bfcpRequestStatus = status;
 
@@ -20029,17 +20082,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this._remoteShared = false;
               this.emit('remoteUnShared');
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
-            case 6:
-              _context6.n = 8;
+            case 21:
+              _context6.next = 27;
               break;
-            case 7:
-              _context6.p = 7;
-              _t = _context6.v;
-              logger.error('Error while processing floor request:', _t.message || _t);
-              return _context6.a(2, Promise.reject("Floor request failed: ".concat(_t.message || 'Unknown error')));
-            case 8:
+            case 23:
+              _context6.prev = 23;
+              _context6.t0 = _context6["catch"](7);
+              logger.error('Error while processing floor request:', _context6.t0.message || _context6.t0);
+              return _context6.abrupt("return", Promise.reject("Floor request failed: ".concat(_context6.t0.message || 'Unknown error')));
+            case 27:
               if (!(type === 'video')) {
-                _context6.n = 9;
+                _context6.next = 35;
                 break;
               }
               logger.debug('share video');
@@ -20059,11 +20112,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context6.n = 13;
+              _context6.next = 68;
               break;
-            case 9:
+            case 35:
               if (!(type === 'pic')) {
-                _context6.n = 10;
+                _context6.next = 49;
                 break;
               }
               logger.debug('share pic');
@@ -20094,20 +20147,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context6.n = 13;
+              _context6.next = 68;
               break;
-            case 10:
+            case 49:
               if (!(type === 'html')) {
-                _context6.n = 12;
+                _context6.next = 64;
                 break;
               }
               logger.debug('share html');
               if (assembly) {
-                _context6.n = 11;
+                _context6.next = 53;
                 break;
               }
-              return _context6.a(2);
-            case 11:
+              return _context6.abrupt("return");
+            case 53:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
               _canvas.height = 1;
@@ -20130,11 +20183,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context6.n = 13;
+              _context6.next = 68;
               break;
-            case 12:
+            case 64:
               if (!(type === 'screen')) {
-                _context6.n = 13;
+                _context6.next = 68;
                 break;
               }
               logger.debug('share screen');
@@ -20146,7 +20199,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
 
               // 分享屏幕 默认帧率 15
-              return _context6.a(2, navigator.mediaDevices.getDisplayMedia({
+              return _context6.abrupt("return", navigator.mediaDevices.getDisplayMedia({
                 video: {
                   width: {
                     max: 1920
@@ -20207,10 +20260,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this8.emit('getdisplaymediafailed', error);
                 throw error;
               }));
-            case 13:
-              return _context6.a(2);
+            case 68:
+            case "end":
+              return _context6.stop();
           }
-        }, _callee6, this, [[3, 7]]);
+        }, _callee6, this, [[7, 23]]);
       }));
       function share(_x4, _x5, _x6, _x7, _x8) {
         return _share.apply(this, arguments);
@@ -20429,7 +20483,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Send the first tone.
       _sendDTMF.call(this);
       function _sendDTMF() {
-        var _this0 = this;
+        var _this10 = this;
         var timeout;
         if (this._status === C.STATUS_TERMINATED || !this._tones || position >= this._tones.length) {
           // Stop sending DTMF.
@@ -20445,7 +20499,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var dtmf = new RTCSession_DTMF(this);
           options.eventHandlers = {
             onFailed: function onFailed() {
-              _this0._tones = null;
+              _this10._tones = null;
             }
           };
           dtmf.send(tone, options);
@@ -20573,7 +20627,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "hold",
     value: function hold() {
-      var _this1 = this;
+      var _this11 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('hold()');
@@ -20595,7 +20649,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this1.terminate({
+          _this11.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Hold Failed'
@@ -20619,7 +20673,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "unhold",
     value: function unhold() {
-      var _this10 = this;
+      var _this12 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('unhold()');
@@ -20641,7 +20695,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this10.terminate({
+          _this12.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Unhold Failed'
@@ -20665,7 +20719,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "renegotiate",
     value: function renegotiate() {
-      var _this11 = this;
+      var _this13 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug('renegotiate()');
@@ -20689,7 +20743,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this11.terminate({
+          _this13.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Media Renegotiation Failed'
@@ -20721,7 +20775,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "refer",
     value: function refer(target, options) {
-      var _this12 = this;
+      var _this14 = this;
       logger.debug('refer()');
       var originalTarget = target;
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
@@ -20742,13 +20796,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // Listen for ending events so we can remove it from the map.
       referSubscriber.on('requestFailed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       referSubscriber.on('accepted', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       referSubscriber.on('failed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this14._referSubscribers[id];
       });
       return referSubscriber;
     }
@@ -20856,7 +20910,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
-      var _this13 = this;
+      var _this15 = this;
       logger.debug('receiveRequest()');
       if (request.method === CRTC_C.CANCEL) {
         /* RFC3261 15 States that a UAS may have accepted an invitation while a CANCEL
@@ -20908,19 +20962,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sdp: e.sdp
               });
               this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-                return _this13._connection.setRemoteDescription(answer);
+                return _this15._connection.setRemoteDescription(answer);
               }).then(function () {
-                if (!_this13._is_confirmed) {
-                  _this13._confirmed('remote', request);
+                if (!_this15._is_confirmed) {
+                  _this15._confirmed('remote', request);
                 }
               })["catch"](function (error) {
-                _this13.terminate({
+                _this15.terminate({
                   cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
                 logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-                _this13.emit('peerconnection:setremotedescriptionfailed', error);
+                _this15.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
               this._confirmed('remote', request);
@@ -21202,20 +21256,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setACKTimer",
     value: function _setACKTimer() {
-      var _this14 = this;
+      var _this16 = this;
       this._timers.ackTimer = setTimeout(function () {
-        if (_this14._status === C.STATUS_WAITING_FOR_ACK) {
+        if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
           logger.debug('no ACK received, terminating the session');
-          clearTimeout(_this14._timers.invite2xxTimer);
-          _this14.sendRequest(CRTC_C.BYE);
-          _this14._ended('remote', null, CRTC_C.causes.NO_ACK);
+          clearTimeout(_this16._timers.invite2xxTimer);
+          _this16.sendRequest(CRTC_C.BYE);
+          _this16._ended('remote', null, CRTC_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
     }
   }, {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
-      var _this15 = this;
+      var _this17 = this;
       var self = this;
       self._canSend = false;
 
@@ -21223,7 +21277,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var successfullyConnected = false;
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
       this._connection.onconnectionstatechange = function () {
-        switch (_this15._connection.connectionState) {
+        switch (_this17._connection.connectionState) {
           case 'connecting':
             // 如果是第一次连接，并且5秒后依然是connecting状态则重新协商
             if (!successfullyConnected) {
@@ -21258,8 +21312,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       };
       this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this15._connection.iceConnectionState;
-        _this15.emit('peerconnection:iceConnectionState', state);
+        var state = _this17._connection.iceConnectionState;
+        _this17.emit('peerconnection:iceConnectionState', state);
         logger.warn("emit \"peerconnection:iceConnectionState\" ".concat(state));
 
         // 成功连接过
@@ -21276,7 +21330,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               status_code: 408,
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
-          } else if (!_this15._canSend) {
+          } else if (!_this17._canSend) {
             logger.warn("iceConnectionState ".concat(state));
             // RTCPeerConnection failed断开后启动重新协商
             self.renegotiate({
@@ -21295,7 +21349,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_createLocalDescription",
     value: function _createLocalDescription(type, constraints) {
-      var _this16 = this;
+      var _this18 = this;
       logger.debug('createLocalDescription()');
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
@@ -21307,14 +21361,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return connection.createOffer(constraints)["catch"](function (error) {
             logger.warn('emit "peerconnection:createofferfailed" [error:%o]', error);
             logger.warn("emit \"peerconnection:createofferfailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this16.emit('peerconnection:createofferfailed', error);
+            _this18.emit('peerconnection:createofferfailed', error);
             return Promise.reject(error);
           });
         } else {
           return connection.createAnswer(constraints)["catch"](function (error) {
             logger.warn('emit "peerconnection:createanswerfailed" [error:%o]', error);
             logger.warn("emit \"peerconnection:createanswerfailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this16.emit('peerconnection:createanswerfailed', error);
+            _this18.emit('peerconnection:createanswerfailed', error);
             return Promise.reject(error);
           });
         }
@@ -21344,7 +21398,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // 1) paphone    => 保留 0，删除 1
                 // 2) 单向视频（可能多发关键帧）    => 保留 0，删除 1
                 // 3) 否则       => 保留 1，删除 0
-                var keepZero = _this16._customizedMode === 'paphone' || constraints && constraints.offerToReceiveVideo === false;
+                var keepZero = _this18._customizedMode === 'paphone' || constraints && constraints.offerToReceiveVideo === false;
                 var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
                 if (shouldDelete) {
                   delH264Payload.push(fmtp.payload);
@@ -21362,7 +21416,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               });
 
               // paphone H264 payload 为124，去掉其他payload为124的媒体
-              if (media.rtp && _this16._customizedMode === 'paphone') {
+              if (media.rtp && _this18._customizedMode === 'paphone') {
                 media.rtp.forEach(function (item) {
                   item.payload === 124 && String(item.codec).toLowerCase() !== 'h264' && delH264Payload.push(124);
                 });
@@ -21384,7 +21438,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
 
                 // paphone H264 payload 为124，去掉其他payload为124的媒体
-                _this16._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
+                _this18._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
                 media.rtp = media.rtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
@@ -21400,7 +21454,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * 处理5G外呼sdp过大问题,
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
-            if (_this16._ua.sk[7] >= 3) {
+            if (_this18._ua.sk[7] >= 3) {
               // 删除 extmap 仅保留 urn:3gpp:video-orientation
               if (media.ext) {
                 media.ext = media.ext.filter(function (ext) {
@@ -21425,10 +21479,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
-        _this16._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
+        _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
         // 非BFCP修改为根据配置参数设置 profile-level-id
-        _this16._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this16._sdpResolution].LEVELID)));
+        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID)));
 
         // 兼容 Firefox 去掉 bundle
         if (Utils.isFirefox() && type === 'offer') {
@@ -21436,10 +21490,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
         }
         return connection.setLocalDescription(desc)["catch"](function (error) {
-          _this16._rtcReady = true;
+          _this18._rtcReady = true;
           logger.warn('emit "peerconnection:setlocaldescriptionfailed" [error:%o]', error);
           logger.warn("emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this16.emit('peerconnection:setlocaldescriptionfailed', error);
+          _this18.emit('peerconnection:setlocaldescriptionfailed', error);
           return Promise.reject(error);
         });
       }).then(function () {
@@ -21450,16 +21504,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          * - 'connection.iceGatheringState' is 'gathering' and 'iceReady' is true.
          */
         var iceRestart = constraints && constraints.iceRestart;
-        if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this16._iceReady) {
-          _this16._rtcReady = true;
+        if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this18._iceReady) {
+          _this18._rtcReady = true;
           var e = {
             originator: 'local',
             type: type,
             sdp: connection.localDescription.sdp
           };
-          _this16._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
           logger.debug("complete emit \"sdp\"".concat(e.sdp));
-          _this16.emit('sdp', e);
+          _this18.emit('sdp', e);
           return Promise.resolve(e.sdp);
         }
 
@@ -21468,23 +21522,23 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var finished = false;
           var iceCandidateListener;
           var iceGatheringStateListener;
-          _this16._iceReady = false;
+          _this18._iceReady = false;
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
             connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
             finished = true;
-            _this16._rtcReady = true;
+            _this18._rtcReady = true;
 
             // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
-            _this16._iceReady = true;
+            _this18._iceReady = true;
             var e = {
               originator: 'local',
               type: type,
               sdp: connection.localDescription.sdp
             };
-            _this16._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+            _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
             logger.debug('ready emit "sdp"');
-            _this16.emit('sdp', e);
+            _this18.emit('sdp', e);
             resolve(e.sdp);
           };
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
@@ -21497,7 +21551,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   ready();
                 }
               }, 2000);
-              _this16.emit('icecandidate', {
+              _this18.emit('icecandidate', {
                 candidate: candidate,
                 ready: ready
               });
@@ -21525,8 +21579,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         var sdp_desc = sdp_transform.parse(sdp);
         if (type === 'offer') {
-          _this16._localToAudio === '' && (_this16._localToAudio = true);
-          _this16._localToVideo === '' && (_this16._localToVideo = false);
+          _this18._localToAudio === '' && (_this18._localToAudio = true);
+          _this18._localToVideo === '' && (_this18._localToVideo = false);
           var _iterator5 = _createForOfIteratorHelper(sdp_desc.media),
             _step5;
           try {
@@ -21535,7 +21589,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (m.type === 'audio') {
                 continue;
               }
-              if (_this16._localToAudio || m.direction == 'inactive') {
+              if (_this18._localToAudio || m.direction == 'inactive') {
                 m.port = 0;
                 try {
                   delete m.connection;
@@ -21546,13 +21600,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // };
               }
               if (m.port !== 0) {
-                if (_this16._mode === '') {
-                  _this16._mode = 'video';
+                if (_this18._mode === '') {
+                  _this18._mode = 'video';
                 } else {
-                  _this16._ontogglemode('video');
+                  _this18._ontogglemode('video');
                 }
-                _this16._localToAudio = false;
-                _this16._localToVideo = true;
+                _this18._localToAudio = false;
+                _this18._localToVideo = true;
               } else {
                 m.direction = 'sendrecv';
               }
@@ -21562,7 +21616,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           } finally {
             _iterator5.f();
           }
-          _this16._mode === '' && (_this16._mode = 'audio');
+          _this18._mode === '' && (_this18._mode = 'audio');
         } else {
           /**
            * 本地音频接听后设置 video 的 port=0
@@ -21577,14 +21631,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 continue;
               }
               var port = _m.port;
-              if (_this16._localToAudio || _m.direction === 'inactive') {
+              if (_this18._localToAudio || _m.direction === 'inactive') {
                 _m.port = 0;
-                if (_this16._remoteHold) {
+                if (_this18._remoteHold) {
                   _m.port = port;
                 }
-                _this16._ontogglemode('audio');
-              } else if (!_this16._remoteToAudio) {
-                _this16._ontogglemode('video');
+                _this18._ontogglemode('audio');
+              } else if (!_this18._remoteToAudio) {
+                _this18._ontogglemode('video');
               }
               if (_m.port === 0) {
                 delete _m.connection;
@@ -21610,13 +21664,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             /**
              * 处理5G和非5G的SDP
              */
-            if (_this16._ua.sk[7] >= 3) {
-              _bandAS += CRTC_C.SDP_LEVELID_AS[_this16._sdpResolution].AS;
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS;
               _bandRR += 6000;
               _bandRS += 8000;
               media.bandwidth = [{
                 type: 'AS',
-                limit: CRTC_C.SDP_LEVELID_AS[_this16._sdpResolution].AS
+                limit: CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS
               }, {
                 type: 'RR',
                 limit: 6000
@@ -21642,7 +21696,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             /**
              * 处理5G和非5G的SDP
              */
-            if (_this16._ua.sk[7] >= 3) {
+            if (_this18._ua.sk[7] >= 3) {
               _bandAS += 90;
               _bandRR += 600;
               _bandRS += 2000;
@@ -21663,7 +21717,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         /**
          * 处理5G和非5G的SDP
          */
-        if (_this16._ua.sk[7] >= 3) {
+        if (_this18._ua.sk[7] >= 3) {
           sdp_desc.bandwidth = [{
             type: 'AS',
             limit: _bandAS
@@ -21741,7 +21795,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReinvite",
     value: function _receiveReinvite(request) {
-      var _this17 = this;
+      var _this19 = this;
       logger.debug('receiveReinvite()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -21781,9 +21835,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._onunhold('remote');
         }
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this17._createLocalDescription('offer', _this17._rtcOfferConstraints);
+          return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
-          sendAnswer.call(_this17, sdp);
+          sendAnswer.call(_this19, sdp);
         })["catch"](function (e) {
           logger.warn(JSON.stringify(e));
           request.reply(500);
@@ -21798,12 +21852,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
       function nextS() {
-        var _this18 = this;
+        var _this20 = this;
         // 适配100rel调整 reinvite 的 hold 判断
         this._notHold = true;
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           if (track.readyState !== 'ended') {
-            _this18._notHold = false;
+            _this20._notHold = false;
           }
         });
         this._processInDialogSdpOffer(request)
@@ -21815,19 +21869,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
            * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
            */
-          if (_this18._ua.sk[7] >= 3 && desc) {
+          if (_this20._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
             // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
-          if (_this18._enableBFCP && _this18._floorctrl == 's-only') {
-            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this18._floorctrl, "\r\na=floorid:").concat(_this18._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
+          if (_this20._enableBFCP && _this20._floorctrl == 's-only') {
+            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this20._floorctrl, "\r\na=floorid:").concat(_this20._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
           }
-          if (_this18._status === C.STATUS_TERMINATED) {
+          if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
-          sendAnswer.call(_this18, desc);
+          sendAnswer.call(_this20, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
@@ -21882,12 +21936,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('upgradeToVideo', {
                   request: request,
                   accept: function accept() {
-                    _this17._localToAudio = false;
-                    nextS.call(_this17);
+                    _this19._localToAudio = false;
+                    nextS.call(_this19);
                   },
                   reject: function reject() {
-                    _this17._localToAudio = true;
-                    nextS.call(_this17);
+                    _this19._localToAudio = true;
+                    nextS.call(_this19);
                   }
                 });
               }
@@ -21917,7 +21971,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
       function sendAnswer(desc) {
-        var _this19 = this;
+        var _this21 = this;
         var extraHeaders = ["Contact: ".concat(this._contact)];
 
         // 5G Headers
@@ -21937,9 +21991,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           logger.debug('NEW Answer SDP: ', desc);
         }
         request.reply(200, null, extraHeaders, desc, function () {
-          _this19._status = C.STATUS_WAITING_FOR_ACK;
-          _this19._setInvite2xxTimer(request, desc);
-          _this19._setACKTimer();
+          _this21._status = C.STATUS_WAITING_FOR_ACK;
+          _this21._setInvite2xxTimer(request, desc);
+          _this21._setACKTimer();
         });
 
         // If callback is given execute it.
@@ -21955,7 +22009,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
-      var _this21 = this;
+      var _this23 = this;
       logger.debug('receiveUpdate()');
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -21996,7 +22050,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 适配 100rel 调整update带sdp的处理
       function nextS() {
-        var _this20 = this;
+        var _this22 = this;
         this._notHold = true;
         this._processInDialogSdpOffer(request)
         // Send answer.
@@ -22007,16 +22061,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
            * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
            */
-          if (_this20._ua.sk[7] >= 3 && desc) {
+          if (_this22._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
             // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
-          if (_this20._status === C.STATUS_TERMINATED) {
+          if (_this22._status === C.STATUS_TERMINATED) {
             return;
           }
-          sendAnswer.call(_this20, desc);
+          sendAnswer.call(_this22, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
@@ -22057,12 +22111,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('upgradeToVideo', {
                   request: request,
                   accept: function accept() {
-                    _this21._localToAudio = false;
-                    nextS.call(_this21);
+                    _this23._localToAudio = false;
+                    nextS.call(_this23);
                   },
                   reject: function reject() {
-                    _this21._localToAudio = true;
-                    nextS.call(_this21);
+                    _this23._localToAudio = true;
+                    nextS.call(_this23);
                   }
                 });
               }
@@ -22100,7 +22154,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
-      var _this22 = this;
+      var _this24 = this;
       logger.debug('_processInDialogSdpOffer()');
       var sdp = request.parseSDP();
       var hold = false;
@@ -22146,44 +22200,44 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._connectionPromiseQueue = this._connectionPromiseQueue
       // Set remote description.
       .then(function () {
-        if (_this22._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        return _this22._connection.setRemoteDescription(offer)["catch"](function (error) {
+        return _this24._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
           logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this22.emit('peerconnection:setremotedescriptionfailed', error);
+          _this24.emit('peerconnection:setremotedescriptionfailed', error);
           throw error;
         });
       }).then(function () {
-        if (_this22._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        if (_this22._remoteHold === true && hold === false) {
-          _this22._remoteHold = false;
-          _this22._onunhold('remote');
-        } else if (_this22._remoteHold === false && hold === true) {
-          _this22._remoteHold = true;
-          _this22._onhold('remote');
+        if (_this24._remoteHold === true && hold === false) {
+          _this24._remoteHold = false;
+          _this24._onunhold('remote');
+        } else if (_this24._remoteHold === false && hold === true) {
+          _this24._remoteHold = true;
+          _this24._onhold('remote');
         }
       }).then(function () {
         // 新增判断是否已经存在一个视频
         var hasVideo = false;
-        _this22._connection.getSenders().forEach(function (sender) {
+        _this24._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
             hasVideo = true;
           }
         });
-        logger.debug('stats: ', _this22._remoteToVideo, _this22._localToAudio, _this22._notHold, hasVideo, _this22._customMediaStream);
+        logger.debug('stats: ', _this24._remoteToVideo, _this24._localToAudio, _this24._notHold, hasVideo, _this24._customMediaStream);
 
         // 适配 100rel 调整 hold 的判断
-        if (_this22._remoteToVideo && !_this22._localToAudio && _this22._notHold && !hasVideo && _this22._customMediaStream === false) {
-          if (!_this22._localMediaStreamLocallyGenerated) {
+        if (_this24._remoteToVideo && !_this24._localToAudio && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
+          if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          var videoConstraints = _this22._inviteMediaConstraints ? {
-            video: _this22._inviteMediaConstraints.video || true
+          var videoConstraints = _this24._inviteMediaConstraints ? {
+            video: _this24._inviteMediaConstraints.video || true
           } : {
             video: true
           };
@@ -22194,7 +22248,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           // }
 
           return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
-            if (_this22._status === C.STATUS_TERMINATED) {
+            if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
 
@@ -22202,7 +22256,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             logger.warn('emit "getusermediafailed" [error:%o]', error);
             logger.warn("emit \"getusermediafailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this22.emit('getusermediafailed', error);
+            _this24.emit('getusermediafailed', error);
             return false;
             // throw error;
           });
@@ -22219,7 +22273,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
           stream.getVideoTracks().forEach(function (track) {
             try {
-              _this22._localMediaStream.addTrack(track);
+              _this24._localMediaStream.addTrack(track);
             } catch (error) {
               logger.warn("_processInDialogSdpOffer() failed local stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
             }
@@ -22227,49 +22281,49 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // 兼容低版本浏览器不支持addTrack的情况
             if (RTCPeerConnection.prototype.addTrack) {
               try {
-                _this22._connection.addTrack(track, stream);
+                _this24._connection.addTrack(track, stream);
               } catch (error) {
                 logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
               }
             } else {
-              _this22._connection.addStream(stream);
+              _this24._connection.addStream(stream);
             }
           });
-          _this22._iceReady = false;
+          _this24._iceReady = false;
         } else {
           logger.debug('no stream.');
 
           // 兼容低版本浏览器不支持addTrack的情况
           // eslint-disable-next-line no-lonely-if
           if (RTCPeerConnection.prototype.addTrack) {
-            if (_this22._localMediaStream.getVideoTracks()[0]) {
-              var videoTrack = _this22._localMediaStream.getVideoTracks()[0];
-              var senders = _this22._connection.getSenders();
+            if (_this24._localMediaStream.getVideoTracks()[0]) {
+              var videoTrack = _this24._localMediaStream.getVideoTracks()[0];
+              var senders = _this24._connection.getSenders();
               var trackAlreadyAdded = senders.some(function (sender) {
                 return sender.track === videoTrack;
               });
               if (!trackAlreadyAdded) {
                 try {
-                  _this22._connection.addTrack(_this22._localMediaStream.getVideoTracks()[0], _this22._localMediaStream);
+                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
                 } catch (error) {
-                  logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(_this22._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
+                  logger.warn("_processInDialogSdpOffer() failed no stream ".concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
                 }
               } else {
                 logger.warn('Track is already added to the peer connection.');
               }
             }
           } else {
-            _this22._connection.addStream(_this22._localMediaStream);
+            _this24._connection.addStream(_this24._localMediaStream);
           }
-          _this22._iceReady = true;
+          _this24._iceReady = true;
         }
       })
       // Create local description.
       .then(function () {
-        if (_this22._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        return _this22._createLocalDescription('answer', _this22._rtcAnswerConstraints)["catch"](function (error) {
+        return _this24._createLocalDescription('answer', _this24._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
           logger.warn('emit "peerconnection:createtelocaldescriptionfailed" [error:%o]', error);
           logger.warn("emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
@@ -22288,7 +22342,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
-      var _this23 = this;
+      var _this25 = this;
       logger.debug('receiveRefer()');
       if (!request.refer_to) {
         logger.debug('no Refer-To header field present in REFER');
@@ -22310,14 +22364,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
-          _accept.call(_this23, initCallback, options);
+          _accept.call(_this25, initCallback, options);
         },
         reject: function reject() {
-          _reject.call(_this23);
+          _reject.call(_this25);
         }
       });
       function _accept(initCallback) {
-        var _this24 = this;
+        var _this26 = this;
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
         initCallback = typeof initCallback === 'function' ? initCallback : null;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
@@ -22330,22 +22384,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua);
         session.on('progress', function (_ref6) {
           var response = _ref6.response;
-          _this24._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
         session.on('accepted', function (_ref7) {
           var response = _ref7.response;
-          _this24._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
 
           // 华为MCU需要挂断
-          _this24._enableBFCP && _this24.terminate();
+          _this26._enableBFCP && _this26.terminate();
         });
         session.on('_failed', function (_ref8) {
           var message = _ref8.message,
             cause = _ref8.cause;
           if (message) {
-            _this24._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
+            _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
-            _this24._enableBFCP || notifier.notify(487, cause);
+            _this26._enableBFCP || notifier.notify(487, cause);
           }
         });
 
@@ -22419,10 +22473,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this26 = this;
+      var _this28 = this;
       logger.debug('receiveReplaces()');
       function _accept2(initCallback) {
-        var _this25 = this;
+        var _this27 = this;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
@@ -22430,7 +22484,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // Terminate the current session when the new one is confirmed.
         session.on('confirmed', function () {
-          _this25.terminate();
+          _this27.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -22443,10 +22497,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this26, initCallback);
+          _accept2.call(_this28, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this26);
+          _reject2.call(_this28);
         }
       });
     }
@@ -22457,118 +22511,121 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(rtcOfferConstraints, mediaStream) {
-      var _this27 = this;
+      var _this29 = this;
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this27.onRequestTimeout();
+          _this29.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this27.onTransportError();
+          _this29.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this27._request = request;
+          _this29._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this27._receiveInviteResponse(response);
+          _this29._receiveInviteResponse(response);
         }
       });
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
         var stream, _Utils$generateAnEmpt2, videoTrack;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.n) {
+        return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+          while (1) switch (_context7.prev = _context7.next) {
             case 0:
-              if (!(_this27._status === C.STATUS_TERMINATED)) {
-                _context7.n = 1;
+              if (!(_this29._status === C.STATUS_TERMINATED)) {
+                _context7.next = 2;
                 break;
               }
               throw new Error('terminated');
-            case 1:
+            case 2:
               // 兼容BFCP需要做音频混音
-              if (_this27._enableBFCP) {
-                stream = new MediaStream([_this27._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
-                _this27._bfcpMediastreams.push(mediaStream);
-                _this27._localMediaStream = stream;
+              if (_this29._enableBFCP) {
+                stream = new MediaStream([_this29._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
+                _this29._bfcpMediastreams.push(mediaStream);
+                _this29._localMediaStream = stream;
               } else {
-                _this27._localMediaStream = mediaStream;
+                _this29._localMediaStream = mediaStream;
               }
-              if (_this27._localMediaStream) {
+              if (_this29._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
-                  _this27._localMediaStream.getAudioTracks().forEach(function (track) {
-                    _this27._connection.addTrack(track, _this27._localMediaStream);
+                  _this29._localMediaStream.getAudioTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
-                  _this27._localMediaStream.getVideoTracks().forEach(function (track) {
-                    _this27._connection.addTrack(track, _this27._localMediaStream);
+                  _this29._localMediaStream.getVideoTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
                 } else {
-                  _this27._connection.addStream(_this27._localMediaStream);
+                  _this29._connection.addStream(_this29._localMediaStream);
                 }
               }
 
               /**
                * 是否启用 DataChannel
                **/
-              if (_this27._enableBFCP) {
+              if (_this29._enableBFCP) {
                 _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack;
-                _this27._bfcpVideoTrack = videoTrack;
-                _this27._connection.addTrack(_this27._bfcpVideoTrack, _this27._localMediaStream);
-                _this27._initDataChannel();
+                _this29._bfcpVideoTrack = videoTrack;
+                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
+                _this29._initDataChannel();
               }
 
               // TODO: should this be triggered here?
-              _this27._connecting(_this27._request);
-              return _context7.a(2, _this27._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-                _this27._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+              _this29._connecting(_this29._request);
+              return _context7.abrupt("return", _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+                _this29._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
+            case 7:
+            case "end":
+              return _context7.stop();
           }
         }, _callee7);
       }))).then(function (desc) {
-        if (_this27._is_canceled || _this27._status === C.STATUS_TERMINATED) {
+        if (_this29._is_canceled || _this29._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
         // 添加BFCP所需属性
-        if (_this27._enableBFCP) {
+        if (_this29._enableBFCP) {
           // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
           var supportedMSTC = false;
           if ('MediaStreamTrackGenerator' in window) {
             supportedMSTC = true;
           }
-          _this27._connection.getTransceivers().forEach(function (transceiver) {
+          _this29._connection.getTransceivers().forEach(function (transceiver) {
             var track = transceiver.sender.track;
             if (!track) {
               return;
             }
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
-              if (track instanceof MediaStreamTrackGenerator || _this27._isCanvasTrack(track)) {
-                _this27._mStream = transceiver.mid;
+              if (track instanceof MediaStreamTrackGenerator || _this29._isCanvasTrack(track)) {
+                _this29._mStream = transceiver.mid;
                 sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
               }
-            } else if (_this27._isCanvasTrack(track)) {
-              _this27._mStream = transceiver.mid;
+            } else if (_this29._isCanvasTrack(track)) {
+              _this29._mStream = transceiver.mid;
               sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
             }
           });
-          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this27._floorctrl ? _this27._floorctrl : 'c-s', "\r\n"));
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
 
           // 添加主辅流标志
-          desc = _this27._addMediastreamFlag(desc, _this27._mStream);
+          desc = _this29._addMediastreamFlag(desc, _this29._mStream);
         }
-        _this27._request.body = desc;
-        _this27._status = C.STATUS_INVITE_SENT;
+        _this29._request.body = desc;
+        _this29._status = C.STATUS_INVITE_SENT;
 
         // 获取DTMF的payload
-        !_this27._dtmf_payload && (_this27._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc));
-        logger.debug("dtmf payload".concat(JSON.stringify(_this27._dtmf_payload)));
-        logger.debug('emit "sending" [request:%o]', _this27._request);
+        !_this29._dtmf_payload && (_this29._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc));
+        logger.debug("dtmf payload".concat(JSON.stringify(_this29._dtmf_payload)));
+        logger.debug('emit "sending" [request:%o]', _this29._request);
         var cache = [];
-        logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this27._request, function (key, value) {
+        logger.debug("emit \"sending\" [request:%o] ".concat(JSON.stringify(_this29._request, function (key, value) {
           if (_typeof(value) === 'object' && value !== null) {
             if (cache.indexOf(value) !== -1) {
               // 移除
@@ -22581,12 +22638,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })));
 
         // Emit 'sending' so the app can mangle the body before the request is sent.
-        _this27.emit('sending', {
-          request: _this27._request
+        _this29.emit('sending', {
+          request: _this29._request
         });
         request_sender.send();
       })["catch"](function (error) {
-        if (_this27._status === C.STATUS_TERMINATED) {
+        if (_this29._status === C.STATUS_TERMINATED) {
           return;
         }
         logger.warn(error);
@@ -22615,7 +22672,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this28 = this;
+      var _this30 = this;
       logger.debug('receiveInviteResponse()');
 
       // Handle 2XX retransmissions and responses from forked requests.
@@ -22677,12 +22734,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (!response.body) {
               Promise.resolve().then(function () {
                 if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                  _this28._earlyDialogs[Object.keys(_this28._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                  _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                     RSeq: response.getHeader('rseq')
                   });
                 }
               }).then(function () {
-                _this28._progress('remote', response);
+                _this30._progress('remote', response);
               });
               break;
             }
@@ -22699,24 +22756,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sdp: e.sdp
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              _this28._connection.setRemoteDescription(answer);
+              _this30._connection.setRemoteDescription(answer);
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
               if (e.sdp.indexOf('m=video 0 ') !== -1) {
-                _this28._ealyAudio = true;
+                _this30._ealyAudio = true;
               }
               if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                _this28._earlyDialogs[Object.keys(_this28._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                   RSeq: response.getHeader('rseq')
                 });
               }
             }).then(function () {
-              return _this28._progress('remote', response);
+              return _this30._progress('remote', response);
             })["catch"](function (error) {
               logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
               logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-              _this28.emit('peerconnection:setremotedescriptionfailed', error);
+              _this30.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -22742,13 +22799,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
                 }).then(function (stream) {
-                  var sender = _this28._connection.getSenders().find(function (s) {
+                  var sender = _this30._connection.getSenders().find(function (s) {
                     return s.track.kind == 'audio';
                   });
                   sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
                     // 适配 100rel 调整 ack 的 cseq
-                    _this28.sendRequest(CRTC_C.ACK);
-                    _this28._confirmed('local', null);
+                    _this30.sendRequest(CRTC_C.ACK);
+                    _this30._confirmed('local', null);
                   });
                 });
               } else {
@@ -22767,11 +22824,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
-            var _iterator0 = _createForOfIteratorHelper(sdp.media),
-              _step0;
+            var _iterator10 = _createForOfIteratorHelper(sdp.media),
+              _step10;
             try {
-              for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
-                var m = _step0.value;
+              for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+                var m = _step10.value;
                 if (m.type === 'audio') {
                   continue;
                 }
@@ -22781,9 +22838,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               }
             } catch (err) {
-              _iterator0.e(err);
+              _iterator10.e(err);
             } finally {
-              _iterator0.f();
+              _iterator10.f();
             }
             if (this._remoteToAudio) {
               this._ontogglemode('audio');
@@ -22817,62 +22874,63 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this28._connection.signalingState === 'stable') {
-                return _this28._connection.createOffer(_this28._rtcOfferConstraints).then(function (offer) {
-                  return _this28._connection.setLocalDescription(offer);
+              if (_this30._connection.signalingState === 'stable') {
+                return _this30._connection.createOffer(_this30._rtcOfferConstraints).then(function (offer) {
+                  return _this30._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this28._acceptAndTerminate(response, 500, error.toString());
-                  _this28._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
+                  _this30._acceptAndTerminate(response, 500, error.toString());
+                  _this30._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
-              _this28._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
                 var mics, sender;
-                return _regenerator().w(function (_context8) {
-                  while (1) switch (_context8.n) {
+                return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+                  while (1) switch (_context8.prev = _context8.next) {
                     case 0:
                       // Handle Session Timers.
-                      _this28._handleSessionTimersInIncomingResponse(response);
-                      _this28._accepted('remote', response);
-                      _this28.sendRequest(CRTC_C.ACK);
-                      _this28._confirmed('local', null);
+                      _this30._handleSessionTimersInIncomingResponse(response);
+                      _this30._accepted('remote', response);
+                      _this30.sendRequest(CRTC_C.ACK);
+                      _this30._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context8.n = 1;
+                      _context8.next = 6;
                       return Utils.getMicrophones();
-                    case 1:
-                      mics = _context8.v;
-                      if (_this28._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+                    case 6:
+                      mics = _context8.sent;
+                      if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
-                          audio: _this28._inviteMediaConstraints.audio || true,
+                          audio: _this30._inviteMediaConstraints.audio || true,
                           video: false
                         }).then(function (stream) {
-                          var sender = _this28._connection.getSenders().find(function (s) {
+                          var sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           sender.replaceTrack(stream.getAudioTracks()[0]);
                         });
-                      } else if (_this28._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                        if (_this28._localMediaStream) {
-                          sender = _this28._connection.getSenders().find(function (s) {
+                      } else if (_this30._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                        if (_this30._localMediaStream) {
+                          sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
-                          sender.replaceTrack(_this28._localMediaStream.getAudioTracks()[0]);
+                          sender.replaceTrack(_this30._localMediaStream.getAudioTracks()[0]);
                         }
                       }
 
                       // 开启 BFCP，自动发送reInvite
-                      _this28._enableBFCP && _this28.renegotiate();
-                    case 2:
-                      return _context8.a(2);
+                      _this30._enableBFCP && _this30.renegotiate();
+                    case 9:
+                    case "end":
+                      return _context8.stop();
                   }
                 }, _callee8);
               })))["catch"](function (error) {
-                _this28._acceptAndTerminate(response, 488, 'Not Acceptable Here');
-                _this28._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
+                _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
                 logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
                 logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-                _this28.emit('peerconnection:setremotedescriptionfailed', error);
+                _this30.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -22891,7 +22949,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this29 = this;
+      var _this31 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendReinvite()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -22913,45 +22971,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
       }
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this29._createLocalDescription('offer', rtcOfferConstraints);
+        return _this31._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this29._mangleOffer(sdp);
+        sdp = _this31._mangleOffer(sdp);
 
         // 添加BFCP所需属性
-        _this29._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl, "\r\na=floorid:").concat(_this29._floorId, " m-stream:").concat(_this29._mStream, "\r\n")));
+        _this31._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this31._floorctrl, "\r\na=floorid:").concat(_this31._floorId, " m-stream:").concat(_this31._mStream, "\r\n")));
         // 添加主辅流标志
-        sdp = _this29._addMediastreamFlag(sdp, _this29._mStream);
+        sdp = _this31._addMediastreamFlag(sdp, _this31._mStream);
         var e = {
           originator: 'local',
           type: 'offer',
           sdp: sdp
         };
-        _this29._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+        _this31._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
         logger.debug('emit "sdp"');
-        _this29.emit('sdp', e);
+        _this31.emit('sdp', e);
 
         // 新增reinvite时更新via_host
-        options.changeViaHost && _this29._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
-        extraHeaders.push("Contact: ".concat(_this29._ua.contact.toString()));
-        _this29.sendRequest(CRTC_C.INVITE, {
+        options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
+        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
+        _this31.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this29, response);
+              onSucceeded.call(_this31, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this29, response);
+              onFailed.call(_this31, response);
             },
             onTransportError: function onTransportError() {
-              _this29.onTransportError(); // Do nothing because session ends.
+              _this31.onTransportError(); // Do nothing because session ends.
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this29.onRequestTimeout(); // Do nothing because session ends.
+              _this31.onRequestTimeout(); // Do nothing because session ends.
             },
             onDialogError: function onDialogError() {
-              _this29.onDialogError(); // Do nothing because session ends.
+              _this31.onDialogError(); // Do nothing because session ends.
             }
           }
         });
@@ -22959,7 +23017,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         onFailed();
       });
       function onSucceeded(response) {
-        var _this30 = this;
+        var _this32 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -23001,11 +23059,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          */
         var sdp_body = sdp_transform.parse(response.body);
         var mediaIndex = 0;
-        var _iterator1 = _createForOfIteratorHelper(sdp_body.media),
-          _step1;
+        var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
+          _step11;
         try {
-          for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
-            var m = _step1.value;
+          for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+            var m = _step11.value;
             if (m.type == 'audio') {
               continue;
             }
@@ -23021,9 +23079,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator1.e(err);
+          _iterator11.e(err);
         } finally {
-          _iterator1.f();
+          _iterator11.f();
         }
         var newSdp = this._sdpAddMid(response.body);
         var e = {
@@ -23038,16 +23096,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this30._connection.setRemoteDescription(answer);
+          return _this32._connection.setRemoteDescription(answer);
         }).then(function () {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this30);
+          onFailed.call(_this32);
           logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
           logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-          _this30.emit('peerconnection:setremotedescriptionfailed', error);
+          _this32.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
       function onFailed(response) {
@@ -23063,7 +23121,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this31 = this;
+      var _this33 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug('sendUpdate()');
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -23086,41 +23144,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this31._createLocalDescription('offer', rtcOfferConstraints);
+          return _this33._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this31._mangleOffer(sdp);
+          sdp = _this33._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
             sdp: sdp
           };
-          _this31._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          _this33._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
           logger.debug('emit "sdp"');
-          _this31.emit('sdp', e);
-          _this31.sendRequest(CRTC_C.UPDATE, {
+          _this33.emit('sdp', e);
+          _this33.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this31, response);
+                onSucceeded.call(_this33, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this31, response);
+                onFailed.call(_this33, response);
               },
               onTransportError: function onTransportError() {
-                _this31.onTransportError(); // Do nothing because session ends.
+                _this33.onTransportError(); // Do nothing because session ends.
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this31.onRequestTimeout(); // Do nothing because session ends.
+                _this33.onRequestTimeout(); // Do nothing because session ends.
               },
               onDialogError: function onDialogError() {
-                _this31.onDialogError(); // Do nothing because session ends.
+                _this33.onDialogError(); // Do nothing because session ends.
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this31);
+          onFailed.call(_this33);
         });
       }
       // No SDP.
@@ -23129,25 +23187,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: extraHeaders,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this31, response);
+              onSucceeded.call(_this33, response);
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this31, response);
+              onFailed.call(_this33, response);
             },
             onTransportError: function onTransportError() {
-              _this31.onTransportError(); // Do nothing because session ends.
+              _this33.onTransportError(); // Do nothing because session ends.
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this31.onRequestTimeout(); // Do nothing because session ends.
+              _this33.onRequestTimeout(); // Do nothing because session ends.
             },
             onDialogError: function onDialogError() {
-              _this31.onDialogError(); // Do nothing because session ends.
+              _this33.onDialogError(); // Do nothing because session ends.
             }
           }
         });
       }
       function onSucceeded(response) {
-        var _this32 = this;
+        var _this34 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -23190,11 +23248,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * @author: lei
            */
           var sdp_body = sdp_transform.parse(sdp);
-          var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
-            _step10;
+          var _iterator12 = _createForOfIteratorHelper(sdp_body.media),
+            _step12;
           try {
-            for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-              var m = _step10.value;
+            for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+              var m = _step12.value;
               if (m.type == 'audio') {
                 continue;
               }
@@ -23209,9 +23267,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }
           } catch (err) {
-            _iterator10.e(err);
+            _iterator12.e(err);
           } finally {
-            _iterator10.f();
+            _iterator12.f();
           }
           var newSdp = this._sdpAddMid(sdp);
           var e = {
@@ -23226,16 +23284,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this32._connection.setRemoteDescription(answer);
+            return _this34._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this32);
+            onFailed.call(_this34);
             logger.warn('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
             logger.warn("emit \"peerconnection:setremotedescriptionfailed\" [error:%o]".concat(JSON.stringify(error)));
-            _this32.emit('peerconnection:setremotedescriptionfailed', error);
+            _this34.emit('peerconnection:setremotedescriptionfailed', error);
           });
         }
         // No SDP answer.
@@ -23285,11 +23343,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Local hold.
       if (this._localHold && !this._remoteHold) {
         logger.debug('mangleOffer() | me on hold, mangling offer');
-        var _iterator11 = _createForOfIteratorHelper(sdp.media),
-          _step11;
+        var _iterator13 = _createForOfIteratorHelper(sdp.media),
+          _step13;
         try {
-          for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-            var m = _step11.value;
+          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+            var m = _step13.value;
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
             }
@@ -23302,38 +23360,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator11.e(err);
+          _iterator13.e(err);
         } finally {
-          _iterator11.f();
+          _iterator13.f();
         }
       }
       // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
         logger.debug('mangleOffer() | both on hold, mangling offer');
-        var _iterator12 = _createForOfIteratorHelper(sdp.media),
-          _step12;
+        var _iterator14 = _createForOfIteratorHelper(sdp.media),
+          _step14;
         try {
-          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-            var _m2 = _step12.value;
+          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+            var _m2 = _step14.value;
             if (holdMediaTypes.indexOf(_m2.type) === -1) {
               continue;
             }
             _m2.direction = 'inactive';
           }
         } catch (err) {
-          _iterator12.e(err);
+          _iterator14.e(err);
         } finally {
-          _iterator12.f();
+          _iterator14.f();
         }
       }
       // Remote hold.
       else if (this._remoteHold) {
         logger.debug('mangleOffer() | remote on hold, mangling offer');
-        var _iterator13 = _createForOfIteratorHelper(sdp.media),
-          _step13;
+        var _iterator15 = _createForOfIteratorHelper(sdp.media),
+          _step15;
         try {
-          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-            var _m3 = _step13.value;
+          for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+            var _m3 = _step15.value;
             if (holdMediaTypes.indexOf(_m3.type) === -1) {
               continue;
             }
@@ -23346,9 +23404,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator13.e(err);
+          _iterator15.e(err);
         } finally {
-          _iterator13.f();
+          _iterator15.f();
         }
       }
       return sdp_transform.write(sdp);
@@ -23391,12 +23449,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
-      var _this33 = this;
+      var _this35 = this;
       logger.debug("setLocalMedia() ".concat(mode));
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
-          _this33._localMediaStream.removeTrack(track);
+          _this35._localMediaStream.removeTrack(track);
         });
         this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -23406,40 +23464,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_streamInactiveHandle",
     value: function _streamInactiveHandle(dual) {
-      var _this34 = this;
+      var _this36 = this;
       var ended = false;
       var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
-        if (_this34._localShareStream && _this34._localShareStreamLocallyGenerated) {
+        if (_this36._localShareStream && _this36._localShareStreamLocallyGenerated) {
           if (dual) {
-            _this34._connection.getTransceivers().forEach(function (transeiver) {
+            _this36._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this34._localShareStream.getVideoTracks()[0].id) {
-                  _this34._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this34._bfcpVideoTrack);
+                if (transeiver.sender.track.id === _this36._localShareStream.getVideoTracks()[0].id) {
+                  _this36._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this36._bfcpVideoTrack);
                 }
               }
             });
-            _this34._localShareStream = null;
-            _this34._localShareStreamLocallyGenerated = false;
+            _this36._localShareStream = null;
+            _this36._localShareStreamLocallyGenerated = false;
 
             // BFCP 释放资源，当被取消权限以后不再用发送release
-            _this34._bfcpRequestStatus !== RequestStatusValue.Revoked && _this34._sendFloorRelease();
+            _this36._bfcpRequestStatus !== RequestStatusValue.Revoked && _this36._sendFloorRelease();
           } else {
-            _this34._localMediaStream.getVideoTracks().forEach(function (track) {
-              var sender = _this34._connection.getSenders().find(function (s) {
+            _this36._localMediaStream.getVideoTracks().forEach(function (track) {
+              var sender = _this36._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              track.readyState === 'live' && _this34._connection.connectionState === 'connected' && sender.replaceTrack(track);
+              track.readyState === 'live' && _this36._connection.connectionState === 'connected' && sender.replaceTrack(track);
             });
-            _this34._localShareStreamLocallyGenerated = false;
+            _this36._localShareStreamLocallyGenerated = false;
           }
-          _this34._localShareStream = null;
-          _this34._localShareStreamLocallyGenerated = false;
+          _this36._localShareStream = null;
+          _this36._localShareStreamLocallyGenerated = false;
         }
       };
 
       // safari 等场景ended 或者 inactive 事件不会触发
       var timer = setInterval(function () {
-        if (_this34._localShareStream && _this34._localShareStream.getVideoTracks() && _this34._localShareStream.getVideoTracks()[0].readyState === 'ended') {
+        if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0].readyState === 'ended') {
           clearInterval(timer);
           ended || mediaStreamTrackEndedHandler();
           ended = true;
@@ -23505,7 +23563,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this35 = this;
+      var _this37 = this;
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
       clearTimeout(this._sessionTimers.timer);
@@ -23513,17 +23571,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm the refresher.
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this35._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
-          if (!_this35._isReadyToReOffer()) {
+          if (!_this37._isReadyToReOffer()) {
             return;
           }
           logger.debug('runSessionTimer() | sending session refresh request');
-          if (_this35._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this35._sendUpdate();
+          if (_this37._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
+            _this37._sendUpdate();
           } else {
-            _this35._sendReinvite();
+            _this37._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       }
@@ -23531,11 +23589,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this35._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
           logger.warn('runSessionTimer() | timer expired, terminating the session');
-          _this35.terminate({
+          _this37.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
             reason_phrase: 'Session Timer Expired'
@@ -23549,25 +23607,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var senders = this._connection.getSenders().filter(function (sender) {
         return sender.track && sender.track.kind === 'audio';
       });
-      var _iterator14 = _createForOfIteratorHelper(senders),
-        _step14;
+      var _iterator16 = _createForOfIteratorHelper(senders),
+        _step16;
       try {
-        for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-          var sender = _step14.value;
+        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+          var sender = _step16.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator14.e(err);
+        _iterator16.e(err);
       } finally {
-        _iterator14.f();
+        _iterator16.f();
       }
     }
   }, {
     key: "_toggleMuteVideo",
     value: function _toggleMuteVideo(mute) {
-      var _this36 = this;
+      var _this38 = this;
       var senders = this._connection.getSenders().filter(function (sender) {
-        if (_this36._enableBFCP) {
+        if (_this38._enableBFCP) {
           // 检查是否存在视频轨道
           if (!sender.track || sender.track.kind !== 'video') {
             return false;
@@ -23575,26 +23633,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           // 获取本地共享流的视频轨道ID
           var localShareTrackId = null;
-          if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0]) {
-            localShareTrackId = _this36._localShareStream.getVideoTracks()[0].id;
+          if (_this38._localShareStream && _this38._localShareStream.getVideoTracks() && _this38._localShareStream.getVideoTracks()[0]) {
+            localShareTrackId = _this38._localShareStream.getVideoTracks()[0].id;
           }
 
           // 验证视频轨道条件
-          return !_this36._isCanvasTrack(sender.track) && sender.track !== _this36._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+          return !_this38._isCanvasTrack(sender.track) && sender.track !== _this38._bfcpVideoTrack && sender.track.id !== localShareTrackId;
         }
         return sender.track && sender.track.kind === 'video';
       });
-      var _iterator15 = _createForOfIteratorHelper(senders),
-        _step15;
+      var _iterator17 = _createForOfIteratorHelper(senders),
+        _step17;
       try {
-        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-          var sender = _step15.value;
+        for (_iterator17.s(); !(_step17 = _iterator17.n()).done;) {
+          var sender = _step17.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator15.e(err);
+        _iterator17.e(err);
       } finally {
-        _iterator15.f();
+        _iterator17.f();
       }
     }
   }, {
@@ -23744,9 +23802,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref1) {
-      var audio = _ref1.audio,
-        video = _ref1.video;
+    value: function _onmute(_ref11) {
+      var audio = _ref11.audio,
+        video = _ref11.video;
       logger.debug('session onmute');
       this._setLocalMediaStatus();
       logger.debug('emit "muted"');
@@ -23757,9 +23815,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref10) {
-      var audio = _ref10.audio,
-        video = _ref10.video;
+    value: function _onunmute(_ref12) {
+      var audio = _ref12.audio,
+        video = _ref12.video;
       logger.debug('session onunmute');
       this._setLocalMediaStatus();
       logger.debug('emit "unmuted"');
@@ -23832,36 +23890,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceAudioToMic",
     value: function _replaceAudioToMic() {
-      var _this37 = this;
+      var _this39 = this;
       // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: this._inviteMediaConstraints.audio || true,
         video: false
       }).then(function (stream) {
-        _this37._connection.getSenders().forEach(function (sender) {
+        _this39._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this37.isMuted().audio;
+            stream.getAudioTracks()[0].enabled = _this39.isMuted().audio;
 
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
             // 本地播放本地音频轨道
-            _this37._localMediaStream.removeTrack(_this37._localMediaStream.getAudioTracks()[0]);
-            _this37._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getAudioTracks()[0]);
+            _this39._localMediaStream.addTrack(stream.getAudioTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this37.emit('localMediastreamUpdate', _this37._localMediaStream);
+            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this37._boundReplaceMicToAudios);
-            stream.getAudioTracks()[0].addEventListener('ended', _this37._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('mute', _this39._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this39._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
         logger.error("replaceAudioToMic error: ".concat(JSON.stringify(error)));
-        _this37._replaceAudioToMic();
+        _this39._replaceAudioToMic();
       });
     }
 
@@ -23871,7 +23929,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceMicToAudio",
     value: function _replaceMicToAudio() {
-      var _this38 = this;
+      var _this40 = this;
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -23880,24 +23938,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this38._boundReplaceMicToAudios);
-          sender.track.removeEventListener('ended', _this38._boundReplaceMicToAudios);
+          sender.track.removeEventListener('mute', _this40._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this40._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
 
           // 替换音频轨道
-          sender.replaceTrack(_this38._generateAnEmptyAudioTrack());
+          sender.replaceTrack(_this40._generateAnEmptyAudioTrack());
 
           // 本地播放本地音频轨道
-          _this38._localMediaStream.removeTrack(_this38._localMediaStream.getVideoTracks()[0]);
-          _this38._localMediaStream.addTrack(_this38._generateAnEmptyAudioTrack());
+          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
+          _this40._localMediaStream.addTrack(_this40._generateAnEmptyAudioTrack());
 
           // 触发本地媒体更新事件
-          _this38.emit('localMediastreamUpdate', _this38._localMediaStream);
+          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
 
           // 开始尝试获取麦克风体并恢复
-          _this38._replaceAudioToMic();
+          _this40._replaceAudioToMic();
         }
       });
     }
@@ -23908,38 +23966,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceCanvasToVideo",
     value: function _replaceCanvasToVideo() {
-      var _this39 = this;
+      var _this41 = this;
       // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: false,
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
-        _this39._connection.getSenders().forEach(function (sender) {
+        _this41._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this39._restoreCameraTrackDraw);
-            _this39._restoreCameraTrackCtx.clearRect(0, 0, _this39._inviteMediaConstraints.width || 640, _this39._inviteMediaConstraints.height || 480);
+            window.cancelAnimationFrame(_this41._restoreCameraTrackDraw);
+            _this41._restoreCameraTrackCtx.clearRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
             // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this39.isMuted().video;
+            stream.getVideoTracks()[0].enabled = _this41.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
             // 本地播放本地视频轨道
-            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getVideoTracks()[0]);
-            _this39._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+            _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
+            _this41._localMediaStream.addTrack(stream.getVideoTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+            _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this39._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this39._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
         logger.error("replaceCanvasToVideo error: ".concat(JSON.stringify(error)));
-        _this39._replaceCanvasToVideo();
+        _this41._replaceCanvasToVideo();
       });
     }
 
@@ -23949,7 +24007,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
-      var _this40 = this;
+      var _this42 = this;
       logger.debug('_replaceVideoToCanvas()');
 
       // 判断是否在通话中
@@ -23964,11 +24022,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 开始绘制纯色
       var _drawToCanvas = function drawToCanvas() {
-        _this40._restoreCameraTrackCanvas.width = _this40._inviteMediaConstraints.width || 640;
-        _this40._restoreCameraTrackCanvas.height = _this40._inviteMediaConstraints.height || 480;
-        _this40._restoreCameraTrackCtx.fillStyle = 'blue';
-        _this40._restoreCameraTrackCtx.fillRect(0, 0, _this40._inviteMediaConstraints.width || 640, _this40._inviteMediaConstraints.height || 480);
-        _this40._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
+        _this42._restoreCameraTrackCanvas.width = _this42._inviteMediaConstraints.width || 640;
+        _this42._restoreCameraTrackCanvas.height = _this42._inviteMediaConstraints.height || 480;
+        _this42._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this42._restoreCameraTrackCtx.fillRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
+        _this42._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
       };
       _drawToCanvas();
 
@@ -23979,20 +24037,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this40._boundReplaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this40._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this42._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this42._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
           // 本地播放本地视频轨道
-          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
-          _this40._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
+          _this42._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
           // 触发本地媒体更新事件
-          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
+          _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
           // 开始尝试获取摄像头媒体并恢复
-          _this40._replaceCanvasToVideo();
+          _this42._replaceCanvasToVideo();
         }
       });
     }
@@ -24003,7 +24061,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this41 = this;
+      var _this43 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -24015,14 +24073,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           timer = null;
 
           // 如果设备变化则替换轨道流
-          _this41._connection.getSenders().forEach(function (sender) {
+          _this43._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this41._replaceVideoToCanvas();
+              _this43._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this41._replaceMicToAudio();
+              _this43._replaceMicToAudio();
             }
           });
         }, 300);
@@ -24033,22 +24091,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 视频轨道
         if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
-            _this41._replaceVideoToCanvas();
+            _this43._replaceVideoToCanvas();
           } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this43._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this43._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this41._replaceMicToAudio();
+            _this43._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this41._boundReplaceMicToAudios);
-            sender.track.addEventListener('ended', _this41._boundReplaceMicToAudios);
+            sender.track.addEventListener('mute', _this43._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this43._boundReplaceMicToAudios);
           }
         }
       });
@@ -24124,7 +24182,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
-      var _this42 = this;
+      var _this44 = this;
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
       if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
@@ -24135,12 +24193,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this.emit('floorRequest', {
           message: message,
           accept: function accept() {
-            var response = _this42._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-            _this42._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
           },
           reject: function reject() {
-            var response = _this42._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-            _this42._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
           }
         });
       }
@@ -24236,21 +24294,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
-      var _this43 = this;
+      var _this45 = this;
       logger.debug('datachannel closed.');
       setTimeout(function () {
         // 判断dc如果断开1秒后ice状态正常则重连dc
-        if (_this43.connection.iceConnectionState === 'connected') {
-          _this43.renegotiate();
+        if (_this45.connection.iceConnectionState === 'connected') {
+          _this45.renegotiate();
         } else {
           // DC 状态设置为未准备好
-          _this43._dataChannelReady = false;
+          _this45._dataChannelReady = false;
           // 停止发送心跳
-          clearInterval(_this43._bfcpHeatbeatTimer);
-          _this43._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+          clearInterval(_this45._bfcpHeatbeatTimer);
+          _this45._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
 
           // 停止检测close状态
-          clearInterval(_this43._closingInterval);
+          clearInterval(_this45._closingInterval);
         }
       }, 1000);
     }
@@ -24264,19 +24322,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this44 = this;
+      var _this46 = this;
       logger.debug("dataChannelSend() ".concat(transactionId));
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
-        if (!_this44._dataChannelReady) {
+        if (!_this46._dataChannelReady) {
           reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           logger.error("[DataChannel] Not ready for transactionId: ".concat(transactionId));
           return;
         }
 
         // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this44._dataChannelMsgs[transactionId]) {
-          _this44._dataChannelMsgs[transactionId] = {
+        if (!_this46._dataChannelMsgs[transactionId]) {
+          _this46._dataChannelMsgs[transactionId] = {
             retries: 0,
             sendAt: Date.now(),
             message: message,
@@ -24285,7 +24343,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             reject: reject
           };
         }
-        var messageState = _this44._dataChannelMsgs[transactionId];
+        var messageState = _this46._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
@@ -24295,8 +24353,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("BFCP send: ".concat(JSON.stringify(_this44._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this44._bfcpUser.receiveMessage(messageState.message);
+        logger.debug("BFCP send: ".concat(JSON.stringify(_this46._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this46._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
         if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
@@ -24305,11 +24363,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (messageState && !messageState.received) {
               messageState.retries++;
               // 增加重试的间隔
-              _this44._dataChannelSend(messageState.message, transactionId);
+              _this46._dataChannelSend(messageState.message, transactionId);
             }
           }, Math.pow(2, messageState.retries) * 500);
         }
-        _this44._dataChannel && _this44._dataChannel.send(messageState.message);
+        _this46._dataChannel && _this46._dataChannel.send(messageState.message);
       });
     }
 
@@ -24331,7 +24389,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this45 = this;
+      var _this47 = this;
       logger.debug("initDataChannel()".concat(JSON.stringify(event)));
 
       // 内部变量
@@ -24363,34 +24421,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
       datachannel.onmessage = function (ev) {
         // 收到数据
-        _this45._onChannelMessage(ev);
+        _this47._onChannelMessage(ev);
       };
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
         logger.warn('datachannel opened.');
-        _this45._dataChannelReady = true;
+        _this47._dataChannelReady = true;
         // 开始发送心跳消息
-        _this45._sendHello();
-        _this45._bfcpHeatbeatTimer = setInterval(function () {
-          _this45._sendHello();
+        _this47._sendHello();
+        _this47._bfcpHeatbeatTimer = setInterval(function () {
+          _this47._sendHello();
         }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
-        _this45._onChannelClose();
+        _this47._onChannelClose();
       };
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
         logger.error('datachannel error.');
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this45._dataChannelReady = false;
+        _this47._dataChannelReady = false;
         logger.warn('data err: ', err);
 
         // 异常重连
-        if (_this45.connection.iceConnectionState === 'connected') {
-          _this45.renegotiate();
+        if (_this47.connection.iceConnectionState === 'connected') {
+          _this47.renegotiate();
         }
       };
 
@@ -24401,7 +24459,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // No "onclosing" event
         if (datachannel && datachannel.readyState === 'closing') {
           // closing timed out: equivalent to onclose firing
-          if (isClosing) _this45._onChannelClose();
+          if (isClosing) _this47._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
@@ -24416,17 +24474,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initVisibilityChangeHandler",
     value: function _initVisibilityChangeHandler() {
-      var _this46 = this;
+      var _this48 = this;
       this._visibilitychangeVideoTrack = null;
       this._blackVideoTrack = null;
       this._trackMutedTimer = null;
       var handleVisibilityChange = function handleVisibilityChange() {
-        var conn = _this46._connection;
-        if (!conn || conn.connectionState !== 'connected' || !_this46._is_confirmed || _this46._enableBFCP) return;
+        var conn = _this48._connection;
+        if (!conn || conn.connectionState !== 'connected' || !_this48._is_confirmed || _this48._enableBFCP) return;
         if (document.hidden) {
-          _this46._handlePageHidden(conn);
+          _this48._handlePageHidden(conn);
         } else {
-          _this46._handlePageVisible(conn);
+          _this48._handlePageVisible(conn);
         }
       };
       document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -24438,7 +24496,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handlePageHidden",
     value: function _handlePageHidden(conn) {
-      var _this47 = this;
+      var _this49 = this;
       var videoSender = conn.getSenders().find(function (s) {
         return s.track.kind === 'video';
       });
@@ -24449,14 +24507,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._trackMutedTimer = setInterval(function () {
         var track = videoSender.track;
         if (track.muted) {
-          _this47._clearTrackMutedTimer();
-          _this47._visibilitychangeVideoTrack = track;
-          _this47._blackVideoTrack = Utils.generateAnBlackVideoTrack({
+          _this49._clearTrackMutedTimer();
+          _this49._visibilitychangeVideoTrack = track;
+          _this49._blackVideoTrack = Utils.generateAnBlackVideoTrack({
             hidden: true,
             width: track.getSettings().width || 640,
             height: track.getSettings().height || 480
           });
-          videoSender.replaceTrack(_this47._blackVideoTrack.videoTrack);
+          videoSender.replaceTrack(_this49._blackVideoTrack.videoTrack);
         }
       }, 100);
     }
@@ -24505,7 +24563,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":65,"events":68,"sdp-transform":74}],47:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":66,"events":65,"sdp-transform":74}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24672,7 +24730,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":68}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":65}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24781,7 +24839,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":68}],49:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":65}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24994,7 +25052,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":68}],51:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":65}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -26102,19 +26160,19 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       response += "From: ".concat(this.getHeader('From'), "\r\n");
       response += "Call-ID: ".concat(this.call_id, "\r\n");
       response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
-      var _iterator0 = _createForOfIteratorHelper(extraHeaders),
-        _step0;
+      var _iterator10 = _createForOfIteratorHelper(extraHeaders),
+        _step10;
       try {
-        for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
-          var _header2 = _step0.value;
+        for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+          var _header2 = _step10.value;
           response += "".concat(_header2.trim(), "\r\n");
         }
 
         // Supported.
       } catch (err) {
-        _iterator0.e(err);
+        _iterator10.e(err);
       } finally {
-        _iterator0.f();
+        _iterator10.f();
       }
       switch (this.method) {
         case CRTC_C.INVITE:
@@ -26181,17 +26239,17 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       }
       reason = reason || CRTC_C.REASON_PHRASE[code] || '';
       var response = "SIP/2.0 ".concat(code, " ").concat(reason, "\r\n");
-      var _iterator1 = _createForOfIteratorHelper(vias),
-        _step1;
+      var _iterator11 = _createForOfIteratorHelper(vias),
+        _step11;
       try {
-        for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
-          var via = _step1.value;
+        for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+          var via = _step11.value;
           response += "Via: ".concat(via, "\r\n");
         }
       } catch (err) {
-        _iterator1.e(err);
+        _iterator11.e(err);
       } finally {
-        _iterator1.f();
+        _iterator11.f();
       }
       var to = this.getHeader('To');
       if (!this.to_tag && code > 100) {
@@ -26299,8 +26357,7 @@ exports.isSocket = function (socket) {
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -26371,19 +26428,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "start",
     value: function start() {
       var _this2 = this;
-      this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
+      this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+        var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
             case 0:
               inform = false; // 全局停止统计信息输出
               if (!(window.CRTCStats === 'stop')) {
-                _context.n = 1;
+                _context.next = 4;
                 break;
               }
               clearInterval(_this2._statsTimer);
-              return _context.a(2);
-            case 1:
+              return _context.abrupt("return");
+            case 4:
               _this2._data = '';
               if (_this2._count === 0) {
                 // 第二次开始间隔5-10次输出一次完整report
@@ -26391,27 +26448,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 inform = true;
               }
               _this2._count--;
-              _context.n = 2;
+              _context.next = 9;
               return _this2._pc.getTransceivers();
-            case 2:
-              transceivers = _context.v;
+            case 9:
+              transceivers = _context.sent;
               _iterator = _createForOfIteratorHelper(transceivers);
-              _context.p = 3;
+              _context.prev = 11;
               _iterator.s();
-            case 4:
+            case 13:
               if ((_step = _iterator.n()).done) {
-                _context.n = 8;
+                _context.next = 24;
                 break;
               }
               transceiver = _step.value;
-              _context.n = 5;
+              _context.next = 17;
               return transceiver.sender.getStats();
-            case 5:
-              senderReports = _context.v;
-              _context.n = 6;
+            case 17:
+              senderReports = _context.sent;
+              _context.next = 20;
               return transceiver.receiver.getStats();
-            case 6:
-              receiverReports = _context.v;
+            case 20:
+              receiverReports = _context.sent;
               if (transceiver.mid === sessionStorage.getItem(CRTC_C.BFCP_SHARED_STREAM_INDEX)) {
                 _this2._parseSenderReport(senderReports, transceiver.sender, true, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, true, inform);
@@ -26419,21 +26476,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 transceiver.sender.track && _this2._parseSenderReport(senderReports, transceiver.sender, false, inform);
                 _this2._parseReceiverReport(receiverReports, transceiver.receiver, false, inform);
               }
-            case 7:
-              _context.n = 4;
+            case 22:
+              _context.next = 13;
               break;
-            case 8:
-              _context.n = 10;
+            case 24:
+              _context.next = 29;
               break;
-            case 9:
-              _context.p = 9;
-              _t = _context.v;
-              _iterator.e(_t);
-            case 10:
-              _context.p = 10;
+            case 26:
+              _context.prev = 26;
+              _context.t0 = _context["catch"](11);
+              _iterator.e(_context.t0);
+            case 29:
+              _context.prev = 29;
               _iterator.f();
-              return _context.f(10);
-            case 11:
+              return _context.finish(29);
+            case 32:
               logger.debug("pc status: cS: ".concat(_this2._pc.connectionState, " iS:").concat(_this2._pc.iceConnectionState, " sS:").concat(_this2._pc.signalingState));
               try {
                 _this2._pc.getSenders().forEach(function (s) {
@@ -26448,17 +26505,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 logger.error(error.toString());
               }
               if (!_this2._data) {
-                _context.n = 12;
+                _context.next = 37;
                 break;
               }
               logger.debug(_this2._data);
-              return _context.a(2);
-            case 12:
+              return _context.abrupt("return");
+            case 37:
               _this2._createReport();
-            case 13:
-              return _context.a(2);
+            case 38:
+            case "end":
+              return _context.stop();
           }
-        }, _callee, null, [[3, 9, 10, 11]]);
+        }, _callee, null, [[11, 26, 29, 32]]);
       })), this._delay * 1000);
     }
   }, {
@@ -26750,7 +26808,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":61,"events":68}],56:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":65}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -27166,7 +27224,7 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
   }, {
     key: "receiveResponse",
     value: function receiveResponse(status_code, response, onSuccess, onFailure) {
-      var _this0 = this;
+      var _this10 = this;
       if (status_code === 100) {
         /* RFC 4320 4.1
          * 'A SIP element MUST NOT
@@ -27199,7 +27257,7 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
             this.stateChanged(C.STATUS_COMPLETED);
             this.last_response = response;
             this.J = setTimeout(function () {
-              _this0.timer_J();
+              _this10.timer_J();
             }, Timers.TIMER_J);
             if (!this.transport.send(response)) {
               this.onTransportError();
@@ -27219,21 +27277,21 @@ var NonInviteServerTransaction = /*#__PURE__*/function (_EventEmitter4) {
 }(EventEmitter);
 var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
   function InviteServerTransaction(ua, transport, request) {
-    var _this1;
+    var _this11;
     _classCallCheck(this, InviteServerTransaction);
-    _this1 = _callSuper(this, InviteServerTransaction);
-    _this1.type = C.INVITE_SERVER;
-    _this1.id = request.via_branch;
-    _this1.ua = ua;
-    _this1.transport = transport;
-    _this1.request = request;
-    _this1.last_response = '';
-    request.server_transaction = _this1;
-    _this1.state = C.STATUS_PROCEEDING;
-    ua.newTransaction(_this1);
-    _this1.resendProvisionalTimer = null;
+    _this11 = _callSuper(this, InviteServerTransaction);
+    _this11.type = C.INVITE_SERVER;
+    _this11.id = request.via_branch;
+    _this11.ua = ua;
+    _this11.transport = transport;
+    _this11.request = request;
+    _this11.last_response = '';
+    request.server_transaction = _this11;
+    _this11.state = C.STATUS_PROCEEDING;
+    ua.newTransaction(_this11);
+    _this11.resendProvisionalTimer = null;
     request.reply(100);
-    return _this1;
+    return _this11;
   }
   _inherits(InviteServerTransaction, _EventEmitter5);
   return _createClass(InviteServerTransaction, [{
@@ -27303,7 +27361,7 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
   }, {
     key: "receiveResponse",
     value: function receiveResponse(status_code, response, onSuccess, onFailure) {
-      var _this10 = this;
+      var _this12 = this;
       if (status_code >= 100 && status_code <= 199) {
         switch (this.state) {
           case C.STATUS_PROCEEDING:
@@ -27318,7 +27376,7 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
         // Trigger the resendProvisionalTimer only for the first non 100 provisional response.
         if (this.resendProvisionalTimer === null) {
           this.resendProvisionalTimer = setInterval(function () {
-            _this10.resend_provisional();
+            _this12.resend_provisional();
           }, Timers.PROVISIONAL_RESPONSE_INTERVAL);
         }
       } else if (status_code >= 200 && status_code <= 299) {
@@ -27327,7 +27385,7 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             this.stateChanged(C.STATUS_ACCEPTED);
             this.last_response = response;
             this.L = setTimeout(function () {
-              _this10.timer_L();
+              _this12.timer_L();
             }, Timers.TIMER_L);
             if (this.resendProvisionalTimer !== null) {
               clearInterval(this.resendProvisionalTimer);
@@ -27362,7 +27420,7 @@ var InviteServerTransaction = /*#__PURE__*/function (_EventEmitter5) {
             } else {
               this.stateChanged(C.STATUS_COMPLETED);
               this.H = setTimeout(function () {
-                _this10.timer_H();
+                _this12.timer_H();
               }, Timers.TIMER_H);
               if (onSuccess) {
                 onSuccess();
@@ -27471,7 +27529,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":68}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":65}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29029,7 +29087,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":68,"jsencrypt":70}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":63,"events":65,"jsencrypt":70}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29267,8 +29325,7 @@ function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLim
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29756,24 +29813,24 @@ exports.cloneObject = function (obj) {
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情
  *
  */
-exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-  var devices, cameras, _t;
-  return _regenerator().w(function (_context) {
-    while (1) switch (_context.p = _context.n) {
+exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+  var devices, cameras;
+  return _regeneratorRuntime().wrap(function _callee$(_context) {
+    while (1) switch (_context.prev = _context.next) {
       case 0:
         if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context.n = 1;
+          _context.next = 2;
           break;
         }
-        return _context.a(2, {
+        return _context.abrupt("return", {
           error: 'The current browser does not support device enumeration function.'
         });
-      case 1:
-        _context.p = 1;
-        _context.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
       case 2:
-        devices = _context.v;
+        _context.prev = 2;
+        _context.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context.sent;
         // 筛选出视频输入设备（摄像头）
         cameras = devices.filter(function (device) {
           return device.kind === 'videoinput';
@@ -29785,15 +29842,18 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().
             deviceId: cam.deviceId
           };
         });
-        return _context.a(2, cameras);
-      case 3:
-        _context.p = 3;
-        _t = _context.v;
-        return _context.a(2, {
-          error: _t.message
+        return _context.abrupt("return", cameras);
+      case 10:
+        _context.prev = 10;
+        _context.t0 = _context["catch"](2);
+        return _context.abrupt("return", {
+          error: _context.t0.message
         });
+      case 13:
+      case "end":
+        return _context.stop();
     }
-  }, _callee, null, [[1, 3]]);
+  }, _callee, null, [[2, 10]]);
 }));
 
 /**
@@ -29805,24 +29865,24 @@ exports.getCameras = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-  var devices, microphones, _t2;
-  return _regenerator().w(function (_context2) {
-    while (1) switch (_context2.p = _context2.n) {
+exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+  var devices, microphones;
+  return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+    while (1) switch (_context2.prev = _context2.next) {
       case 0:
         if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context2.n = 1;
+          _context2.next = 2;
           break;
         }
-        return _context2.a(2, {
+        return _context2.abrupt("return", {
           error: 'The current browser does not support device enumeration function.'
         });
-      case 1:
-        _context2.p = 1;
-        _context2.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
       case 2:
-        devices = _context2.v;
+        _context2.prev = 2;
+        _context2.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context2.sent;
         // 筛选出音频输入设备（麦克风）
         microphones = devices.filter(function (device) {
           return device.kind === 'audioinput';
@@ -29834,15 +29894,18 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
             deviceId: mic.deviceId
           };
         });
-        return _context2.a(2, microphones);
-      case 3:
-        _context2.p = 3;
-        _t2 = _context2.v;
-        return _context2.a(2, {
-          error: _t2.message
+        return _context2.abrupt("return", microphones);
+      case 10:
+        _context2.prev = 10;
+        _context2.t0 = _context2["catch"](2);
+        return _context2.abrupt("return", {
+          error: _context2.t0.message
         });
+      case 13:
+      case "end":
+        return _context2.stop();
     }
-  }, _callee2, null, [[1, 3]]);
+  }, _callee2, null, [[2, 10]]);
 }));
 
 /**
@@ -29854,24 +29917,24 @@ exports.getMicrophones = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerato
  * 因此建议在用户授权访问后， 再调用该接口获取设备详情，比如在 initialize() 后再调用此接口获取设备详情。
  *
  */
-exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-  var devices, speakers, _t3;
-  return _regenerator().w(function (_context3) {
-    while (1) switch (_context3.p = _context3.n) {
+exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+  var devices, speakers;
+  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+    while (1) switch (_context3.prev = _context3.next) {
       case 0:
         if (!(!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices)) {
-          _context3.n = 1;
+          _context3.next = 2;
           break;
         }
-        return _context3.a(2, {
+        return _context3.abrupt("return", {
           error: 'The current browser does not support device enumeration function.'
         });
-      case 1:
-        _context3.p = 1;
-        _context3.n = 2;
-        return navigator.mediaDevices.enumerateDevices();
       case 2:
-        devices = _context3.v;
+        _context3.prev = 2;
+        _context3.next = 5;
+        return navigator.mediaDevices.enumerateDevices();
+      case 5:
+        devices = _context3.sent;
         // 筛选出音频输出设备
         speakers = devices.filter(function (device) {
           return device.kind === 'audiooutput';
@@ -29883,15 +29946,18 @@ exports.getSpeakers = /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator()
             deviceId: speaker.deviceId
           };
         });
-        return _context3.a(2, speakers);
-      case 3:
-        _context3.p = 3;
-        _t3 = _context3.v;
-        return _context3.a(2, {
-          error: _t3.message
+        return _context3.abrupt("return", speakers);
+      case 10:
+        _context3.prev = 10;
+        _context3.t0 = _context3["catch"](2);
+        return _context3.abrupt("return", {
+          error: _context3.t0.message
         });
+      case 13:
+      case "end":
+        return _context3.stop();
     }
-  }, _callee3, null, [[1, 3]]);
+  }, _callee3, null, [[2, 10]]);
 }));
 
 /**
@@ -30260,10 +30326,10 @@ exports.generateAnBlackVideoTrack = function (options) {
 
 // 创建一个静音音频轨道
 var createSilentAudioTrack = /*#__PURE__*/function () {
-  var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+  var _ref5 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
     var audio, audioContext, destination, source;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
+    return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+      while (1) switch (_context4.prev = _context4.next) {
         case 0:
           audio = new Audio();
           audioContext = new AudioContext();
@@ -30275,11 +30341,14 @@ var createSilentAudioTrack = /*#__PURE__*/function () {
             console.warn("new Audio() error: ".concat(JSON.stringify(error)));
           });
           source.connect(destination);
-          return _context4.a(2, {
+          return _context4.abrupt("return", {
             state: audioContext.state,
             audioContext: audioContext,
             audioTrack: destination.stream.getAudioTracks()[0]
           });
+        case 9:
+        case "end":
+          return _context4.stop();
       }
     }, _callee4);
   }));
@@ -31008,6 +31077,26 @@ exports.sendKeyFrames = function (pc, interval, frequency) {
     start(1);
   }
 };
+
+// 获取华为Android手机后摄列表最后一个
+exports.getHuaweiAndroidEnvironment = function () {
+  function isHuaweiAndroid(ua) {
+    return /huawei/i.test(ua) && /android/i.test(ua);
+  }
+  if (isHuaweiAndroid(navigator.userAgent)) {
+    var environments = [];
+    return navigator.mediaDevices.enumerateDevices().then(function (devices) {
+      devices.forEach(function (device) {
+        if (typeof device.getCapabilities === 'function') {
+          if (device.getCapabilities().facingMode && device.getCapabilities().facingMode.indexOf('environment') !== -1) {
+            environments.push(device.deviceId);
+          }
+        }
+      });
+      return environments[environments.length - 1];
+    });
+  }
+};
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
 
@@ -31518,6 +31607,531 @@ function fromByteArray (uint8) {
 }
 
 },{}],65:[function(require,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+var objectCreate = Object.create || objectCreatePolyfill
+var objectKeys = Object.keys || objectKeysPolyfill
+var bind = Function.prototype.bind || functionBindPolyfill
+
+function EventEmitter() {
+  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
+    this._events = objectCreate(null);
+    this._eventsCount = 0;
+  }
+
+  this._maxListeners = this._maxListeners || undefined;
+}
+module.exports = EventEmitter;
+
+// Backwards-compat with node 0.10.x
+EventEmitter.EventEmitter = EventEmitter;
+
+EventEmitter.prototype._events = undefined;
+EventEmitter.prototype._maxListeners = undefined;
+
+// By default EventEmitters will print a warning if more than 10 listeners are
+// added to it. This is a useful default which helps finding memory leaks.
+var defaultMaxListeners = 10;
+
+var hasDefineProperty;
+try {
+  var o = {};
+  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
+  hasDefineProperty = o.x === 0;
+} catch (err) { hasDefineProperty = false }
+if (hasDefineProperty) {
+  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
+    enumerable: true,
+    get: function() {
+      return defaultMaxListeners;
+    },
+    set: function(arg) {
+      // check whether the input is a positive number (whose value is zero or
+      // greater and not a NaN).
+      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
+        throw new TypeError('"defaultMaxListeners" must be a positive number');
+      defaultMaxListeners = arg;
+    }
+  });
+} else {
+  EventEmitter.defaultMaxListeners = defaultMaxListeners;
+}
+
+// Obviously not all Emitters should be limited to 10. This function allows
+// that to be increased. Set to zero for unlimited.
+EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
+  if (typeof n !== 'number' || n < 0 || isNaN(n))
+    throw new TypeError('"n" argument must be a positive number');
+  this._maxListeners = n;
+  return this;
+};
+
+function $getMaxListeners(that) {
+  if (that._maxListeners === undefined)
+    return EventEmitter.defaultMaxListeners;
+  return that._maxListeners;
+}
+
+EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
+  return $getMaxListeners(this);
+};
+
+// These standalone emit* functions are used to optimize calling of event
+// handlers for fast cases because emit() itself often has a variable number of
+// arguments and can be deoptimized because of that. These functions always have
+// the same number of arguments and thus do not get deoptimized, so the code
+// inside them can execute faster.
+function emitNone(handler, isFn, self) {
+  if (isFn)
+    handler.call(self);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self);
+  }
+}
+function emitOne(handler, isFn, self, arg1) {
+  if (isFn)
+    handler.call(self, arg1);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1);
+  }
+}
+function emitTwo(handler, isFn, self, arg1, arg2) {
+  if (isFn)
+    handler.call(self, arg1, arg2);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2);
+  }
+}
+function emitThree(handler, isFn, self, arg1, arg2, arg3) {
+  if (isFn)
+    handler.call(self, arg1, arg2, arg3);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].call(self, arg1, arg2, arg3);
+  }
+}
+
+function emitMany(handler, isFn, self, args) {
+  if (isFn)
+    handler.apply(self, args);
+  else {
+    var len = handler.length;
+    var listeners = arrayClone(handler, len);
+    for (var i = 0; i < len; ++i)
+      listeners[i].apply(self, args);
+  }
+}
+
+EventEmitter.prototype.emit = function emit(type) {
+  var er, handler, len, args, i, events;
+  var doError = (type === 'error');
+
+  events = this._events;
+  if (events)
+    doError = (doError && events.error == null);
+  else if (!doError)
+    return false;
+
+  // If there is no 'error' event listener then throw.
+  if (doError) {
+    if (arguments.length > 1)
+      er = arguments[1];
+    if (er instanceof Error) {
+      throw er; // Unhandled 'error' event
+    } else {
+      // At least give some kind of context to the user
+      var err = new Error('Unhandled "error" event. (' + er + ')');
+      err.context = er;
+      throw err;
+    }
+    return false;
+  }
+
+  handler = events[type];
+
+  if (!handler)
+    return false;
+
+  var isFn = typeof handler === 'function';
+  len = arguments.length;
+  switch (len) {
+      // fast cases
+    case 1:
+      emitNone(handler, isFn, this);
+      break;
+    case 2:
+      emitOne(handler, isFn, this, arguments[1]);
+      break;
+    case 3:
+      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
+      break;
+    case 4:
+      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
+      break;
+      // slower
+    default:
+      args = new Array(len - 1);
+      for (i = 1; i < len; i++)
+        args[i - 1] = arguments[i];
+      emitMany(handler, isFn, this, args);
+  }
+
+  return true;
+};
+
+function _addListener(target, type, listener, prepend) {
+  var m;
+  var events;
+  var existing;
+
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+
+  events = target._events;
+  if (!events) {
+    events = target._events = objectCreate(null);
+    target._eventsCount = 0;
+  } else {
+    // To avoid recursion in the case that type === "newListener"! Before
+    // adding it to the listeners, first emit "newListener".
+    if (events.newListener) {
+      target.emit('newListener', type,
+          listener.listener ? listener.listener : listener);
+
+      // Re-assign `events` because a newListener handler could have caused the
+      // this._events to be assigned to a new object
+      events = target._events;
+    }
+    existing = events[type];
+  }
+
+  if (!existing) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    existing = events[type] = listener;
+    ++target._eventsCount;
+  } else {
+    if (typeof existing === 'function') {
+      // Adding the second element, need to change to array.
+      existing = events[type] =
+          prepend ? [listener, existing] : [existing, listener];
+    } else {
+      // If we've already got an array, just append.
+      if (prepend) {
+        existing.unshift(listener);
+      } else {
+        existing.push(listener);
+      }
+    }
+
+    // Check for listener leak
+    if (!existing.warned) {
+      m = $getMaxListeners(target);
+      if (m && m > 0 && existing.length > m) {
+        existing.warned = true;
+        var w = new Error('Possible EventEmitter memory leak detected. ' +
+            existing.length + ' "' + String(type) + '" listeners ' +
+            'added. Use emitter.setMaxListeners() to ' +
+            'increase limit.');
+        w.name = 'MaxListenersExceededWarning';
+        w.emitter = target;
+        w.type = type;
+        w.count = existing.length;
+        if (typeof console === 'object' && console.warn) {
+          console.warn('%s: %s', w.name, w.message);
+        }
+      }
+    }
+  }
+
+  return target;
+}
+
+EventEmitter.prototype.addListener = function addListener(type, listener) {
+  return _addListener(this, type, listener, false);
+};
+
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+
+EventEmitter.prototype.prependListener =
+    function prependListener(type, listener) {
+      return _addListener(this, type, listener, true);
+    };
+
+function onceWrapper() {
+  if (!this.fired) {
+    this.target.removeListener(this.type, this.wrapFn);
+    this.fired = true;
+    switch (arguments.length) {
+      case 0:
+        return this.listener.call(this.target);
+      case 1:
+        return this.listener.call(this.target, arguments[0]);
+      case 2:
+        return this.listener.call(this.target, arguments[0], arguments[1]);
+      case 3:
+        return this.listener.call(this.target, arguments[0], arguments[1],
+            arguments[2]);
+      default:
+        var args = new Array(arguments.length);
+        for (var i = 0; i < args.length; ++i)
+          args[i] = arguments[i];
+        this.listener.apply(this.target, args);
+    }
+  }
+}
+
+function _onceWrap(target, type, listener) {
+  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
+  var wrapped = bind.call(onceWrapper, state);
+  wrapped.listener = listener;
+  state.wrapFn = wrapped;
+  return wrapped;
+}
+
+EventEmitter.prototype.once = function once(type, listener) {
+  if (typeof listener !== 'function')
+    throw new TypeError('"listener" argument must be a function');
+  this.on(type, _onceWrap(this, type, listener));
+  return this;
+};
+
+EventEmitter.prototype.prependOnceListener =
+    function prependOnceListener(type, listener) {
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+      this.prependListener(type, _onceWrap(this, type, listener));
+      return this;
+    };
+
+// Emits a 'removeListener' event if and only if the listener was removed.
+EventEmitter.prototype.removeListener =
+    function removeListener(type, listener) {
+      var list, events, position, i, originalListener;
+
+      if (typeof listener !== 'function')
+        throw new TypeError('"listener" argument must be a function');
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      list = events[type];
+      if (!list)
+        return this;
+
+      if (list === listener || list.listener === listener) {
+        if (--this._eventsCount === 0)
+          this._events = objectCreate(null);
+        else {
+          delete events[type];
+          if (events.removeListener)
+            this.emit('removeListener', type, list.listener || listener);
+        }
+      } else if (typeof list !== 'function') {
+        position = -1;
+
+        for (i = list.length - 1; i >= 0; i--) {
+          if (list[i] === listener || list[i].listener === listener) {
+            originalListener = list[i].listener;
+            position = i;
+            break;
+          }
+        }
+
+        if (position < 0)
+          return this;
+
+        if (position === 0)
+          list.shift();
+        else
+          spliceOne(list, position);
+
+        if (list.length === 1)
+          events[type] = list[0];
+
+        if (events.removeListener)
+          this.emit('removeListener', type, originalListener || listener);
+      }
+
+      return this;
+    };
+
+EventEmitter.prototype.removeAllListeners =
+    function removeAllListeners(type) {
+      var listeners, events, i;
+
+      events = this._events;
+      if (!events)
+        return this;
+
+      // not listening for removeListener, no need to emit
+      if (!events.removeListener) {
+        if (arguments.length === 0) {
+          this._events = objectCreate(null);
+          this._eventsCount = 0;
+        } else if (events[type]) {
+          if (--this._eventsCount === 0)
+            this._events = objectCreate(null);
+          else
+            delete events[type];
+        }
+        return this;
+      }
+
+      // emit removeListener for all listeners on all events
+      if (arguments.length === 0) {
+        var keys = objectKeys(events);
+        var key;
+        for (i = 0; i < keys.length; ++i) {
+          key = keys[i];
+          if (key === 'removeListener') continue;
+          this.removeAllListeners(key);
+        }
+        this.removeAllListeners('removeListener');
+        this._events = objectCreate(null);
+        this._eventsCount = 0;
+        return this;
+      }
+
+      listeners = events[type];
+
+      if (typeof listeners === 'function') {
+        this.removeListener(type, listeners);
+      } else if (listeners) {
+        // LIFO order
+        for (i = listeners.length - 1; i >= 0; i--) {
+          this.removeListener(type, listeners[i]);
+        }
+      }
+
+      return this;
+    };
+
+function _listeners(target, type, unwrap) {
+  var events = target._events;
+
+  if (!events)
+    return [];
+
+  var evlistener = events[type];
+  if (!evlistener)
+    return [];
+
+  if (typeof evlistener === 'function')
+    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
+
+  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
+}
+
+EventEmitter.prototype.listeners = function listeners(type) {
+  return _listeners(this, type, true);
+};
+
+EventEmitter.prototype.rawListeners = function rawListeners(type) {
+  return _listeners(this, type, false);
+};
+
+EventEmitter.listenerCount = function(emitter, type) {
+  if (typeof emitter.listenerCount === 'function') {
+    return emitter.listenerCount(type);
+  } else {
+    return listenerCount.call(emitter, type);
+  }
+};
+
+EventEmitter.prototype.listenerCount = listenerCount;
+function listenerCount(type) {
+  var events = this._events;
+
+  if (events) {
+    var evlistener = events[type];
+
+    if (typeof evlistener === 'function') {
+      return 1;
+    } else if (evlistener) {
+      return evlistener.length;
+    }
+  }
+
+  return 0;
+}
+
+EventEmitter.prototype.eventNames = function eventNames() {
+  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
+};
+
+// About 1.5x faster than the two-arg version of Array#splice().
+function spliceOne(list, index) {
+  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
+    list[i] = list[k];
+  list.pop();
+}
+
+function arrayClone(arr, n) {
+  var copy = new Array(n);
+  for (var i = 0; i < n; ++i)
+    copy[i] = arr[i];
+  return copy;
+}
+
+function unwrapListeners(arr) {
+  var ret = new Array(arr.length);
+  for (var i = 0; i < ret.length; ++i) {
+    ret[i] = arr[i].listener || arr[i];
+  }
+  return ret;
+}
+
+function objectCreatePolyfill(proto) {
+  var F = function() {};
+  F.prototype = proto;
+  return new F;
+}
+function objectKeysPolyfill(obj) {
+  var keys = [];
+  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
+    keys.push(k);
+  }
+  return k;
+}
+function functionBindPolyfill(context) {
+  var fn = this;
+  return function () {
+    return fn.apply(context, arguments);
+  };
+}
+
+},{}],66:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -33298,7 +33912,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":64,"buffer":65,"ieee754":69}],66:[function(require,module,exports){
+},{"base64-js":64,"buffer":66,"ieee754":69}],67:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -33521,7 +34135,7 @@ function save(namespaces) {
 function load() {
 	let r;
 	try {
-		r = exports.storage.getItem('debug') || exports.storage.getItem('DEBUG') ;
+		r = exports.storage.getItem('debug');
 	} catch (error) {
 		// Swallow
 		// XXX (@Qix-) should we be logging these?
@@ -33574,7 +34188,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":67,"_process":72}],67:[function(require,module,exports){
+},{"./common":68,"_process":72}],68:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -33745,7 +34359,7 @@ function setup(env) {
 
 		const split = (typeof namespaces === 'string' ? namespaces : '')
 			.trim()
-			.replace(/\s+/g, ',')
+			.replace(' ', ',')
 			.split(',')
 			.filter(Boolean);
 
@@ -33868,532 +34482,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":71}],68:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var objectCreate = Object.create || objectCreatePolyfill
-var objectKeys = Object.keys || objectKeysPolyfill
-var bind = Function.prototype.bind || functionBindPolyfill
-
-function EventEmitter() {
-  if (!this._events || !Object.prototype.hasOwnProperty.call(this, '_events')) {
-    this._events = objectCreate(null);
-    this._eventsCount = 0;
-  }
-
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-var defaultMaxListeners = 10;
-
-var hasDefineProperty;
-try {
-  var o = {};
-  if (Object.defineProperty) Object.defineProperty(o, 'x', { value: 0 });
-  hasDefineProperty = o.x === 0;
-} catch (err) { hasDefineProperty = false }
-if (hasDefineProperty) {
-  Object.defineProperty(EventEmitter, 'defaultMaxListeners', {
-    enumerable: true,
-    get: function() {
-      return defaultMaxListeners;
-    },
-    set: function(arg) {
-      // check whether the input is a positive number (whose value is zero or
-      // greater and not a NaN).
-      if (typeof arg !== 'number' || arg < 0 || arg !== arg)
-        throw new TypeError('"defaultMaxListeners" must be a positive number');
-      defaultMaxListeners = arg;
-    }
-  });
-} else {
-  EventEmitter.defaultMaxListeners = defaultMaxListeners;
-}
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function setMaxListeners(n) {
-  if (typeof n !== 'number' || n < 0 || isNaN(n))
-    throw new TypeError('"n" argument must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-function $getMaxListeners(that) {
-  if (that._maxListeners === undefined)
-    return EventEmitter.defaultMaxListeners;
-  return that._maxListeners;
-}
-
-EventEmitter.prototype.getMaxListeners = function getMaxListeners() {
-  return $getMaxListeners(this);
-};
-
-// These standalone emit* functions are used to optimize calling of event
-// handlers for fast cases because emit() itself often has a variable number of
-// arguments and can be deoptimized because of that. These functions always have
-// the same number of arguments and thus do not get deoptimized, so the code
-// inside them can execute faster.
-function emitNone(handler, isFn, self) {
-  if (isFn)
-    handler.call(self);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self);
-  }
-}
-function emitOne(handler, isFn, self, arg1) {
-  if (isFn)
-    handler.call(self, arg1);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1);
-  }
-}
-function emitTwo(handler, isFn, self, arg1, arg2) {
-  if (isFn)
-    handler.call(self, arg1, arg2);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2);
-  }
-}
-function emitThree(handler, isFn, self, arg1, arg2, arg3) {
-  if (isFn)
-    handler.call(self, arg1, arg2, arg3);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].call(self, arg1, arg2, arg3);
-  }
-}
-
-function emitMany(handler, isFn, self, args) {
-  if (isFn)
-    handler.apply(self, args);
-  else {
-    var len = handler.length;
-    var listeners = arrayClone(handler, len);
-    for (var i = 0; i < len; ++i)
-      listeners[i].apply(self, args);
-  }
-}
-
-EventEmitter.prototype.emit = function emit(type) {
-  var er, handler, len, args, i, events;
-  var doError = (type === 'error');
-
-  events = this._events;
-  if (events)
-    doError = (doError && events.error == null);
-  else if (!doError)
-    return false;
-
-  // If there is no 'error' event listener then throw.
-  if (doError) {
-    if (arguments.length > 1)
-      er = arguments[1];
-    if (er instanceof Error) {
-      throw er; // Unhandled 'error' event
-    } else {
-      // At least give some kind of context to the user
-      var err = new Error('Unhandled "error" event. (' + er + ')');
-      err.context = er;
-      throw err;
-    }
-    return false;
-  }
-
-  handler = events[type];
-
-  if (!handler)
-    return false;
-
-  var isFn = typeof handler === 'function';
-  len = arguments.length;
-  switch (len) {
-      // fast cases
-    case 1:
-      emitNone(handler, isFn, this);
-      break;
-    case 2:
-      emitOne(handler, isFn, this, arguments[1]);
-      break;
-    case 3:
-      emitTwo(handler, isFn, this, arguments[1], arguments[2]);
-      break;
-    case 4:
-      emitThree(handler, isFn, this, arguments[1], arguments[2], arguments[3]);
-      break;
-      // slower
-    default:
-      args = new Array(len - 1);
-      for (i = 1; i < len; i++)
-        args[i - 1] = arguments[i];
-      emitMany(handler, isFn, this, args);
-  }
-
-  return true;
-};
-
-function _addListener(target, type, listener, prepend) {
-  var m;
-  var events;
-  var existing;
-
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-
-  events = target._events;
-  if (!events) {
-    events = target._events = objectCreate(null);
-    target._eventsCount = 0;
-  } else {
-    // To avoid recursion in the case that type === "newListener"! Before
-    // adding it to the listeners, first emit "newListener".
-    if (events.newListener) {
-      target.emit('newListener', type,
-          listener.listener ? listener.listener : listener);
-
-      // Re-assign `events` because a newListener handler could have caused the
-      // this._events to be assigned to a new object
-      events = target._events;
-    }
-    existing = events[type];
-  }
-
-  if (!existing) {
-    // Optimize the case of one listener. Don't need the extra array object.
-    existing = events[type] = listener;
-    ++target._eventsCount;
-  } else {
-    if (typeof existing === 'function') {
-      // Adding the second element, need to change to array.
-      existing = events[type] =
-          prepend ? [listener, existing] : [existing, listener];
-    } else {
-      // If we've already got an array, just append.
-      if (prepend) {
-        existing.unshift(listener);
-      } else {
-        existing.push(listener);
-      }
-    }
-
-    // Check for listener leak
-    if (!existing.warned) {
-      m = $getMaxListeners(target);
-      if (m && m > 0 && existing.length > m) {
-        existing.warned = true;
-        var w = new Error('Possible EventEmitter memory leak detected. ' +
-            existing.length + ' "' + String(type) + '" listeners ' +
-            'added. Use emitter.setMaxListeners() to ' +
-            'increase limit.');
-        w.name = 'MaxListenersExceededWarning';
-        w.emitter = target;
-        w.type = type;
-        w.count = existing.length;
-        if (typeof console === 'object' && console.warn) {
-          console.warn('%s: %s', w.name, w.message);
-        }
-      }
-    }
-  }
-
-  return target;
-}
-
-EventEmitter.prototype.addListener = function addListener(type, listener) {
-  return _addListener(this, type, listener, false);
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.prependListener =
-    function prependListener(type, listener) {
-      return _addListener(this, type, listener, true);
-    };
-
-function onceWrapper() {
-  if (!this.fired) {
-    this.target.removeListener(this.type, this.wrapFn);
-    this.fired = true;
-    switch (arguments.length) {
-      case 0:
-        return this.listener.call(this.target);
-      case 1:
-        return this.listener.call(this.target, arguments[0]);
-      case 2:
-        return this.listener.call(this.target, arguments[0], arguments[1]);
-      case 3:
-        return this.listener.call(this.target, arguments[0], arguments[1],
-            arguments[2]);
-      default:
-        var args = new Array(arguments.length);
-        for (var i = 0; i < args.length; ++i)
-          args[i] = arguments[i];
-        this.listener.apply(this.target, args);
-    }
-  }
-}
-
-function _onceWrap(target, type, listener) {
-  var state = { fired: false, wrapFn: undefined, target: target, type: type, listener: listener };
-  var wrapped = bind.call(onceWrapper, state);
-  wrapped.listener = listener;
-  state.wrapFn = wrapped;
-  return wrapped;
-}
-
-EventEmitter.prototype.once = function once(type, listener) {
-  if (typeof listener !== 'function')
-    throw new TypeError('"listener" argument must be a function');
-  this.on(type, _onceWrap(this, type, listener));
-  return this;
-};
-
-EventEmitter.prototype.prependOnceListener =
-    function prependOnceListener(type, listener) {
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-      this.prependListener(type, _onceWrap(this, type, listener));
-      return this;
-    };
-
-// Emits a 'removeListener' event if and only if the listener was removed.
-EventEmitter.prototype.removeListener =
-    function removeListener(type, listener) {
-      var list, events, position, i, originalListener;
-
-      if (typeof listener !== 'function')
-        throw new TypeError('"listener" argument must be a function');
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      list = events[type];
-      if (!list)
-        return this;
-
-      if (list === listener || list.listener === listener) {
-        if (--this._eventsCount === 0)
-          this._events = objectCreate(null);
-        else {
-          delete events[type];
-          if (events.removeListener)
-            this.emit('removeListener', type, list.listener || listener);
-        }
-      } else if (typeof list !== 'function') {
-        position = -1;
-
-        for (i = list.length - 1; i >= 0; i--) {
-          if (list[i] === listener || list[i].listener === listener) {
-            originalListener = list[i].listener;
-            position = i;
-            break;
-          }
-        }
-
-        if (position < 0)
-          return this;
-
-        if (position === 0)
-          list.shift();
-        else
-          spliceOne(list, position);
-
-        if (list.length === 1)
-          events[type] = list[0];
-
-        if (events.removeListener)
-          this.emit('removeListener', type, originalListener || listener);
-      }
-
-      return this;
-    };
-
-EventEmitter.prototype.removeAllListeners =
-    function removeAllListeners(type) {
-      var listeners, events, i;
-
-      events = this._events;
-      if (!events)
-        return this;
-
-      // not listening for removeListener, no need to emit
-      if (!events.removeListener) {
-        if (arguments.length === 0) {
-          this._events = objectCreate(null);
-          this._eventsCount = 0;
-        } else if (events[type]) {
-          if (--this._eventsCount === 0)
-            this._events = objectCreate(null);
-          else
-            delete events[type];
-        }
-        return this;
-      }
-
-      // emit removeListener for all listeners on all events
-      if (arguments.length === 0) {
-        var keys = objectKeys(events);
-        var key;
-        for (i = 0; i < keys.length; ++i) {
-          key = keys[i];
-          if (key === 'removeListener') continue;
-          this.removeAllListeners(key);
-        }
-        this.removeAllListeners('removeListener');
-        this._events = objectCreate(null);
-        this._eventsCount = 0;
-        return this;
-      }
-
-      listeners = events[type];
-
-      if (typeof listeners === 'function') {
-        this.removeListener(type, listeners);
-      } else if (listeners) {
-        // LIFO order
-        for (i = listeners.length - 1; i >= 0; i--) {
-          this.removeListener(type, listeners[i]);
-        }
-      }
-
-      return this;
-    };
-
-function _listeners(target, type, unwrap) {
-  var events = target._events;
-
-  if (!events)
-    return [];
-
-  var evlistener = events[type];
-  if (!evlistener)
-    return [];
-
-  if (typeof evlistener === 'function')
-    return unwrap ? [evlistener.listener || evlistener] : [evlistener];
-
-  return unwrap ? unwrapListeners(evlistener) : arrayClone(evlistener, evlistener.length);
-}
-
-EventEmitter.prototype.listeners = function listeners(type) {
-  return _listeners(this, type, true);
-};
-
-EventEmitter.prototype.rawListeners = function rawListeners(type) {
-  return _listeners(this, type, false);
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  if (typeof emitter.listenerCount === 'function') {
-    return emitter.listenerCount(type);
-  } else {
-    return listenerCount.call(emitter, type);
-  }
-};
-
-EventEmitter.prototype.listenerCount = listenerCount;
-function listenerCount(type) {
-  var events = this._events;
-
-  if (events) {
-    var evlistener = events[type];
-
-    if (typeof evlistener === 'function') {
-      return 1;
-    } else if (evlistener) {
-      return evlistener.length;
-    }
-  }
-
-  return 0;
-}
-
-EventEmitter.prototype.eventNames = function eventNames() {
-  return this._eventsCount > 0 ? Reflect.ownKeys(this._events) : [];
-};
-
-// About 1.5x faster than the two-arg version of Array#splice().
-function spliceOne(list, index) {
-  for (var i = index, k = i + 1, n = list.length; k < n; i += 1, k += 1)
-    list[i] = list[k];
-  list.pop();
-}
-
-function arrayClone(arr, n) {
-  var copy = new Array(n);
-  for (var i = 0; i < n; ++i)
-    copy[i] = arr[i];
-  return copy;
-}
-
-function unwrapListeners(arr) {
-  var ret = new Array(arr.length);
-  for (var i = 0; i < ret.length; ++i) {
-    ret[i] = arr[i].listener || arr[i];
-  }
-  return ret;
-}
-
-function objectCreatePolyfill(proto) {
-  var F = function() {};
-  F.prototype = proto;
-  return new F;
-}
-function objectKeysPolyfill(obj) {
-  var keys = [];
-  for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
-    keys.push(k);
-  }
-  return k;
-}
-function functionBindPolyfill(context) {
-  var fn = this;
-  return function () {
-    return fn.apply(context, arguments);
-  };
-}
-
-},{}],69:[function(require,module,exports){
+},{"ms":71}],69:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m

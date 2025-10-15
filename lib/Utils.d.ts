@@ -60,3 +60,5 @@ export function replaceDtmfPayloads(): string;
 export function ensureVideoSdpAttrs(string): string;
 
 export function sendKeyFrames(pc, interval): Function | undefined;
+
+export function getHuaweiAndroidEnvironment(): string;
