@@ -105,6 +105,38 @@ const ua = new CRTC.UA(configuration);
 
 // ***** UA 事件回调 *****
 
+
+/**
+ * connected
+ *
+ * @fires 信令连接成功时触发
+ */
+ua.on('connected', function()
+{
+  setStatus('信令连接成功');
+});
+
+/**
+ * browser:navigator:offline
+ *
+ * @fires 浏览器离线时触发
+ */
+ua.on('browser:navigator:offline', function()
+{
+  setStatus('浏览器已离线');
+});
+
+/**
+ * browser:navigator:online
+ *
+ * @fires 浏览器在线时触发
+ */
+ua.on('browser:navigator:online', function()
+{
+  setStatus('浏览器在线');
+});
+
+
 /**
  * failed
  *
