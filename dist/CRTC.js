@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.6-beta.2025101693
+ * CRTC v1.11.7-beta.202510161759
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.6-beta.405020321806 (Web)',
+  USER_AGENT: 'UA/1.11.7-beta.405020323518 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.6-beta.405020321806');
+debug('version %s', '1.11.7-beta.405020323518');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.6-beta.405020321806';
+    return '1.11.7-beta.405020323518';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -26539,6 +26539,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               // 用于计算速率和丢包的值
               calc_bytesSent = report['bytesSent'] - (previewStats.bytesSent || 0);
               calc_packetsSent = report['packetsSent'] - (previewStats.packetsSent || 0);
+              console.warn('SENT: ', report['bytesSent'], previewStats.bytesSent, calc_bytesSent, calc_packetsSent);
 
               // 当前报告的原始值
               tmpObject['bytesSent'] = report['bytesSent'];
@@ -26579,7 +26580,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         loss = Math.floor(calc_packetsLost * 100 / calc_packetsSent);
       }
       tmpObject['calc_loss'] = loss;
-      tmpObject['calc_speed'] = !calc_bytesSent ? null : calc_bytesSent / this._delay * 8;
+      tmpObject['calc_speed'] = !calc_bytesSent ? 0 : calc_bytesSent / this._delay * 8;
       !tmpObject['frameWidth'] && type !== 'audio' && (tmpObject = {});
 
       // 合并统计结果
@@ -26610,10 +26611,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         switch (report.type) {
           case 'inbound-rtp':
             {
+              console.warn('byteRecv: ', report['bytesReceived'], previewStats.bytesReceived);
               // 用于计算速率和丢包的值
               calc_bytesReceived = report['bytesReceived'] - (previewStats.bytesReceived || 0);
               calc_packetsReceived = report['packetsReceived'] - (previewStats.packetsReceived || 0);
               calc_packetsLost = report['packetsLost'] - (previewStats.packetsLost || 0);
+              console.warn('byteRecv: ', report['bytesReceived'], previewStats.bytesReceived, calc_bytesReceived, calc_packetsReceived);
 
               // 当前报告的原始值
               tmpObject['bytesReceived'] = report['bytesReceived'];
@@ -26649,11 +26652,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         loss = Math.floor(calc_packetsLost * 100 / (calc_packetsReceived + calc_packetsLost));
       }
       tmpObject['calc_loss'] = loss;
-      tmpObject['calc_speed'] = !calc_bytesReceived ? null : calc_bytesReceived / this._delay * 8;
-      calc_packetsReceived === 0 && (tmpObject = {
-        packetsReceived: tmpObject['packetsReceived']
-      });
-      // 合并统计结果
+      tmpObject['calc_speed'] = !calc_bytesReceived ? 0 : calc_bytesReceived / this._delay * 8;
+      console.warn('cs: ', tmpObject['calc_speed'], calc_bytesReceived, calc_packetsReceived);
+      // calc_packetsReceived === 0 && (tmpObject = { packetsReceived: tmpObject['packetsReceived'] });
+      console.warn('bbbbbbbbb: ', JSON.stringify(tmpObject));
       (calc_packetsReceived || calc_packetsReceived === 0) && (this._newStats.downStreams[type] = tmpObject);
     }
 
@@ -26663,7 +26665,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_createReport",
     value: function _createReport() {
       var newReport = formatStats(this._newStats);
-      logger.debug(JSON.stringify(this._newStats));
+      logger.debug('_newStats', JSON.stringify(this._newStats));
+      logger.debug('newReport', JSON.stringify(newReport));
       this.emit('report', {
         RTT: newReport.rtt,
         upStreams: newReport.upStreams,
@@ -26708,6 +26711,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           jitter: oldDownStreams['audio'].jitter,
           speed: (oldDownStreams['audio'].calc_speed / 1000).toFixed(1)
         });
+        console.warn('aaaaaa: ', oldDownStreams['audio'].calc_speed, (oldDownStreams['audio'].calc_speed / 1000).toFixed(1));
 
         // 计算video和shared的总和
         for (var _i = 0, _arr = ['video', 'shared']; _i < _arr.length; _i++) {
