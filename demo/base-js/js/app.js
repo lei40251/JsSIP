@@ -931,7 +931,7 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
@@ -955,7 +955,7 @@ ua.on('newRTCSession', function(e)
     const tmpStream = new MediaStream();
 
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
@@ -1004,7 +1004,7 @@ ua.on('newRTCSession', function(e)
     const tmpStream = new MediaStream();
 
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
@@ -1029,7 +1029,7 @@ ua.on('newRTCSession', function(e)
   {
     const tmpStream = new MediaStream();
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
@@ -1473,7 +1473,7 @@ async function call(type, direction, mediaStream)
       tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     }
 
-    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg }));
+    blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     window.novideo = blackVideo;
 
