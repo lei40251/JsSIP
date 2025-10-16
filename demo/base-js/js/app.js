@@ -27,6 +27,10 @@ let useUpdate = true;
 let haveACamera = false;
 let confirmed = false;
 
+// 用于断网提示相关
+let disconnectedBy = null;
+let isShowUI = false;
+
 // 当前模式
 let curMode;
 
@@ -105,17 +109,6 @@ const ua = new CRTC.UA(configuration);
 
 // ***** UA 事件回调 *****
 
-
-/**
- * connected
- *
- * @fires 信令连接成功时触发
- */
-ua.on('connected', function()
-{
-  setStatus('信令连接成功');
-});
-
 /**
  * browser:navigator:offline
  *
@@ -124,6 +117,15 @@ ua.on('connected', function()
 ua.on('browser:navigator:offline', function()
 {
   setStatus('浏览器已离线');
+
+  // 断网提示
+  if (!disconnectedBy)
+  {
+    disconnectedBy = 'BROWSER';
+
+    // 断网提示
+    isShowUI = true;
+  }
 });
 
 /**
@@ -134,8 +136,55 @@ ua.on('browser:navigator:offline', function()
 ua.on('browser:navigator:online', function()
 {
   setStatus('浏览器在线');
+  if (disconnectedBy === 'BROWSER')
+  {
+    disconnectedBy=null;
+
+    // 关闭断网提示
+    isShowUI = false;
+  }
 });
 
+/**
+ * connected
+ *
+ * @fires 信令连接成功时触发
+ */
+ua.on('connected', function()
+{
+  disconnectedBy = null;
+
+  // 关闭断网提示
+  isShowUI = false;
+
+  setStatus('信令连接成功');
+});
+
+/**
+ * disconnected
+ *
+ * @fires 信令连接尝试(或自动重新尝试)失败时触发
+ *
+ * @type {object}
+ * @property {boolean} error - 连接是否因为错误而断开
+ */
+ua.on('disconnected', function(data)
+{
+  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
+
+  // 主动断开不处理断网提示
+  if (handleStop)
+  {
+    return;
+  }
+
+  if (!disconnectedBy)
+  {
+    // 显示断网提示
+    isShowUI = true;
+  }
+  disconnectedBy = 'UA';
+});
 
 /**
  * failed
@@ -151,19 +200,6 @@ ua.on('failed', function(data)
 {
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
-});
-
-/**
- * disconnected
- *
- * @fires 信令连接尝试(或自动重新尝试)失败时触发
- *
- * @type {object}
- * @property {boolean} error - 连接是否因为错误而断开
- */
-ua.on('disconnected', function(data)
-{
-  setStatus(`信令连接断开: ${data.code} ${data.reason}`);
 });
 
 /**
@@ -1804,6 +1840,11 @@ function start()
   // 更新摄像头下拉列表
   updateDevices();
 
+  // 初始化断网提示相关
+  handleStop=false;
+  disconnectedBy = null;
+  isShowUI = false;
+
   // 启动UA，连接信令服务器并注册
   ua.start();
 
@@ -1881,6 +1922,7 @@ function start()
   // 页面刷新 终止会话，注销ua
   window.onbeforeunload = function()
   {
+    handleStop = true;
     ua.stop();
   };
 }
