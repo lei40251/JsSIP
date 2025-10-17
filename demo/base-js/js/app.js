@@ -28,6 +28,7 @@ let haveACamera = false;
 let confirmed = false;
 
 // 用于断网提示相关
+let handleStop = false;
 let disconnectedBy = null;
 let isShowUI = false;
 
@@ -783,11 +784,11 @@ ua.on('newRTCSession', function(e)
       {
         if (item.type === 'audio')
         {
-          downF += `# 音频 # ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          downF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
         else
         {
-          downF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          downF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
       });
 
@@ -795,11 +796,11 @@ ua.on('newRTCSession', function(e)
       {
         if (item.type === 'audio')
         {
-          upF += `# 音频 # ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          upF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
         else
         {
-          upF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed || ''}kbps | ${item.jitter}ms | ${item.loss}%\n`;
+          upF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
       });
 
@@ -1048,6 +1049,21 @@ ua.on('newRTCSession', function(e)
     stats && stats.reset();
   };
 
+  /**
+   * 替换自定义流
+   */
+  document.querySelector('#switchVideo').onclick = function()
+  {
+    const cusVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps });
+
+    e.session.connection.getSenders().forEach((sender) =>
+    {
+      if (sender.track.kind === 'video')
+      {
+        sender.replaceTrack(cusVideo.videoTrack).then(() => setStatus('替换成功'));
+      }
+    });
+  };
 
   /**
    * 切换单向视频
@@ -1071,6 +1087,7 @@ ua.on('newRTCSession', function(e)
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
     stats && stats.reset();
   };
+
 
   /**
    * 切换摄像头
