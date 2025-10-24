@@ -69,15 +69,17 @@ const socket = new CRTC.WebSocketInterface(signalingUrl);
 // UA 配置项
 const configuration = {
   // Socket 实例
-  sockets        : socket,
+  sockets                          : socket,
   // 与 UA 关联的 SIP URI
-  uri            : `sip:${account}@${sipDomain}`,
+  uri                              : `sip:${account}@${sipDomain}`,
   // 显示名
-  display_name   : account,
+  display_name                     : account,
   // SIP身份验证密码
-  password       : `yl_19${account}`,
-  session_timers : false,
-  secret_key     : secretKey
+  password                         : `yl_19${account}`,
+  connection_recovery_max_interval : 30,
+  connection_recovery_min_interval : 2,
+  session_timers                   : false,
+  secret_key                       : secretKey
 };
 
 // 媒体约束条件
