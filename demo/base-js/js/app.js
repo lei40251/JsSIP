@@ -84,17 +84,19 @@ const configuration = {
 
 // 媒体约束条件
 let videoConstraints = {
-  width     : 640,
-  height    : 480,
-  frameRate : 15
+  facingMode : 'user',
+  width      : 640,
+  height     : 480,
+  frameRate  : 15
 };
 
 if (exts && exts.indexOf('BP720P') !== -1)
 {
   videoConstraints = {
-    width     : 1280,
-    height    : 720,
-    frameRate : 15
+    facingMode : 'user',
+    width      : 1280,
+    height     : 720,
+    frameRate  : 15
   };
 }
 

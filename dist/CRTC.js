@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.7-beta.202510171037
+ * CRTC v1.11.7-beta.202510281519
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.7-beta.405020342074 (Web)',
+  USER_AGENT: 'UA/1.11.7-beta.405020563038 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.7-beta.405020342074');
+debug('version %s', '1.11.7-beta.405020563038');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.7-beta.405020342074';
+    return '1.11.7-beta.405020563038';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -22740,8 +22740,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               type: 'answer',
               sdp: e.sdp
             });
+            // TODO:如果改成pranswer接通前远端update会有问题
+            // const answer = new RTCSessionDescription({ type: 'pranswer', sdp: e.sdp });
+
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-              _this28._connection.setRemoteDescription(answer);
+              // 兼容部分场景180多次返回SDP问题
+              if (_this28._connection.signalingState !== 'stable') {
+                return _this28._connection.setRemoteDescription(answer);
+              } else {
+                logger.warn("Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote answer sdp: Called in wrong state: stable");
+              }
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
