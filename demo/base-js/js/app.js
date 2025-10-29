@@ -1442,6 +1442,32 @@ ua.on('newRTCSession', function(e)
   };
 });
 
+
+/**
+ * 测试用
+ */
+document.querySelector('#testBtn').onclick = function()
+{
+  console.warn('aaaaaaaaaaaaaaaaaaaaaa');
+  navigator.mediaDevices.enumerateDevices()
+    .then((devices) =>
+    {
+      const dev=[];
+
+      devices.forEach((device) =>
+      {
+        dev.push(device);
+        if (typeof device.getCapabilities === 'function')
+        {
+          dev.push(device.getCapabilities());
+          console.warn(device);
+        }
+      });
+
+      document.body.innerText=JSON.stringify(dev);
+    });
+};
+
 // 部分场景视频卡死需要重新播放
 document.querySelector('.resume').onclick = function()
 {
