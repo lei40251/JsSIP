@@ -1125,7 +1125,7 @@ ua.on('newRTCSession', function(e)
   /**
    * 手机端用切换摄像头
    */
-  document.querySelector('#switchDevice').onclick = function()
+  document.querySelector('#switchDevice').onclick = async function()
   {
     if (cloneStream)
     {
@@ -1134,7 +1134,10 @@ ua.on('newRTCSession', function(e)
         v.stop();
       });
     }
-    e.session.switchDevice('camera', camFlag ? 'environment' : 'user');
+    e.session.switchDevice('camera', camFlag ? 'environment' : 'user')
+      .then(() => console.warn('aaaaaaaaaaa'))
+      .catch((err) => console.warn('err: ', err));
+
     camFlag = !camFlag;
     setStatus(`switchDevice facingMode ${ camFlag}`);
   };

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.8-beta.202510291650
+ * CRTC v1.11.8-beta.202510291748
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.8-beta.405020583300 (Web)',
+  USER_AGENT: 'UA/1.11.8-beta.405020583496 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.8-beta.405020583300');
+debug('version %s', '1.11.8-beta.405020583496');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.8-beta.405020583300';
+    return '1.11.8-beta.405020583496';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19866,6 +19866,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   logger.warn("".concat(_this7._id, " not enough cameras."));
                   return;
                 }
+                var next = false;
                 _this7._connection.getSenders().find(function (s) {
                   logger.debug("".concat(_this7._id, " kind: ").concat(s.track && s.track.kind));
                   if (s.track && s.track.kind == 'video') {
@@ -19874,10 +19875,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       // eslint-disable-next-line max-len
                       s.track != _this7._bfcpVideoTrack && s.track != (_this7._localShareStream && _this7._localShareStream.getVideoTracks()[0]) && s.track.stop();
                     } else {
+                      next = true;
                       s.track.stop();
                     }
                   }
                 });
+                if (!next) {
+                  return Promise.reject('switchDevice Failed. There is no video track for the current session.');
+                }
                 _this7._localMediaStreamLocallyGenerated = true;
 
                 // 确保必要的对象存在
@@ -19927,7 +19932,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         try {
                           _this7._localMediaStream.removeTrack(_this7._localMediaStream.getVideoTracks()[0]);
                         } catch (error) {
-                          logger.error(error);
+                          logger.error(_this7._id + error.message);
                         }
                         videoTrack = stream.getVideoTracks()[0];
                         _this7._localMediaStream.addTrack(videoTrack);
@@ -19953,6 +19958,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 video: false
               };
               return _context5.a(2, Promise.resolve().then(function () {
+                var next = false;
                 var audioConstraints = {
                   deviceId: {
                     exact: deviceId
@@ -19961,9 +19967,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this7._connection.getSenders().find(function (s) {
                   logger.debug("".concat(_this7._id, " kind: ").concat(s.track.kind));
                   if (s.track.kind == 'audio') {
+                    next = true;
                     s.track.stop();
                   }
                 });
+                if (!next) {
+                  return Promise.reject('switchDevice Failed. There is no audio track for the current session.');
+                }
                 _this7._localMediaStreamLocallyGenerated = true;
                 _constraints.audio = audioConstraints;
                 return navigator.mediaDevices.getUserMedia(_constraints)["catch"](function (error) {
