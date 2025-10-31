@@ -76,7 +76,7 @@ const configuration = {
   display_name                     : account,
   // SIP身份验证密码
   password                         : `yl_19${account}`,
-  connection_recovery_max_interval : 30,
+  connection_recovery_max_interval : 3,
   connection_recovery_min_interval : 2,
   session_timers                   : false,
   secret_key                       : secretKey
@@ -318,7 +318,6 @@ ua.on('newRTCSession', function(e)
 
       // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:2');
       // a=fmtp:109 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42c01f
-
     }
     else if (d.originator === 'remote')
     {
@@ -1108,6 +1107,8 @@ ua.on('newRTCSession', function(e)
       });
     }
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
+    // .then(() => e.session.renegotiate())
+    // .catch((err) => console.warn('err: ', err));
     setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
   };
 
@@ -1135,7 +1136,7 @@ ua.on('newRTCSession', function(e)
       });
     }
     e.session.switchDevice('camera', camFlag ? 'environment' : 'user')
-      .then(() => console.warn('aaaaaaaaaaa'))
+      .then(() => e.session.renegotiate())
       .catch((err) => console.warn('err: ', err));
 
     camFlag = !camFlag;

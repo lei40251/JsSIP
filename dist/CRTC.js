@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.8-beta.202510291748
+ * CRTC v1.11.8-beta.202510311341
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.8-beta.405020583496 (Web)',
+  USER_AGENT: 'UA/1.11.8-beta.405020622682 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.8-beta.405020583496');
+debug('version %s', '1.11.8-beta.405020622682');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.8-beta.405020583496';
+    return '1.11.8-beta.405020622682';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -21298,6 +21298,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (e.key === 'needReinvite' && e.newValue === 1 && !self._canSend) {
                 self._canSend = true;
                 self.renegotiate({
+                  rtcOfferConstraints: {
+                    iceRestart: true
+                  },
                   changeViaHost: true
                 });
                 setTimeout(function () {
@@ -21866,11 +21869,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
            * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
            * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
-           * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
+           *
+           * 1、本端初始offer主动设置tcap，不带xfb
+           * 2、本端初始offer未设置tcap，不带xfb
+           * 3、本端初始answer，远端带tcap。带xfb
+           * 4、本端初始answer，远端不带带tcap。不带xfb
+           * 5、本端offer关闭视频，不带xfb
+           * 6、本端answer关闭视频，不带xfb
+           *
+           * 有特殊场景update不带tcap，暂时改为全部响应带xfb
            */
           if (_this19._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
-            // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
@@ -22058,11 +22068,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * 解决UPDATE场景到H5的媒体传输tcap AVPF协商问题
            * O/A方SDP中对应媒体携带a=cc-xfb属性，对应行为是SBC转发后把媒体传输AVP改为AVPF
            * 其中远端Offer tcap，本端应答时不能携带tcap属性，现修改为5G授权默认不携带tcap等
-           * if (request.body.indexOf('tcap:1 RTP/AVPF') !== -1 && desc)
+           *
+           * 1、本端初始offer主动设置tcap，不带xfb
+           * 2、本端初始offer未设置tcap，不带xfb
+           * 3、本端初始answer，远端带tcap。带xfb
+           * 4、本端初始answer，远端不带带tcap。不带xfb
+           * 5、本端offer关闭视频，不带xfb
+           * 6、本端answer关闭视频，不带xfb
+           *
+           * 有特殊场景update不带tcap，暂时改为全部响应带xfb
            */
           if (_this21._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
-            // desc = desc.replace(/a=mid:1\r\n/, 'a=mid:1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
