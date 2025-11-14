@@ -57,7 +57,7 @@ const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
 const env = handleGetQuery('env');
 const noremb = handleGetQuery('noremb') || false;
-const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy } = env ? envs[`env_${env}`] : envs['env_default'];
+const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, password } = env ? envs[`env_${env}`] : envs['env_default'];
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 
 exts && exts.forEach((ext) => extraFeatures.push(ext));
@@ -75,7 +75,7 @@ const configuration = {
   // 显示名
   display_name                     : account,
   // SIP身份验证密码
-  password                         : `yl_19${account}`,
+  password                         : `${password?password:'yl_19'}${account}`,
   connection_recovery_max_interval : 3,
   connection_recovery_min_interval : 2,
   session_timers                   : false,
