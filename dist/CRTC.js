@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.8-beta.20251031203
+ * CRTC v1.11.8-beta.202511172056
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.8-beta.405020624006 (Web)',
+  USER_AGENT: 'UA/1.11.8-beta.405022344112 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.8-beta.405020624006');
+debug('version %s', '1.11.8-beta.405022344112');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.8-beta.405020624006';
+    return '1.11.8-beta.405022344112';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -22917,7 +22917,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this29._handleSessionTimersInIncomingResponse(response);
                       _this29._accepted('remote', response);
                       _this29.sendRequest(CRTC_C.ACK);
-                      _this29._confirmed('local', null);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
                       _context8.n = 1;
@@ -22932,15 +22931,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           var sender = _this29._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
-                          sender.replaceTrack(stream.getAudioTracks()[0]);
+                          sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
+                            _this29._confirmed('local', null);
+                          });
                         });
                       } else if (_this29._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
                         if (_this29._localMediaStream) {
                           sender = _this29._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
-                          sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]);
+                          sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]).then(function () {
+                            _this29._confirmed('local', null);
+                          });
                         }
+                      } else {
+                        _this29.sendRequest(CRTC_C.ACK);
+                        _this29._confirmed('local', null);
                       }
 
                       // 开启 BFCP，自动发送reInvite
