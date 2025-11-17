@@ -142,5 +142,12 @@ const envs =
     secretKey          : 'oSsKA/AuIVTMgi3G2SJZoseErvVeif9klrfHMBbj2tGf2VxvjHB0wuahGoLPV/rGbllpAuC0Rl1jDJ+Ci09zZOjnou2mL0Ebf+rKg0vf5v47VeKpmJAQecWJgnQ5+g1vBKTdi6TAD/cmtMgEfbuHbdFeQTQ7uTRNwjJT6PDbBpfYui+koO64LeZLfx01pnZLxuErWkErk7y/YptVzz9EniFqzPVrAwSrDVVXXElPhHwXnF3Le2ky1HdpoqzA96WWEopd/UsBwJntsH1+bbneeDBhliekCaalIaqNYqh/9ok2Ip5D+nlCVDJXgapzqCEw2SylZDq3VzKW5A09TzdO3w==',
     iceServers         : [ { 'urls': 'turn:116.133.5.85:30120?transport=udp', 'username': 'user', 'credential': '5g_24@cu' } ],
     iceTransportPolicy : 'relay'
+  },
+  env_pamb : {
+    signalingUrl       : 'wss://pamb.zgpajf.com.cn:50600/wss',
+    sipDomain          : 'pamb.zgpajf.com.cn',
+    secretKey          : 'wDzDaMtPB/F+J5QfPgGCbCCsRYfLElw2cp8X/lNXD0KFzdiLPycFwP5rvR5ZqXS+xGHfz2+Ass4ePwPaOdKVLQoqF5YOL2knzikAn6+cF7oEE7thbJoHPNXTp6xpOcZOeuhsBriza9+TQh132Lpy6nno2fWWTUtbAocDdV90sS9tI0AyyqD5aqKBgHhKrCbviPU7wF3CuqC/g2DluGndoJ13oY3ZVgbFRZI0D+OxLwuCl5GyF04F7czW/93r0bmR4TNEZ/1esRC9hRHyou0VMoHkJe4IVow3nwex9MsxArAt5IdQAKm8o0etfdTBbsXvKnMuqtTeXkAAEz91fXVu2A==',
+    iceTransportPolicy : 'relay',
+    password           : 'sos_'
   }
 };
