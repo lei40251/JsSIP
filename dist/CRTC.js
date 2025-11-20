@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.8.202511181927
+ * CRTC v1.11.8.202511202233
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.8.405022363854 (Web)',
+  USER_AGENT: 'UA/1.11.8.405022404466 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.8.405022363854');
+debug('version %s', '1.11.8.405022404466');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.8.405022363854';
+    return '1.11.8.405022404466';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21414,7 +21414,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // 1) paphone    => 保留 0，删除 1
                 // 2) 单向视频（可能多发关键帧）    => 保留 0，删除 1
                 // 3) 否则       => 保留 1，删除 0
-                var keepZero = _this17._customizedMode === 'paphone' || constraints && constraints.offerToReceiveVideo === false;
+                var keepZero = _this17._customizedMode === 'paphone';
                 var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
                 if (shouldDelete) {
                   delH264Payload.push(fmtp.payload);
@@ -22955,7 +22955,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           });
                         }
                       } else {
-                        _this29.sendRequest(CRTC_C.ACK);
                         _this29._confirmed('local', null);
                       }
 
