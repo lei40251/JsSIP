@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * CRTC v1.11.9-beta.202511191637
-=======
- * CRTC v1.11.8.202511202233
->>>>>>> 0f1b90d96f2f99875cd357b912da74572b17093d
+ * CRTC v1.11.9-beta.2025112190
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3543,11 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-<<<<<<< HEAD
-  USER_AGENT: 'UA/1.11.9-beta.405022383274 (Web)',
-=======
-  USER_AGENT: 'UA/1.11.8.405022404466 (Web)',
->>>>>>> 0f1b90d96f2f99875cd357b912da74572b17093d
+  USER_AGENT: 'UA/1.11.9-beta.405022421800 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16859,11 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-<<<<<<< HEAD
-debug('version %s', '1.11.9-beta.405022383274');
-=======
-debug('version %s', '1.11.8.405022404466');
->>>>>>> 0f1b90d96f2f99875cd357b912da74572b17093d
+debug('version %s', '1.11.9-beta.405022421800');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16901,11 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-<<<<<<< HEAD
-    return '1.11.9-beta.405022383274';
-=======
-    return '1.11.8.405022404466';
->>>>>>> 0f1b90d96f2f99875cd357b912da74572b17093d
+    return '1.11.9-beta.405022421800';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -21428,8 +21412,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
                 // packetization-mode 规则：
                 // 1) paphone    => 保留 0，删除 1
-                // 2) 单向视频（可能多发关键帧）    => 保留 0，删除 1
-                // 3) 否则       => 保留 1，删除 0
+                // 2) 否则       => 保留 1，删除 0
                 var keepZero = _this17._customizedMode === 'paphone';
                 var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
                 if (shouldDelete) {
@@ -22971,10 +22954,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                           });
                         }
                       } else {
-<<<<<<< HEAD
-                        // this.sendRequest(CRTC_C.ACK);
-=======
->>>>>>> 0f1b90d96f2f99875cd357b912da74572b17093d
                         _this29._confirmed('local', null);
                       }
 
