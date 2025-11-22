@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Video Mixer (Tiered Priority)</title>
+    <style>
+        body { background: #1a1a1a; color: #fff; font-family: sans-serif; text-align: center; }
+        #status { color: #00ff00; font-size: 14px; padding: 10px; border: 1px dashed #00ff00; margin: 10px auto; max-width: 600px; }
+        #outputVideo { width: 100%; max-width: 640px; border: 2px solid #555; background: #000; }
+        button { padding: 15px 40px; font-size: 20px; background: #007aff; color: white; border: none; border-radius: 8px; margin: 20px; cursor: pointer; }
+
+        /* === 兼容性 Hack：不可见但存在 (Tier 3 兼容必需) === */
+        .force-visible {
+            position: fixed; top: 0; left: 0;
+            width: 10px; height: 10px; 
+            z-index: 99999; 
+            opacity: 0.01; 
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status">Initializing...</div>
+    <button id="startBtn">START MIXER</button>
+
+    <div class="main-stage">
+        <h3>Mixed Output</h3>
+        <video id="outputVideo" autoplay playsinline webkit-playsinline muted controls></video>
+    </div>
+
+    <div style="display:none;">
+        <canvas id="c1" width="320" height="180"></canvas>
+        <canvas id="c2" width="320" height="180"></canvas>
+        <canvas id="c3" width="320" height="180"></canvas>
+        <canvas id="c4" width="320" height="180"></canvas>
+    </div>
+
+<script>
+/**
+ * Worker 脚本：实现 Tier 1 (WebGL) 和 Tier 2 (Canvas 2D)
+ */
+const workerScript = `
+let canvas, gl, ctx, renderMode;
+let program, positionBuffer, uResolutionLoc;
+
+// WebGL 顶点着色器：渲染一个覆盖整个 Canvas 的四边形
+const vsSource = \`
+    attribute vec4 a_position;
+    attribute vec2 a_texCoord;
+    varying vec2 v_texCoord;
+    void main() {
+        gl_Position = a_position;
+        v_texCoord = a_texCoord;
+    }
+\`;
+
+// WebGL 片段着色器：从纹理采样颜色
+const fsSource = \`
+    precision mediump float;
+    varying vec2 v_texCoord;
+    uniform sampler2D u_image;
+    void main() {
+        gl_FragColor = texture2D(u_image, v_texCoord);
+    }
+\`;
+
+// --- WebGL 初始化和工具函数 ---
+function compileShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('Shader compilation error: ' + gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+
+function initProgram(gl) {
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    if (!vertexShader || !fragmentShader) return null;
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program linking error: ' + gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        return null;
+    }
+    return program;
+}
+
+function setupWebGL(gl) {
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    program = initProgram(gl);
+    if (!program) return false;
+    gl.useProgram(program);
+
+    // 顶点和纹理坐标数据 (一个简单的全屏四边形)
+    const positionLocation = gl.getAttribLocation(program, "a_position");
+    const texCoordLocation = gl.getAttribLocation(program, "a_texCoord");
+    
+    // WebGL 坐标 (从 -1 到 1)
+    const positions = [
+        -1, -1, 0, 0, // bottom left
+        1, -1, 1, 0, // bottom right
+        -1, 1, 0, 1, // top left
+        1, 1, 1, 1,  // top right
+    ];
+    
+    positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // 设置属性指针
+    const stride = 4 * 4; // 4 float components (pos, tex), 4 bytes per float
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0); // position is first 2 floats
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 2 * 4); // texcoord is next 2 floats
+    gl.enableVertexAttribArray(texCoordLocation);
+    
+    gl.uniform1i(gl.getUniformLocation(program, "u_image"), 0); // 告诉着色器使用纹理单元 0
+    return true;
+}
+
+// --- Worker 消息处理 ---
+
+self.onmessage = function(e) {
+    const { type, payload } = e.data;
+    if (type === 'INIT') {
+        canvas = payload.canvas;
+        
+        // Tier 1 尝试: WebGL
+        gl = canvas.getContext('webgl2', { alpha: false }) || canvas.getContext('webgl', { alpha: false });
+
+        if (gl && setupWebGL(gl)) {
+            renderMode = 'WebGL';
+            self.postMessage({ type: 'READY', mode: 'Tier 1 (WebGL)' });
+        } else {
+            // Tier 2 降级: Canvas 2D
+            ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+            renderMode = 'Canvas2D';
+            self.postMessage({ type: 'READY', mode: 'Tier 2 (Canvas 2D)' });
+        }
+    } else if (type === 'DRAW' && renderMode) {
+        if (renderMode === 'WebGL') {
+            drawWebGL(payload.bitmaps, payload.totalSources);
+        } else {
+            drawCanvas2D(payload.bitmaps, payload.totalSources);
+        }
+    }
+};
+
+// --- Tier 1 WebGL 渲染实现 ---
+
+function drawWebGL(bitmaps, totalSources) {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const useGrid = totalSources > 1;
+    const gridW = gl.canvas.width / (useGrid ? 2 : 1);
+    const gridH = gl.canvas.height / (useGrid ? 2 : 1);
+
+    bitmaps.forEach(item => {
+        const i = item.index;
+        
+        // 计算 Viewport
+        let x = useGrid ? (i % 2) * gridW : 0;
+        let y = useGrid ? Math.floor(i / 2) * gridH : 0;
+        // 注意：WebGL Viewport (0,0) 是左下角
+        const glY = gl.canvas.height - (y + gridH); 
+
+        // 绑定纹理
+        const texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.bmp);
+
+        // 设置 Viewport 和绘制
+        gl.viewport(x, glY, gridW, gridH);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // 清理
+        gl.deleteTexture(texture);
+        item.bmp.close();
+    });
+    gl.flush();
+}
+
+// --- Tier 2 Canvas 2D 渲染实现 ---
+
+function drawCanvas2D(bitmaps, totalSources) {
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    const useGrid = totalSources > 1;
+    const gridW = useGrid ? width / 2 : width;
+    const gridH = useGrid ? height / 2 : height;
+
+    bitmaps.forEach(item => {
+        const i = item.index;
+        let x = useGrid ? (i % 2) * gridW : 0;
+        let y = useGrid ? Math.floor(i / 2) * gridH : 0;
+
+        if (item.bmp) {
+            // Canvas 2D 模式下，ImageBitmap可以直接作为 source，然后绘制
+            drawCover(ctx, item.bmp, x, y, gridW, gridH);
+            item.bmp.close();
+        }
+    });
+}
+
+function drawCover(ctx, img, x, y, w, h) {
+    const vw = img.width;
+    const vh = img.height;
+    const videoRatio = vw / vh;
+    const targetRatio = w / h;
+    let sx, sy, sw, sh;
+
+    if (videoRatio > targetRatio) {
+        sh = vh; sw = vh * targetRatio; sy = 0; sx = (vw - sw) / 2;
+    } else {
+        sw = vw; sh = vw / targetRatio; sx = 0; sy = (vh - sh) / 2;
+    }
+    // 使用 ImageBitmap 作为源绘制
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+`;
+
+
+// --- Main Thread 主逻辑 (Tier 3 兜底) ---
+
+class VideoMixer {
+    constructor(width = 640, height = 360, fps = 15) {
+        this.width = width;
+        this.height = height;
+        this.fps = fps;
+        this.sources = []; 
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.isRunning = false;
+
+        this.worker = null;
+        this.renderMode = 'Tier 3 (Main Thread)'; // 默认兜底模式
+        this.ctx = null;
+        
+        this._init();
+    }
+
+    _init() {
+        const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
+        const hasWorker = typeof Worker !== 'undefined';
+        
+        if (hasOffscreen && hasWorker && this.canvas.transferControlToOffscreen) {
+            try {
+                const offscreen = this.canvas.transferControlToOffscreen();
+                const blob = new Blob([workerScript], { type: 'application/javascript' });
+                this.worker = new Worker(URL.createObjectURL(blob));
+                
+                this.worker.onmessage = (e) => {
+                    if (e.data.type === 'READY') {
+                        // Worker 成功启动，设置其返回的模式 (Tier 1 或 Tier 2)
+                        this.renderMode = e.data.mode;
+                        this.log(`Worker Initialized: ${this.renderMode}`);
+                    }
+                };
+                // 启动 Worker，开始尝试 Tier 1/2
+                this.worker.postMessage({ type: 'INIT', payload: { canvas: offscreen } }, [offscreen]);
+                return;
+            } catch (e) {
+                console.warn('Worker init failed, falling back to Main Thread.', e);
+            }
+        }
+
+        // Tier 3 降级模式 (用于 iPhone 7 或功能不支持)
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+        this.log(this.renderMode);
+    }
+
+    log(msg) {
+        document.getElementById('status').innerText = msg;
+    }
+
+    addStream(stream, id) {
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+        video.autoplay = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.className = 'force-visible'; 
+        
+        document.body.appendChild(video);
+        
+        const index = this.sources.length; 
+        this.sources.push({ id, element: video, index });
+
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.loop();
+        }
+    }
+    
+    playAllVideos() {
+        // iPhone 7 兼容性修正：必须在同步执行栈中调用 play()
+        this.sources.forEach(s => {
+            s.element.play().catch(e => console.error("Video play failed:", e));
+        });
+    }
+
+    getMixedStream() {
+        return this.canvas.captureStream(this.fps);
+    }
+
+   async loop() {
+        if (!this.isRunning) return;
+
+        const totalSources = this.sources.length;
+
+        // 判断是否成功启动 Worker (Tier 1 或 Tier 2)
+        if (this.worker && this.renderMode !== 'Tier 3 (Main Thread)') {
+            // --- Worker 模式 (Tier 1/2) ---
+            const promises = this.sources.map(async (s) => {
+                if (s.element.readyState >= 2) {
+                    try {
+                        const bmp = await createImageBitmap(s.element);
+                        return { index: s.index, bmp };
+                    } catch (e) { return null; }
+                }
+                return null;
+            });
+
+            const results = await Promise.all(promises);
+            const validItems = results.filter(r => r !== null);
+            const transferList = validItems.map(i => i.bmp);
+
+            if (validItems.length > 0) {
+                this.worker.postMessage({ 
+                    type: 'DRAW', 
+                    payload: { bitmaps: validItems, totalSources } 
+                }, transferList);
+            }
+
+        } else {
+            // --- 主线程模式 (Tier 3) ---
+            // === 关键修正：确保 this.ctx 存在才调用绘制 ===
+            if (this.renderMode === 'Tier 3 (Main Thread)' && this.ctx) { 
+                this._drawOnMainThread(totalSources);
+            }
+        }
+
+        requestAnimationFrame(() => this.loop());
+    }
+
+    // --- Tier 3 渲染实现 ---
+    _drawOnMainThread(totalSources) {
+        // Tier 3 使用 Main Thread Canvas 2D 绘制，兼容 iPhone 7
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        const useGrid = totalSources > 1;
+        const gridW = useGrid ? this.width / 2 : this.width;
+        const gridH = useGrid ? this.height / 2 : this.height;
+
+        this.sources.forEach((source, i) => {
+            const video = source.element;
+            let x = useGrid ? (i % 2) * gridW : 0;
+            let y = useGrid ? Math.floor(i / 2) * gridH : 0;
+
+            try {
+                if (video.readyState >= 2) { 
+                    this._drawImageCover(this.ctx, video, x, y, gridW, gridH);
+                } else {
+                    this._drawPlaceholder(this.ctx, i, x, y, gridW, gridH, "Loading/Paused");
+                }
+            } catch (e) {
+                this._drawPlaceholder(this.ctx, i, x, y, gridW, gridH, "Error");
+            }
+        });
+    }
+
+    _drawImageCover(ctx, video, x, y, w, h) {
+        // Tier 3 专用的 drawImage(video)
+        const vw = video.videoWidth || 320;
+        const vh = video.videoHeight || 180;
+        if (!vw || !vh) return;
+
+        const videoRatio = vw / vh;
+        const targetRatio = w / h;
+        let sx, sy, sw, sh;
+
+        if (videoRatio > targetRatio) {
+            sh = vh; sw = vh * targetRatio; sy = 0; sx = (vw - sw) / 2;
+        } else {
+            sw = vw; sh = vw / targetRatio; sx = 0; sy = (vh - sh) / 2;
+        }
+        ctx.drawImage(video, sx, sy, sw, sh, x, y, w, h);
+    }
+
+    _drawPlaceholder(ctx, index, x, y, w, h, msg) {
+        ctx.fillStyle = '#222'; ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif';
+        ctx.fillText(`${index+1}`, x + 20, y + 40);
+        ctx.font = '16px sans-serif'; ctx.fillText(msg, x + 20, y + 70);
+    }
+}
+
+// --- 演示和启动逻辑 ---
+
+const SOURCE_FPS = 15; 
+const createSourceStreams = () => {
+    const streams = [];
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'];
+
+    for(let i=1; i<=4; i++) {
+        const canvas = document.getElementById('c'+i);
+        const ctx = canvas.getContext('2d');
+        let offset = 0;
+        
+        setInterval(() => {
+            ctx.fillStyle = '#222'; ctx.fillRect(0,0,320,180);
+            ctx.fillStyle = colors[i-1]; ctx.fillRect(offset, 60, 60, 60);
+            ctx.fillStyle = '#fff'; ctx.font = '40px Arial'; ctx.fillText(i, 20, 100);
+            offset = (offset + 3) % 320;
+        }, 1000/SOURCE_FPS); 
+
+        streams.push(canvas.captureStream(SOURCE_FPS));
+    }
+    return streams;
+};
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('startBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.innerText = "Starting...";
+
+    const mixer = new VideoMixer(640, 360, 15);
+
+    try {
+        const streams = createSourceStreams();
+
+        // Tier 3 兼容性：同步创建 video 元素并启动播放
+        for(let i=0; i<4; i++) {
+            mixer.addStream(streams[i], `user-${i}`);
+        }
+        mixer.playAllVideos();
+
+        // 启动输出视频
+        const mixedStream = mixer.getMixedStream();
+        const outVid = document.getElementById('outputVideo');
+        outVid.srcObject = mixedStream;
+        outVid.play().catch(e => console.error("Output play failed:", e));
+
+    } catch(e) {
+        mixer.log("Fatal Init Error: " + e.message);
+        console.error(e);
+    }
+});
+</script>
+</body>
+</html>
