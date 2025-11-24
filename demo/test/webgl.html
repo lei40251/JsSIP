@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>720P High-Res 15FPS Mixer - Selectable Mode</title>
+    <title>720P High-Res 30FPS Mixer - Selectable Mode</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
         #status { color: #0f0; font-size: 12px; padding: 8px; border: 1px solid #333; background: #111; margin: 10px auto; max-width: 800px; border-radius: 4px; }
@@ -18,7 +18,7 @@
 </head>
 <body>
 
-    <h3>720P High-Res / 15 FPS (Final Fix)</h3>
+    <h3>720P High-Res / 30 FPS (Final Fix)</h3>
     <div id="status">System Standby</div>
     
     <div class="main-stage">
@@ -171,7 +171,7 @@ function drawCanvas2D(frames, totalSources) {
  */
 class ProductionMixer {
     constructor(renderModeOverride = 'Auto') {
-        this.config = { width: 1280, height: 720, fps: 15 };
+        this.config = { width: 1280, height: 720, fps: 30 };
         this.renderModeOverride = renderModeOverride; 
         
         this.sources = []; 
@@ -202,7 +202,7 @@ class ProductionMixer {
         if (selectedMode === 'MainThread_Canvas2D') {
             this.renderMode = 'Tier 3 (Main Thread)';
             this.ctx = this.canvas.getContext('2d', { alpha: false });
-            this.log(`Mode: Manual Main Thread (720P@15FPS)`);
+            this.log(`Mode: Manual Main Thread (720P@30FPS)`);
             return;
         }
 
@@ -221,7 +221,7 @@ class ProductionMixer {
                 this.worker.onmessage = (e) => {
                     if (e.data.type === 'READY') {
                         this.renderMode = e.data.mode;
-                        this.log(`System Ready: ${this.renderMode} (720P@15FPS)`);
+                        this.log(`System Ready: ${this.renderMode} (720P@30FPS)`);
                     } else if (e.data.type === 'DONE') {
                         this.isWorkerBusy = false;
                     }
