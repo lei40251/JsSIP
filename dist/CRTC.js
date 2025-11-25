@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.10.202511252228
+ * CRTC v1.11.10.202511252236
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.10.405022504456 (Web)',
+  USER_AGENT: 'UA/1.11.10.405022504472 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.10.405022504456');
+debug('version %s', '1.11.10.405022504472');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.10.405022504456';
+    return '1.11.10.405022504472';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -25196,7 +25196,7 @@ module.exports = /*#__PURE__*/function () {
         return;
       }
       var extraHeaders = this._extraHeaders.slice();
-      extraHeaders.push("Contact: ".concat(this._contact, ";").concat(this._extraContactParams));
+      extraHeaders.push("Contact: ".concat(this._contact).concat(this._extraContactParams));
       extraHeaders.push("Expires: ".concat(this._expires));
       var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
         'to_uri': this._to_uri,
@@ -25346,7 +25346,7 @@ module.exports = /*#__PURE__*/function () {
       if (options.all) {
         extraHeaders.push("Contact: *".concat(this._extraContactParams));
       } else {
-        extraHeaders.push("Contact: ".concat(this._contact, ";").concat(this._extraContactParams));
+        extraHeaders.push("Contact: ".concat(this._contact).concat(this._extraContactParams));
       }
       extraHeaders.push('Expires: 0');
       var request = new SIPMessage.OutgoingRequest(CRTC_C.REGISTER, this._registrar, this._ua, {
