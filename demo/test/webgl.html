@@ -216,8 +216,9 @@ class ProductionMixer {
                 const requestedMode = selectedMode === 'Auto' ? 'Worker_WebGL' : selectedMode;
                 
                 const offscreen = this.canvas.transferControlToOffscreen();
-                const blob = new Blob([workerScript], { type: 'application/javascript' });
-                this.worker = new Worker(URL.createObjectURL(blob));
+                // const blob = new Blob([workerScript], { type: 'application/javascript' });
+                // this.worker = new Worker(URL.createObjectURL(blob));
+                this.worker = new Worker('./webgl.worker.js');
                 this.worker.onmessage = (e) => {
                     if (e.data.type === 'READY') {
                         this.renderMode = e.data.mode;

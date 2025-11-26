@@ -77,14 +77,14 @@
  * Worker Code (FIXED: Standard string concatenation used for mode message)
  * ============================================================================
  */
-const workerScript = `
+//const workerScript = `
 let canvas, gl, ctx, renderMode;
 let textureCache = [null, null, null, null]; // WebGL 纹理缓存数组，最多 4 个源
 
 // WebGL 顶点着色器：定义顶点位置和纹理坐标
-const vsSource = \`attribute vec4 a_position; attribute vec2 a_texCoord; varying vec2 v_texCoord; void main() { gl_Position = a_position; v_texCoord = a_texCoord; }\`;
+const vsSource = `attribute vec4 a_position; attribute vec2 a_texCoord; varying vec2 v_texCoord; void main() { gl_Position = a_position; v_texCoord = a_texCoord; }`;
 // WebGL 片段着色器：通过采样纹理来获取颜色，实现图像绘制
-const fsSource = \`precision mediump float; varying vec2 v_texCoord; uniform sampler2D u_image; void main() { gl_FragColor = texture2D(u_image, v_texCoord); }\`;
+const fsSource = `precision mediump float; varying vec2 v_texCoord; uniform sampler2D u_image; void main() { gl_FragColor = texture2D(u_image, v_texCoord); }`;
 
 /**
  * 初始化 WebGL 渲染环境
@@ -241,7 +241,7 @@ function drawCanvas2D(frames, totalSources) {
         item.frame.close(); // 释放 VideoFrame/ImageBitmap 资源
     });
 }
-`;
+// `;
 ```
 
 ### 主线程 - 混合器类 (`ProductionMixer`)
