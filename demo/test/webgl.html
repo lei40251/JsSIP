@@ -1,421 +1,640 @@
 <!DOCTYPE html>
+<!-- 声明HTML5文档类型 -->
 <html lang="en">
+<!-- 设置网页语言为英语 -->
+
 <head>
+    <!-- 文档头部信息 -->
     <meta charset="UTF-8">
+    <!-- 设置字符编码为UTF-8 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 设置视口，适配移动设备，禁止用户缩放 -->
     <title>720P High-Res 30FPS Mixer - Selectable Mode</title>
+    <!-- 设置页面标题 -->
+
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-        #status { color: #0f0; font-size: 12px; padding: 8px; border: 1px solid #333; background: #111; margin: 10px auto; max-width: 800px; border-radius: 4px; }
-        #outputVideo { width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; border: 1px solid #333; background: #111; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .controls { margin: 20px; display: flex; gap: 15px; justify-content: center; align-items: center; }
-        button, select { padding: 12px 20px; font-size: 16px; font-weight: 600; border-radius: 6px; cursor: pointer; border: 1px solid #555; background: #2c2c2e; color: white; }
-        #startBtn { background: #007aff; border-color: #007aff; }
-        #stopBtn { background: #ff3b30; border-color: #ff3b30; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .force-visible { position: fixed; top: 0; left: 0; width: 1px; height: 1px; z-index: 99999; opacity: 0.01; pointer-events: none; }
+        /* 页面样式定义 */
+        body {
+            /* 页面主体样式 */
+            background: #000;
+            /* 黑色背景 */
+            color: #fff;
+            /* 白色文字 */
+            font-family: sans-serif;
+            /* 无衬线字体 */
+            text-align: center;
+            /* 文字居中对齐 */
+            margin: 0;
+            /* 外边距为0 */
+            padding: 20px;
+            /* 内边距20像素 */
+        }
+
+        #status {
+            /* 状态显示区域样式 */
+            color: #0f0;
+            /* 绿色文字 */
+            font-size: 12px;
+            /* 字体大小12像素 */
+            padding: 8px;
+            /* 内边距8像素 */
+            border: 1px solid #333;
+            /* 1像素灰色边框 */
+            background: #111;
+            /* 深灰背景 */
+            margin: 10px auto;
+            /* 上下10像素外边距，水平居中 */
+            max-width: 800px;
+            /* 最大宽度800像素 */
+            border-radius: 4px;
+            /* 4像素圆角 */
+        }
+
+        #outputVideo {
+            /* 输出视频元素样式 */
+            width: 100%;
+            /* 宽度占父容器100% */
+            max-width: 1280px;
+            /* 最大宽度1280像素 */
+            aspect-ratio: 16 / 9;
+            /* 保持16:9宽高比 */
+            border: 1px solid #333;
+            /* 1像素灰色边框 */
+            background: #111;
+            /* 深灰背景 */
+            border-radius: 8px;
+            /* 8像素圆角 */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            /* 阴影效果 */
+        }
+
+        .controls {
+            /* 控制按钮容器样式 */
+            margin: 20px;
+            /* 外边距20像素 */
+            display: flex;
+            /* 使用弹性布局 */
+            gap: 15px;
+            /* 元素间距15像素 */
+            justify-content: center;
+            /* 水平居中 */
+            align-items: center;
+            /* 垂直居中 */
+        }
+
+        button,
+        select {
+            /* 按钮和选择框通用样式 */
+            padding: 12px 20px;
+            /* 内边距 */
+            font-size: 16px;
+            /* 字体大小 */
+            font-weight: 600;
+            /* 字体粗细 */
+            border-radius: 6px;
+            /* 圆角 */
+            cursor: pointer;
+            /* 鼠标指针样式 */
+            border: 1px solid #555;
+            /* 边框 */
+            background: #2c2c2e;
+            /* 背景色 */
+            color: white;
+            /* 文字颜色 */
+        }
+
+        #startBtn {
+            /* 开始按钮特殊样式 */
+            background: #007aff;
+            /* 蓝色背景 */
+            border-color: #007aff;
+            /* 蓝色边框 */
+        }
+
+        #stopBtn {
+            /* 停止按钮特殊样式 */
+            background: #ff3b30;
+            /* 红色背景 */
+            border-color: #ff3b30;
+            /* 红色边框 */
+        }
+
+        button:disabled {
+            /* 禁用按钮样式 */
+            opacity: 0.5;
+            /* 透明度50% */
+            cursor: not-allowed;
+            /* 禁止手势 */
+        }
+
+        .force-visible {
+            /* 强制可见类，用于隐藏但保持功能的视频元素 */
+            position: fixed;
+            /* 固定定位 */
+            top: 0;
+            /* 顶部位置 */
+            left: 0;
+            /* 左侧位置 */
+            width: 1px;
+            /* 宽度1像素 */
+            height: 1px;
+            /* 高度1像素 */
+            z-index: 99999;
+            /* 层级很高 */
+            opacity: 0.01;
+            /* 几乎透明 */
+            pointer-events: none;
+            /* 不响应鼠标事件 */
+        }
     </style>
 </head>
-<body>
 
+<body>
+    <!-- 页面主体内容 -->
     <h3>720P High-Res / 30 FPS (Final Fix)</h3>
+    <!-- 页面标题 -->
     <div id="status">System Standby</div>
-    
+    <!-- 状态显示区域，默认显示"系统待机" -->
+
     <div class="main-stage">
+        <!-- 主要显示区域 -->
         <video id="outputVideo" autoplay playsinline webkit-playsinline muted controls></video>
+        <!-- 输出视频元素，具有自动播放、内联播放、静音和控制条属性 -->
     </div>
 
     <div class="controls">
+        <!-- 控制按钮区域 -->
         <label for="renderModeSelect" style="color: #ccc;">渲染模式:</label>
+        <!-- 渲染模式选择标签 -->
         <select id="renderModeSelect">
+            <!-- 渲染模式选择下拉框 -->
             <option value="Auto">Auto (推荐)</option>
+            <!-- 自动模式选项 -->
             <option value="Worker_WebGL">Tier 1: Worker + WebGL (最高性能)</option>
+            <!-- WebGL工作线程模式选项 -->
             <option value="Worker_Canvas2D">Tier 2: Worker + 2D (中等性能)</option>
+            <!-- Canvas2D工作线程模式选项 -->
             <option value="MainThread_Canvas2D">Tier 3: Main Thread + 2D (最低兼容)</option>
+            <!-- 主线程Canvas2D模式选项 -->
         </select>
         <button id="startBtn">Start Mixer</button>
+        <!-- 开始混合按钮 -->
         <button id="stopBtn" disabled>Stop</button>
+        <!-- 停止按钮，默认禁用 -->
     </div>
 
     <div style="display:none;">
+        <!-- 隐藏的画布容器 -->
         <canvas id="c1" width="1280" height="720"></canvas>
+        <!-- 第一个测试画布，分辨率为1280x720 -->
         <canvas id="c2" width="1280" height="720"></canvas>
+        <!-- 第二个测试画布 -->
         <canvas id="c3" width="1280" height="720"></canvas>
+        <!-- 第三个测试画布 -->
         <canvas id="c4" width="1280" height="720"></canvas>
+        <!-- 第四个测试画布 -->
     </div>
 
-<script>
-/**
- * ============================================================================
- * Worker Code (FIXED: Standard string concatenation used for mode message)
- * ============================================================================
- */
-const workerScript = `
-let canvas, gl, ctx, renderMode;
-let textureCache = [null, null, null, null];
+    <script>
+        /**
+         * ============================================================================
+         * Worker Code (FIXED: Standard string concatenation used for mode message)
+         * ============================================================================
+         */
+        // 注释掉的工作线程代码部分，实际使用的是外部webgl.worker.js文件
 
-const vsSource = \`attribute vec4 a_position; attribute vec2 a_texCoord; varying vec2 v_texCoord; void main() { gl_Position = a_position; v_texCoord = a_texCoord; }\`;
-const fsSource = \`precision mediump float; varying vec2 v_texCoord; uniform sampler2D u_image; void main() { gl_FragColor = texture2D(u_image, v_texCoord); }\`;
+        /**
+         * ============================================================================
+         * Main Mixer Class (No changes needed here, as the fix was in the workerScript definition)
+         * ============================================================================
+         */
 
-function initWebGL(gl) {
-    try {
-        const compile = (t, s) => { const h = gl.createShader(t); gl.shaderSource(h, s); gl.compileShader(h); return h; };
-        const p = gl.createProgram();
-        gl.attachShader(p, compile(gl.VERTEX_SHADER, vsSource));
-        gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fsSource));
-        gl.linkProgram(p);
-        gl.useProgram(p);
-        const buf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1]), gl.STATIC_DRAW);
-        const pl = gl.getAttribLocation(p, "a_position");
-        const tl = gl.getAttribLocation(p, "a_texCoord");
-        gl.vertexAttribPointer(pl, 2, gl.FLOAT, false, 16, 0); gl.enableVertexAttribArray(pl);
-        gl.vertexAttribPointer(tl, 2, gl.FLOAT, false, 16, 8); gl.enableVertexAttribArray(tl);
-        gl.uniform1i(gl.getUniformLocation(p, "u_image"), 0);
-        return true;
-    } catch(e) { return false; }
-}
+        /**
+         * 生产混流器类
+         * 负责管理多个视频流的混合处理，支持多种渲染模式：
+         * 1. Worker + WebGL (高性能)
+         * 2. Worker + Canvas2D (中等性能)
+         * 3. Main Thread + Canvas2D (最低兼容性)
+         */
+        class ProductionMixer {
+            /**
+             * 构造函数
+             * @param {string} renderModeOverride - 渲染模式覆盖设置，默认为'Auto'
+             */
+            constructor(renderModeOverride = 'Auto') {
+                // 配置参数：分辨率和帧率
+                this.config = { width: 1280, height: 720, fps: 30 };
 
-self.onmessage = function(e) {
-    const { type, payload } = e.data;
-    
-    if (type === 'INIT') {
-        canvas = payload.canvas;
-        const requestedMode = payload.requestedMode; 
-        const isAndroid = payload.isAndroid;
+                // 渲染模式覆盖设置
+                this.renderModeOverride = renderModeOverride;
 
-        if (requestedMode === 'Worker_WebGL') {
-            const attr = { alpha: false, desynchronized: true, antialias: false, powerPreference: "high-performance" };
-            gl = canvas.getContext('webgl2', attr) || canvas.getContext('webgl', attr);
-            
-            if (gl && initWebGL(gl)) {
-                renderMode = 'WebGL';
-                self.postMessage({ type: 'READY', mode: 'Tier 1 (Worker WebGL)' });
-                return;
+                // 视频源数组
+                this.sources = [];
+
+                // 创建离屏画布用于渲染
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = this.config.width;
+                this.canvas.height = this.config.height;
+
+                // 运行状态标志
+                this.isRunning = false;
+
+                // Web Worker实例
+                this.worker = null;
+
+                // 当前渲染模式
+                this.renderMode = 'Init...';
+
+                // Worker忙碌状态标志
+                this.isWorkerBusy = false;
+
+                // 帧间隔时间（毫秒）
+                this.frameInterval = 1000 / this.config.fps;
+
+                // 上一帧时间戳
+                this.lastFrameTime = 0;
+
+                // 动画帧ID
+                this.animationFrameId = null;
+
+                // 是否支持VideoFrame API
+                this.hasVideoFrame = typeof VideoFrame !== 'undefined';
+
+                // 初始化混流器
+                this._init();
             }
-        }
 
-        // Worker Canvas2D Fallback or request
-        // Android 上 Canvas 2D 不开 desynchronized，防止撕裂/Bug
-        ctx = canvas.getContext('2d', { alpha: false, desynchronized: !isAndroid });
-        renderMode = 'Canvas2D';
-        // FIXED LINE: Standard string concatenation
-        self.postMessage({ type: 'READY', mode: 'Tier 2 (Worker 2D / ' + requestedMode + ')' });
-    } 
-    else if (type === 'DRAW') {
-        try {
-            if (renderMode === 'WebGL') drawWebGL(payload.frames, payload.totalSources);
-            else drawCanvas2D(payload.frames, payload.totalSources);
-        } finally {
-            self.postMessage({ type: 'DONE' });
-        }
-    }
-    else if (type === 'DESTROY') {
-        if (gl) {
-             textureCache.forEach(t => t && gl.deleteTexture(t));
-             gl.getExtension('WEBGL_losing_context')?.loseContext();
-        }
-        self.close();
-    }
-};
+            /**
+             * 初始化混流器
+             * 根据浏览器支持情况和用户选择确定最佳渲染模式
+             */
+            _init() {
+                // 检测是否为Android设备
+                const isAndroid = /Android/i.test(navigator.userAgent);
 
-function drawWebGL(frames, totalSources) {
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    const w = gl.canvas.width; const h = gl.canvas.height;
-    const useGrid = totalSources > 1;
-    const gridW = useGrid ? w / 2 : w;
-    const gridH = useGrid ? h / 2 : h;
+                // 检测浏览器是否支持Web Worker和OffscreenCanvas
+                const supportsWorker = window.Worker && window.OffscreenCanvas;
 
-    frames.forEach(item => {
-        const i = item.index;
-        if (!textureCache[i]) {
-            textureCache[i] = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, textureCache[i]);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        } else {
-            gl.bindTexture(gl.TEXTURE_2D, textureCache[i]);
-        }
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.frame);
-        let x = useGrid ? (i % 2) * gridW : 0;
-        let y = useGrid ? Math.floor(i / 2) * gridH : 0;
-        gl.viewport(x, h - (y + gridH), gridW, gridH);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        item.frame.close();
-    });
-    gl.flush();
-}
+                // 获取用户选择的渲染模式
+                let selectedMode = this.renderModeOverride;
 
-function drawCanvas2D(frames, totalSources) {
-    const w = canvas.width; const h = canvas.height;
-    if (totalSources < 4) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); }
-    const gridW = totalSources > 1 ? w / 2 : w;
-    const gridH = totalSources > 1 ? h / 2 : h;
-    frames.forEach(item => {
-        const i = item.index;
-        let x = totalSources > 1 ? (i % 2) * gridW : 0;
-        let y = totalSources > 1 ? Math.floor(i / 2) * gridH : 0;
-        ctx.drawImage(item.frame, x, y, gridW, gridH);
-        item.frame.close();
-    });
-}
-`;
+                // 如果强制使用主线程Canvas2D模式
+                if (selectedMode === 'MainThread_Canvas2D') {
+                    this.renderMode = 'Tier 3 (Main Thread)';
+                    // 获取2D渲染上下文
+                    this.ctx = this.canvas.getContext('2d', { alpha: false });
+                    this.log(`Mode: Manual Main Thread (720P@30FPS)`);
+                    return;
+                }
 
-/**
- * ============================================================================
- * Main Mixer Class (No changes needed here, as the fix was in the workerScript definition)
- * ============================================================================
- */
-class ProductionMixer {
-    constructor(renderModeOverride = 'Auto') {
-        this.config = { width: 1280, height: 720, fps: 30 };
-        this.renderModeOverride = renderModeOverride; 
-        
-        this.sources = []; 
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = this.config.width;
-        this.canvas.height = this.config.height;
-        
-        this.isRunning = false;
-        this.worker = null;
-        this.renderMode = 'Init...';
-        this.isWorkerBusy = false;
-        
-        this.frameInterval = 1000 / this.config.fps;
-        this.lastFrameTime = 0;
-        this.animationFrameId = null;
-        
-        this.hasVideoFrame = typeof VideoFrame !== 'undefined';
-        
-        this._init();
-    }
+                // 如果选择了非自动模式但浏览器不支持Worker，则回退到主线程模式
+                if (selectedMode !== 'Auto' && !supportsWorker) {
+                    selectedMode = 'MainThread_Canvas2D';
+                    this.log(`⚠️ Worker Mode requested but OffscreenCanvas not supported. Falling back to Main Thread.`);
+                }
 
-    _init() {
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        const supportsWorker = window.Worker && window.OffscreenCanvas;
-
-        let selectedMode = this.renderModeOverride;
-        
-        if (selectedMode === 'MainThread_Canvas2D') {
-            this.renderMode = 'Tier 3 (Main Thread)';
-            this.ctx = this.canvas.getContext('2d', { alpha: false });
-            this.log(`Mode: Manual Main Thread (720P@30FPS)`);
-            return;
-        }
-
-        if (selectedMode !== 'Auto' && !supportsWorker) {
-             selectedMode = 'MainThread_Canvas2D'; 
-             this.log(`⚠️ Worker Mode requested but OffscreenCanvas not supported. Falling back to Main Thread.`);
-        }
-        
-        if (supportsWorker) {
-            try {
-                const requestedMode = selectedMode === 'Auto' ? 'Worker_WebGL' : selectedMode;
-                
-                const offscreen = this.canvas.transferControlToOffscreen();
-                // const blob = new Blob([workerScript], { type: 'application/javascript' });
-                // this.worker = new Worker(URL.createObjectURL(blob));
-                this.worker = new Worker('./webgl.worker.js');
-                this.worker.onmessage = (e) => {
-                    if (e.data.type === 'READY') {
-                        this.renderMode = e.data.mode;
-                        this.log(`System Ready: ${this.renderMode} (720P@30FPS)`);
-                    } else if (e.data.type === 'DONE') {
-                        this.isWorkerBusy = false;
-                    }
-                };
-                this.worker.postMessage({ 
-                    type: 'INIT', 
-                    payload: { canvas: offscreen, isAndroid: isAndroid, requestedMode: requestedMode } 
-                }, [offscreen]);
-                return;
-            } catch (e) { console.warn("Worker init failed:", e); }
-        }
-        
-        this.renderMode = 'Tier 3 (Main Thread)';
-        this.ctx = this.canvas.getContext('2d', { alpha: false });
-        this.log(`System Ready: Tier 3 Fallback (Worker initialization failed)`);
-    }
-
-    log(msg) { document.getElementById('status').innerText = msg; }
-
-    addStream(stream, id) {
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.muted = true;
-        video.autoplay = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.className = 'force-visible';
-        
-        document.body.appendChild(video);
-        this.sources.push({ id, element: video, index: this.sources.length });
-    }
-
-    start() {
-        if (this.isRunning) return;
-        this.isRunning = true;
-        this.sources.forEach(s => s.element.play().catch(()=>{}));
-        this.loop();
-    }
-
-    destroy() {
-        this.isRunning = false;
-        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
-        if (this.worker) {
-            this.worker.postMessage({ type: 'DESTROY' });
-            this.worker.terminate();
-            this.worker = null;
-        }
-        this.sources.forEach(s => {
-            s.element.srcObject = null;
-            s.element.remove();
-        });
-        this.sources = [];
-        document.getElementById('outputVideo').srcObject = null;
-        this.log("Stopped");
-    }
-
-    getMixedStream() {
-        return this.canvas.captureStream(this.config.fps);
-    }
-
-    async loop(timestamp) {
-        if (!this.isRunning) return;
-        this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
-
-        if (timestamp && (timestamp - this.lastFrameTime < this.frameInterval)) return;
-        this.lastFrameTime = timestamp;
-
-        if (this.worker && this.isWorkerBusy) return;
-
-        const total = this.sources.length;
-        
-        let validItems = [];
-
-        try {
-            const framesPromises = this.sources.map(async (s) => {
-                if (s.element.readyState >= 2) {
+                // 如果支持Worker，则尝试初始化Worker模式
+                if (supportsWorker) {
                     try {
-                        if (this.hasVideoFrame) {
-                            return { index: s.index, frame: new VideoFrame(s.element) };
-                        } else {
-                            const bmp = await createImageBitmap(s.element); 
-                            return { index: s.index, frame: bmp };
+                        // 确定请求的渲染模式
+                        const requestedMode = selectedMode === 'Auto' ? 'Worker_WebGL' : selectedMode;
+
+                        // 将画布转换为离屏画布以供Worker使用
+                        const offscreen = this.canvas.transferControlToOffscreen();
+
+                        // 创建Worker实例，加载外部webgl.worker.js文件
+                        this.worker = new Worker('./webgl.worker.js');
+
+                        // 监听Worker消息
+                        this.worker.onmessage = (e) => {
+                            // 处理Worker准备就绪消息
+                            if (e.data.type === 'READY') {
+                                this.renderMode = e.data.mode;
+                                this.log(`System Ready: ${this.renderMode} (720P@30FPS)`);
+                            }
+                            // 处理Worker绘制完成消息
+                            else if (e.data.type === 'DONE') {
+                                this.isWorkerBusy = false;
+                            }
+                        };
+
+                        // 向Worker发送初始化消息
+                        this.worker.postMessage({
+                            type: 'INIT',
+                            payload: {
+                                canvas: offscreen,
+                                isAndroid: isAndroid,
+                                requestedMode: requestedMode
+                            }
+                        }, [offscreen]); // 将离屏画布传递给Worker
+                        return;
+                    } catch (e) {
+                        // Worker初始化失败时输出警告
+                        console.warn("Worker init failed:", e);
+                    }
+                }
+
+                // 回退到主线程Canvas2D模式
+                this.renderMode = 'Tier 3 (Main Thread)';
+                this.ctx = this.canvas.getContext('2d', { alpha: false });
+                this.log(`System Ready: Tier 3 Fallback (Worker initialization failed)`);
+            }
+
+            /**
+             * 日志输出方法
+             * @param {string} msg - 要显示的日志消息
+             */
+            log(msg) {
+                document.getElementById('status').innerText = msg;
+            }
+
+            /**
+             * 添加视频流到混流器
+             * @param {MediaStream} stream - 要添加的媒体流
+             * @param {string} id - 流的唯一标识符
+             */
+            addStream(stream, id) {
+                // 创建视频元素用于播放媒体流
+                const video = document.createElement('video');
+                video.srcObject = stream;        // 设置视频源
+                video.muted = true;              // 静音播放
+                video.autoplay = true;           // 自动播放
+                video.setAttribute('playsinline', '');      // 内联播放
+                video.setAttribute('webkit-playsinline', ''); // iOS内联播放
+                video.className = 'force-visible';          // 添加强制可见类
+
+                // 将视频元素添加到页面body中
+                document.body.appendChild(video);
+
+                // 将视频源添加到sources数组中
+                this.sources.push({ id, element: video, index: this.sources.length });
+            }
+
+            /**
+             * 启动混流器
+             */
+            start() {
+                // 如果已经在运行则直接返回
+                if (this.isRunning) return;
+
+                // 设置运行状态为true
+                this.isRunning = true;
+
+                // 播放所有视频源
+                this.sources.forEach(s => s.element.play().catch(() => { }));
+
+                // 启动渲染循环
+                this.loop();
+            }
+
+            /**
+             * 销毁混流器，释放资源
+             */
+            destroy() {
+                // 设置运行状态为false
+                this.isRunning = false;
+
+                // 取消动画帧回调
+                if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+
+                // 终止Worker并释放资源
+                if (this.worker) {
+                    this.worker.postMessage({ type: 'DESTROY' });
+                    this.worker.terminate();
+                    this.worker = null;
+                }
+
+                // 移除所有视频元素
+                this.sources.forEach(s => {
+                    s.element.srcObject = null;
+                    s.element.remove();
+                });
+                this.sources = [];
+
+                // 清空输出视频的源
+                document.getElementById('outputVideo').srcObject = null;
+
+                // 更新状态显示
+                this.log("Stopped");
+            }
+
+            /**
+             * 获取混合后的媒体流
+             * @returns {MediaStream} 混合后的媒体流
+             */
+            getMixedStream() {
+                // 使用captureStream API捕获画布内容作为媒体流
+                return this.canvas.captureStream(this.config.fps);
+            }
+
+            /**
+             * 渲染循环函数
+             * @param {DOMHighResTimeStamp} timestamp - 时间戳
+             */
+            async loop(timestamp) {
+                // 如果未运行则直接返回
+                if (!this.isRunning) return;
+
+                // 请求下一帧动画
+                this.animationFrameId = requestAnimationFrame((t) => this.loop(t));
+
+                // 控制帧率，确保按指定帧率渲染
+                if (timestamp && (timestamp - this.lastFrameTime < this.frameInterval)) return;
+                this.lastFrameTime = timestamp;
+
+                // 如果Worker正忙则跳过本次渲染
+                if (this.worker && this.isWorkerBusy) return;
+
+                // 获取视频源数量
+                const total = this.sources.length;
+
+                // 存储有效的帧数据
+                let validItems = [];
+
+                try {
+                    // 为每个视频源创建帧数据Promise
+                    const framesPromises = this.sources.map(async (s) => {
+                        // 检查视频元素是否已准备好
+                        if (s.element.readyState >= 2) {
+                            try {
+                                // 如果支持VideoFrame API，则创建VideoFrame对象
+                                if (this.hasVideoFrame) {
+                                    return { index: s.index, frame: new VideoFrame(s.element) };
+                                } else {
+                                    // 否则创建ImageBitmap对象
+                                    const bmp = await createImageBitmap(s.element);
+                                    return { index: s.index, frame: bmp };
+                                }
+                            } catch (e) {
+                                // 出错时返回null
+                                return null;
+                            }
                         }
-                    } catch (e) { return null; }
-                }
-                return null;
-            });
+                        // 未准备好时返回null
+                        return null;
+                    });
 
-            const results = await Promise.all(framesPromises);
-            validItems = results.filter(r => r !== null);
+                    // 等待所有帧数据Promise完成
+                    const results = await Promise.all(framesPromises);
 
-            if (validItems.length > 0) {
-                if (this.worker && this.renderMode.includes('Worker')) {
-                    this.isWorkerBusy = true;
-                    this.worker.postMessage(
-                        { type: 'DRAW', payload: { frames: validItems, totalSources: total } }, 
-                        validItems.map(i => i.frame) 
-                    );
-                    validItems = []; 
-                } else if (this.ctx) {
-                    this._drawMain(validItems, total);
+                    // 过滤出有效的帧数据
+                    validItems = results.filter(r => r !== null);
+
+                    // 如果有有效帧数据则进行渲染
+                    if (validItems.length > 0) {
+                        // 使用Worker进行渲染
+                        if (this.worker && this.renderMode.includes('Worker')) {
+                            this.isWorkerBusy = true;
+                            // 向Worker发送绘制消息
+                            this.worker.postMessage(
+                                { type: 'DRAW', payload: { frames: validItems, totalSources: total } },
+                                validItems.map(i => i.frame) // 将帧数据转移给Worker
+                            );
+                            validItems = [];
+                        }
+                        // 使用主线程进行渲染
+                        else if (this.ctx) {
+                            this._drawMain(validItems, total);
+                        }
+                    }
+                } catch (error) {
+                    // 捕获并输出错误信息
+                    console.error("Loop Error:", error);
+                } finally {
+                    // 关闭所有帧数据以释放资源
+                    if (validItems.length > 0) {
+                        validItems.forEach(i => i.frame.close());
+                    }
                 }
             }
-        } catch (error) {
-            console.error("Loop Error:", error);
-        } finally {
-            if (validItems.length > 0) {
-                validItems.forEach(i => i.frame.close());
+
+            /**
+             * 主线程绘制方法
+             * @param {Array} items - 要绘制的帧数据项
+             * @param {number} total - 总视频源数
+             */
+            _drawMain(items, total) {
+                // 如果视频源少于4个，则清空画布
+                if (total < 4) {
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.fillRect(0, 0, this.config.width, this.config.height);
+                }
+
+                // 计算网格尺寸
+                const gridW = total > 1 ? this.config.width / 2 : this.config.width;
+                const gridH = total > 1 ? this.config.height / 2 : this.config.height;
+
+                // 绘制每个视频帧
+                items.forEach(item => {
+                    const i = item.index;
+                    // 计算绘制位置
+                    let x = total > 1 ? (i % 2) * gridW : 0;
+                    let y = total > 1 ? Math.floor(i / 2) * gridH : 0;
+
+                    // 在画布上绘制视频帧
+                    this.ctx.drawImage(item.frame, x, y, gridW, gridH);
+
+                    // 关闭帧数据以释放资源
+                    item.frame.close();
+                });
             }
         }
-    }
 
-    _drawMain(items, total) {
-        if (total < 4) {
-            this.ctx.fillStyle = '#000';
-            this.ctx.fillRect(0, 0, this.config.width, this.config.height);
-        }
-        const gridW = total > 1 ? this.config.width / 2 : this.config.width;
-        const gridH = total > 1 ? this.config.height / 2 : this.config.height;
+        // === Demo App Logic ===
+        // 演示应用程序逻辑部分
 
-        items.forEach(item => {
-            const i = item.index;
-            let x = total > 1 ? (i % 2) * gridW : 0;
-            let y = total > 1 ? Math.floor(i / 2) * gridH : 0;
-            this.ctx.drawImage(item.frame, x, y, gridW, gridH);
-            item.frame.close(); 
+        // 全局变量：混流器实例和源定时器数组
+        let mixer = null;
+        let sourceIntervals = [];
+
+        // 为开始按钮添加点击事件监听器
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            // 获取相关DOM元素
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const selectedMode = document.getElementById('renderModeSelect').value;
+
+            // 禁用开始按钮，启用停止按钮，禁用模式选择
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            document.getElementById('renderModeSelect').disabled = true;
+
+            // 创建新的混流器实例
+            mixer = new ProductionMixer(selectedMode);
+
+            try {
+                // 定义四种颜色用于测试视频流
+                const colors = ['#ff3b30', '#34c759', '#007aff', '#ffcc00'];
+                const streams = [];
+                const startTime = Date.now();
+
+                // 创建四个测试视频流
+                for (let i = 1; i <= 4; i++) {
+                    // 获取对应的画布元素
+                    const canvas = document.getElementById('c' + i);
+                    // 获取2D渲染上下文
+                    const ctx = canvas.getContext('2d', { alpha: false });
+
+                    // 设置定时器定期更新画布内容
+                    const intervalId = setInterval(() => {
+                        // 计算动画偏移量
+                        const elapsed = Date.now() - startTime;
+                        const offset = Math.floor(elapsed * 0.5) % 1280;
+
+                        // 清空画布并绘制移动方块和数字
+                        ctx.fillStyle = '#1c1c1e';
+                        ctx.fillRect(0, 0, 1280, 720);
+                        ctx.fillStyle = colors[i - 1];
+                        ctx.fillRect(offset, 260, 200, 200);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 120px sans-serif';
+                        ctx.fillText(i, 60, 180);
+                    }, 33); // 约30fps
+
+                    // 将定时器ID保存到数组中
+                    sourceIntervals.push(intervalId);
+
+                    // 捕获画布内容作为媒体流
+                    streams.push(canvas.captureStream(mixer.config.fps));
+                }
+
+                // 将所有测试流添加到混流器
+                streams.forEach((s, i) => mixer.addStream(s, `uid-${i}`));
+
+                // 启动混流器
+                mixer.start();
+
+                // 获取混合后的流并设置到输出视频元素
+                const outVid = document.getElementById('outputVideo');
+                outVid.srcObject = mixer.getMixedStream();
+                outVid.play().catch(console.error);
+
+            } catch (e) {
+                // 捕获并处理错误
+                console.error(e);
+                mixer.log("Error: " + e.message);
+                document.getElementById('stopBtn').click();
+            }
         });
-    }
-}
 
-// === Demo App Logic ===
-let mixer = null;
-let sourceIntervals = [];
+        // 为停止按钮添加点击事件监听器
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            // 销毁混流器实例
+            if (mixer) {
+                mixer.destroy();
+                mixer = null;
+            }
 
-document.getElementById('startBtn').addEventListener('click', async () => {
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const selectedMode = document.getElementById('renderModeSelect').value;
-    
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    document.getElementById('renderModeSelect').disabled = true;
+            // 清除所有测试源的定时器
+            sourceIntervals.forEach(clearInterval);
+            sourceIntervals = [];
 
-    mixer = new ProductionMixer(selectedMode); 
-
-    try {
-        const colors = ['#ff3b30', '#34c759', '#007aff', '#ffcc00'];
-        const streams = [];
-        const startTime = Date.now();
-        
-        for(let i=1; i<=4; i++) {
-            const canvas = document.getElementById('c'+i);
-            const ctx = canvas.getContext('2d', { alpha: false });
-            
-            const intervalId = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const offset = Math.floor(elapsed * 0.5) % 1280;
-
-                ctx.fillStyle = '#1c1c1e'; ctx.fillRect(0,0,1280,720);
-                ctx.fillStyle = colors[i-1]; ctx.fillRect(offset, 260, 200, 200);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 120px sans-serif'; ctx.fillText(i, 60, 180);
-            }, 33);
-            sourceIntervals.push(intervalId);
-            
-            streams.push(canvas.captureStream(mixer.config.fps));
-        }
-
-        streams.forEach((s, i) => mixer.addStream(s, `uid-${i}`));
-        mixer.start();
-
-        const outVid = document.getElementById('outputVideo');
-        outVid.srcObject = mixer.getMixedStream();
-        outVid.play().catch(console.error);
-
-    } catch(e) {
-        console.error(e);
-        mixer.log("Error: " + e.message);
-        document.getElementById('stopBtn').click(); 
-    }
-});
-
-document.getElementById('stopBtn').addEventListener('click', () => {
-    if (mixer) {
-        mixer.destroy();
-        mixer = null;
-    }
-    sourceIntervals.forEach(clearInterval);
-    sourceIntervals = [];
-    
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
-    document.getElementById('renderModeSelect').disabled = false;
-});
-</script>
+            // 启用开始按钮，禁用停止按钮，启用模式选择
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('renderModeSelect').disabled = false;
+        });
+    </script>
 </body>
+
 </html>
