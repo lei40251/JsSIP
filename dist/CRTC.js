@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.11.202511261141
+ * CRTC v1.11.11.20251211628
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.11.405022522282 (Web)',
+  USER_AGENT: 'UA/1.11.11.405024023256 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.11.405022522282');
+debug('version %s', '1.11.11.405024023256');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.11.405022522282';
+    return '1.11.11.405024023256';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -30862,7 +30862,7 @@ exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
         // 如果不是 DTMF rtpmap 行，则检查 m=audio 和 a=fmtp 行，因为它们也可能包含 DTMF payload
 
         // 尝试匹配 m=audio 行
-        var audioMLineMatch = line.match(/^(m=audio\s+\d+\s+UDP\/TLS\/RTP\/SAVPF\s+)(.*)/);
+        var audioMLineMatch = line.match(/^(m=audio\s+\d+\s+.*AVPF\s+)(.*)/);
         if (audioMLineMatch) {
           var prefix = audioMLineMatch[1];
           var currentPayloadsStr = audioMLineMatch[2];
