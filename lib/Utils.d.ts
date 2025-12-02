@@ -11,6 +11,8 @@ export function isEmpty(value: unknown): boolean;
 
 export function hasMethods(obj: any, ...methodNames: string[]): boolean;
 
+export function sleep(number): void;
+
 export function newTag(): string;
 
 export function newUUID(): string;
