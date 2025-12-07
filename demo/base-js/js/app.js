@@ -521,6 +521,40 @@ ua.on('newRTCSession', function(e)
     // console.warn('iceConnectionState: ', d);
   });
 
+  
+  /**
+    * mediaerror
+    *
+    * @fires 当获取到的用户媒体为已知异常时触发
+    *
+    * @type {object}
+    * @property {string} type - 'video'为视频轨道异常
+    * @property {Mediastream} mediastream - 触发此异常的媒体流
+    */
+  e.session.on('mediaerror', function(d)
+  {
+    setStatus(`用户媒体错误：${d.type } track failed`);
+
+    // 可以根据需要多次检查并做进一步处理
+    let count = 3;
+    const timer = setInterval(() => 
+    {
+      if (CRTC.Utils.isVideoTrackHealthy(d.mediastream))
+      {
+        clearInterval(timer);
+      }
+      else if (count >= 0)
+      {
+        clearInterval(timer);
+        // 可以根据需要做进一步处理，提示用户等
+      }
+      else
+      {
+        count--;
+      }
+    }, 1000);
+  });
+
   /**
     * failed
     *

@@ -165,6 +165,7 @@ options：
 | newDTMF                                   | 收到INFO模式的DTMF后触发                                                                                                            |
 | muted                                     | 当本地媒体静音时触发，包括音频静音或视频关闭                                                                                        |
 | unmuted                                   | 当本地媒体取消静音时触发，包括音频取消静音或打开关闭的视频                                                                          |
+|mediaerror                                    |当获取到的用户媒体为已知异常时触发|
 | getusermediafailed                        | 当内部调用 getUserMedia() 失败时触发                                                                                                |
 | peerconnection:iceConnectionState         | iceconnectionstatechange事件触发，[参考链接](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/iceConnectionState) |
 | peerconnection:createofferfailed          | 当内部调用 createOffer() 失败时触发                                                                                                 |
@@ -219,6 +220,7 @@ data 字段
 | getMicrophones()           | 获取可用的麦克风列表                                                                                   |
 | getSpeakers()           | 返回音频输出设备列表表                                                                                   |
 | getStreams<sup>1</sup>(pc, type<sup>2</sup>) | 获取音视频流（音频流、视频流或媒体流）。<br>pc - RTCPeerConnection 实例<br>type - 流类型<br>return - 返回包含音频流、视频流和媒体流的对象或null
+|isVideoTrackHealthy|视频轨道分辨率是否异常|
 
 标注 1：
 
