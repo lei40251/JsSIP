@@ -32,6 +32,8 @@ let handleStop = false;
 let disconnectedBy = null;
 let isShowUI = false;
 
+let mix;
+
 // 当前模式
 let curMode;
 
@@ -567,6 +569,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d)
   {
+    mix && mix.stop();
     setStatus(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
@@ -620,6 +623,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('ended', function()
   {
+    mix && mix.stop();
     setStatus('通话结束');
 
     // 输出通话开始时间及通话结束时间
@@ -801,6 +805,27 @@ ua.on('newRTCSession', function(e)
     // }
 
     confirmed = true;
+
+    /* 用于验证接通以后替换音频 */
+    // const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
+
+    // mix = new CRTC.Mixer([ rs.audioStream ]);
+    // mix.getAudioStream().then((m) => 
+    // {
+    //   const sender = e.session.connection.getSenders().filter((s) => 
+    //   {
+    //     if (s.track && s.track.kind == 'audio')
+    //     {
+    //       return s;
+    //     }
+    //   });
+
+    //   if (sender.length>0)
+    //   {
+    //     sender[0].replaceTrack(m.getAudioTracks()[0], m);
+    //   }
+    // });
+    /* 结尾 */
 
     // 获取统计信息
     stats = new CRTC.getStats(e.session.connection);
