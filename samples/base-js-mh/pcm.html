@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>AudioStreamer Demo</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: inline-block;
+      width: 120px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 300px;
+      padding: 5px;
+    }
+
+    button {
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+
+    #outputLog {
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 200px;
+      overflow-y: scroll;
+      font-family: monospace;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Audio Streamer 模块调用示例</h1>
+
+  <div class="input-group">
+    <label for="serverUriInput">Server URI:</label>
+    <input type="text" id="serverUriInput" value="ws://dev.vsbc.com:9090/ws">
+  </div>
+  <div class="input-group">
+    <label for="sessionIdInput">Session ID:</label>
+    <input type="number" id="sessionIdInput" value="335221">
+  </div>
+
+  <button id="startBtn">开始传输</button>
+  <button id="stopBtn" disabled>停止传输</button>
+
+  <h3>日志输出:</h3>
+  <pre id="outputLog"></pre>
+
+  <script type="module">
+    // 确保 AudioStreamer.js 文件与此 HTML 文件在同一目录下
+    import AudioStreamer from './js/AudioStreamer.js';
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const logArea = document.getElementById('outputLog');
+    const serverUriInput = document.getElementById('serverUriInput');
+    const sessionIdInput = document.getElementById('sessionIdInput');
+
+    const SAMPLE_RATE = 16000;
+
+    let streamerInstance = null;
+
+    function appendLog(message) {
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false }) + "." + String(new Date().getMilliseconds()).padStart(3, '0');
+      logArea.textContent += `[${time}] ${message}\n`;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    startBtn.onclick = async () => {
+      if (streamerInstance && streamerInstance.isStreaming) {
+        appendLog("已在运行中，请勿重复点击。");
+        return;
+      }
+
+      // **从输入框获取用户设置的值**
+      const serverUri = serverUriInput.value;
+      // 使用 parseInt 确保 session ID 是数字类型
+      const sessionId = parseInt(sessionIdInput.value);
+
+      if (!serverUri || isNaN(sessionId)) {
+        appendLog("Server URI 或 Session ID 无效，请检查输入。");
+        return;
+      }
+
+      try {
+        // 实例化 AudioStreamer，传入页面获取的参数
+        streamerInstance = new AudioStreamer(serverUri, sessionId, SAMPLE_RATE);
+
+        // 设置回调函数
+        streamerInstance.onLog = appendLog;
+        streamerInstance.onError = (msg) => {
+          appendLog(`[ERROR] ${msg}`);
+          updateButtons(false);
+        };
+        streamerInstance.onClose = () => {
+          appendLog("传输流程结束。");
+          updateButtons(false);
+        };
+
+        updateButtons(true);
+        // 启动
+        await streamerInstance.start();
+
+      } catch (error) {
+        // 捕获权限或其他启动错误
+        appendLog(`启动失败: ${error.message}`);
+        updateButtons(false);
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (streamerInstance) {
+        streamerInstance.stop();
+      }
+    };
+
+    function updateButtons(isStreaming) {
+      startBtn.disabled = isStreaming;
+      stopBtn.disabled = !isStreaming;
+      // 传输过程中禁止修改输入
+      serverUriInput.disabled = isStreaming;
+      sessionIdInput.disabled = isStreaming;
+    }
+  </script>
+</body>
+
+</html>

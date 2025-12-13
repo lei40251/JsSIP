@@ -111,7 +111,7 @@ def generate_test_pcm(filename, duration=5, sample_rate=16000, channels=1):
 def main():
     # 在这里直接设置参数值
     server_uri = "ws://dev.vsbc.com:9090/ws"  # 替换为实际的服务器地址
-    session_id = 294295  # 替换为实际的session ID
+    session_id = 797264  # 替换为实际的session ID
     sample_rate = 16000  # 设置采样率
 
     # 使用现有PCM文件或生成测试文件

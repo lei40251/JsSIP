@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>麦克风音量检测</title>
+  <style>
+    #volume-bar {
+      width: 0%;
+      height: 20px;
+      background-color: green;
+      transition: width 0.1s ease;
+    }
+
+    #volume-number {
+      margin-top: 10px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>麦克风音量检测</h1>
+  <div id="volume-bar"></div>
+  <div id="volume-number">音量: 0</div>
+
+  <script>
+    // 检查浏览器是否支持 Web Audio API
+    if (!window.AudioContext && !window.webkitAudioContext) {
+      alert("您的浏览器不支持 Web Audio API！")
+    }
+
+    let audioContext
+    let analyser
+    let dataArray
+
+    async function startMicrophone() {
+      try {
+        // 请求麦克风权限并获取音频流
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+        // 创建音频上下文
+        audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
+        // 创建 MediaStreamAudioSourceNode
+        const source = audioContext.createMediaStreamSource(stream)
+
+        // 创建 AnalyserNode
+        analyser = audioContext.createAnalyser()
+        analyser.fftSize = 256 // 设置 FFT 大小，影响频率分辨率
+
+        // 连接节点
+        source.connect(analyser)
+
+        // 准备数据数组
+        const bufferLength = analyser.frequencyBinCount
+        dataArray = new Uint8Array(bufferLength)
+
+        // 开始实时更新音量
+        updateVolume()
+      } catch (err) {
+        console.error("无法访问麦克风:", err)
+      }
+    }
+
+    function updateVolume() {
+      // 获取频率数据
+      analyser.getByteFrequencyData(dataArray)
+
+      // 计算音量大小（简单取平均值）
+      const sum = dataArray.reduce((a, b) => a + b, 0)
+      const average = sum / dataArray.length
+
+      // 更新 UI
+      const volumeBar = document.getElementById('volume-bar')
+      const volumeNumber = document.getElementById('volume-number')
+
+      volumeBar.style.width = `${average}%`
+      volumeNumber.textContent = `音量: ${Math.round(average)}`
+
+      // 循环调用
+      requestAnimationFrame(updateVolume)
+    }
+
+    // 启动麦克风检测
+    startMicrophone();
+  </script>
+</body>
+
+</html>
