@@ -798,7 +798,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('confirmed', async function()
   {
     setStatus('confirmed');
-    updateDevices();
+    // updateDevices();
     // if (e.session === tmpSession)
     // {
     //   rtcSession.terminate();
