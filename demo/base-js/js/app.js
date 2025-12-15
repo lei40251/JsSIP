@@ -797,6 +797,12 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('confirmed', async function()
   {
+    if (e.session.connection.iceConnectionState === 'new')
+    {
+      // 根据业务需求进行网络连接异常提示，或者可以延迟2秒再判断一次做为确认
+    }
+
+
     setStatus('confirmed');
     // updateDevices();
     // if (e.session === tmpSession)
