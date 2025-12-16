@@ -25,8 +25,11 @@
 </head>
 
 <body>
-  <iframe src="./index.html?caller=7305" frameborder="0"
-    allow="camera;microphone;autoplay;display-capture;fullscreen"></iframe>
+  <iframe id="frame" frameborder="0" allow="camera;microphone;autoplay;display-capture;fullscreen"></iframe>
+  <script>
+    const iframe = document.getElementById('frame');
+    iframe.src = `./index.html${window.location.search}`;
+  </script>
 </body>
 
 </html>
