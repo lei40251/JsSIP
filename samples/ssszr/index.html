@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>深声实时交互数字人 Demo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    #status-area {
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-height: 100px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+      overflow-y: scroll;
+      max-height: 250px;
+    }
+
+    #digital-human-video {
+      width: 100%;
+      height: 450px;
+      background-color: #000;
+      margin-bottom: 20px;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px dashed #ddd;
+    }
+
+    .input-text-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-text-group input {
+      flex-grow: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .input-text-group button {
+      flex-shrink: 0;
+      padding: 8px 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>深声实时交互数字人 Demo</h1>
+
+    <p>
+      <label for="app_id">AppId:</label>
+      <input type="text" id="app_id" value="IQ2RMzRa" placeholder="在此输入您的 AppId">
+    </p>
+    <p>
+      <label for="app_secret">AppSecret:</label>
+      <input type="text" id="app_secret" value="c398bdafd30b820f3dd0d8ed91735a5c" placeholder="在此输入您的 AppSecret">
+    </p>
+
+    <div class="control-group">
+      <h3>🌐 连接与控制</h3>
+      <button id="connect-btn">连接 WebSocket 并创建会话</button>
+      <button id="start-mic-btn" disabled>开始麦克风采集和发送</button>
+      <button id="stop-mic-btn" disabled>停止麦克风采集</button>
+      <button id="close-session-btn" disabled style="background-color: #d9534f; color: white;">结束会话并断开连接</button>
+    </div>
+
+    <div class="control-group">
+      <h3>💬 文本交互控制</h3>
+      <div class="input-text-group">
+        <input type="text" id="text-input" placeholder="输入您想对数字人说的话..." disabled>
+        <button id="send-text-btn" disabled>发送文本</button>
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>📺 数字人视频流</h2>
+    <video id="digital-human-video" autoplay playsinline controls></video>
+
+    <h2>💻 状态信息</h2>
+    <pre id="status-area">等待连接...</pre>
+  </div>
+
+  <script src="deepsound_demo.js"></script>
+</body>
+
+</html>

@@ -12,7 +12,7 @@ function negotiate()
     {
       const offer = pc.localDescription;
         
-      return fetch('http://dev.vsbc.com:9090/offer', {
+      return fetch('https://dev.vsbc.com:9090/offer', {
         body : JSON.stringify({
           sdp  : offer.sdp,
           type : offer.type
@@ -32,7 +32,7 @@ function negotiate()
       // document.getElementById('sessionid').value = answer.sessionid;
 
       // 实例化 AudioStreamer，传入页面获取的参数
-      localAudio = new AudioStreamer('ws://dev.vsbc.com:9090/ws', answer.sessionid, 16000);
+      localAudio = new AudioStreamer('wss://dev.vsbc.com:9090/ws', answer.sessionid, 16000);
 
       // 设置回调函数
       localAudio.onError = (msg) => 
