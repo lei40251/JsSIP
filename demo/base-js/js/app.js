@@ -2033,7 +2033,7 @@ function start()
   // 监听系统输入设备变化更新摄像头列表
   navigator.mediaDevices.addEventListener('devicechange', () =>
   {
-    updateDevices();
+    // updateDevices();
   });
 
   // 页面刷新 终止会话，注销ua
