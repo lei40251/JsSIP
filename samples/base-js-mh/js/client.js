@@ -1,4 +1,4 @@
-function negotiate() 
+function negotiate(flag) 
 {
   pc.addTransceiver('video', { direction: 'recvonly' });
   pc.addTransceiver('audio', { direction: 'recvonly' });
@@ -45,7 +45,7 @@ function negotiate()
       };
 
       // 启动
-      localAudio.start();
+      localAudio.start(flag);
       
       return pc.setRemoteDescription(answer);
     })
@@ -55,7 +55,7 @@ function negotiate()
     });
 }
 
-function start(flag) 
+function start(flag, flag1) 
 {
   console.warn('start');
   const config = {
@@ -77,7 +77,11 @@ function start(flag)
     console.warn('track');
     if (evt.track.kind == 'video') 
     {
-      if (flag)
+      if (flag1)
+      {        
+        document.getElementById('screen').srcObject = evt.streams[0];
+      }
+      else if (flag)
       {
 
         rtcSession.answer({
@@ -97,15 +101,19 @@ function start(flag)
       {
         call(null, null, evt.streams[0]);
       }
-      // document.getElementById('video').srcObject = evt.streams[0];
     }
   });
 
-  negotiate();
+  negotiate(useRnnoiseNode);
 }
 document.querySelector('#callMetaHuman').onclick= function()
 {
   start();
+};
+
+document.querySelector('#metaHuman').onclick= function()
+{
+  start(null, true);
 };
 
 /**

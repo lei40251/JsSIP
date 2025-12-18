@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>RNNoise + WebRTC Minimal Demo</title>
+</head>
+
+<body>
+  <button id="start">Start Call</button>
+  <p>Remote audio:</p>
+  <audio id="remote" autoplay></audio>
+
+  <script>
+    const pc1 = new RTCPeerConnection();
+    const pc2 = new RTCPeerConnection();
+
+    pc1.onicecandidate = e => e.candidate && pc2.addIceCandidate(e.candidate);
+    pc2.onicecandidate = e => e.candidate && pc1.addIceCandidate(e.candidate);
+
+    pc2.ontrack = e => {
+      document.getElementById('remote').srcObject = e.streams[0];
+    };
+
+    document.getElementById('start').onclick = async () => {
+      // 1️⃣ 获取麦克风（关 WebRTC 自带降噪）
+      const micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      // 2️⃣ AudioContext（必须 48k）
+      const ctx = new AudioContext({ sampleRate: 48000 });
+
+      // 3️⃣ 加载 RNNoise AudioWorklet
+      await ctx.audioWorklet.addModule(
+        './rnnoise-wasm/dist/NoiseSuppressorWorklet.js'
+      );
+
+      // 4️⃣ 构建音频处理链路
+      const mic = ctx.createMediaStreamSource(micStream);
+      const rnnoiseNode = new AudioWorkletNode(
+        ctx,
+        'NoiseSuppressorWorklet'
+      );
+
+      const dest = ctx.createMediaStreamDestination();
+
+      mic.connect(rnnoiseNode).connect(dest);
+      // mic.connect(dest);
+
+      // 5️⃣ 把“降噪后的音频”送进 WebRTC
+      dest.stream.getTracks().forEach(track => {
+        pc1.addTrack(track, dest.stream);
+      });
+
+      // 6️⃣ WebRTC loopback（自己连自己）
+      const offer = await pc1.createOffer();
+      await pc1.setLocalDescription(offer);
+      await pc2.setRemoteDescription(offer);
+
+      const answer = await pc2.createAnswer();
+      await pc2.setLocalDescription(answer);
+      await pc1.setRemoteDescription(answer);
+
+      console.log('RNNoise WebRTC started');
+    };
+  </script>
+</body>
+
+</html>

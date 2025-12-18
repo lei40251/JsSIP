@@ -813,24 +813,25 @@ ua.on('newRTCSession', function(e)
     confirmed = true;
 
     /* 用于验证接通以后替换音频 */
-    // const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
+    const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
 
-    // mix = new CRTC.Mixer([ rs.audioStream ]);
-    // mix.getAudioStream().then((m) => 
-    // {
-    //   const sender = e.session.connection.getSenders().filter((s) => 
-    //   {
-    //     if (s.track && s.track.kind == 'audio')
-    //     {
-    //       return s;
-    //     }
-    //   });
+    mix = new CRTC.Mixer([ rs.audioStream ]);
+    mix.getAudioStream().then((m) => 
+    {
+      const sender = e.session.connection.getSenders().filter((s) => 
+      {
+        if (s.track && s.track.kind == 'audio')
+        {
+          return s;
+        }
+      });
 
-    //   if (sender.length>0)
-    //   {
-    //     sender[0].replaceTrack(m.getAudioTracks()[0], m);
-    //   }
-    // });
+      if (sender.length>0)
+      {
+        sender[0].replaceTrack(m.getAudioTracks()[0], m);
+      }
+    });
+
     /* 结尾 */
 
     // 获取统计信息

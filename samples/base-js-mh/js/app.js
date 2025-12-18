@@ -24,6 +24,7 @@ let options;
 let camFlag = true;
 
 let useUpdate = true;
+let useRnnoiseNode = false;
 let haveACamera = false;
 let confirmed = false;
 
@@ -1550,6 +1551,14 @@ document.querySelector('#useupdate').onchange = function()
   this.options[this.selectedIndex].value !== 'update' ? useUpdate = false : useUpdate = true;
   console.log(this.options[this.selectedIndex]);
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
+};
+
+// useRnnoiseNode
+document.querySelector('#useRnnoiseNode').onchange = function()
+{
+  this.options[this.selectedIndex].value !== '0' ? useRnnoiseNode = true : useRnnoiseNode = false;
+  console.log(this.options[this.selectedIndex]);
+  setStatus(`noise: ${useRnnoiseNode}`);
 };
 
 /**

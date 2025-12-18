@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <title>音频流实时传输测试工具</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: #f4f7f6;
+    }
+
+    .config-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      transition: 0.3s;
+    }
+
+    #startBtn {
+      background: #28a745;
+      color: white;
+    }
+
+    #startBtn:disabled {
+      background: #ccc;
+    }
+
+    #stopBtn {
+      background: #dc3545;
+      color: white;
+    }
+
+    #status-bar {
+      margin-top: 15px;
+      padding: 10px;
+      border-left: 5px solid #666;
+      background: #eee;
+    }
+
+    .log-container {
+      background: #1e1e1e;
+      color: #adadad;
+      padding: 15px;
+      height: 350px;
+      overflow-y: auto;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      font-size: 13px;
+    }
+
+    .log-info {
+      color: #4ec9b0;
+    }
+
+    .log-warn {
+      color: #ce9178;
+    }
+
+    .log-error {
+      color: #f44747;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="config-panel">
+    <div class="input-group">
+      <label>WebSocket 地址</label>
+      <input type="text" id="uriInput" value="wss://dev.vsbc.com:9090/ws">
+    </div>
+    <div class="input-group">
+      <label>Session ID</label>
+      <input type="number" id="sessionInput" value="149477">
+    </div>
+    <div class="input-group">
+      <label>采样率 (Hz)</label>
+      <input type="number" id="rateInput" value="16000">
+    </div>
+    <div class="controls">
+      <button id="startBtn">开始连接并推流</button>
+      <button id="stopBtn" disabled>停止</button>
+    </div>
+    <div id="status-bar">当前状态: 等待操作</div>
+  </div>
+
+  <div class="log-container" id="log"></div>
+
+  <script type="worklet" id="worklet-code">
+        class PCMProcessor extends AudioWorkletProcessor {
+            constructor() {
+                super();
+                this.targetSize = 320; // 320 samples = 640 bytes (for 16-bit PCM)
+                this.cacheBuffer = new Int16Array(this.targetSize);
+                this.cacheIndex = 0;
+            }
+            process(inputs) {
+                const input = inputs[0];
+                if (input && input[0]) {
+                    const data = input[0];
+                    for (let i = 0; i < data.length; i++) {
+                        let s = Math.max(-1, Math.min(1, data[i]));
+                        this.cacheBuffer[this.cacheIndex++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        if (this.cacheIndex >= this.targetSize) {
+                            const b = this.cacheBuffer.slice().buffer;
+                            this.port.postMessage(b, [b]);
+                            this.cacheIndex = 0;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+        registerProcessor('pcm-processor', PCMProcessor);
+    </script>
+
+  <script>
+    const startBtn = document.getElementById('startBtn')
+    const stopBtn = document.getElementById('stopBtn')
+    const statusBar = document.getElementById('status-bar')
+    const logPanel = document.getElementById('log')
+
+    let ws = null
+    let audioCtx = null
+    let canSend = false
+
+    function log(msg, type = 'info') {
+      const div = document.createElement('div')
+      div.className = 'log-' + type
+      const now = new Date()
+      const time = now.getHours().toString().padStart(2, '0') + ":" +
+        now.getMinutes().toString().padStart(2, '0') + ":" +
+        now.getSeconds().toString().padStart(2, '0') + "." +
+        now.getMilliseconds().toString().padStart(3, '0')
+      div.textContent = `[${time}] ${msg}`
+      logPanel.appendChild(div)
+      logPanel.scrollTop = logPanel.scrollHeight
+    }
+
+    async function initAudioStream() {
+      const uri = document.getElementById('uriInput').value
+      const sid = parseInt(document.getElementById('sessionInput').value)
+      const srate = parseInt(document.getElementById('rateInput').value)
+
+      canSend = false
+      statusBar.innerText = "状态: 正在建立 WebSocket 连接..."
+
+      // 1. WebSocket 初始化
+      ws = new WebSocket(uri)
+      ws.binaryType = 'arraybuffer'
+
+      ws.onopen = () => {
+        log("Connected to " + uri)
+        statusBar.innerText = "状态: 已连接，正在验证登录..."
+
+        // 模拟 Python: 发送登录命令
+        const loginCmd = { cmd: 'login', sessionid: sid }
+        ws.send(JSON.stringify(loginCmd))
+        log("Sent Login: " + JSON.stringify(loginCmd))
+
+        // 模拟 Python: 发送设置PCM格式
+        const pcmCmd = { cmd: 'setpcm', samplerate: srate }
+        ws.send(JSON.stringify(pcmCmd))
+        log("Sent SetPCM: " + JSON.stringify(pcmCmd))
+
+        // 模拟 Python: 发送 10 个预热空包
+        const preBuffer = new ArrayBuffer(640 * 10)
+        ws.send(preBuffer)
+        log("Sent 10 pre-buffer empty chunks")
+      }
+
+      ws.onmessage = (e) => {
+        log("Server Response: " + e.data, 'warn')
+        // 收到响应后开启发送权限（可根据实际返回内容微调判断逻辑）
+        if (!canSend) {
+          canSend = true
+          log(">>> Validation received, starting audio binary stream <<<", 'info')
+          statusBar.innerText = "状态: 正在传输麦克风音频"
+        }
+      }
+
+      ws.onerror = (err) => log("WebSocket Error: " + err.message, 'error')
+      ws.onclose = () => {
+        log("WebSocket Closed", 'error')
+        stop()
+      }
+
+      // 2. Audio Context 初始化
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, sampleRate: srate }
+      })
+
+      audioCtx = new AudioContext({ sampleRate: srate })
+      const workletCode = document.getElementById('worklet-code').textContent
+      const blob = new Blob([workletCode], { type: 'application/javascript' })
+      await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob))
+
+      const source = audioCtx.createMediaStreamSource(stream)
+      const workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor')
+
+      // 3. 接收并发送
+      workletNode.port.onmessage = (event) => {
+        if (ws && ws.readyState === WebSocket.OPEN && canSend) {
+          ws.send(event.data)
+        }
+      }
+
+      source.connect(workletNode)
+      workletNode.connect(audioCtx.destination)
+
+      // 静音输出以防反馈
+      const gain = audioCtx.createGain()
+      gain.gain.value = 0
+      workletNode.connect(gain).connect(audioCtx.destination)
+    }
+
+    function stop() {
+      if (audioCtx) audioCtx.close()
+      if (ws) ws.close()
+      canSend = false
+      startBtn.disabled = false
+      stopBtn.disabled = true
+      statusBar.innerText = "状态: 已停止"
+      log("Stream stopped.")
+    }
+
+    startBtn.onclick = async () => {
+      try {
+        startBtn.disabled = true
+        stopBtn.disabled = false
+        await initAudioStream()
+      } catch (e) {
+        log("Startup failed: " + e.message, 'error')
+        stop()
+      }
+    }
+
+    stopBtn.onclick = stop;
+  </script>
+</body>
+
+</html>

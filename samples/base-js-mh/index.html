@@ -38,8 +38,8 @@
       <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
         <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
           class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="localVideo"></video>
-        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-          class="mh-100 mw-100 hide" style="object-fit: contain; flex: 1 1 auto;min-width: 0;" id="screen"></video>
+        <video playsinline x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5" class="mh-100 mw-100"
+          style="object-fit: contain; flex: 1 1 auto;min-width: 0;" id="screen"></video>
       </div>
     </div>
     <div class="position-relative h-100">
@@ -70,6 +70,12 @@
             <select id="useupdate" class="form-select">
               <option value="update">useUpdate</option>
               <option value="invite">useReInvite</option>
+            </select>
+          </div>
+          <div class="col col-3">
+            <select id="useRnnoiseNode" class="form-select">
+              <option value="0">不降噪</option>
+              <option value="1">降噪</option>
             </select>
           </div>
           <div class="col col-3">
@@ -106,6 +112,7 @@
             <button class="btn btn-secondary" id="callNull"> 无设备外呼</button>
             <button class="btn btn-warning" id="callNullAudio"> 无麦克风外呼</button>
             <button class="btn btn-success" id="callNullVideo"> 无摄像头外呼</button>
+            <button class="btn btn-warning" id="metaHuman"> 数字人</button>
             <button class="btn btn-info" id="callMetaHuman"> 数字人外呼</button>
             <!-- <button class="btn btn-warning" id="callVideoSendonly"><i class="bi-camera-video"></i> 单向视频外呼</button> -->
             <button class="btn btn-danger" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
@@ -233,6 +240,34 @@
   <script>
     TogetherJS(this)
   </script> -->
+
+  <script type="worklet" id="worklet-code">
+        class PCMProcessor extends AudioWorkletProcessor {
+            constructor() {
+                super();
+                this.targetSize = 320; // 320 samples = 640 bytes (for 16-bit PCM)
+                this.cacheBuffer = new Int16Array(this.targetSize);
+                this.cacheIndex = 0;
+            }
+            process(inputs) {
+                const input = inputs[0];
+                if (input && input[0]) {
+                    const data = input[0];
+                    for (let i = 0; i < data.length; i++) {
+                        let s = Math.max(-1, Math.min(1, data[i]));
+                        this.cacheBuffer[this.cacheIndex++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        if (this.cacheIndex >= this.targetSize) {
+                            const b = this.cacheBuffer.slice().buffer;
+                            this.port.postMessage(b, [b]);
+                            this.cacheIndex = 0;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+        registerProcessor('pcm-processor', PCMProcessor);
+    </script>
   <script src="./js/eruda.js"></script>
   <script>eruda.init();</script>
   <script src="./js/jquery-3.3.1.min.js"></script>

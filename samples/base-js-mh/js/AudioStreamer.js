@@ -32,6 +32,8 @@
       this.scriptProcessor = null;
       this.isStreaming = false;
 
+      this.flag = false;
+
       // 外部可设置的回调函数
       this.onLog = console.log;
       this.onError = console.error;
@@ -60,7 +62,7 @@
          * 启动音频流传输.
          * @returns {Promise<void>}
          */
-    async start() 
+    async start(flag) 
     {
       if (this.isStreaming) 
       {
@@ -71,6 +73,7 @@
 
       try 
       {
+        this.flag = flag;
         this.isStreaming = true;
         this.onLog('开始初始化 AudioStreamer...');
 
@@ -80,7 +83,8 @@
             sampleRate       : this.expectedSampleRate,
             channelCount     : 1,
             echoCancellation : true,
-            noiseSuppression : true
+            noiseSuppression : flag?false:true,
+            latency          : { ideal: 0.01 }
           } 
         };
                 
@@ -156,7 +160,7 @@
       // this.onLog("（假设服务器不回复 setpcm 消息，立即启动音频采集）");
     }
 
-    startAudioProcessing() 
+    async startAudioProcessing() 
     {
       if (this.audioContext) 
       {
@@ -168,28 +172,50 @@
       const AudioContext = window.AudioContext || window.webkitAudioContext;
 
       this.audioContext = new AudioContext({ sampleRate: this.expectedSampleRate }); 
-
+      
       this.onLog(`AudioContext 实际采样率: ${this.audioContext.sampleRate}Hz`);
+      
+      const workletCode = document.getElementById('worklet-code').textContent;
+      const blob = new Blob([ workletCode ], { type: 'application/javascript' });
+
+      await this.audioContext.audioWorklet.addModule(URL.createObjectURL(blob));
+
+      // 加载 RNNoise AudioWorklet
+      await this.audioContext.audioWorklet.addModule('./js/rnnoise-wasm/dist/NoiseSuppressorWorklet.js');
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-            
-      // 创建 ScriptProcessorNode: 缓冲区大小 2048 (4096 字节), 单声道
-      this.scriptProcessor = this.audioContext.createScriptProcessor(2048, 1, 1);
-
-      this.scriptProcessor.onaudioprocess = (audioProcessingEvent) => 
+      const workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor');
+      const rnnoiseNode = new AudioWorkletNode(
+        this.audioContext,
+        'NoiseSuppressorWorklet'
+      );
+      
+      // 3. 接收并发送
+      workletNode.port.onmessage = (event) => 
       {
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) return;
-
-        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-        const pcm16Data = this.floatTo16BitPCM(inputData);
-
-        // 5. 发送音频数据
-        this.websocket.send(pcm16Data);
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) 
+        {
+          this.websocket.send(event.data);
+        }
       };
 
-      source.connect(this.scriptProcessor);
-      this.scriptProcessor.connect(this.audioContext.destination); 
+      console.warn('flag: ', this.flag);
+      if (this.flag)
+      {
+        source.connect(rnnoiseNode).connect(workletNode);
+      }
+      else
+      {        
+        source.connect(workletNode);
+      }
+      workletNode.connect(this.audioContext.destination);
 
+      // 静音输出以防反馈
+      const gain = this.audioContext.createGain();
+
+      gain.gain.value = 0;
+      workletNode.connect(gain).connect(this.audioContext.destination);
+        
       this.onLog('音频采集启动，开始流式传输数据...');
     }
 
