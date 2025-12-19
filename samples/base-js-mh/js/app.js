@@ -34,6 +34,7 @@ let disconnectedBy = null;
 let isShowUI = false;
 
 let mix;
+let mic = false;
 
 // 当前模式
 let curMode;
@@ -1184,11 +1185,13 @@ ua.on('newRTCSession', function(e)
    *
    * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
    */
-  document.querySelector('#mics').onchange = function()
-  {
-    e.session.switchDevice('audio', this.options[this.selectedIndex].value);
-    setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
-  };
+  // document.querySelector('#mics').onchange = function()
+  // {
+  //   e.session.switchDevice('audio', this.options[this.selectedIndex].value);
+  //   mic = this.options[this.selectedIndex].value;
+  //   console.warn('mic: ', mic);
+  //   setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
+  // };
 
   /**
    * 手机端用切换摄像头
@@ -2054,6 +2057,19 @@ function start()
 }
 
 start();
+
+/**
+   * 切换麦克风
+   *
+   * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
+   */
+document.querySelector('#mics').onchange = function()
+{
+  // e.session.switchDevice('audio', this.options[this.selectedIndex].value);
+  mic = this.options[this.selectedIndex].value;
+  console.warn('mic: ', mic);
+  setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
+};
 
 document.addEventListener('visibilitychange', function()
 {

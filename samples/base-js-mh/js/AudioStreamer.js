@@ -87,7 +87,12 @@
             latency          : { ideal: 0.01 }
           } 
         };
-                
+
+        if (mic)
+        {
+          constraints.audio['deviceId'] = { exact: mic };
+        }
+        console.warn('micC: ', mic, constraints);
         this.onLog('请求麦克风权限...');
         this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
@@ -190,12 +195,18 @@
         'NoiseSuppressorWorklet'
       );
       
+      let count = 0;
+
       // 3. 接收并发送
       workletNode.port.onmessage = (event) => 
       {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) 
         {
-          this.websocket.send(event.data);
+          if (count>10)
+          {
+            this.websocket.send(event.data);
+          }
+          count++;
         }
       };
 
