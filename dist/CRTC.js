@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.14-beta.202512171617
+ * CRTC v1.11.14-beta.202512231547
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.14-beta.405024343234 (Web)',
+  USER_AGENT: 'UA/1.11.14-beta.405024463094 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.14-beta.405024343234');
+debug('version %s', '1.11.14-beta.405024463094');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.14-beta.405024343234';
+    return '1.11.14-beta.405024463094';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -27990,6 +27990,8 @@ module.exports = /*#__PURE__*/function () {
         logger.debug("received text message:\n\n".concat(data, "\n"));
       }
 
+      // 删除bundle
+      data = data.replace(/a=group:BUNDLE.*\r\n/, '');
       // 统一修改收到的SDP
       data = data.replace(/b=(AS|RS|RR):\d.*\r?\n/g, '');
       data = data.replace(/(m=video[^\r\n]*(?:[\s\S]*?(?=\r?\nm=|$)))/gm, function (match) {

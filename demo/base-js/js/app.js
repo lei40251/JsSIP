@@ -569,7 +569,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d)
   {
-    mix && mix.stop();
+    // mix && mix.stop();
     setStatus(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
@@ -623,7 +623,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('ended', function()
   {
-    mix && mix.stop();
+    // mix && mix.stop();
     setStatus('通话结束');
 
     // 输出通话开始时间及通话结束时间
@@ -813,24 +813,28 @@ ua.on('newRTCSession', function(e)
     confirmed = true;
 
     /* 用于验证接通以后替换音频 */
-    const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
+    // if (!mix)
+    // {
+    //   const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
+    //   const mediastream = new MediaStream([ rs.audioStream.getTracks()[0].clone() ]);
+    
+    //   mix = new CRTC.Mixer([ mediastream ]);
+    //   mix.getAudioStream().then((m) => 
+    //   {
+    //     const sender = e.session.connection.getSenders().filter((s) => 
+    //     {
+    //       if (s.track && s.track.kind == 'audio')
+    //       {
+    //         return s;
+    //       }
+    //     });
 
-    mix = new CRTC.Mixer([ rs.audioStream ]);
-    mix.getAudioStream().then((m) => 
-    {
-      const sender = e.session.connection.getSenders().filter((s) => 
-      {
-        if (s.track && s.track.kind == 'audio')
-        {
-          return s;
-        }
-      });
-
-      if (sender.length>0)
-      {
-        sender[0].replaceTrack(m.getAudioTracks()[0], m);
-      }
-    });
+    //     if (sender.length>0)
+    //     {
+    //       sender[0].replaceTrack(m.getAudioTracks()[0], m);
+    //     }
+    //   });
+    // }
 
     /* 结尾 */
 
@@ -1647,6 +1651,11 @@ async function call(type, direction, mediaStream)
   {
     options.mediaConstraints.audio = false;
   }
+
+  // if (mix)
+  // {
+  //   options.mediaStream = await mix.getAudioStream();
+  // }
 
   const callee = document.querySelector('#callee').value;
 
