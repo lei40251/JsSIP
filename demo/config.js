@@ -59,8 +59,9 @@ const envs =
   env_jfvideo : {
     signalingUrl : 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss',
     sipDomain    : 'jfvideo-bond-media-stg.zgpajf.com.cn',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
-    iceServers   : null
+    secretKey    : 'xI1atJ6EEP/nhioXYoLXdN6tdKmEDBW6vSSrBO9gGGWzJIdHYzC8Laa7rYU4QG8WumlkPZEleHlkPgLlNI8kL3yufmMVakllcBvZs4Ho10NCHfhVLNYYnEdMSxK3w7sSL2RJ9HJh2F2ftajEN7hJxXiPf/lzNb7ASwUsI3qZwXDo1fvSAh7b0Po/flq4MPIOlyN/cf6rZ9DX83qXoP5EcgdS1cVzDz/hKIhDqPMyq50kd7rPloZCOt6nUH0XU4nmNksLqRKCQgtpVCUKqj+3UUZuvx6tBQu/coeUZa/CYexHu8x+ifqQEWuAsEe3yrNYSn1t8PWWiXDz+YCZw1UPNg==',
+    iceServers   : null,
+    password     : '3214'
   },
   env_cloudnetuc : {
     signalingUrl : 'wss://cloudnetuc.vsbc.com:50600/wss',
