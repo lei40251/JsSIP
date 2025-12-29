@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.14-beta.202512261116
+ * CRTC v1.11.14-beta.202512291115
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.14-beta.405024522232 (Web)',
+  USER_AGENT: 'UA/1.11.14-beta.405024582230 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16851,7 +16851,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.14-beta.405024522232');
+debug('version %s', '1.11.14-beta.405024582230');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16889,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.14-beta.405024522232';
+    return '1.11.14-beta.405024582230';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -31132,7 +31132,7 @@ exports.sendKeyFrames = function (pc, interval, frequency) {
         pc.getSenders().forEach(function (sender) {
           if (sender.track.kind === 'video') {
             var parameters = sender.getParameters();
-            parameters.encodings[0].scaleResolutionDownBy = !scaleResolutionDownBy ? 1.001 : 1;
+            parameters.encodings[0].scaleResolutionDownBy = !scaleResolutionDownBy ? 2 : 1;
             scaleResolutionDownBy = !scaleResolutionDownBy;
             sender.setParameters(parameters);
           }
