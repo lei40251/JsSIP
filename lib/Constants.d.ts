@@ -15,6 +15,8 @@ export enum CMODE {
   PAPHONE = 'paphone'
 }
 
+export const NO_CAMERA_SVG = ''
+
 export const SDP_LEVELID_AS : {
   BP720P : {
     LEVELID : '42c01f',

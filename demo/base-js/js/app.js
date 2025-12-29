@@ -33,6 +33,8 @@ let disconnectedBy = null;
 let isShowUI = false;
 
 let mix;
+// 是否单视频
+let videoOnly = false;
 
 // 当前模式
 let curMode;
@@ -206,6 +208,7 @@ ua.on('disconnected', function(data)
  */
 ua.on('failed', function(data)
 {
+  videoOnly = false;
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
 });
@@ -569,6 +572,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d)
   {
+    videoOnly = false;
     // mix && mix.stop();
     setStatus(`通话建立失败: ${d.cause}`);
 
@@ -623,6 +627,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('ended', function()
   {
+    videoOnly = false;
     // mix && mix.stop();
     setStatus('通话结束');
 
@@ -1019,7 +1024,8 @@ ua.on('newRTCSession', function(e)
    * 单视频接听
    */
   document.querySelector('#onlyVideoAudio').onclick = async function()
-  {
+  {    
+    videoOnly = true;
     e.session.answer({
       mediaConstraints : {
         audio : false,
@@ -1279,7 +1285,14 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#muteCam').onclick = function()
   {
     // 关闭摄像头
-    e.session.mute({ video: true });
+    if (videoOnly)
+    {
+      e.session.mute({ video: true, video_only: true });
+    }
+    else
+    {      
+      e.session.mute({ video: true });
+    }
   };
 
   /**
@@ -2029,6 +2042,7 @@ function start()
   // 发起无音频视频呼叫
   document.querySelector('#callAudio').onclick = function()
   {
+    videoOnly = true;
     // 设置当前通话模式为视频模式
     call('onlyVideo');
   };

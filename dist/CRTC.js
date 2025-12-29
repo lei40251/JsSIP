@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.14.202512291119
+ * CRTC v1.11.15-beta.202512291628
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2025 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.14.405024582238 (Web)',
+  USER_AGENT: 'UA/1.11.15-beta.405024583256 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3559,6 +3559,7 @@ module.exports = {
   CMODE: {
     PAPHONE: 'paphone'
   },
+  NO_CAMERA_SVG: '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1756366745939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10589" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"><path d="M865.08627 773.036973l-0.83027 0.996324a35.424865 35.424865 0 0 0-17.380324-4.649513 36.006054 36.006054 0 0 0-2.767568 71.956757c8.468757 7.140324 13.062919 14.612757 13.062919 22.417297 0 45.111351-152.050162 81.643243-339.635892 81.643243-130.739892 0-244.154811-17.767784-300.945297-43.782919l-50.425081 50.36973C241.442595 995.272649 370.632649 1024 517.535135 1024c232.475676 0 420.67027-71.956757 420.67027-160.518919 0-33.542919-27.011459-64.70573-73.119135-90.444108zM965.881081 49.816216a33.210811 33.210811 0 0 0-46.937946 0L58.118919 910.751135a33.210811 33.210811 0 0 0 46.827243 46.827243L965.881081 96.643459a33.210811 33.210811 0 0 0 0-46.827243zM251.350486 647.610811a363.935135 363.935135 0 0 1-73.229837-221.405406c0-195.611676 148.895135-354.248649 339.414486-354.248648a329.728 329.728 0 0 1 222.955243 86.126702l51.58746-51.532108A407.164541 407.164541 0 0 0 517.535135 0c-229.265297 0-415.135135 190.796108-415.135135 426.205405a431.076324 431.076324 0 0 0 96.754162 273.380325z m382.643892-382.588541a199.264865 199.264865 0 0 0-278.14054 278.140541l120.665946-120.942703a83.027027 83.027027 0 1 1 53.635459-53.635459zM716.8 426.205405a207.622919 207.622919 0 0 0-1.439135-23.635027l-221.405406 221.405406a207.622919 207.622919 0 0 0 23.579676 1.494486 199.264865 199.264865 0 0 0 199.264865-199.264865z m-398.861838 373.732325A404.618378 404.618378 0 0 0 517.535135 852.410811c229.265297 0 415.135135-190.796108 415.135135-426.205406a433.34573 433.34573 0 0 0-45.996973-194.947459L830.380973 287.827027a371.407568 371.407568 0 0 1 26.568649 138.378378c0 195.611676-148.895135 354.248649-339.414487 354.248649a329.783351 329.783351 0 0 1-146.127567-33.819676z" fill="#8a8a8a" p-id="10590"></path></svg>',
   // 不同清晰度对应H264的levleId和AS值
   SDP_LEVELID_AS: {
     BP720P: {
@@ -16851,7 +16852,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.14.405024582238');
+debug('version %s', '1.11.15-beta.405024583256');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16889,7 +16890,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.14.405024582238';
+    return '1.11.15-beta.405024583256';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -18440,6 +18441,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 本地摄像头
     _this._localCameras = [];
     _this._selectedLocalCameras = null;
+
+    // 单视频通话，关闭摄像头
+    _this._videoOnlyMute = false;
+    _this._onMutedVideoTrack = null;
+    _this._replaceMutedCanvasTrack = null;
+    _this._isCurrentlyMuted = false;
 
     // Flag to indicate PeerConnection ready for new actions.
     _this._rtcReady = true;
@@ -20555,7 +20562,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function mute() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
         audio: true,
-        video: false
+        video: false,
+        video_only: false
       };
       logger.debug("".concat(this._id, " mute()"));
       var audioMuted = false,
@@ -20566,6 +20574,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this._toggleMuteAudio(true);
       }
       if (options.video) {
+        // 如果是单视频通话关闭视频
+        options.video_only ? this._videoOnlyMute = true : this._videoOnlyMute = false;
         videoMuted = true;
         this._videoMuted = true;
         this._toggleMuteVideo(true);
@@ -23718,7 +23728,32 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       try {
         for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
           var sender = _step15.value;
-          sender.track.enabled = !mute;
+          if (this._videoOnlyMute) {
+            if (this._isCurrentlyMuted === mute) return;
+            this._isCurrentlyMuted = mute;
+            if (mute) {
+              if (!this._onMutedVideoTrack) {
+                this._onMutedVideoTrack = sender.track;
+                this._replaceMutedCanvasTrack = Utils.generateAnBlackVideoTrack({
+                  svgSource: CRTC_C.NO_CAMERA_SVG,
+                  width: 640,
+                  height: 480,
+                  fps: 25
+                });
+                sender.replaceTrack(this._replaceMutedCanvasTrack.videoTrack);
+              }
+            } else {
+              sender.replaceTrack(this._onMutedVideoTrack);
+              this._replaceMutedCanvasTrack.cleanup();
+              setTimeout(function () {
+                _this37._onMutedVideoTrack = null;
+                _this37._replaceMutedCanvasTrack = null;
+              }, 0);
+            }
+          } else {
+            sender.track.enabled = !mute;
+            this._isCurrentlyMuted = mute;
+          }
         }
       } catch (err) {
         _iterator15.e(err);
