@@ -202,7 +202,7 @@
       {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) 
         {
-          if (count>10)
+          if (count>20)
           {
             this.websocket.send(event.data);
           }
