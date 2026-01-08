@@ -1099,7 +1099,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toAudio').onclick = function()
   {
-    e.session.demoteToAudio({ useUpdate: false }, () => { setStatus(`切换音频模式完成${curMode}`); });
+    e.session.downgradeToAudio({ useUpdate: false }, () => { setStatus(`切换音频模式完成${curMode}`); });
   };
 
   /**
