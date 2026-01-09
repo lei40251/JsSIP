@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.15.202618925
+ * CRTC v1.11.15.2026191013
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.15.405202161850 (Web)',
+  USER_AGENT: 'UA/1.11.15.405202182026 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16852,7 +16852,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.15.405202161850');
+debug('version %s', '1.11.15.405202182026');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16890,7 +16890,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.15.405202161850';
+    return '1.11.15.405202182026';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -22783,6 +22783,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       switch (true) {
         case /^100$/.test(response.status_code):
           this._status = C.STATUS_1XX_RECEIVED;
+          this._trying(response);
           break;
         case /^1[0-9]{2}$/.test(response.status_code):
           {
@@ -23786,6 +23787,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug("".concat(this._id, " emit \"connecting\""));
       this.emit('connecting', {
         request: request
+      });
+    }
+  }, {
+    key: "_trying",
+    value: function _trying(response) {
+      logger.debug("".concat(this._id, " session trying"));
+      logger.debug("".concat(this._id, " emit \"trying\""));
+      this.emit('trying', {
+        response: response || null
       });
     }
   }, {

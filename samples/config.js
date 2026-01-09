@@ -4,7 +4,7 @@
 const defaulteEnv = {
   signalingUrl       : 'wss://5g.vsbc.com:9002/wss',
   sipDomain          : '5g.vsbc.com',
-  secretKey          : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
+  secretKey          : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
   iceServers         : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
   iceTransportPolicy : 'relay'
 };
@@ -12,7 +12,7 @@ const defaulteEnv = {
 const defaulteEnv_no = {
   signalingUrl : 'wss://5g.vsbc.com:9002/wss',
   sipDomain    : '5g.vsbc.com',
-  secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA=='
+  secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g=='
 };
 
 const envs =
@@ -36,19 +36,19 @@ const envs =
   env_pro40 : {
     signalingUrl : 'wss://pro.vsbc.com:60040/wss',
     sipDomain    : 'pro.vsbc.com',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
+    secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
     iceServers   : null
   },
   env_pro41 : {
     signalingUrl : 'wss://pro.vsbc.com:60041/wss',
     sipDomain    : 'pro.vsbc.com',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
+    secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
     iceServers   : null
   },
   env_pro12550 : {
     signalingUrl : 'wss://pro.vsbc.com:12550/wss',
     sipDomain    : 'pro.vsbc.com',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
+    secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
     iceServers   : [ {
       'urls'       : 'turn:pro.vsbc.com:12103?transport=udp',
       'username'   : 'user',
@@ -59,8 +59,9 @@ const envs =
   env_jfvideo : {
     signalingUrl : 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss',
     sipDomain    : 'jfvideo-bond-media-stg.zgpajf.com.cn',
-    secretKey    : sessionStorage.getItem('secret_key') || 'pdiC8Sg121leH89+tXKLKmUIJTrUqf/Jq+i5vtsl10n4Us/7m2RuyMZWZWIgs4+WyZPfluXtmOwgq2QV8ZVk1+nL7E/5ZovRARwZzeeiG+Y39e9BRXiiu0panarGBzLfaAaMxnr3itlq6XWBvKDbN/PXS0NpQ55zRcEgRoXrBB0so1klK5gqPyF5bbyUVAUidla4qgnoXYufxGOLSbYezKPaW07uaHDWPigsHRxCFnvspPzYIZhJGWQBXiutPhI3oriGjcomkcodTtwHTpF7TGNVKbdous9TgS7MnawZGEwBNVk8VYUjeGbU8Op/BnWDseSRJHz/0NV4LFBogIjQxA==',
-    iceServers   : null
+    secretKey    : 'xI1atJ6EEP/nhioXYoLXdN6tdKmEDBW6vSSrBO9gGGWzJIdHYzC8Laa7rYU4QG8WumlkPZEleHlkPgLlNI8kL3yufmMVakllcBvZs4Ho10NCHfhVLNYYnEdMSxK3w7sSL2RJ9HJh2F2ftajEN7hJxXiPf/lzNb7ASwUsI3qZwXDo1fvSAh7b0Po/flq4MPIOlyN/cf6rZ9DX83qXoP5EcgdS1cVzDz/hKIhDqPMyq50kd7rPloZCOt6nUH0XU4nmNksLqRKCQgtpVCUKqj+3UUZuvx6tBQu/coeUZa/CYexHu8x+ifqQEWuAsEe3yrNYSn1t8PWWiXDz+YCZw1UPNg==',
+    iceServers   : null,
+    password     : '3214'
   },
   env_cloudnetuc : {
     signalingUrl : 'wss://cloudnetuc.vsbc.com:50600/wss',

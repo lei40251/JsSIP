@@ -1,13 +1,38 @@
 function negotiate(flag) 
 {
   pc.addTransceiver('video', { direction: 'recvonly' });
-  pc.addTransceiver('audio', { direction: 'recvonly' });
+  pc.addTransceiver('audio', { direction: 'sendrecv' });
 
-    
-  return pc.createOffer().then((offer) => 
+  
+  // 1. 获取麦克风权限
+  const constraints = { 
+    audio : { 
+      sampleRate       : this.expectedSampleRate,
+      channelCount     : 1,
+      echoCancellation : true,
+      autoGainControl  : true,
+      noiseSuppression : true,
+      latency          : { ideal: 0.01 }
+    } 
+  };
+
+  if (mic)
   {
-    return pc.setLocalDescription(offer);
-  })
+    constraints.audio['deviceId'] = { exact: mic };
+  }
+  console.warn('micC: ', mic, constraints);
+  console.warn('请求麦克风权限...');
+  
+  return navigator.mediaDevices.getUserMedia(constraints)
+    .then((stream) => 
+    {
+      pc.addTrack(stream.getAudioTracks()[0]);
+      
+      return pc.createOffer().then((offer) => 
+      {
+        return pc.setLocalDescription(offer);
+      });        
+    })
     .then(() => 
     {
       const offer = pc.localDescription;
@@ -29,23 +54,23 @@ function negotiate(flag)
     })
     .then((answer) => 
     {
-      // document.getElementById('sessionid').value = answer.sessionid;
+      // // document.getElementById('sessionid').value = answer.sessionid;
 
-      // 实例化 AudioStreamer，传入页面获取的参数
-      localAudio = new AudioStreamer('wss://dev.vsbc.com:9090/ws', answer.sessionid, 16000);
+      // // 实例化 AudioStreamer，传入页面获取的参数
+      // localAudio = new AudioStreamer('wss://dev.vsbc.com:9090/ws', answer.sessionid, 16000);
 
-      // 设置回调函数
-      localAudio.onError = (msg) => 
-      {
-        console.warn(`[ERROR] ${msg}`);
-      };
-      localAudio.onClose = () => 
-      {
-        console.warn('传输流程结束。');
-      };
+      // // 设置回调函数
+      // localAudio.onError = (msg) => 
+      // {
+      //   console.warn(`[ERROR] ${msg}`);
+      // };
+      // localAudio.onClose = () => 
+      // {
+      //   console.warn('传输流程结束。');
+      // };
 
-      // 启动
-      localAudio.start(flag);
+      // // 启动
+      // localAudio.start(flag);
       
       return pc.setRemoteDescription(answer);
     })
@@ -53,6 +78,8 @@ function negotiate(flag)
     {
       console.error(e);
     });
+    
+  
 }
 
 function start(flag, flag1) 

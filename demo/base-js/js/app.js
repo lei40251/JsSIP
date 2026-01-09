@@ -303,7 +303,7 @@ ua.on('newRTCSession', function(e)
 
     // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
 
-    d.sdp = d.sdp.replace(/a=extmap:\d+ urn:3gpp:video-orientation\r\n/g, '');
+    // d.sdp = d.sdp.replace(/a=extmap:\d+ urn:3gpp:video-orientation\r\n/g, '');
     // d.sdp = d.sdp.replace(/a=extmap:.*\r\n/g, '');
 
     if (d.originator === 'local')
@@ -340,6 +340,8 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
       // d.sdp = d.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
       // d.sdp = d.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
+      // d.sdp = d.sdp.replace(/a=mid:([2-9]|\d{2,})/g, 'a=mid:1');
+      // d.sdp = d.sdp.replace(/a=group:BUNDLE(.*?)(\s)([2-9]|\d{2,})/g, 'a=group:BUNDLE$1$21');
 
       // m=video 20080 UDP/TLS/RTP/SAVPF 106
       // b=TIAS:512000
@@ -348,6 +350,17 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
       // d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
     }
+  });
+
+  /**
+    * trying
+    *
+    * @fires 收到或者发出 100 的SIP请求时触发;
+    */
+  e.session.on('trying', function()
+  {
+    console.warn('trying');
+    setStatus('Trying');
   });
 
   /**
