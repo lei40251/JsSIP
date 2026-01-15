@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC 高级截图测试 (ImageCapture)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .video-box,
+    .preview-box {
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    /* === 关键 CSS 修复 === */
+    /* 强制 GPU 复合层，防止视频画面与网页分离导致截图黑屏 */
+    video {
+      width: 100%;
+      max-width: 480px;
+      background: #000;
+      display: block;
+      /* 关键属性 */
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+    }
+
+    img {
+      max-width: 480px;
+      border: 2px solid #4CAF50;
+      /* 绿色边框表示这是截图 */
+      display: none;
+      /* 默认隐藏 */
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.snap {
+      background-color: #28a745;
+    }
+
+    .logs {
+      background: #333;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      height: 150px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>WebRTC 截图方案验证 (ImageCapture + Fallback)</h2>
+
+    <div class="video-box">
+      <h3>1. 视频源 (模拟 WebRTC Remote Stream)</h3>
+      <video id="remoteVideo" autoplay playsinline muted></video>
+      <div style="margin-top: 10px;">
+        <button onclick="startCamera()">启动摄像头 (模拟通话)</button>
+        <button onclick="doCapture()" class="snap" id="btnSnap" disabled>立即截图</button>
+      </div>
+    </div>
+
+    <div class="preview-box">
+      <h3>2. 截图结果预览</h3>
+      <p id="statusText">等待截图...</p>
+      <img id="imgPreview" alt="截图预览">
+    </div>
+
+    <div class="logs" id="consoleLogs"></div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 核心截图函数 (直接复制这个函数到你的项目中)
+    // ==========================================
+    async function captureVideoFrame(videoElement) {
+      return new Promise(async (resolve, reject) => {
+        if (!videoElement || !videoElement.srcObject) {
+          return reject(new Error("Video 元素无效或无媒体流"));
+        }
+
+        // 检查流是否活跃
+        if (!videoElement.srcObject.active) {
+          return reject(new Error("媒体流已停止 (Inactive)"));
+        }
+
+        // 检查 ReadyState，确保有画面
+        if (videoElement.readyState < 2) {
+          return reject(new Error(`视频未就绪 (ReadyState: ${videoElement.readyState})`));
+        }
+
+        const stream = videoElement.srcObject;
+        const videoTracks = stream.getVideoTracks();
+
+        if (videoTracks.length === 0) {
+          return reject(new Error("流中没有视频轨道"));
+        }
+
+        const track = videoTracks[0];
+        let imageBitmap = null;
+        let usedMethod = "";
+
+        try {
+          // --- 策略 A: 尝试使用 ImageCapture (Chrome/Edge) ---
+          if (window.ImageCapture) {
+            try {
+              const imageCapture = new ImageCapture(track);
+              // grabFrame() 比 takePhoto() 快，且不打断流
+              imageBitmap = await imageCapture.grabFrame();
+              usedMethod = "ImageCapture API (GPU)";
+            } catch (err) {
+              console.warn("ImageCapture 出错，降级处理:", err);
+            }
+          }
+
+          // --- 准备 Canvas 进行转换 ---
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          if (imageBitmap) {
+            // 使用抓取到的 Bitmap
+            canvas.width = imageBitmap.width;
+            canvas.height = imageBitmap.height;
+            ctx.drawImage(imageBitmap, 0, 0);
+            // 必须关闭 Bitmap 以释放显存
+            imageBitmap.close();
+          } else {
+            // --- 策略 B: 传统 Canvas 绘制 (Fallback) ---
+            usedMethod = "Canvas drawImage (Fallback)";
+            // 必须使用 videoWidth 真实分辨率
+            const w = videoElement.videoWidth;
+            const h = videoElement.videoHeight;
+
+            if (w === 0 || h === 0) {
+              return reject(new Error("无法获取视频分辨率，可能是流刚建立"));
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+            ctx.drawImage(videoElement, 0, 0, w, h);
+          }
+
+          // --- 结果输出 ---
+
+          // 1. 生成 Base64 (用于预览)
+          const base64 = canvas.toDataURL('image/jpeg', 0.9);
+
+          // 2. 生成 Blob (用于上传)
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve({
+                method: usedMethod,
+                base64: base64,
+                blob: blob,
+                width: canvas.width,
+                height: canvas.height
+              });
+            } else {
+              reject(new Error("Blob 生成失败"));
+            }
+          }, 'image/jpeg', 0.9);
+
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    // ==========================================
+    // 页面交互逻辑 (测试用)
+    // ==========================================
+
+    const video = document.getElementById('remoteVideo');
+    const imgPreview = document.getElementById('imgPreview');
+    const btnSnap = document.getElementById('btnSnap');
+    const statusText = document.getElementById('statusText');
+
+    // 模拟日志输出
+    function log(msg) {
+      const div = document.getElementById('consoleLogs');
+      const p = document.createElement('div');
+      p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      div.prepend(p);
+      console.log(msg);
+    }
+
+    // 1. 启动摄像头 (模拟 WebRTC 呼叫)
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 1280, height: 720 }, // 请求高清以便测试
+          audio: false
+        });
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+          log(`视频流加载成功: ${video.videoWidth}x${video.videoHeight}`);
+          btnSnap.disabled = false;
+        };
+      } catch (e) {
+        log("摄像头启动失败: " + e.message);
+        alert("请确保在 HTTPS 或 localhost 环境下运行，并允许摄像头权限。");
+      }
+    }
+
+    // 2. 执行截图
+    async function doCapture() {
+      try {
+        log("开始截图...");
+
+        // 调用上面封装好的函数
+        const result = await captureVideoFrame(video);
+
+        log(`截图成功! 使用方式: ${result.method}`);
+        log(`分辨率: ${result.width}x${result.height}`);
+        log(`Blob 大小: ${(result.blob.size / 1024).toFixed(2)} KB`);
+
+        // 显示预览
+        imgPreview.src = result.base64;
+        imgPreview.style.display = 'block';
+        statusText.innerText = "截图生成成功，准备上传...";
+
+        // 模拟上传
+        mockUpload(result.blob);
+
+      } catch (err) {
+        log("截图发生错误: " + err.message);
+        statusText.innerText = "截图失败";
+      }
+    }
+
+    // 3. 模拟上传接口
+    function mockUpload(blob) {
+      // 这里可以替换为你的 FormData 上传逻辑
+      // const formData = new FormData();
+      // formData.append('file', blob, 'capture.jpg');
+      // axios.post(...)
+      setTimeout(() => {
+        log("模拟上传完成 (Server 200 OK)");
+      }, 500);
+    }
+  </script>
+
+</body>
+
+</html>
