@@ -66,3 +66,6 @@ export function sendKeyFrames(pc, interval): Function | undefined;
 export function getHuaweiAndroidEnvironment(): string;
 
 export function isVideoTrackHealthy(object): boolean;
+
+export function updateSdpByConstraints(string, object): string;
+

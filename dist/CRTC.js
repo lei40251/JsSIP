@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.16.2026115951
+ * CRTC v1.11.16.20261151016
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.16.405202301902 (Web)',
+  USER_AGENT: 'UA/1.11.16.405202302032 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16852,7 +16852,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.16.405202301902');
+debug('version %s', '1.11.16.405202302032');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16890,7 +16890,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.16.405202301902';
+    return '1.11.16.405202302032';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19279,6 +19279,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Create a new RTCPeerConnection instance.
       // TODO: This may throw an error, should react.
       this._createRTCConnection(pcConfig, rtcConstraints);
+
+      // 根据自定义流确定是否需要获取对应设备的流
+      mediaStream && mediaStream.getTracks().forEach(function (track) {
+        mediaConstraints[track.kind] = false;
+      });
       Promise.resolve()
       // Handle local MediaStream.
       .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
@@ -19286,12 +19291,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              // 根据自定义流确定是否需要获取对应设备的流
-              mediaStream && mediaStream.getTracks().forEach(function (track) {
-                mediaConstraints[track.kind] = false;
-              });
-
-              // Audio and/or video requested, prompt getUserMedia.
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
                 _context2.n = 6;
                 break;
@@ -19456,7 +19455,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var e = {
           originator: 'remote',
           type: 'offer',
-          sdp: newSdp
+          sdp: Utils.updateSdpByConstraints(newSdp, mediaConstraints)
         };
         logger.debug("".concat(_this4._id, " emit \"sdp\""));
         _this4.emit('sdp', e);
@@ -19503,7 +19502,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         if (!mediaConstraints.video) {
           // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
-          desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
+          // desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
+          desc = Utils.updateSdpByConstraints(desc, mediaConstraints);
         }
         if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
           _this4._floorId = 2;
@@ -31265,6 +31265,32 @@ exports.isVideoTrackHealthy = function (mediastream) {
   var result = video.videoWidth && video.videoHeight ? true : false;
   video.remove();
   return result;
+};
+
+/**
+ * 根据约束修改 SDP：禁用对应媒体的端口(设为0)并设为 inactive
+ */
+exports.updateSdpByConstraints = function (sdp, constraints) {
+  return sdp.split(/(?=m=)/).map(function (section) {
+    // 判断当前段是音频还是视频
+    var isAudio = section.startsWith('m=audio');
+    var isVideo = section.startsWith('m=video');
+
+    // 如果当前媒体类型在约束中被禁用 (false)
+    if (isAudio && !constraints.audio || isVideo && !constraints.video) {
+      // 1. 将 m= 行的端口号 (第二个参数) 替换为 0
+      section = section.replace(/^(m=[a-z]+)\s+\d+/, '$1 0');
+
+      // 2. 修改方向属性：如果有 sendrecv/sendonly 等则替换，没有则追加
+      if (/a=(sendrecv|sendonly|recvonly)/.test(section)) {
+        return section.replace(/a=(sendrecv|sendonly|recvonly)/g, 'a=inactive');
+      } else {
+        // 注意处理换行符，确保格式正确
+        return "".concat(section.trimEnd(), "\r\na=inactive\r\n");
+      }
+    }
+    return section;
+  }).join('');
 };
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
