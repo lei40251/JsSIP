@@ -285,13 +285,16 @@ ua.on('newRTCSession', function(e)
 
   e.session.on('refer', function(d)
   {
+    setStatus('refer');
+    d.request.refer_to.uri.host = sipDomain;    
+    d.accept(null, options);
+    // 兼容华为MCU
     isRefer = true;
-    d.request.refer_to.uri.host = sipDomain;
-    d.accept(() =>
-    {
-      e.session.terminate();
-      call('video', null, cloneStream);
-    }, options);
+    // d.accept(() =>
+    // {
+    //   e.session.terminate();
+    //   call('video', null, cloneStream);
+    // }, options);
   });
 
   // 部分场景兼容使用
