@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.16.20261212145
+ * CRTC v1.11.16.20261212156
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.16.405202424290 (Web)',
+  USER_AGENT: 'UA/1.11.16.405202424312 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.16.405202424290');
+debug('version %s', '1.11.16.405202424312');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.16.405202424290';
+    return '1.11.16.405202424312';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -26662,7 +26662,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }();
       setTimeout(function () {
         processing();
-      }, 1500);
+      }, this._delay * 500);
       this._statsTimer = setInterval(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
