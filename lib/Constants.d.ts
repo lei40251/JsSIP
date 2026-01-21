@@ -45,6 +45,7 @@ export enum causes {
   AUTHENTICATION_ERROR = 'Authentication Error',
   BYE = 'Terminated',
   WEBRTC_ERROR = 'WebRTC Error',
+  REINVITE_ERROR = 're-Invite Error',
   CANCELED = 'Canceled',
   NO_ANSWER = 'No Answer',
   EXPIRES = 'Expires',
