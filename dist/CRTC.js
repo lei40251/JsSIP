@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.16.20261151016
+ * CRTC v1.11.16.20261211140
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.16.405202302032 (Web)',
+  USER_AGENT: 'UA/1.11.16.405202422280 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16852,7 +16852,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.16.405202302032');
+debug('version %s', '1.11.16.405202422280');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16890,7 +16890,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.16.405202302032';
+    return '1.11.16.405202422280';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19502,7 +19502,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         if (!mediaConstraints.video) {
           // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
-          // desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
+          desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
           desc = Utils.updateSdpByConstraints(desc, mediaConstraints);
         }
         if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
@@ -23841,14 +23841,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._end_time = new Date();
       this._close();
       logger.debug("".concat(this._id, " emit \"ended\""));
+
+      // 停止全部统计信息事件
+      window.CRTCStats = 'stop';
       this.emit('ended', {
         originator: originator,
         message: message || null,
         cause: cause
       });
-
-      // 停止全部统计信息事件
-      window.CRTCStats = 'stop';
       this._dataChannel && this._dataChannel.close();
       this._dataChannel = null;
       if (this._inviteVideoTrackStatsTimer) {
@@ -23874,14 +23874,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // Emit private '_failed' event first.
       logger.debug("".concat(this._id, " emit \"_failed\""));
+
+      // 停止全部统计信息事件
+      window.CRTCStats = 'stop';
       this.emit('_failed', {
         originator: originator,
         message: message || null,
         cause: cause
       });
-
-      // 停止全部统计信息事件
-      window.CRTCStats = 'stop';
       this._dataChannel && this._dataChannel.close();
       this._dataChannel = null;
       this._close();
@@ -26658,10 +26658,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       logger.debug('stop()');
       clearInterval(this._statsTimer);
       this._count = this._interval;
+      window.CRTCStats = '';
     }
   }, {
     key: "reset",
-    value: function reset() {}
+    value: function reset() {
+      this.stop();
+    }
 
     // 解析上行统计报告
   }, {
