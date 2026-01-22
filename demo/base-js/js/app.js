@@ -642,11 +642,11 @@ ua.on('newRTCSession', function(e)
     * @property {string} message - originator 为 'remote' 时输出失败信息
     * @property {string} cause - 结束原因
     */
-  e.session.on('ended', function()
+  e.session.on('ended', function(d)
   {
     videoOnly = false;
     // mix && mix.stop();
-    setStatus('通话结束');
+    setStatus(`通话结束: ${d.cause}`);
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
