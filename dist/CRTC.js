@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.17-beta.2026122951
+ * CRTC v1.11.17-beta.20261231140
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.17-beta.405202441902 (Web)',
+  USER_AGENT: 'UA/1.11.17-beta.405202462280 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.17-beta.405202441902');
+debug('version %s', '1.11.17-beta.405202462280');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.17-beta.405202441902';
+    return '1.11.17-beta.405202462280';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19115,6 +19115,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var _this4 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug("".concat(this._id, " answer() ").concat(JSON.stringify(options)));
+
+      // 初始化统计信息参数
+      window.CRTCStats = 'start';
       var request = this._request;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var mediaConstraints = Utils.cloneObject(options.mediaConstraints);
@@ -26565,6 +26568,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function start() {
       var _this2 = this;
       logger.debug('start()');
+      window.CRTCStats = '';
       var processing = /*#__PURE__*/function () {
         var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
           var inform, transceivers, _iterator, _step, transceiver, senderReports, receiverReports, _t;
@@ -26576,6 +26580,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _context.n = 1;
                   break;
                 }
+                logger.debug("CRTCStats: ".concat(window.CRTCStats));
                 clearInterval(_this2._statsTimer);
                 return _context.a(2);
               case 1:
