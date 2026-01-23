@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.17-beta.2026123214
+ * CRTC v1.11.17-beta.2026123218
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.17-beta.405202464208 (Web)',
+  USER_AGENT: 'UA/1.11.17-beta.405202464216 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.17-beta.405202464208');
+debug('version %s', '1.11.17-beta.405202464216');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.17-beta.405202464208';
+    return '1.11.17-beta.405202464216';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":67}],39:[function(require,module,exports){
@@ -21421,7 +21421,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
       this._rtcReady = false;
-      console.warn('con: ', constraints);
       return Promise.resolve()
       // Create Offer or Answer.
       .then(function () {
@@ -22490,7 +22489,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           options.extraHeaders = Utils.cloneArray(options.extraHeaders);
           options.extraHeaders.push("Replaces: ".concat(replaces));
         }
-        console.warn('aaaaaaa: ', options.mediaConstraints, this._inviteMediaConstraints, this._answerMediaConstraints);
         options.mediaConstraints = options.mediaConstraints || this._inviteMediaConstraints || this._answerMediaConstraints;
         session.connect(request.refer_to.uri.toAor(), options, initCallback);
       }
