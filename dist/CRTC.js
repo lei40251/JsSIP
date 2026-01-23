@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.17-beta.20261231140
+ * CRTC v1.11.17-beta.20261231813
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.17-beta.405202462280 (Web)',
+  USER_AGENT: 'UA/1.11.17-beta.405202463626 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.17-beta.405202462280');
+debug('version %s', '1.11.17-beta.405202463626');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.17-beta.405202462280';
+    return '1.11.17-beta.405202463626';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -19504,7 +19504,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (_this4._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        if (!mediaConstraints.video) {
+        if (!mediaConstraints.video && desc) {
           // desc = desc.replace(/(m=video) \d+ (.*\r?\n([\s\S]*?\r?\n)*?a=)recvonly/, '$1 0 $2inactive');
           desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
           desc = Utils.updateSdpByConstraints(desc, mediaConstraints);
@@ -21553,6 +21553,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc.sdp = desc.sdp.replace(/a=bundle-only\r\n/g, '');
           desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
         }
+        logger.debug("".concat(_this17._id, " desc.sdp: ").concat(desc.sdp));
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this17._rtcReady = true;
           logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
@@ -21640,7 +21641,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }).then(function (sdp) {
         // 去掉IPV6
         // sdp = sdp.replace(/a=candidate:.*:.*\r\n/g, '');
-
+        logger.debug("".concat(_this17._id, " sdp: ").concat(sdp));
         var sdp_desc = sdp_transform.parse(sdp);
         if (type === 'offer') {
           _this17._localToAudio === '' && (_this17._localToAudio = true);
@@ -21794,6 +21795,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }];
         }
         return sdp_transform.write(sdp_desc);
+      })["catch"](function (e) {
+        logger.warn(_this17._id + JSON.stringify(e));
       });
     }
 
@@ -22693,9 +22696,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this28._status = C.STATUS_INVITE_SENT;
 
         // 获取DTMF的payload
-        !_this28._dtmf_payload && (_this28._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc));
-        logger.debug("".concat(_this28._id, " dtmf payload").concat(JSON.stringify(_this28._dtmf_payload)));
-        logger.debug("".concat(_this28._id, " emit \"sending\" [request:%o]"), _this28._request);
+        if (desc & !_this28._dtmf_payload) {
+          _this28._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc);
+        }
+        logger.debug("".concat(_this28._id, " dtmf payload ").concat(JSON.stringify(_this28._dtmf_payload)));
+        logger.debug("".concat(_this28._id, " emit \"sending\" [request:%o] "), _this28._request);
         var cache = [];
         logger.debug("".concat(_this28._id, " emit \"sending\" [request:%o] ").concat(JSON.stringify(_this28._request, function (key, value) {
           if (_typeof(value) === 'object' && value !== null) {

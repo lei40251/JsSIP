@@ -352,7 +352,6 @@ ua.on('newRTCSession', function(e)
       // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
       // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
       // d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
-      console.warn('sdp: ', d.sdp);
     }
   });
 
