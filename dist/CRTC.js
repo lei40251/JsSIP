@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.17-beta.20261231813
+ * CRTC v1.11.17-beta.20261271053
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.17-beta.405202463626 (Web)',
+  USER_AGENT: 'UA/1.11.17-beta.405202542106 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.17-beta.405202463626');
+debug('version %s', '1.11.17-beta.405202542106');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.17-beta.405202463626';
+    return '1.11.17-beta.405202542106';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -18830,7 +18830,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
                 _this2._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
                 logger.warn("".concat(_this2._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this2._id, " emit \"getusermediafailed\" [error:%o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this2._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                 _this2.emit('getusermediafailed', error);
                 var e = new Error("getusermediafailed, ".concat(error.message), {
                   cause: error.message
@@ -19322,7 +19322,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 request.reply(480);
                 _this4._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
                 logger.warn("".concat(_this4._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this4._id, " emit \"getusermediafailed\" [error:%o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this4._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                 _this4.emit('getusermediafailed', error);
                 throw new Error('getUserMedia() failed');
               });
@@ -19473,7 +19473,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           request.reply(488);
           _this4._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
           logger.warn("".concat(_this4._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this4._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this4._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           _this4.emit('peerconnection:setremotedescriptionfailed', error);
           throw new Error('peerconnection.setRemoteDescription() failed');
         });
@@ -19954,7 +19954,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         _context4.n = 1;
                         return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
                           logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                          logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]").concat(JSON.stringify(error)));
+                          logger.error("".concat(_this7._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                           _this7.emit('getusermediafailed', error);
                           throw new Error('getUserMedia() failed');
                         });
@@ -20022,7 +20022,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _constraints.audio = audioConstraints;
                 return navigator.mediaDevices.getUserMedia(_constraints)["catch"](function (error) {
                   logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]"), error);
-                  logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]").concat(JSON.stringify(error)));
+                  logger.error("".concat(_this7._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                   _this7.emit('getusermediafailed', error);
                   throw new Error('getUserMedia() failed');
                 });
@@ -20299,7 +20299,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _this8._enableBFCP && _this8._sendFloorRelease();
                 }
                 logger.warn("".concat(_this8._id, " emit \"getdisplaymediafailed\" [error:%o]"), error);
-                logger.warn("".concat(_this8._id, " emit \"getdisplaymediafailed\" [error:%o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this8._id, " emit \"getdisplaymediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                 _this8.emit('getdisplaymediafailed', error);
                 throw error;
               }));
@@ -21018,7 +21018,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   status_code: 488
                 });
                 logger.warn("".concat(_this13._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this13._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this13._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                 _this13.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
@@ -21226,7 +21226,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._connection.close();
         } catch (error) {
           logger.warn("".concat(this._id, " close() | error closing the RTCPeerConnection: %o"), error);
-          logger.warn("".concat(this._id, " close() | error closing the RTCPeerConnection: %o").concat(JSON.stringify(error)));
+          logger.warn("".concat(this._id, " close() | error closing the RTCPeerConnection: ").concat(error.message, " ").concat(JSON.stringify(error)));
         }
       }
 
@@ -21425,14 +21425,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (type === 'offer') {
           return connection.createOffer(constraints)["catch"](function (error) {
             logger.warn("".concat(_this17._id, " emit \"peerconnection:createofferfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createofferfailed\" [error:%o]").concat(JSON.stringify(error)));
+            logger.warn("".concat(_this17._id, " emit \"peerconnection:createofferfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
             _this17.emit('peerconnection:createofferfailed', error);
             return Promise.reject(error);
           });
         } else {
           return connection.createAnswer(constraints)["catch"](function (error) {
             logger.warn("".concat(_this17._id, " emit \"peerconnection:createanswerfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createanswerfailed\" [error:%o]").concat(JSON.stringify(error)));
+            logger.warn("".concat(_this17._id, " emit \"peerconnection:createanswerfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
             _this17.emit('peerconnection:createanswerfailed', error);
             return Promise.reject(error);
           });
@@ -21444,13 +21444,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (type === 'offer') {
           var mids = [];
           sdp.media.forEach(function (media, index) {
-            // 处理视频呼叫音频接听后再切换视频时 mid 值问题
-            media.mid = index;
-            mids.push(index);
+            if (!Utils.isFirefox()) {
+              // 处理视频呼叫音频接听后再切换视频时 mid 值问题
+              media.mid = index;
+              mids.push(index);
+            }
             if (media.type === 'video') {
               var lowH264 = false;
+              var payloads = [media.payloads];
               var delH264Payload = [];
-              var payloads = media.payloads.split(' ');
+              if (typeof media.payloads === 'string') {
+                payloads = media.payloads.split(' ');
+              }
               media.fmtp.forEach(function (fmtp) {
                 if (fmtp.config.indexOf('profile-level-id=42e0') !== -1 || fmtp.config.indexOf('profile-level-id=42c0') !== -1) {
                   lowH264 = true;
@@ -21536,7 +21541,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           });
 
           // 处理视频呼叫音频接听后再切换视频时 mid 值问题
-          sdp.groups[0].mids = mids.join(' ');
+          Utils.isFirefox() || (sdp.groups[0].mids = mids.join(' '));
           desc.sdp = sdp_transform.write(sdp);
         }
         desc.sdp = sdp_transform.write(sdp);
@@ -21557,7 +21562,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this17._rtcReady = true;
           logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           _this17.emit('peerconnection:setlocaldescriptionfailed', error);
           return Promise.reject(error);
         });
@@ -21796,7 +21801,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         return sdp_transform.write(sdp_desc);
       })["catch"](function (e) {
-        logger.warn(_this17._id + JSON.stringify(e));
+        logger.warn("".concat(_this17._id, " ").concat(e.message));
       });
     }
 
@@ -21906,7 +21911,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }).then(function (sdp) {
           sendAnswer.call(_this18, sdp);
         })["catch"](function (e) {
-          logger.warn(_this18._id + JSON.stringify(e));
+          logger.warn("this._id ".concat(e.message, " ").concat(JSON.stringify(e)));
           request.reply(500);
         });
         return;
@@ -22287,7 +22292,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _this23._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
           logger.warn("".concat(_this23._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this23._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           _this23.emit('peerconnection:setremotedescriptionfailed', error);
           throw error;
         });
@@ -22333,7 +22338,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // this._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
             logger.warn("".concat(_this23._id, " emit \"getusermediafailed\" [error:%o]"), error);
-            logger.warn("".concat(_this23._id, " emit \"getusermediafailed\" [error:%o]").concat(JSON.stringify(error)));
+            logger.warn("".concat(_this23._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
             _this23.emit('getusermediafailed', error);
             return false;
             // throw error;
@@ -22353,7 +22358,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             try {
               _this23._localMediaStream.addTrack(track);
             } catch (error) {
-              logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed local stream ").concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+              logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed local stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
             }
 
             // 兼容低版本浏览器不支持addTrack的情况
@@ -22361,7 +22366,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               try {
                 _this23._connection.addTrack(track, stream);
               } catch (error) {
-                logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(track.kind, " [error: %o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
               }
             } else {
               _this23._connection.addStream(stream);
@@ -22384,7 +22389,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 try {
                   _this23._connection.addTrack(_this23._localMediaStream.getVideoTracks()[0], _this23._localMediaStream);
                 } catch (error) {
-                  logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(_this23._localMediaStream.getVideoTracks()[0].kind, " [error: %o]").concat(JSON.stringify(error)));
+                  logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(_this23._localMediaStream.getVideoTracks()[0].kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
                 }
               } else {
                 logger.warn("".concat(_this23._id, " Track is already added to the peer connection."));
@@ -22404,12 +22409,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return _this23._createLocalDescription('answer', _this23._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
           logger.warn("".concat(_this23._id, " emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this23._id, " emit \"peerconnection:createtelocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           throw error;
         });
       })["catch"](function (error) {
         logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed [error: %o]"), error);
-        logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed [error: %o]").concat(JSON.stringify(error)));
+        logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed ").concat(error.message, " ").concat(JSON.stringify(error)));
       });
       return this._connectionPromiseQueue;
     }
@@ -22858,7 +22863,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               return _this29._progress('remote', response);
             })["catch"](function (error) {
               logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-              logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+              logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
               _this29.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
@@ -23027,7 +23032,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
                 logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                 _this29.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
@@ -23202,7 +23207,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })["catch"](function (error) {
           onFailed.call(_this31);
           logger.warn("".concat(_this31._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this31._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this31._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           _this31.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
@@ -23390,7 +23395,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           })["catch"](function (error) {
             onFailed.call(_this33);
             logger.warn("".concat(_this33._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this33._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]").concat(JSON.stringify(error)));
+            logger.warn("".concat(_this33._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
             _this33.emit('peerconnection:setremotedescriptionfailed', error);
           });
         }
@@ -23982,17 +23987,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sdpAddMid",
     value: function _sdpAddMid(sdp) {
-      if (sdp.indexOf('a=mid:0') === -1) {
-        // 新增多个媒体及Datachannel的mid
-        var midCounter = 0;
-        var newSdp = sdp.replace(/(^m=[^\r\n]+)/gm, function (match) {
-          return "".concat(match, "\r\na=mid:").concat(midCounter++);
-        });
-        logger.debug("".concat(this._id, " new sdp: "), newSdp);
-        return newSdp;
-      } else {
+      logger.debug("".concat(this._id, " _sdpAddMid()"));
+      if (sdp.indexOf('a=mid:') !== -1) {
         return sdp;
       }
+      var lSdp = this.connection && this.connection.localDescription && this.connection.localDescription.sdp;
+      var mids = [];
+      if (lSdp) {
+        var parts = lSdp.split('\r\nm=');
+        parts.slice(1).forEach(function (p) {
+          var m = p.match(/\r\na=mid:([^\r\n]+)/);
+          mids.push(m ? m[1] : null);
+        });
+      }
+      var index = 0;
+      var newSdp = sdp.replace(/(^m=[^\r\n]+)/gm, function (match) {
+        var mid = mids[index] !== null && mids[index] !== undefined ? mids[index] : String(index);
+        index++;
+        return "".concat(match, "\r\na=mid:").concat(mid);
+      });
+      return newSdp;
     }
 
     /**
@@ -24011,7 +24025,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       audio.loop = true;
       audio.crossOrigin = 'anonymous';
       audio.play()["catch"](function (error) {
-        logger.error("".concat(_this38._id, " new Audio() error: ").concat(JSON.stringify(error)));
+        logger.error("".concat(_this38._id, " new Audio() error: ").concat(error.message, " ").concat(JSON.stringify(error)));
       });
       source.connect(destination);
       return destination.stream.getAudioTracks()[0];
@@ -24051,7 +24065,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
-        logger.error("".concat(_this39._id, " replaceAudioToMic error: ").concat(JSON.stringify(error)));
+        logger.error("".concat(_this39._id, " replaceAudioToMic error: ").concat(error.message, " ").concat(JSON.stringify(error)));
         _this39._replaceAudioToMic();
       });
     }
@@ -24129,7 +24143,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
-        logger.error("".concat(_this41._id, " replaceCanvasToVideo error: ").concat(JSON.stringify(error)));
+        logger.error("".concat(_this41._id, " replaceCanvasToVideo error: ").concat(error.message, " ").concat(JSON.stringify(error)));
         _this41._replaceCanvasToVideo();
       });
     }
@@ -24523,7 +24537,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
       var _this47 = this;
-      logger.debug("".concat(this._id, " initDataChannel()").concat(JSON.stringify(event)));
+      logger.debug("".concat(this._id, " initDataChannel() ").concat(JSON.stringify(event)));
 
       // 内部变量
       var datachannel;
