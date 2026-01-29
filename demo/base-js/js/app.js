@@ -440,6 +440,8 @@ ua.on('newRTCSession', function(e)
     setStatus(`mode: ${d.mode}`);
 
     curMode = d.mode;
+    
+    stats && stats.setMode(d.mode);
 
     if (d.mode == 'video')
     {
@@ -457,7 +459,7 @@ ua.on('newRTCSession', function(e)
 
     }
 
-    stats && stats.reset();
+    // stats && stats.reset();
 
     // 获取媒体流
     getStreams(e.session.connection);
@@ -1127,7 +1129,7 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toVideo').onclick = function()
   {
     e.session.upgradeToVideo({ useUpdate: false }, () => { setStatus(`切换视频模式完成${curMode}`); });
-    stats && stats.reset();
+    // stats && stats.reset();
   };
 
   /**
@@ -1143,7 +1145,7 @@ ua.on('newRTCSession', function(e)
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
-    stats && stats.reset();
+    // stats && stats.reset();
   };
 
   /**
@@ -1168,7 +1170,7 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toVideoSendonly').onclick = function()
   {
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成')+curMode; });
-    stats && stats.reset();
+    // stats && stats.reset();
   };
 
   /**
@@ -1182,7 +1184,7 @@ ua.on('newRTCSession', function(e)
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成')+curMode; });
-    stats && stats.reset();
+    // stats && stats.reset();
   };
 
 
