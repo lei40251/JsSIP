@@ -600,7 +600,8 @@ ua.on('newRTCSession', function(e)
     setStatus(`ended: ${e.session.end_time}`);
 
     // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    stopStreams();
+    // 呼转被拒绝会有问题，暂时先不停止媒体
+    // stopStreams();
 
     // 停止获取统计信息
     stats && stats.stop();
