@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.18-beta.202626957
+ * CRTC v1.11.18-beta.2026261237
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.18-beta.405204121914 (Web)',
+  USER_AGENT: 'UA/1.11.18-beta.405204122474 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16853,7 +16853,7 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
-debug('version %s', '1.11.18-beta.405204121914');
+debug('version %s', '1.11.18-beta.405204122474');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16891,7 +16891,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.18-beta.405204121914';
+    return '1.11.18-beta.405204122474';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./WebSocketInterface":62,"debug":66}],39:[function(require,module,exports){
@@ -22712,7 +22712,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this28._status = C.STATUS_INVITE_SENT;
 
         // 获取DTMF的payload
-        if (desc & !_this28._dtmf_payload) {
+        if (desc && !_this28._dtmf_payload) {
           _this28._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc);
         }
         logger.debug("".concat(_this28._id, " dtmf payload ").concat(JSON.stringify(_this28._dtmf_payload)));
