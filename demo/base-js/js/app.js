@@ -43,6 +43,8 @@ let curMode;
 let cloneStream = null;
 let isRefer = false;
 
+let recorder;
+
 const extraFeatures = [];
 
 // let payload;
@@ -59,6 +61,7 @@ let blackVideo = null;
 
 const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
+const rec = handleGetQuery('rec') || false;
 const env = handleGetQuery('env');
 const noremb = handleGetQuery('noremb') || false;
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, password } = env ? envs[`env_${env}`] : envs['env_default'];
@@ -597,6 +600,12 @@ ua.on('newRTCSession', function(e)
     tmpSession = null;
     rtcSession = null;
 
+    if (recorder)
+    {
+      recorder.stop();
+      recorder.clearRecordedData();
+    }
+
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
@@ -649,6 +658,12 @@ ua.on('newRTCSession', function(e)
     videoOnly = false;
     // mix && mix.stop();
     setStatus(`通话结束: ${d.cause}`);
+
+    if (recorder)
+    {
+      recorder.stop();
+      recorder.clearRecordedData();
+    }
 
     // 输出通话开始时间及通话结束时间
     setStatus(`start: ${e.session.start_time}`);
@@ -825,7 +840,30 @@ ua.on('newRTCSession', function(e)
     {
       // 根据业务需求进行网络连接异常提示，或者可以延迟2秒再判断一次做为确认
     }
+    
+    // 本地媒体流
+    const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
+    // 远端媒体流
+    const remoteStream = CRTC.Utils.getStreams(e.session.connection, 'remote');
 
+    console.warn('rec: ', rec);
+    if (rec)
+    {
+      recorder = new MultiStreamRecorder([ localStream.videoStream, remoteStream.videoStream ]);
+      recorder.mimeType = 'video/webm;codecs=vp8';
+      recorder.ondataavailable = function(blob) 
+      {
+        console.warn('recorder: ', blob);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        a.href = url;
+        a.download = `rec_${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+      };
+      recorder.start(Number(rec)*1000);
+    }
 
     setStatus('confirmed');
     // updateDevices();
@@ -1596,7 +1634,7 @@ document.querySelector('#useupdate').onchange = function()
 async function call(type, direction, mediaStream)
 {
   telephone_event_pt = null;
-
+  recorder=undefined;
   camFlag = true;
 
   if (!ua.isRegistered())
