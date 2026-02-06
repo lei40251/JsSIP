@@ -355,6 +355,18 @@ ua.on('newRTCSession', function(e)
       // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
       // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
       // d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
+
+      // d.sdp = d.sdp.replace(/(m=video\s+)\d+/, '$10');
+      // d.sdp = d.sdp.replace(
+      //   /(m=video[\s\S]*?)(a=sendrecv|a=sendonly|a=recvonly)/,
+      //   (match, part1) => 
+      //   {
+      //     // part1 是 m=video 到 属性前的所有内容
+      //     return `${part1 }a=inactive`;
+      //   }
+      // );
+
+      // console.warn('d.sdp: ', d.sdp);
     }
   });
 

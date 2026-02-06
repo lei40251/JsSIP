@@ -69,3 +69,7 @@ export function isVideoTrackHealthy(object): boolean;
 
 export function updateSdpByConstraints(string, object): string;
 
+export function fixVideoInactive(string): string;
+
+export function disableVideoInSdp(string): string;
+
