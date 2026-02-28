@@ -35,8 +35,10 @@ let confirmed = false;
 // 用于断网提示相关
 let handleStop = false;
 let disconnectedBy = null;
+// eslint-disable-next-line no-unused-vars
 let isShowUI = false;
 
+// eslint-disable-next-line no-unused-vars
 let mix;
 // 是否单视频
 let videoOnly = false;
@@ -561,7 +563,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('peerconnection:iceConnectionState', (d) =>
   {
-    // console.warn('iceConnectionState: ', d);
+    console.warn('iceConnectionState: ', d);
   });
 
   
@@ -1860,23 +1862,6 @@ async function call(type, direction, mediaStream)
     }, 3000);
   }
 
-}
-
-function generateAnEmptyAudioTrack()
-{
-  // 增加安卓微信呼叫的语音提醒
-  // const audio = new Audio('./sound/waiting.mp3');
-  const audio = new Audio();
-  const audioCtx = new AudioContext();
-  const destination = audioCtx.createMediaStreamDestination();
-  const source = audioCtx.createMediaElementSource(audio);
-
-  audio.loop = true;
-  audio.crossOrigin = 'anonymous';
-  audio.play().catch((error) => { logger.error(`new Audio() error: ${JSON.stringify(error)}`); });
-  source.connect(destination);
-
-  return destination.stream.getAudioTracks()[0];
 }
 
 /**
