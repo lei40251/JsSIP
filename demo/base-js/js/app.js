@@ -2,6 +2,11 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
+window.addEventListener('VirtualBackgroundEngineReady', async() => 
+{
+  setStatus('加载虚拟背景');
+});
+
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
@@ -1729,6 +1734,40 @@ async function call(type, direction, mediaStream)
     };
   }
 
+  if (type=== 'callVB')
+  {
+    const engine = new window.VirtualBackgroundEngine();
+
+    const inputStream = await navigator.mediaDevices.getUserMedia({
+      video : videoConstraints
+    });
+
+    await engine.init({
+      inputStream,
+      modelPath : './virtual-background/models/segm_lite_v681.tflite'
+    });
+
+    engine.start();
+
+    engine.setBackgroundImage('./virtual-background/backgrounds/porch-691330_1280.jpg');
+
+    const processedStream = engine.getOutputStream();
+
+    // console.warn(processedStream);
+    // document.getElementById('video').srcObject = processedStream;
+
+    window.novideo = processedStream;
+
+    options['mediaStream'] = processedStream;
+
+    // 系统麦克风和摄像头
+    options['mediaConstraints'] = {
+      audio : true,
+      video : type === true
+    };
+    
+  }
+
   if (type === 'onlyVideo')
   {
     options.mediaConstraints.audio = false;
@@ -2080,10 +2119,16 @@ function start()
     call('callnullaudio');
   };
 
-  // 发起无音视频呼叫
+  // 发起虚拟背景呼叫
+  document.querySelector('#callVB').onclick = function()
+  {
+    call('callVB');
+  };
+
+
+  // 发起无摄像头呼叫
   document.querySelector('#callNullVideo').onclick = function()
   {
-    // 设置当前通话模式为音频模式
     call('callnullvideo');
   };
 
