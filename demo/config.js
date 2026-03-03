@@ -33,6 +33,13 @@ const envs =
     secretKey    : sessionStorage.getItem('secret_key') || 'FgUvPLJlMrIcAE4msvkZ4WfKy1XtpWXNoQhB9Dx8RhDw7yJfINTJsNPybpGALXOjFFbZq+iwXbRleTJgEGAAMgIpHmSlctsN/DJ7637Va8RQsGBXxAB3zpsz+n9gR4PIzhBQlKVMknvETgFIaUvbfzP0RWhzdHDvBcYGvfrjHZ6ZMcV4lbAT+uSG9xpJZKzUQTl5h2AdCt51pIYNBJftSol+szubf2sB7oAoiXWpgjJL2dc73CFwSRDvGHwMQZOgyIP/mLyw7FNeU7ENieW+At4Eytu0sETnpNlw9rIKvyl62/j/zY5VG6dWoMQ7YF8aEALXLVU0pQbDCYG2EQQ3Zg==',
     iceServers   : null
   },
+  env_backqu : {
+    signalingUrl       : 'wss://crtc.backqu.com:9002/wss',
+    sipDomain          : 'crtc.backqu.com',
+    secretKey          : sessionStorage.getItem('secret_key') || 'nQx3agNP4MAce6re5Cim7gDte6xSwvdjvd337cWZnYd2dyn+WxxZ+tFoSK2eQ0lJYXMmrvRcAhuj5FA6FnkEdHNeg3zhW0Gwme0lJ27klqopKA9qZWDs7OgmQvoxYU5mMAWuMPIWPD09+WndmsX8FURsDZQExEoC6UWjKy/lWC+QgFX3QVxQ5EbNiNKgp1JHihnx6Kps71dg034fmrCQaUzg1R2e+hPwRMWCCk+n3vabjodeOyWlUTGpFpo+jx2oFPAP+TjbW7q7NNr/K1uSubuoK80ks5c7cBY6CFK3XXyFImXjOjkGvA7uSEXWHP4e99eDeyUD99ZHMEb88Phnsg==',
+    iceServers         : [ { 'urls': 'turn:crtc.backqu.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+    iceTransportPolicy : 'relay'
+  },
   env_pro40 : {
     signalingUrl : 'wss://pro.vsbc.com:60040/wss',
     sipDomain    : 'pro.vsbc.com',

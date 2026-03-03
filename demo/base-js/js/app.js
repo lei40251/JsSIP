@@ -25,6 +25,7 @@ let optionsTimer;
 let tmpSession;
 let safari_r = false;
 let options;
+let oldSession;
 
 let camFlag = true;
 
@@ -297,6 +298,7 @@ ua.on('newRTCSession', function(e)
   {
     setStatus('refer');
     d.request.refer_to.uri.host = sipDomain;    
+    oldSession = e.session;
     d.accept(null, options);
     // 兼容华为MCU
     isRefer = true;
@@ -739,7 +741,16 @@ ua.on('newRTCSession', function(e)
   {
     if (d.originator === 'remote')
     {
-      setStatus(`收到新消息：${d.info.body}`);
+      setStatus(`收到新消息：${JSON.stringify(d.info.body)}`);
+      const body = JSON.parse(d.info.body);
+
+      if (body)
+      {
+        if (body.event==='cancel')
+        {
+          isRefer && tmpSession.terminate();
+        }
+      }
     }
     else if (d.originator === 'local')
     {
@@ -1301,16 +1312,25 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#cancel').onclick = function()
   {
-    e.session.terminate();
-
     blackVideo && blackVideo.cleanup();
 
-    try
-    {
-      rtcSession.terminate();
-      tmpSession.terminate();
+    try 
+    {      
+      oldSession&& oldSession.isEstablished() && oldSession.terminate();
+      e.session && e.session.isEstablished() && e.session.terminate();
+      rtcSession && rtcSession.isEstablished() && rtcSession.terminate();
+      tmpSession && tmpSession.isEstablished() && tmpSession.terminate();
     }
-    catch (error) { }
+    catch (error) { console.error(error); }
+  };
+
+
+  /**
+   * 结束呼转
+   */
+  document.querySelector('#cancelReferBtn').onclick = function()
+  {
+    e.session.sendInfo('text/plain', JSON.stringify({ 'event': 'cancel' }));
   };
 
   /**
@@ -1582,7 +1602,7 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#sendInfo').onclick = function()
   {
     // 注意： contentType 必填，一般用 text/plain 发送字符串
-    e.session.sendInfo('text/plain', document.querySelector('#info').value);
+    e.session.sendInfo('text/plain', JSON.stringify(document.querySelector('#info').value));
   };
 
   /**
@@ -1612,7 +1632,6 @@ ua.on('newRTCSession', function(e)
  */
 document.querySelector('#testBtn').onclick = function()
 {
-  console.warn('aaaaaaaaaaaaaaaaaaaaaa');
   navigator.mediaDevices.enumerateDevices()
     .then((devices) =>
     {
@@ -1751,7 +1770,7 @@ async function call(type, direction, mediaStream)
 
     engine.start();
 
-    engine.setBackgroundImage('./virtual-background/backgrounds/porch-691330_1280.jpg');
+    engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
 
     const processedStream = engine.getOutputStream();
 
