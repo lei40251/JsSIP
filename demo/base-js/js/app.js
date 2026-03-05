@@ -1757,7 +1757,7 @@ async function call(type, direction, mediaStream)
 
   if (type=== 'callVB')
   {
-    const engine = new window.VirtualBackgroundEngine();
+    const engine = new CRTC.VirtualBackground();
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -1765,7 +1765,7 @@ async function call(type, direction, mediaStream)
 
     await engine.init({
       inputStream,
-      modelPath : './virtual-background/models/segm_lite_v681.tflite'
+      modelPath : './virtual-background/models/slv.tflite'
     });
 
     engine.start();
