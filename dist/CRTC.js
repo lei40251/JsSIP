@@ -1,5 +1,5 @@
 /*
- * CRTC v1.11.20-beta.2026351430
+ * CRTC v1.12.0-beta.202636100
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.11.20-beta.405206102860 (Web)',
+  USER_AGENT: 'UA/1.12.0-beta.405206122000 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.11.20-beta.405206102860');
+debug('version %s', '1.12.0-beta.405206122000');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.11.20-beta.405206102860';
+    return '1.12.0-beta.405206122000';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":70,"debug":74}],39:[function(require,module,exports){
@@ -31418,8 +31418,17 @@ exports.disableVideoInSdp = function (sdp) {
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
 "use strict";
 
+/**
+ * 创建一个基于 Web Worker 的 Timer
+ * 作用：避免主线程 setTimeout 在页面卡顿时不准的问题
+ */
 exports.createTimerWorker = function () {
   var callbacks = new Map();
+
+  /**
+   * Worker 内运行的代码
+   * 负责真正执行 setTimeout
+   */
   var code = "\n    const timeoutIds = new Map();\n\n    self.onmessage = (event) =>\n    {\n      if (event.data.timeoutMs !== undefined)\n      {\n        const timeoutId = self.setTimeout(() =>\n        {\n          self.postMessage({ callbackId: event.data.callbackId });\n          timeoutIds.delete(event.data.callbackId);\n        }, event.data.timeoutMs);\n\n        timeoutIds.set(event.data.callbackId, timeoutId);\n      }\n      else\n      {\n        const timeoutId = timeoutIds.get(event.data.callbackId);\n\n        self.clearTimeout(timeoutId);\n        timeoutIds.delete(event.data.callbackId);\n      }\n    }\n  ";
   var blob = new Blob([code], {
     type: 'application/javascript'
@@ -31435,6 +31444,13 @@ exports.createTimerWorker = function () {
     callback();
   };
   var nextCallbackId = 1;
+
+  /**
+   * 在 Web Worker 中设置一个延时回调
+   * @param {Function} callback - 延时后执行的回调函数
+   * @param {number} timeoutMs - 延时时间（毫秒）
+   * @returns {number} 回调 ID，可用于取消该延时
+   */
   function setTimeout(callback, timeoutMs) {
     var callbackId = nextCallbackId++;
     callbacks.set(callbackId, callback);
@@ -31444,6 +31460,11 @@ exports.createTimerWorker = function () {
     });
     return callbackId;
   }
+
+  /**
+   * 取消通过 setTimeout 设置的延时回调
+   * @param {number} callbackId - 要取消的回调 ID
+   */
   function clearTimeout(callbackId) {
     if (!callbacks.has(callbackId)) {
       return;
@@ -31453,6 +31474,10 @@ exports.createTimerWorker = function () {
     });
     callbacks["delete"](callbackId);
   }
+
+  /**
+   * 终止 Timer Worker 并清理所有资源
+   */
   function terminate() {
     callbacks.clear();
     worker.terminate();
@@ -31505,6 +31530,10 @@ var DEFAULT_CONFIG = {
   }
 };
 module.exports = /*#__PURE__*/function () {
+  /**
+   * 创建虚拟背景引擎实例
+   * @param {Object} options - 可选的配置选项
+   */
   function VirtualBackgroundEngine() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     _classCallCheck(this, VirtualBackgroundEngine);
@@ -31522,6 +31551,12 @@ module.exports = /*#__PURE__*/function () {
     this.animationFrameId = null;
     this.solidColorCanvas = null;
   }
+
+  /**
+   * 合并用户配置与默认配置
+   * @param {Object} options - 用户提供的配置选项
+   * @returns {Object} 合并后的配置对象
+   */
   return _createClass(VirtualBackgroundEngine, [{
     key: "mergeConfig",
     value: function mergeConfig(options) {
@@ -31533,9 +31568,13 @@ module.exports = /*#__PURE__*/function () {
       return config;
     }
 
-    /* ===============================
-     * 初始化
-     * =============================== */
+    /**
+     * 初始化虚拟背景引擎
+     * @param {Object} params - 初始化参数
+     * @param {MediaStream} params.inputStream - 输入的媒体流（必需）
+     * @param {string} params.modelPath - 模型文件路径（必需）
+     * @param {HTMLCanvasElement} [params.canvas] - 可选的画布元素
+     */
   }, {
     key: "init",
     value: (function () {
@@ -31578,10 +31617,16 @@ module.exports = /*#__PURE__*/function () {
         return _init.apply(this, arguments);
       }
       return init;
-    }())
+    }()
+    /**
+     * 加载 TFLite SIMD 分割模型
+     * @param {string} modelPath - 模型文件路径
+     * @returns {Promise<void>}
+     */
+    )
   }, {
     key: "loadModel",
-    value: function () {
+    value: (function () {
       var _loadModel = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(modelPath) {
         var modelResponse, model, bufferOffset, _t;
         return _regenerator().w(function (_context2) {
@@ -31635,9 +31680,14 @@ module.exports = /*#__PURE__*/function () {
       }
       return loadModel;
     }()
+    /**
+     * 创建视频元素并播放输入流
+     * @returns {Promise<void>}
+     */
+    )
   }, {
     key: "createVideoElement",
-    value: function () {
+    value: (function () {
       var _createVideoElement = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
         var _t2;
         return _regenerator().w(function (_context3) {
@@ -31667,6 +31717,10 @@ module.exports = /*#__PURE__*/function () {
       }
       return createVideoElement;
     }()
+    /**
+     * 设置 WebGL2 处理管道
+     */
+    )
   }, {
     key: "setupPipeline",
     value: function setupPipeline() {
@@ -31682,21 +31736,32 @@ module.exports = /*#__PURE__*/function () {
       }, this.config.segmentation, this.canvas, this.tfs, function () {});
       this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
     }
+
+    /**
+     * 创建输出媒体流
+     * 使用画布捕获视频帧生成输出流
+     */
   }, {
     key: "createOutputStream",
     value: function createOutputStream() {
       var stream = this.canvas.captureStream(this.config.video.targetFps);
       this.outputStream = stream;
     }
+
+    /**
+     * 获取输出媒体流
+     * @returns {MediaStream} 处理后的输出媒体流
+     */
   }, {
     key: "getOutputStream",
     value: function getOutputStream() {
       return this.outputStream;
     }
 
-    /* ===============================
-     * 控制
-     * =============================== */
+    /**
+     * 启动虚拟背景渲染循环
+     * 开始处理视频帧并应用虚拟背景效果
+     */
   }, {
     key: "start",
     value: function start() {
@@ -31706,6 +31771,11 @@ module.exports = /*#__PURE__*/function () {
       this.loop = this.loop.bind(this);
       this.animationFrameId = requestAnimationFrame(this.loop);
     }
+
+    /**
+     * 停止虚拟背景渲染循环
+     * 释放动画帧和定时器资源
+     */
   }, {
     key: "stop",
     value: function stop() {
@@ -31719,9 +31789,14 @@ module.exports = /*#__PURE__*/function () {
         this.renderTimeoutId = null;
       }
     }
+
+    /**
+     * 渲染循环 - 递归调用以持续处理视频帧
+     * @param {number} now - 当前时间戳（毫秒）
+     */
   }, {
     key: "loop",
-    value: function () {
+    value: (function () {
       var _loop = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(now) {
         var interval;
         return _regenerator().w(function (_context4) {
@@ -31762,9 +31837,13 @@ module.exports = /*#__PURE__*/function () {
       }
       return loop;
     }()
-    /* ===============================
-     * 动态修改背景
-     * =============================== */
+    /**
+     * 设置背景图片
+     * 异步加载图片并更新背景元素
+     * @param {string} url - 背景图片的 URL 地址
+     * @returns {Promise<void>} 图片加载完成后 resolve，加载失败则 reject
+     */
+    )
   }, {
     key: "setBackgroundImage",
     value: (function () {
@@ -31790,7 +31869,13 @@ module.exports = /*#__PURE__*/function () {
         return _setBackgroundImage.apply(this, arguments);
       }
       return setBackgroundImage;
-    }())
+    }()
+    /**
+     * 设置模糊背景效果
+     * 使用高斯模糊对原始视频背景进行模糊处理
+     * @param {number} [radius=20] - 模糊半径，值越大模糊程度越高
+     */
+    )
   }, {
     key: "setBlurBackground",
     value: function setBlurBackground(radius) {
@@ -31799,6 +31884,12 @@ module.exports = /*#__PURE__*/function () {
         blurRadius: radius
       }));
     }
+
+    /**
+     * 设置纯色背景
+     * 创建一个纯色画布作为虚拟背景
+     * @param {string} [color='#00ff00'] - 背景颜色，默认为绿色
+     */
   }, {
     key: "setSolidColor",
     value: function setSolidColor() {
@@ -31814,9 +31905,10 @@ module.exports = /*#__PURE__*/function () {
       this.backgroundEl.src = this.solidColorCanvas.toDataURL();
     }
 
-    /* ===============================
-     * 清理
-     * =============================== */
+    /**
+     * 销毁虚拟背景引擎实例
+     * 释放所有资源，包括 Web Worker、模型内存、媒体流等
+     */
   }, {
     key: "destroy",
     value: function destroy() {
@@ -31838,9 +31930,6 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-
-// window.VirtualBackgroundEngine = VirtualBackgroundEngine
-// window.dispatchEvent(new Event('VirtualBackgroundEngineReady'))
 },{"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":69}],64:[function(require,module,exports){
 "use strict";
 
@@ -31867,25 +31956,53 @@ function createProgram(gl, vertexShader, fragmentShader) {
   }
   return program;
 }
+
+/**
+ * 异步获取 WebGL 缓冲区数据
+ * 通过 GPU 同步机制确保数据在读取前已完全写入
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {number} target - 缓冲区目标（如 gl.ARRAY_BUFFER）
+ * @param {WebGLBuffer} buffer - WebGL 缓冲区对象
+ * @param {number} srcByteOffset - 源数据的字节偏移量
+ * @param {ArrayBufferView} dstBuffer - 目标缓冲区（用于存储读取的数据）
+ * @param {number} dstOffset - 目标缓冲区的写入偏移量
+ * @param {number} length - 要读取的数据长度
+ * @returns {Promise<void>}
+ */
 function getBufferSubDataAsync(_x, _x2, _x3, _x4, _x5, _x6, _x7) {
   return _getBufferSubDataAsync.apply(this, arguments);
 }
+/**
+ * 异步等待 GPU 同步对象完成
+ * 使用 requestAnimationFrame 轮询 GPU 命令完成状态
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {WebGLSync} sync - GPU 同步对象
+ * @returns {Promise<number>} 返回 Promise，解析为 GPU 等待结果状态
+ */
 function _getBufferSubDataAsync() {
   _getBufferSubDataAsync = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(gl, target, buffer, srcByteOffset, dstBuffer, dstOffset, length) {
     var sync, res;
     return _regenerator().w(function (_context2) {
       while (1) switch (_context2.n) {
         case 0:
-          sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+          // 创建 GPU 同步对象，用于确保 GPU 命令执行完成
+          sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); // 刷新 GPU 命令队列，确保所有待执行的命令已发送到 GPU
           gl.flush();
+          // 异步等待 GPU 完成所有命令
           _context2.n = 1;
           return clientWaitAsync(gl, sync);
         case 1:
           res = _context2.v;
+          // 删除同步对象，释放资源
           gl.deleteSync(sync);
+
+          // 如果等待未失败，则读取缓冲区数据
           if (res !== gl.WAIT_FAILED) {
+            // 绑定目标缓冲区
             gl.bindBuffer(target, buffer);
+            // 从缓冲区读取数据到目标数组
             gl.getBufferSubData(target, srcByteOffset, dstBuffer, dstOffset, length);
+            // 解除缓冲区绑定
             gl.bindBuffer(target, null);
           }
         case 2:
@@ -31898,32 +32015,72 @@ function _getBufferSubDataAsync() {
 function clientWaitAsync(gl, sync) {
   return new Promise(function (resolve) {
     function test() {
+      // 查询同步对象的状态
+      // 参数：sync 对象, flags=0, timeout=0（立即返回，不阻塞）
       var res = gl.clientWaitSync(sync, 0, 0);
+
+      // 如果等待失败（如 sync 对象无效），直接 resolve
       if (res === gl.WAIT_FAILED) {
         resolve(res);
         return;
       }
+      // 如果超时（GPU 尚未完成），使用 requestAnimationFrame 延迟后重试
       if (res === gl.TIMEOUT_EXPIRED) {
         requestAnimationFrame(test);
         return;
       }
+      // GPU 已完成工作，resolve 结果
       resolve(res);
     }
+    // 立即开始第一次检查
     requestAnimationFrame(test);
   });
 }
+
+/**
+ * 创建并配置管道阶段的 WebGL 程序
+ * 包含顶点着色器、片元着色器，并设置顶点属性和坐标缓冲区
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {WebGLShader} vertexShader - 顶点着色器
+ * @param {WebGLShader} fragmentShader - 片元着色器
+ * @param {WebGLBuffer} positionBuffer - 顶点位置缓冲区
+ * @param {WebGLBuffer} texCoordBuffer - 纹理坐标缓冲区
+ * @returns {WebGLProgram} 配置完成的 WebGL 程序对象
+ */
 exports.createPiplelineStageProgram = function (gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer) {
+  // 创建 WebGL 程序并附加着色器进行链接
   var program = createProgram(gl, vertexShader, fragmentShader);
+  // 获取顶点着色器中属性位置（a_position：顶点坐标）
   var positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+
+  // 启用顶点属性数组，以便 GPU 可以访问属性数据
   gl.enableVertexAttribArray(positionAttributeLocation);
+  // 绑定顶点位置缓冲区
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  // 设置顶点属性指针：2个分量（x, y），FLOAT类型，不归一化，步长为0，偏移为0
   gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+  // 获取顶点着色器中属性位置（a_texCoord：纹理坐标）
   var texCoordAttributeLocation = gl.getAttribLocation(program, 'a_texCoord');
+
+  // 启用纹理坐标属性数组
   gl.enableVertexAttribArray(texCoordAttributeLocation);
+  // 绑定纹理坐标缓冲区
   gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  // 设置纹理坐标属性指针：2个分量（u, v），FLOAT类型
   gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+  // 返回配置完成的程序对象
   return program;
 };
+
+/**
+ * 编译 WebGL 着色器
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {number} shaderType - 着色器类型（如 gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER）
+ * @param {string} shaderSource - 着色器源代码
+ * @returns {WebGLShader} 编译完成的着色器对象
+ */
 exports.compileShader = function (gl, shaderType, shaderSource) {
   var shader = gl.createShader(shaderType);
   gl.shaderSource(shader, shaderSource);
@@ -31933,6 +32090,18 @@ exports.compileShader = function (gl, shaderType, shaderSource) {
   }
   return shader;
 };
+
+/**
+ * 创建 WebGL 2D 纹理
+ * 配置纹理参数并分配 GPU 内存
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {number} internalformat - 纹理内部格式（如 gl.R8, gl.RGBA8 等）
+ * @param {number} width - 纹理宽度
+ * @param {number} height - 纹理高度
+ * @param {number} [minFilter=gl.NEAREST] - 缩小过滤模式
+ * @param {number} [magFilter=gl.NEAREST] - 放大过滤模式
+ * @returns {WebGLTexture} 创建的纹理对象
+ */
 exports.createTexture = function (gl, internalformat, width, height) {
   var minFilter = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : gl.NEAREST;
   var magFilter = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : gl.NEAREST;
@@ -31945,6 +32114,20 @@ exports.createTexture = function (gl, internalformat, width, height) {
   gl.texStorage2D(gl.TEXTURE_2D, 1, internalformat, width, height);
   return texture;
 };
+
+/**
+ * 异步读取像素数据
+ * 使用 PIXEL_PACK_BUFFER 和 GPU 同步机制确保读取完成
+ * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
+ * @param {number} x - 读取区域的起始 x 坐标
+ * @param {number} y - 读取区域的起始 y 坐标
+ * @param {number} width - 读取区域的宽度
+ * @param {number} height - 读取区域的高度
+ * @param {number} format - 像素数据格式（如 gl.RED, gl.RGBA 等）
+ * @param {number} type - 像素数据类型（如 gl.UNSIGNED_BYTE, gl.FLOAT 等）
+ * @param {ArrayBufferView} dest - 目标缓冲区，用于存储读取的像素数据
+ * @returns {Promise<ArrayBufferView>} 返回包含像素数据的缓冲区
+ */
 exports.readPixelsAsync = /*#__PURE__*/function () {
   var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(gl, x, y, width, height, format, type, dest) {
     var buf;
@@ -32341,6 +32524,71 @@ var _require5 = require('../helpers/webglHelper.js'),
   compileShader = _require5.compileShader,
   createTexture = _require5.createTexture,
   glsl = _require5.glsl;
+
+/**
+ * 构建 WebGL2 虚拟背景处理管道
+ * 
+ * 这是虚拟背景引擎的核心模块，负责创建完整的 WebGL2 渲染管道。
+ * 管道包含以下处理阶段：
+ * 
+ * 1. 尺寸调整阶段 (ResizingStage)
+ *    - 将输入视频帧缩放至分割模型所需尺寸 (160x96)
+ *    - 使用双线性插值保持图像质量
+ * 
+ * 2. Softmax 阶段 (SoftmaxStage)
+ *    - 将 TFLite 模型的原始输出转换为概率分布
+ *    - 生成人物分割遮罩 (person mask)
+ * 
+ * 3. 联合双边滤波阶段 (JointBilateralFilterStage)
+ *    - 对分割遮罩进行边缘平滑处理
+ *    - 同时考虑颜色信息和空间距离，消除锯齿和噪声
+ * 
+ * 4. 背景合成阶段 (BackgroundImageStage)
+ *    - 将人物与虚拟背景进行合成
+ *    - 支持多种混合模式和光晕效果
+ * 
+ * @param {Object} sourcePlayback - 源视频播放配置
+ * @param {number} sourcePlayback.width - 源视频宽度
+ * @param {number} sourcePlayback.height - 源视频高度
+ * @param {HTMLVideoElement} sourcePlayback.htmlElement - HTML 视频元素
+ * 
+ * @param {HTMLImageElement} backgroundImage - 背景图片元素
+ * 
+ * @param {Object} backgroundConfig - 背景配置
+ * @param {string} backgroundConfig.type - 背景类型：
+ *   - 'image': 使用自定义图片作为背景
+ *   - 'blur': 使用模糊后的视频作为背景
+ *   - 其他值: 无背景（仅显示人物）
+ * 
+ * @param {Object} segmentationConfig - 分割配置
+ * @param {string} segmentationConfig.backend - 后端类型 (如 'wasmSimd')
+ * @param {string} segmentationConfig.inputResolution - 输入分辨率 (如 '160x96')
+ * @param {string} segmentationConfig.model - 模型名称 (如 'meet')
+ * @param {string} segmentationConfig.pipeline - 管道类型 (如 'webgl2')
+ * @param {number} segmentationConfig.targetFps - 目标帧率
+ * 
+ * @param {HTMLCanvasElement} canvas - 输出画布元素
+ * @param {Object} tflite - TensorFlow Lite SIMD 模块实例
+ * 
+ * @returns {Object} 管道对象，包含以下方法：
+ *   - render(): 执行一帧渲染，返回 Promise
+ *   - updatePostProcessingConfig(config): 更新后处理配置
+ *   - cleanUp(): 释放所有 WebGL 资源
+ * 
+ * @example
+ * const pipeline = buildWebGL2Pipeline(
+ *   { width: 1280, height: 720, htmlElement: videoEl },
+ *   backgroundImgEl,
+ *   { type: 'image' },
+ *   { backend: 'wasmSimd', inputResolution: '160x96', model: 'meet', pipeline: 'webgl2', targetFps: 15 },
+ *   canvas,
+ *   tflite
+ * );
+ * 
+ * await pipeline.render(); // 渲染一帧
+ * pipeline.updatePostProcessingConfig({ jointBilateralFilter: { sigmaSpace: 1, sigmaColor: 0.1 } });
+ * pipeline.cleanUp(); // 清理资源
+ */
 exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgroundConfig, segmentationConfig, canvas, tflite) {
   var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      gl_Position = vec4(a_position, 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
   var frameWidth = sourcePlayback.width,
@@ -32376,27 +32624,99 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
   var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
   var backgroundStage = buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas);
+
+  /**
+   * 执行一帧的渲染处理
+   * 
+   * 这是 WebGL2 虚拟背景管道的核心渲染方法，负责处理视频帧的完整流程：
+   * 1. 上传视频帧到 GPU 纹理
+   * 2. 调整帧大小以适配分割模型输入
+   * 3. 运行 AI 分割模型进行人物识别
+   * 4. 加载分割结果（人物遮罩）
+   * 5. 应用联合双边滤波器进行边缘平滑
+   * 6. 渲染最终合成结果（背景+人物）
+   * 
+   * 渲染流程：
+   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+   * │  视频帧      │───▶│  调整大小    │───▶│  AI 分割    │
+   * │ (WebGL纹理) │    │ (160x96)    │    │ (TFLite)    │
+   * └─────────────┘    └─────────────┘    └─────────────┘
+   *                                                │
+   *                                                ▼
+   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+   * │  最终输出   │◀───│  背景合成   │◀───│  边缘平滑   │
+   * │  (Canvas)   │    │  (Blend)    │    │ (双边滤波)  │
+   * └─────────────┘    └─────────────┘    └─────────────┘
+   * 
+   * @returns {Promise<void>} 渲染完成后 resolve
+   */
   function render() {
     return _render.apply(this, arguments);
   }
+  /**
+   * 更新后处理配置
+   * 
+   * 用于动态调整虚拟背景的后处理效果，包括分割边缘平滑参数和背景合成参数。
+   * 可以在渲染过程中调用以实时更改效果。
+   * 
+   * 后处理配置包含两个主要部分：
+   * 1. 联合双边滤波器 (Joint Bilateral Filter) - 用于平滑分割边缘
+   * 2. 背景合成参数 - 用于控制背景与人物的合成方式
+   * 
+   * @param {Object} postProcessingConfig - 后处理配置对象
+   * @param {Object} postProcessingConfig.jointBilateralFilter - 联合双边滤波配置
+   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaSpace - 空间 sigma，控制滤波的空间影响范围
+   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaColor - 颜色 sigma，控制颜色相似性的权重
+   * @param {number[]} postProcessingConfig.coverage - 人物遮罩覆盖率 [min, max]
+   * @param {number} postProcessingConfig.lightWrapping - 光晕强度 (0-1)，使人物边缘产生光晕效果
+   * @param {string} postProcessingConfig.blendMode - 混合模式，如 'screen', 'multiply' 等
+   */
   function _render() {
     _render = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
+            // 1. 激活纹理单元 0 并绑定输入帧纹理
+            // WebGL 支持多个纹理单元（TEXTURE0, TEXTURE1 等）
+            // 着色器可以从不同纹理单元采样，本例使用单元 0
             gl.activeTexture(gl.TEXTURE0);
+            // 绑定输入帧纹理，这是存放当前视频帧的纹理对象
             gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
 
-            // texImage2D seems faster than texSubImage2D to upload
-            // video texture
+            // 2. 上传视频帧数据到 GPU 纹理
+            // texImage2D 比 texSubImage2D 上传视频帧更快
+            // 参数说明：
+            //   - TEXTURE_2D: 目标纹理类型
+            //   - 0: Mipmap 级别（0 表示基础级别）
+            //   - RGBA: 内部格式（GPU 存储格式）
+            //   - RGBA: 源格式（视频数据格式）
+            //   - UNSIGNED_BYTE: 源数据类型（8位无符号）
+            //   - sourcePlayback.htmlElement: HTML 视频/图像元素
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourcePlayback.htmlElement);
+            // 3. 绑定顶点数组对象（VAO）
+            // VAO 存储顶点属性配置（位置、纹理坐标等）
+            // 绑定 VAO 后，后续的 draw 调用会使用这个配置
             gl.bindVertexArray(vertexArray);
+            // 4. 渲染调整大小阶段
+            // 将视频帧从原始尺寸调整到分割模型输入尺寸 (160x96)
+            // 使用 await 确保此阶段完成后再进行下一步
             _context.n = 1;
             return resizingStage.render();
           case 1:
+            // 5. 运行 TFLite 推理
+            // 调用 TensorFlow Lite SIMD 模型进行人物分割
+            // 分割结果输出到 segmentationTexture
             tflite._runInference();
+            // 6. 渲染分割结果加载阶段
+            // 将 TFLite 的分割结果（原始遮罩数据）加载到纹理
             loadSegmentationStage.render();
+            // 7. 渲染联合双边滤波阶段
+            // 对分割遮罩进行边缘平滑处理，消除锯齿和噪声
+            // 联合双边滤波会考虑颜色信息和空间距离
             jointBilateralFilterStage.render();
+            // 8. 渲染背景合成阶段
+            // 将平滑后的分割遮罩与背景图像合成
+            // 人物区域显示原始视频，背景区域显示虚拟背景
             backgroundStage.render();
           case 2:
             return _context.a(2);
@@ -32406,34 +32726,111 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
     return _render.apply(this, arguments);
   }
   function updatePostProcessingConfig(postProcessingConfig) {
+    // 1. 更新联合双边滤波器的空间 sigma 参数
+    // sigmaSpace 控制滤波器在空间域的影响范围，值越大表示考虑更远的像素
+    // 较大的值会产生更平滑的边缘，但可能损失细节
     jointBilateralFilterStage.updateSigmaSpace(postProcessingConfig.jointBilateralFilter.sigmaSpace);
+    // 2. 更新联合双边滤波器的颜色 sigma 参数
+    // sigmaColor 控制颜色相似性在滤波中的权重，值越大表示颜色差异影响越小
+    // 较大的值会使滤波器对颜色差异更不敏感，产生更均匀的遮罩
     jointBilateralFilterStage.updateSigmaColor(postProcessingConfig.jointBilateralFilter.sigmaColor);
+    // 3. 根据背景类型进行不同的配置
     if (backgroundConfig.type === 'image') {
+      // === 背景图片模式 ===
+      // 使用自定义图片作为虚拟背景
       var backgroundImageStage = backgroundStage;
+
+      // 更新人物遮罩覆盖率
+      // coverage 是一个 [min, max] 数组，控制遮罩的强度范围
+      // 值通常在 0-1 之间，min 控制最小覆盖率，max 控制最大覆盖率
       backgroundImageStage.updateCoverage(postProcessingConfig.coverage);
+      // 更新光晕效果强度
+      // lightWrapping 使人物边缘产生发光效果，营造与背景融合的感觉
+      // 值为 0 时关闭光晕，值越大光晕越强
       backgroundImageStage.updateLightWrapping(postProcessingConfig.lightWrapping);
+      // 更新混合模式
+      // 决定如何将人物与背景合成：
+      // - 'screen': 滤色模式，产生较亮的结果
+      // - 'multiply': 正片叠底模式，产生较暗的结果
+      // - 其他模式可产生不同的艺术效果
       backgroundImageStage.updateBlendMode(postProcessingConfig.blendMode);
     } else if (backgroundConfig.type === 'blur') {
+      // === 背景模糊模式 ===
+      // 使用模糊后的原视频作为背景（模拟景深效果）
       var backgroundBlurStage = backgroundStage;
+
+      // 更新遮罩覆盖率
+      // 在模糊模式下，控制模糊背景的可见程度
       backgroundBlurStage.updateCoverage(postProcessingConfig.coverage);
     } else {
-      // TODO Handle no background in a separate pipeline path
+      // === 无背景/纯视频模式 ===
+      // TODO: 应该使用单独的管道处理无背景情况
+      // 当前实现：将覆盖率设为最大，关闭光晕效果
       var _backgroundImageStage = backgroundStage;
+
+      // 设置覆盖率接近 100%，使视频完整显示
+      // [0, 0.9999] 而不是 [0, 1]，避免除零错误
       _backgroundImageStage.updateCoverage([0, 0.9999]);
+      // 关闭光晕效果
       _backgroundImageStage.updateLightWrapping(0);
     }
   }
+
+  /**
+   * 清理 WebGL 管道资源
+   * 
+   * 当不再需要 WebGL2 虚拟背景管道时，调用此函数释放所有 GPU 资源。
+   * 正确清理资源对于避免 GPU 内存泄漏至关重要，特别是在单页面应用中。
+   * 
+   * 清理顺序说明：
+   * 1. 先清理各管道阶段（包含着色器程序和帧缓冲区）
+   * 2. 再清理独立的 GPU 对象（纹理、缓冲区、着色器）
+   * 
+   * 清理内容：
+   * - 管道阶段：背景合成、双边滤波、分割加载、尺寸调整
+   * - GPU 资源：纹理对象、缓冲区对象、顶点数组对象、着色器对象
+   */
   function cleanUp() {
+    // 1. 清理各管道阶段
+    // 每个阶段可能包含自己的着色器程序、帧缓冲区等资源
+    // cleanUp 方法会负责释放这些内部资源
+
+    // 清理背景合成阶段
+    // 包含背景图片/模糊的着色器程序和渲染目标
     backgroundStage.cleanUp();
+    // 清理联合双边滤波阶段
+    // 包含边缘平滑处理的着色器程序和中间渲染目标
     jointBilateralFilterStage.cleanUp();
+    // 清理分割结果加载阶段
+    // 包含将 TFLite 输出加载到纹理的着色器程序
     loadSegmentationStage.cleanUp();
+    // 清理尺寸调整阶段
+    // 包含视频帧缩放的着色器程序和渲染目标
     resizingStage.cleanUp();
+
+    // 2. 清理独立的 GPU 对象
+    // 按照依赖关系顺序清理：先清理依赖它们的资源，再清理被依赖的资源
+
+    // 删除人物遮罩纹理
+    // 存储分割后的人物遮罩数据，用于背景合成
     gl.deleteTexture(personMaskTexture);
+    // 删除分割纹理
+    // 存储 TFLite 模型的分割结果（原始概率数据）
     gl.deleteTexture(segmentationTexture);
+    // 删除输入帧纹理
+    // 存储当前视频帧的 RGBA 数据
     gl.deleteTexture(inputFrameTexture);
+    // 删除纹理坐标缓冲区
+    // 存储顶点的 UV 坐标，用于纹理映射
     gl.deleteBuffer(texCoordBuffer);
+    // 删除顶点位置缓冲区
+    // 存储顶点的 x, y 坐标
     gl.deleteBuffer(positionBuffer);
+    // 删除顶点数组对象（VAO）
+    // VAO 存储顶点属性的配置状态
     gl.deleteVertexArray(vertexArray);
+    // 删除顶点着色器
+    // 注意：片元着色器在各自阶段内部清理
     gl.deleteShader(vertexShader);
   }
   return {
