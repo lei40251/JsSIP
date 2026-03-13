@@ -1316,10 +1316,10 @@ ua.on('newRTCSession', function(e)
 
     try 
     {      
-      oldSession&& oldSession.isEstablished() && oldSession.terminate();
-      e.session && e.session.isEstablished() && e.session.terminate();
-      rtcSession && rtcSession.isEstablished() && rtcSession.terminate();
-      tmpSession && tmpSession.isEstablished() && tmpSession.terminate();
+      oldSession && oldSession.isEstablished() && oldSession.terminate();
+      e.session && e.session.terminate();
+      rtcSession && rtcSession.terminate();
+      tmpSession && tmpSession.terminate();
     }
     catch (error) { console.error(error); }
   };

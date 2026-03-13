@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.0-beta.202636100
+ * CRTC v1.12.0-beta.20263131032
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.0-beta.405206122000 (Web)',
+  USER_AGENT: 'UA/1.12.0-beta.405206262064 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.0-beta.405206122000');
+debug('version %s', '1.12.0-beta.405206262064');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.0-beta.405206122000';
+    return '1.12.0-beta.405206262064';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":70,"debug":74}],39:[function(require,module,exports){
@@ -27952,8 +27952,13 @@ module.exports = /*#__PURE__*/function () {
       message = message.replace(/a=candidate:.*:.*\r\n/g, '');
 
       // 修改端口，适配 icecandidate 收集未完成的情况
-      message = message.replace(/m=audio 9 /, 'm=audio 11028 ');
-      message = message.replace(/m=video 9 /, 'm=video 11029 ');
+      // message = message.replace(/m=audio 9 /, 'm=audio 11028 ');
+      // message = message.replace(/m=video 9 /, 'm=video 11029 ');
+      var port = 11028;
+      message = message.replace(/^m=(\w+)\s9\s/gm, function (match, media) {
+        return "m=".concat(media, " ").concat(port++, " ");
+      });
+
       // 修改端口和方向，适配音视频切换问题
       message = Utils.fixVideoInactive(message);
 
