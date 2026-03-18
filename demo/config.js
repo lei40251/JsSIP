@@ -63,6 +63,18 @@ const envs =
     } ],
     iceTransportPolicy : 'relay'
   },
+  env_pro_b2b : {
+    signalingUrl : 'wss://pro.vsbc.com:12550/wss',
+    sipDomain    : 'pro.vsbc.com',
+    secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
+    iceServers   : [ {
+      'urls'       : 'turn:pro.vsbc.com:12103?transport=udp',
+      'username'   : 'user',
+      'credential' : '5g_24@cu'
+    } ],
+    iceTransportPolicy : 'relay',
+    password           : 'Admin123$'
+  },
   env_jfvideo : {
     signalingUrl : 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss',
     sipDomain    : 'jfvideo-bond-media-stg.zgpajf.com.cn',

@@ -26,6 +26,8 @@ let tmpSession;
 let safari_r = false;
 let options;
 let oldSession;
+let callee;
+let remoteNo;
 
 let camFlag = true;
 
@@ -124,6 +126,27 @@ iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
 pcConfig['iceCandidatePoolSize'] = 10;
 
 pcConfig['bundlePolicy'] = 'max-compat';
+
+// b2b
+const b2bChannel = new BroadcastChannel('b2bChannel');
+
+b2bChannel.onmessage = function(event) 
+{
+  console.log('Tab B 收到数据:', event.data);
+  
+  if (event.data.type === 'toVideo')
+  {
+    callee = event.data.data;
+    console.warn('call: ', callee);
+    videoOnly = true;
+    // 设置当前通话模式为视频模式
+    call('onlyVideo');
+  }
+  else if (event.data.type === 'toAudio')
+  {
+    document.querySelector('#cancel').click();
+  }
+};
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -615,6 +638,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('failed', function(d)
   {
     videoOnly = false;
+    remoteNo = undefined;
     // mix && mix.stop();
     setStatus(`通话建立失败: ${d.cause}`);
 
@@ -677,6 +701,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('ended', function(d)
   {
     videoOnly = false;
+    remoteNo = undefined;
     // mix && mix.stop();
     setStatus(`通话结束: ${d.cause}`);
 
@@ -1198,6 +1223,37 @@ ua.on('newRTCSession', function(e)
   {
     e.session.upgradeToVideo({ useUpdate: false }, () => { setStatus(`切换视频模式完成${curMode}`); });
     // stats && stats.reset();
+  };
+
+  // b2b切换视频模式
+  document.querySelector('#b2bToVideo').onclick =async function()
+  {
+    const callid = await request({
+      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/getInCallId',
+      method : 'POST',
+      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+      body : { 'caller': 13831175769 }
+    });
+
+    const callNo = await request({
+      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/status',
+      method : 'POST',
+      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+      body : {
+        'callId' : callid.data, // callid，long类型
+        'cmd'    : 'query' // 固定值
+      }
+    });
+
+    b2bChannel.postMessage({ type: 'toVideo', data: callNo.data.stat });
+  };
+
+  // b2b切换音频模式
+  document.querySelector('#b2bToAudio').onclick = function()
+  {
+    b2bChannel.postMessage({ type: 'toAudio' });
   };
 
   /**
@@ -1799,13 +1855,12 @@ async function call(type, direction, mediaStream)
   //   options.mediaStream = await mix.getAudioStream();
   // }
 
-  const callee = document.querySelector('#callee').value;
-
   console.log('op: ', options);
 
   try
   {
-    const session = await ua.call(`${callee}@${sipDomain}`, options);
+    remoteNo = callee;
+    const session = await ua.call(`${callee || document.querySelector('#callee').value}@${sipDomain}`, options);
 
     // 默认远端无回铃音
     earlyMedia = false;
@@ -2158,7 +2213,7 @@ function start()
   };
 
   // 发起无音频视频呼叫
-  document.querySelector('#callAudio').onclick = function()
+  document.querySelector('#callVideoSendonly').onclick = function()
   {
     videoOnly = true;
     // 设置当前通话模式为视频模式
