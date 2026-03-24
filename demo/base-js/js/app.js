@@ -309,6 +309,10 @@ ua.on('newRTCSession', function(e)
 
   if (e.originator === 'remote')
   {
+    remoteNo = e.request.from.uri.user;
+    console.warn('remoteNo: ', remoteNo);
+    document.querySelector('#callee').value = remoteNo;
+
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
     // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
@@ -1225,36 +1229,39 @@ ua.on('newRTCSession', function(e)
     // stats && stats.reset();
   };
 
-  // b2b切换视频模式
-  document.querySelector('#b2bToVideo').onclick =async function()
-  {
-    const callid = await request({
-      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/getInCallId',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+  // // b2b切换视频模式
+  // document.querySelector('#b2bToVideo').onclick =async function()
+  // {
+  //   request({
+  //     url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
+  //     method : 'POST',
+  //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-      body : { 'caller': 13831175769 }
-    });
+  //     body : { 'caller': remoteNo } 
+  //   })
+  //     .then((callId) => 
+  //     {
+  //       console.warn('cid: ', callId);
+        
+  //       return request({
+  //         url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+  //         method : 'POST',
+  //         secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-    const callNo = await request({
-      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/status',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+  //         body : { 'callId': callId.data.data, 'cmd': 'query' }
+  //       });
+  //     })
+  //     .then(((callNo) => 
+  //     {
+  //       b2bChannel.postMessage({ type: 'toVideo', data: BigInt(callNo.data.data.stat) });
+  //     }));
+  // };
 
-      body : {
-        'callId' : callid.data, // callid，long类型
-        'cmd'    : 'query' // 固定值
-      }
-    });
-
-    b2bChannel.postMessage({ type: 'toVideo', data: callNo.data.stat });
-  };
-
-  // b2b切换音频模式
-  document.querySelector('#b2bToAudio').onclick = function()
-  {
-    b2bChannel.postMessage({ type: 'toAudio' });
-  };
+  // // b2b切换音频模式
+  // document.querySelector('#b2bToAudio').onclick = function()
+  // {
+  //   b2bChannel.postMessage({ type: 'toAudio' });
+  // };
 
   /**
    * 切换自定义流单向视频
@@ -1859,8 +1866,10 @@ async function call(type, direction, mediaStream)
 
   try
   {
-    remoteNo = callee;
-    const session = await ua.call(`${callee || document.querySelector('#callee').value}@${sipDomain}`, options);
+    const number = callee || document.querySelector('#callee').value;
+
+    remoteNo = number;
+    const session = await ua.call(`${number}@${sipDomain}`, options);
 
     // 默认远端无回铃音
     earlyMedia = false;
@@ -2210,6 +2219,38 @@ function start()
   {
     // 设置当前通话模式为视频模式
     call('video');
+  };
+
+  // 发起B2B无音频视频呼叫
+  document.querySelector('#b2bCallVideoSendonly').onclick = function()
+  {
+    request({
+      url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
+      method : 'POST',
+      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+      body : { 'caller': document.querySelector('#callee').value } 
+    })
+      .then((callId) => 
+      {
+        console.warn('cid: ', callId);
+        
+        return request({
+          url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+          method : 'POST',
+          secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+          body : { 'callId': callId.data.data, 'cmd': 'query' }
+        });
+      })
+      .then(((callNo) => 
+      {
+        callee = callNo.data.data.stat;
+        console.warn('call: ', callee);
+        videoOnly = true;
+        // 设置当前通话模式为视频模式
+        call('onlyVideo');
+      }));
   };
 
   // 发起无音频视频呼叫
