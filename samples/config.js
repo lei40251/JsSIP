@@ -56,6 +56,17 @@ const envs =
     } ],
     iceTransportPolicy : 'relay'
   },
+  env_pro30007 : {
+    signalingUrl : 'wss://pro.vsbc.com:30007/wss',
+    sipDomain    : 'pro.vsbc.com',
+    secretKey    : sessionStorage.getItem('secret_key') || 'NqxXyFxzRgtUFimTCPdX++hWdLPlFNZsiD9FzMyZF3fLix3YQ33e81ioVXEmH5lTNDWN4R/FX43O+L4qgi1P02Zi8t18Stg36yxG8N9mLTtM8ksD1joAV21MT/NquAadCI0u/Ki9jwxoyutWd5BlpimAWvEKeZycgPnxbQJdlse8lyuQMDdMfY+EbBvuqe7eYOpIOG3Qh5xwfnK1tSJK5vkNSI0HWOFGEYKGynayYKnzOCLRC1Us4VPsD+a50IpiZAn7/sSpTXByt5uclHvIdWe1DaeSlKM/dPm9KpO78fRTdlqFEpWMdyZ8MUoFDXktRjl3PLPnAmTdSnSo3fyA6g==',
+    iceServers   : [ {
+      'urls'       : 'turn:pro.vsbc.com:30002?transport=udp',
+      'username'   : 'user',
+      'credential' : '1234'
+    } ],
+    iceTransportPolicy : 'relay'
+  },
   env_jfvideo : {
     signalingUrl : 'wss://jfvideo-bond-media-stg.zgpajf.com.cn:50600/wss',
     sipDomain    : 'jfvideo-bond-media-stg.zgpajf.com.cn',

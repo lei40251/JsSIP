@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.0-beta.20263131032
+ * CRTC v1.12.0-beta.20263261448
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.0-beta.405206262064 (Web)',
+  USER_AGENT: 'UA/1.12.0-beta.405206522896 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3551,7 +3551,7 @@ module.exports = {
   // BFCP心跳间隔，默认30秒
   BFCP_HEARTBEAT_INTERVAL: 30 * 1000,
   // BFCP未响应重试次数；重试间隔第一次500，第n次为2的n次方乘以500，单位ms
-  MAX_RETRY_ATTEMPTS: 4,
+  MAX_RETRY_ATTEMPTS: 5,
   // BFCP控制的流transceiver索引号
   BFCP_TRANSCEIVER_INDEX: 'trancesiver_index',
   BFCP_SHARED_STREAM_INDEX: 'shared_stream_index',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.0-beta.405206262064');
+debug('version %s', '1.12.0-beta.405206522896');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.0-beta.405206262064';
+    return '1.12.0-beta.405206522896';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":70,"debug":74}],39:[function(require,module,exports){
@@ -18354,7 +18354,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 用于解析BFCP消息的User对象
     _this._bfcpUser = null;
     // BFCP控制的floorId，SDP协商获得
-    _this._floorId = null;
+    _this._floorId = 1;
     // BFCP服务类型，默认c-s，根据SDP协商修改
     _this._floorctrl = null;
     // 本端发送给BFCP服务器的流的mid
@@ -18364,9 +18364,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     // 远端的辅流在PC中的transceiver索引号，根据前面label及SDP计算得到
     _this._transceiverIndex = null;
     // SDP协商过程中远端给的userId
-    _this._bfcpUserId = null;
+    _this._bfcpUserId = 1;
     // SDP协商过程中远端给的confId
-    _this._confId = null;
+    _this._confId = 1;
     // 本端发送floorRequest收到响应里面的，用于后续释放资源
     _this._floorRequestId = null;
     // 发送BFCP消息事务ID，起始值为1-9的随机整数
@@ -19075,24 +19075,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
 
-      // 更新BFCP的floorctrl
-      var lines = request.body.split(/\r?\n/);
-      var line = lines.find(function (l) {
-        return l.trim().startsWith('a=floorctrl:') && l.includes(':');
-      });
-      if (line) {
-        switch (line.split(':')[1].trim()) {
-          case 'c-s':
-          case 'c-only':
-            this._floorctrl = 's-only';
-            break;
-          case 's-only':
-            this._floorctrl = 'c-only';
-            break;
-          default:
-            break;
-        }
-      }
+      // 根据远端的约束值，更新BFCP的floorctrl
+      this._updateFloorctrlFromSdp(request.body);
 
       // Fire 'newRTCSession' event.
       this._newRTCSession('remote', request);
@@ -19515,8 +19499,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc = desc.replace(/(m=video) \d+ ([\s\S]*?a=)recvonly/g, '$1 0 $2inactive');
           desc = Utils.updateSdpByConstraints(desc, options.mediaConstraints);
         }
-        if (_this4._enableBFCP && _this4._floorctrl == 's-only') {
-          _this4._floorId = 2;
+        if (_this4._enableBFCP && _this4._floorctrl === 's-only') {
+          // this._floorId = 2;
           desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this4._floorctrl, "\r\na=floorid:").concat(_this4._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
         }
         _this4._handleSessionTimersInIncomingRequest(request, extraHeaders);
@@ -20876,7 +20860,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _sendFloorRequest() {
       logger.debug("".concat(this._id, " sendFloorRequest()"));
       var currentTransactionId = this._transactionId;
-      this._transactionId++;
+      this._transactionId++; // 无最大值检查，会无限递增，但应该也不会超过 Number.MAX_SAFE_INTEGER
       var floorRequest = this._bfcpUser.floorRequestMessage(currentTransactionId, this._floorId);
       return this._dataChannelSend(floorRequest, currentTransactionId);
     }
@@ -20952,6 +20936,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
         this._bfcpAudioSources = [];
         this._bfcpAudioDestination = null;
+        this._bfcpAudioCtx && this._bfcpAudioCtx.close();
+        this._bfcpAudioCtx = null;
       }
     }
 
@@ -22709,6 +22695,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           });
           desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n"));
+          if (_this28._floorctrl !== 'c-only') {
+            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=confid:".concat(_this28._confId, "\r\na=userid:").concat(_this28._bfcpUserId, "\r\n"));
+          }
 
           // 添加主辅流标志
           desc = _this28._addMediastreamFlag(desc, _this28._mStream);
@@ -22925,10 +22914,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             /**
-               * 音视频切换相关
-               * 根据sdp判断用户Answer的通话模式，并触发mode事件
-               * @author: lei
-               */
+                 * 音视频切换相关
+                 * 根据sdp判断用户Answer的通话模式，并触发mode事件
+                 * @author: lei
+                 */
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
@@ -22965,11 +22954,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this.emit('sdp', _e);
             if (this._enableBFCP) {
               // 获取响应中BFCP相关属性
-              this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
-              this._floorctrl = (_e.sdp.match(/a=floorctrl:([a-z-]+)/) || [null, ''])[1] === 's-only' ? 'c-only' : 'c-s';
-              this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
-              this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
               this._mstrm = (_e.sdp.match(/mstrm:(\d+)/) || [null, ''])[1];
+
+              // 根据远端的约束值，更新BFCP的floorctrl
+              this._updateFloorctrlFromSdp(_e.sdp);
+              if (this._floorctrl === 'c-only') {
+                this._floorId = Number((_e.sdp.match(/a=floorid:(\d+)/) || [null, 1])[1]);
+                this._confId = (_e.sdp.match(/a=confid:(\d+)/) || [null, ''])[1];
+                this._bfcpUserId = (_e.sdp.match(/a=userid:(\d+)/) || [null, ''])[1];
+              }
 
               // 把协商来的userId 和 confId赋值给bfcpUser对象
               this._bfcpUser.userId = Number(this._bfcpUserId);
@@ -23039,8 +23032,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         _this29._confirmed('local', null);
                       }
 
+                      // TODO: 暂时不清楚为什么要重新协商，这polycom可能不需要，暂时先不重新协商
                       // 开启 BFCP，自动发送reInvite
-                      _this29._enableBFCP && _this29.renegotiate();
+                      // this._enableBFCP && this.renegotiate();
                     case 2:
                       return _context8.a(2);
                   }
@@ -23096,7 +23090,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         sdp = _this30._mangleOffer(sdp);
 
         // 添加BFCP所需属性
-        _this30._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n")));
+        _this30._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this30._floorctrl, "\r\na=confid:").concat(_this30._confId, "\r\na=userid:").concat(_this30._bfcpUserId, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n")));
         // 添加主辅流标志
         sdp = _this30._addMediastreamFlag(sdp, _this30._mStream);
         var e = {
@@ -24510,7 +24504,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var messageState = _this46._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
-        if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
+        if (messageState.retries !== 0 && messageState.retries >= CRTC_C.MAX_RETRY_ATTEMPTS) {
           logger.warn("".concat(_this46._id, " [DataChannel] Max retry attempts (").concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           messageState.reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           return;
@@ -24613,6 +24607,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 异常重连
         if (_this47.connection.iceConnectionState === 'connected') {
           _this47.renegotiate();
+        } else {
+          // 不需要重连的时候会触发
+          _this47._onChannelClose();
         }
       };
 
@@ -24701,6 +24698,42 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (this._blackVideoTrack) {
         this._blackVideoTrack.cleanup();
         this._blackVideoTrack = null;
+      }
+    }
+
+    /**
+     * 根据远端SDP中的floorctrl属性更新本端BFCP角色
+     *
+     * BFCP floorctrl 角色交换规则：
+     * - 远端为 'c-s' (client-server) 或 'c-only' 时，本端应设置为 's-only' (server-only)
+     * - 远端为 's-only' 时，本端应设置为 'c-only' (client-only)
+     *
+     * 这种交换确保在 BFCP 握手阶段，双方角色互补：
+     * - c-s 模式：远端为客户端，本端为服务端
+     * - s-only 模式：远端为服务端，本端为客户端
+     *
+     * @param {string} sdp - SDP内容
+     * @returns {void}
+     */
+  }, {
+    key: "_updateFloorctrlFromSdp",
+    value: function _updateFloorctrlFromSdp(sdp) {
+      var lines = sdp.split(/\r?\n/);
+      var line = lines.find(function (l) {
+        return l.trim().startsWith('a=floorctrl:') && l.includes(':');
+      });
+      if (line) {
+        switch (line.split(':')[1].trim()) {
+          case 'c-only':
+            this._floorctrl = 's-only';
+            break;
+          case 'c-s':
+          case 's-only':
+            this._floorctrl = 'c-only';
+            break;
+          default:
+            break;
+        }
       }
     }
 
@@ -28153,7 +28186,7 @@ module.exports = /*#__PURE__*/function () {
         var hasSctpPort = /a=sctp-port:\d+/.test(data);
         var hasMaxMessageSize = /a=max-message-size:\d+/.test(data);
         if (!hasSctpPort || !hasMaxMessageSize) {
-          data = data.replace(/(SCTP webrtc-datachannel\r\n)/g, "$1a=sctp-port:".concat(this._sctp_port, "\r\na=max-message-size:").concat(this._max_message_size, "\r\n"));
+          data = data.replace(/(SCTP webrtc-datachannel\r\n)/g, "$1a=sctp-port:".concat(this._sctp_port || 0, "\r\na=max-message-size:").concat(this._max_message_size || 1073741823, "\r\n"));
         }
       }
 
@@ -30828,11 +30861,13 @@ exports.getApplicationMediaPositions = function (sdp) {
     mediaSections.splice(index, 1);
   });
 
-  // 如果存在BFCP媒体块，移动到最后
-  if (bfcpIndex !== -1) {
-    var bfcpSection = mediaSections.splice(bfcpIndex, 1)[0];
-    mediaSections.push(bfcpSection);
-  }
+  // // 如果存在BFCP媒体块，移动到最后
+  // if (bfcpIndex !== -1)
+  // {
+  //   const bfcpSection = mediaSections.splice(bfcpIndex, 1)[0];
+
+  //   mediaSections.push(bfcpSection);
+  // }
 
   // 为每个没有ice凭证的媒体块添加ice凭证，并为视频媒体添加rtcp-mux
   mediaSections.forEach(function (section, index) {
