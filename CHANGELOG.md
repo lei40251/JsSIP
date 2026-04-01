@@ -1,6 +1,8 @@
 CHANGELOG
 =========
 
+* 增加远端是否支持视频模式的事件 remoteSupportsVideo
+
 ### 1.12.0
 
 * 优化特定场景音视频切换问题

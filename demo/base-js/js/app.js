@@ -317,6 +317,12 @@ ua.on('newRTCSession', function(e)
 
   // ***** Session 事件回调 *****
 
+  // 远端是否支持视频模式
+  e.session.on('remoteSupportsVideo', function(d)
+  {
+    setStatus('对端支持视频模式');
+  });
+
   e.session.on('refer', function(d)
   {
     setStatus('refer');
