@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
-window.addEventListener('VirtualBackgroundEngineReady', async() => 
+window.addEventListener('VirtualBackgroundEngineReady', async() =>
 {
   setStatus('加载虚拟背景');
 });
@@ -128,25 +128,25 @@ pcConfig['iceCandidatePoolSize'] = 10;
 pcConfig['bundlePolicy'] = 'max-compat';
 
 // b2b
-const b2bChannel = new BroadcastChannel('b2bChannel');
+// const b2bChannel = new BroadcastChannel('b2bChannel');
 
-b2bChannel.onmessage = function(event) 
-{
-  console.log('Tab B 收到数据:', event.data);
-  
-  if (event.data.type === 'toVideo')
-  {
-    callee = event.data.data;
-    console.warn('call: ', callee);
-    videoOnly = true;
-    // 设置当前通话模式为视频模式
-    call('onlyVideo');
-  }
-  else if (event.data.type === 'toAudio')
-  {
-    document.querySelector('#cancel').click();
-  }
-};
+// b2bChannel.onmessage = function(event)
+// {
+//   console.log('Tab B 收到数据:', event.data);
+
+//   if (event.data.type === 'toVideo')
+//   {
+//     callee = event.data.data;
+//     console.warn('call: ', callee);
+//     videoOnly = true;
+//     // 设置当前通话模式为视频模式
+//     call('onlyVideo');
+//   }
+//   else if (event.data.type === 'toAudio')
+//   {
+//     document.querySelector('#cancel').click();
+//   }
+// };
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -320,7 +320,7 @@ ua.on('newRTCSession', function(e)
   e.session.on('refer', function(d)
   {
     setStatus('refer');
-    d.request.refer_to.uri.host = sipDomain;    
+    d.request.refer_to.uri.host = sipDomain;
     oldSession = e.session;
     d.accept(null, options);
     // 兼容华为MCU
@@ -391,7 +391,7 @@ ua.on('newRTCSession', function(e)
       // d.sdp = d.sdp.replace(/(m=video\s+)\d+/, '$10');
       // d.sdp = d.sdp.replace(
       //   /(m=video[\s\S]*?)(a=sendrecv|a=sendonly|a=recvonly)/,
-      //   (match, part1) => 
+      //   (match, part1) =>
       //   {
       //     // part1 是 m=video 到 属性前的所有内容
       //     return `${part1 }a=inactive`;
@@ -487,7 +487,7 @@ ua.on('newRTCSession', function(e)
     setStatus(`mode: ${d.mode}`);
 
     curMode = d.mode;
-    
+
     stats && stats.setMode(d.mode);
 
     if (d.mode == 'video')
@@ -591,7 +591,7 @@ ua.on('newRTCSession', function(e)
     console.warn('iceConnectionState: ', d);
   });
 
-  
+
   /**
     * mediaerror
     *
@@ -607,7 +607,7 @@ ua.on('newRTCSession', function(e)
 
     // 可以根据需要多次检查并做进一步处理
     let count = 3;
-    const timer = setInterval(() => 
+    const timer = setInterval(() =>
     {
       if (CRTC.Utils.isVideoTrackHealthy(d.mediastream))
       {
@@ -895,7 +895,7 @@ ua.on('newRTCSession', function(e)
     {
       // 根据业务需求进行网络连接异常提示，或者可以延迟2秒再判断一次做为确认
     }
-    
+
     // 本地媒体流
     const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
     // 远端媒体流
@@ -906,7 +906,7 @@ ua.on('newRTCSession', function(e)
     {
       recorder = new MultiStreamRecorder([ localStream.videoStream, remoteStream.videoStream ]);
       recorder.mimeType = 'video/webm;codecs=vp8';
-      recorder.ondataavailable = function(blob) 
+      recorder.ondataavailable = function(blob)
       {
         console.warn('recorder: ', blob);
         const url = URL.createObjectURL(blob);
@@ -934,11 +934,11 @@ ua.on('newRTCSession', function(e)
     // {
     //   const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
     //   const mediastream = new MediaStream([ rs.audioStream.getTracks()[0].clone() ]);
-    
+
     //   mix = new CRTC.Mixer([ mediastream ]);
-    //   mix.getAudioStream().then((m) => 
+    //   mix.getAudioStream().then((m) =>
     //   {
-    //     const sender = e.session.connection.getSenders().filter((s) => 
+    //     const sender = e.session.connection.getSenders().filter((s) =>
     //     {
     //       if (s.track && s.track.kind == 'audio')
     //       {
@@ -1136,7 +1136,7 @@ ua.on('newRTCSession', function(e)
    * 单视频接听
    */
   document.querySelector('#onlyVideoAudio').onclick = async function()
-  {    
+  {
     videoOnly = true;
     e.session.answer({
       mediaConstraints : {
@@ -1226,35 +1226,35 @@ ua.on('newRTCSession', function(e)
   };
 
   // b2b切换视频模式
-  document.querySelector('#b2bToVideo').onclick =async function()
-  {
-    const callid = await request({
-      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/getInCallId',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+  // document.querySelector('#b2bToVideo').onclick =async function()
+  // {
+  //   const callid = await request({
+  //     url    : 'https://b2b.vsbc.com/b2b/tapi/v1/getInCallId',
+  //     method : 'POST',
+  //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-      body : { 'caller': 13831175769 }
-    });
+  //     body : { 'caller': 13831175769 }
+  //   });
 
-    const callNo = await request({
-      url    : 'https://b2b.vsbc.com/b2b/tapi/v1/status',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+  //   const callNo = await request({
+  //     url    : 'https://b2b.vsbc.com/b2b/tapi/v1/status',
+  //     method : 'POST',
+  //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-      body : {
-        'callId' : callid.data, // callid，long类型
-        'cmd'    : 'query' // 固定值
-      }
-    });
+  //     body : {
+  //       'callId' : callid.data, // callid，long类型
+  //       'cmd'    : 'query' // 固定值
+  //     }
+  //   });
 
-    b2bChannel.postMessage({ type: 'toVideo', data: callNo.data.stat });
-  };
+  //   // b2bChannel.postMessage({ type: 'toVideo', data: callNo.data.stat });
+  // };
 
   // b2b切换音频模式
-  document.querySelector('#b2bToAudio').onclick = function()
-  {
-    b2bChannel.postMessage({ type: 'toAudio' });
-  };
+  // document.querySelector('#b2bToAudio').onclick = function()
+  // {
+  //   // b2bChannel.postMessage({ type: 'toAudio' });
+  // };
 
   /**
    * 切换自定义流单向视频
@@ -1262,7 +1262,6 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toCommonVideoSendonly').onclick = function()
   {
     const tmpStream = new MediaStream();
-
 
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
@@ -1370,8 +1369,8 @@ ua.on('newRTCSession', function(e)
   {
     blackVideo && blackVideo.cleanup();
 
-    try 
-    {      
+    try
+    {
       oldSession && oldSession.isEstablished() && oldSession.terminate();
       e.session && e.session.terminate();
       rtcSession && rtcSession.terminate();
@@ -1442,7 +1441,7 @@ ua.on('newRTCSession', function(e)
       e.session.mute({ video: true, video_only: true });
     }
     else
-    {      
+    {
       e.session.mute({ video: true });
     }
   };
@@ -1842,7 +1841,7 @@ async function call(type, direction, mediaStream)
       audio : true,
       video : type === true
     };
-    
+
   }
 
   if (type === 'onlyVideo')
@@ -2210,6 +2209,39 @@ function start()
   {
     // 设置当前通话模式为视频模式
     call('video');
+  };
+
+
+  // 发起B2B无音频视频呼叫
+  document.querySelector('#b2bCallVideoSendonly').onclick = function()
+  {
+    request({
+      url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
+      method : 'POST',
+      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+      body : { 'caller': document.querySelector('#callee').value }
+    })
+      .then((callId) =>
+      {
+        console.warn('cid: ', callId);
+
+        return request({
+          url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+          method : 'POST',
+          secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+          body : { 'callId': callId.data.data, 'cmd': 'query' }
+        });
+      })
+      .then(((callNo) =>
+      {
+        callee = callNo.data.data.stat;
+        console.warn('call: ', callee);
+        videoOnly = true;
+        // 设置当前通话模式为视频模式
+        call('onlyVideo');
+      }));
   };
 
   // 发起无音频视频呼叫
