@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.0-beta.2026331952
+ * CRTC v1.12.0-beta.2026411537
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.0-beta.405206621904 (Web)',
+  USER_AGENT: 'UA/1.12.0-beta.405208023074 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.0-beta.405206621904');
+debug('version %s', '1.12.0-beta.405208023074');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.0-beta.405206621904';
+    return '1.12.0-beta.405208023074';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":70,"debug":75}],39:[function(require,module,exports){
@@ -19101,6 +19101,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // Fire 'newRTCSession' event.
       this._newRTCSession('remote', request);
+      console.warn('req: ', request);
 
       // The user may have rejected the call in the 'newRTCSession' event.
       if (this._status === C.STATUS_TERMINATED) {
