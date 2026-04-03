@@ -29,6 +29,11 @@ let oldSession;
 let callee;
 let remoteNo;
 
+// 选中的摄像头
+let selectCamera;
+// 选中的麦克风
+let selectMic;
+
 let camFlag = true;
 
 let useUpdate = true;
@@ -97,7 +102,8 @@ const configuration = {
   connection_recovery_min_interval : 2,
   register_expires                 : 20,
   session_timers                   : false,
-  secret_key                       : secretKey
+  secret_key                       : secretKey,
+  user_agent                       : 'Polycom RealPresence Desktop for Windows (3.11.3.73575)'
 };
 
 // 媒体约束条件
@@ -309,6 +315,10 @@ ua.on('newRTCSession', function(e)
 
   if (e.originator === 'remote')
   {
+    remoteNo = e.request.from.uri.user;
+    console.warn('remoteNo: ', remoteNo);
+    document.querySelector('#callee').value = remoteNo;
+
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
     // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
@@ -316,12 +326,6 @@ ua.on('newRTCSession', function(e)
   }
 
   // ***** Session 事件回调 *****
-
-  // 远端是否支持视频模式
-  e.session.on('remoteSupportsVideo', function(d)
-  {
-    setStatus('对端支持视频模式');
-  });
 
   e.session.on('refer', function(d)
   {
@@ -368,6 +372,21 @@ ua.on('newRTCSession', function(e)
 
       // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:2');
       // a=fmtp:109 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42c01f
+
+      // a=content:slides
+
+      // let videoCount = 10;
+
+      // d.sdp = d.sdp.replace(/(m=video[^\r\n]*)([\r\n]+)/g, (match, videoLine, newline) =>
+      // {
+      //   videoCount++;
+
+      //   return `${videoLine}${newline}a=label:${videoCount}\r\n`;
+      // });
+
+      // d.sdp = d.sdp.replace(/a=floorid:1 m-stream:2\r\n/, 'a=floorid:1 mstrm:12\r\n');
+
+      // d.sdp = `${d.sdp}\r\nm=application 0 RTP/AVP 100\r\na=rtpmap:100 H224/4800\r\n`;
     }
     else if (d.originator === 'remote')
     {
@@ -1231,35 +1250,38 @@ ua.on('newRTCSession', function(e)
     // stats && stats.reset();
   };
 
-  // b2b切换视频模式
+  // // b2b切换视频模式
   // document.querySelector('#b2bToVideo').onclick =async function()
   // {
-  //   const callid = await request({
-  //     url    : 'https://b2b.vsbc.com/b2b/tapi/v1/getInCallId',
+  //   request({
+  //     url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
   //     method : 'POST',
   //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-  //     body : { 'caller': 13831175769 }
-  //   });
+  //     body : { 'caller': remoteNo }
+  //   })
+  //     .then((callId) =>
+  //     {
+  //       console.warn('cid: ', callId);
 
-  //   const callNo = await request({
-  //     url    : 'https://b2b.vsbc.com/b2b/tapi/v1/status',
-  //     method : 'POST',
-  //     secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+  //       return request({
+  //         url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+  //         method : 'POST',
+  //         secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
 
-  //     body : {
-  //       'callId' : callid.data, // callid，long类型
-  //       'cmd'    : 'query' // 固定值
-  //     }
-  //   });
-
-  //   // b2bChannel.postMessage({ type: 'toVideo', data: callNo.data.stat });
+  //         body : { 'callId': callId.data.data, 'cmd': 'query' }
+  //       });
+  //     })
+  //     .then(((callNo) =>
+  //     {
+  //       b2bChannel.postMessage({ type: 'toVideo', data: BigInt(callNo.data.data.stat) });
+  //     }));
   // };
 
-  // b2b切换音频模式
+  // // b2b切换音频模式
   // document.querySelector('#b2bToAudio').onclick = function()
   // {
-  //   // b2bChannel.postMessage({ type: 'toAudio' });
+  //   b2bChannel.postMessage({ type: 'toAudio' });
   // };
 
   /**
@@ -1268,6 +1290,7 @@ ua.on('newRTCSession', function(e)
   document.querySelector('#toCommonVideoSendonly').onclick = function()
   {
     const tmpStream = new MediaStream();
+
 
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
@@ -1316,13 +1339,12 @@ ua.on('newRTCSession', function(e)
     // stats && stats.reset();
   };
 
-
   /**
    * 切换摄像头
    *
    * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
    */
-  document.querySelector('#cameras').onchange = function()
+  document.querySelector('#cameras').addEventListener('change', function()
   {
     if (cloneStream)
     {
@@ -1334,19 +1356,19 @@ ua.on('newRTCSession', function(e)
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
     // .then(() => e.session.renegotiate())
     // .catch((err) => console.warn('err: ', err));
-    setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
-  };
+    setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
+  });
 
   /**
    * 切换麦克风
    *
    * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
    */
-  document.querySelector('#mics').onchange = function()
+  document.querySelector('#mics').addEventListener('change', function()
   {
     e.session.switchDevice('audio', this.options[this.selectedIndex].value);
-    setStatus(`switchDevice${this.options[this.selectedIndex].innerText}`);
-  };
+    setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
+  });
 
   /**
    * 手机端用切换摄像头
@@ -1756,6 +1778,10 @@ async function call(type, direction, mediaStream)
   if (direction == 'sendonly')
   {
     options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
+    if (type === 'onlyVideo')
+    {
+      options['rtcOfferConstraints'] = { offerToReceiveAudio: false, offerToReceiveVideo: false };
+    }
   }
 
   if (mediaStream)
@@ -1864,8 +1890,20 @@ async function call(type, direction, mediaStream)
 
   try
   {
-    remoteNo = callee;
-    const session = await ua.call(`${callee || document.querySelector('#callee').value}@${sipDomain}`, options);
+    const number = callee || document.querySelector('#callee').value;
+
+    if (selectCamera && options.mediaConstraints && options.mediaConstraints.video)
+    {
+      options.mediaConstraints.video.deviceId = { exact: selectCamera };
+    }
+
+    if (selectMic && options.mediaConstraints && options.mediaConstraints.audio)
+    {
+      options.mediaConstraints.video.deviceId = { exact: selectMic };
+    }
+
+    remoteNo = number;
+    const session = await ua.call(`${number}@${sipDomain}`, options);
 
     // 默认远端无回铃音
     earlyMedia = false;
@@ -2130,7 +2168,7 @@ function updateDevices()
   CRTC.Utils.getMicrophones()
     .then((microphones) =>
     {
-      let menus = '';
+      let menus = '<option selected value="">请选择切换音频输入</option>';
 
       microphones.forEach((device) =>
       {
@@ -2217,9 +2255,8 @@ function start()
     call('video');
   };
 
-
   // 发起B2B无音频视频呼叫
-  document.querySelector('#b2bCallVideoSendonly').onclick = function()
+  document.querySelector('#b2bCallVideoOnly').onclick = function()
   {
     request({
       url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
@@ -2250,6 +2287,38 @@ function start()
       }));
   };
 
+  // 发起B2B无音频视频单向呼叫
+  document.querySelector('#b2bCallVideoSendonly').onclick = function()
+  {
+    request({
+      url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
+      method : 'POST',
+      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+      body : { 'caller': document.querySelector('#callee').value }
+    })
+      .then((callId) =>
+      {
+        console.warn('cid: ', callId);
+
+        return request({
+          url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
+          method : 'POST',
+          secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
+
+          body : { 'callId': callId.data.data, 'cmd': 'query' }
+        });
+      })
+      .then(((callNo) =>
+      {
+        callee = callNo.data.data.stat;
+        console.warn('call: ', callee);
+        videoOnly = true;
+        // 设置当前通话模式为视频模式
+        call('onlyVideo', 'sendonly');
+      }));
+  };
+
   // 发起无音频视频呼叫
   document.querySelector('#callVideoSendonly').onclick = function()
   {
@@ -2262,7 +2331,7 @@ function start()
   // document.querySelector('#callVideoSendonly').onclick = function()
   // {
   //   // 设置当前通话模式为单向视频模式
-  //   call('video', 'sendonly');
+  //   call('onlyVideo', 'sendonly');
   // };
 
   // 监听系统输入设备变化更新摄像头列表
@@ -2292,4 +2361,23 @@ document.addEventListener('visibilitychange', function()
     // document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
     console.warn('页面回到前台');
   }
+});
+
+
+/**
+ * 切换选择的摄像头，session外只是切换选择
+ */
+document.querySelector('#cameras').addEventListener('change', function()
+{
+  selectCamera = this.options[this.selectedIndex].value;
+  setStatus(`select camera ${this.options[this.selectedIndex].innerText}`);
+});
+
+/**
+ * 切换选择的麦克风，session外只是切换选择
+ */
+document.querySelector('#mics').addEventListener('change', function()
+{
+  selectMic = this.options[this.selectedIndex].value;
+  setStatus(`select mic ${this.options[this.selectedIndex].innerText}`);
 });
