@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.1-beta.2026411729
+ * CRTC v1.12.1-beta.20264131754
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3274,7 +3274,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":74}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":75}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.1-beta.405208023458 (Web)',
+  USER_AGENT: 'UA/1.12.1-beta.405208263508 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.1-beta.405208023458');
+debug('version %s', '1.12.1-beta.405208263508');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,10 +16893,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.1-beta.405208023458';
+    return '1.12.1-beta.405208263508';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":70,"debug":75}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17013,7 +17013,7 @@ module.exports = /*#__PURE__*/function () {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":75}],40:[function(require,module,exports){
+},{"debug":76}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17275,7 +17275,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":73}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":74}],41:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17975,7 +17975,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":73}],44:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":74}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -24753,7 +24753,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":74,"events":73,"sdp-transform":82}],47:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":75,"events":74,"sdp-transform":83}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24920,7 +24920,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":73}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":74}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25029,7 +25029,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":73}],49:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":74}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25242,7 +25242,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":73}],51:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":74}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -26475,7 +26475,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":82}],54:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":83}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -27059,7 +27059,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":61,"events":73}],56:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":74}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -27780,7 +27780,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":73}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":74}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29351,7 +29351,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":71,"events":73,"jsencrypt":78}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":72,"events":74,"jsencrypt":79}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -31592,6 +31592,8 @@ module.exports = /*#__PURE__*/function () {
     this.renderTimeoutId = null;
     this.animationFrameId = null;
     this.solidColorCanvas = null;
+    this._cachedSolidColor = null;
+    this._cachedSolidColorDataUrl = null;
   }
 
   /**
@@ -31642,19 +31644,27 @@ module.exports = /*#__PURE__*/function () {
               this.canvas = canvas || document.createElement('canvas');
               this.canvas.width = this.config.video.width;
               this.canvas.height = this.config.video.height;
-              _context.next = 11;
+              _context.prev = 9;
+              _context.next = 12;
               return this.loadModel(modelPath);
-            case 11:
-              _context.next = 13;
+            case 12:
+              _context.next = 14;
               return this.createVideoElement();
-            case 13:
-              this.setupPipeline();
+            case 14:
+              // this.setupPipeline();
               this.createOutputStream();
-            case 15:
+              _context.next = 21;
+              break;
+            case 17:
+              _context.prev = 17;
+              _context.t0 = _context["catch"](9);
+              this.destroy();
+              throw _context.t0;
+            case 21:
             case "end":
               return _context.stop();
           }
-        }, _callee, this);
+        }, _callee, this, [[9, 17]]);
       }));
       function init(_x) {
         return _init.apply(this, arguments);
@@ -31767,7 +31777,7 @@ module.exports = /*#__PURE__*/function () {
     )
   }, {
     key: "setupPipeline",
-    value: function setupPipeline() {
+    value: function setupPipeline(type) {
       this.backgroundEl = document.createElement('img');
       this.backgroundEl.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
       var sourcePlayback = {
@@ -31776,7 +31786,7 @@ module.exports = /*#__PURE__*/function () {
         htmlElement: this.videoEl
       };
       this.pipeline = buildWebGL2Pipeline(sourcePlayback, this.backgroundEl, {
-        type: 'image'
+        type: type
       }, this.config.segmentation, this.canvas, this.tfs, function () {});
       this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
     }
@@ -31854,7 +31864,7 @@ module.exports = /*#__PURE__*/function () {
             case 2:
               interval = 1000 / this.config.video.targetFps;
               if (!(now - this.lastFrameTime >= interval)) {
-                _context4.next = 11;
+                _context4.next = 19;
                 break;
               }
               this.lastFrameTime = now;
@@ -31865,17 +31875,29 @@ module.exports = /*#__PURE__*/function () {
               return _context4.abrupt("return");
             case 7:
               this.isRendering = true;
-              _context4.next = 10;
+              // await this.pipeline.render();
+              // this.isRendering = false;
+              _context4.prev = 8;
+              _context4.next = 11;
               return this.pipeline.render();
-            case 10:
-              this.isRendering = false;
             case 11:
+              _context4.next = 16;
+              break;
+            case 13:
+              _context4.prev = 13;
+              _context4.t0 = _context4["catch"](8);
+              console.warn('Render error:', _context4.t0);
+            case 16:
+              _context4.prev = 16;
+              this.isRendering = false;
+              return _context4.finish(16);
+            case 19:
               this.animationFrameId = requestAnimationFrame(this.loop);
-            case 12:
+            case 20:
             case "end":
               return _context4.stop();
           }
-        }, _callee4, this);
+        }, _callee4, this, [[8, 13, 16, 19]]);
       }));
       function loop(_x3) {
         return _loop.apply(this, arguments);
@@ -31901,6 +31923,7 @@ module.exports = /*#__PURE__*/function () {
                 var img = new Image();
                 img.crossOrigin = 'anonymous';
                 img.onload = function () {
+                  _this.setupPipeline('image');
                   _this.backgroundEl.src = img.src;
                   resolve();
                 };
@@ -31927,7 +31950,8 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "setBlurBackground",
     value: function setBlurBackground(radius) {
-      radius = radius || 20;
+      this.setupPipeline('blur');
+      radius = typeof radius === 'number' ? radius : 20;
       this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
         blurRadius: radius
       }));
@@ -31942,6 +31966,11 @@ module.exports = /*#__PURE__*/function () {
     key: "setSolidColor",
     value: function setSolidColor() {
       var color = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '#00ff00';
+      this.setupPipeline('image');
+      if (this._cachedSolidColor === color && this._cachedSolidColorDataUrl) {
+        this.backgroundEl.src = this._cachedSolidColorDataUrl;
+        return;
+      }
       if (!this.solidColorCanvas) {
         this.solidColorCanvas = document.createElement('canvas');
         this.solidColorCanvas.width = 16;
@@ -31950,7 +31979,10 @@ module.exports = /*#__PURE__*/function () {
       var ctx = this.solidColorCanvas.getContext('2d');
       ctx.fillStyle = color;
       ctx.fillRect(0, 0, 16, 16);
-      this.backgroundEl.src = this.solidColorCanvas.toDataURL();
+      // this.backgroundEl.src = this.solidColorCanvas.toDataURL();
+      this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
+      this._cachedSolidColor = color;
+      this.backgroundEl.src = this._cachedSolidColorDataUrl;
     }
 
     /**
@@ -31968,9 +32000,15 @@ module.exports = /*#__PURE__*/function () {
         this.tfs._freeModelBuffer();
       }
       this.timerWorker.terminate();
-      this.inputStream.getTracks().forEach(function (t) {
-        return t.stop();
-      });
+      if (this.inputStream) {
+        this.inputStream.getTracks().forEach(function (t) {
+          return t.stop();
+        });
+      }
+      if (this.videoEl) {
+        this.videoEl.srcObject = null;
+        this.videoEl.load();
+      }
       this.pipeline = null;
       this.tfs = null;
       this.inputStream = null;
@@ -31978,7 +32016,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":69}],64:[function(require,module,exports){
+},{"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":70}],64:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -32206,6 +32244,128 @@ exports.readPixelsAsync = /*#__PURE__*/function () {
 },{}],65:[function(require,module,exports){
 "use strict";
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.buildBackgroundBlurStage = buildBackgroundBlurStage;
+var _webglHelper = require("../helpers/webglHelper.js");
+var _templateObject, _templateObject2, _templateObject3;
+function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
+function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
+  var blurPass = buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas);
+  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas);
+  function render() {
+    blurPass.render();
+    blendPass.render();
+  }
+  function updateCoverage(coverage) {
+    blendPass.updateCoverage(coverage);
+  }
+  function cleanUp() {
+    blendPass.cleanUp();
+    blurPass.cleanUp();
+  }
+  return {
+    render: render,
+    updateCoverage: updateCoverage,
+    cleanUp: cleanUp
+  };
+}
+function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
+  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform vec2 u_texelSize;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    const float offset[5] = float[](0.0, 1.0, 2.0, 3.0, 4.0);\n    const float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216,\n      0.0540540541, 0.0162162162);\n\n    void main() {\n      vec4 centerColor = texture(u_inputFrame, v_texCoord);\n      float personMask = texture(u_personMask, v_texCoord).a;\n\n      vec4 frameColor = centerColor * weight[0] * (1.0 - personMask);\n\n      for (int i = 1; i < 5; i++) {\n        vec2 offset = vec2(offset[i]) * u_texelSize;\n\n        vec2 texCoord = v_texCoord + offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n\n        texCoord = v_texCoord - offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n      }\n      outColor = vec4(frameColor.rgb + (1.0 - frameColor.a) * centerColor.rgb, 1.0);\n    }\n  "])));
+  var scale = 0.5;
+  var outputWidth = canvas.width * scale;
+  var outputHeight = canvas.height * scale;
+  var texelWidth = 1 / outputWidth;
+  var texelHeight = 1 / outputHeight;
+  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
+  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
+  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
+  var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
+  var texture1 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
+  var texture2 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
+  var frameBuffer1 = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
+  var frameBuffer2 = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture2, 0);
+  gl.useProgram(program);
+  gl.uniform1i(personMaskLocation, 1);
+  function render() {
+    gl.viewport(0, 0, outputWidth, outputHeight);
+    gl.useProgram(program);
+    gl.uniform1i(inputFrameLocation, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, personMaskTexture);
+    for (var i = 0; i < 3; i++) {
+      gl.uniform2f(texelSizeLocation, 0, texelHeight);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, texture1);
+      gl.uniform1i(inputFrameLocation, 2);
+      gl.uniform2f(texelSizeLocation, texelWidth, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.bindTexture(gl.TEXTURE_2D, texture2);
+    }
+  }
+  function cleanUp() {
+    gl.deleteFramebuffer(frameBuffer2);
+    gl.deleteFramebuffer(frameBuffer1);
+    gl.deleteTexture(texture2);
+    gl.deleteTexture(texture1);
+    gl.deleteProgram(program);
+    gl.deleteShader(fragmentShader);
+  }
+  return {
+    render: render,
+    cleanUp: cleanUp
+  };
+}
+function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
+  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
+  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_blurredInputFrame;\n    uniform vec2 u_coverage;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      vec3 color = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 blurredColor = texture(u_blurredInputFrame, v_texCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(mix(blurredColor, color, personMask), 1.0);\n    }\n  "])));
+  var outputWidth = canvas.width,
+    outputHeight = canvas.height;
+  var vertexShader = (0, _webglHelper.compileShader)(gl, gl.VERTEX_SHADER, vertexShaderSource);
+  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
+  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
+  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
+  var blurredInputFrame = gl.getUniformLocation(program, 'u_blurredInputFrame');
+  var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
+  gl.useProgram(program);
+  gl.uniform1i(inputFrameLocation, 0);
+  gl.uniform1i(personMaskLocation, 1);
+  gl.uniform1i(blurredInputFrame, 2);
+  gl.uniform2f(coverageLocation, 0, 1);
+  function render() {
+    gl.viewport(0, 0, outputWidth, outputHeight);
+    gl.useProgram(program);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  function updateCoverage(coverage) {
+    gl.useProgram(program);
+    gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
+  }
+  function cleanUp() {
+    gl.deleteProgram(program);
+    gl.deleteShader(fragmentShader);
+    gl.deleteShader(vertexShader);
+  }
+  return {
+    render: render,
+    updateCoverage: updateCoverage,
+    cleanUp: cleanUp
+  };
+}
+},{"../helpers/webglHelper.js":64}],66:[function(require,module,exports){
+"use strict";
+
 var _templateObject, _templateObject2;
 function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
 var _require = require('../helpers/webglHelper.js'),
@@ -32310,7 +32470,7 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],66:[function(require,module,exports){
+},{"../helpers/webglHelper.js":64}],67:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -32400,7 +32560,7 @@ exports.buildJointBilateralFilterStage = function (gl, vertexShader, positionBuf
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],67:[function(require,module,exports){
+},{"../helpers/webglHelper.js":64}],68:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -32497,7 +32657,7 @@ exports.buildResizingStage = function (gl, vertexShader, positionBuffer, texCoor
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],68:[function(require,module,exports){
+},{"../helpers/webglHelper.js":64}],69:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -32556,7 +32716,7 @@ exports.buildSoftmaxStage = function (gl, vertexShader, positionBuffer, texCoord
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],69:[function(require,module,exports){
+},{"../helpers/webglHelper.js":64}],70:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -32573,61 +32733,63 @@ var _require3 = require('./softmaxStage.js'),
   buildSoftmaxStage = _require3.buildSoftmaxStage;
 var _require4 = require('./backgroundImageStage.js'),
   buildBackgroundImageStage = _require4.buildBackgroundImageStage;
-var _require5 = require('../helpers/webglHelper.js'),
-  compileShader = _require5.compileShader,
-  createTexture = _require5.createTexture,
-  glsl = _require5.glsl;
+var _require5 = require('./backgroundBlurStage.js'),
+  buildBackgroundBlurStage = _require5.buildBackgroundBlurStage;
+var _require6 = require('../helpers/webglHelper.js'),
+  compileShader = _require6.compileShader,
+  createTexture = _require6.createTexture,
+  glsl = _require6.glsl;
 
 /**
  * 构建 WebGL2 虚拟背景处理管道
- * 
+ *
  * 这是虚拟背景引擎的核心模块，负责创建完整的 WebGL2 渲染管道。
  * 管道包含以下处理阶段：
- * 
+ *
  * 1. 尺寸调整阶段 (ResizingStage)
  *    - 将输入视频帧缩放至分割模型所需尺寸 (160x96)
  *    - 使用双线性插值保持图像质量
- * 
+ *
  * 2. Softmax 阶段 (SoftmaxStage)
  *    - 将 TFLite 模型的原始输出转换为概率分布
  *    - 生成人物分割遮罩 (person mask)
- * 
+ *
  * 3. 联合双边滤波阶段 (JointBilateralFilterStage)
  *    - 对分割遮罩进行边缘平滑处理
  *    - 同时考虑颜色信息和空间距离，消除锯齿和噪声
- * 
+ *
  * 4. 背景合成阶段 (BackgroundImageStage)
  *    - 将人物与虚拟背景进行合成
  *    - 支持多种混合模式和光晕效果
- * 
+ *
  * @param {Object} sourcePlayback - 源视频播放配置
  * @param {number} sourcePlayback.width - 源视频宽度
  * @param {number} sourcePlayback.height - 源视频高度
  * @param {HTMLVideoElement} sourcePlayback.htmlElement - HTML 视频元素
- * 
+ *
  * @param {HTMLImageElement} backgroundImage - 背景图片元素
- * 
+ *
  * @param {Object} backgroundConfig - 背景配置
  * @param {string} backgroundConfig.type - 背景类型：
  *   - 'image': 使用自定义图片作为背景
  *   - 'blur': 使用模糊后的视频作为背景
  *   - 其他值: 无背景（仅显示人物）
- * 
+ *
  * @param {Object} segmentationConfig - 分割配置
  * @param {string} segmentationConfig.backend - 后端类型 (如 'wasmSimd')
  * @param {string} segmentationConfig.inputResolution - 输入分辨率 (如 '160x96')
  * @param {string} segmentationConfig.model - 模型名称 (如 'meet')
  * @param {string} segmentationConfig.pipeline - 管道类型 (如 'webgl2')
  * @param {number} segmentationConfig.targetFps - 目标帧率
- * 
+ *
  * @param {HTMLCanvasElement} canvas - 输出画布元素
  * @param {Object} tflite - TensorFlow Lite SIMD 模块实例
- * 
+ *
  * @returns {Object} 管道对象，包含以下方法：
  *   - render(): 执行一帧渲染，返回 Promise
  *   - updatePostProcessingConfig(config): 更新后处理配置
  *   - cleanUp(): 释放所有 WebGL 资源
- * 
+ *
  * @example
  * const pipeline = buildWebGL2Pipeline(
  *   { width: 1280, height: 720, htmlElement: videoEl },
@@ -32637,7 +32799,7 @@ var _require5 = require('../helpers/webglHelper.js'),
  *   canvas,
  *   tflite
  * );
- * 
+ *
  * await pipeline.render(); // 渲染一帧
  * pipeline.updatePostProcessingConfig({ jointBilateralFilter: { sigmaSpace: 1, sigmaColor: 0.1 } });
  * pipeline.cleanUp(); // 清理资源
@@ -32676,11 +32838,11 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   var resizingStage = buildResizingStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite);
   var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
   var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas);
+  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas);
 
   /**
    * 执行一帧的渲染处理
-   * 
+   *
    * 这是 WebGL2 虚拟背景管道的核心渲染方法，负责处理视频帧的完整流程：
    * 1. 上传视频帧到 GPU 纹理
    * 2. 调整帧大小以适配分割模型输入
@@ -32688,7 +32850,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
    * 4. 加载分割结果（人物遮罩）
    * 5. 应用联合双边滤波器进行边缘平滑
    * 6. 渲染最终合成结果（背景+人物）
-   * 
+   *
    * 渲染流程：
    * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
    * │  视频帧      │───▶│  调整大小    │───▶│  AI 分割    │
@@ -32700,7 +32862,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
    * │  最终输出   │◀───│  背景合成   │◀───│  边缘平滑   │
    * │  (Canvas)   │    │  (Blend)    │    │ (双边滤波)  │
    * └─────────────┘    └─────────────┘    └─────────────┘
-   * 
+   *
    * @returns {Promise<void>} 渲染完成后 resolve
    */
   function render() {
@@ -32708,14 +32870,14 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   }
   /**
    * 更新后处理配置
-   * 
+   *
    * 用于动态调整虚拟背景的后处理效果，包括分割边缘平滑参数和背景合成参数。
    * 可以在渲染过程中调用以实时更改效果。
-   * 
+   *
    * 后处理配置包含两个主要部分：
    * 1. 联合双边滤波器 (Joint Bilateral Filter) - 用于平滑分割边缘
    * 2. 背景合成参数 - 用于控制背景与人物的合成方式
-   * 
+   *
    * @param {Object} postProcessingConfig - 后处理配置对象
    * @param {Object} postProcessingConfig.jointBilateralFilter - 联合双边滤波配置
    * @param {number} postProcessingConfig.jointBilateralFilter.sigmaSpace - 空间 sigma，控制滤波的空间影响范围
@@ -32832,14 +32994,14 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
 
   /**
    * 清理 WebGL 管道资源
-   * 
+   *
    * 当不再需要 WebGL2 虚拟背景管道时，调用此函数释放所有 GPU 资源。
    * 正确清理资源对于避免 GPU 内存泄漏至关重要，特别是在单页面应用中。
-   * 
+   *
    * 清理顺序说明：
    * 1. 先清理各管道阶段（包含着色器程序和帧缓冲区）
    * 2. 再清理独立的 GPU 对象（纹理、缓冲区、着色器）
-   * 
+   *
    * 清理内容：
    * - 管道阶段：背景合成、双边滤波、分割加载、尺寸调整
    * - GPU 资源：纹理对象、缓冲区对象、顶点数组对象、着色器对象
@@ -32893,7 +33055,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64,"./backgroundImageStage.js":65,"./jointBilateralFilterStage.js":66,"./resizingStage.js":67,"./softmaxStage.js":68}],70:[function(require,module,exports){
+},{"../helpers/webglHelper.js":64,"./backgroundBlurStage.js":65,"./backgroundImageStage.js":66,"./jointBilateralFilterStage.js":67,"./resizingStage.js":68,"./softmaxStage.js":69}],71:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -33041,7 +33203,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Grammar":37,"./Logger":39}],71:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39}],72:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -33250,7 +33412,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],72:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],73:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -33402,7 +33564,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],73:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -33927,7 +34089,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],74:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -35708,7 +35870,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":72,"buffer":74,"ieee754":77}],75:[function(require,module,exports){
+},{"base64-js":73,"buffer":75,"ieee754":78}],76:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -35984,7 +36146,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":76,"_process":80}],76:[function(require,module,exports){
+},{"./common":77,"_process":81}],77:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -36278,7 +36440,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":79}],77:[function(require,module,exports){
+},{"ms":80}],78:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -36365,7 +36527,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],78:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -41756,7 +41918,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],79:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -41920,7 +42082,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],80:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -42106,7 +42268,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -42602,7 +42764,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],82:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -42617,7 +42779,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":81,"./parser":83,"./writer":84}],83:[function(require,module,exports){
+},{"./grammar":82,"./parser":84,"./writer":85}],84:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -42743,7 +42905,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":81}],84:[function(require,module,exports){
+},{"./grammar":82}],85:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -42859,5 +43021,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":81}]},{},[38])(38)
+},{"./grammar":82}]},{},[38])(38)
 });

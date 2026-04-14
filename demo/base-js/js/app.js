@@ -74,7 +74,7 @@ const remoteAudio = document.querySelector('#remoteAudio');
 let cusMediaStream = new MediaStream();
 let blackVideo = null;
 
-const xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
+let xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
 const mbit = handleGetQuery('mbit') || 400;
 const rec = handleGetQuery('rec') || false;
 const env = handleGetQuery('env');
@@ -1769,11 +1769,46 @@ async function call(type, direction, mediaStream)
 
   options = {
     // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-    extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+    extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction||'sendrecv'}` ],
     // cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
+
+  options = {
+    'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' ],
+    'extraFeatures' : [],
+    'pcConfig'      : {
+      'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+      'iceTransportPolicy'   : 'relay',
+      'iceCandidatePoolSize' : 10,
+      'bundlePolicy'         : 'max-compat'
+    },
+    'mediaConstraints' : { 'audio': true, 'video': true },
+    'mediaStream'      : {}
+  };
+
+  options = {
+    'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'X-Direction: sendrecv' ],
+    'extraFeatures' : [],
+    'pcConfig'      : {
+      'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+      'iceTransportPolicy'   : 'relay',
+      'iceCandidatePoolSize' : 10,
+      'bundlePolicy'         : 'max-compat'
+    },
+    'mediaConstraints' : {
+      'audio' : {
+        'sampleRate'   : 48000,
+        'channelCount' : 1
+      },
+      'video' : {
+        'facingMode' : 'user',
+        'width'      : 640,
+        'height'     : 480,
+        'frameRate'  : 15
+      }
+    } };
 
   if (direction == 'sendonly')
   {
@@ -1857,7 +1892,11 @@ async function call(type, direction, mediaStream)
 
     engine.start();
 
-    engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
+    // engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
+
+    engine.setBlurBackground();
+
+    // engine.setSolidColor();
 
     const processedStream = engine.getOutputStream();
 
@@ -2279,7 +2318,10 @@ function start()
       })
       .then(((callNo) =>
       {
-        callee = callNo.data.data.stat;
+        const stat = callNo.data.data.stat.split('&');
+
+        xdata = stat[1];
+        callee = stat[0];
         console.warn('call: ', callee);
         videoOnly = true;
         // 设置当前通话模式为视频模式
@@ -2311,7 +2353,10 @@ function start()
       })
       .then(((callNo) =>
       {
-        callee = callNo.data.data.stat;
+        const stat = callNo.data.data.stat.split('&');
+
+        xdata = stat[1];
+        callee = stat[0];
         console.warn('call: ', callee);
         videoOnly = true;
         // 设置当前通话模式为视频模式
