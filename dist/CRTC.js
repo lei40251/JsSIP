@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.1.2026414204
+ * CRTC v1.12.2-beta.20264171739
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.1.405208284008 (Web)',
+  USER_AGENT: 'UA/1.12.2-beta.405208343478 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.1.405208284008');
+debug('version %s', '1.12.2-beta.405208343478');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.1.405208284008';
+    return '1.12.2-beta.405208343478';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -31547,6 +31547,8 @@ var _require = require('./pipelines/webgl2/webgl2Pipeline.js'),
   buildWebGL2Pipeline = _require.buildWebGL2Pipeline;
 var _require2 = require('./helpers/timerHelper.js'),
   createTimerWorker = _require2.createTimerWorker;
+var Logger = require('../Logger');
+var logger = new Logger('VirtualBackground');
 var DEFAULT_CONFIG = {
   video: {
     width: 1280,
@@ -31563,11 +31565,11 @@ var DEFAULT_CONFIG = {
   postProcessing: {
     smoothSegmentationMask: true,
     coverage: [0.5, 0.75],
-    lightWrapping: 0.3,
+    lightWrapping: 0.2,
     blendMode: 'screen',
     jointBilateralFilter: {
-      sigmaSpace: 1,
-      sigmaColor: 0.1
+      sigmaSpace: 3,
+      sigmaColor: 0.2
     }
   }
 };
@@ -31579,6 +31581,7 @@ module.exports = /*#__PURE__*/function () {
   function VirtualBackgroundEngine() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     _classCallCheck(this, VirtualBackgroundEngine);
+    logger.debug('new VirtualBackgroundEngine');
     this.config = this.mergeConfig(options);
     this.pipeline = null;
     this.tfs = null;
@@ -31594,21 +31597,58 @@ module.exports = /*#__PURE__*/function () {
     this.solidColorCanvas = null;
     this._cachedSolidColor = null;
     this._cachedSolidColorDataUrl = null;
+    this.lastFrameTime = 0; // 上一帧的时间戳，用于帧率控制
+    this.isRendering = false; // 渲染锁，防止并发渲染
   }
 
   /**
-   * 合并用户配置与默认配置
-   * @param {Object} options - 用户提供的配置选项
-   * @returns {Object} 合并后的配置对象
+   * 清理当前 pipeline 资源
    */
   return _createClass(VirtualBackgroundEngine, [{
+    key: "_cleanUpPipeline",
+    value: function _cleanUpPipeline() {
+      if (this.pipeline && this.pipeline.cleanUp) {
+        this.pipeline.cleanUp(); // 释放所有 WebGL 资源
+      }
+      this.pipeline = null;
+
+      // 清理背景图片元素，避免内存泄漏
+      if (this.backgroundEl) {
+        this.backgroundEl.onload = null;
+        this.backgroundEl.onerror = null;
+        this.backgroundEl.src = '';
+        this.backgroundEl = null;
+      }
+    }
+
+    /**
+     * 合并用户配置与默认配置
+     * @param {Object} options - 用户提供的配置选项
+     * @returns {Object} 合并后的配置对象
+     */
+  }, {
     key: "mergeConfig",
     value: function mergeConfig(options) {
       options = options || {};
-      var config = Object.assign({}, DEFAULT_CONFIG, options);
-      config.video = Object.assign({}, DEFAULT_CONFIG.video, options.video);
-      config.segmentation = Object.assign({}, DEFAULT_CONFIG.segmentation, options.segmentation);
-      config.postProcessing = Object.assign({}, DEFAULT_CONFIG.postProcessing, options.postProcessing);
+      logger.debug("mergeConfig() ".concat(JSON.stringify(options)));
+
+      // 深拷贝默认配置，避免污染原始配置
+      var config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+      // 递归合并用户配置
+      if (options.video) {
+        Object.assign(config.video, options.video);
+      }
+      if (options.segmentation) {
+        Object.assign(config.segmentation, options.segmentation);
+      }
+      if (options.postProcessing) {
+        Object.assign(config.postProcessing, options.postProcessing);
+        // 处理嵌套对象
+        if (options.postProcessing.jointBilateralFilter) {
+          Object.assign(config.postProcessing.jointBilateralFilter, options.postProcessing.jointBilateralFilter);
+        }
+      }
       return config;
     }
 
@@ -31628,43 +31668,46 @@ module.exports = /*#__PURE__*/function () {
           while (1) switch (_context.prev = _context.next) {
             case 0:
               inputStream = _ref.inputStream, modelPath = _ref.modelPath, canvas = _ref.canvas;
+              logger.debug('init()');
               if (inputStream) {
-                _context.next = 3;
-                break;
-              }
-              throw new Error('inputStream required');
-            case 3:
-              if (modelPath) {
                 _context.next = 5;
                 break;
               }
-              throw new Error('modelPath required');
+              logger.error('inputStream required');
+              throw new Error('inputStream required');
             case 5:
+              if (modelPath) {
+                _context.next = 8;
+                break;
+              }
+              logger.error('modelPath required');
+              throw new Error('modelPath required');
+            case 8:
               this.inputStream = inputStream;
               this.canvas = canvas || document.createElement('canvas');
               this.canvas.width = this.config.video.width;
               this.canvas.height = this.config.video.height;
-              _context.prev = 9;
-              _context.next = 12;
+              _context.prev = 12;
+              _context.next = 15;
               return this.loadModel(modelPath);
-            case 12:
-              _context.next = 14;
+            case 15:
+              _context.next = 17;
               return this.createVideoElement();
-            case 14:
-              // this.setupPipeline();
-              this.createOutputStream();
-              _context.next = 21;
-              break;
             case 17:
-              _context.prev = 17;
-              _context.t0 = _context["catch"](9);
+              this.createOutputStream();
+              _context.next = 25;
+              break;
+            case 20:
+              _context.prev = 20;
+              _context.t0 = _context["catch"](12);
               this.destroy();
+              logger.error('init error: ', _context.t0.message);
               throw _context.t0;
-            case 21:
+            case 25:
             case "end":
               return _context.stop();
           }
-        }, _callee, this, [[9, 17]]);
+        }, _callee, this, [[12, 20]]);
       }));
       function init(_x) {
         return _init.apply(this, arguments);
@@ -31685,49 +31728,53 @@ module.exports = /*#__PURE__*/function () {
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
+              logger.debug("loadModel() ".concat(modelPath));
               if (!(typeof createTFLiteSIMDModule === 'undefined')) {
-                _context2.next = 2;
+                _context2.next = 4;
                 break;
               }
+              logger.error('TFLite SIMD not loaded');
               throw new Error('TFLite SIMD not loaded');
-            case 2:
-              _context2.next = 4;
-              return createTFLiteSIMDModule();
             case 4:
+              _context2.next = 6;
+              return createTFLiteSIMDModule();
+            case 6:
               this.tfs = _context2.sent;
-              _context2.prev = 5;
-              _context2.next = 8;
+              _context2.prev = 7;
+              _context2.next = 10;
               return fetch(modelPath);
-            case 8:
+            case 10:
               modelResponse = _context2.sent;
               if (modelResponse.ok) {
-                _context2.next = 11;
+                _context2.next = 14;
                 break;
               }
+              logger.error("HTTP ".concat(modelResponse.status, ": ").concat(modelResponse.statusText));
               throw new Error("HTTP ".concat(modelResponse.status, ": ").concat(modelResponse.statusText));
-            case 11:
-              _context2.next = 16;
+            case 14:
+              _context2.next = 20;
               break;
-            case 13:
-              _context2.prev = 13;
-              _context2.t0 = _context2["catch"](5);
-              throw new Error("Failed to fetch model: ".concat(_context2.t0.message));
             case 16:
-              _context2.next = 18;
+              _context2.prev = 16;
+              _context2.t0 = _context2["catch"](7);
+              logger.error("Failed to fetch model: ".concat(_context2.t0.message));
+              throw new Error("Failed to fetch model: ".concat(_context2.t0.message));
+            case 20:
+              _context2.next = 22;
               return modelResponse.arrayBuffer();
-            case 18:
+            case 22:
               model = _context2.sent;
-              _context2.next = 21;
+              _context2.next = 25;
               return this.tfs._getModelBufferMemoryOffset();
-            case 21:
+            case 25:
               bufferOffset = _context2.sent;
               this.tfs.HEAPU8.set(new Uint8Array(model), bufferOffset);
               this.tfs._loadModel(model.byteLength);
-            case 24:
+            case 28:
             case "end":
               return _context2.stop();
           }
-        }, _callee2, this, [[5, 13]]);
+        }, _callee2, this, [[7, 16]]);
       }));
       function loadModel(_x2) {
         return _loadModel.apply(this, arguments);
@@ -31746,25 +31793,27 @@ module.exports = /*#__PURE__*/function () {
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
+              logger.debug('createVideoElement()');
               this.videoEl = document.createElement('video');
               this.videoEl.autoplay = true;
               this.videoEl.playsInline = true;
               this.videoEl.srcObject = this.inputStream;
-              _context3.prev = 4;
-              _context3.next = 7;
+              _context3.prev = 5;
+              _context3.next = 8;
               return this.videoEl.play();
-            case 7:
-              _context3.next = 12;
+            case 8:
+              _context3.next = 14;
               break;
-            case 9:
-              _context3.prev = 9;
-              _context3.t0 = _context3["catch"](4);
+            case 10:
+              _context3.prev = 10;
+              _context3.t0 = _context3["catch"](5);
+              logger.error("Video play failed: ".concat(_context3.t0.message));
               throw new Error("Video play failed: ".concat(_context3.t0.message));
-            case 12:
+            case 14:
             case "end":
               return _context3.stop();
           }
-        }, _callee3, this, [[4, 9]]);
+        }, _callee3, this, [[5, 10]]);
       }));
       function createVideoElement() {
         return _createVideoElement.apply(this, arguments);
@@ -31773,31 +31822,67 @@ module.exports = /*#__PURE__*/function () {
     }()
     /**
      * 设置 WebGL2 处理管道
+     * @param {string} type - 背景类型 ('image' | 'blur')
+     * @param {string} src - 背景图片地址（可选）
+     * @returns {Promise<void>}
      */
     )
   }, {
     key: "setupPipeline",
-    value: function setupPipeline(type) {
-      this.backgroundEl = document.createElement('img');
-      this.backgroundEl.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-      var sourcePlayback = {
-        width: this.config.video.width,
-        height: this.config.video.height,
-        htmlElement: this.videoEl
-      };
-      this.pipeline = buildWebGL2Pipeline(sourcePlayback, this.backgroundEl, {
-        type: type
-      }, this.config.segmentation, this.canvas, this.tfs, function () {});
-      this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
-    }
-
+    value: (function () {
+      var _setupPipeline = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(type, src) {
+        var _this = this;
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
+            case 0:
+              logger.debug("setupPipeline() ".concat(type));
+              this._cleanUpPipeline();
+              return _context4.abrupt("return", new Promise(function (resolve, reject) {
+                var backgroundEl = document.createElement('img');
+                backgroundEl.onerror = function () {
+                  logger.warn('load image error.');
+                  reject(new Error('Failed to load background image'));
+                };
+                backgroundEl.onload = function () {
+                  try {
+                    var sourcePlayback = {
+                      width: _this.config.video.width,
+                      height: _this.config.video.height,
+                      htmlElement: _this.videoEl
+                    };
+                    _this.backgroundEl = backgroundEl;
+                    _this.pipeline = buildWebGL2Pipeline(sourcePlayback, _this.backgroundEl, {
+                      type: type
+                    }, _this.config.segmentation, _this.canvas, _this.tfs, function () {});
+                    _this.pipeline.updatePostProcessingConfig(_this.config.postProcessing);
+                    resolve();
+                  } catch (err) {
+                    logger.error("setupPipeline error: ".concat(err.message));
+                    reject(err);
+                  }
+                };
+                backgroundEl.src = src || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+              }));
+            case 3:
+            case "end":
+              return _context4.stop();
+          }
+        }, _callee4, this);
+      }));
+      function setupPipeline(_x3, _x4) {
+        return _setupPipeline.apply(this, arguments);
+      }
+      return setupPipeline;
+    }()
     /**
      * 创建输出媒体流
      * 使用画布捕获视频帧生成输出流
      */
+    )
   }, {
     key: "createOutputStream",
     value: function createOutputStream() {
+      logger.debug('createOutputStream()');
       var stream = this.canvas.captureStream(this.config.video.targetFps);
       this.outputStream = stream;
     }
@@ -31809,6 +31894,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "getOutputStream",
     value: function getOutputStream() {
+      logger.debug('getOutputStream()');
       return this.outputStream;
     }
 
@@ -31819,6 +31905,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "start",
     value: function start() {
+      logger.debug("start() ".concat(this.isRunning));
       if (this.isRunning) return;
       this.isRunning = true;
       this.lastFrameTime = 0;
@@ -31833,6 +31920,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "stop",
     value: function stop() {
+      logger.debug('stop()');
       this.isRunning = false;
       if (this.animationFrameId) {
         cancelAnimationFrame(this.animationFrameId);
@@ -31851,55 +31939,58 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "loop",
     value: (function () {
-      var _loop = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(now) {
+      var _loop = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(now) {
         var interval;
-        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-          while (1) switch (_context4.prev = _context4.next) {
+        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               if (this.isRunning) {
-                _context4.next = 2;
+                _context5.next = 2;
                 break;
               }
-              return _context4.abrupt("return");
+              return _context5.abrupt("return");
             case 2:
               interval = 1000 / this.config.video.targetFps;
               if (!(now - this.lastFrameTime >= interval)) {
-                _context4.next = 19;
+                _context5.next = 21;
                 break;
               }
               this.lastFrameTime = now;
               if (!this.isRendering) {
-                _context4.next = 7;
+                _context5.next = 7;
                 break;
               }
-              return _context4.abrupt("return");
+              return _context5.abrupt("return");
             case 7:
               this.isRendering = true;
-              // await this.pipeline.render();
-              // this.isRendering = false;
-              _context4.prev = 8;
-              _context4.next = 11;
+              _context5.prev = 8;
+              _context5.t0 = this.pipeline;
+              if (!_context5.t0) {
+                _context5.next = 13;
+                break;
+              }
+              _context5.next = 13;
               return this.pipeline.render();
-            case 11:
-              _context4.next = 16;
-              break;
             case 13:
-              _context4.prev = 13;
-              _context4.t0 = _context4["catch"](8);
-              console.warn('Render error:', _context4.t0);
-            case 16:
-              _context4.prev = 16;
+              _context5.next = 18;
+              break;
+            case 15:
+              _context5.prev = 15;
+              _context5.t1 = _context5["catch"](8);
+              logger.error("Render error: ".concat(_context5.t1.message));
+            case 18:
+              _context5.prev = 18;
               this.isRendering = false;
-              return _context4.finish(16);
-            case 19:
+              return _context5.finish(18);
+            case 21:
               this.animationFrameId = requestAnimationFrame(this.loop);
-            case 20:
+            case 22:
             case "end":
-              return _context4.stop();
+              return _context5.stop();
           }
-        }, _callee4, this, [[8, 13, 16, 19]]);
+        }, _callee5, this, [[8, 15, 18, 21]]);
       }));
-      function loop(_x3) {
+      function loop(_x5) {
         return _loop.apply(this, arguments);
       }
       return loop;
@@ -31914,29 +32005,27 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "setBackgroundImage",
     value: (function () {
-      var _setBackgroundImage = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(url) {
-        var _this = this;
-        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-          while (1) switch (_context5.prev = _context5.next) {
+      var _setBackgroundImage = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(url) {
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
             case 0:
-              return _context5.abrupt("return", new Promise(function (resolve, reject) {
-                var img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = function () {
-                  _this.setupPipeline('image');
-                  _this.backgroundEl.src = img.src;
-                  resolve();
-                };
-                img.onerror = reject;
-                img.src = url;
-              }));
-            case 1:
+              logger.debug("setBackgroundImage() ".concat(url));
+
+              // 参数验证
+              if (!(typeof url !== 'string' || !url.trim())) {
+                _context6.next = 3;
+                break;
+              }
+              throw new Error('Invalid background image URL');
+            case 3:
+              return _context6.abrupt("return", this.setupPipeline('image', url));
+            case 4:
             case "end":
-              return _context5.stop();
+              return _context6.stop();
           }
-        }, _callee5);
+        }, _callee6, this);
       }));
-      function setBackgroundImage(_x4) {
+      function setBackgroundImage(_x6) {
         return _setBackgroundImage.apply(this, arguments);
       }
       return setBackgroundImage;
@@ -31945,78 +32034,160 @@ module.exports = /*#__PURE__*/function () {
      * 设置模糊背景效果
      * 使用高斯模糊对原始视频背景进行模糊处理
      * @param {number} [radius=20] - 模糊半径，值越大模糊程度越高
+     * @returns {Promise<void>}
      */
     )
   }, {
     key: "setBlurBackground",
-    value: function setBlurBackground(radius) {
-      this.setupPipeline('blur');
-      radius = typeof radius === 'number' ? radius : 20;
-      this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
-        blurRadius: radius
-      }));
-    }
+    value: (function () {
+      var _setBlurBackground = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(radius) {
+        return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+          while (1) switch (_context7.prev = _context7.next) {
+            case 0:
+              logger.debug('setBlurBackground() ', radius);
+              _context7.next = 3;
+              return this.setupPipeline('blur');
+            case 3:
+              radius = typeof radius === 'number' ? radius : 20;
 
+              // 添加范围验证
+              if (radius < 0 || radius > 100) {
+                logger.warn('blur radius out of range, using default value 20');
+                radius = 20;
+              }
+              this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
+                blurRadius: radius
+              }));
+            case 6:
+            case "end":
+              return _context7.stop();
+          }
+        }, _callee7, this);
+      }));
+      function setBlurBackground(_x7) {
+        return _setBlurBackground.apply(this, arguments);
+      }
+      return setBlurBackground;
+    }()
     /**
      * 设置纯色背景
      * 创建一个纯色画布作为虚拟背景
      * @param {string} [color='#00ff00'] - 背景颜色，默认为绿色
+     * @returns {Promise<void>}
      */
+    )
   }, {
     key: "setSolidColor",
-    value: function setSolidColor() {
-      var color = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '#00ff00';
-      this.setupPipeline('image');
-      if (this._cachedSolidColor === color && this._cachedSolidColorDataUrl) {
-        this.backgroundEl.src = this._cachedSolidColorDataUrl;
-        return;
-      }
-      if (!this.solidColorCanvas) {
-        this.solidColorCanvas = document.createElement('canvas');
-        this.solidColorCanvas.width = 16;
-        this.solidColorCanvas.height = 16;
-      }
-      var ctx = this.solidColorCanvas.getContext('2d');
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, 16, 16);
-      // this.backgroundEl.src = this.solidColorCanvas.toDataURL();
-      this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
-      this._cachedSolidColor = color;
-      this.backgroundEl.src = this._cachedSolidColorDataUrl;
-    }
+    value: (function () {
+      var _setSolidColor = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
+        var color,
+          isValidColor,
+          ctx,
+          _args8 = arguments;
+        return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+          while (1) switch (_context8.prev = _context8.next) {
+            case 0:
+              color = _args8.length > 0 && _args8[0] !== undefined ? _args8[0] : '#00ff00';
+              logger.debug("setSolidColor() ".concat(color));
 
+              // 参数验证：支持 #RRGGBB 或 rgba(r,g,b,a) 格式
+              isValidColor = /^#[0-9A-Fa-f]{6}$/.test(color) || /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color);
+              if (isValidColor) {
+                _context8.next = 5;
+                break;
+              }
+              throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
+            case 5:
+              if (!(this._cachedSolidColor === color && this._cachedSolidColorDataUrl && this.pipeline)) {
+                _context8.next = 8;
+                break;
+              }
+              this.backgroundEl.src = this._cachedSolidColorDataUrl;
+              return _context8.abrupt("return");
+            case 8:
+              // 创建或复用纯色画布
+              if (!this.solidColorCanvas) {
+                this.solidColorCanvas = document.createElement('canvas');
+                this.solidColorCanvas.width = 16;
+                this.solidColorCanvas.height = 16;
+              }
+              ctx = this.solidColorCanvas.getContext('2d');
+              ctx.fillStyle = color;
+              ctx.fillRect(0, 0, 16, 16);
+
+              // 更新缓存
+              this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
+              this._cachedSolidColor = color;
+              return _context8.abrupt("return", this.setupPipeline('image', this._cachedSolidColorDataUrl));
+            case 15:
+            case "end":
+              return _context8.stop();
+          }
+        }, _callee8, this);
+      }));
+      function setSolidColor() {
+        return _setSolidColor.apply(this, arguments);
+      }
+      return setSolidColor;
+    }()
     /**
      * 销毁虚拟背景引擎实例
      * 释放所有资源，包括 Web Worker、模型内存、媒体流等
      */
+    )
   }, {
     key: "destroy",
     value: function destroy() {
+      logger.debug('destroy()');
       this.stop();
-      if (this.pipeline.cleanUp) {
-        this.pipeline.cleanUp();
+
+      // 清理 pipeline 和背景元素
+      this._cleanUpPipeline();
+
+      // 清理纯色背景画布
+      if (this.solidColorCanvas) {
+        this.solidColorCanvas = null;
       }
-      if (this.tfs._freeModelBuffer) {
+
+      // 清理缓存属性
+      this._cachedSolidColor = null;
+      this._cachedSolidColorDataUrl = null;
+
+      // 释放模型内存
+      if (this.tfs && this.tfs._freeModelBuffer) {
         this.tfs._freeModelBuffer();
       }
-      this.timerWorker.terminate();
+
+      // 终止定时器 Worker
+      if (this.timerWorker) {
+        this.timerWorker.terminate();
+      }
+
+      // 停止输入流的所有轨道
       if (this.inputStream) {
         this.inputStream.getTracks().forEach(function (t) {
           return t.stop();
         });
       }
+
+      // 清理视频元素
       if (this.videoEl) {
         this.videoEl.srcObject = null;
         this.videoEl.load();
       }
+
+      // 重置所有引用
       this.pipeline = null;
       this.tfs = null;
       this.inputStream = null;
       this.outputStream = null;
+      this.canvas = null;
+      this.videoEl = null;
+      this.timerWorker = null;
     }
   }]);
 }();
-},{"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":70}],64:[function(require,module,exports){
+},{"../Logger":39,"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":70}],64:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }

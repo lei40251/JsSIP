@@ -1879,7 +1879,7 @@ async function call(type, direction, mediaStream)
 
   if (type=== 'callVB')
   {
-    const engine = new CRTC.VirtualBackground();
+    const engine = new CRTC.VirtualBackground({ video: videoConstraints });
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -1892,9 +1892,17 @@ async function call(type, direction, mediaStream)
 
     engine.start();
 
-    // engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
+    engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
 
-    engine.setBlurBackground();
+    setTimeout(() =>
+    {
+      engine.setBackgroundImage('./virtual-background/backgrounds/sky.jpg');
+      setTimeout(() =>
+      {
+        engine.setBlurBackground();
+      }, 5000);
+    }, 10000);
+
 
     // engine.setSolidColor();
 
