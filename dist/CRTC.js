@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.2-beta.20264171739
+ * CRTC v1.12.2-beta.2026422859
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.2-beta.405208343478 (Web)',
+  USER_AGENT: 'UA/1.12.2-beta.405208441718 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.2-beta.405208343478');
+debug('version %s', '1.12.2-beta.405208441718');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.2-beta.405208343478';
+    return '1.12.2-beta.405208441718';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -19594,7 +19594,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._localToAudio = false;
       this._localToVideo = true;
       return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-        var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks;
+        var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks, transceiver;
         return _regeneratorRuntime().wrap(function _callee3$(_context3) {
           while (1) switch (_context3.prev = _context3.next) {
             case 0:
@@ -19656,7 +19656,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.debug("".concat(_this5._id, " environment id: "), _this5._environment);
             case 19:
               if (!stream) {
-                _context3.next = 45;
+                _context3.next = 47;
                 break;
               }
               if (!_this5._customMediaStream) {
@@ -19703,9 +19703,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               videoTracks = stream.getVideoTracks();
               _this5._localMediaStream.addTrack(videoTracks[0]);
-              _this5._connection.addTrack(videoTracks[0], _this5._localMediaStream);
+
+              // 根据是否单向添加Transceiver
+              transceiver = _this5._connection.addTransceiver('video', {
+                direction: options.sendOnly ? 'sendonly' : 'sendrecv'
+              }); // 把 track 绑定到 sender
+              _context3.next = 46;
+              return transceiver.sender.replaceTrack(videoTracks[0]);
+            case 46:
               return _context3.abrupt("return", true);
-            case 45:
+            case 47:
             case "end":
               return _context3.stop();
           }
@@ -19718,24 +19725,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         };
 
-        // 单向视频，仅发送
-        if (options.sendOnly) {
-          opts = {
-            rtcOfferConstraints: {
-              iceRestart: true,
-              offerToReceiveVideo: false
-            }
-          };
-        }
-
         // 单向视频，仅接收
         if (options.recvOnly) {
-          opts = {
-            rtcOfferConstraints: {
-              iceRestart: true,
-              offerToReceiveVideo: true
-            }
-          };
+          _this5._connection.addTransceiver('video', {
+            direction: 'recvonly'
+          });
         }
 
         // 使用update还是reinvite
@@ -21581,9 +21575,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc.sdp = desc.sdp.replace(/a=bundle-only\r\n/g, '');
           desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
         }
-
-        // logger.debug(`${this._id} desc.sdp: ${desc.sdp}`);
-
         return connection.setLocalDescription(desc)["catch"](function (error) {
           _this19._rtcReady = true;
           logger.warn("".concat(_this19._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
@@ -22945,10 +22936,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
 
             /**
-               * 音视频切换相关
-               * 根据sdp判断用户Answer的通话模式，并触发mode事件
-               * @author: lei
-               */
+                 * 音视频切换相关
+                 * 根据sdp判断用户Answer的通话模式，并触发mode事件
+                 * @author: lei
+                 */
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;

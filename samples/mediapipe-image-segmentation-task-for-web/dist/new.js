@@ -36,22 +36,22 @@
 // 从 CDN 导入 MediaPipe Tasks Vision 的核心模块
 // - ImageSegmenter：图像分割器主类，负责模型加载和推理
 // - FilesetResolver：文件集解析器，负责定位和加载 WASM 运行时文件
-import { ImageSegmenter, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2";
+import { ImageSegmenter, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2';
 
 // ==================== DOM 元素获取 ====================
 
 // 视频元素：显示摄像头实时画面
-const video = document.getElementById("webcam");
+const video = document.getElementById('webcam');
 
 // Canvas 元素及上下文：用于渲染视频流的分割结果
-const canvasElement = document.getElementById("canvas");
-const canvasCtx = canvasElement.getContext("2d");
+const canvasElement = document.getElementById('canvas');
+const canvasCtx = canvasElement.getContext('2d');
 
 // 分割类别预测结果展示区域
-const webcamPredictions = document.getElementById("webcamPredictions");
+const webcamPredictions = document.getElementById('webcamPredictions');
 
 // 演示区域容器：模型加载完成后才显示
-const demosSection = document.getElementById("demos");
+const demosSection = document.getElementById('demos');
 
 // 摄像头开关按钮：点击启用/禁用摄像头分割
 let enableWebcamButton;
@@ -60,15 +60,15 @@ let enableWebcamButton;
 let webcamRunning = false;
 
 // 视频显示尺寸设置
-const videoHeight = "360px";
-const videoWidth = "480px";
+const videoHeight = '360px';
+const videoWidth = '480px';
 
 // 运行模式：当前为 VIDEO（视频流模式），也可切换为 IMAGE（单帧图片模式）
 // 注意：运行模式必须与调用方法匹配：
 //   - IMAGE 模式 → 调用 segment()
 //   - VIDEO 模式 → 调用 segmentForVideo()
 // let runningMode: "IMAGE" | "VIDEO" = "IMAGE";
-let runningMode = "VIDEO";
+let runningMode = 'LIVE_STREAM';
 
 // 分割结果的输出宽高（模型输入尺寸）
 const resultWidthHeigth = 256;
@@ -89,27 +89,27 @@ let labels;
 // 每种颜色在视觉上尽可能与其他颜色区分开，便于人眼辨识不同类别区域
 // 格式：[R, G, B, A]，A=255 表示完全不透明
 const legendColors = [
-  [255, 197, 0, 255],    // Vivid Yellow - 鲜艳黄色
-  [128, 62, 117, 255],   // Strong Purple - 强紫色
-  [255, 104, 0, 255],    // Vivid Orange - 鲜艳橙色
-  [166, 189, 215, 255],  // Very Light Blue - 极浅蓝色
-  [193, 0, 32, 255],     // Vivid Red - 鲜艳红色
-  [206, 162, 98, 255],   // Grayish Yellow - 灰黄色
-  [129, 112, 102, 255],  // Medium Gray - 中灰色
-  [0, 125, 52, 255],     // Vivid Green - 鲜艳绿色
-  [246, 118, 142, 255],  // Strong Purplish Pink - 强紫粉色
-  [0, 83, 138, 255],     // Strong Blue - 强蓝色
-  [255, 112, 92, 255],   // Strong Yellowish Pink - 强黄粉色
-  [83, 55, 112, 255],    // Strong Violet - 强紫罗兰色
-  [255, 142, 0, 255],    // Vivid Orange Yellow - 鲜橙黄色
-  [179, 40, 81, 255],    // Strong Purplish Red - 强紫红色
-  [244, 200, 0, 255],    // Vivid Greenish Yellow - 鲜绿黄色
-  [127, 24, 13, 255],    // Strong Reddish Brown - 强红棕色
-  [147, 170, 0, 255],    // Vivid Yellowish Green - 鲜黄绿色
-  [89, 51, 21, 255],     // Deep Yellowish Brown - 深黄棕色
-  [241, 58, 19, 255],    // Vivid Reddish Orange - 鲜红橙色
-  [35, 44, 22, 255],     // Dark Olive Green - 暗橄榄绿
-  [0, 161, 194, 255]     // Vivid Blue - 鲜艳蓝色
+  [ 255, 197, 0, 255 ], // Vivid Yellow - 鲜艳黄色
+  [ 128, 62, 117, 255 ], // Strong Purple - 强紫色
+  [ 255, 104, 0, 255 ], // Vivid Orange - 鲜艳橙色
+  [ 166, 189, 215, 255 ], // Very Light Blue - 极浅蓝色
+  [ 193, 0, 32, 255 ], // Vivid Red - 鲜艳红色
+  [ 206, 162, 98, 255 ], // Grayish Yellow - 灰黄色
+  [ 129, 112, 102, 255 ], // Medium Gray - 中灰色
+  [ 0, 125, 52, 255 ], // Vivid Green - 鲜艳绿色
+  [ 246, 118, 142, 255 ], // Strong Purplish Pink - 强紫粉色
+  [ 0, 83, 138, 255 ], // Strong Blue - 强蓝色
+  [ 255, 112, 92, 255 ], // Strong Yellowish Pink - 强黄粉色
+  [ 83, 55, 112, 255 ], // Strong Violet - 强紫罗兰色
+  [ 255, 142, 0, 255 ], // Vivid Orange Yellow - 鲜橙黄色
+  [ 179, 40, 81, 255 ], // Strong Purplish Red - 强紫红色
+  [ 244, 200, 0, 255 ], // Vivid Greenish Yellow - 鲜绿黄色
+  [ 127, 24, 13, 255 ], // Strong Reddish Brown - 强红棕色
+  [ 147, 170, 0, 255 ], // Vivid Yellowish Green - 鲜黄绿色
+  [ 89, 51, 21, 255 ], // Deep Yellowish Brown - 深黄棕色
+  [ 241, 58, 19, 255 ], // Vivid Reddish Orange - 鲜红橙色
+  [ 35, 44, 22, 255 ], // Dark Olive Green - 暗橄榄绿
+  [ 0, 161, 194, 255 ] // Vivid Blue - 鲜艳蓝色
 ];
 
 // ==================== ImageSegmenter 初始化 ====================
@@ -123,19 +123,20 @@ const legendColors = [
  * 3. 获取模型支持的类别标签
  * 4. 显示演示区域 UI
  */
-const createImageSegmenter = async () => {
+const createImageSegmenter = async() => 
+{
   // 步骤1：加载 Vision Tasks 的 WASM 运行时
   // FilesetResolver 会根据指定的 CDN 路径下载并初始化 WebAssembly 模块
   // 这些 WASM 文件包含了模型推理所需的计算核心
   // 注意：变量名 audio 是原始代码的命名，实际加载的是 vision（视觉）任务的 WASM
   const audio = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm"
+    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm'
   );
 
   // 步骤2：创建 ImageSegmenter 实例
   // 使用 createFromOptions 工厂方法而非 new 构造函数
   imageSegmenter = await ImageSegmenter.createFromOptions(audio, {
-    baseOptions: {
+    baseOptions : {
       // ==================== 可选模型列表 ====================
       //
       // 【模型1 - 当前使用】Selfie Segmenter Landscape（自拍分割-横向版）
@@ -144,8 +145,8 @@ const createImageSegmenter = async () => {
       // - 分割类别：2 类（背景 + 人物）
       // - 适用场景：视频会议背景虚化/替换、自拍人像分割
       // - 特点：模型更轻量，帧率更高，专为横向视频流优化
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite",
+      modelAssetPath :
+      'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite',
       //
       // 【模型2 - 备选】Selfie Segmenter Square（自拍分割-方形版）
       // - 输入尺寸：256×256（方形输入，通用场景）
@@ -153,7 +154,7 @@ const createImageSegmenter = async () => {
       // - 分割类别：2 类（背景 + 人物）
       // - 适用场景：与模型1相同，但适合需要方形输入的场景
       // - 特点：输入分辨率更高，分割精度略优，但计算量稍大
-      // "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+      // 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
       //
       // 【模型3 - 备选】DeepLab-V3（通用语义分割）
       // - 输入尺寸：257×257
@@ -166,17 +167,17 @@ const createImageSegmenter = async () => {
       // "https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite",
       // 计算委托：使用 GPU 加速推理（可选 "GPU" 或 "CPU"）
       // GPU 通常更快，但并非所有设备都支持；CPU 兼容性更好
-      delegate: "GPU"
+      delegate : 'GPU'
     },
     // 运行模式：IMAGE（单帧图片）或 VIDEO（连续视频流）
     // VIDEO 模式使用帧间信息进行时序平滑，分割结果更稳定
-    runningMode: runningMode,
+    runningMode           : runningMode,
     // 是否输出类别掩码：每个像素标注其所属类别的 ID
     // true → result.categoryMask 可用（Uint8Array/Float32Array）
-    outputCategoryMask: true,
+    outputCategoryMask    : true,
     // 是否输出置信度掩码：每个类别一张图，像素值表示该像素属于该类别的置信度
     // false → result.confidenceMasks 不可用（节省内存和计算）
-    outputConfidenceMasks: false
+    outputConfidenceMasks : false
   });
 
   // 步骤3：获取模型支持的类别标签列表
@@ -186,7 +187,7 @@ const createImageSegmenter = async () => {
   labels = imageSegmenter.getLabels();
 
   // 步骤4：模型加载完成，显示演示区域
-  demosSection.classList.remove("invisible");
+  demosSection.classList.remove('invisible');
 };
 
 // 立即调用初始化函数，页面加载时开始加载模型
@@ -196,14 +197,15 @@ createImageSegmenter();
 
 // 获取所有标记为"点击分割"的图片容器
 const imageContainers = document.getElementsByClassName(
-  "segmentOnClick"
+  'segmentOnClick'
 );
 
 // 为每个容器内的 img 元素绑定点击事件
-for (let i = 0; i < imageContainers.length; i++) {
+for (let i = 0; i < imageContainers.length; i++) 
+{
   imageContainers[i]
-    .getElementsByTagName("img")[0]
-    .addEventListener("click", handleClick);
+    .getElementsByTagName('img')[0]
+    .addEventListener('click', handleClick);
 }
 
 /**
@@ -217,24 +219,27 @@ for (let i = 0; i < imageContainers.length; i++) {
  * @param {Event} event - 点击事件对象
  */
 let canvasClick;
-async function handleClick(event) {
+
+async function handleClick(event) 
+{
   // 如果 ImageSegmenter 尚未加载完成，不执行分割
-  if (imageSegmenter === undefined) {
+  if (imageSegmenter === undefined) 
+  {
     return;
   }
 
   // 获取被点击图片对应的 Canvas 元素（与图片同属一个父容器）
-  canvasClick = event.target.parentElement.getElementsByTagName("canvas")[0];
+  canvasClick = event.target.parentElement.getElementsByTagName('canvas')[0];
 
   // 显示 Canvas（移除隐藏样式）
-  canvasClick.classList.remove("removed");
+  canvasClick.classList.remove('removed');
 
   // 设置 Canvas 尺寸为图片的原始尺寸
   canvasClick.width = event.target.naturalWidth;
   canvasClick.height = event.target.naturalHeight;
 
   // 获取 Canvas 2D 上下文
-  const cxt = canvasClick.getContext("2d");
+  const cxt = canvasClick.getContext('2d');
 
   // 清空画布，准备绘制
   cxt.clearRect(0, 0, canvasClick.width, canvasClick.height);
@@ -249,10 +254,11 @@ async function handleClick(event) {
   // 因为 ImageSegmenter 要求运行模式与调用方法严格匹配：
   //   IMAGE 模式 → segment()
   //   VIDEO 模式 → segmentForVideo()
-  if (runningMode === "VIDEO") {
-    runningMode = "IMAGE";
+  if (runningMode === 'VIDEO') 
+  {
+    runningMode = 'IMAGE';
     await imageSegmenter.setOptions({
-      runningMode: runningMode
+      runningMode : runningMode
     });
   }
 
@@ -281,22 +287,23 @@ async function handleClick(event) {
  * @param {number} result.categoryMask.height - 掩码高度
  * @param {Function} result.categoryMask.getAsUint8Array - 获取 Uint8Array 格式的掩码数据
  */
-function callback(result) {
-  const cxt = canvasClick.getContext("2d");
+function callback(result) 
+{
+  const cxt = canvasClick.getContext('2d');
 
   // 获取类别掩码的尺寸（可能与原始图片尺寸不同，模型会缩放输入）
   const { width, height } = result.categoryMask;
 
   // 从 Canvas 获取当前图像的像素数据（RGBA 格式，每像素4字节）
   // 注意：此处的像素数据来自之前 drawImage 绘制的原始图片
-  let imageData = cxt.getImageData(0, 0, width, height).data;
+  const imageData = cxt.getImageData(0, 0, width, height).data;
 
   // 调整 Canvas 尺寸为掩码尺寸（确保像素对齐）
   canvasClick.width = width;
   canvasClick.height = height;
 
   // 用于记录检测到的非背景类别名称
-  let category = "";
+  let category = '';
 
   // 获取类别掩码数据（Uint8Array 格式）
   // 每个元素是一个整数，表示该像素所属类别的 ID
@@ -304,9 +311,12 @@ function callback(result) {
   const mask = result.categoryMask.getAsUint8Array();
 
   // 遍历每个像素，将类别颜色与原始像素颜色混合
-  for (let i in mask) {
+  // eslint-disable-next-line guard-for-in
+  for (const i in mask) 
+  {
     // 如果该像素属于非背景类别（mask[i] > 0），记录类别名称
-    if (mask[i] > 0) {
+    if (mask[i] > 0) 
+    {
       category = labels[mask[i]];
     }
 
@@ -338,14 +348,14 @@ function callback(result) {
   // 显示检测到的类别名称
   // 获取图片容器内的分类结果显示元素
   const p = event.target.parentNode.getElementsByClassName(
-    "classification"
+    'classification'
   )[0];
 
   // 移除隐藏样式，显示文本
-  p.classList.remove("removed");
+  p.classList.remove('removed');
 
   // 设置文本内容为检测到的类别（取最后一个非背景类别）
-  p.innerText = "Category: " + category;
+  p.innerText = `Category: ${ category}`;
 }
 
 // ==================== 视频流分割回调函数 ====================
@@ -362,9 +372,10 @@ function callback(result) {
  * @param {Object} result - 分割结果对象
  * @param {Object} result.categoryMask - 类别掩码（Float32 格式）
  */
-function callbackForVideo(result) {
+function callbackForVideo(result) 
+{
   // 获取 Canvas 上当前视频帧的像素数据
-  let imageData = canvasCtx.getImageData(
+  const imageData = canvasCtx.getImageData(
     0,
     0,
     video.videoWidth,
@@ -380,7 +391,8 @@ function callbackForVideo(result) {
   let j = 0;
 
   // 遍历掩码中的每个像素
-  for (let i = 0; i < mask.length; ++i) {
+  for (let i = 0; i < mask.length; ++i) 
+  {
     // 将 Float32 掩码值乘以 255 并四舍五入，映射为颜色索引
     // 例如：mask[i] = 0.059 → 15（人），mask[i] = 0.0 → 0（背景）
     const maskVal = Math.round(mask[i] * 255.0);
@@ -413,7 +425,8 @@ function callbackForVideo(result) {
 
   // 如果摄像头仍在运行，请求下一帧处理
   // 使用 requestAnimationFrame 实现与屏幕刷新同步的处理节奏
-  if (webcamRunning === true) {
+  if (webcamRunning === true) 
+  {
     window.requestAnimationFrame(predictWebcam);
   }
 }
@@ -424,8 +437,9 @@ function callbackForVideo(result) {
  * 检测浏览器是否支持 getUserMedia（摄像头访问）
  * @returns {boolean} 是否支持摄像头访问
  */
-function hasGetUserMedia() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+function hasGetUserMedia() 
+{
+  return Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
 // 记录上一次处理的视频时间戳，用于跳过重复帧
@@ -443,13 +457,17 @@ let lastWebcamTime = -1;
  *
  * 该函数通过 requestAnimationFrame 循环调用，实现持续的视频流分割
  */
-async function predictWebcam() {
+async function predictWebcam() 
+{
   // 检查当前视频帧是否与上一帧相同
   // currentTime 未变化说明视频还没有新帧，跳过本次处理
-  if (video.currentTime === lastWebcamTime) {
-    if (webcamRunning === true) {
+  if (video.currentTime === lastWebcamTime) 
+  {
+    if (webcamRunning === true) 
+    {
       window.requestAnimationFrame(predictWebcam);
     }
+    
     return;
   }
 
@@ -461,21 +479,23 @@ async function predictWebcam() {
   canvasCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
   // 如果 ImageSegmenter 尚未加载完成，不执行分割
-  if (imageSegmenter === undefined) {
+  if (imageSegmenter === undefined) 
+  {
     return;
   }
 
   // 如果当前运行模式为 IMAGE（之前点击了图片分割），需要切换回 VIDEO 模式
   // 因为视频流必须使用 segmentForVideo() 方法
-  if (runningMode === "IMAGE") {
-    runningMode = "VIDEO";
+  if (runningMode === 'IMAGE') 
+  {
+    runningMode = 'VIDEO';
     await imageSegmenter.setOptions({
-      runningMode: runningMode
+      runningMode : runningMode
     });
   }
 
   // 记录当前时间戳，用于视频模式的帧同步
-  let startTimeMs = performance.now();
+  const startTimeMs = performance.now();
 
   // 使用 segmentForVideo() 对视频帧进行分割
   // 与 segment() 的区别：
@@ -496,26 +516,31 @@ async function predictWebcam() {
  *
  * @param {Event} event - 按钮点击事件
  */
-async function enableCam(event) {
+async function enableCam(event) 
+{
   // 如果 ImageSegmenter 尚未加载完成，不执行操作
-  if (imageSegmenter === undefined) {
+  if (imageSegmenter === undefined) 
+  {
     return;
   }
 
   // 切换摄像头运行状态
-  if (webcamRunning === true) {
+  if (webcamRunning === true) 
+  {
     // 当前正在运行 → 停止
     webcamRunning = false;
-    enableWebcamButton.innerText = "ENABLE SEGMENTATION";
-  } else {
+    enableWebcamButton.innerText = 'ENABLE SEGMENTATION';
+  }
+  else 
+  {
     // 当前未运行 → 启动
     webcamRunning = true;
-    enableWebcamButton.innerText = "DISABLE SEGMENTATION";
+    enableWebcamButton.innerText = 'DISABLE SEGMENTATION';
   }
 
   // 摄像头媒体约束配置
   const constraints = {
-    video: true  // 仅请求视频流，未指定分辨率等参数（使用浏览器默认值）
+    video : true // 仅请求视频流，未指定分辨率等参数（使用浏览器默认值）
   };
 
   // 请求摄像头权限并获取视频流
@@ -524,18 +549,21 @@ async function enableCam(event) {
 
   // 当视频数据加载完成后，开始预测循环
   // loadeddata 事件在第一帧数据可用时触发
-  video.addEventListener("loadeddata", predictWebcam);
+  video.addEventListener('loadeddata', predictWebcam);
 }
 
 // ==================== 初始化摄像头按钮 ====================
 
 // 如果浏览器支持摄像头访问，为按钮绑定事件监听器
-if (hasGetUserMedia()) {
+if (hasGetUserMedia()) 
+{
   enableWebcamButton = document.getElementById(
-    "webcamButton"
+    'webcamButton'
   );
-  enableWebcamButton.addEventListener("click", enableCam);
-} else {
+  enableWebcamButton.addEventListener('click', enableCam);
+}
+else 
+{
   // 浏览器不支持摄像头，输出警告信息
-  console.warn("getUserMedia() is not supported by your browser");
+  console.warn('getUserMedia() is not supported by your browser');
 }
