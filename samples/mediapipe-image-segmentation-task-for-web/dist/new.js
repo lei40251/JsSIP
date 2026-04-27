@@ -47,9 +47,6 @@ const video = document.getElementById('webcam');
 const canvasElement = document.getElementById('canvas');
 const canvasCtx = canvasElement.getContext('2d');
 
-// 分割类别预测结果展示区域
-const webcamPredictions = document.getElementById('webcamPredictions');
-
 // 演示区域容器：模型加载完成后才显示
 const demosSection = document.getElementById('demos');
 
@@ -59,10 +56,6 @@ let enableWebcamButton;
 // 摄像头是否正在运行的标志
 let webcamRunning = false;
 
-// 视频显示尺寸设置
-const videoHeight = '360px';
-const videoWidth = '480px';
-
 // 运行模式：当前为 VIDEO（视频流模式），也可切换为 IMAGE（单帧图片模式）
 // 注意：运行模式必须与调用方法匹配：
 //   - IMAGE 模式 → 调用 segment()
@@ -70,8 +63,6 @@ const videoWidth = '480px';
 // let runningMode: "IMAGE" | "VIDEO" = "IMAGE";
 let runningMode = 'LIVE_STREAM';
 
-// 分割结果的输出宽高（模型输入尺寸）
-const resultWidthHeigth = 256;
 
 // ==================== 全局状态变量 ====================
 
@@ -177,7 +168,7 @@ const createImageSegmenter = async() =>
     outputCategoryMask    : true,
     // 是否输出置信度掩码：每个类别一张图，像素值表示该像素属于该类别的置信度
     // false → result.confidenceMasks 不可用（节省内存和计算）
-    outputConfidenceMasks : false
+    outputConfidenceMasks : true
   });
 
   // 步骤3：获取模型支持的类别标签列表

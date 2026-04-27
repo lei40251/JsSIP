@@ -1780,41 +1780,41 @@ async function call(type, direction, mediaStream)
     pcConfig      : pcConfig
   };
 
-  options = {
-    'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' ],
-    'extraFeatures' : [],
-    'pcConfig'      : {
-      'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
-      'iceTransportPolicy'   : 'relay',
-      'iceCandidatePoolSize' : 10,
-      'bundlePolicy'         : 'max-compat'
-    },
-    'mediaConstraints' : { 'audio': true, 'video': true },
-    'mediaStream'      : {}
-  };
+  // options = {
+  //   'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' ],
+  //   'extraFeatures' : [],
+  //   'pcConfig'      : {
+  //     'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+  //     'iceTransportPolicy'   : 'relay',
+  //     'iceCandidatePoolSize' : 10,
+  //     'bundlePolicy'         : 'max-compat'
+  //   },
+  //   'mediaConstraints' : { 'audio': true, 'video': true },
+  //   'mediaStream'      : {}
+  // };
 
-  options = {
-    'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'X-Direction: sendrecv' ],
-    'extraFeatures' : [],
-    'pcConfig'      : {
-      'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
-      'iceTransportPolicy'   : 'relay',
-      'iceCandidatePoolSize' : 10,
-      'bundlePolicy'         : 'max-compat'
-    },
-    'mediaConstraints' : {
-      'audio' : {
-        'sampleRate'   : 48000,
-        'channelCount' : 1
-      },
-      'video' : {
-        'facingMode' : 'user',
-        'width'      : 640,
-        'height'     : 480,
-        'frameRate'  : 15
-      }
-    }
-  };
+  // options = {
+  //   'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'X-Direction: sendrecv' ],
+  //   'extraFeatures' : [],
+  //   'pcConfig'      : {
+  //     'iceServers'           : [ { 'urls': 'turn:5g.vsbc.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
+  //     'iceTransportPolicy'   : 'relay',
+  //     'iceCandidatePoolSize' : 10,
+  //     'bundlePolicy'         : 'max-compat'
+  //   },
+  //   'mediaConstraints' : {
+  //     'audio' : {
+  //       'sampleRate'   : 48000,
+  //       'channelCount' : 1
+  //     },
+  //     'video' : {
+  //       'facingMode' : 'user',
+  //       'width'      : 640,
+  //       'height'     : 480,
+  //       'frameRate'  : 15
+  //     }
+  //   }
+  // };
 
   if (direction == 'sendonly') 
   {

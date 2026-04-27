@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.2-beta.2026422859
+ * CRTC v1.12.2-beta.2026424186
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.2-beta.405208441718 (Web)',
+  USER_AGENT: 'UA/1.12.2-beta.405208483612 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.2-beta.405208441718');
+debug('version %s', '1.12.2-beta.405208483612');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.2-beta.405208441718';
+    return '1.12.2-beta.405208483612';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -22334,6 +22334,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 新增判断是否已经存在一个视频
         var hasVideo = false;
         _this25._connection.getSenders().forEach(function (sender) {
+          try {
+            logger.debug('sender: ', sender.track.kind, sender.track.readyState);
+          } catch (error) {}
           if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
             hasVideo = true;
           }
@@ -22351,8 +22354,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             video: true
           };
           if (CRTC_C.SDP_LEVELID_AS[_this25._sdpResolution].VIDEOCONSTRAINTS) {
-            videoConstraints['video'] = CRTC_C.SDP_LEVELID_AS[_this25._sdpResolution].VIDEOCONSTRAINTS;
+            Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[_this25._sdpResolution].VIDEOCONSTRAINTS);
           }
+          logger.debug('video constraints: ', JSON.stringify(videoConstraints));
           return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
             if (_this25._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
