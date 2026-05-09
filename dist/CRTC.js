@@ -1,5 +1,5 @@
 /*
- * CRTC v1.12.2-beta.2026424186
+ * CRTC v1.12.2-beta.2026591744
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.12.2-beta.405208483612 (Web)',
+  USER_AGENT: 'UA/1.12.2-beta.405210183488 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.12.2-beta.405208483612');
+debug('version %s', '1.12.2-beta.405210183488');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.12.2-beta.405208483612';
+    return '1.12.2-beta.405210183488';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -18389,6 +18389,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._bfcpMediastreams = [];
     _this._bfcpAudioCtx = null;
 
+    // 预处理媒体流，如虚拟背景等
+    _this._mediaStreamProcessor = null;
+
     // 用于华为安卓记录后摄
     _this._environment = null;
 
@@ -18664,6 +18667,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || null;
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
       var extraFeatures = options.extraFeatures || null;
+
+      // 预处理媒体流，如虚拟背景等
+      this._mediaStreamProcessor = options.mediaStreamProcessor || null;
       this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
         audio: false,
         video: false
@@ -18785,10 +18791,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 适配浏览器M79以后Chrome默认使用mDNS主机名隐藏WebRTC暴露的本地IP
       return Promise.resolve()
       // Get a stream if required.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
+      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
         var hasAudio, mStream, currMediaConstraints, tStream, sendStream, mics, ua;
-        return _regeneratorRuntime().wrap(function _callee$(_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
             case 0:
               mStream = new MediaStream(); // 非自定义媒体流模式
               _this2._customMediaStream = false;
@@ -18806,7 +18812,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // Request for user media access.
               if (!(_this2._inviteMediaConstraints.audio || _this2._inviteMediaConstraints.video)) {
-                _context.next = 20;
+                _context2.next = 20;
                 break;
               }
               _this2._localMediaStreamLocallyGenerated = true;
@@ -18827,11 +18833,42 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
               logger.debug("".concat(_this2._id, " currMediaConstraints: "), JSON.stringify(currMediaConstraints));
               if (!(currMediaConstraints.audio || currMediaConstraints.video)) {
-                _context.next = 20;
+                _context2.next = 20;
                 break;
               }
-              _context.next = 12;
-              return navigator.mediaDevices.getUserMedia(currMediaConstraints)["catch"](function (error) {
+              _context2.next = 12;
+              return navigator.mediaDevices.getUserMedia(currMediaConstraints).then(/*#__PURE__*/function () {
+                var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(stream) {
+                  return _regeneratorRuntime().wrap(function _callee$(_context) {
+                    while (1) switch (_context.prev = _context.next) {
+                      case 0:
+                        if (!_this2._mediaStreamProcessor) {
+                          _context.next = 7;
+                          break;
+                        }
+                        _context.next = 3;
+                        return _this2._mediaStreamProcessor(stream);
+                      case 3:
+                        _context.t0 = _context.sent;
+                        if (_context.t0) {
+                          _context.next = 6;
+                          break;
+                        }
+                        _context.t0 = stream;
+                      case 6:
+                        stream = _context.t0;
+                      case 7:
+                        return _context.abrupt("return", stream);
+                      case 8:
+                      case "end":
+                        return _context.stop();
+                    }
+                  }, _callee);
+                }));
+                return function (_x) {
+                  return _ref2.apply(this, arguments);
+                };
+              }())["catch"](function (error) {
                 if (_this2._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
                 }
@@ -18846,9 +18883,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 throw e;
               });
             case 12:
-              tStream = _context.sent;
+              tStream = _context2.sent;
               if (!(currMediaConstraints.video && tStream)) {
-                _context.next = 19;
+                _context2.next = 19;
                 break;
               }
               // 如果包含视频轨道，判断是否为分辨率正常的视频轨道
@@ -18861,10 +18898,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   });
                 }
               }
-              _context.next = 17;
+              _context2.next = 17;
               return Utils.getHuaweiAndroidEnvironment();
             case 17:
-              _this2._environment = _context.sent;
+              _this2._environment = _context2.sent;
               logger.debug("".concat(_this2._id, " environment id: "), _this2._environment);
             case 19:
               tStream.getTracks().forEach(function (track) {
@@ -18872,10 +18909,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               });
             case 20:
               sendStream = new MediaStream();
-              _context.next = 23;
+              _context2.next = 23;
               return Utils.getMicrophones();
             case 23:
-              mics = _context.sent;
+              mics = _context2.sent;
               // 兼容安卓微信Bug及iOS蓝牙问题
               if (navigator.userAgent.indexOf('WeChat') != -1 && hasAudio || navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1 && hasAudio) {
                 logger.debug("".concat(_this2.id, " mics: ").concat(mics.length, " hasAudio: ").concat(hasAudio));
@@ -18890,17 +18927,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context.next = 30;
+                _context2.next = 30;
                 break;
               }
-              return _context.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
+              return _context2.abrupt("return", Utils.getStreamThroughCanvas(sendStream));
             case 30:
-              return _context.abrupt("return", sendStream);
+              return _context2.abrupt("return", sendStream);
             case 31:
             case "end":
-              return _context.stop();
+              return _context2.stop();
           }
-        }, _callee);
+        }, _callee2);
       }))).then(function (stream) {
         // Create a new RTCPeerConnection instance.
         _this2._createRTCConnection(pcConfig, rtcConstraints);
@@ -19305,13 +19342,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       });
       Promise.resolve()
       // Handle local MediaStream.
-      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      .then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4() {
         var mStream, ua;
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regeneratorRuntime().wrap(function _callee4$(_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
             case 0:
               if (!(mediaConstraints.audio || mediaConstraints.video)) {
-                _context2.next = 20;
+                _context4.next = 20;
                 break;
               }
               _this4._localMediaStreamLocallyGenerated = true;
@@ -19329,8 +19366,39 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
                 _this4._localToAudio = true;
               }
-              _context2.next = 6;
-              return navigator.mediaDevices.getUserMedia(mediaConstraints)["catch"](function (error) {
+              _context4.next = 6;
+              return navigator.mediaDevices.getUserMedia(mediaConstraints).then(/*#__PURE__*/function () {
+                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(stream) {
+                  return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+                    while (1) switch (_context3.prev = _context3.next) {
+                      case 0:
+                        if (!_this4._mediaStreamProcessor) {
+                          _context3.next = 7;
+                          break;
+                        }
+                        _context3.next = 3;
+                        return _this4._mediaStreamProcessor(stream);
+                      case 3:
+                        _context3.t0 = _context3.sent;
+                        if (_context3.t0) {
+                          _context3.next = 6;
+                          break;
+                        }
+                        _context3.t0 = stream;
+                      case 6:
+                        stream = _context3.t0;
+                      case 7:
+                        return _context3.abrupt("return", stream);
+                      case 8:
+                      case "end":
+                        return _context3.stop();
+                    }
+                  }, _callee3);
+                }));
+                return function (_x2) {
+                  return _ref4.apply(this, arguments);
+                };
+              }())["catch"](function (error) {
                 if (_this4._status === C.STATUS_TERMINATED) {
                   throw new Error('terminated');
                 }
@@ -19342,36 +19410,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 throw new Error('getUserMedia() failed');
               });
             case 6:
-              mStream = _context2.sent;
+              mStream = _context4.sent;
               if (!(mediaConstraints.video && mStream)) {
-                _context2.next = 12;
+                _context4.next = 12;
                 break;
               }
-              _context2.next = 10;
+              _context4.next = 10;
               return Utils.getHuaweiAndroidEnvironment();
             case 10:
-              _this4._environment = _context2.sent;
+              _this4._environment = _context4.sent;
               logger.debug("".concat(_this4._id, " environment id: "), _this4._environment);
             case 12:
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (!(ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2')))) {
-                _context2.next = 17;
+                _context4.next = 17;
                 break;
               }
-              return _context2.abrupt("return", Utils.getStreamThroughCanvas(mStream));
+              return _context4.abrupt("return", Utils.getStreamThroughCanvas(mStream));
             case 17:
-              return _context2.abrupt("return", mStream);
+              return _context4.abrupt("return", mStream);
             case 18:
-              _context2.next = 22;
+              _context4.next = 22;
               break;
             case 20:
               _this4._customMediaStream = true;
-              return _context2.abrupt("return", mediaStream);
+              return _context4.abrupt("return", mediaStream);
             case 22:
             case "end":
-              return _context2.stop();
+              return _context4.stop();
           }
-        }, _callee2);
+        }, _callee4);
       })))
       // Attach MediaStream to RTCPeerconnection.
       .then(function (stream) {
@@ -19593,13 +19661,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       }
       this._localToAudio = false;
       this._localToVideo = true;
-      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
+      return Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6() {
         var stream, oldVideoTrack, newVideoTrack, haveVideoTrackToSend, senders, i, ua, videoTracks, transceiver;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) switch (_context3.prev = _context3.next) {
+        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
+          while (1) switch (_context6.prev = _context6.next) {
             case 0:
               if (!(_this5._localMediaStream.getVideoTracks().length > 0)) {
-                _context3.next = 4;
+                _context6.next = 4;
                 break;
               }
               _this5._connection.getTransceivers().forEach(function (t) {
@@ -19617,56 +19685,87 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               });
               if (!options.recvOnly) {
-                _context3.next = 4;
+                _context6.next = 4;
                 break;
               }
-              return _context3.abrupt("return");
+              return _context6.abrupt("return");
             case 4:
               if (!options.recvOnly) {
-                _context3.next = 6;
+                _context6.next = 6;
                 break;
               }
-              return _context3.abrupt("return");
+              return _context6.abrupt("return");
             case 6:
               if (!videoStream) {
-                _context3.next = 11;
+                _context6.next = 11;
                 break;
               }
               stream = videoStream;
               _this5._customMediaStream = true;
-              _context3.next = 19;
+              _context6.next = 19;
               break;
             case 11:
-              _context3.next = 13;
+              _context6.next = 13;
               return navigator.mediaDevices.getUserMedia({
                 video: videoConstraints
-              })["catch"](function (error) {
+              }).then(/*#__PURE__*/function () {
+                var _ref6 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(mediastream) {
+                  return _regeneratorRuntime().wrap(function _callee5$(_context5) {
+                    while (1) switch (_context5.prev = _context5.next) {
+                      case 0:
+                        if (!_this5._mediaStreamProcessor) {
+                          _context5.next = 7;
+                          break;
+                        }
+                        _context5.next = 3;
+                        return _this5._mediaStreamProcessor(mediastream);
+                      case 3:
+                        _context5.t0 = _context5.sent;
+                        if (_context5.t0) {
+                          _context5.next = 6;
+                          break;
+                        }
+                        _context5.t0 = mediastream;
+                      case 6:
+                        mediastream = _context5.t0;
+                      case 7:
+                        return _context5.abrupt("return", mediastream);
+                      case 8:
+                      case "end":
+                        return _context5.stop();
+                    }
+                  }, _callee5);
+                }));
+                return function (_x3) {
+                  return _ref6.apply(this, arguments);
+                };
+              }())["catch"](function (error) {
                 throw error;
               });
             case 13:
-              stream = _context3.sent;
+              stream = _context6.sent;
               if (!stream) {
-                _context3.next = 19;
+                _context6.next = 19;
                 break;
               }
-              _context3.next = 17;
+              _context6.next = 17;
               return Utils.getHuaweiAndroidEnvironment();
             case 17:
-              _this5._environment = _context3.sent;
+              _this5._environment = _context6.sent;
               logger.debug("".concat(_this5._id, " environment id: "), _this5._environment);
             case 19:
               if (!stream) {
-                _context3.next = 47;
+                _context6.next = 47;
                 break;
               }
               if (!_this5._customMediaStream) {
-                _context3.next = 39;
+                _context6.next = 39;
                 break;
               }
               oldVideoTrack = _this5._localMediaStream.getVideoTracks()[0];
               newVideoTrack = stream.getVideoTracks()[0];
               if (!oldVideoTrack) {
-                _context3.next = 39;
+                _context6.next = 39;
                 break;
               }
               _this5._localMediaStream.removeTrack(oldVideoTrack);
@@ -19676,26 +19775,26 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               i = 0;
             case 29:
               if (!(i < senders.length)) {
-                _context3.next = 37;
+                _context6.next = 37;
                 break;
               }
               if (!(senders[i].track.kind === 'video')) {
-                _context3.next = 34;
+                _context6.next = 34;
                 break;
               }
               senders[i].replaceTrack(newVideoTrack);
               haveVideoTrackToSend = true;
-              return _context3.abrupt("break", 37);
+              return _context6.abrupt("break", 37);
             case 34:
               i++;
-              _context3.next = 29;
+              _context6.next = 29;
               break;
             case 37:
               if (!haveVideoTrackToSend) {
-                _context3.next = 39;
+                _context6.next = 39;
                 break;
               }
-              return _context3.abrupt("return", true);
+              return _context6.abrupt("return", true);
             case 39:
               navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
               if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
@@ -19708,15 +19807,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               transceiver = _this5._connection.addTransceiver('video', {
                 direction: options.sendOnly ? 'sendonly' : 'sendrecv'
               }); // 把 track 绑定到 sender
-              _context3.next = 46;
+              _context6.next = 46;
               return transceiver.sender.replaceTrack(videoTracks[0]);
             case 46:
-              return _context3.abrupt("return", true);
+              return _context6.abrupt("return", true);
             case 47:
             case "end":
-              return _context3.stop();
+              return _context6.stop();
           }
-        }, _callee3);
+        }, _callee6);
       }))).then(function () {
         _this5._iceReady = false;
         var opts = {
@@ -19817,33 +19916,33 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "switchDevice",
     value: (function () {
-      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee5(type, deviceId) {
+      var _switchDevice = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee9(type, deviceId) {
         var _this7 = this;
         var cameras, constraints, _constraints;
-        return _regeneratorRuntime().wrap(function _callee5$(_context5) {
-          while (1) switch (_context5.prev = _context5.next) {
+        return _regeneratorRuntime().wrap(function _callee9$(_context9) {
+          while (1) switch (_context9.prev = _context9.next) {
             case 0:
               logger.debug("".concat(this._id, " switchDevice(), type:").concat(type, ", deviceId:").concat(deviceId));
 
               // Check Session Status.
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context5.next = 3;
+                _context9.next = 3;
                 break;
               }
               throw new Exceptions.InvalidStateError(this._status);
             case 3:
               if (!(type === 'camera')) {
-                _context5.next = 14;
+                _context9.next = 14;
                 break;
               }
               if (!(this._localCameras.length === 0)) {
-                _context5.next = 9;
+                _context9.next = 9;
                 break;
               }
-              _context5.next = 7;
+              _context9.next = 7;
               return Utils.getCameras();
             case 7:
-              cameras = _context5.sent;
+              cameras = _context9.sent;
               cameras.forEach(function (cam) {
                 _this7._localCameras.push(cam.deviceId);
               });
@@ -19855,7 +19954,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 audio: false,
                 video: true
               };
-              return _context5.abrupt("return", Promise.resolve().then(function () {
+              return _context9.abrupt("return", Promise.resolve().then(function () {
                 var videoConstraints;
 
                 // 如果传参包含deviceId则使用deviceId
@@ -19945,10 +20044,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 constraints.video = Object.assign(_this7._inviteMediaConstraints.video, constraints.video);
                 return constraints;
               }).then(/*#__PURE__*/function () {
-                var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(videoConstraints) {
+                var _ref7 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8(videoConstraints) {
                   var sender, stream, track, ua, videoTrack;
-                  return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-                    while (1) switch (_context4.prev = _context4.next) {
+                  return _regeneratorRuntime().wrap(function _callee8$(_context8) {
+                    while (1) switch (_context8.prev = _context8.next) {
                       case 0:
                         logger.debug("".concat(_this7._id, " videoConstraints"), JSON.stringify(videoConstraints));
                         sender = _this7._connection.getSenders().find(function (s) {
@@ -19963,15 +20062,46 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
                         // iOS手机延迟重新获取
                         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
-                        _context4.next = 6;
-                        return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
+                        _context8.next = 6;
+                        return navigator.mediaDevices.getUserMedia(videoConstraints).then(/*#__PURE__*/function () {
+                          var _ref8 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7(mediastream) {
+                            return _regeneratorRuntime().wrap(function _callee7$(_context7) {
+                              while (1) switch (_context7.prev = _context7.next) {
+                                case 0:
+                                  if (!_this7._mediaStreamProcessor) {
+                                    _context7.next = 7;
+                                    break;
+                                  }
+                                  _context7.next = 3;
+                                  return _this7._mediaStreamProcessor(mediastream);
+                                case 3:
+                                  _context7.t0 = _context7.sent;
+                                  if (_context7.t0) {
+                                    _context7.next = 6;
+                                    break;
+                                  }
+                                  _context7.t0 = mediastream;
+                                case 6:
+                                  mediastream = _context7.t0;
+                                case 7:
+                                  return _context7.abrupt("return", mediastream);
+                                case 8:
+                                case "end":
+                                  return _context7.stop();
+                              }
+                            }, _callee7);
+                          }));
+                          return function (_x7) {
+                            return _ref8.apply(this, arguments);
+                          };
+                        }())["catch"](function (error) {
                           logger.error("".concat(_this7._id, " emit \"getusermediafailed\" [error:%o]"), error);
                           logger.error("".concat(_this7._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
                           _this7.emit('getusermediafailed', error);
                           throw new Error('getUserMedia() failed');
                         });
                       case 6:
-                        stream = _context4.sent;
+                        stream = _context8.sent;
                         try {
                           track = stream.getVideoTracks()[0];
                           logger.debug("".concat(_this7._id, " stream: "), track.kind, track.label, track.readyState);
@@ -19996,27 +20126,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                         _this7.emit('cameraChanged', {
                           videoStream: stream
                         });
-                        return _context4.abrupt("return", stream);
+                        return _context8.abrupt("return", stream);
                       case 16:
                       case "end":
-                        return _context4.stop();
+                        return _context8.stop();
                     }
-                  }, _callee4);
+                  }, _callee8);
                 }));
-                return function (_x3) {
-                  return _ref4.apply(this, arguments);
+                return function (_x6) {
+                  return _ref7.apply(this, arguments);
                 };
               }()));
             case 14:
               if (!(type === 'audio' && deviceId)) {
-                _context5.next = 19;
+                _context9.next = 19;
                 break;
               }
               _constraints = {
                 audio: true,
                 video: false
               };
-              return _context5.abrupt("return", Promise.resolve().then(function () {
+              return _context9.abrupt("return", Promise.resolve().then(function () {
                 var next = false;
                 var audioConstraints = {
                   deviceId: {
@@ -20062,14 +20192,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               logger.error("".concat(this._id, " Invalid parameters"));
 
               // 参数错误
-              return _context5.abrupt("return", Promise.reject('Invalid parameters'));
+              return _context9.abrupt("return", Promise.reject('Invalid parameters'));
             case 21:
             case "end":
-              return _context5.stop();
+              return _context9.stop();
           }
-        }, _callee5, this);
+        }, _callee9, this);
       }));
-      function switchDevice(_x, _x2) {
+      function switchDevice(_x4, _x5) {
         return _switchDevice.apply(this, arguments);
       }
       return switchDevice;
@@ -20081,11 +20211,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "share",
     value: (function () {
-      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee6(type, id, assembly, dual, skip) {
+      var _share = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee10(type, id, assembly, dual, skip) {
         var _this8 = this;
         var timer, floorResponse, element, status, renderHtml, canvas, ctx, _canvas, _ctx;
-        return _regeneratorRuntime().wrap(function _callee6$(_context6) {
-          while (1) switch (_context6.prev = _context6.next) {
+        return _regeneratorRuntime().wrap(function _callee10$(_context10) {
+          while (1) switch (_context10.prev = _context10.next) {
             case 0:
               renderHtml = function _renderHtml(canvas, ctx) {
                 assembly(document.querySelector(id), {
@@ -20103,36 +20233,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // 双流必须开启BFCP支持
               if (!(dual && !this._enableBFCP || !dual && this._enableBFCP)) {
-                _context6.next = 4;
+                _context10.next = 4;
                 break;
               }
-              return _context6.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
+              return _context10.abrupt("return", Promise.reject(new Exceptions.NotSupportedError("Dual and BFCP settings must be consistent. Dual: ".concat(dual, ", BFCP: ").concat(this._enableBFCP))));
             case 4:
               if (!(this._status !== C.STATUS_CONFIRMED && this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_1XX_RECEIVED)) {
-                _context6.next = 6;
+                _context10.next = 6;
                 break;
               }
-              return _context6.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
+              return _context10.abrupt("return", Promise.reject(new Exceptions.InvalidStateError(this._status)));
             case 6:
               element = document.querySelector(id); // 根据BFCP协议响应判断如何执行双流
-              _context6.prev = 7;
+              _context10.prev = 7;
               if (!(this._enableBFCP && !skip)) {
-                _context6.next = 21;
+                _context10.next = 21;
                 break;
               }
-              _context6.next = 11;
+              _context10.next = 11;
               return this._sendFloorRequest();
             case 11:
-              floorResponse = _context6.sent;
+              floorResponse = _context10.sent;
               this._handleFloorRequestStatusMessage(floorResponse);
               // Log the response for debugging purposes
               logger.debug("".concat(this._id, " Floor request response:"), floorResponse);
               status = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[1].content[1].content[0];
               if (!(status != RequestStatusValue.Granted)) {
-                _context6.next = 17;
+                _context10.next = 17;
                 break;
               }
-              return _context6.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
+              return _context10.abrupt("return", Promise.reject("Floor request not accepted. Status: ".concat(status)));
             case 17:
               // 保存一下状态
               this._bfcpRequestStatus = status;
@@ -20142,16 +20272,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               this.emit('remoteUnShared');
               this._floorRequestId = floorResponse.getAttribute(AttributeName.FloorRequestInformation).content[0];
             case 21:
-              _context6.next = 27;
+              _context10.next = 27;
               break;
             case 23:
-              _context6.prev = 23;
-              _context6.t0 = _context6["catch"](7);
-              logger.error("".concat(this._id, " Error while processing floor request:"), _context6.t0.message || _context6.t0);
-              return _context6.abrupt("return", Promise.reject("Floor request failed: ".concat(_context6.t0.message || 'Unknown error')));
+              _context10.prev = 23;
+              _context10.t0 = _context10["catch"](7);
+              logger.error("".concat(this._id, " Error while processing floor request:"), _context10.t0.message || _context10.t0);
+              return _context10.abrupt("return", Promise.reject("Floor request failed: ".concat(_context10.t0.message || 'Unknown error')));
             case 27:
               if (!(type === 'video')) {
-                _context6.next = 35;
+                _context10.next = 35;
                 break;
               }
               logger.debug("".concat(this._id, " share video"));
@@ -20171,11 +20301,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender.replaceTrack(track);
                 }
               });
-              _context6.next = 68;
+              _context10.next = 68;
               break;
             case 35:
               if (!(type === 'pic')) {
-                _context6.next = 49;
+                _context10.next = 49;
                 break;
               }
               logger.debug("".concat(this._id, " share pic"));
@@ -20206,19 +20336,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender2.replaceTrack(track);
                 }
               });
-              _context6.next = 68;
+              _context10.next = 68;
               break;
             case 49:
               if (!(type === 'html')) {
-                _context6.next = 64;
+                _context10.next = 64;
                 break;
               }
               logger.debug("".concat(this._id, " share html"));
               if (assembly) {
-                _context6.next = 53;
+                _context10.next = 53;
                 break;
               }
-              return _context6.abrupt("return");
+              return _context10.abrupt("return");
             case 53:
               _canvas = document.createElement('canvas');
               _canvas.width = 1;
@@ -20242,11 +20372,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   _sender3.replaceTrack(track);
                 }
               });
-              _context6.next = 68;
+              _context10.next = 68;
               break;
             case 64:
               if (!(type === 'screen')) {
-                _context6.next = 68;
+                _context10.next = 68;
                 break;
               }
               logger.debug("".concat(this._id, " share screen"));
@@ -20258,7 +20388,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
 
               // 分享屏幕 默认帧率 15
-              return _context6.abrupt("return", navigator.mediaDevices.getDisplayMedia({
+              return _context10.abrupt("return", navigator.mediaDevices.getDisplayMedia({
                 video: {
                   width: {
                     max: 1920
@@ -20321,11 +20451,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }));
             case 68:
             case "end":
-              return _context6.stop();
+              return _context10.stop();
           }
-        }, _callee6, this, [[7, 23]]);
+        }, _callee10, this, [[7, 23]]);
       }));
-      function share(_x4, _x5, _x6, _x7, _x8) {
+      function share(_x8, _x9, _x10, _x11, _x12) {
         return _share.apply(this, arguments);
       }
       return share;
@@ -20422,8 +20552,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var dialog = this._dialog;
 
             // Send the BYE as soon as the ACK is received...
-            this.receiveRequest = function (_ref5) {
-              var method = _ref5.method;
+            this.receiveRequest = function (_ref9) {
+              var method = _ref9.method;
               if (method === CRTC_C.ACK) {
                 _this9.sendRequest(CRTC_C.BYE, {
                   extraHeaders: extraHeaders,
@@ -22336,7 +22466,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         _this25._connection.getSenders().forEach(function (sender) {
           try {
             logger.debug('sender: ', sender.track.kind, sender.track.readyState);
-          } catch (error) {}
+          } catch (error) {
+            logger.error('sender error: ', error.message);
+          }
           if (sender.track && sender.track.kind === 'video' && sender.track.readyState === 'live') {
             hasVideo = true;
           }
@@ -22357,7 +22489,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[_this25._sdpResolution].VIDEOCONSTRAINTS);
           }
           logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-          return navigator.mediaDevices.getUserMedia(videoConstraints)["catch"](function (error) {
+          return navigator.mediaDevices.getUserMedia(videoConstraints).then(/*#__PURE__*/function () {
+            var _ref10 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee11(stream) {
+              return _regeneratorRuntime().wrap(function _callee11$(_context11) {
+                while (1) switch (_context11.prev = _context11.next) {
+                  case 0:
+                    if (!_this25._mediaStreamProcessor) {
+                      _context11.next = 7;
+                      break;
+                    }
+                    _context11.next = 3;
+                    return _this25._mediaStreamProcessor(stream);
+                  case 3:
+                    _context11.t0 = _context11.sent;
+                    if (_context11.t0) {
+                      _context11.next = 6;
+                      break;
+                    }
+                    _context11.t0 = stream;
+                  case 6:
+                    stream = _context11.t0;
+                  case 7:
+                    return _context11.abrupt("return", stream);
+                  case 8:
+                  case "end":
+                    return _context11.stop();
+                }
+              }, _callee11);
+            }));
+            return function (_x13) {
+              return _ref10.apply(this, arguments);
+            };
+          }())["catch"](function (error) {
             if (_this25._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -22492,20 +22655,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           return;
         }
         var session = new RTCSession(this._ua);
-        session.on('progress', function (_ref6) {
-          var response = _ref6.response;
+        session.on('progress', function (_ref11) {
+          var response = _ref11.response;
           _this27._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
-        session.on('accepted', function (_ref7) {
-          var response = _ref7.response;
+        session.on('accepted', function (_ref12) {
+          var response = _ref12.response;
           _this27._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
 
           // 华为MCU需要挂断
           _this27._enableBFCP && _this27.terminate();
         });
-        session.on('_failed', function (_ref8) {
-          var message = _ref8.message,
-            cause = _ref8.cause;
+        session.on('_failed', function (_ref13) {
+          var message = _ref13.message,
+            cause = _ref13.cause;
           if (message) {
             _this27._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
@@ -22641,13 +22804,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee7() {
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee12() {
         var stream, _Utils$generateAnEmpt2, videoTrack;
-        return _regeneratorRuntime().wrap(function _callee7$(_context7) {
-          while (1) switch (_context7.prev = _context7.next) {
+        return _regeneratorRuntime().wrap(function _callee12$(_context12) {
+          while (1) switch (_context12.prev = _context12.next) {
             case 0:
               if (!(_this30._status === C.STATUS_TERMINATED)) {
-                _context7.next = 2;
+                _context12.next = 2;
                 break;
               }
               throw new Error('terminated');
@@ -22686,15 +22849,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
               // TODO: should this be triggered here?
               _this30._connecting(_this30._request);
-              return _context7.abrupt("return", _this30._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+              return _context12.abrupt("return", _this30._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
                 _this30._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
             case 7:
             case "end":
-              return _context7.stop();
+              return _context12.stop();
           }
-        }, _callee7);
+        }, _callee12);
       }))).then(function (desc) {
         if (_this30._is_canceled || _this30._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
@@ -23006,10 +23169,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
               }
             }).then(function () {
-              _this31._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee8() {
+              _this31._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee13() {
                 var mics, sender;
-                return _regeneratorRuntime().wrap(function _callee8$(_context8) {
-                  while (1) switch (_context8.prev = _context8.next) {
+                return _regeneratorRuntime().wrap(function _callee13$(_context13) {
+                  while (1) switch (_context13.prev = _context13.next) {
                     case 0:
                       // Handle Session Timers.
                       _this31._handleSessionTimersInIncomingResponse(response);
@@ -23017,10 +23180,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this31.sendRequest(CRTC_C.ACK);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context8.next = 5;
+                      _context13.next = 5;
                       return Utils.getMicrophones();
                     case 5:
-                      mics = _context8.sent;
+                      mics = _context13.sent;
                       if (_this31._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
                           audio: _this31._inviteMediaConstraints.audio || true,
@@ -23058,9 +23221,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                       _this31._enableBFCP && _this31.renegotiate();
                     case 8:
                     case "end":
-                      return _context8.stop();
+                      return _context13.stop();
                   }
-                }, _callee8);
+                }, _callee13);
               })))["catch"](function (error) {
                 _this31._acceptAndTerminate(response, 488, 'Not Acceptable Here');
                 _this31._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
@@ -23977,9 +24140,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onmute",
-    value: function _onmute(_ref11) {
-      var audio = _ref11.audio,
-        video = _ref11.video;
+    value: function _onmute(_ref16) {
+      var audio = _ref16.audio,
+        video = _ref16.video;
       logger.debug("".concat(this._id, " session onmute"));
       this._setLocalMediaStatus();
       logger.debug("".concat(this._id, " emit \"muted\""));
@@ -23990,9 +24153,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }, {
     key: "_onunmute",
-    value: function _onunmute(_ref12) {
-      var audio = _ref12.audio,
-        video = _ref12.video;
+    value: function _onunmute(_ref17) {
+      var audio = _ref17.audio,
+        video = _ref17.video;
       logger.debug("".concat(this._id, " session onunmute"));
       this._setLocalMediaStatus();
       logger.debug("".concat(this._id, " emit \"unmuted\""));
@@ -31454,6 +31617,7 @@ exports.disableVideoInSdp = function (sdp) {
   return newSdp;
 };
 },{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
+(function (global){(function (){
 "use strict";
 
 /**
@@ -31462,6 +31626,33 @@ exports.disableVideoInSdp = function (sdp) {
  */
 exports.createTimerWorker = function () {
   var callbacks = new Map();
+  if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
+    var root = typeof window !== 'undefined' ? window : global;
+    var timeoutIds = new Set();
+    return {
+      setTimeout: function setTimeout(callback, timeoutMs) {
+        var timeoutId = root.setTimeout(function () {
+          timeoutIds["delete"](timeoutId);
+          callback();
+        }, timeoutMs);
+        timeoutIds.add(timeoutId);
+        return timeoutId;
+      },
+      clearTimeout: function clearTimeout(timeoutId) {
+        if (!timeoutIds.has(timeoutId)) {
+          return;
+        }
+        root.clearTimeout(timeoutId);
+        timeoutIds["delete"](timeoutId);
+      },
+      terminate: function terminate() {
+        timeoutIds.forEach(function (timeoutId) {
+          return root.clearTimeout(timeoutId);
+        });
+        timeoutIds.clear();
+      }
+    };
+  }
 
   /**
    * Worker 内运行的代码
@@ -31473,6 +31664,7 @@ exports.createTimerWorker = function () {
   });
   var url = URL.createObjectURL(blob);
   var worker = new Worker(url);
+  URL.revokeObjectURL(url);
   worker.onmessage = function (event) {
     var callback = callbacks.get(event.data.callbackId);
     if (!callback) {
@@ -31526,6 +31718,7 @@ exports.createTimerWorker = function () {
     terminate: terminate
   };
 };
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],63:[function(require,module,exports){
 "use strict";
 
@@ -31548,7 +31741,8 @@ var DEFAULT_CONFIG = {
   video: {
     width: 1280,
     height: 720,
-    targetFps: 15
+    targetFps: 15,
+    mirror: false
   },
   segmentation: {
     backend: 'wasmSimd',
@@ -31638,10 +31832,13 @@ module.exports = /*#__PURE__*/function () {
         Object.assign(config.segmentation, options.segmentation);
       }
       if (options.postProcessing) {
-        Object.assign(config.postProcessing, options.postProcessing);
+        var postProcessing = Object.assign({}, options.postProcessing);
+        var jointBilateralFilter = postProcessing.jointBilateralFilter;
+        delete postProcessing.jointBilateralFilter;
+        Object.assign(config.postProcessing, postProcessing);
         // 处理嵌套对象
-        if (options.postProcessing.jointBilateralFilter) {
-          Object.assign(config.postProcessing.jointBilateralFilter, options.postProcessing.jointBilateralFilter);
+        if (jointBilateralFilter) {
+          Object.assign(config.postProcessing.jointBilateralFilter, jointBilateralFilter);
         }
       }
       return config;
@@ -31847,7 +32044,8 @@ module.exports = /*#__PURE__*/function () {
                     };
                     _this.backgroundEl = backgroundEl;
                     _this.pipeline = buildWebGL2Pipeline(sourcePlayback, _this.backgroundEl, {
-                      type: type
+                      type: type,
+                      mirror: _this.config.video.mirror
                     }, _this.config.segmentation, _this.canvas, _this.tfs, function () {});
                     _this.pipeline.updatePostProcessingConfig(_this.config.postProcessing);
                     resolve();
@@ -31894,6 +32092,20 @@ module.exports = /*#__PURE__*/function () {
     }
 
     /**
+     * 设置输出画面是否水平镜像
+     * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
+     */
+  }, {
+    key: "setMirror",
+    value: function setMirror(mirror) {
+      logger.debug("setMirror() ".concat(mirror));
+      this.config.video.mirror = Boolean(mirror);
+      if (this.pipeline && this.pipeline.updateMirror) {
+        this.pipeline.updateMirror(this.config.video.mirror);
+      }
+    }
+
+    /**
      * 启动虚拟背景渲染循环
      * 开始处理视频帧并应用虚拟背景效果
      */
@@ -31905,7 +32117,9 @@ module.exports = /*#__PURE__*/function () {
       this.isRunning = true;
       this.lastFrameTime = 0;
       this.loop = this.loop.bind(this);
-      this.animationFrameId = requestAnimationFrame(this.loop);
+      if (this.isRunning) {
+        this.animationFrameId = requestAnimationFrame(this.loop);
+      }
     }
 
     /**
@@ -31947,43 +32161,46 @@ module.exports = /*#__PURE__*/function () {
             case 2:
               interval = 1000 / this.config.video.targetFps;
               if (!(now - this.lastFrameTime >= interval)) {
-                _context5.next = 21;
+                _context5.next = 22;
                 break;
               }
               this.lastFrameTime = now;
               if (!this.isRendering) {
-                _context5.next = 7;
+                _context5.next = 8;
                 break;
               }
+              this.animationFrameId = requestAnimationFrame(this.loop);
               return _context5.abrupt("return");
-            case 7:
+            case 8:
               this.isRendering = true;
-              _context5.prev = 8;
+              _context5.prev = 9;
               _context5.t0 = this.pipeline;
               if (!_context5.t0) {
-                _context5.next = 13;
+                _context5.next = 14;
                 break;
               }
-              _context5.next = 13;
+              _context5.next = 14;
               return this.pipeline.render();
-            case 13:
-              _context5.next = 18;
+            case 14:
+              _context5.next = 19;
               break;
-            case 15:
-              _context5.prev = 15;
-              _context5.t1 = _context5["catch"](8);
+            case 16:
+              _context5.prev = 16;
+              _context5.t1 = _context5["catch"](9);
               logger.error("Render error: ".concat(_context5.t1.message));
-            case 18:
-              _context5.prev = 18;
+            case 19:
+              _context5.prev = 19;
               this.isRendering = false;
-              return _context5.finish(18);
-            case 21:
-              this.animationFrameId = requestAnimationFrame(this.loop);
+              return _context5.finish(19);
             case 22:
+              if (this.isRunning) {
+                this.animationFrameId = requestAnimationFrame(this.loop);
+              }
+            case 23:
             case "end":
               return _context5.stop();
           }
-        }, _callee5, this, [[8, 15, 18, 21]]);
+        }, _callee5, this, [[9, 16, 19, 22]]);
       }));
       function loop(_x5) {
         return _loop.apply(this, arguments);
@@ -32417,15 +32634,21 @@ exports.buildBackgroundBlurStage = buildBackgroundBlurStage;
 var _webglHelper = require("../helpers/webglHelper.js");
 var _templateObject, _templateObject2, _templateObject3;
 function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
-function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
+function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, mirror) {
   var blurPass = buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas);
-  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas);
+  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror);
   function render() {
     blurPass.render();
     blendPass.render();
   }
   function updateCoverage(coverage) {
     blendPass.updateCoverage(coverage);
+  }
+  function updateBlurRadius(radius) {
+    blurPass.updateBlurRadius(radius);
+  }
+  function updateMirror(shouldMirror) {
+    blendPass.updateMirror(shouldMirror);
   }
   function cleanUp() {
     blendPass.cleanUp();
@@ -32434,11 +32657,13 @@ function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuff
   return {
     render: render,
     updateCoverage: updateCoverage,
+    updateBlurRadius: updateBlurRadius,
+    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 }
 function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
-  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform vec2 u_texelSize;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    const float offset[5] = float[](0.0, 1.0, 2.0, 3.0, 4.0);\n    const float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216,\n      0.0540540541, 0.0162162162);\n\n    void main() {\n      vec4 centerColor = texture(u_inputFrame, v_texCoord);\n      float personMask = texture(u_personMask, v_texCoord).a;\n\n      vec4 frameColor = centerColor * weight[0] * (1.0 - personMask);\n\n      for (int i = 1; i < 5; i++) {\n        vec2 offset = vec2(offset[i]) * u_texelSize;\n\n        vec2 texCoord = v_texCoord + offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n\n        texCoord = v_texCoord - offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n      }\n      outColor = vec4(frameColor.rgb + (1.0 - frameColor.a) * centerColor.rgb, 1.0);\n    }\n  "])));
+  var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform vec2 u_texelSize;\n    uniform float u_radiusScale;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    const float offset[5] = float[](0.0, 1.0, 2.0, 3.0, 4.0);\n    const float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216,\n      0.0540540541, 0.0162162162);\n\n    void main() {\n      vec4 centerColor = texture(u_inputFrame, v_texCoord);\n      float personMask = texture(u_personMask, v_texCoord).a;\n\n      vec4 frameColor = centerColor * weight[0] * (1.0 - personMask);\n\n      for (int i = 1; i < 5; i++) {\n        vec2 offset = vec2(offset[i]) * u_texelSize * u_radiusScale;\n\n        vec2 texCoord = v_texCoord + offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n\n        texCoord = v_texCoord - offset;\n        frameColor += texture(u_inputFrame, texCoord) * weight[i] *\n          (1.0 - texture(u_personMask, texCoord).a);\n      }\n      outColor = vec4(frameColor.rgb + (1.0 - frameColor.a) * centerColor.rgb, 1.0);\n    }\n  "])));
   var scale = 0.5;
   var outputWidth = canvas.width * scale;
   var outputHeight = canvas.height * scale;
@@ -32449,6 +32674,7 @@ function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personM
   var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
   var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
   var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
+  var radiusScaleLocation = gl.getUniformLocation(program, 'u_radiusScale');
   var texture1 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
   var texture2 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
   var frameBuffer1 = gl.createFramebuffer();
@@ -32459,6 +32685,7 @@ function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personM
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture2, 0);
   gl.useProgram(program);
   gl.uniform1i(personMaskLocation, 1);
+  gl.uniform1f(radiusScaleLocation, 1);
   function render() {
     gl.viewport(0, 0, outputWidth, outputHeight);
     gl.useProgram(program);
@@ -32486,13 +32713,19 @@ function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personM
     gl.deleteProgram(program);
     gl.deleteShader(fragmentShader);
   }
+  function updateBlurRadius(radius) {
+    radius = Math.max(0, Math.min(radius, 100));
+    gl.useProgram(program);
+    gl.uniform1f(radiusScaleLocation, radius / 20);
+  }
   return {
     render: render,
+    updateBlurRadius: updateBlurRadius,
     cleanUp: cleanUp
   };
 }
-function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
-  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
+function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
+  var vertexShaderSource = (0, _webglHelper.glsl)(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        v_texCoord.x = 1.0 - v_texCoord.x;\n      }\n    }\n  "])));
   var fragmentShaderSource = (0, _webglHelper.glsl)(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_blurredInputFrame;\n    uniform vec2 u_coverage;\n\n    in vec2 v_texCoord;\n\n    out vec4 outColor;\n\n    void main() {\n      vec3 color = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 blurredColor = texture(u_blurredInputFrame, v_texCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(mix(blurredColor, color, personMask), 1.0);\n    }\n  "])));
   var outputWidth = canvas.width,
     outputHeight = canvas.height;
@@ -32503,11 +32736,13 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
   var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
   var blurredInputFrame = gl.getUniformLocation(program, 'u_blurredInputFrame');
   var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
+  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
   gl.useProgram(program);
   gl.uniform1i(inputFrameLocation, 0);
   gl.uniform1i(personMaskLocation, 1);
   gl.uniform1i(blurredInputFrame, 2);
   gl.uniform2f(coverageLocation, 0, 1);
+  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
   function render() {
     gl.viewport(0, 0, outputWidth, outputHeight);
     gl.useProgram(program);
@@ -32518,6 +32753,10 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
     gl.useProgram(program);
     gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
   }
+  function updateMirror(shouldMirror) {
+    gl.useProgram(program);
+    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
+  }
   function cleanUp() {
     gl.deleteProgram(program);
     gl.deleteShader(fragmentShader);
@@ -32526,6 +32765,7 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas) {
   return {
     render: render,
     updateCoverage: updateCoverage,
+    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 }
@@ -32539,8 +32779,8 @@ var _require = require('../helpers/webglHelper.js'),
   createPiplelineStageProgram = _require.createPiplelineStageProgram,
   createTexture = _require.createTexture,
   glsl = _require.glsl;
-exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas) {
-  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    uniform vec2 u_backgroundScale;\n    uniform vec2 u_backgroundOffset;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n    out vec2 v_backgroundCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      v_texCoord = a_texCoord;\n      v_backgroundCoord = a_texCoord * u_backgroundScale + u_backgroundOffset;\n    }\n  "])));
+exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, mirror) {
+  var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    uniform vec2 u_backgroundScale;\n    uniform vec2 u_backgroundOffset;\n    uniform float u_mirror;\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n    out vec2 v_backgroundCoord;\n\n    void main() {\n      // Flipping Y is required when rendering to canvas\n      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);\n      vec2 texCoord = a_texCoord;\n      if (u_mirror > 0.5) {\n        texCoord.x = 1.0 - texCoord.x;\n      }\n      v_texCoord = texCoord;\n      v_backgroundCoord = texCoord * u_backgroundScale + u_backgroundOffset;\n    }\n  "])));
   var fragmentShaderSource = glsl(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["#version 300 es\n\n    precision highp float;\n\n    uniform sampler2D u_inputFrame;\n    uniform sampler2D u_personMask;\n    uniform sampler2D u_background;\n    uniform vec2 u_coverage;\n    uniform float u_lightWrapping;\n    uniform float u_blendMode;\n\n    in vec2 v_texCoord;\n    in vec2 v_backgroundCoord;\n\n    out vec4 outColor;\n\n    vec3 screen(vec3 a, vec3 b) {\n      return 1.0 - (1.0 - a) * (1.0 - b);\n    }\n\n    vec3 linearDodge(vec3 a, vec3 b) {\n      return a + b;\n    }\n\n    void main() {\n      vec3 frameColor = texture(u_inputFrame, v_texCoord).rgb;\n      vec3 backgroundColor = texture(u_background, v_backgroundCoord).rgb;\n      float personMask = texture(u_personMask, v_texCoord).a;\n      float lightWrapMask = 1.0 - max(0.0, personMask - u_coverage.y) / (1.0 - u_coverage.y);\n      vec3 lightWrap = u_lightWrapping * lightWrapMask * backgroundColor;\n      frameColor = u_blendMode * linearDodge(frameColor, lightWrap) +\n        (1.0 - u_blendMode) * screen(frameColor, lightWrap);\n      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);\n      outColor = vec4(frameColor * personMask + backgroundColor * (1.0 - personMask), 1.0);\n    }\n  "])));
   var outputWidth = canvas.width,
     outputHeight = canvas.height;
@@ -32550,6 +32790,7 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
   var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
   var backgroundScaleLocation = gl.getUniformLocation(program, 'u_backgroundScale');
   var backgroundOffsetLocation = gl.getUniformLocation(program, 'u_backgroundOffset');
+  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
   var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
   var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
   var backgroundLocation = gl.getUniformLocation(program, 'u_background');
@@ -32559,12 +32800,13 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
   gl.useProgram(program);
   gl.uniform2f(backgroundScaleLocation, 1, 1);
   gl.uniform2f(backgroundOffsetLocation, 0, 0);
+  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
   gl.uniform1i(inputFrameLocation, 0);
   gl.uniform1i(personMaskLocation, 1);
   gl.uniform2f(coverageLocation, 0, 1);
   gl.uniform1f(lightWrappingLocation, 0);
   gl.uniform1f(blendModeLocation, 0);
-  var backgroundTexture;
+  var backgroundTexture = null;
   // TODO Find a better to handle background being loaded
 
   if (backgroundImage.complete) {
@@ -32589,6 +32831,9 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
   function updateBackgroundImage(bgImage) {
+    if (backgroundTexture) {
+      gl.deleteTexture(backgroundTexture);
+    }
     backgroundTexture = createTexture(gl, gl.RGBA8, bgImage.naturalWidth, bgImage.naturalHeight, gl.LINEAR, gl.LINEAR);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, bgImage.naturalWidth, bgImage.naturalHeight, gl.RGBA, gl.UNSIGNED_BYTE, bgImage);
     var xOffset = 0;
@@ -32607,6 +32852,7 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     var yScale = backgroundHeight / bgImage.naturalHeight;
     xOffset /= bgImage.naturalWidth;
     yOffset /= bgImage.naturalHeight;
+    gl.useProgram(program);
     gl.uniform2f(backgroundScaleLocation, xScale, yScale);
     gl.uniform2f(backgroundOffsetLocation, xOffset, yOffset);
   }
@@ -32622,6 +32868,10 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     gl.useProgram(program);
     gl.uniform1f(blendModeLocation, blendMode === 'screen' ? 0 : 1);
   }
+  function updateMirror(shouldMirror) {
+    gl.useProgram(program);
+    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
+  }
   function cleanUp() {
     gl.deleteTexture(backgroundTexture);
     gl.deleteProgram(program);
@@ -32633,6 +32883,7 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     updateCoverage: updateCoverage,
     updateLightWrapping: updateLightWrapping,
     updateBlendMode: updateBlendMode,
+    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 };
@@ -32890,6 +33141,12 @@ var _templateObject;
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _taggedTemplateLiteral(e, t) { return t || (t = e.slice(0)), Object.freeze(Object.defineProperties(e, { raw: { value: Object.freeze(t) } })); }
 var _require = require('./jointBilateralFilterStage.js'),
   buildJointBilateralFilterStage = _require.buildJointBilateralFilterStage;
@@ -32905,6 +33162,12 @@ var _require6 = require('../helpers/webglHelper.js'),
   compileShader = _require6.compileShader,
   createTexture = _require6.createTexture,
   glsl = _require6.glsl;
+var inputResolutions = {
+  '640x360': [640, 360],
+  '256x256': [256, 256],
+  '256x144': [256, 144],
+  '160x96': [160, 96]
+};
 
 /**
  * 构建 WebGL2 虚拟背景处理管道
@@ -32974,9 +33237,17 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   var vertexShaderSource = glsl(_templateObject || (_templateObject = _taggedTemplateLiteral(["#version 300 es\n\n    in vec2 a_position;\n    in vec2 a_texCoord;\n\n    out vec2 v_texCoord;\n\n    void main() {\n      gl_Position = vec4(a_position, 0.0, 1.0);\n      v_texCoord = a_texCoord;\n    }\n  "])));
   var frameWidth = sourcePlayback.width,
     frameHeight = sourcePlayback.height;
-  var segmentationWidth = 160,
-    segmentationHeight = 96;
+  var segmentationResolution = inputResolutions[segmentationConfig.inputResolution];
+  if (!segmentationResolution) {
+    throw new Error("Unsupported segmentation inputResolution: ".concat(segmentationConfig.inputResolution));
+  }
+  var _segmentationResoluti = _slicedToArray(segmentationResolution, 2),
+    segmentationWidth = _segmentationResoluti[0],
+    segmentationHeight = _segmentationResoluti[1];
   var gl = canvas.getContext('webgl2');
+  if (!gl) {
+    throw new Error('WebGL2 not supported');
+  }
   var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
   var vertexArray = gl.createVertexArray();
   gl.bindVertexArray(vertexArray);
@@ -33004,7 +33275,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   var resizingStage = buildResizingStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite);
   var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
   var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas);
+  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
 
   /**
    * 执行一帧的渲染处理
@@ -33144,6 +33415,9 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
       // 更新遮罩覆盖率
       // 在模糊模式下，控制模糊背景的可见程度
       backgroundBlurStage.updateCoverage(postProcessingConfig.coverage);
+      if (typeof postProcessingConfig.blurRadius === 'number') {
+        backgroundBlurStage.updateBlurRadius(postProcessingConfig.blurRadius);
+      }
     } else {
       // === 无背景/纯视频模式 ===
       // TODO: 应该使用单独的管道处理无背景情况
@@ -33155,6 +33429,18 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
       _backgroundImageStage.updateCoverage([0, 0.9999]);
       // 关闭光晕效果
       _backgroundImageStage.updateLightWrapping(0);
+    }
+  }
+
+  /**
+   * 更新最终输出是否水平镜像。
+   * 分割和滤波阶段保持原始坐标，只在最终合成阶段翻转输出采样坐标。
+   *
+   * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
+   */
+  function updateMirror(mirror) {
+    if (backgroundStage.updateMirror) {
+      backgroundStage.updateMirror(mirror);
     }
   }
 
@@ -33218,6 +33504,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
   return {
     render: render,
     updatePostProcessingConfig: updatePostProcessingConfig,
+    updateMirror: updateMirror,
     cleanUp: cleanUp
   };
 };

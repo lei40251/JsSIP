@@ -931,7 +931,6 @@ ua.on('newRTCSession', function(e)
     // 远端媒体流
     const remoteStream = CRTC.Utils.getStreams(e.session.connection, 'remote');
 
-    console.warn('rec: ', rec);
     if (rec) 
     {
       recorder = new MultiStreamRecorder([ localStream.videoStream, remoteStream.videoStream ]);
@@ -1885,7 +1884,7 @@ async function call(type, direction, mediaStream)
 
   if (type === 'callVB') 
   {
-    const engine = new CRTC.VirtualBackground({ video: videoConstraints });
+    const engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -1902,6 +1901,7 @@ async function call(type, direction, mediaStream)
 
     setTimeout(() => 
     {
+      engine.setMirror(true);
       engine.setBackgroundImage('./virtual-background/backgrounds/sky.jpg');
       setTimeout(() => 
       {
@@ -1954,6 +1954,8 @@ async function call(type, direction, mediaStream)
     {
       options.mediaConstraints.video.deviceId = { exact: selectMic };
     }
+
+    options.mediaStreamProcessor = mediaStreamProcessor;
 
     remoteNo = number;
     const session = await ua.call(`${number}@${sipDomain}`, options);
@@ -2440,3 +2442,25 @@ document.querySelector('#mics').addEventListener('change', function()
   selectMic = this.options[this.selectedIndex].value;
   setStatus(`select mic ${this.options[this.selectedIndex].innerText}`);
 });
+
+
+async function mediaStreamProcessor(mediastream)
+{
+  // 先取出音频
+  const audioTrack = mediastream.getAudioTracks()[0];
+  const engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+ 
+  await engine.init({
+    inputStream : mediastream,
+    modelPath   : './virtual-background/models/slv.tflite'
+  });
+  engine.start();
+  engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
+  const processedStream = engine.getOutputStream();
+
+  // 如果有音频，需要恢复音频
+  audioTrack && processedStream.addTrack(audioTrack);
+  setStatus('视频增加了虚拟背景');
+  
+  return processedStream;
+}
