@@ -60,6 +60,15 @@ let isRefer = false;
 
 let recorder;
 
+// 虚拟背景相关
+let virtualBackgroundType;
+let engine;
+const virtualBackgroundImgs = {
+  img1 : './virtual-background/backgrounds/office.png',
+  img2 : './virtual-background/backgrounds/sky.jpg'
+};
+
+
 const extraFeatures = [];
 
 // let payload;
@@ -321,7 +330,7 @@ ua.on('newRTCSession', function(e)
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
     // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
-    setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
+    // setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
   }
 
   // ***** Session 事件回调 *****
@@ -907,7 +916,7 @@ ua.on('newRTCSession', function(e)
     }
     else 
     {
-      d.accept();
+      d.accept(videoConstraints);
     }
   });
 
@@ -1126,11 +1135,12 @@ ua.on('newRTCSession', function(e)
         audio : true,
         video : videoConstraints
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures        : extraFeatures,
+      mediaStreamProcessor : virtualBackgroundType ? mediaStreamProcessor : null
     });
 
     setStatus('video answer');
@@ -1250,7 +1260,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#toVideo').onclick = function() 
   {
-    e.session.upgradeToVideo({ useUpdate: false }, () => { setStatus(`切换视频模式完成${curMode}`); });
+    e.session.upgradeToVideo({ useUpdate: false, videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
     // stats && stats.reset();
   };
 
@@ -1955,7 +1965,10 @@ async function call(type, direction, mediaStream)
       options.mediaConstraints.video.deviceId = { exact: selectMic };
     }
 
-    options.mediaStreamProcessor = mediaStreamProcessor;
+    if (virtualBackgroundType)
+    {
+      options.mediaStreamProcessor = mediaStreamProcessor;
+    }
 
     remoteNo = number;
     const session = await ua.call(`${number}@${sipDomain}`, options);
@@ -2207,7 +2220,7 @@ function updateDevices()
   CRTC.Utils.getCameras()
     .then((cameras) => 
     {
-      let option = '<option selected value="">请选择切换摄像头</option>';
+      let option = '<option selected value="">切换摄像头</option>';
 
       cameras.forEach((device) => 
       {
@@ -2223,7 +2236,7 @@ function updateDevices()
   CRTC.Utils.getMicrophones()
     .then((microphones) => 
     {
-      let menus = '<option selected value="">请选择切换音频输入</option>';
+      let menus = '<option selected value="">切换音频输入</option>';
 
       microphones.forEach((device) => 
       {
@@ -2444,18 +2457,64 @@ document.querySelector('#mics').addEventListener('change', function()
 });
 
 
+/**
+ * 切换虚拟背景
+ */
+document.querySelector('#virtualBackground').addEventListener('change', function() 
+{
+  virtualBackgroundType = this.options[this.selectedIndex].value;
+  
+  setStatus(`${this.options[this.selectedIndex].innerText}`);
+
+  if (!engine || !virtualBackgroundType)
+  {    
+    return;
+  }
+
+  if (virtualBackgroundType==='blur')
+  {
+    engine.setBlurBackground();
+  }
+  else if (virtualBackgroundType === 'none')
+  {
+    engine.setBackgroundImage('none');
+  }
+  else
+  {
+    engine.setBackgroundImage(virtualBackgroundImgs[virtualBackgroundType]);
+  }
+});
+
+// 处理视频轨道
 async function mediaStreamProcessor(mediastream)
 {
+  if (!mediastream.getVideoTracks()[0])
+  {
+    return mediastream;
+  }
+
   // 先取出音频
   const audioTrack = mediastream.getAudioTracks()[0];
-  const engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+
+  engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
  
   await engine.init({
     inputStream : mediastream,
     modelPath   : './virtual-background/models/slv.tflite'
   });
   engine.start();
-  engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
+  if (virtualBackgroundType==='blur')
+  {
+    engine.setBlurBackground();
+  }
+  else if (virtualBackgroundType === 'none')
+  {
+    engine.setBackgroundImage('none');
+  }
+  else
+  {
+    engine.setBackgroundImage(virtualBackgroundImgs[virtualBackgroundType]);
+  }
   const processedStream = engine.getOutputStream();
 
   // 如果有音频，需要恢复音频

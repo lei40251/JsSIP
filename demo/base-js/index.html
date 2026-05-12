@@ -68,18 +68,27 @@
           <div class="col col-3">
             <select id="mics" class="form-select"></select>
           </div>
-          <div class="col col-3">
+          <div class="col col-2">
             <select id="useupdate" class="form-select">
               <option value="update">useUpdate</option>
               <option value="invite">useReInvite</option>
             </select>
           </div>
-          <div class="col col-3">
+          <div class="col col-2">
             <select id="videoHint" class="form-select">
               <option value=""></option>
               <option value="detail">保清晰</option>
               <option value="motion">保流畅</option>
               <option value="text">文本</option>
+            </select>
+          </div>
+          <div class="col col-2">
+            <select id="virtualBackground" class="form-select">
+              <option value=''>不开启虚拟背景</option>
+              <option value="none">无图片</option>
+              <option value="img1">图片1</option>
+              <option value="img2">图片2</option>
+              <option value="blur">背景模糊</option>
             </select>
           </div>
         </div>
@@ -112,7 +121,7 @@
             <button class="btn btn-secondary" id="callNull"> 无设备外呼</button>
             <button class="btn btn-warning" id="callNullAudio"> 无麦克风外呼</button>
             <button class="btn btn-success" id="callNullVideo"> 无摄像头外呼</button>
-            <button class="btn btn-warning" id="callVB"> 虚拟背景外呼</button>
+            <button class="btn btn-warning hide" id="callVB"> 虚拟背景外呼</button>
             <!-- <button class="btn btn-warning" id="callVideoSendonly"><i class="bi-camera-video"></i> 单向视频外呼</button> -->
             <button class="btn btn-danger" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
           </div>
