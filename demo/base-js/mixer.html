@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixer v6.3 (输入/输出双重FPS控制)</title>
+    <style>
+        :root { --primary: #6366f1; --danger: #ef4444; --bg: #f8fafc; --panel: #ffffff; --text: #334155; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0; }
+        h1 { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        .badge { background: #e2e8f0; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #475569; }
+        
+        .main-layout { display: flex; gap: 20px; flex: 1; min-height: 0; }
+        
+        /* --- 左侧控制面板 --- */
+        .control-panel { width: 340px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-right: 5px; flex-shrink: 0; }
+        .card { background: var(--panel); padding: 15px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .card h3 { margin: 0 0 10px 0; font-size: 0.85rem; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        
+        .form-row { margin-bottom: 10px; }
+        .form-row label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
+        select, input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; background: #fff; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; color: var(--text); }
+        .btn-outline:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+        /* 槽位选择器 */
+        .slot-grid-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+        .slot-btn { 
+            aspect-ratio: 16/9; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; 
+            display: flex; align-items: center; justify-content: center; font-size: 14px; color: #64748b; cursor: pointer; transition: all 0.15s;
+            position: relative;
+        }
+        .slot-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .slot-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .slot-btn.occupied { background: #f1f5f9; color: #cbd5e1; border-color: #e2e8f0; cursor: not-allowed; }
+        .slot-btn.occupied::after { content: '×'; position: absolute; font-size: 18px; }
+
+        /* --- 右侧预览面板 --- */
+        .preview-panel { 
+            flex: 1; display: flex; flex-direction: column; 
+            background: var(--panel); border-radius: 8px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
+            overflow: hidden; border: 1px solid #e2e8f0;
+        }
+        
+        .canvas-wrapper { 
+            flex: 1; min-height: 0; background: #0f172a; 
+            display: flex; align-items: center; justify-content: center; position: relative; 
+        }
+        video#mixed-video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        #grid-overlay { position: absolute; top:0; left:0; pointer-events: none; }
+        .grid-cell-label { 
+            position: absolute; border: 1px dashed rgba(255,255,255,0.15); 
+            display: flex; align-items: center; justify-content: center; 
+            color: rgba(255,255,255,0.2); font-size: 24px; font-weight: bold;
+        }
+
+        .audio-viz { height: 60px; flex-shrink: 0; background: #1e293b; position: relative; border-top: 1px solid #334155; }
+        canvas#viz-canvas { width: 100%; height: 100%; display: block; }
+
+        .source-strip { 
+            height: 110px; flex-shrink: 0; background: #f8fafc; padding: 10px; 
+            display: flex; gap: 10px; overflow-x: auto; align-items: center; border-top: 1px solid #e2e8f0; 
+        }
+        .source-thumb { 
+            width: 120px; height: 100%; background: #000; border-radius: 6px; 
+            position: relative; overflow: hidden; flex-shrink: 0; border: 2px solid #e2e8f0; 
+            display: flex; flex-direction: column;
+        }
+        .source-thumb video { flex: 1; width: 100%; object-fit: cover; opacity: 0.8; }
+        .source-thumb .info { background: #334155; color: white; font-size: 10px; padding: 4px; text-align: center; }
+        .source-thumb .slot-tag { 
+            position: absolute; top: 4px; left: 4px; background: var(--primary); color: white; 
+            width: 20px; height: 20px; border-radius: 50%; font-size: 11px; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 2;
+        }
+        .source-thumb .remove-btn {
+            position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; 
+            background: rgba(239, 68, 68, 0.9); color: white; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 14px; cursor: pointer; border: none; z-index: 2;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎛️ Mixer v6.3 <span style="font-size:0.8em; color:#64748b; font-weight:400; margin-left:5px;">FPS Control</span></h1>
+    <div id="status-badge" class="badge">就绪</div>
+</header>
+
+<div class="main-layout">
+    <div class="control-panel">
+        <div class="card">
+            <h3>1. 输出 (Canvas Output)</h3>
+            <div class="form-row">
+                <label>输出分辨率</label>
+                <select id="cfg-out-res">
+                    <optgroup label="横屏 (Landscape)">
+                        <option value="1920x1080">1080p (1920x1080)</option>
+                        <option value="1280x720" selected>720p (1280x720)</option>
+                        <option value="854x480">480p (854x480)</option>
+                        <option value="640x360">360p (640x360)</option>
+                    </optgroup>
+                    <optgroup label="竖屏 (Portrait)">
+                        <option value="1080x1920">1080p 竖屏</option>
+                        <option value="720x1280">720p 竖屏</option>
+                        <option value="480x854">480p 竖屏</option>
+                        <option value="360x640">360p 竖屏</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>输出帧率</label>
+                <select id="cfg-fps">
+                    <option value="60">60 FPS (流畅)</option>
+                    <option value="30" selected>30 FPS (标准)</option>
+                    <option value="15">15 FPS (低耗)</option>
+                    <option value="5">5 FPS (极低)</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>渲染后端</label>
+                <select id="cfg-render-mode">
+                    <option value="auto">Auto (自动选择)</option>
+                    <option value="worker-webgl2">Worker + WebGL2</option>
+                    <option value="main-webgl2" selected>Main Thread + WebGL2</option>
+                    <option value="worker-2d">Worker + Canvas2D</option>
+                    <option value="main-2d">Main Thread + Canvas2D</option>
+                </select>
+            </div>
+            <button id="btn-start" class="btn-primary" style="width:100%">▶️ 启动混流引擎</button>
+            <button id="btn-stop" class="btn-danger" style="width:100%; display:none;">⏹️ 停止并释放</button>
+        </div>
+
+        <div class="card" id="panel-sources" style="opacity:0.5; pointer-events:none;">
+            <h3>2. 目标位置 (Target Slot)</h3>
+            <div class="slot-grid-selector" id="slot-selector">
+                </div>
+            
+            <h3>3. 添加源 (Add Source)</h3>
+            <div class="form-row">
+                <label>输入分辨率 (Resolution)</label>
+                <select id="cfg-in-res">
+                    <option value="auto">自动 (Auto)</option>
+                    <optgroup label="横屏 (Landscape)">
+                        <option value="1920x1080">1080p</option>
+                        <option value="1280x720">720p</option>
+                        <option value="854x480">480p</option>
+                        <option value="640x360">360p</option>
+                    </optgroup>
+                    <optgroup label="竖屏 (Portrait)">
+                        <option value="1080x1920">1080p 竖屏</option>
+                        <option value="720x1280">720p 竖屏</option>
+                        <option value="480x854">480p 竖屏</option>
+                        <option value="360x640">360p 竖屏</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>输入帧率 (Input FPS)</label>
+                <select id="cfg-in-fps">
+                    <option value="60">60 FPS</option>
+                    <option value="30" selected>30 FPS</option>
+                    <option value="15">15 FPS</option>
+                    <option value="10">10 FPS</option>
+                    <option value="5">5 FPS</option>
+                </select>
+            </div>
+
+            <div class="btn-grid">
+                <button class="btn-outline" onclick="app.addVirtual()">🤖 虚拟源</button>
+                <button class="btn-outline" onclick="app.addCamera()">📷 摄像头</button>
+                <button class="btn-outline" onclick="app.addScreen()">🖥️ 屏幕共享</button>
+                <button class="btn-outline" style="color:var(--danger)" onclick="app.clearAll()">🗑️ 清空</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>4. 实时统计</h3>
+            <div style="font-size:12px; font-family:monospace; line-height:1.5;">
+                <div>Canvas: <span id="stat-size">-</span></div>
+                <div>Layout: <span id="stat-layout">-</span></div>
+                <div>Audio: <span id="stat-audio">0</span> Ch</div>
+                <div>Renderer: <span id="stat-renderer">-</span></div>
+                <div>Dropped: <span id="stat-dropped">0</span></div>
+                <div>Reason: <span id="stat-render-reason">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-panel">
+        <div class="canvas-wrapper">
+            <video id="mixed-video" autoplay playsinline muted></video>
+            <div id="grid-overlay"></div>
+            <div style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.5); color:white; padding:2px 6px; border-radius:4px; font-size:10px;">Output Preview</div>
+        </div>
+        
+        <div class="audio-viz">
+            <canvas id="viz-canvas"></canvas>
+            <div style="position:absolute; top:2px; left:5px; color:#4ade80; font-size:10px; font-weight:bold;">Audio Mix</div>
+        </div>
+
+        <div class="source-strip" id="thumbs-container">
+            <div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>
+        </div>
+    </div>
+</div>
+
+<!--
+  这个页面是 CRTC.Mixer 的功能演示页。
+  注意：真正的混流逻辑来自 ../../dist/CRTC.min.js 中的 CRTC.Mixer；
+  页面里的 JS 只负责采集测试输入源、操作 slot、渲染缩略图和展示统计信息。
+-->
+<script src="../../dist/CRTC.min.js"></script>
+<script>
+// ==========================================
+// 1. Utils (虚拟源 - 支持动态FPS控制)
+// ==========================================
+const VirtualGen = {
+    audioCtx: null,
+
+    // 创建一个用于测试的虚拟 MediaStream。
+    // 视频部分来自 canvas.captureStream(fps)，音频部分来自 OscillatorNode。
+    // 这个方法只服务于 demo，SDK 的 Mixer 本身不负责创建输入源。
+    create(width, height, fps, label, id) {
+        if(!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(this.audioCtx.state === 'suspended') this.audioCtx.resume();
+        
+        const canvas = document.createElement('canvas'); 
+        canvas.width = width; 
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        const hue = (id * 137) % 360; 
+        let x = 0; 
+
+        // 这里持续刷新 canvas 画面，让虚拟源看起来是动态视频。
+        // 输入源实际输出帧率由下面的 canvas.captureStream(fps) 控制。
+        const draw = () => {
+            ctx.fillStyle = '#0f172a'; 
+            ctx.fillRect(0,0,width,height);
+            
+            ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`; 
+            ctx.lineWidth = Math.max(5, width * 0.02); 
+            ctx.strokeRect(0,0,width,height);
+            
+            x = (x + width * 0.015) % width; // 移动速度
+            ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+            const boxSize = height * 0.2; 
+            ctx.fillRect(x, height/2 - boxSize/2, boxSize, boxSize);
+            
+            ctx.fillStyle = '#fff'; 
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline='middle';
+            
+            ctx.font = `bold ${height/6}px sans-serif`;
+            ctx.fillText(label, width/2, height/2 - height/8);
+            
+            // 在虚拟源画面上直接标出输入分辨率和输入帧率，方便观察 Mixer 的缩放效果。
+            ctx.font = `${height/10}px monospace`;
+            ctx.fillText(`${width}x${height} @ ${fps}fps`, width/2, height/2 + height/6);
+            
+            requestAnimationFrame(draw);
+        };
+        draw();
+        
+        // 关键：这里控制“输入源”的帧率，不是 Mixer 输出帧率。
+        // Mixer 输出帧率在 new CRTC.Mixer({ fps }) 时设置。
+        const vStream = canvas.captureStream(fps);
+
+        // 给虚拟源增加一个简单音频轨，方便验证 Mixer 的音频混合能力。
+        const dest = this.audioCtx.createMediaStreamDestination();
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.frequency.value = 200 + (id * 100);
+        gain.gain.value = 0.2;
+        osc.connect(gain); gain.connect(dest); osc.start();
+
+        const mixed = new MediaStream([...vStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        mixed.id = `virtual-${id}-${Date.now()}`;
+
+        // MediaStream.stopInternal 不是浏览器标准 API，只是 demo 为虚拟源补的清理钩子。
+        // 删除虚拟源时需要停止 oscillator，否则音频节点会继续占用资源。
+        mixed.stopInternal = () => { try{osc.stop()}catch(e){} };
+        return mixed;
+    }
+};
+
+// ==========================================
+// 2. UI App
+// ==========================================
+const app = {
+    // CRTC.Mixer 实例。点击“启动混流引擎”后创建，点击“停止并释放”后销毁。
+    mixer: null,
+
+    // demo 自己创建或采集的输入源列表。
+    // 每一项保存 { stream, slot }，用于删除源时同步停止本地采集轨道。
+    localStreams: [],
+
+    // 虚拟源编号计数器，仅用于生成画面标签和不同频率的测试音。
+    counter: 0,
+
+    // 当前选中的目标 slot。添加新源时会传给 CRTC.Mixer.appendStream(stream, slot)。
+    currentSlot: 0,
+
+    // 缓存页面元素，避免每次操作都重复 querySelector/getElementById。
+    ui: {
+        slotGrid: document.getElementById('slot-selector'),
+        mixedVideo: document.getElementById('mixed-video'),
+        thumbs: document.getElementById('thumbs-container'),
+        btnStart: document.getElementById('btn-start'),
+        btnStop: document.getElementById('btn-stop'),
+        panelSources: document.getElementById('panel-sources'),
+        statusBadge: document.getElementById('status-badge'),
+        overlay: document.getElementById('grid-overlay'),
+        statsLayout: document.getElementById('stat-layout'),
+        statsAudio: document.getElementById('stat-audio'),
+        statsSize: document.getElementById('stat-size'),
+        statsRenderer: document.getElementById('stat-renderer'),
+        statsDropped: document.getElementById('stat-dropped'),
+        statsRenderReason: document.getElementById('stat-render-reason')
+    },
+
+    init() {
+        // 初始化 0-8 共 9 个 slot 按钮；Mixer 内部会根据最大 slot 自动计算 1/2/4/6/9 宫格布局。
+        for(let i=0; i<9; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'slot-btn';
+            btn.innerText = i;
+            btn.dataset.slot = i;
+            btn.onclick = () => this.selectSlot(i);
+            this.ui.slotGrid.appendChild(btn);
+        }
+        this.selectSlot(0);
+
+        // 绑定启动/停止按钮。输入源按钮通过 HTML 上的 onclick 直接调用 app.addXxx()。
+        this.ui.btnStart.onclick = () => this.start();
+        this.ui.btnStop.onclick = () => this.stop();
+    },
+
+    selectSlot(idx) {
+        // 只改变 demo 当前选中的目标位置，不会立即影响 Mixer。
+        this.currentSlot = idx;
+        const btns = this.ui.slotGrid.children;
+        for(let b of btns) {
+            b.classList.toggle('active', parseInt(b.dataset.slot) === idx);
+        }
+    },
+
+    updateSlotUI() {
+        if(!this.mixer) return;
+
+        // getSources() 是 Mixer 对外暴露的只读快照，这里不直接访问 _sources 私有字段。
+        const occupied = new Set();
+        this.mixer.getSources().forEach(s => occupied.add(s.slot));
+        const btns = this.ui.slotGrid.children;
+        for(let b of btns) {
+            b.classList.toggle('occupied', occupied.has(parseInt(b.dataset.slot)));
+        }
+    },
+
+    async start() {
+        const [w, h] = document.getElementById('cfg-out-res').value.split('x').map(Number);
+        const fps = parseInt(document.getElementById('cfg-fps').value);
+        const renderMode = document.getElementById('cfg-render-mode').value;
+
+        // 这里是 demo 使用 SDK Mixer 的核心入口：
+        // width/height 控制输出 canvas 分辨率，fps 控制输出 MediaStream 的视频帧率。
+        // renderMode 用于演示新增的渲染后端选择能力，auto 会按 Worker WebGL2 → 主线程 WebGL2 → Worker 2D → 主线程 2D 降级。
+        // 初始不传输入源，后续通过 appendStream(stream, slot) 动态添加。
+        this.mixer = new CRTC.Mixer([], { width: w, height: h, fps: fps, renderMode: renderMode });
+        
+        try {
+            // getMixedStream() 返回混合后的 MediaStream，可直接赋给 video 预览，也可推给 RTCPeerConnection。
+            const outStream = await this.mixer.getMixedStream();
+            this.ui.mixedVideo.srcObject = outStream;
+            
+            this.ui.btnStart.style.display = 'none';
+            this.ui.btnStop.style.display = 'block';
+            this.ui.panelSources.style.opacity = '1';
+            this.ui.panelSources.style.pointerEvents = 'auto';
+            this.ui.statusBadge.innerText = "运行中";
+            this.ui.statusBadge.style.background = "#4ade80";
+            this.ui.statusBadge.style.color = "white";
+            this.ui.statsSize.innerText = `${w}x${h} @ ${fps}fps`;
+            this.ui.thumbs.innerHTML = '';
+            this.updateRenderInfo();
+
+            // 启动音频可视化。启动时可能还没有任何音频源，startViz 内部会等待音频轨出现。
+            this.startViz(outStream);
+            this.startRenderInfoLoop();
+        } catch (e) {
+            alert(e.message);
+        }
+    },
+
+    stop() {
+        // 先释放 Mixer 内部资源：绘制循环、canvas captureStream、WebAudio 节点等。
+        if(this.mixer) {
+            this.mixer.stop();
+            this.mixer = null;
+        }
+
+        // 再释放 demo 自己持有的输入源。Mixer.stop() 不会停止外部传入的原始摄像头/屏幕流。
+        this.localStreams.forEach(item => {
+            const s = item.stream || item;
+
+            s.getTracks().forEach(t => t.stop());
+            if(s.stopInternal) s.stopInternal();
+        });
+        this.localStreams = [];
+        this.ui.mixedVideo.srcObject = null;
+        this.ui.btnStart.style.display = 'block';
+        this.ui.btnStop.style.display = 'none';
+        this.ui.panelSources.style.opacity = '0.5';
+        this.ui.panelSources.style.pointerEvents = 'none';
+        this.ui.statusBadge.innerText = "已停止";
+        this.ui.statusBadge.style.background = "#e2e8f0";
+        this.ui.statusBadge.style.color = "#475569";
+        this.ui.thumbs.innerHTML = '<div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>';
+        this.ui.overlay.innerHTML = '';
+        this.ui.statsRenderer.innerText = '-';
+        this.ui.statsDropped.innerText = '0';
+        this.ui.statsRenderReason.innerText = '-';
+        this.updateSlotUI();
+    },
+
+    async _handleStreamAdd(stream, label) {
+        if(!this.mixer) return;
+        const slot = this.currentSlot;
+
+        // demo 与 SDK 的 slot 语义保持一致：同一个 slot 再加源会覆盖旧源。
+        // 这里先停止 demo 侧旧输入源，避免被覆盖后摄像头/屏幕仍在采集。
+        this.removeLocalStreamBySlot(slot);
+
+        // 这是动态添加输入源到 SDK Mixer 的核心调用。
+        // 第二个参数是 slot 编号；Mixer 内部会根据 slot 计算画面位置。
+        this.mixer.appendStream(stream, slot);
+        
+        this.localStreams.push({ stream, slot });
+        this.addThumb(stream, label, slot);
+        this.updateSlotUI();
+        
+        let nextSlot = slot + 1;
+        if (nextSlot < 9) this.selectSlot(nextSlot);
+
+        this.updateStats();
+    },
+
+    removeLocalStreamBySlot(slot) {
+        // 查找 demo 侧记录的旧源，并复用 removeSource 做 Mixer 移除、轨道停止和 UI 清理。
+        const oldItem = this.localStreams.find(item => item.slot === slot);
+        if(!oldItem) return;
+        this.removeSource(oldItem.stream.id);
+    },
+
+    addThumb(stream, label, slot) {
+        // 同 slot 覆盖时，先删旧缩略图。
+        const existing = document.querySelector(`.source-thumb[data-slot="${slot}"]`);
+        if(existing) existing.remove();
+        if(this.ui.thumbs.innerText.includes('暂无')) this.ui.thumbs.innerHTML = '';
+
+        // 缩略图只用于展示输入源原始画面，不参与混流。
+        const div = document.createElement('div');
+        div.className = 'source-thumb';
+        div.dataset.slot = slot;
+        div.id = `thumb-${stream.id}`;
+        
+        div.innerHTML = `
+            <div class="slot-tag">${slot}</div>
+            <div class="remove-btn" onclick="app.removeSource('${stream.id}')">&times;</div>
+            <video autoplay muted playsinline></video>
+            <div class="info">${label}</div>
+        `;
+        div.querySelector('video').srcObject = stream;
+        
+        const thumbs = Array.from(this.ui.thumbs.children);
+        const nextThumb = thumbs.find(t => parseInt(t.dataset.slot) > slot);
+        if(nextThumb) this.ui.thumbs.insertBefore(div, nextThumb);
+        else this.ui.thumbs.appendChild(div);
+    },
+
+    removeSource(id) {
+        if(!this.mixer) return;
+
+        // 从 SDK Mixer 中移除指定源。id 是原始 MediaStream.id，也可被 Mixer.getSources() 返回。
+        this.mixer.removeStream(id);
+        
+        // 停止 demo 自己采集/生成的原始输入源，释放摄像头、屏幕共享或虚拟源 oscillator。
+        const idx = this.localStreams.findIndex(item => item.stream.id === id);
+        if(idx !== -1) {
+            const s = this.localStreams[idx].stream;
+            s.getTracks().forEach(t => t.stop());
+            if(s.stopInternal) s.stopInternal();
+            this.localStreams.splice(idx, 1);
+        }
+        
+        const el = document.getElementById(`thumb-${id}`);
+        if(el) el.remove();
+        if(this.ui.thumbs.children.length === 0) {
+            this.ui.thumbs.innerHTML = '<div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>';
+        }
+        this.updateSlotUI();
+        this.updateStats();
+    },
+
+    addVirtual() {
+        this.counter++;
+        let w=640, h=360;
+        const resVal = document.getElementById('cfg-in-res').value;
+        if(resVal !== 'auto') [w, h] = resVal.split('x').map(Number);
+        
+        // 输入帧率只作用于这个虚拟源自身；Mixer 输出帧率由启动时的输出帧率决定。
+        const fps = parseInt(document.getElementById('cfg-in-fps').value);
+        
+        const s = VirtualGen.create(w, h, fps, `SRC-${this.counter}`, this.counter);
+        this._handleStreamAdd(s, `虚拟源 ${this.counter}`);
+    },
+
+    async addCamera() {
+        try {
+            const constraints = { video: {}, audio: true };
+            const resVal = document.getElementById('cfg-in-res').value;
+            if(resVal !== 'auto') {
+                const [w, h] = resVal.split('x').map(Number);
+
+                // 摄像头输入分辨率使用 ideal，浏览器和设备可能返回接近但不完全一致的实际值。
+                constraints.video.width = {ideal: w};
+                constraints.video.height = {ideal: h};
+            }
+
+            // 摄像头输入帧率同样是 ideal 约束，实际值取决于设备能力和浏览器策略。
+            const fps = parseInt(document.getElementById('cfg-in-fps').value);
+            constraints.video.frameRate = { ideal: fps };
+
+            const s = await navigator.mediaDevices.getUserMedia(constraints);
+            this._handleStreamAdd(s, '摄像头');
+        } catch(e) { alert("摄像头失败: " + e.message); }
+    },
+
+    async addScreen() {
+        try {
+            // 屏幕共享通常不能精确控制帧率，这里只把选择值传给浏览器做参考。
+            const fps = parseInt(document.getElementById('cfg-in-fps').value);
+            const s = await navigator.mediaDevices.getDisplayMedia({video:{frameRate:fps}, audio:true});
+            this._handleStreamAdd(s, '屏幕共享');
+
+            // 用户通过浏览器浮层停止屏幕共享时，同步从 Mixer 和 UI 中移除。
+            s.getVideoTracks()[0].onended = () => this.removeSource(s.id);
+        } catch(e) {}
+    },
+
+    clearAll() {
+        // 使用副本遍历，避免 removeSource 修改 localStreams 时影响当前循环。
+        [...this.localStreams].forEach(item => this.removeSource(item.stream.id));
+    },
+
+    updateStats() {
+        if(!this.mixer) return;
+
+        // 统计信息全部从 Mixer.getSources() 快照得出，避免依赖 SDK 私有字段。
+        const sources = this.mixer.getSources();
+        const ac = sources.filter(s => s.hasAudio).length;
+        this.ui.statsAudio.innerText = ac;
+        this.updateOverlayFromSources(sources);
+        this.updateRenderInfo();
+    },
+
+    updateRenderInfo() {
+        if(!this.mixer || !this.mixer.getRenderInfo) return;
+
+        // getRenderInfo() 是新增的只读排查接口。Worker 模式初始化有异步消息，
+        // 所以 actualMode 可能从 worker-init 稍后更新为 worker-webgl2 或 worker-2d。
+        const info = this.mixer.getRenderInfo();
+        this.ui.statsRenderer.innerText = `${info.actualMode} (${info.requestedMode})`;
+        this.ui.statsDropped.innerText = info.droppedFrames || 0;
+        this.ui.statsRenderReason.innerText = info.reason || '-';
+    },
+
+    startRenderInfoLoop() {
+        // 渲染后端和 dropped frame 是运行时数据，需要循环刷新。
+        const tick = () => {
+            if(!this.mixer) return;
+            this.updateRenderInfo();
+            requestAnimationFrame(tick);
+        };
+
+        tick();
+    },
+
+    calcLayoutFromSources(sources) {
+        // 这里复刻 Mixer 的 slot 布局计算，仅用于画页面上的虚线 overlay。
+        // 真正的混流布局仍由 SDK 内部完成；overlay 只是帮助观察 slot 位置。
+        let maxSlot = -1;
+        sources.forEach(s => {
+            if(typeof s.slot === 'number' && s.slot > maxSlot) maxSlot = s.slot;
+        });
+        const count = Math.max(maxSlot + 1, sources.length, 1);
+        const resVal = document.getElementById('cfg-out-res').value;
+        const [w, h] = resVal.split('x').map(Number);
+        const isPortrait = h > w;
+        let cols = 1, rows = 1;
+
+        if(count <= 1) { cols = 1; rows = 1; }
+        else if(count <= 2) {
+            if(isPortrait) { cols = 1; rows = 2; } else { cols = 2; rows = 1; }
+        }
+        else if(count <= 4) { cols = 2; rows = 2; }
+        else if(count <= 6) {
+            if(isPortrait) { cols = 2; rows = 3; } else { cols = 3; rows = 2; }
+        }
+        else if(count <= 9) { cols = 3; rows = 3; }
+        else {
+            cols = Math.ceil(Math.sqrt(count));
+            rows = Math.ceil(count / cols);
+        }
+
+        return { cols, rows };
+    },
+
+    updateOverlayFromSources(sources) {
+        // 源变化后刷新预览区上的 slot 网格。
+        const layout = this.calcLayoutFromSources(sources);
+        this.drawOverlay(layout.cols, layout.rows);
+    },
+
+    drawOverlay(cols, rows) {
+        // 根据 rows/cols 在预览区画一个百分比定位的网格，不影响真实输出流。
+        this.ui.overlay.style.width = '100%';
+        this.ui.overlay.style.height = '100%';
+        this.ui.overlay.innerHTML = '';
+        this.ui.statsLayout.innerText = `${cols}x${rows}`;
+        const wPct = 100/cols, hPct = 100/rows;
+        for(let r=0; r<rows; r++) {
+            for(let c=0; c<cols; c++) {
+                const div = document.createElement('div');
+                div.className = 'grid-cell-label';
+                div.style.left = (c * wPct) + '%';
+                div.style.top = (r * hPct) + '%';
+                div.style.width = wPct + '%';
+                div.style.height = hPct + '%';
+                div.innerText = r*cols + c;
+                this.ui.overlay.appendChild(div);
+            }
+        }
+    },
+
+    startViz(stream) {
+        // 对 mixed stream 做音频频谱可视化。启动时可能还没有任何音频源，
+        // 如果此时直接 createMediaStreamSource(stream) 会抛错，所以先等待音频轨出现。
+        const audioTracks = stream.getAudioTracks();
+        const cvs = document.getElementById('viz-canvas');
+        const ctx = cvs.getContext('2d');
+
+        if(audioTracks.length === 0) {
+            const waitForAudio = () => {
+                if(!this.mixer) return;
+                cvs.width = cvs.clientWidth; cvs.height = cvs.clientHeight;
+                ctx.clearRect(0,0,cvs.width,cvs.height);
+
+                // CRTC.Mixer 支持先启动、后添加带音频的输入源；音频轨出现后再创建 analyser。
+                if(stream.getAudioTracks().length > 0) {
+                    this.startViz(stream);
+                    return;
+                }
+
+                requestAnimationFrame(waitForAudio);
+            };
+
+            waitForAudio();
+            return;
+        }
+
+        const ac = new AudioContext();
+        const src = ac.createMediaStreamSource(stream);
+        const an = ac.createAnalyser(); an.fftSize = 128;
+        src.connect(an);
+        const data = new Uint8Array(an.frequencyBinCount);
+        const draw = () => {
+            // Mixer 停止时关闭可视化用的 AudioContext，避免页面残留音频分析节点。
+            if(!this.mixer) { ac.close(); return; }
+            requestAnimationFrame(draw);
+            cvs.width = cvs.clientWidth; cvs.height = cvs.clientHeight;
+            an.getByteFrequencyData(data);
+            ctx.clearRect(0,0,cvs.width,cvs.height);
+            const barW = (cvs.width / data.length)*2.5;
+            let x = 0;
+            for(let i=0; i<data.length; i++) {
+                const h = (data[i]/255)*cvs.height;
+                ctx.fillStyle = `rgb(${h+50}, 220, 100)`;
+                ctx.fillRect(x, cvs.height-h, barW, h);
+                x+=barW+1;
+            }
+        };
+        draw();
+    }
+};
+
+app.init();
+</script>
+</body>
+</html>

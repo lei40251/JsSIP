@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026512921
+ * CRTC v1.13.0.20265121810
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3274,7 +3274,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":75}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":83}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210241842 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210243620 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210241842');
+debug('version %s', '1.13.0.405210243620');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,10 +16893,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210241842';
+    return '1.13.0.405210243620';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":84}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17013,7 +17013,7 @@ module.exports = /*#__PURE__*/function () {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":76}],40:[function(require,module,exports){
+},{"debug":84}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17275,71 +17275,707 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":74}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":82}],41:[function(require,module,exports){
 "use strict";
 
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 var Logger = require('./Logger');
+var RendererFactory = require('./mixer-renderer/RendererFactory');
 var logger = new Logger('MediaStreamMixer');
+
+/**
+ * MediaStreamMixer — 多路音视频混流器
+ *
+ * 功能：
+ *   - 将多个 MediaStream / HTMLVideoElement 合并为一个 MediaStream
+ *   - 视频：按浏览器能力使用 Worker WebGL2 / 主线程 WebGL2 / Worker Canvas2D / 主线程 Canvas2D 绘制
+ *   - 音频：用 WebAudio API，每路独立 GainNode 控制音量，汇总到 MediaStreamAudioDestinationNode
+ *
+ * 两种布局模式：
+ *   - legacy：固定 640x480 单元格，最多 2x2，向后兼容旧版调用方
+ *   - grid：按 slot 和输出画布比例自动计算网格，支持动态增减
+ *
+ * 使用示例：
+ *   const mixer = new MediaStreamMixer([localStream, remoteStream], { width: 1280, height: 720 });
+ *   const output = await mixer.getMixedStream();
+ *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
+ */
 module.exports = /*#__PURE__*/function () {
-  function MediaStreamMixer(videos) {
-    var _this = this;
+  // =========================================================================
+  //  构造与初始化
+  // =========================================================================
+
+  /**
+   * @param {Array<MediaStream|HTMLMediaElement>|MediaStream|HTMLMediaElement} videos
+   *   需要混流的输入源。为了兼容旧版 SDK，仍然支持只传数组；新版也允许传单个源。
+   *   每个元素可以是：
+   *     - MediaStream：原生 WebRTC 媒体流
+   *     - HTMLVideoElement：外部 video 元素（mixer 不接管生命周期）
+   *     - { mediaStream: MediaStream }：SDK 内部包装对象
+   * @param {Object} [options]
+   *   混流配置。只要传入 width/height/fps/layoutMode/backgroundColor/audioGain 中任意一项，
+   *   默认进入新版 grid 布局；完全不传配置时保持旧版 640x480 单元、最多 2x2 的行为。
+   * @param {number} [options.width=1280]  - 输出视频宽度（grid 模式默认 1280，legacy 模式动态）
+   * @param {number} [options.height=720]  - 输出视频高度（grid 模式默认 720，legacy 模式动态）
+   * @param {number} [options.fps]         - 输出帧率（不传则浏览器自动选择）
+   * @param {string} [options.backgroundColor='#000'] - 画布背景色
+   * @param {number} [options.audioGain=0.8] - 全局默认音量增益
+   * @param {string} [options.layoutMode]  - 'grid' | 'legacy'
+   * @param {string} [options.renderMode='auto']
+   *   渲染后端：'auto' | 'worker-webgl2' | 'main-webgl2' | 'worker-2d' | 'main-2d'
+   * @param {string} [options.workerUrl]
+   *   可选外部 Worker 脚本地址；不传时默认使用 Blob Worker，部署更简单。
+   * @param {boolean} [options.dropFrameWhenBusy=true]
+   *   Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。
+   * @param {number} [options.maxFrameQueue=1]
+   *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
+   */
+  function MediaStreamMixer() {
+    var videos = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     _classCallCheck(this, MediaStreamMixer);
+    // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
+    options = options || {};
+    videos = videos || [];
+
+    // 统一为数组，方便后续统一遍历
+    if (!(videos instanceof Array)) {
+      videos = [videos];
+    }
     logger.debug("constructor: ".concat(videos.length));
 
-    // 根据传参是 video 元素还是 mediastream 分别处理后存储到 _videos
-    var tmpVideos = [];
-    videos.forEach(function (video) {
-      if (video instanceof HTMLMediaElement) {
-        tmpVideos.push(video);
-      } else {
-        tmpVideos.push(_this._mediaStreamToVideoElement(video));
-      }
-    });
-    // 需要混屏的全部 HTMLMediaElement 数组
-    this._videos = tmpVideos;
-    // 是否停止绘制视频帧
+    // -----------------------------------------------------------------------
+    // 源管理
+    // -----------------------------------------------------------------------
+
+    /** @type {number} 内部 ID 自增计数器，当 MediaStream.id 冲突时追加序号 */
+    this._sourceSeq = 0;
+
+    /**
+     * @type {Array<Object>} 统一内部数据结构，每个元素包含：
+     *   {string}  id              - 唯一标识（优先用 MediaStream.id）
+     *   {MediaStream} stream      - 当前关联的 MediaStream
+     *   {HTMLVideoElement} video  - 用于绘制到 canvas 的 video 元素
+     *   {number|null} slot        - grid 模式下的位置编号
+     *   {number} gain             - 该路的音量增益
+     *   {MediaStreamSourceNode|null} audioSourceNode - WebAudio 源节点
+     *   {GainNode|null} gainNode  - 该路的音量控制节点
+     *   {MediaStream|null} audioStream - 已连接音频的流引用（用于换源检测）
+     *   {boolean} ownedVideo      - true=mixer 创建的隐藏 video；false=外部传入的元素
+     */
+    this._sources = [];
+
+    /**
+     * @type {Array<HTMLVideoElement>}
+     * 仅用于旧版兼容：外部代码如果只读 _videos，仍能看到当前参与混流的 video 元素。
+     * 通过 _syncVideos() 与 _sources 保持同步。
+     */
+    this._videos = [];
+
+    // -----------------------------------------------------------------------
+    // 布局模式与渲染控制
+    // -----------------------------------------------------------------------
+
+    /**
+     * 检测是否显式传了新版配置项。
+     * 避免旧项目无感升级后输出分辨率变化。
+     * @type {boolean}
+     */
+    this._hasModernOptions = this._hasMixerOptions(options);
+
+    /**
+     * @type {boolean} 调用方是否显式选择了渲染后端。
+     * 用于区分“旧调用默认 main-2d”和“后续 slot 升级后可自动选择高性能后端”。
+     */
+    this._hasExplicitRenderMode = Object.prototype.hasOwnProperty.call(options, 'renderMode');
+
+    /**
+     * @type {string} 布局模式：'legacy' | 'grid'
+     * - legacy：旧版固定宫格，画布尺寸动态
+     * - grid：新版 slot 网格，画布固定
+     */
+    this._layoutMode = options.layoutMode || (this._hasModernOptions ? 'grid' : 'legacy');
+
+    /** @type {boolean} 停止绘制标记；设为 true 时 rAF 回调直接返回 */
     this._isStopDrawingFrames = false;
 
-    // 停止时使用
-    this._audioSources;
-    this._audioDestination;
-    this._audioContext;
+    /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
+    this._animationId = null;
 
-    // 初始化混屏用的画布
+    // -----------------------------------------------------------------------
+    // WebAudio 相关
+    // -----------------------------------------------------------------------
+
+    /** @type {Array<MediaStreamSourceNode>} 所有已连接的音频源节点（用于调试/清理） */
+    this._audioSources = [];
+
+    /** @type {MediaStreamAudioDestinationNode|null} 音频汇总目标节点 */
+    this._audioDestination = null;
+
+    /** @type {AudioContext|null} WebAudio 上下文（延迟到 getAudioStream() 才创建） */
+    this._audioContext = null;
+
+    /**
+     * @type {MediaStream|null}
+     * getMixedStream() 已返回的流。后续 append 有音频源时，
+     * 通过 _ensureMixedStreamAudioTrack() 把 destination 的音频轨补进去。
+     */
+    this._mixedStream = null;
+
+    /**
+     * @type {Array<MediaStream>}
+     * canvas.captureStream() 产生的流列表，stop() 时统一停止 tracks。
+     */
+    this._capturedStreams = [];
+
+    // -----------------------------------------------------------------------
+    // 混流配置
+    // -----------------------------------------------------------------------
+
+    /**
+     * @type {Object}
+     * @property {number|null} width           - 输出宽度（legacy=null 动态，grid=1280）
+     * @property {number|null} height          - 输出高度（legacy=null 动态，grid=720）
+     * @property {number|null} fps             - 帧率（null=浏览器默认）
+     * @property {string}      backgroundColor - 画布底色
+     * @property {number}      audioGain       - 全局默认音量
+     * @property {string}      renderMode      - 渲染后端选择
+     */
+    this._config = {
+      width: this._normalizePositiveInteger(options.width, this._layoutMode === 'legacy' ? null : 1280),
+      height: this._normalizePositiveInteger(options.height, this._layoutMode === 'legacy' ? null : 720),
+      fps: this._normalizePositiveInteger(options.fps, null),
+      backgroundColor: options.backgroundColor || '#000',
+      audioGain: this._normalizeGain(options.audioGain, 0.8),
+      renderMode: this._normalizeRenderMode(options.renderMode, this._layoutMode === 'legacy' ? 'main-2d' : 'auto'),
+      workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
+      dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
+      maxFrameQueue: this._normalizePositiveInteger(options.maxFrameQueue, 1),
+      preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true
+    };
+
+    // -----------------------------------------------------------------------
+    // 渲染画布
+    // -----------------------------------------------------------------------
+
+    /** @type {HTMLCanvasElement} 离屏 canvas，所有视频帧合成到这里 */
     this._canvas = document.createElement('canvas');
-    this._context = this._canvas.getContext('2d');
+
+    /**
+     * @type {BaseRenderer|null}
+     * 渲染后端延迟到第一次 getVideoStream()/getMixedStream() 时创建。
+     * 这样可以按 renderMode 决定是拿 2D、WebGL2，还是创建 Worker 的独立 OffscreenCanvas。
+     */
+    this._renderer = null;
     this._canvas.setAttribute('style', 'display:none');
+
+    // grid 模式预置 canvas 尺寸
+    if (this._layoutMode !== 'legacy') {
+      this._prepareModernCanvas();
+    }
+
+    // -- 将初始传入的源加入混流 --
+    this.appendStream(videos);
   }
 
-  // 计算缩放后的视频分辨率
+  // =========================================================================
+  //  配置检测与参数归一化
+  // =========================================================================
+
+  /**
+   * 检测 options 中是否显式包含新版混流配置项。
+   * 这是为了避免旧项目在升级后无感切换到 grid 模式，导致输出分辨率变化。
+   *
+   * @param {Object} options - 用户传入的配置对象
+   * @returns {boolean} true=调用方明确传了混流配置
+   */
   return _createClass(MediaStreamMixer, [{
+    key: "_hasMixerOptions",
+    value: function _hasMixerOptions(options) {
+      return Boolean(options && (Object.prototype.hasOwnProperty.call(options, 'width') || Object.prototype.hasOwnProperty.call(options, 'height') || Object.prototype.hasOwnProperty.call(options, 'fps') || Object.prototype.hasOwnProperty.call(options, 'layoutMode') || Object.prototype.hasOwnProperty.call(options, 'backgroundColor') || Object.prototype.hasOwnProperty.call(options, 'audioGain') || Object.prototype.hasOwnProperty.call(options, 'renderMode') || Object.prototype.hasOwnProperty.call(options, 'workerUrl') || Object.prototype.hasOwnProperty.call(options, 'dropFrameWhenBusy') || Object.prototype.hasOwnProperty.call(options, 'maxFrameQueue') || Object.prototype.hasOwnProperty.call(options, 'preserveDrawingBuffer')));
+    }
+
+    /**
+     * 归一化渲染模式。
+     * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
+     *
+     * @param {*} value - 用户传入的 renderMode
+     * @param {string} fallback - 非法或未传时使用的模式
+     * @returns {string} 合法渲染模式
+     */
+  }, {
+    key: "_normalizeRenderMode",
+    value: function _normalizeRenderMode(value, fallback) {
+      var validModes = {
+        auto: true,
+        'worker-webgl2': true,
+        'main-webgl2': true,
+        'worker-2d': true,
+        'main-2d': true
+      };
+      if (typeof value === 'string' && validModes[value]) {
+        return value;
+      }
+      return fallback || 'auto';
+    }
+
+    /**
+     * 将输入值归一化为正整数。
+     * 对外暴露的 width/height/fps 只接受正数；非法值回退默认值，不让 canvas 进入 0 尺寸。
+     *
+     * @param {*} value - 原始输入
+     * @param {number|null} fallback - 非法值时使用的备选值
+     * @returns {number|null} 归一化后的整数，或 fallback
+     */
+  }, {
+    key: "_normalizePositiveInteger",
+    value: function _normalizePositiveInteger(value, fallback) {
+      var numberValue = Number(value);
+      if (Number.isFinite(numberValue) && numberValue > 0) {
+        return Math.floor(numberValue);
+      }
+      return fallback;
+    }
+
+    /**
+     * 归一化 slot 值。
+     * slot 只允许非负整数，数组批量添加时从起始 slot 递增（沿用演示页行为）。
+     *
+     * @param {*} value - 原始 slot 值
+     * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+     * @returns {number|null} 归一化后的 slot，非法则返回 null
+     */
+  }, {
+    key: "_normalizeSlot",
+    value: function _normalizeSlot(value, index) {
+      var numberValue = Number(value);
+      if (!Number.isFinite(numberValue)) {
+        return null;
+      }
+      return Math.max(0, Math.floor(numberValue)) + index;
+    }
+
+    /**
+     * 归一化音量增益值。
+     * 允许大于 1 做放大，但不允许负数。非法值使用全局默认音量。
+     *
+     * @param {*} value - 原始增益值
+     * @param {number} fallback - 非法时的备选值
+     * @returns {number} 归一化后的增益值（>= 0）
+     */
+  }, {
+    key: "_normalizeGain",
+    value: function _normalizeGain(value, fallback) {
+      var numberValue = Number(value);
+      if (Number.isFinite(numberValue) && numberValue >= 0) {
+        return numberValue;
+      }
+      return fallback;
+    }
+
+    /**
+     * 统一 appendStream() 第二个参数的格式。
+     * 支持两种调用方式：
+     *   appendStream(stream, 3)            → 数字作为 slot
+     *   appendStream(stream, { slot, gain }) → 对象解构
+     *
+     * @param {number|Object} optionsOrSlot - 原始参数
+     * @param {number} index - 数组索引，用于批量添加时 slot 递增
+     * @returns {Object} { slot: number|null, gain: number|undefined }
+     */
+  }, {
+    key: "_normalizeSourceOptions",
+    value: function _normalizeSourceOptions(optionsOrSlot, index) {
+      var options = {};
+      if (typeof optionsOrSlot === 'number') {
+        options.slot = this._normalizeSlot(optionsOrSlot, index);
+      } else if (optionsOrSlot && _typeof(optionsOrSlot) === 'object') {
+        if (typeof optionsOrSlot.slot === 'number') {
+          options.slot = this._normalizeSlot(optionsOrSlot.slot, index);
+        }
+        if (typeof optionsOrSlot.gain === 'number') {
+          options.gain = this._normalizeGain(optionsOrSlot.gain, this._config.audioGain);
+        }
+      }
+      return options;
+    }
+
+    // =========================================================================
+    //  布局模式管理
+    // =========================================================================
+
+    /**
+     * 将 legacy 实例升级为 grid 模式。
+     * 旧实例一旦使用 slot 添加源，就升级为新版 grid 布局。
+     * 这是 appendStream(stream, slot) 的隐式语义。
+     *
+     * 副作用：修改 _layoutMode、_config.width/height、重置 canvas 尺寸。
+     */
+  }, {
+    key: "_ensureModernLayout",
+    value: function _ensureModernLayout() {
+      if (this._layoutMode !== 'legacy') {
+        return;
+      }
+      this._layoutMode = 'grid';
+      this._config.width = this._config.width || 1280;
+      this._config.height = this._config.height || 720;
+
+      // 旧调用如果在启动前通过 appendStream(stream, slot) 进入新版 slot 模式，
+      // 且调用方没有显式指定 renderMode，则允许使用 auto 后端选择。
+      if (!this._hasExplicitRenderMode && !this._renderer) {
+        this._config.renderMode = 'auto';
+      }
+      this._prepareModernCanvas();
+    }
+
+    /**
+     * 设置 grid 模式的固定输出画布尺寸。
+     * 与 legacy 模式不同，grid 模式下画布尺寸恒定不变。
+     */
+  }, {
+    key: "_prepareModernCanvas",
+    value: function _prepareModernCanvas() {
+      var width = this._config.width || 1280;
+      var height = this._config.height || 720;
+
+      // 只有尺寸真正变化时才设置 canvas.width/height。
+      // 浏览器在设置 canvas 尺寸时会清空画布；Worker 路径是异步回写，若每帧都清空就会明显闪烁。
+      if (this._canvas.width !== width) {
+        this._canvas.width = width;
+      }
+      if (this._canvas.height !== height) {
+        this._canvas.height = height;
+      }
+    }
+
+    /**
+     * 确保渲染后端已经初始化。
+     *
+     * RendererFactory 是整个 Mixer 唯一允许初始化输出 canvas context 的地方。
+     * 这样可以避免不同 renderer 抢占同一个 canvas context。
+     *
+     * @returns {BaseRenderer} 当前实际使用的渲染后端
+     */
+  }, {
+    key: "_ensureRenderer",
+    value: function _ensureRenderer() {
+      if (!this._renderer) {
+        this._renderer = RendererFactory.createRenderer(this._canvas, this._config);
+      }
+      return this._renderer;
+    }
+
+    /**
+     * 将当前输出画布尺寸同步给 renderer。
+     *
+     * @param {number} width - 输出宽度
+     * @param {number} height - 输出高度
+     */
+  }, {
+    key: "_resizeRenderer",
+    value: function _resizeRenderer(width, height) {
+      if (this._renderer) {
+        this._renderer.resize(width, height);
+      }
+    }
+
+    /**
+     * 同步 _videos 数组，用于旧版兼容。
+     * 外部代码如果只读 _videos，仍能看到当前参与混流的 video 元素。
+     */
+  }, {
+    key: "_syncVideos",
+    value: function _syncVideos() {
+      this._videos = this._sources.map(function (source) {
+        return source.video;
+      });
+    }
+
+    // =========================================================================
+    //  源标识与创建
+    // =========================================================================
+
+    /**
+     * 生成唯一 source ID。
+     * 优先使用 MediaStream.id，便于外部用 removeStream(stream.id) 移除；
+     * 重复 id 时追加序号避免内部冲突。
+     *
+     * @param {MediaStream|null} stream - 媒体流
+     * @param {HTMLVideoElement} video - video 元素
+     * @returns {string} 唯一的 source ID
+     */
+  }, {
+    key: "_createSourceId",
+    value: function _createSourceId(stream, video) {
+      var baseId = stream && stream.id || video.id || "mixer-source-".concat(this._sourceSeq + 1);
+      var sourceId = baseId;
+      while (this._sources.some(function (source) {
+        return source.id === sourceId;
+      })) {
+        this._sourceSeq += 1;
+        sourceId = "".concat(baseId, "-").concat(this._sourceSeq);
+      }
+      return sourceId;
+    }
+
+    /**
+     * 创建内部 source 对象。
+     * 根据输入类型决定是否创建隐藏 video 元素：
+     *   - HTMLMediaElement：直接引用外部元素，不接管生命周期
+     *   - 其他（MediaStream / { mediaStream }）：创建隐藏 <video autoplay muted>
+     *
+     * @param {MediaStream|HTMLMediaElement|Object} input - 输入源
+     * @param {Object} options - { slot, gain } 归一化后的选项
+     * @returns {Object} source 对象（结构见 _sources 的 @type 注释）
+     * @throws {TypeError} 无效 MediaStream
+     */
+  }, {
+    key: "_createSource",
+    value: function _createSource(input, options) {
+      var video;
+      var stream;
+      var ownedVideo = false;
+      if (input instanceof HTMLMediaElement) {
+        // 调用方传 HTMLVideoElement 时不接管元素生命周期，只读取其 srcObject 并在绘制时跟随变化。
+        video = input;
+        stream = input.srcObject;
+      } else {
+        // 支持 SDK 内部常见包装对象 { mediaStream }，也支持原生 MediaStream。
+        stream = input && (input.mediaStream || input);
+        if (!stream) {
+          throw new TypeError('Invalid MediaStream.');
+        }
+        video = this._mediaStreamToVideoElement(stream);
+        ownedVideo = true;
+      }
+      var source = {
+        id: this._createSourceId(stream, video),
+        stream: stream,
+        video: video,
+        slot: typeof options.slot === 'number' ? options.slot : null,
+        gain: this._normalizeGain(options.gain, this._config.audioGain),
+        audioSourceNode: null,
+        gainNode: null,
+        audioStream: null,
+        ownedVideo: ownedVideo
+      };
+
+      // grid 模式下未指定 slot → 自动分配第一个空位
+      if (this._layoutMode !== 'legacy' && source.slot === null) {
+        source.slot = this._getNextSlot();
+      }
+      return source;
+    }
+
+    /**
+     * 查找第一个未被占用的 slot 编号。
+     * 从 0 开始递增，跳过已被现有 source 占用的 slot。
+     *
+     * @returns {number} 第一个空闲 slot
+     */
+  }, {
+    key: "_getNextSlot",
+    value: function _getNextSlot() {
+      var slot = 0;
+      var occupiedSlots = this._sources.reduce(function (slots, source) {
+        if (typeof source.slot === 'number') {
+          slots[source.slot] = true;
+        }
+        return slots;
+      }, {});
+      while (occupiedSlots[slot]) {
+        slot += 1;
+      }
+      return slot;
+    }
+
+    // =========================================================================
+    //  源移除与查找
+    // =========================================================================
+
+    /**
+     * 移除并清理一个 source 对象。
+     * 步骤：断开音频 → 释放 video 元素（仅 ownedVideo）→ 从 _sources 移除 → 同步 _videos。
+     *
+     * @param {Object} source - 要移除的 source 对象
+     * @returns {boolean} true=成功移除；false=source 为空
+     */
+  }, {
+    key: "_removeSource",
+    value: function _removeSource(source) {
+      if (!source) {
+        return false;
+      }
+
+      // 先断开 WebAudio 节点连接，避免音频残留
+      this._disconnectAudio(source);
+      if (source.ownedVideo && source.video) {
+        // 只有 Mixer 自己创建的隐藏 video 才会释放；外部传入的 HTMLMediaElement 不做 pause/remove。
+        source.video.pause();
+        source.video.srcObject = null;
+        source.video.remove();
+      }
+      this._sources = this._sources.filter(function (item) {
+        return item !== source;
+      });
+      this._syncVideos();
+      if (this._renderer) {
+        this._renderer.removeSource(source.id);
+      }
+      return true;
+    }
+
+    /**
+     * 按 MediaStream 对象、stream.id 或内部 source.id 查找 source。
+     *
+     * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
+     * @returns {Object|null} 找到的 source 对象，或 null
+     */
+  }, {
+    key: "_findSource",
+    value: function _findSource(streamOrId) {
+      var _this = this;
+      if (!streamOrId) {
+        return null;
+      }
+
+      // 按字符串 ID 查找（source.id 或 stream.id）
+      if (typeof streamOrId === 'string') {
+        return this._sources.find(function (source) {
+          var stream = _this._getSourceStream(source);
+          return source.id === streamOrId || stream && stream.id === streamOrId;
+        }) || null;
+      }
+
+      // 按对象引用查找（MediaStream 或 HTMLVideoElement）
+      var stream = streamOrId.mediaStream || streamOrId;
+      return this._sources.find(function (source) {
+        return source.stream === stream || source.video === streamOrId;
+      }) || null;
+    }
+
+    // =========================================================================
+    //  源状态检测
+    // =========================================================================
+
+    /**
+     * 检测某路源是否有 live（活跃）状态的音频轨。
+     * 只混入 live 状态音频轨，避免 ended track 触发 WebAudio 创建失败或无效混音。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条 live 音频轨
+     */
+  }, {
+    key: "_hasLiveAudioTrack",
+    value: function _hasLiveAudioTrack(source) {
+      var stream = this._getSourceStream(source);
+      return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(function (track) {
+        return track.readyState === 'live';
+      }));
+    }
+
+    /**
+     * 检测某路源是否有视频轨（不判断 readyState）。
+     * readyState 在绘制阶段才判断；这样刚加入但尚未出帧的源仍保留在布局中。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条视频轨
+     */
+  }, {
+    key: "_hasVideoTrack",
+    value: function _hasVideoTrack(source) {
+      var stream = this._getSourceStream(source);
+      return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
+    }
+
+    /**
+     * 判断某路源当前是否可渲染。
+     * 条件：stream 存在且 active，并且有视频轨。
+     * 具体视频帧是否可画由 video.readyState 在绘制时判断。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=可渲染
+     */
+  }, {
+    key: "_isRenderable",
+    value: function _isRenderable(source) {
+      var stream = this._getSourceStream(source);
+      return Boolean(stream && stream.active && this._hasVideoTrack(source));
+    }
+
+    /**
+     * 获取 source 当前关联的 MediaStream。
+     *
+     * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
+     * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
+     *
+     * 注意：此方法仅同步 stream 引用，不断开音频。
+     * 如果外部替换了 srcObject，音频重连由 _connectAudio() 中的换源检测处理。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {MediaStream|null} 当前 MediaStream
+     */
+  }, {
+    key: "_getSourceStream",
+    value: function _getSourceStream(source) {
+      var stream = source.video && source.video.srcObject ? source.video.srcObject : source.stream;
+      if (stream && source.stream !== stream) {
+        source.stream = stream;
+      }
+      return stream;
+    }
+
+    // =========================================================================
+    //  视频缩放计算
+    // =========================================================================
+
+    /**
+     * 计算视频等比缩放后的尺寸和居中偏移量。
+     *
+     * 缩放策略：始终按比例缩放，取能填满目标单元格的缩放比
+     * （按较宽边对齐，短边居中留黑边）。
+     *
+     * @param {number} width       - 原始视频宽度（video.videoWidth）
+     * @param {number} height      - 原始视频高度（video.videoHeight）
+     * @param {number} [targetWidth=640]  - 目标单元格宽度
+     * @param {number} [targetHeight=480] - 目标单元格高度
+     * @returns {Object|null} 缩放结果：{ width, height, offsetX, offsetY }，无效输入返回 null
+     */
+  }, {
     key: "_scaleVideo",
     value: function _scaleVideo(width, height) {
       var targetWidth = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 640;
       var targetHeight = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 480;
-      var newWidth, newHeight, scale;
+      var newWidth;
+      var newHeight;
+      var scale;
+      if (!width || !height) {
+        return null;
+      }
 
-      // 始终按比例缩放（无论原始尺寸是否小于目标尺寸）
+      // 以宽高比决定缩放基准边
       if (width / height >= targetWidth / targetHeight) {
-        scale = targetWidth / width; // 以宽度为基准缩放
+        // 视频更宽（或等比例）→ 以宽度为基准，高度等比缩放（上下留黑边）
+        scale = targetWidth / width;
         newHeight = height * scale;
         newWidth = targetWidth;
       } else {
-        scale = targetHeight / height; // 以高度为基准缩放
+        // 视频更高 → 以高度为基准，宽度等比缩放（左右留黑边）
+        scale = targetHeight / height;
         newWidth = width * scale;
         newHeight = targetHeight;
       }
 
-      // 计算居中偏移量（若缩放后尺寸仍小于目标尺寸）
+      // 居中偏移量（当缩放后尺寸小于目标尺寸时有效）
       var offsetX = Math.max(0, (targetWidth - newWidth) / 2);
       var offsetY = Math.max(0, (targetHeight - newHeight) / 2);
       return {
@@ -17350,69 +17986,238 @@ module.exports = /*#__PURE__*/function () {
       };
     }
 
+    // =========================================================================
+    //  布局计算（grid 模式）
+    // =========================================================================
+
     /**
-     * 视频绘制到画布
+     * 根据当前所有 source 的 slot 计算网格行列数。
+     * 布局按最大 slot 计算，而不只是按源数量计算。
+     * 例如只占用 slot 8，也应显示 3x3，让 slot 8 落在右下角。
+     *
+     * @returns {Object} { cols: number, rows: number }
      */
   }, {
-    key: "_drawImage",
-    value: function _drawImage(video, idx) {
-      // 是否已经停止
-      if (this._isStopDrawingFrames) {
-        return;
+    key: "_calcLayout",
+    value: function _calcLayout() {
+      var maxSlot = -1;
+      this._sources.forEach(function (source) {
+        if (typeof source.slot === 'number' && source.slot > maxSlot) {
+          maxSlot = source.slot;
+        }
+      });
+      var count = Math.max(maxSlot + 1, this._sources.length, 1);
+      var isPortrait = this._canvas.height > this._canvas.width;
+      var cols = 1;
+      var rows = 1;
+      if (count <= 1) {
+        cols = 1;
+        rows = 1;
+      } else if (count <= 2) {
+        if (isPortrait) {
+          cols = 1;
+          rows = 2;
+        } else {
+          cols = 2;
+          rows = 1;
+        }
+      } else if (count <= 4) {
+        cols = 2;
+        rows = 2;
+      } else if (count <= 6) {
+        if (isPortrait) {
+          cols = 2;
+          rows = 3;
+        } else {
+          cols = 3;
+          rows = 2;
+        }
+      } else if (count <= 9) {
+        cols = 3;
+        rows = 3;
+      } else {
+        // 超过 9 路时使用通用算法：尽可能接近正方形
+        cols = Math.ceil(Math.sqrt(count));
+        rows = Math.ceil(count / cols);
       }
-      var x = 0;
-      var y = 0;
-      if (idx === 1) {
-        x = 640;
+      return {
+        cols: cols,
+        rows: rows
+      };
+    }
+
+    // =========================================================================
+    //  渲染数据构建
+    // =========================================================================
+
+    /**
+     * 构建一帧渲染 payload。
+     *
+     * Mixer 本身只负责决定每路视频应该画在哪里；真正的绘制由当前 renderer 完成。
+     * 这样 Canvas2D、WebGL2、Worker Canvas2D、Worker WebGL2 可以复用完全一致的布局结果。
+     *
+     * @returns {Object} renderer.render() 可直接消费的数据
+     */
+  }, {
+    key: "_createRenderPayload",
+    value: function _createRenderPayload() {
+      if (this._layoutMode !== 'legacy') {
+        return this._createModernRenderPayload();
       }
-      if (idx === 2) {
-        y = 480;
-      }
-      if (idx === 3) {
-        x = 640;
-        y = 480;
-      }
-      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight);
-      this._context.drawImage(video, x + newVideo.offsetX, y + newVideo.offsetY, newVideo.width, newVideo.height);
+      return this._createLegacyRenderPayload();
     }
 
     /**
-     * 将视频流渲染到画布
+     * legacy 模式 payload。
+     * 继续保持旧版 640x480 单元格、最多两列、>=3 路时两行的画布尺寸规则。
+     *
+     * @returns {Object} 渲染 payload
+     */
+  }, {
+    key: "_createLegacyRenderPayload",
+    value: function _createLegacyRenderPayload() {
+      var _this2 = this;
+      var renderSources = this._sources.filter(function (source) {
+        return _this2._isRenderable(source);
+      });
+      var rowCount = 1;
+      if (renderSources.length >= 3) {
+        rowCount = 2;
+      }
+      var canvasWidth = renderSources.length >= 2 ? 1280 : 640;
+      var canvasHeight = 480 * rowCount;
+      if (this._canvas.width !== canvasWidth) {
+        this._canvas.width = canvasWidth;
+      }
+      if (this._canvas.height !== canvasHeight) {
+        this._canvas.height = canvasHeight;
+      }
+      this._resizeRenderer(canvasWidth, canvasHeight);
+      var items = [];
+      renderSources.forEach(function (source, idx) {
+        var draw = _this2._calcDrawRect(source.video, idx % 2 * 640, Math.floor(idx / 2) * 480, 640, 480);
+        if (draw) {
+          items.push({
+            id: source.id,
+            slot: source.slot,
+            video: source.video,
+            draw: draw
+          });
+        }
+      });
+      return {
+        width: canvasWidth,
+        height: canvasHeight,
+        backgroundColor: this._config.backgroundColor,
+        items: items
+      };
+    }
+
+    /**
+     * grid 模式 payload。
+     * 按 slot 计算 1/2/4/6/9 宫格，并根据输出横竖屏决定 2 路、6 路的排列方向。
+     *
+     * @returns {Object} 渲染 payload
+     */
+  }, {
+    key: "_createModernRenderPayload",
+    value: function _createModernRenderPayload() {
+      var _this3 = this;
+      this._prepareModernCanvas();
+      this._resizeRenderer(this._canvas.width, this._canvas.height);
+      var layout = this._calcLayout();
+      var cellWidth = this._canvas.width / layout.cols;
+      var cellHeight = this._canvas.height / layout.rows;
+      var items = [];
+      this._sources.forEach(function (source) {
+        if (!_this3._isRenderable(source)) {
+          return;
+        }
+        var slot = typeof source.slot === 'number' ? source.slot : 0;
+        var col = slot % layout.cols;
+        var row = Math.floor(slot / layout.cols);
+        var targetX = col * cellWidth;
+        var targetY = row * cellHeight;
+        var draw = _this3._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+        if (draw) {
+          items.push({
+            id: source.id,
+            slot: slot,
+            video: source.video,
+            draw: draw
+          });
+        }
+      });
+      return {
+        width: this._canvas.width,
+        height: this._canvas.height,
+        backgroundColor: this._config.backgroundColor,
+        items: items
+      };
+    }
+
+    /**
+     * 计算某个 video 在目标单元格中的 contain 绘制矩形。
+     *
+     * @param {HTMLVideoElement} video - 输入视频元素
+     * @param {number} targetX - 单元格左上角 x
+     * @param {number} targetY - 单元格左上角 y
+     * @param {number} targetWidth - 单元格宽
+     * @param {number} targetHeight - 单元格高
+     * @returns {Object|null} { x, y, width, height }
+     */
+  }, {
+    key: "_calcDrawRect",
+    value: function _calcDrawRect(video, targetX, targetY, targetWidth, targetHeight) {
+      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
+      if (!newVideo || !newVideo.width || !newVideo.height) {
+        return null;
+      }
+      return {
+        x: targetX + newVideo.offsetX,
+        y: targetY + newVideo.offsetY,
+        width: newVideo.width,
+        height: newVideo.height
+      };
+    }
+
+    // =========================================================================
+    //  主渲染循环（rAF）
+    // =========================================================================
+
+    /**
+     * requestAnimationFrame 回调 — 每帧执行一次。
+     * 根据 _layoutMode 分发到 legacy 或 grid 绘制方法。
+     * 绘制完成后根据是否有源决定是否调度下一帧。
      */
   }, {
     key: "_drawVideosToCanvas",
     value: function _drawVideosToCanvas() {
-      var _this2 = this;
-      // 是否已经停止
       if (this._isStopDrawingFrames) {
         return;
       }
-      var renderVideos = this._videos.filter(function (video) {
-        if (!video.srcObject) return false;
+      var payload = this._createRenderPayload();
+      this._ensureRenderer().render(payload);
 
-        // 检查流是否活跃且包含视频轨道
-        return video.srcObject.active && video.srcObject.getVideoTracks().length > 0;
-      });
-
-      // 根据视频数量生成画布高的倍数
-      var height = 1;
-      if (renderVideos.length >= 3) {
-        height = 2;
+      // 还有源时才继续帧循环，无源时暂停以节省 CPU
+      if (this._sources.length > 0) {
+        this._animationId = window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
+      } else {
+        this._animationId = null;
       }
-
-      // 设置画布宽高
-      this._canvas.width = renderVideos.length >= 2 ? 1280 : 640;
-      this._canvas.height = 480 * height;
-      renderVideos.forEach(function (video, idx) {
-        // 开始绘制当前视频帧
-        _this2._drawImage(video, idx);
-      });
-
-      // 开始帧动画开始混流
-      window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
     }
 
-    // 将MediaStream转换为 HTMLVideoElement
+    // =========================================================================
+    //  视频元素工具
+    // =========================================================================
+
+    /**
+     * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
+     * 创建的 video 元素：display:none、muted、autoplay、playsinline。
+     *
+     * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
+     * @returns {HTMLVideoElement} 可播放该流的隐藏 video
+     */
   }, {
     key: "_mediaStreamToVideoElement",
     value: function _mediaStreamToVideoElement(mediaStream) {
@@ -17421,73 +18226,358 @@ module.exports = /*#__PURE__*/function () {
       video.muted = true;
       video.autoplay = true;
       video.setAttribute('playsinline', '');
-      video.srcObject = mediaStream.mediaStream || mediaStream;
+      video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
       video.play()["catch"](function () {
         logger.error('video play error');
       });
       return video;
     }
 
-    // 停止合流
+    // =========================================================================
+    //  音频连接与管理
+    // =========================================================================
+
+    /**
+     * 连接一路 source 的音频到混音目标节点。
+     *
+     * 音频路径：source.stream → createMediaStreamSource() → GainNode → AudioDestination
+     *
+     * 幂等性：同一 source 已连接同 stream 时直接返回 false 不重复连接；
+     * 如果外部替换了 stream（如 HTMLVideoElement 换源），先断旧节点再建新链路。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=成功连接；false=跳过（无音频轨 / 已连接 / audioContext 未就绪）
+     */
   }, {
-    key: "stop",
-    value: function stop() {
-      logger.debug('stop');
-      this._videos = [];
-      this._isStopDrawingFrames = true;
-      if (this._audioSources.length) {
-        this._audioSources.forEach(function (source) {
-          source.disconnect();
-        });
-        this._audioSources = [];
+    key: "_connectAudio",
+    value: function _connectAudio(source) {
+      var stream = this._getSourceStream(source);
+      if (!this._audioContext || !this._audioDestination || !this._hasLiveAudioTrack(source)) {
+        return false;
       }
-      if (this._audioDestination) {
-        this._audioDestination.disconnect();
-        this._audioDestination = null;
+      if (source.audioSourceNode) {
+        // 同一个 source 已经连过当前 stream 时无需重复连接；如果外部替换过 stream，则先断旧节点。
+        if (source.audioStream === stream) {
+          return false;
+        }
+        this._disconnectAudio(source);
       }
-      if (this._audioContext) {
-        this._audioContext.close();
-      }
-      this._audioContext = null;
+      try {
+        // 创建音频链路：MediaStream → SourceNode → GainNode → Destination
+        var audioSourceNode = this._audioContext.createMediaStreamSource(stream);
+        var gainNode = this._audioContext.createGain();
+        gainNode.gain.value = source.gain;
+        audioSourceNode.connect(gainNode);
+        gainNode.connect(this._audioDestination);
 
-      // 清理画布
-      this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        // 保存节点引用，便于后续断开和音量调整
+        source.audioSourceNode = audioSourceNode;
+        source.gainNode = gainNode;
+        source.audioStream = stream;
+        this._audioSources.push(audioSourceNode);
 
-      // 停止画布导出的视频流
-      if (this._canvas.stream) {
-        this._canvas.stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-        this._canvas.stream = null;
+        // 如果 mixedStream 已返回给调用方且有音频轨，补进去
+        this._ensureMixedStreamAudioTrack();
+        logger.debug('audio tracks: ', stream.getAudioTracks().length);
+        return true;
+      } catch (error) {
+        logger.warn("Failed to connect audio source: ".concat(error.message));
+        return false;
       }
     }
 
-    // 添加媒体
+    /**
+     * 断开一路 source 的音频连接，释放 WebAudio 节点。
+     * 在以下场景调用：
+     *   - removeStream() 移除源时
+     *   - appendStream() 同 slot 覆盖时
+     *   - HTMLVideoElement 外部换源时（由 _connectAudio 的换源检测触发）
+     *
+     * @param {Object} source - 内部 source 对象
+     */
   }, {
-    key: "appendStream",
-    value: function appendStream(videos) {
-      var _this3 = this;
-      logger.debug('appendStream');
-      if (!videos) {
-        // eslint-disable-next-line no-throw-literal
-        throw 'First parameter is required.';
+    key: "_disconnectAudio",
+    value: function _disconnectAudio(source) {
+      var audioSourceNode = source.audioSourceNode;
+
+      // 先断 gainNode，再断 audioSourceNode（反向顺序断开）
+      if (source.gainNode) {
+        source.gainNode.disconnect();
+        source.gainNode = null;
       }
-      if (!(videos instanceof Array)) {
-        videos = [videos];
+      if (source.audioSourceNode) {
+        source.audioSourceNode.disconnect();
+        source.audioSourceNode = null;
       }
-      videos.forEach(function (video) {
-        if (video instanceof HTMLMediaElement) {
-          _this3._videos.push(video);
-        } else {
-          _this3._videos.push(_this3._mediaStreamToVideoElement(video));
+      source.audioStream = null;
+
+      // 从 _audioSources 追踪数组中移除
+      if (audioSourceNode) {
+        this._audioSources = this._audioSources.filter(function (sourceNode) {
+          return sourceNode !== audioSourceNode;
+        });
+      }
+    }
+
+    /**
+     * 将 AudioDestination 的音频轨补充到已返回的 mixed stream 中。
+     *
+     * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
+     * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨注入到已返回的流。
+     */
+  }, {
+    key: "_ensureMixedStreamAudioTrack",
+    value: function _ensureMixedStreamAudioTrack() {
+      var _this4 = this;
+      if (!this._mixedStream || !this._audioDestination || this._mixedStream.getAudioTracks().length > 0) {
+        return;
+      }
+      this._audioDestination.stream.getAudioTracks().forEach(function (track) {
+        _this4._mixedStream.addTrack(track);
+      });
+    }
+
+    /**
+     * 去重地将音频流中的音轨添加到目标流中。
+     *
+     * @param {MediaStream} targetStream - 目标流（一般是 video stream）
+     * @param {MediaStream} audioStream - 音频流（audio destination stream）
+     */
+  }, {
+    key: "_addAudioTracksToStream",
+    value: function _addAudioTracksToStream(targetStream, audioStream) {
+      if (!targetStream || !audioStream) {
+        return;
+      }
+      audioStream.getAudioTracks().forEach(function (track) {
+        if (!targetStream.getAudioTracks().some(function (item) {
+          return item.id === track.id;
+        })) {
+          targetStream.addTrack(track);
         }
       });
     }
 
-    // 获取音视频混合的媒体流
+    // =========================================================================
+    //  公开 API
+    // =========================================================================
+
+    /**
+     * 停止混流，释放所有资源。
+     *
+     * 清理步骤：
+     *   1. 设置停止标记 + cancelAnimationFrame 停止渲染循环
+     *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
+     *   3. 断开并关闭 AudioContext
+     *   4. 清空画布
+     *   5. 停止所有 captureStream 的 tracks
+     */
+  }, {
+    key: "stop",
+    value: function stop() {
+      logger.debug('stop');
+      this._isStopDrawingFrames = true;
+      if (this._animationId) {
+        window.cancelAnimationFrame(this._animationId);
+        this._animationId = null;
+      }
+      this.clearStreams();
+
+      // MediaStreamDestinationNode 没有 disconnect 输入的语义，disconnect 失败不应影响资源释放。
+      if (this._audioDestination) {
+        try {
+          this._audioDestination.disconnect();
+        } catch (error) {}
+        this._audioDestination = null;
+      }
+      if (this._audioContext) {
+        // close() 返回 Promise，但这里不等待；stop 的目标是同步断开对象引用和停止输出轨。
+        this._audioContext.close();
+      }
+      this._audioContext = null;
+      this._audioSources = [];
+      this._mixedStream = null;
+
+      // 清理渲染后端。WebGL 路径会释放 texture/program，Worker 路径会 terminate worker。
+      if (this._renderer) {
+        this._renderer.destroy();
+        this._renderer = null;
+      }
+
+      // 停止画布导出的视频流
+      this._capturedStreams.forEach(function (stream) {
+        stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      });
+      this._capturedStreams = [];
+      this._canvas.stream = null;
+    }
+
+    /**
+     * 向混流器添加新的输入源。
+     *
+     * 支持多种调用方式：
+     *   appendStream(stream)          → 自动分配 slot（grid 模式）
+     *   appendStream(stream, 3)       → 指定 slot
+     *   appendStream(stream, { slot: 3, gain: 0.5 })
+     *   appendStream([streamA, ...])  → 批量添加
+     *
+     * 指定 slot 时会隐式将 legacy 模式升级为 grid 模式。
+     * grid 模式下同 slot 已有源会被新源覆盖。
+     *
+     * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
+     * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
+     * @returns {boolean} true=至少成功添加了一个源
+     * @throws {TypeError} 未传 videos
+     */
+  }, {
+    key: "appendStream",
+    value: function appendStream(videos, optionsOrSlot) {
+      var _this5 = this;
+      logger.debug('appendStream');
+      if (!videos) {
+        throw new TypeError('First parameter is required.');
+      }
+      if (!(videos instanceof Array)) {
+        videos = [videos];
+      }
+      var appended = false;
+
+      // 只需首次判断是否需要升级到 grid 布局
+      if (typeof optionsOrSlot === 'number' || optionsOrSlot && typeof optionsOrSlot.slot === 'number') {
+        this._ensureModernLayout();
+      }
+      videos.forEach(function (video, index) {
+        var sourceOptions = _this5._normalizeSourceOptions(optionsOrSlot, index);
+        var source = _this5._createSource(video, sourceOptions);
+
+        // grid 模式下同 slot 覆盖检测
+        if (_this5._layoutMode !== 'legacy' && typeof source.slot === 'number') {
+          var oldSource = _this5._sources.find(function (item) {
+            return item.slot === source.slot;
+          });
+          if (oldSource) {
+            // 新版 slot 语义与演示页一致：同 slot 新源覆盖旧源。
+            logger.warn("Slot ".concat(source.slot, " overwritten."));
+            _this5._removeSource(oldSource);
+          }
+        }
+        _this5._sources.push(source);
+        _this5._syncVideos();
+        appended = true;
+
+        // 如果音频系统已初始化，立即连接该源的音频
+        if (_this5._audioContext) {
+          _this5._connectAudio(source);
+        }
+      });
+
+      // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
+      if (!this._animationId && !this._isStopDrawingFrames && this._sources.length > 0) {
+        this._animationId = window.requestAnimationFrame(this._drawVideosToCanvas.bind(this));
+      }
+      return appended;
+    }
+
+    /**
+     * 按 MediaStream 或 ID 移除一路源。
+     *
+     * @param {MediaStream|string} streamOrId - 要移除的流或 ID
+     *   - MediaStream 对象：按引用匹配
+     *   - string：先匹配 source.id，再匹配 stream.id
+     * @returns {boolean} true=找到并移除了源
+     */
+  }, {
+    key: "removeStream",
+    value: function removeStream(streamOrId) {
+      logger.debug('removeStream');
+      return this._removeSource(this._findSource(streamOrId));
+    }
+
+    /**
+     * 移除所有输入源。
+     * 遍历 _sources 快照逐条清理，过程中 _sources 数组会变化。
+     */
+  }, {
+    key: "clearStreams",
+    value: function clearStreams() {
+      var _this6 = this;
+      logger.debug('clearStreams');
+      var sources = this._sources.slice();
+      sources.forEach(function (source) {
+        _this6._removeSource(source);
+      });
+    }
+
+    /**
+     * 返回当前所有源的快照。
+     * 返回新对象数组，外部修改不影响内部状态。
+     *
+     * @returns {Array<Object>} 源信息列表：
+     *   { id, streamId, slot, gain, hasAudio, hasVideo }
+     */
+  }, {
+    key: "getSources",
+    value: function getSources() {
+      var _this7 = this;
+      return this._sources.map(function (source) {
+        var stream = _this7._getSourceStream(source);
+        return {
+          id: source.id,
+          streamId: stream ? stream.id : null,
+          slot: source.slot,
+          gain: source.gain,
+          hasAudio: _this7._hasLiveAudioTrack(source),
+          hasVideo: _this7._hasVideoTrack(source)
+        };
+      });
+    }
+
+    /**
+     * 返回当前渲染后端状态。
+     *
+     * 这个 API 只读，不影响渲染；主要用于 demo 展示和线上排查性能问题。
+     * Worker 后端初始化有异步消息，因此刚启动时 actualMode 可能短暂显示 worker-init，
+     * 随后会更新为 worker-webgl2 或 worker-2d。
+     *
+     * @returns {Object} 渲染状态快照
+     */
+  }, {
+    key: "getRenderInfo",
+    value: function getRenderInfo() {
+      if (!this._renderer) {
+        return {
+          requestedMode: this._config.renderMode,
+          actualMode: 'not-started',
+          isWorker: false,
+          isWebGL2: false,
+          isFallback: false,
+          reason: '',
+          droppedFrames: 0,
+          renderedFrames: 0,
+          fps: this._config.fps,
+          width: this._canvas.width || this._config.width,
+          height: this._canvas.height || this._config.height
+        };
+      }
+      return this._renderer.getInfo();
+    }
+
+    /**
+     * 获取合并了视频和音频的完整输出流。
+     *
+     * 流程：
+     *   1. getVideoStream() → 启动 rAF 渲染循环 + canvas.captureStream()
+     *   2. 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨
+     *   3. getAudioStream() → 初始化 AudioContext + 连接所有源的音频
+     *   4. 将音频流的音轨添加到视频流
+     *
+     * @returns {Promise<MediaStream>} 包含视频轨和音频轨的混合流
+     */
   }, {
     key: "getMixedStream",
-    value: function () {
+    value: (function () {
       var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
         var mixedVideoStream, mixedAudioStream;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
@@ -17495,18 +18585,16 @@ module.exports = /*#__PURE__*/function () {
             case 0:
               logger.debug('getMixedStream()');
               this._isStopDrawingFrames = false;
-              mixedVideoStream = this.getVideoStream();
-              _context.next = 5;
+              mixedVideoStream = this.getVideoStream(); // 先保存 mixed stream，再初始化音频；这样启动时无音频、后续 append 有音频源时，
+              // _connectAudio() 可以把 MediaStreamDestination 的音频轨补到已经返回给调用方的流里。
+              this._mixedStream = mixedVideoStream;
+              _context.next = 6;
               return this.getAudioStream();
-            case 5:
+            case 6:
               mixedAudioStream = _context.sent;
-              if (mixedAudioStream) {
-                mixedAudioStream.getAudioTracks().forEach(function (track) {
-                  mixedVideoStream.addTrack(track);
-                });
-              }
+              this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
               return _context.abrupt("return", mixedVideoStream);
-            case 8:
+            case 9:
             case "end":
               return _context.stop();
           }
@@ -17516,49 +18604,75 @@ module.exports = /*#__PURE__*/function () {
         return _getMixedStream.apply(this, arguments);
       }
       return getMixedStream;
-    }() // 获取混合后的视频流
+    }()
+    /**
+     * 仅获取混合后的视频流（不含音频）。
+     * 启动 rAF 渲染循环，从 canvas 截取画面输出为 MediaStream。
+     *
+     * @returns {MediaStream} 仅包含视频轨的流
+     */
+    )
   }, {
     key: "getVideoStream",
     value: function getVideoStream() {
       logger.debug('getVideoStream()');
+      this._isStopDrawingFrames = false;
 
-      // 开始帧动画开始混流
+      // 取消上次的 rAF 循环，重新开始
+      if (this._animationId) {
+        window.cancelAnimationFrame(this._animationId);
+        this._animationId = null;
+      }
+
+      // 立即绘制第一帧 + 启动 rAF 循环
       this._drawVideosToCanvas();
       var videoStream = new MediaStream();
-      var capturedStream = this._canvas.captureStream();
+
+      // 旧版未传 fps 时继续使用浏览器默认 captureStream 行为；新版传 fps 时控制输出帧率
+      var capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
       capturedStream.getVideoTracks().forEach(function (track) {
         logger.debug('track: ', track.id, track.enabled, track.readyState);
         videoStream.addTrack(track);
       });
 
+      // 清理前一次 captureStream，避免多次调用 getVideoStream 导致流泄漏
+      this._capturedStreams.forEach(function (stream) {
+        stream.getTracks().forEach(function (track) {
+          return track.stop();
+        });
+      });
+      this._capturedStreams = [];
+
       // 用于停止混合时
       this._canvas.stream = capturedStream;
+      this._capturedStreams.push(capturedStream);
       return videoStream;
     }
 
-    // 获取混合后的音频流
+    /**
+     * 获取混合后的音频流。
+     * 初始化 AudioContext（延迟创建），连接所有源的音频到 MediaStreamAudioDestination。
+     *
+     * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
+     */
   }, {
     key: "getAudioStream",
-    value: function () {
+    value: (function () {
       var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
-        var _this4 = this;
-        var seenStreams;
+        var _this8 = this;
+        var AudioContextConstructor, connectedSources;
         return _regeneratorRuntime().wrap(function _callee2$(_context2) {
           while (1) switch (_context2.prev = _context2.next) {
             case 0:
               logger.debug('getAudioStream()');
 
-              // TODO:可以分别混合音频
-              // if (this._useGainNode === true)
-              // {
-              //   this._gainNode = this._audioContext.createGain();
-              //   this._gainNode.connect(this._audioContext.destination);
-              //   this._gainNode.gain.value = 0; // don't hear this
-              // }
-
+              // 延迟创建 AudioContext（避免浏览器自动播放策略限制）
               if (!this._audioContext) {
-                this._audioContext = new AudioContext();
+                AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+                this._audioContext = new AudioContextConstructor();
               }
+
+              // 自动恢复被浏览器挂起的 AudioContext
               if (!(this._audioContext.state === 'suspended')) {
                 _context2.next = 5;
                 break;
@@ -17566,28 +18680,25 @@ module.exports = /*#__PURE__*/function () {
               _context2.next = 5;
               return this._audioContext.resume();
             case 5:
-              this._audioSources = [];
-              this._audioDestination = this._audioContext.createMediaStreamDestination();
-              seenStreams = new WeakSet();
-              this._videos.forEach(function (video) {
-                var stream = video.srcObject;
-                if (stream && !seenStreams.has(stream) && stream.getAudioTracks().length > 0 && stream.getAudioTracks()[0].readyState === 'live') {
-                  var source = _this4._audioContext.createMediaStreamSource(stream);
-                  source.connect(_this4._audioDestination);
-                  _this4._audioSources.push(source);
-                  seenStreams.add(stream);
-                  logger.debug('audio tracks: ', stream.getAudioTracks().length);
-                }
+              // 创建音频汇总节点
+              if (!this._audioDestination) {
+                this._audioDestination = this._audioContext.createMediaStreamDestination();
+              }
+
+              // createMediaStreamSource 对同一个 MediaStream 只能创建一次有效链路。
+              // 每个 source 只在未连接或 stream 已变化时连接，避免重复混入同一路音频。
+              connectedSources = this._sources.filter(function (source) {
+                return _this8._connectAudio(source);
               });
-              if (!(this._audioSources.length === 0)) {
-                _context2.next = 12;
+              if (!(this._audioSources.length === 0 && connectedSources.length === 0)) {
+                _context2.next = 10;
                 break;
               }
               logger.warn('No valid audio sources, skip audio stream creation');
               return _context2.abrupt("return", null);
-            case 12:
+            case 10:
               return _context2.abrupt("return", this._audioDestination.stream);
-            case 13:
+            case 11:
             case "end":
               return _context2.stop();
           }
@@ -17597,10 +18708,10 @@ module.exports = /*#__PURE__*/function () {
         return _getAudioStream.apply(this, arguments);
       }
       return getAudioStream;
-    }()
+    }())
   }]);
 }();
-},{"./Logger":39}],42:[function(require,module,exports){
+},{"./Logger":39,"./mixer-renderer/RendererFactory":75}],42:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17975,7 +19086,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":74}],44:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":82}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -24890,7 +26001,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":75,"events":74,"sdp-transform":83}],47:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":83,"events":82,"sdp-transform":91}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25057,7 +26168,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":74}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":82}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25166,7 +26277,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":74}],49:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":82}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25379,7 +26490,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":74}],51:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":82}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -26612,7 +27723,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":83}],54:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":91}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -27196,7 +28307,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":61,"events":74}],56:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":82}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -27917,7 +29028,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":74}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":82}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29488,7 +30599,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":72,"events":74,"jsencrypt":79}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":80,"events":82,"jsencrypt":87}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -33744,6 +34855,1080 @@ module.exports = /*#__PURE__*/function () {
 },{"./Grammar":37,"./Logger":39}],72:[function(require,module,exports){
 "use strict";
 
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * Mixer 内部渲染器基类。
+ *
+ * 公开 SDK 不暴露这些类；它们只负责把 Mixer 已经算好的布局画到同一个 canvas。
+ * Mixer 继续负责源管理、布局计算、音频混合和输出 MediaStream 生命周期。
+ */
+module.exports = /*#__PURE__*/function () {
+  function BaseRenderer(config, info) {
+    _classCallCheck(this, BaseRenderer);
+    this._config = config || {};
+    this._info = Object.assign({
+      requestedMode: this._config.renderMode || 'main-2d',
+      actualMode: 'unknown',
+      isWorker: false,
+      isWebGL2: false,
+      isFallback: false,
+      reason: '',
+      droppedFrames: 0,
+      renderedFrames: 0,
+      fps: this._config.fps || null,
+      width: this._config.width || null,
+      height: this._config.height || null
+    }, info || {});
+  }
+  return _createClass(BaseRenderer, [{
+    key: "init",
+    value: function init() {
+      return true;
+    }
+  }, {
+    key: "render",
+    value: function render() {}
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      this._info.width = width;
+      this._info.height = height;
+    }
+  }, {
+    key: "removeSource",
+    value: function removeSource() {}
+  }, {
+    key: "destroy",
+    value: function destroy() {}
+  }, {
+    key: "getInfo",
+    value: function getInfo() {
+      return Object.assign({}, this._info);
+    }
+  }, {
+    key: "_updateInfo",
+    value: function _updateInfo(info) {
+      Object.assign(this._info, info || {});
+    }
+  }]);
+}();
+},{}],73:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var BaseRenderer = require('./BaseRenderer');
+
+/**
+ * 主线程 Canvas2D 渲染器。
+ *
+ * 这是旧版 Mixer 的稳定兜底路径。所有更高性能路径初始化失败时都会回到这里，
+ * 因此它的行为尽量保持简单、确定，并与旧 drawImage 逻辑一致。
+ */
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  function MainCanvas2DRenderer(config, info) {
+    var _this;
+    _classCallCheck(this, MainCanvas2DRenderer);
+    _this = _callSuper(this, MainCanvas2DRenderer, [config, Object.assign({
+      actualMode: 'main-2d',
+      isWorker: false,
+      isWebGL2: false
+    }, info || {})]);
+    _this._canvas = null;
+    _this._context = null;
+    return _this;
+  }
+  _inherits(MainCanvas2DRenderer, _BaseRenderer);
+  return _createClass(MainCanvas2DRenderer, [{
+    key: "init",
+    value: function init(canvas) {
+      this._canvas = canvas;
+      this._context = canvas.getContext('2d', {
+        alpha: false
+      }) || canvas.getContext('2d');
+      if (!this._context) {
+        throw new Error('Canvas2D context is not available');
+      }
+      this.resize(canvas.width, canvas.height);
+      return true;
+    }
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(MainCanvas2DRenderer, "resize", this, 3)([width, height]);
+      if (!this._canvas) {
+        return;
+      }
+      if (this._canvas.width !== width) {
+        this._canvas.width = width;
+      }
+      if (this._canvas.height !== height) {
+        this._canvas.height = height;
+      }
+    }
+  }, {
+    key: "render",
+    value: function render(payload) {
+      var _this2 = this;
+      if (!this._context || !payload) {
+        return;
+      }
+      this.resize(payload.width, payload.height);
+
+      // 每帧先铺背景色，确保源减少、slot 覆盖或 contain 留边时不会残留上一帧内容。
+      this._context.fillStyle = payload.backgroundColor || '#000';
+      this._context.fillRect(0, 0, payload.width, payload.height);
+      payload.items.forEach(function (item) {
+        if (!item.video || item.video.readyState < 2) {
+          return;
+        }
+        _this2._context.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
+      });
+      this._info.renderedFrames += 1;
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      if (this._context && this._canvas) {
+        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+      }
+      this._context = null;
+      this._canvas = null;
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":72}],74:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var BaseRenderer = require('./BaseRenderer');
+var glHelpers = require('./helpers/gl');
+var colorHelper = require('./helpers/color');
+var VERTEX_SHADER = "#version 300 es\nin vec2 a_position;\nin vec2 a_texCoord;\nout vec2 v_texCoord;\nvoid main()\n{\n  gl_Position = vec4(a_position, 0.0, 1.0);\n  v_texCoord = a_texCoord;\n}";
+var FRAGMENT_SHADER = "#version 300 es\nprecision highp float;\nin vec2 v_texCoord;\nuniform sampler2D u_texture;\nout vec4 outColor;\nvoid main()\n{\n  outColor = texture(u_texture, v_texCoord);\n}";
+
+/**
+ * 主线程 WebGL2 渲染器。
+ *
+ * Safari / WKWebView 常见情况是 Worker + WebGL2 不稳定或不可用，但主线程 WebGL2 可用。
+ * 这一路不能降低主线程调度压力，但可以把缩放和合成交给 GPU，通常比多路 Canvas2D 更稳。
+ */
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  function MainWebGL2Renderer(config, info) {
+    var _this;
+    _classCallCheck(this, MainWebGL2Renderer);
+    _this = _callSuper(this, MainWebGL2Renderer, [config, Object.assign({
+      actualMode: 'main-webgl2',
+      isWorker: false,
+      isWebGL2: true
+    }, info || {})]);
+    _this._canvas = null;
+    _this._gl = null;
+    _this._program = null;
+    _this._positionBuffer = null;
+    _this._texCoordBuffer = null;
+    _this._textures = {};
+    return _this;
+  }
+  _inherits(MainWebGL2Renderer, _BaseRenderer);
+  return _createClass(MainWebGL2Renderer, [{
+    key: "init",
+    value: function init(canvas) {
+      this._canvas = canvas;
+      this._gl = canvas.getContext('webgl2', {
+        alpha: false,
+        antialias: false,
+        preserveDrawingBuffer: Boolean(this._config.preserveDrawingBuffer),
+        powerPreference: 'high-performance'
+      });
+      if (!this._gl) {
+        throw new Error('WebGL2 context is not available');
+      }
+      this._setupProgram();
+      this.resize(canvas.width, canvas.height);
+      return true;
+    }
+  }, {
+    key: "_setupProgram",
+    value: function _setupProgram() {
+      var gl = this._gl;
+      var vertexShader = glHelpers.compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+      var fragmentShader = glHelpers.compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+      this._program = glHelpers.createProgram(gl, vertexShader, fragmentShader);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
+      this._positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      this._texCoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._texCoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.useProgram(this._program);
+      this._enableAttribute('a_position', this._positionBuffer);
+      this._enableAttribute('a_texCoord', this._texCoordBuffer);
+      gl.uniform1i(gl.getUniformLocation(this._program, 'u_texture'), 0);
+    }
+  }, {
+    key: "_enableAttribute",
+    value: function _enableAttribute(name, buffer) {
+      var gl = this._gl;
+      var location = gl.getAttribLocation(this._program, name);
+      gl.enableVertexAttribArray(location);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+    }
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(MainWebGL2Renderer, "resize", this, 3)([width, height]);
+      if (!this._canvas) {
+        return;
+      }
+      if (this._canvas.width !== width) {
+        this._canvas.width = width;
+      }
+      if (this._canvas.height !== height) {
+        this._canvas.height = height;
+      }
+    }
+  }, {
+    key: "render",
+    value: function render(payload) {
+      var _this2 = this;
+      if (!this._gl || !payload) {
+        return;
+      }
+      var gl = this._gl;
+      var clearColor = colorHelper.parseColor(payload.backgroundColor);
+      this.resize(payload.width, payload.height);
+      gl.useProgram(this._program);
+      gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.activeTexture(gl.TEXTURE0);
+      payload.items.forEach(function (item) {
+        if (!item.video || item.video.readyState < 2) {
+          return;
+        }
+        var texture = _this2._getTexture(item.id);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        // HTMLVideoElement / HTMLCanvasElement 的像素原点是左上角，而 WebGL 纹理坐标原点按左下角处理。
+        // 在上传阶段翻转，比手动反转 shader texcoord 更稳定，也方便与 Worker WebGL2 路径保持一致。
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
+        _this2._drawItem(item, payload.height);
+      });
+      gl.flush();
+      this._info.renderedFrames += 1;
+    }
+  }, {
+    key: "_getTexture",
+    value: function _getTexture(id) {
+      if (!this._textures[id]) {
+        this._textures[id] = glHelpers.createVideoTexture(this._gl);
+      }
+      return this._textures[id];
+    }
+  }, {
+    key: "_drawItem",
+    value: function _drawItem(item, canvasHeight) {
+      var gl = this._gl;
+      var draw = item.draw;
+      var viewportX = Math.round(draw.x);
+      var viewportY = Math.round(canvasHeight - draw.y - draw.height);
+      var viewportWidth = Math.round(draw.width);
+      var viewportHeight = Math.round(draw.height);
+      if (viewportWidth <= 0 || viewportHeight <= 0) {
+        return;
+      }
+      gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+  }, {
+    key: "removeSource",
+    value: function removeSource(id) {
+      var texture = this._textures[id];
+      if (texture && this._gl) {
+        this._gl.deleteTexture(texture);
+      }
+      delete this._textures[id];
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      var _this3 = this;
+      var gl = this._gl;
+      if (!gl) {
+        return;
+      }
+      Object.keys(this._textures).forEach(function (id) {
+        gl.deleteTexture(_this3._textures[id]);
+      });
+      this._textures = {};
+      if (this._positionBuffer) {
+        gl.deleteBuffer(this._positionBuffer);
+      }
+      if (this._texCoordBuffer) {
+        gl.deleteBuffer(this._texCoordBuffer);
+      }
+      if (this._program) {
+        gl.deleteProgram(this._program);
+      }
+      var loseContext = gl.getExtension('WEBGL_lose_context');
+      if (loseContext) {
+        loseContext.loseContext();
+      }
+      this._gl = null;
+      this._program = null;
+      this._canvas = null;
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":72,"./helpers/color":77,"./helpers/gl":78}],75:[function(require,module,exports){
+"use strict";
+
+var MainCanvas2DRenderer = require('./MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('./MainWebGL2Renderer');
+var WorkerRenderer = require('./WorkerRenderer');
+
+/**
+ * 根据 renderMode 创建实际渲染器。
+ *
+ * auto 模式优先尝试：
+ *   worker-webgl2（Worker 内失败会自动降到 worker-2d）
+ *   -> main-webgl2
+ *   -> main-2d
+ *
+ * 注意：这里是 Mixer 第一个初始化输出 canvas context 的位置，避免不同 renderer 抢占 context。
+ */
+exports.createRenderer = function (canvas, config) {
+  var mode = config.renderMode || 'auto';
+  var errors = [];
+  if (mode === 'main-2d') {
+    return createMain2D(canvas, config, false, '');
+  }
+  if (mode === 'auto' && shouldPreferMainWebGL2()) {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: true,
+        reason: 'Safari/WKWebView prefers main-thread WebGL2 because Worker WebGL2 support is limited'
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+  if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
+    try {
+      var _renderer = new WorkerRenderer(config, {
+        requestedMode: mode,
+        isFallback: false,
+        reason: ''
+      });
+      _renderer.init(canvas);
+      return _renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+      if (mode === 'worker-webgl2' || mode === 'worker-2d') {
+        return createMainFallback(canvas, config, mode, errors.join('; '));
+      }
+    }
+  }
+  if (mode === 'main-webgl2' || mode === 'auto') {
+    try {
+      var _renderer2 = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: errors.length > 0,
+        reason: errors.join('; ')
+      });
+      _renderer2.init(canvas);
+      return _renderer2;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
+};
+function createMainFallback(canvas, config, requestedMode, reason) {
+  if (requestedMode !== 'worker-2d') {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: requestedMode,
+        isFallback: true,
+        reason: reason
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {}
+  }
+  return createMain2D(canvas, config, true, reason);
+}
+function createMain2D(canvas, config, isFallback, reason) {
+  var renderer = new MainCanvas2DRenderer(config, {
+    requestedMode: config.renderMode || 'auto',
+    isFallback: Boolean(isFallback),
+    reason: reason || ''
+  });
+  renderer.init(canvas);
+  return renderer;
+}
+function shouldPreferMainWebGL2() {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  var ua = navigator.userAgent || '';
+  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+  var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
+  return isSafari || isIOSWebView;
+}
+},{"./MainCanvas2DRenderer":73,"./MainWebGL2Renderer":74,"./WorkerRenderer":76}],76:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+var BaseRenderer = require('./BaseRenderer');
+var workerScript = require('./workerScript');
+
+/**
+ * Worker 渲染器。
+ *
+ * 负责三件事：
+ *   1. 创建独立 OffscreenCanvas 给 Worker 渲染；
+ *   2. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer；
+ *   3. Worker 渲染后传回 ImageBitmap，主线程写入真正用于 captureStream() 的输出 canvas。
+ *
+ * 注意：不再 transfer 输出 canvas 本身。这样 canvas.captureStream() 始终绑定主线程 canvas，
+ * 避免部分浏览器无法捕获 Worker 直接绘制结果而出现黑屏。
+ */
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  function WorkerRenderer(config, info) {
+    var _this;
+    _classCallCheck(this, WorkerRenderer);
+    _this = _callSuper(this, WorkerRenderer, [config, Object.assign({
+      actualMode: 'worker-init',
+      isWorker: true,
+      isWebGL2: false
+    }, info || {})]);
+    _this._canvas = null;
+    _this._outputContext = null;
+    _this._worker = null;
+    _this._workerUrl = null;
+    _this._workerReady = false;
+    _this._workerBusy = false;
+    _this._extractingFrame = false;
+    _this._queuedPayloads = [];
+    _this._destroyed = false;
+    _this._frameFactory = null;
+    return _this;
+  }
+  _inherits(WorkerRenderer, _BaseRenderer);
+  return _createClass(WorkerRenderer, [{
+    key: "init",
+    value: function init(canvas) {
+      var _this2 = this;
+      if (!this._canUseWorker(canvas)) {
+        throw new Error('Worker OffscreenCanvas is not available');
+      }
+      this._canvas = canvas;
+      this.resize(canvas.width, canvas.height);
+      try {
+        this._worker = this._createWorker();
+        this._outputContext = canvas.getContext('2d', {
+          alpha: false
+        }) || canvas.getContext('2d');
+        if (!this._outputContext) {
+          throw new Error('Canvas2D output context is not available');
+        }
+        this._outputContext.fillStyle = this._config.backgroundColor || '#000';
+        this._outputContext.fillRect(0, 0, canvas.width || 1, canvas.height || 1);
+        this._outputContext.imageSmoothingEnabled = true;
+        var offscreenCanvas = new OffscreenCanvas(canvas.width || 1, canvas.height || 1);
+        this._worker.onmessage = function (event) {
+          return _this2._handleWorkerMessage(event);
+        };
+        this._worker.onerror = function (error) {
+          _this2._workerBusy = false;
+          _this2._extractingFrame = false;
+          _this2._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: "Worker renderer error: ".concat(error.message || 'unknown')
+          });
+        };
+        this._worker.postMessage({
+          type: 'init',
+          canvas: offscreenCanvas,
+          requestedMode: this._config.renderMode,
+          width: canvas.width,
+          height: canvas.height,
+          backgroundColor: this._config.backgroundColor
+        }, [offscreenCanvas]);
+      } catch (error) {
+        this._destroyWorker();
+        throw error;
+      }
+      return true;
+    }
+  }, {
+    key: "_canUseWorker",
+    value: function _canUseWorker(canvas) {
+      return Boolean(typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && canvas && canvas.getContext);
+    }
+  }, {
+    key: "_createWorker",
+    value: function _createWorker() {
+      if (this._config.workerUrl) {
+        return new Worker(this._config.workerUrl);
+      }
+      var blob = new Blob([workerScript.createWorkerScript()], {
+        type: 'application/javascript'
+      });
+      this._workerUrl = URL.createObjectURL(blob);
+      return new Worker(this._workerUrl);
+    }
+  }, {
+    key: "_handleWorkerMessage",
+    value: function _handleWorkerMessage(event) {
+      var data = event.data || {};
+      if (data.type === 'ready') {
+        this._workerReady = true;
+        this._updateInfo({
+          actualMode: data.actualMode,
+          isWorker: true,
+          isWebGL2: Boolean(data.isWebGL2),
+          reason: data.reason || this._info.reason
+        });
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'rendered') {
+        if (data.bitmap && this._outputContext) {
+          this._outputContext.drawImage(data.bitmap, 0, 0, this._canvas.width, this._canvas.height);
+          if (data.bitmap.close) {
+            data.bitmap.close();
+          }
+        }
+        this._workerBusy = false;
+        this._info.renderedFrames += 1;
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'renderError') {
+        this._workerBusy = false;
+        this._updateInfo({
+          isFallback: true,
+          reason: data.reason || 'Worker render failed'
+        });
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'failed') {
+        this._workerBusy = false;
+        this._workerReady = false;
+        this._extractingFrame = false;
+        this._updateInfo({
+          actualMode: 'worker-failed',
+          isFallback: true,
+          reason: data.reason || 'Worker renderer initialization failed'
+        });
+      }
+    }
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(WorkerRenderer, "resize", this, 3)([width, height]);
+    }
+  }, {
+    key: "render",
+    value: function render(payload) {
+      if (this._destroyed) {
+        return;
+      }
+      if (!this._worker) {
+        return;
+      }
+      if (!this._workerReady) {
+        this._queuePayload(payload);
+        return;
+      }
+      if (this._workerBusy || this._extractingFrame) {
+        this._queuePayload(payload);
+        return;
+      }
+      this._renderInWorker(payload);
+    }
+  }, {
+    key: "_renderInWorker",
+    value: function () {
+      var _renderInWorker2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee(payload) {
+        var result;
+        return _regeneratorRuntime().wrap(function _callee$(_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              this._extractingFrame = true;
+              result = null;
+              _context.prev = 2;
+              _context.next = 5;
+              return this._createWorkerPayload(payload);
+            case 5:
+              result = _context.sent;
+              this._extractingFrame = false;
+              if (!(result.items.length === 0)) {
+                _context.next = 10;
+                break;
+              }
+              this._flushQueuedPayload();
+              return _context.abrupt("return");
+            case 10:
+              if (!this._destroyed) {
+                _context.next = 13;
+                break;
+              }
+              this._closeTransferFrames(result.items);
+              return _context.abrupt("return");
+            case 13:
+              this._workerBusy = true;
+              this._worker.postMessage({
+                type: 'render',
+                payload: {
+                  width: payload.width,
+                  height: payload.height,
+                  backgroundColor: payload.backgroundColor,
+                  items: result.items
+                }
+              }, result.transfers);
+              _context.next = 24;
+              break;
+            case 17:
+              _context.prev = 17;
+              _context.t0 = _context["catch"](2);
+              if (result && result.items) {
+                this._closeTransferFrames(result.items);
+              }
+              this._extractingFrame = false;
+              this._workerBusy = false;
+              this._info.droppedFrames += 1;
+              this._updateInfo({
+                isFallback: true,
+                reason: "Worker frame extraction failed: ".concat(_context.t0.message || String(_context.t0))
+              });
+            case 24:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, this, [[2, 17]]);
+      }));
+      function _renderInWorker(_x) {
+        return _renderInWorker2.apply(this, arguments);
+      }
+      return _renderInWorker;
+    }()
+  }, {
+    key: "_queuePayload",
+    value: function _queuePayload(payload) {
+      var maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
+      if (maxFrameQueue <= 0) {
+        this._info.droppedFrames += 1;
+        return;
+      }
+      if (this._config.dropFrameWhenBusy) {
+        this._info.droppedFrames += 1;
+        this._queuedPayloads = [payload];
+        return;
+      }
+      this._queuedPayloads.push(payload);
+      while (this._queuedPayloads.length > maxFrameQueue) {
+        this._queuedPayloads.shift();
+        this._info.droppedFrames += 1;
+      }
+    }
+  }, {
+    key: "_flushQueuedPayload",
+    value: function _flushQueuedPayload() {
+      if (!this._queuedPayloads.length || this._destroyed || this._workerBusy || this._extractingFrame) {
+        return;
+      }
+      var payload = this._queuedPayloads.shift();
+      this._renderInWorker(payload);
+    }
+  }, {
+    key: "_createWorkerPayload",
+    value: function () {
+      var _createWorkerPayload2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(payload) {
+        var items, transfers, idx, item, frame;
+        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+          while (1) switch (_context2.prev = _context2.next) {
+            case 0:
+              items = [];
+              transfers = [];
+              _context2.prev = 2;
+              idx = 0;
+            case 4:
+              if (!(idx < payload.items.length)) {
+                _context2.next = 16;
+                break;
+              }
+              item = payload.items[idx];
+              if (!(!item.video || item.video.readyState < 2)) {
+                _context2.next = 8;
+                break;
+              }
+              return _context2.abrupt("continue", 13);
+            case 8:
+              _context2.next = 10;
+              return this._createFrame(item.video);
+            case 10:
+              frame = _context2.sent;
+              items.push({
+                id: item.id,
+                draw: item.draw,
+                frame: frame
+              });
+              transfers.push(frame);
+            case 13:
+              ++idx;
+              _context2.next = 4;
+              break;
+            case 16:
+              _context2.next = 22;
+              break;
+            case 18:
+              _context2.prev = 18;
+              _context2.t0 = _context2["catch"](2);
+              this._closeTransferFrames(items);
+              throw _context2.t0;
+            case 22:
+              return _context2.abrupt("return", {
+                items: items,
+                transfers: transfers
+              });
+            case 23:
+            case "end":
+              return _context2.stop();
+          }
+        }, _callee2, this, [[2, 18]]);
+      }));
+      function _createWorkerPayload(_x2) {
+        return _createWorkerPayload2.apply(this, arguments);
+      }
+      return _createWorkerPayload;
+    }()
+  }, {
+    key: "_createFrame",
+    value: function () {
+      var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(video) {
+        var VideoFrameConstructor, bitmapOptions, bitmap, frame;
+        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
+              if (!(this._frameFactory === 'imagebitmap' || this._frameFactory === null && typeof createImageBitmap !== 'undefined')) {
+                _context3.next = 22;
+                break;
+              }
+              _context3.prev = 2;
+              // Worker WebGL2 上传 ImageBitmap 时，部分浏览器不会再按 UNPACK_FLIP_Y_WEBGL 处理方向。
+              // 因此 WebGL2 Worker 路径在抽帧阶段就翻转一次；Worker Canvas2D 继续使用原始方向。
+              bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
+                imageOrientation: 'flipY'
+              } : undefined;
+              if (!bitmapOptions) {
+                _context3.next = 10;
+                break;
+              }
+              _context3.next = 7;
+              return createImageBitmap(video, bitmapOptions);
+            case 7:
+              _context3.t0 = _context3.sent;
+              _context3.next = 13;
+              break;
+            case 10:
+              _context3.next = 12;
+              return createImageBitmap(video);
+            case 12:
+              _context3.t0 = _context3.sent;
+            case 13:
+              bitmap = _context3.t0;
+              this._frameFactory = 'imagebitmap';
+              return _context3.abrupt("return", bitmap);
+            case 18:
+              _context3.prev = 18;
+              _context3.t1 = _context3["catch"](2);
+              if (!(this._frameFactory === 'imagebitmap')) {
+                _context3.next = 22;
+                break;
+              }
+              throw _context3.t1;
+            case 22:
+              if (!(this._frameFactory === 'videoframe' || this._frameFactory === null && VideoFrameConstructor)) {
+                _context3.next = 33;
+                break;
+              }
+              _context3.prev = 23;
+              frame = new VideoFrameConstructor(video);
+              this._frameFactory = 'videoframe';
+              return _context3.abrupt("return", frame);
+            case 29:
+              _context3.prev = 29;
+              _context3.t2 = _context3["catch"](23);
+              if (!(this._frameFactory === 'videoframe')) {
+                _context3.next = 33;
+                break;
+              }
+              throw _context3.t2;
+            case 33:
+              throw new Error('VideoFrame and createImageBitmap are unavailable');
+            case 34:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3, this, [[2, 18], [23, 29]]);
+      }));
+      function _createFrame(_x3) {
+        return _createFrame2.apply(this, arguments);
+      }
+      return _createFrame;
+    }()
+  }, {
+    key: "_closeTransferFrames",
+    value: function _closeTransferFrames(items) {
+      (items || []).forEach(function (item) {
+        if (item.frame && item.frame.close) {
+          item.frame.close();
+        }
+      });
+    }
+  }, {
+    key: "removeSource",
+    value: function removeSource(id) {
+      if (this._worker) {
+        this._worker.postMessage({
+          type: 'removeSource',
+          id: id
+        });
+      }
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      this._destroyed = true;
+      this._workerReady = false;
+      this._extractingFrame = false;
+      this._workerBusy = false;
+      this._queuedPayloads = [];
+      this._outputContext = null;
+      this._destroyWorker();
+    }
+  }, {
+    key: "_destroyWorker",
+    value: function _destroyWorker() {
+      if (this._worker) {
+        try {
+          this._worker.postMessage({
+            type: 'destroy'
+          });
+        } catch (error) {}
+        this._worker.terminate();
+        this._worker = null;
+      }
+      if (this._workerUrl) {
+        URL.revokeObjectURL(this._workerUrl);
+        this._workerUrl = null;
+      }
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":72,"./workerScript":79}],77:[function(require,module,exports){
+"use strict";
+
+/**
+ * 将常见 CSS 颜色转换为 WebGL clearColor 可用的 RGBA 数组。
+ *
+ * 这里只做渲染兜底需要的轻量解析：
+ *   - #rgb / #rrggbb
+ *   - rgb(r,g,b) / rgba(r,g,b,a)
+ * 其它复杂 CSS 颜色交给 Canvas2D 路径原生处理，WebGL 路径回退黑色。
+ *
+ * @param {string} color - 用户传入的背景色
+ * @returns {Array<number>} [r, g, b, a]，每个通道范围 0-1
+ */
+exports.parseColor = function (color) {
+  if (!color || typeof color !== 'string') {
+    return [0, 0, 0, 1];
+  }
+  var value = color.trim();
+  if (value[0] === '#') {
+    return parseHexColor(value);
+  }
+  if (value.indexOf('rgb') === 0) {
+    return parseRgbColor(value);
+  }
+  return [0, 0, 0, 1];
+};
+function parseHexColor(value) {
+  var hex = value.slice(1);
+  if (hex.length === 3) {
+    hex = hex.split('').map(function (item) {
+      return item + item;
+    }).join('');
+  }
+  if (hex.length !== 6) {
+    return [0, 0, 0, 1];
+  }
+  var numberValue = parseInt(hex, 16);
+  if (!Number.isFinite(numberValue)) {
+    return [0, 0, 0, 1];
+  }
+  return [(numberValue >> 16 & 255) / 255, (numberValue >> 8 & 255) / 255, (numberValue & 255) / 255, 1];
+}
+function parseRgbColor(value) {
+  var matches = value.match(/rgba?\(([^)]+)\)/i);
+  if (!matches) {
+    return [0, 0, 0, 1];
+  }
+  var parts = matches[1].split(',').map(function (item) {
+    return Number(item.trim());
+  });
+  if (parts.length < 3 || parts.some(function (item) {
+    return !Number.isFinite(item);
+  })) {
+    return [0, 0, 0, 1];
+  }
+  return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
+}
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+},{}],78:[function(require,module,exports){
+"use strict";
+
+/**
+ * 编译 WebGL shader。
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @param {number} shaderType - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
+ * @param {string} shaderSource - GLSL 源码
+ * @returns {WebGLShader} 编译后的 shader
+ */
+exports.compileShader = function (gl, shaderType, shaderSource) {
+  var shader = gl.createShader(shaderType);
+  gl.shaderSource(shader, shaderSource);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    var message = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error("Could not compile shader: ".concat(message));
+  }
+  return shader;
+};
+
+/**
+ * 链接 WebGL program。
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @param {WebGLShader} vertexShader - 顶点 shader
+ * @param {WebGLShader} fragmentShader - 片元 shader
+ * @returns {WebGLProgram} 链接后的 program
+ */
+exports.createProgram = function (gl, vertexShader, fragmentShader) {
+  var program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    var message = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error("Could not link WebGL program: ".concat(message));
+  }
+  return program;
+};
+
+/**
+ * 创建用于上传视频帧的 2D texture。
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @returns {WebGLTexture} texture
+ */
+exports.createVideoTexture = function (gl) {
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return texture;
+};
+},{}],79:[function(require,module,exports){
+"use strict";
+
+/**
+ * 生成 Mixer Worker 的源码字符串。
+ *
+ * Browserify 会把这个模块打进 SDK 主包，默认用 Blob Worker 运行，避免额外部署文件。
+ * 如果业务侧 CSP 禁止 Blob Worker，可通过 options.workerUrl 指定外部 worker 脚本；外部脚本内容
+ * 可以直接使用 createWorkerScript() 的返回值生成。
+ *
+ * @returns {string} Worker 源码
+ */
+exports.createWorkerScript = function () {
+  return "\nvar canvas = null;\nvar ctx = null;\nvar gl = null;\nvar program = null;\nvar positionBuffer = null;\nvar texCoordBuffer = null;\nvar textures = {};\nvar actualMode = 'unknown';\nvar requestedMode = 'auto';\nvar width = 0;\nvar height = 0;\nvar backgroundColor = '#000';\n\nvar VERTEX_SHADER = '#version 300 es\\n' +\n  'in vec2 a_position;\\n' +\n  'in vec2 a_texCoord;\\n' +\n  'out vec2 v_texCoord;\\n' +\n  'void main() {\\n' +\n  '  gl_Position = vec4(a_position, 0.0, 1.0);\\n' +\n  '  v_texCoord = a_texCoord;\\n' +\n  '}\\n';\n\nvar FRAGMENT_SHADER = '#version 300 es\\n' +\n  'precision highp float;\\n' +\n  'in vec2 v_texCoord;\\n' +\n  'uniform sampler2D u_texture;\\n' +\n  'out vec4 outColor;\\n' +\n  'void main() {\\n' +\n  '  outColor = texture(u_texture, v_texCoord);\\n' +\n  '}\\n';\n\nself.onmessage = function(event)\n{\n  var data = event.data || {};\n\n  if (data.type === 'init')\n  {\n    init(data);\n  }\n  else if (data.type === 'render')\n  {\n    render(data.payload || {});\n  }\n  else if (data.type === 'removeSource')\n  {\n    removeSource(data.id);\n  }\n  else if (data.type === 'destroy')\n  {\n    destroy();\n  }\n};\n\nfunction init(data)\n{\n  canvas = data.canvas;\n  requestedMode = data.requestedMode || 'auto';\n  width = data.width || canvas.width || 1;\n  height = data.height || canvas.height || 1;\n  backgroundColor = data.backgroundColor || '#000';\n  canvas.width = width;\n  canvas.height = height;\n\n  try\n  {\n    if (requestedMode === 'worker-webgl2' || requestedMode === 'auto')\n    {\n      initWebGL2();\n      actualMode = 'worker-webgl2';\n      postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: true, reason: '' });\n\n      return;\n    }\n  }\n  catch (error)\n  {\n    destroyWebGL2();\n\n    backgroundColor = data.backgroundColor || backgroundColor;\n  }\n\n  try\n  {\n    initCanvas2D();\n    actualMode = 'worker-2d';\n    postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: false, reason: 'Worker WebGL2 unavailable, fallback to Worker Canvas2D' });\n  }\n  catch (error)\n  {\n    postMessage({ type: 'failed', reason: error.message || String(error) });\n  }\n}\n\nfunction initWebGL2()\n{\n  gl = canvas.getContext('webgl2', {\n    alpha: false,\n    antialias: false,\n    preserveDrawingBuffer: false,\n    powerPreference: 'high-performance'\n  });\n\n  if (!gl)\n  {\n    throw new Error('Worker WebGL2 context is not available');\n  }\n\n  var vertexShader = compileShader(gl.VERTEX_SHADER, VERTEX_SHADER);\n  var fragmentShader = compileShader(gl.FRAGMENT_SHADER, FRAGMENT_SHADER);\n\n  program = createProgram(vertexShader, fragmentShader);\n  gl.deleteShader(vertexShader);\n  gl.deleteShader(fragmentShader);\n\n  positionBuffer = gl.createBuffer();\n  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);\n  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([\n    -1, -1,\n    1, -1,\n    -1, 1,\n    1, 1\n  ]), gl.STATIC_DRAW);\n\n  texCoordBuffer = gl.createBuffer();\n  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);\n  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([\n    0, 0,\n    1, 0,\n    0, 1,\n    1, 1\n  ]), gl.STATIC_DRAW);\n\n  gl.useProgram(program);\n  enableAttribute('a_position', positionBuffer);\n  enableAttribute('a_texCoord', texCoordBuffer);\n  gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);\n}\n\nfunction initCanvas2D()\n{\n  ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');\n\n  if (!ctx)\n  {\n    throw new Error('Worker Canvas2D context is not available');\n  }\n}\n\nfunction render(payload)\n{\n  var outputBitmap = null;\n  var items = payload.items || [];\n\n  try\n  {\n    if (!items.length)\n    {\n      postMessage({ type: 'rendered' });\n\n      return;\n    }\n\n    width = payload.width || width;\n    height = payload.height || height;\n    backgroundColor = payload.backgroundColor || backgroundColor;\n\n    if (canvas.width !== width)\n    {\n      canvas.width = width;\n    }\n\n    if (canvas.height !== height)\n    {\n      canvas.height = height;\n    }\n\n    if (actualMode === 'worker-webgl2')\n    {\n      renderWebGL2(payload);\n    }\n    else if (actualMode === 'worker-2d')\n    {\n      renderCanvas2D(payload);\n    }\n\n    if (canvas.transferToImageBitmap)\n    {\n      outputBitmap = canvas.transferToImageBitmap();\n      postMessage({ type: 'rendered', bitmap: outputBitmap }, [ outputBitmap ]);\n      outputBitmap = null;\n    }\n    else\n    {\n      postMessage({ type: 'renderError', reason: 'OffscreenCanvas.transferToImageBitmap is not available' });\n    }\n  }\n  catch (error)\n  {\n    if (outputBitmap && outputBitmap.close)\n    {\n      outputBitmap.close();\n    }\n\n    postMessage({ type: 'renderError', reason: error.message || String(error) });\n  }\n  finally\n  {\n    closeFrames(payload.items || []);\n  }\n}\n\nfunction renderWebGL2(payload)\n{\n  var clearColor = parseColor(payload.backgroundColor || '#000');\n  var items = payload.items || [];\n\n  gl.useProgram(program);\n  gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);\n  gl.clear(gl.COLOR_BUFFER_BIT);\n  gl.activeTexture(gl.TEXTURE0);\n\n  items.forEach(function(item)\n  {\n    if (!item.frame || !item.draw)\n    {\n      return;\n    }\n\n    var texture = getTexture(item.id);\n\n    gl.bindTexture(gl.TEXTURE_2D, texture);\n    // ImageBitmap \u7684\u65B9\u5411\u5DF2\u5728 createImageBitmap(..., { imageOrientation: 'flipY' }) \u9636\u6BB5\u5904\u7406\uFF1B\n    // VideoFrame fallback \u4ECD\u4F9D\u8D56 UNPACK_FLIP_Y_WEBGL\u3002Chromium \u5BF9 ImageBitmap \u4F1A\u5FFD\u7565\u6B64\u5F00\u5173\uFF0C\n    // \u56E0\u6B64\u8FD9\u91CC\u6253\u5F00\u5B83\u4E0D\u4F1A\u9020\u6210 ImageBitmap \u4E8C\u6B21\u7FFB\u8F6C\u3002\n    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);\n    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.frame);\n\n    var draw = item.draw;\n    var viewportX = Math.round(draw.x);\n    var viewportY = Math.round(height - draw.y - draw.height);\n    var viewportWidth = Math.round(draw.width);\n    var viewportHeight = Math.round(draw.height);\n\n    if (viewportWidth <= 0 || viewportHeight <= 0)\n    {\n      return;\n    }\n\n    gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);\n    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);\n  });\n\n  gl.flush();\n}\n\nfunction renderCanvas2D(payload)\n{\n  var items = payload.items || [];\n\n  ctx.fillStyle = payload.backgroundColor || '#000';\n  ctx.fillRect(0, 0, width, height);\n\n  items.forEach(function(item)\n  {\n    if (!item.frame || !item.draw)\n    {\n      return;\n    }\n\n    ctx.drawImage(\n      item.frame,\n      item.draw.x,\n      item.draw.y,\n      item.draw.width,\n      item.draw.height\n    );\n  });\n}\n\nfunction compileShader(shaderType, shaderSource)\n{\n  var shader = gl.createShader(shaderType);\n\n  gl.shaderSource(shader, shaderSource);\n  gl.compileShader(shader);\n\n  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))\n  {\n    var message = gl.getShaderInfoLog(shader);\n\n    gl.deleteShader(shader);\n    throw new Error('Could not compile shader: ' + message);\n  }\n\n  return shader;\n}\n\nfunction createProgram(vertexShader, fragmentShader)\n{\n  var shaderProgram = gl.createProgram();\n\n  gl.attachShader(shaderProgram, vertexShader);\n  gl.attachShader(shaderProgram, fragmentShader);\n  gl.linkProgram(shaderProgram);\n\n  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))\n  {\n    var message = gl.getProgramInfoLog(shaderProgram);\n\n    gl.deleteProgram(shaderProgram);\n    throw new Error('Could not link WebGL program: ' + message);\n  }\n\n  return shaderProgram;\n}\n\nfunction enableAttribute(name, buffer)\n{\n  var location = gl.getAttribLocation(program, name);\n\n  gl.enableVertexAttribArray(location);\n  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);\n  gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);\n}\n\nfunction getTexture(id)\n{\n  if (!textures[id])\n  {\n    textures[id] = gl.createTexture();\n    gl.bindTexture(gl.TEXTURE_2D, textures[id]);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);\n    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);\n  }\n\n  return textures[id];\n}\n\nfunction removeSource(id)\n{\n  if (gl && textures[id])\n  {\n    gl.deleteTexture(textures[id]);\n  }\n\n  delete textures[id];\n}\n\nfunction closeFrames(items)\n{\n  items.forEach(function(item)\n  {\n    if (item.frame && item.frame.close)\n    {\n      item.frame.close();\n    }\n  });\n}\n\nfunction destroy()\n{\n  destroyWebGL2();\n  ctx = null;\n  canvas = null;\n}\n\nfunction destroyWebGL2()\n{\n  if (!gl)\n  {\n    return;\n  }\n\n  Object.keys(textures).forEach(function(id)\n  {\n    gl.deleteTexture(textures[id]);\n  });\n  textures = {};\n\n  if (positionBuffer)\n  {\n    gl.deleteBuffer(positionBuffer);\n  }\n\n  if (texCoordBuffer)\n  {\n    gl.deleteBuffer(texCoordBuffer);\n  }\n\n  if (program)\n  {\n    gl.deleteProgram(program);\n  }\n\n  var loseContext = gl.getExtension('WEBGL_lose_context');\n\n  if (loseContext)\n  {\n    loseContext.loseContext();\n  }\n\n  gl = null;\n  program = null;\n  positionBuffer = null;\n  texCoordBuffer = null;\n}\n\nfunction parseColor(color)\n{\n  if (!color || typeof color !== 'string')\n  {\n    return [ 0, 0, 0, 1 ];\n  }\n\n  var value = color.trim();\n\n  if (value[0] === '#')\n  {\n    return parseHexColor(value);\n  }\n\n  if (value.indexOf('rgb') === 0)\n  {\n    return parseRgbColor(value);\n  }\n\n  return [ 0, 0, 0, 1 ];\n}\n\nfunction parseHexColor(value)\n{\n  var hex = value.slice(1);\n\n  if (hex.length === 3)\n  {\n    hex = hex.split('').map(function(item)\n    {\n      return item + item;\n    }).join('');\n  }\n\n  if (hex.length !== 6)\n  {\n    return [ 0, 0, 0, 1 ];\n  }\n\n  var numberValue = parseInt(hex, 16);\n\n  if (!isFinite(numberValue))\n  {\n    return [ 0, 0, 0, 1 ];\n  }\n\n  return [\n    ((numberValue >> 16) & 255) / 255,\n    ((numberValue >> 8) & 255) / 255,\n    (numberValue & 255) / 255,\n    1\n  ];\n}\n\nfunction parseRgbColor(value)\n{\n  var matches = value.match(/rgba?\\(([^)]+)\\)/i);\n\n  if (!matches)\n  {\n    return [ 0, 0, 0, 1 ];\n  }\n\n  var parts = matches[1].split(',').map(function(item)\n  {\n    return Number(item.trim());\n  });\n\n  if (parts.length < 3 || parts.some(function(item)\n  {\n    return !isFinite(item);\n  }))\n  {\n    return [ 0, 0, 0, 1 ];\n  }\n\n  return [\n    clamp(parts[0] / 255, 0, 1),\n    clamp(parts[1] / 255, 0, 1),\n    clamp(parts[2] / 255, 0, 1),\n    clamp(parts.length > 3 ? parts[3] : 1, 0, 1)\n  ];\n}\n\nfunction clamp(value, min, max)\n{\n  return Math.min(max, Math.max(min, value));\n}\n";
+};
+},{}],80:[function(require,module,exports){
+"use strict";
+
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -33950,7 +36135,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],73:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],81:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -34102,7 +36287,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],74:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -34627,7 +36812,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],75:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -36408,7 +38593,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":73,"buffer":75,"ieee754":78}],76:[function(require,module,exports){
+},{"base64-js":81,"buffer":83,"ieee754":86}],84:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -36684,7 +38869,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":77,"_process":81}],77:[function(require,module,exports){
+},{"./common":85,"_process":89}],85:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -36978,7 +39163,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":80}],78:[function(require,module,exports){
+},{"ms":88}],86:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -37065,7 +39250,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],79:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -42456,7 +44641,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],80:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -42620,7 +44805,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],81:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -42806,7 +44991,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],82:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -43302,7 +45487,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],83:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -43317,7 +45502,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":82,"./parser":84,"./writer":85}],84:[function(require,module,exports){
+},{"./grammar":90,"./parser":92,"./writer":93}],92:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -43443,7 +45628,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":82}],85:[function(require,module,exports){
+},{"./grammar":90}],93:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -43559,5 +45744,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":82}]},{},[38])(38)
+},{"./grammar":90}]},{},[38])(38)
 });
