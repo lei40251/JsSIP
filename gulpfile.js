@@ -63,6 +63,50 @@ function getLocalTimestamp()
       .padStart(2, '0');
 }
 
+function collectPrivateMethodNames(dir)
+{
+  const names = new Set([ '_process', '_invoke', '__await' ]);
+  const walk = function(currentDir)
+  {
+    fs.readdirSync(currentDir).forEach(function(fileName)
+    {
+      const filePath = path.join(currentDir, fileName);
+      const stat = fs.statSync(filePath);
+
+      if (stat.isDirectory())
+      {
+        walk(filePath);
+
+        return;
+      }
+
+      if (!/\.js$/.test(fileName))
+      {
+        return;
+      }
+
+      const content = fs.readFileSync(filePath, 'utf8');
+      let match;
+      const classMethodPattern = /^\s+(_[A-Za-z0-9_]+)\s*\(/gm;
+      const prototypeMethodPattern = /\.prototype\.(_[A-Za-z0-9_]+)\s*=/g;
+
+      while ((match = classMethodPattern.exec(content)))
+      {
+        names.add(match[1]);
+      }
+
+      while ((match = prototypeMethodPattern.exec(content)))
+      {
+        names.add(match[1]);
+      }
+    });
+  };
+
+  walk(dir);
+
+  return Array.from(names).sort();
+}
+
 // 1. 复制文件
 function copyFiles()
 {
@@ -151,6 +195,11 @@ gulp.task('uglify', function()
       keep_fnames     : false, // 混淆函数名
       mangle          : {
         // 保留必要的名称
+        properties : {
+          regex       : /^_/,
+          keep_quoted : true,
+          reserved    : collectPrivateMethodNames(path.resolve('lib'))
+        },
         reserved : [
           'CommonHeader',
           'FloorRequest',
@@ -180,6 +229,7 @@ gulp.task('uglify', function()
         unsafe      : true,
         unsafe_math : true,
         reduce_vars : true,
+        // pure_funcs  : [ 'logger.debug', 'this._logger.debug' ],
         global_defs : {
           __DEBUG__ : false // 全局常量替换
         }
@@ -219,7 +269,7 @@ gulp.task('uglify', function()
     .pipe(gulp.dest('dist/'));
 });
 
-gulp.task('test', function()
+gulp.task('test-files', function()
 {
   const src = [
     'test/test-classes.js',
@@ -227,14 +277,25 @@ gulp.task('test', function()
     'test/test-parser.js',
     'test/test-properties.js',
     'test/test-UA-no-WebRTC.js',
-    'test/test-digestAuthentication.js'
+    'test/test-digestAuthentication.js',
+    'test/test-mixer.js'
   ];
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src));
-  // 不支持nodejs
-  // .pipe(nodeunit({ reporter: 'default' }));
 });
+
+gulp.task('mixer-test', function(done)
+{
+  require('./test/test-mixer').run()
+    .then(function()
+    {
+      done();
+    })
+    .catch(done);
+});
+
+gulp.task('test', gulp.series('test-files', 'mixer-test'));
 
 gulp.task('grammar', function(cb)
 {

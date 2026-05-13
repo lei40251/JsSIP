@@ -63,11 +63,11 @@ let recorder;
 // 虚拟背景相关
 let virtualBackgroundType;
 let engine;
+let localMediaStream;
 const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
-
 
 const extraFeatures = [];
 
@@ -775,6 +775,9 @@ ua.on('newRTCSession', function(e)
 
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
+
+    engine && engine.stop();
+    localMediaStream & localMediaStream.getTracks().forEach((track) => track.stop());
   });
 
   /**
@@ -2492,6 +2495,8 @@ async function mediaStreamProcessor(mediastream)
   {
     return mediastream;
   }
+
+  localMediaStream = mediastream;
 
   // 先取出音频
   const audioTrack = mediastream.getAudioTracks()[0];

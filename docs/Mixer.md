@@ -66,7 +66,7 @@ const mixer = new MediaStreamMixer([
 
 **参数**:
 
-- `videos`: `MediaStream | HTMLMediaElement | Array<...>` — 输入源。支持数组、单个对象、SDK 包装对象 `{ mediaStream }`
+- `videos`: `MediaStream | HTMLMediaElement | Array<...>` — 输入源。支持数组、单个对象、SDK 包装对象 `{ mediaStream }`；传入 `HTMLMediaElement` 时仅支持 `srcObject` 为 `MediaStream` 的元素，不支持普通文件 URL/MSE `video.src`
 - `options`: 配置对象：
   - `width` / `height` — 输出分辨率（grid 模式默认 1280x720）
   - `fps` — 输出帧率（默认浏览器自动）
@@ -201,7 +201,8 @@ _drawVideosToCanvas()
 
 ### 性能优化
 
-- rAF 只在 `_sources.length > 0` 时持续调度，无源时自动暂停
+- 配置 `fps` 时，rAF 只负责调度，真正的视频合成按目标帧间隔节流，避免输出 15/30fps 时仍按屏幕刷新率满负载合成
+- rAF 只在 `_sources.length > 0` 时持续调度，无源时自动暂停；最后一个源移除时会强制渲染一帧背景色，避免输出残留上一帧
 - `appendStream()` 添加源时自动恢复 rAF 循环
 - 每帧检查 `video.readyState < 2` 跳过未就绪的视频
 
@@ -225,11 +226,13 @@ _drawVideosToCanvas()
 
 ### 关键实现
 
-- **延迟初始化**: `AudioContext` 在 `getAudioStream()` 首次调用时才创建，避免浏览器自动播放策略限制
+- **延迟初始化**: `AudioContext` 只在已请求音频且存在 live 音频轨时创建，避免无音频源也占用浏览器音频资源
 - **自动恢复**: 如果 `AudioContext` 处于 `suspended` 状态，`getAudioStream()` 会 `await resume()`
-- **源替换处理**: `_connectAudio()` 检测 `source.audioStream !== currentStream` 时自动断旧连新
+- **源替换处理**: 渲染循环检测外部 `HTMLMediaElement.srcObject` 变化，并触发音频断旧连新
 - **音量控制**: 每个 source 有独立 `GainNode`，可在 `appendStream()` 时指定
-- **音频轨注入**: `getMixedStream()` 把 `AudioDestination` 的音频轨添加到视频 `MediaStream` 中
+- **音频轨注入**: `getMixedStream()` 把 `AudioDestination` 的音频轨添加到视频 `MediaStream` 中；启动时无音频、后续 append 有音频源时也会补入
+- **状态观测**: `getAudioInfo()` 区分 `not-requested`、`no-source`、`ready`、`mixing`、`suspended`、`failed`、`stopped`
+- **本地监听**: demo 里的输出 `<video>` 默认静音；添加带音频的输入源后，需要点击“监听输出”按钮才会在本机播放混音结果
 
 ---
 
@@ -245,7 +248,7 @@ const mixedStream = await mixer.getMixedStream();
 **步骤**:
 
 1. 设置 `_isStopDrawingFrames = false`（重置停止标记）
-2. 调用 `getVideoStream()` 获取视频流，保存为 `_mixedStream`
+2. 调用 `getVideoStream()` 获取或复用视频输出流，保存为 `_mixedStream`
 3. 调用 `getAudioStream()` 获取音频流
 4. 把音频流的音轨 `addTrack()` 到视频流
 5. 返回合并后的 `MediaStream`
@@ -254,15 +257,47 @@ const mixedStream = await mixer.getMixedStream();
 
 - 调用 `_drawVideosToCanvas()` 开始 rAF 循环
 - `canvas.captureStream(fps)` 抓取画布内容为视频流
-- 清理上一次 captureStream 避免内存泄漏
+- 同一 Mixer 实例内复用已有输出流；多次调用不会停止调用方已持有的旧 video track
 - 返回仅含视频轨的 `MediaStream`
 
 ### `getAudioStream()`
 
-- 创建 / 恢复 `AudioContext`
+- 标记调用方需要混音音频
+- 如果当前没有 live 音频轨，返回 `null`，暂不创建 `AudioContext`
+- 存在 live 音频轨时创建 / 恢复 `AudioContext`
 - 创建 `MediaStreamAudioDestinationNode`
-- 遍历所有 `_sources` 连接音频（跳过无 live 音频轨的源）
-- 返回 `_destination.stream`（仅含音频轨）
+- 遍历所有 `_sources` 连接音频，返回 `_destination.stream`（仅含音频轨）
+
+### `getAudioInfo()`
+
+返回当前音频状态快照：
+
+```js
+{
+  requested: true,
+  status: 'mixing',
+  contextState: 'running',
+  sourceCount: 2,
+  liveSourceCount: 2,
+  connectedSources: 2,
+  outputTracks: 1,
+  reason: '',
+  lastError: ''
+}
+```
+
+`status` 常见值：
+
+- `not-requested` — 尚未调用 `getAudioStream()` / `getMixedStream()`
+- `no-source` — 已请求音频，但当前没有 live 音频轨
+- `ready` / `mixing` — AudioContext 可用，且已连接音频源
+- `suspended` — AudioContext 仍处于浏览器挂起状态
+- `failed` — AudioContext 创建/恢复或音频源连接失败
+- `stopped` — Mixer 已停止
+
+### Renderer fallback
+
+初始化阶段按 `renderMode` 选择 Worker/WebGL2/main-2d；运行时如果 Worker 后端连续失败，Mixer 会切到主线程 Canvas2D。运行期 fallback 不切 WebGL2，因为 WorkerRenderer 已经占用了输出 canvas 的 2D context；主线程 WebGL2 运行时失败只更新状态，不跨 context 切换。
 
 ---
 
@@ -285,8 +320,11 @@ new MediaStreamMixer()
             ├── cancelAnimationFrame() + rAF 标记
             ├── clearStreams() — 释放所有源
             ├── audioContext.close()
-            └── 清理 captureStreams + canvas
+            ├── 清理 captureStreams + canvas
+            └── 标记实例不可复用
 ```
+
+`stop()` 后同一个 mixer 实例不再支持 `appendStream()`、`getVideoStream()`、`getAudioStream()` 或 `getMixedStream()`；需要重新创建实例。
 
 ### `stop()` 清理
 
@@ -294,8 +332,9 @@ new MediaStreamMixer()
 2. `cancelAnimationFrame()` — 取消当前排队帧
 3. `clearStreams()` — 逐一 `_removeSource()`，断开音频 + 释放 video 元素
 4. 断开并销毁 `AudioContext`
-5. `clearRect()` 清空画布
+5. 销毁 renderer
 6. 停止所有 `_capturedStreams` 的 tracks
+7. `_destroyed = true` — 阻止后续误复用
 
 ---
 
@@ -327,11 +366,12 @@ new MediaStreamMixer()
   │ ───────────────────────────────► │
   │                                  ├── getVideoStream()
   │                                  │   ├── _drawVideosToCanvas()
+  │                                  │   │   ├── 按 fps 判断是否需要合成当前帧
   │                                  │   │   ├── _drawModernVideosToCanvas()
   │                                  │   │   │   ├── _calcLayout()
   │                                  │   │   │   └── 每个 source → _scaleVideo() → drawImage()
   │                                  │   │   └── rAF 调度下一帧
-  │                                  │   └── canvas.captureStream() → videoStream
+  │                                  │   └── canvas.captureStream() → videoStream（后续调用复用）
   │                                  │
   │                                  ├── 保存 _mixedStream = videoStream
   │                                  │
@@ -406,6 +446,7 @@ _connectAudio(source)
 | `_removeSource(source)` | 移除源 + 释放资源 | `removeStream`, `clearStreams`, `appendStream`(slot覆盖) |
 | `_findSource(streamOrId)` | 按 stream/id/video 查找 | `removeStream` |
 | `_hasLiveAudioTrack(source)` | 是否有 live 音频轨 | `_connectAudio`, `getSources` |
+| `_updateAudioInfo(info)` | 更新音频状态快照 | `getAudioInfo`, `getAudioStream` |
 | `_hasVideoTrack(source)` | 是否有视频轨 | `_isRenderable` |
 | `_isRenderable(source)` | stream active + 有视频轨 | `_drawVideosToCanvas`, `_drawModernVideosToCanvas` |
 | `_getSourceStream(source)` | 获取当前 MediaStream | 多处调用 |
@@ -419,3 +460,4 @@ _connectAudio(source)
 | `_disconnectAudio(source)` | 断开一路音频 | `_removeSource`, `_connectAudio`(换源) |
 | `_ensureMixedStreamAudioTrack()` | 补音频轨到已返回的 mixed stream | `_connectAudio` |
 | `_addAudioTracksToStream(ts, as)` | 去重添加音频轨 | `getMixedStream` |
+| `_fallbackRendererToMain2D(reason)` | Worker/renderer 运行时失败后切主线程 2D | `_drawVideosToCanvas` |

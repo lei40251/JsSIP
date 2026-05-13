@@ -31,6 +31,7 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-outline { background: white; border: 1px solid #cbd5e1; color: var(--text); }
         .btn-outline:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .audio-monitor-row { margin-top: 8px; display: none; }
 
         /* 槽位选择器 */
         .slot-grid-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
@@ -141,6 +142,9 @@
             </div>
             <button id="btn-start" class="btn-primary" style="width:100%">▶️ 启动混流引擎</button>
             <button id="btn-stop" class="btn-danger" style="width:100%; display:none;">⏹️ 停止并释放</button>
+            <div id="audio-monitor-row" class="audio-monitor-row">
+                <button id="btn-monitor-audio" class="btn-outline" style="width:100%">🔊 监听输出</button>
+            </div>
         </div>
 
         <div class="card" id="panel-sources" style="opacity:0.5; pointer-events:none;">
@@ -193,6 +197,7 @@
                 <div>Canvas: <span id="stat-size">-</span></div>
                 <div>Layout: <span id="stat-layout">-</span></div>
                 <div>Audio: <span id="stat-audio">0</span> Ch</div>
+                <div>AudioState: <span id="stat-audio-state">-</span></div>
                 <div>Renderer: <span id="stat-renderer">-</span></div>
                 <div>Dropped: <span id="stat-dropped">0</span></div>
                 <div>Reason: <span id="stat-render-reason">-</span></div>
@@ -314,6 +319,9 @@ const app = {
     // 当前选中的目标 slot。添加新源时会传给 CRTC.Mixer.appendStream(stream, slot)。
     currentSlot: 0,
 
+    // 输出预览默认静音，只有用户点击“监听输出”后才打开本地播放，满足浏览器自动播放策略。
+    monitorAudio: false,
+
     // 缓存页面元素，避免每次操作都重复 querySelector/getElementById。
     ui: {
         slotGrid: document.getElementById('slot-selector'),
@@ -321,11 +329,14 @@ const app = {
         thumbs: document.getElementById('thumbs-container'),
         btnStart: document.getElementById('btn-start'),
         btnStop: document.getElementById('btn-stop'),
+        audioMonitorRow: document.getElementById('audio-monitor-row'),
+        btnMonitorAudio: document.getElementById('btn-monitor-audio'),
         panelSources: document.getElementById('panel-sources'),
         statusBadge: document.getElementById('status-badge'),
         overlay: document.getElementById('grid-overlay'),
         statsLayout: document.getElementById('stat-layout'),
         statsAudio: document.getElementById('stat-audio'),
+        statsAudioState: document.getElementById('stat-audio-state'),
         statsSize: document.getElementById('stat-size'),
         statsRenderer: document.getElementById('stat-renderer'),
         statsDropped: document.getElementById('stat-dropped'),
@@ -347,6 +358,8 @@ const app = {
         // 绑定启动/停止按钮。输入源按钮通过 HTML 上的 onclick 直接调用 app.addXxx()。
         this.ui.btnStart.onclick = () => this.start();
         this.ui.btnStop.onclick = () => this.stop();
+        this.ui.btnMonitorAudio.onclick = () => this.toggleMonitorAudio();
+        this.updateMonitorAudioUI();
     },
 
     selectSlot(idx) {
@@ -371,6 +384,8 @@ const app = {
     },
 
     async start() {
+        if(this.mixer) this.stop();
+
         const [w, h] = document.getElementById('cfg-out-res').value.split('x').map(Number);
         const fps = parseInt(document.getElementById('cfg-fps').value);
         const renderMode = document.getElementById('cfg-render-mode').value;
@@ -380,14 +395,19 @@ const app = {
         // renderMode 用于演示新增的渲染后端选择能力，auto 会按 Worker WebGL2 → 主线程 WebGL2 → Worker 2D → 主线程 2D 降级。
         // 初始不传输入源，后续通过 appendStream(stream, slot) 动态添加。
         this.mixer = new CRTC.Mixer([], { width: w, height: h, fps: fps, renderMode: renderMode });
+        this.monitorAudio = false;
+        this.ui.mixedVideo.muted = true;
+        this.updateMonitorAudioUI();
         
         try {
             // getMixedStream() 返回混合后的 MediaStream，可直接赋给 video 预览，也可推给 RTCPeerConnection。
             const outStream = await this.mixer.getMixedStream();
             this.ui.mixedVideo.srcObject = outStream;
+            this.ui.mixedVideo.muted = !this.monitorAudio;
             
             this.ui.btnStart.style.display = 'none';
             this.ui.btnStop.style.display = 'block';
+            this.ui.audioMonitorRow.style.display = 'block';
             this.ui.panelSources.style.opacity = '1';
             this.ui.panelSources.style.pointerEvents = 'auto';
             this.ui.statusBadge.innerText = "运行中";
@@ -401,6 +421,10 @@ const app = {
             this.startViz(outStream);
             this.startRenderInfoLoop();
         } catch (e) {
+            if(this.mixer) {
+                this.mixer.stop();
+                this.mixer = null;
+            }
             alert(e.message);
         }
     },
@@ -420,9 +444,12 @@ const app = {
             if(s.stopInternal) s.stopInternal();
         });
         this.localStreams = [];
+        this.monitorAudio = false;
         this.ui.mixedVideo.srcObject = null;
+        this.ui.mixedVideo.muted = true;
         this.ui.btnStart.style.display = 'block';
         this.ui.btnStop.style.display = 'none';
+        this.ui.audioMonitorRow.style.display = 'none';
         this.ui.panelSources.style.opacity = '0.5';
         this.ui.panelSources.style.pointerEvents = 'none';
         this.ui.statusBadge.innerText = "已停止";
@@ -430,10 +457,39 @@ const app = {
         this.ui.statusBadge.style.color = "#475569";
         this.ui.thumbs.innerHTML = '<div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>';
         this.ui.overlay.innerHTML = '';
+        this.ui.statsAudioState.innerText = '-';
         this.ui.statsRenderer.innerText = '-';
         this.ui.statsDropped.innerText = '0';
         this.ui.statsRenderReason.innerText = '-';
+        this.updateMonitorAudioUI();
         this.updateSlotUI();
+    },
+
+    async toggleMonitorAudio() {
+        if(!this.mixer || !this.ui.mixedVideo.srcObject) return;
+
+        const enable = !this.monitorAudio;
+        this.monitorAudio = enable;
+        this.ui.mixedVideo.muted = !enable;
+
+        if(enable) {
+            try {
+                await this.ui.mixedVideo.play();
+            } catch(e) {
+                this.monitorAudio = false;
+                this.ui.mixedVideo.muted = true;
+                alert("监听输出失败: " + e.message);
+            }
+        }
+
+        this.updateMonitorAudioUI();
+    },
+
+    updateMonitorAudioUI() {
+        if(!this.ui.btnMonitorAudio) return;
+
+        this.ui.btnMonitorAudio.innerText = this.monitorAudio ? '🔇 停止监听' : '🔊 监听输出';
+        this.ui.btnMonitorAudio.disabled = !this.mixer;
     },
 
     async _handleStreamAdd(stream, label) {
@@ -572,7 +628,10 @@ const app = {
         // 统计信息全部从 Mixer.getSources() 快照得出，避免依赖 SDK 私有字段。
         const sources = this.mixer.getSources();
         const ac = sources.filter(s => s.hasAudio).length;
+        const audioInfo = this.mixer.getAudioInfo ? this.mixer.getAudioInfo() : null;
+
         this.ui.statsAudio.innerText = ac;
+        this.ui.statsAudioState.innerText = audioInfo ? `${audioInfo.status} (${audioInfo.connectedSources}/${audioInfo.liveSourceCount})` : '-';
         this.updateOverlayFromSources(sources);
         this.updateRenderInfo();
     },
@@ -708,6 +767,7 @@ const app = {
 };
 
 app.init();
+window.addEventListener('pagehide', () => app.stop());
 </script>
 </body>
 </html>
