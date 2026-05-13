@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx mocha *)",
+      "Bash(node -e \"const m = require\\('./lib/Mixer'\\); console.log\\(typeof m, m.name\\)\")",
+      "Bash(node test/test-mixer.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "mcp__plugin_everything-claude-code_github__create_pull_request",
+      "Bash(where gh *)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}
