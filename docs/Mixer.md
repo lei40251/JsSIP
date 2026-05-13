@@ -1,27 +1,64 @@
 # MediaStreamMixer — 混流器模块
 
-**文件**: [lib/Mixer.js](../lib/Mixer.js)
+**入口**: [lib/Mixer.js](../lib/Mixer.js)（barrel 文件，重定向到 MixerController）
+**核心**: [lib/mixer-core/MixerController.js](../lib/mixer-core/MixerController.js)
 **导出**: `class MediaStreamMixer`
 
-> 将多路 `MediaStream` / `HTMLMediaElement` 合并为单路音视频输出流。视频用 Canvas 2D 合成，音频用 WebAudio API 混音。
+> 将多路 `MediaStream` / `HTMLMediaElement` 合并为单路音视频输出流。
+> 视频使用 Canvas 合成，支持 WebGL2 / Canvas2D / Worker 多后端；音频用 WebAudio API 混音。
 
 ---
 
 ## 目录
 
-1. [核心概念](#1-核心概念)
-2. [构造与配置](#2-构造与配置)
-3. [输入源管理](#3-输入源管理)
-4. [视频混流](#4-视频混流)
-5. [音频混流](#5-音频混流)
-6. [输出流获取](#6-输出流获取)
-7. [生命周期](#7-生命周期)
-8. [内部调用时序](#8-内部调用时序)
-9. [私有方法速查](#9-私有方法速查)
+1. [模块结构](#1-模块结构)
+2. [核心概念](#2-核心概念)
+3. [构造与配置](#3-构造与配置)
+4. [输入源管理](#4-输入源管理)
+5. [视频混流](#5-视频混流)
+6. [音频混流](#6-音频混流)
+7. [输出流获取](#7-输出流获取)
+8. [生命周期](#8-生命周期)
+9. [内部调用时序](#9-内部调用时序)
+10. [方法速查](#10-方法速查)
 
 ---
 
-## 1. 核心概念
+## 1. 模块结构
+
+MediaStreamMixer 采用**调解者模式**，核心类 `MixerController` 作为调解者协调各子模块：
+
+```
+lib/
+├── Mixer.js                           # 入口（重定向到 MixerController）
+└── mixer-core/
+    ├── MixerController.js             # 主控制器，协调所有子模块
+    ├── SourceRegistry.js              # 输入源注册表
+    ├── LayoutEngine.js                # 视频布局计算引擎
+    ├── AudioMixer.js                  # WebAudio 混音模块
+    ├── OutputStreamManager.js         # 输出流生命周期管理
+    ├── RenderLoop.js                  # 帧循环与渲染后端管理
+    ├── MixerConfig.js                 # 配置归一化工具（纯函数）
+    └── MixerDomAdapter.js             # DOM 元素创建适配器
+```
+
+**职责边界**:
+
+| 子模块 | 职责 |
+|--------|------|
+| `SourceRegistry` | 源的增删、ID 生成、slot 分配、状态查询 |
+| `LayoutEngine` | 按布局模式和 slot 计算每路视频的绘制矩形 |
+| `AudioMixer` | 延迟创建 AudioContext，每路独立 GainNode，WebAudio 混音 |
+| `OutputStreamManager` | canvas.captureStream()、音频轨注入、停止清理 |
+| `RenderLoop` | rAF 帧循环、fps 节流、渲染器创建/故障降级 |
+| `MixerConfig` | 参数校验、归一化、默认值填充（纯函数） |
+| `MixerDomAdapter` | 创建隐藏 canvas/video 元素 |
+
+**状态委派**: MixerController 不持有子模块状态的副本。19 个旧私有属性（`_sources`、`_renderer`、`_audioContext` 等）通过 `Object.defineProperty` 只读 getter 直接委派到子模块，无需手动同步。
+
+---
+
+## 2. 核心概念
 
 ### 两种布局模式
 
@@ -33,20 +70,40 @@
 ### 数据流路径
 
 ```
-MediaStream/HTMLVideoElement
+MediaStream / HTMLVideoElement
     │
-    ├──► _createSource() ──► _sources[]
-    │                           │
-    ├──► video (HTMLVideoElement) ──► _drawVideosToCanvas() ──► canvas ──► captureStream()
-    │                                                                         │
-    ├──► audio (WebAudio) ──► MediaStreamSourceNode ──► GainNode ──► MediaStreamAudioDestinationNode
-    │                                                                         │
-    └──► getMixedStream() ──► 合并 video stream + audio tracks ──► 最终输出 MediaStream
+    ├──► SourceRegistry.add() ──► sources[]
+    │                                 │
+    ├──► video (HTMLVideoElement) ──► RenderLoop.renderFrame()
+    │                                     │
+    │                              LayoutEngine.createRenderPayload()
+    │                                     │
+    │                              renderer.render(payload) → canvas
+    │                                     │
+    │                              OutputStreamManager.getVideoStream()
+    │                                     │
+    │                              canvas.captureStream() → videoStream
+    │
+    ├──► AudioMixer._connectSource()
+    │       createMediaStreamSource() → GainNode → destination
+    │
+    └──► OutputStreamManager.addAudioTracksToStream()
+            videoStream + audioStream.tracks → 最终输出 MediaStream
 ```
+
+### 渲染后端
+
+按 `renderMode` 配置自动选择：
+
+- `auto`：优先 Worker WebGL2 → Worker Canvas2D → 主线程 WebGL2 → 主线程 Canvas2D
+- `worker-webgl2` / `worker-2d`：Worker 线程（OffscreenCanvas），不阻塞主线程
+- `main-webgl2` / `main-2d`：主线程渲染
+
+运行时 Worker 渲染器连续失败 2 次后自动降级到 `main-2d`。
 
 ---
 
-## 2. 构造与配置
+## 3. 构造与配置
 
 ### `new MediaStreamMixer(videos, options)`
 
@@ -60,91 +117,64 @@ const mixer = new MediaStreamMixer([
   fps: 30,
   backgroundColor: '#000',
   audioGain: 0.8,
-  layoutMode: 'grid'  // 'grid' | 'legacy'
+  layoutMode: 'grid',   // 'grid' | 'legacy'
+  renderMode: 'auto'     // 渲染后端选择
 });
 ```
 
 **参数**:
 
-- `videos`: `MediaStream | HTMLMediaElement | Array<...>` — 输入源。支持数组、单个对象、SDK 包装对象 `{ mediaStream }`；传入 `HTMLMediaElement` 时仅支持 `srcObject` 为 `MediaStream` 的元素，不支持普通文件 URL/MSE `video.src`
-- `options`: 配置对象：
-  - `width` / `height` — 输出分辨率（grid 模式默认 1280x720）
-  - `fps` — 输出帧率（默认浏览器自动）
+- `videos`: `MediaStream | HTMLMediaElement | Array<...>` — 输入源。
+  支持数组、单个对象、SDK 包装对象 `{ mediaStream }`；
+  `HTMLMediaElement` 需使用 `srcObject=MediaStream`。
+
+- `options`:
+  - `width` / `height` — 输出分辨率（grid 模式默认 1280x720，legacy 模式动态）
+  - `fps` — 输出帧率（不传则浏览器自动选择）
   - `backgroundColor` — 画布底色（默认 `'#000'`）
   - `audioGain` — 全局默认音量（默认 0.8）
   - `layoutMode` — `'grid'` | `'legacy'`
+  - `renderMode` — `'auto'` | `'worker-webgl2'` | `'main-webgl2'` | `'worker-2d'` | `'main-2d'`
+  - `workerUrl` — 可选外部 Worker 脚本地址（不传使用 Blob Worker）
+  - `dropFrameWhenBusy` — Worker 忙时是否丢帧（默认 `true`）
+  - `maxFrameQueue` — 最大帧队列（默认 1）
 
-### 关键初始化步骤
+### 初始化步骤
 
-1. 检测 `options` 是否有显式配置项 → 决定 `_layoutMode`
-2. 创建 `canvas` + `2d context`，grid 模式设置固定分辨率
-3. 调用 `appendStream(videos)` 将初始源加入混流
-4. 音频相关对象（`AudioContext` 等）延迟创建 — 直到 `getAudioStream()` 才初始化
+1. `MixerConfig.create(options)` 归一化配置 → 检测 `hasModernOptions` → 决定 `_layoutMode`
+2. 创建 `MixerDomAdapter` + 离屏 `canvas`
+3. 创建子模块：`SourceRegistry` → `OutputStreamManager` → `RenderLoop` → `AudioMixer` → `LayoutEngine`
+4. grid 模式预置 canvas 尺寸
+5. `appendStream(videos)` 将初始源加入混流
+6. 音频系统延迟创建，直到 `getAudioStream()` 才初始化
 
 ---
 
-## 3. 输入源管理
+## 4. 输入源管理
 
 ### `appendStream(videos, optionsOrSlot)`
 
-向混流器添加新源。
-
 ```js
-// 添加单个源，自动分配 slot
-mixer.appendStream(stream);
-
-// 添加到指定 slot（会隐式升级为 grid 模式）
-mixer.appendStream(stream, 3);
+mixer.appendStream(stream);                          // 自动分配 slot
+mixer.appendStream(stream, 3);                       // 指定 slot（隐式升级 grid）
 mixer.appendStream(stream, { slot: 3, gain: 0.5 });
-
-// 批量添加
-mixer.appendStream([streamA, streamB], { gain: 0.7 });
+mixer.appendStream([streamA, streamB], { gain: 0.7 }); // 批量添加
 ```
 
 **逻辑**:
 
-1. 如果 `optionsOrSlot` 是数字或包含 `.slot` → 调用 `_ensureModernLayout()` 升级为 grid 模式
-2. 遍历 `videos` 数组，对每个输入：
-   - 调用 `_normalizeSourceOptions()` 统一 options 格式
-   - `_createSource()` 创建内部 source 对象（创建隐藏 `<video>` 元素）
-   - grid 模式下，同 slot 已有源则覆盖（先 remove 旧的）
-   - 如果 `_audioContext` 已存在，连接该源的音频
-3. 如果 rAF 循环因无源暂停过，重新启动
+1. 如果 `optionsOrSlot` 含 `.slot` → `_ensureModernLayout()` 升级为 grid
+2. 遍历 `videos`，`SourceRegistry.add()` 创建/覆盖源
+3. 音频系统已激活时触发 `AudioMixer.scheduleRefresh()`
+4. 恢复 rAF 循环
 
 ### `removeStream(streamOrId)`
 
-```js
-mixer.removeStream(stream);         // 通过 MediaStream 对象
-mixer.removeStream(stream.id);      // 通过 stream id
-mixer.removeStream(source.id);      // 通过内部 source id
-```
-
-- 通过 `_findSource()` 查找匹配的 source
-- 调用 `_removeSource()` 断开音频、释放 video 元素、从 `_sources` 移除
-
-### `clearStreams()`
-
-移除所有源，遍历 `_sources` 切片逐个调用 `_removeSource()`。
-
-### Source 内部结构
-
-```js
-{
-  id:              string,   // 唯一标识，优先用 MediaStream.id
-  stream:          MediaStream,
-  video:           HTMLVideoElement,
-  slot:            number | null,
-  gain:            number,
-  audioSourceNode: MediaStreamSourceNode | null,
-  gainNode:        GainNode | null,
-  audioStream:     MediaStream | null,
-  ownedVideo:      boolean   // true=mixer 创建的隐藏 video，false=外部传入的 HTMLMediaElement
-}
-```
+通过 `SourceRegistry.find()` → `SourceRegistry.remove()` 移除，自动断开音频并释放 video 元素。
 
 ### `getSources()`
 
-返回快照数组，不暴露内部引用：
+返回快照数组：
 
 ```js
 [
@@ -153,33 +183,51 @@ mixer.removeStream(source.id);      // 通过内部 source id
 ]
 ```
 
+### Source 内部结构
+
+```js
+{
+  id:              string,   // 优先 MediaStream.id（冲突追加 -1 -2 后缀）
+  stream:          MediaStream,
+  video:           HTMLVideoElement,
+  slot:            number | null,
+  gain:            number,
+  audioSourceNode: MediaStreamAudioSourceNode | null,  // 由 AudioMixer 连接
+  gainNode:        GainNode | null,
+  audioStream:     MediaStream | null,
+  ownedVideo:      boolean   // true=mixer 创建的隐藏 video
+}
+```
+
+### Slot 分配（grid 模式）
+
+- 指定 slot 时放入目标位置，同 slot 旧源被覆盖
+- 未指定 slot 时从 0 自增分配最小编号空位
+- 批量添加时 slot 在数组内递增
+
 ---
 
-## 4. 视频混流
+## 5. 视频混流
 
-### 机制
-
-每一帧的流程：
+### 帧循环（RenderLoop）
 
 ```
 requestAnimationFrame
     │
     ▼
-_drawVideosToCanvas()
+RenderLoop.renderFrame(timestamp, forceRender)
     │
-    ├── legacy 模式
-    │   ├── 设置 canvas 尺寸（640/1280 × 480/960）
-    │   ├── 筛选可渲染源（stream.active + 有 video track）
-    │   └── _drawImage(video, idx) — 每个源画到对应单元格
-    │
-    └── grid 模式
-        ├── _prepareModernCanvas() — 固定输出分辨率
-        ├── 填充背景色
-        ├── _calcLayout() — 根据最大 slot 计算行列数
-        └── 按 slot 计算每个源的 cell 位置，_scaleVideo() 等比缩放后 drawImage
+    ├── fps 节流检查：未到目标间隔时跳过
+    ├── 同步外部音频源（HTMLVideoElement 换源检测）
+    ├── LayoutEngine.createRenderPayload(layoutMode)
+    │       ├── legacy：固定宫格，逐源计算绘制矩形
+    │       └── grid：_calcLayout() → 按 slot 排列
+    ├── renderer.render(payload) → 绘制到 canvas
+    ├── 检查 Worker 健康状态 → 连续失败 2 次降级
+    └── _scheduleNextFrame()
 ```
 
-### `_calcLayout()` 网格计算
+### LayoutEngine 网格计算
 
 | 源数 / slot 范围 | 布局 |
 |-----------------|------|
@@ -190,92 +238,41 @@ _drawVideosToCanvas()
 | 7-9 | 3×3 |
 | 10+ | `ceil(sqrt(n)) × ceil(n/cols)` |
 
-### `_scaleVideo(width, height, targetW, targetH)`
+### 等比缩放
 
-等比缩放 + 居中算法：
-
-- 以视频宽高比与目标单元格宽高比比较
-- 取能填满单元格的缩放比（按较宽边对齐）
-- 计算 `offsetX` / `offsetY` 实现居中
-- 无效输入返回 `null`
-
-### 性能优化
-
-- 配置 `fps` 时，rAF 只负责调度，真正的视频合成按目标帧间隔节流，避免输出 15/30fps 时仍按屏幕刷新率满负载合成
-- rAF 只在 `_sources.length > 0` 时持续调度，无源时自动暂停；最后一个源移除时会强制渲染一帧背景色，避免输出残留上一帧
-- `appendStream()` 添加源时自动恢复 rAF 循环
-- 每帧检查 `video.readyState < 2` 跳过未就绪的视频
+`_scaleVideo()` 实现 cover 效果：按目标区域等比缩放，超出部分裁剪，居中显示。
 
 ---
 
-## 5. 音频混流
+## 6. 音频混流
 
 ### 机制
 
 ```
-每个 source:
-  MediaStream ──► createMediaStreamSource() ──► GainNode ──┐
-                                                            │
-所有 source 汇总 ───────────────────────────────────────────┤
-                                                            ▼
-                                             MediaStreamAudioDestinationNode
-                                                      │
-                                                      ▼
-                                              _destination.stream
+MediaStream → createMediaStreamSource() → GainNode ─┐
+                                                     │
+所有源汇总 ──────────────────────────────────────────┤
+                                                     ▼
+                              MediaStreamAudioDestinationNode
+                                      │
+                                      ▼
+                              destination.stream
 ```
 
-### 关键实现
+### AudioMixer 关键行为
 
-- **延迟初始化**: `AudioContext` 只在已请求音频且存在 live 音频轨时创建，避免无音频源也占用浏览器音频资源
-- **自动恢复**: 如果 `AudioContext` 处于 `suspended` 状态，`getAudioStream()` 会 `await resume()`
-- **源替换处理**: 渲染循环检测外部 `HTMLMediaElement.srcObject` 变化，并触发音频断旧连新
-- **音量控制**: 每个 source 有独立 `GainNode`，可在 `appendStream()` 时指定
-- **音频轨注入**: `getMixedStream()` 把 `AudioDestination` 的音频轨添加到视频 `MediaStream` 中；启动时无音频、后续 append 有音频源时也会补入
-- **状态观测**: `getAudioInfo()` 区分 `not-requested`、`no-source`、`ready`、`mixing`、`suspended`、`failed`、`stopped`
-- **本地监听**: demo 里的输出 `<video>` 默认静音；添加带音频的输入源后，需要点击“监听输出”按钮才会在本机播放混音结果
-
----
-
-## 6. 输出流获取
-
-### `getMixedStream()` — 主入口
-
-```js
-const mixedStream = await mixer.getMixedStream();
-// 直接传给 RTCPeerConnection / <video> 等消费端
-```
-
-**步骤**:
-
-1. 设置 `_isStopDrawingFrames = false`（重置停止标记）
-2. 调用 `getVideoStream()` 获取或复用视频输出流，保存为 `_mixedStream`
-3. 调用 `getAudioStream()` 获取音频流
-4. 把音频流的音轨 `addTrack()` 到视频流
-5. 返回合并后的 `MediaStream`
-
-### `getVideoStream()`
-
-- 调用 `_drawVideosToCanvas()` 开始 rAF 循环
-- `canvas.captureStream(fps)` 抓取画布内容为视频流
-- 同一 Mixer 实例内复用已有输出流；多次调用不会停止调用方已持有的旧 video track
-- 返回仅含视频轨的 `MediaStream`
-
-### `getAudioStream()`
-
-- 标记调用方需要混音音频
-- 如果当前没有 live 音频轨，返回 `null`，暂不创建 `AudioContext`
-- 存在 live 音频轨时创建 / 恢复 `AudioContext`
-- 创建 `MediaStreamAudioDestinationNode`
-- 遍历所有 `_sources` 连接音频，返回 `_destination.stream`（仅含音频轨）
+- **延迟初始化**: `AudioContext` 只在已请求音频且存在 live 音频轨时创建
+- **自动恢复**: `AudioContext` 处于 `suspended` 时自动 `resume()`
+- **换源检测**: 每帧渲染前 `syncExternalSourceAudio()` 检测 HTMLVideoElement 换源
+- **异步刷新**: `scheduleRefresh()` 用于不能 await 的路径，pending 标记确保不丢失刷新请求
+- **音量独立**: 每路独立 GainNode，appendStream 时可指定 gain
 
 ### `getAudioInfo()`
-
-返回当前音频状态快照：
 
 ```js
 {
   requested: true,
-  status: 'mixing',
+  status: 'mixing',        // not-requested | no-source | ready | mixing | suspended | failed | stopped
   contextState: 'running',
   sourceCount: 2,
   liveSourceCount: 2,
@@ -286,178 +283,136 @@ const mixedStream = await mixer.getMixedStream();
 }
 ```
 
-`status` 常见值：
+---
 
-- `not-requested` — 尚未调用 `getAudioStream()` / `getMixedStream()`
-- `no-source` — 已请求音频，但当前没有 live 音频轨
-- `ready` / `mixing` — AudioContext 可用，且已连接音频源
-- `suspended` — AudioContext 仍处于浏览器挂起状态
-- `failed` — AudioContext 创建/恢复或音频源连接失败
-- `stopped` — Mixer 已停止
+## 7. 输出流获取
 
-### Renderer fallback
+### `getMixedStream()`
 
-初始化阶段按 `renderMode` 选择 Worker/WebGL2/main-2d；运行时如果 Worker 后端连续失败，Mixer 会切到主线程 Canvas2D。运行期 fallback 不切 WebGL2，因为 WorkerRenderer 已经占用了输出 canvas 的 2D context；主线程 WebGL2 运行时失败只更新状态，不跨 context 切换。
+```js
+const mixedStream = await mixer.getMixedStream();
+```
+
+**步骤**:
+
+1. `RenderLoop.resume()`
+2. `getVideoStream()` → 启动 rAF + `canvas.captureStream()`
+3. `setMixedStream()` 保存引用（供后续音频注入）
+4. `getAudioStream()` → 初始化 AudioContext、连接所有音频源
+5. `addAudioTracksToStream()` → 音频轨去重添加到视频流
+
+**音频延迟注入**: `getMixedStream()` 返回后通过 `appendStream()` 添加有音频的源时，AudioMixer 自动将音频轨补充到已返回的流。
+
+### `getRenderInfo()`
+
+```js
+{
+  requestedMode: 'auto',
+  actualMode: 'worker-webgl2',
+  isWorker: true, isWebGL2: true, isFallback: false,
+  droppedFrames: 0, renderedFrames: 42,
+  fps: 30, width: 1280, height: 720
+}
+```
 
 ---
 
-## 7. 生命周期
+## 8. 生命周期
 
 ```
 new MediaStreamMixer()
+    ├── appendStream() → 可多次调用
     │
-    ├── appendStream(stream)
-    │       │
-    │       ▼
-    ├── getMixedStream() ──► rAF 循环启动
-    │       │                    │
-    │       ├── appendStream() ──┘ 可继续添加源
-    │       ├── removeStream()     移除源
-    │       │
-    │       ▼
+    ├── getMixedStream() / getVideoStream()
+    │       └── rAF 循环启动
+    │             ├── 有源 → 持续渲染
+    │             ├── 无源 → 一帧背景色后暂停
+    │             └── 新源加入 → 自动恢复
+    │
     └── stop()
-            │
-            ├── cancelAnimationFrame() + rAF 标记
-            ├── clearStreams() — 释放所有源
-            ├── audioContext.close()
-            ├── 清理 captureStreams + canvas
-            └── 标记实例不可复用
+            ├── RenderLoop.stop() — cancelAnimationFrame
+            ├── clearStreams() — 移除所有源
+            ├── AudioMixer.stop() — 关闭 AudioContext
+            ├── RenderLoop.destroy() — 销毁渲染器
+            ├── OutputStreamManager.stop() — 停止所有 tracks
+            └── _destroyed = true
 ```
 
-`stop()` 后同一个 mixer 实例不再支持 `appendStream()`、`getVideoStream()`、`getAudioStream()` 或 `getMixedStream()`；需要重新创建实例。
-
-### `stop()` 清理
-
-1. `_isStopDrawingFrames = true` — 阻止 rAF 下一帧
-2. `cancelAnimationFrame()` — 取消当前排队帧
-3. `clearStreams()` — 逐一 `_removeSource()`，断开音频 + 释放 video 元素
-4. 断开并销毁 `AudioContext`
-5. 销毁 renderer
-6. 停止所有 `_capturedStreams` 的 tracks
-7. `_destroyed = true` — 阻止后续误复用
+**`stop()` 后**: 同一实例不再可用，需 `new MediaStreamMixer()`。
 
 ---
 
-## 8. 内部调用时序
-
-### 完整混流流程
+## 9. 内部调用时序
 
 ```
-调用方                              Mixer
-  │                                  │
-  │  new Mixer([streamA])            │
-  │ ───────────────────────────────► │
-  │                                  ├── _hasMixerOptions() → false
-  │                                  ├── _layoutMode = 'legacy'
-  │                                  ├── _prepareModernCanvas() (跳过)
-  │                                  └── appendStream([streamA])
-  │                                       └── _createSource(streamA)
-  │                                           ├── _createSourceId()
-  │                                           └── _mediaStreamToVideoElement()
-  │                                               └── <video>.play()
+调用方                              MixerController
+  │                                      │
+  │  new Mixer([streamA])                │
+  │ ─────────────────────────────────►   │
+  │                                      ├── MixerConfig.create(options)
+  │                                      ├── 创建子模块（SourceRegistry / RenderLoop / AudioMixer / LayoutEngine）
+  │                                      ├── grid 模式预置 canvas 尺寸
+  │                                      └── appendStream([streamA])
+  │                                           └── SourceRegistry.add(streamA)
+  │                                               ├── _createSource() → ID + video 元素
+  │                                               └── slot 冲突检测（grid 模式）
   │
   │  appendStream(streamB, 5)
-  │ ───────────────────────────────► │
-  │                                  ├── _ensureModernLayout() → 升级为 grid
-  │                                  ├── _createSource(streamB, { slot: 5 })
-  │                                  └── slot 冲突检测
+  │ ─────────────────────────────────►   │
+  │                                      ├── _ensureModernLayout() → grid 升级
+  │                                      └── SourceRegistry.add(streamB, { slot: 5 })
   │
   │  await getMixedStream()
-  │ ───────────────────────────────► │
-  │                                  ├── getVideoStream()
-  │                                  │   ├── _drawVideosToCanvas()
-  │                                  │   │   ├── 按 fps 判断是否需要合成当前帧
-  │                                  │   │   ├── _drawModernVideosToCanvas()
-  │                                  │   │   │   ├── _calcLayout()
-  │                                  │   │   │   └── 每个 source → _scaleVideo() → drawImage()
-  │                                  │   │   └── rAF 调度下一帧
-  │                                  │   └── canvas.captureStream() → videoStream（后续调用复用）
-  │                                  │
-  │                                  ├── 保存 _mixedStream = videoStream
-  │                                  │
-  │                                  ├── getAudioStream()
-  │                                  │   ├── new AudioContext()
-  │                                  │   ├── createMediaStreamDestination()
-  │                                  │   ├── 每个 source → _connectAudio()
-  │                                  │   │   └── createMediaStreamSource() → GainNode → Destination
-  │                                  │   └── return audioStream
-  │                                  │
-  │                                  ├── _addAudioTracksToStream(videoStream, audioStream)
-  │                                  └── return mixedStream
-  │
-  │  removeStream(streamA)
-  │ ───────────────────────────────► │
-  │                                  ├── _findSource(streamA)
-  │                                  ├── _removeSource(sourceA)
-  │                                  │   ├── _disconnectAudio()
-  │                                  │   └── source.video.pause() + remove()
-  │                                  └── _syncVideos()
+  │ ─────────────────────────────────►   │
+  │                                      ├── OutputStreamManager.getVideoStream()
+  │                                      │   ├── drawFirstFrame()
+  │                                      │   │   ├── LayoutEngine.createRenderPayload()
+  │                                      │   │   └── renderer.render(payload)
+  │                                      │   └── canvas.captureStream() → videoStream
+  │                                      │
+  │                                      ├── setMixedStream(videoStream)
+  │                                      │
+  │                                      ├── AudioMixer._refreshAudioConnections()
+  │                                      │   ├── _ensureAudioSystem() → new AudioContext()
+  │                                      │   └── _connectSource() → 遍历所有源
+  │                                      │
+  │                                      └── addAudioTracksToStream(videoStream, audioStream)
   │
   │  stop()
-  │ ───────────────────────────────► │
-  │                                  ├── cancelAnimationFrame()
-  │                                  ├── clearStreams()
-  │                                  ├── audioContext.close()
-  │                                  └── 清理 resources
-```
-
-### 音频连接时序（详细）
-
-```
-getAudioStream() 或 appendStream() 触发
-    │
-    ▼
-_connectAudio(source)
-    │
-    ├── _getSourceStream() → 同步 srcObject
-    │
-    ├── 检查 audioContext 和 audioDestination 就绪
-    │
-    ├── 检查 _hasLiveAudioTrack()
-    │
-    ├── [已连过?] → 检查 audioStream === currentStream?
-    │   ├── 相同 → return false（无需重复连）
-    │   └── 不同 → _disconnectAudio()（先断旧的）
-    │
-    └── 创建新的音频链路:
-        createMediaStreamSource(stream)
-            → 连到 GainNode (gain = source.gain)
-            → 连到 MediaStreamAudioDestination
-        → 记录节点引用 + 调用 _ensureMixedStreamAudioTrack()
+  │ ─────────────────────────────────►   │
+  │                                      ├── RenderLoop.stop()
+  │                                      ├── clearStreams()
+  │                                      ├── AudioMixer.stop()
+  │                                      ├── RenderLoop.destroy()
+  │                                      └── OutputStreamManager.stop()
 ```
 
 ---
 
-## 9. 私有方法速查
+## 10. 方法速查
 
-| 方法 | 作用 | 调用者 |
-|------|------|--------|
-| `_hasMixerOptions(options)` | 检测是否传了新版配置项 | constructor |
-| `_normalizePositiveInteger(v, fallback)` | 校验正整数 | constructor |
-| `_normalizeSlot(v, index)` | 校验 slot + 递增 | `_normalizeSourceOptions` |
-| `_normalizeGain(v, fallback)` | 校验音量值 | constructor, `_normalizeSourceOptions`, `_createSource` |
-| `_normalizeSourceOptions(options, idx)` | 统一 appendStream 参数格式 | `appendStream` |
-| `_ensureModernLayout()` | legacy → grid 升级 | `appendStream` |
-| `_prepareModernCanvas()` | 设置 grid 固定画布尺寸 | constructor, `_ensureModernLayout`, `_drawModernVideosToCanvas` |
-| `_syncVideos()` | `_videos` ← `_sources[].video` | `appendStream`, `_removeSource` |
-| `_createSourceId(stream, video)` | 生成唯一 source id | `_createSource` |
-| `_createSource(input, options)` | 创建内部 source 对象 | `appendStream` |
-| `_getNextSlot()` | 找第一个空 slot | `_createSource` |
-| `_removeSource(source)` | 移除源 + 释放资源 | `removeStream`, `clearStreams`, `appendStream`(slot覆盖) |
-| `_findSource(streamOrId)` | 按 stream/id/video 查找 | `removeStream` |
-| `_hasLiveAudioTrack(source)` | 是否有 live 音频轨 | `_connectAudio`, `getSources` |
-| `_updateAudioInfo(info)` | 更新音频状态快照 | `getAudioInfo`, `getAudioStream` |
-| `_hasVideoTrack(source)` | 是否有视频轨 | `_isRenderable` |
-| `_isRenderable(source)` | stream active + 有视频轨 | `_drawVideosToCanvas`, `_drawModernVideosToCanvas` |
-| `_getSourceStream(source)` | 获取当前 MediaStream | 多处调用 |
-| `_scaleVideo(w, h, tw, th)` | 等比缩放 + 居中 | `_drawImage`, `_drawModernVideosToCanvas` |
-| `_drawImage(video, idx)` | legacy 单格绘制 | `_drawVideosToCanvas`(legacy) |
-| `_calcLayout()` | 计算网格行列 | `_drawModernVideosToCanvas` |
-| `_drawModernVideosToCanvas()` | grid 模式绘制全帧 | `_drawVideosToCanvas` |
-| `_drawVideosToCanvas()` | 主 rAF 回调 | rAF, `getVideoStream`, `appendStream` |
-| `_mediaStreamToVideoElement(s)` | 创建隐藏 `<video>` | `_createSource` |
-| `_connectAudio(source)` | 连接一路音频 | `appendStream`, `getAudioStream` |
-| `_disconnectAudio(source)` | 断开一路音频 | `_removeSource`, `_connectAudio`(换源) |
-| `_ensureMixedStreamAudioTrack()` | 补音频轨到已返回的 mixed stream | `_connectAudio` |
-| `_addAudioTracksToStream(ts, as)` | 去重添加音频轨 | `getMixedStream` |
-| `_fallbackRendererToMain2D(reason)` | Worker/renderer 运行时失败后切主线程 2D | `_drawVideosToCanvas` |
+### MixerController 公开 API
+
+| 方法 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
+| `appendStream(videos, optionsOrSlot?)` | `MediaStream/HTMLVideoElement/Array`, `number/Object` | `boolean` | 添加输入源，同 slot 覆盖 |
+| `removeStream(streamOrId)` | `MediaStream/string` | `boolean` | 移除指定源 |
+| `clearStreams()` | — | — | 移除所有源 |
+| `getSources()` | — | `Array<Object>` | 源信息快照 |
+| `getRenderInfo()` | — | `Object` | 渲染后端状态 |
+| `getAudioInfo()` | — | `Object` | 音频系统状态 |
+| `getMixedStream()` | — | `Promise<MediaStream>` | 完整音视频混合流 |
+| `getVideoStream()` | — | `MediaStream` | 仅视频轨 |
+| `getAudioStream()` | — | `Promise<MediaStream\|null>` | 仅音频轨 |
+| `stop()` | — | — | 释放所有资源 |
+
+### 子模块入口
+
+各子模块有完整中文注释，直接查看源码：
+- [SourceRegistry.js](../lib/mixer-core/SourceRegistry.js)
+- [LayoutEngine.js](../lib/mixer-core/LayoutEngine.js)
+- [AudioMixer.js](../lib/mixer-core/AudioMixer.js)
+- [OutputStreamManager.js](../lib/mixer-core/OutputStreamManager.js)
+- [RenderLoop.js](../lib/mixer-core/RenderLoop.js)
+- [MixerConfig.js](../lib/mixer-core/MixerConfig.js)
+- [MixerDomAdapter.js](../lib/mixer-core/MixerDomAdapter.js)
