@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265132341
+ * CRTC v1.13.0.2026514858
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210264682 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210281716 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210264682');
+debug('version %s', '1.13.0.405210281716');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210264682';
+    return '1.13.0.405210281716';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":92}],39:[function(require,module,exports){
@@ -17278,6 +17278,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 },{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":90}],41:[function(require,module,exports){
 "use strict";
 
+/**
+ * Mixer 模块入口
+ *
+ * 这是 MediaStreamMixer 的公共入口点。旧代码通过 require('./Mixer') 引用，
+ * 实际实现已拆分到 mixer-core/MixerController.js。
+ * 此文件保留为 barrel 文件，确保向后兼容。
+ *
+ * @module Mixer
+ * @see module:mixer-core/MixerController
+ */
 module.exports = require('./mixer-core/MixerController');
 },{"./mixer-core/MixerController":75}],42:[function(require,module,exports){
 "use strict";
@@ -33364,7 +33374,25 @@ module.exports = /*#__PURE__*/function () {
 "use strict";
 
 /**
- * WebAudio mixer for MediaStreamMixer sources.
+ * AudioMixer — WebAudio 混音模块
+ *
+ * 负责混流器的音频处理部分：
+ *   - 延迟创建 AudioContext（用户交互后才初始化）
+ *   - 每路输入源独立 GainNode 控制音量
+ *   - 汇总到 MediaStreamAudioDestinationNode 输出
+ *   - 支持动态增删源、外部换源检测、自动重连
+ *
+ * @module AudioMixer
+ */
+
+/**
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {Object} options.logger - 日志记录器
+ * @param {Function} options.getDestroyed - 返回混流器是否已销毁的回调
+ * @param {Object} options.sourceRegistry - SourceRegistry 实例
+ * @param {Function} options.onAudioTrackAvailable - 音频轨可用时的回调（用于补充到 mixed stream）
  */
 function AudioMixer(options) {
   options = options || {};
@@ -33372,12 +33400,26 @@ function AudioMixer(options) {
   this._getDestroyed = options.getDestroyed;
   this._sourceRegistry = options.sourceRegistry;
   this._onAudioTrackAvailable = options.onAudioTrackAvailable;
+
+  /** @type {Array<MediaStreamAudioSourceNode>} 已连接的 WebAudio 源节点列表 */
   this._audioSources = [];
+
+  /** @type {MediaStreamAudioDestinationNode|null} 混音输出目标节点 */
   this._audioDestination = null;
+
+  /** @type {AudioContext|null} WebAudio 上下文（延迟创建） */
   this._audioContext = null;
+
+  /** @type {boolean} 是否已请求获取音频流 */
   this._audioRequested = false;
+
+  /** @type {Promise|null} 正在进行的音频刷新操作 */
   this._audioRefreshPromise = null;
+
+  /** @type {boolean} 刷新过程中又有新的刷新请求标记 */
   this._audioRefreshPending = false;
+
+  /** @type {Object} 音频系统状态信息（调试用） */
   this._audioInfo = {
     requested: false,
     status: 'not-requested',
@@ -33390,6 +33432,13 @@ function AudioMixer(options) {
     lastError: ''
   };
 }
+
+/**
+ * 获取混合后的音频流。
+ * 初始化 AudioContext（延迟创建），连接所有源的音频到 destination。
+ *
+ * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
+ */
 AudioMixer.prototype.getAudioStream = function () {
   this._audioRequested = true;
   this._updateAudioInfo({
@@ -33398,6 +33447,12 @@ AudioMixer.prototype.getAudioStream = function () {
   });
   return this._refreshAudioConnections();
 };
+
+/**
+ * 计划一次异步音频刷新。
+ * 适用于不能直接 await 的路径（如 appendStream 循环内）。
+ * 如果已有正在进行的刷新，标记 pending 并在完成后自动重刷。
+ */
 AudioMixer.prototype.scheduleRefresh = function () {
   var _this = this;
   if (!this._audioRequested || this._getDestroyed()) {
@@ -33424,6 +33479,14 @@ AudioMixer.prototype.scheduleRefresh = function () {
     return stream || null;
   });
 };
+
+/**
+ * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
+ *
+ * 遍历所有源，检查 stream 引用是否变化。如果发现换源：
+ *   - 已有音频连接的源：断开旧连接，标记需要刷新
+ *   - 新出现音频轨的源：标记需要刷新
+ */
 AudioMixer.prototype.syncExternalSourceAudio = function () {
   var _this2 = this;
   if (!this._audioRequested && !this._audioContext) {
@@ -33433,11 +33496,15 @@ AudioMixer.prototype.syncExternalSourceAudio = function () {
   this._sourceRegistry.sources.forEach(function (source) {
     var previousStream = source.stream;
     var currentStream = _this2._sourceRegistry.getStream(source);
+
+    // 已有音频连接但 stream 变化了，断开旧连接
     if (source.audioSourceNode && source.audioStream !== currentStream) {
       _this2.disconnectSource(source);
       needsRefresh = true;
       return;
     }
+
+    // stream 引用变化且有音频轨，需要刷新连接
     if (currentStream && currentStream !== previousStream && _this2._sourceRegistry.hasLiveAudioTrack(source)) {
       needsRefresh = true;
     }
@@ -33446,6 +33513,17 @@ AudioMixer.prototype.syncExternalSourceAudio = function () {
     this.scheduleRefresh();
   }
 };
+
+/**
+ * 断开一路源的音频连接，释放 WebAudio 节点。
+ *
+ * 调用场景：
+ *   - removeStream() 移除源时
+ *   - appendStream() 同 slot 覆盖时
+ *   - 外部 HTMLVideoElement 换源检测触发时
+ *
+ * @param {Object} source - 内部 source 对象
+ */
 AudioMixer.prototype.disconnectSource = function (source) {
   var audioSourceNode = source.audioSourceNode;
   if (source.gainNode) {
@@ -33463,10 +33541,27 @@ AudioMixer.prototype.disconnectSource = function (source) {
     });
   }
 };
+
+/**
+ * 获取当前音频系统状态快照。
+ * 返回副本，外部修改不影响内部状态。
+ *
+ * @returns {Object} 音频状态信息
+ */
 AudioMixer.prototype.getInfo = function () {
   this._updateAudioInfo();
   return Object.assign({}, this._audioInfo);
 };
+
+/**
+ * 停止音频系统，释放所有资源。
+ *
+ * 清理步骤：
+ *   1. 断开并清空 AudioDestination 节点
+ *   2. 关闭 AudioContext
+ *   3. 清空源节点列表
+ *   4. 重置请求状态
+ */
 AudioMixer.prototype.stop = function () {
   if (this._audioDestination) {
     try {
@@ -33487,6 +33582,15 @@ AudioMixer.prototype.stop = function () {
     reason: 'Mixer stopped'
   });
 };
+
+/**
+ * 确保音频系统已初始化（创建 AudioContext + Destination）。
+ *
+ * 如果浏览器不支持 AudioContext 或恢复失败，Promise resolve false。
+ * AudioContext 在用户交互后自动 resume（浏览器 autoplay 政策）。
+ *
+ * @returns {Promise<boolean>} true=音频系统就绪
+ */
 AudioMixer.prototype._ensureAudioSystem = function () {
   var _this3 = this;
   if (this._getDestroyed()) {
@@ -33505,6 +33609,8 @@ AudioMixer.prototype._ensureAudioSystem = function () {
     }
     this._audioContext = new AudioContextConstructor();
   }
+
+  // 浏览器自动暂停时，尝试恢复
   var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
   return resumePromise.then(function () {
     if (_this3._getDestroyed()) {
@@ -33527,6 +33633,18 @@ AudioMixer.prototype._ensureAudioSystem = function () {
     return false;
   });
 };
+
+/**
+ * 刷新所有音频连接。
+ *
+ * 核心流程：
+ *   1. 断开已无音频轨的旧源连接
+ *   2. 如果没有 live 音频源，返回 null
+ *   3. 确保音频系统已初始化
+ *   4. 遍历所有源，为有音频轨且未连接的源建立 WebAudio 连接
+ *
+ * @returns {Promise<MediaStream|null>} audio destination stream，或 null
+ */
 AudioMixer.prototype._refreshAudioConnections = function () {
   var _this4 = this;
   if (!this._audioRequested || this._getDestroyed()) {
@@ -33536,11 +33654,15 @@ AudioMixer.prototype._refreshAudioConnections = function () {
     });
     return Promise.resolve(null);
   }
+
+  // 先清理已无音频轨的旧连接
   this._sourceRegistry.sources.forEach(function (source) {
     if (source.audioSourceNode && !_this4._sourceRegistry.hasLiveAudioTrack(source)) {
       _this4.disconnectSource(source);
     }
   });
+
+  // 没有 live 音频源，跳过
   if (!this._sourceRegistry.hasAnyLiveAudioTrack()) {
     this._logger.debug('No live audio sources, skip audio stream creation');
     this._updateAudioInfo({
@@ -33575,6 +33697,16 @@ AudioMixer.prototype._refreshAudioConnections = function () {
     return _this4._audioDestination.stream;
   });
 };
+
+/**
+ * 连接一路源的音频到混音输出。
+ *
+ * 流程：createMediaStreamSource → GainNode → destination
+ * 如果源已有音频连接且 stream 未变则跳过；如果 stream 变了则先断开再重连。
+ *
+ * @param {Object} source - 内部 source 对象
+ * @returns {boolean} true=成功连接
+ */
 AudioMixer.prototype._connectSource = function (source) {
   var stream = this._sourceRegistry.getStream(source);
   if (!this._audioContext || !this._audioDestination || !this._sourceRegistry.hasLiveAudioTrack(source)) {
@@ -33611,6 +33743,12 @@ AudioMixer.prototype._connectSource = function (source) {
     return false;
   }
 };
+
+/**
+ * 更新音频状态信息（合并更新方式）。
+ *
+ * @param {Object} [info] - 要更新的字段（可选，不传则只同步计数器）
+ */
 AudioMixer.prototype._updateAudioInfo = function (info) {
   var _this5 = this;
   Object.assign(this._audioInfo, {
@@ -33624,6 +33762,8 @@ AudioMixer.prototype._updateAudioInfo = function (info) {
     outputTracks: this._audioDestination ? this._audioDestination.stream.getAudioTracks().length : 0
   }, info || {});
 };
+
+// 只读 getter 暴露给 MixerController 的 prototype getter 使用
 Object.defineProperties(AudioMixer.prototype, {
   requested: {
     get: function get() {
@@ -33661,7 +33801,27 @@ module.exports = AudioMixer;
 "use strict";
 
 /**
- * Builds renderer payloads from Mixer sources and layout mode.
+ * LayoutEngine — 混流器布局引擎
+ *
+ * 根据输入源的数量、slot 分配和布局模式（legacy / grid），
+ * 计算每路视频在输出画布上的绘制位置和尺寸，生成渲染 payload。
+ *
+ * 布局模式：
+ *   - legacy：固定 640x480 单元格，最多 2x2，向后兼容旧版调用方
+ *   - grid：按 slot 和输出画布比例自动计算网格，支持动态增减
+ *
+ * @module LayoutEngine
+ */
+
+/**
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {Object} options.sourceRegistry - SourceRegistry 实例，用于获取输入源列表
+ * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+ * @param {Object} options.config - 混流配置对象
+ * @param {Function} options.prepareModernCanvas - 设置 grid 模式 canvas 尺寸的方法
+ * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
  */
 function LayoutEngine(options) {
   options = options || {};
@@ -33671,12 +33831,31 @@ function LayoutEngine(options) {
   this._prepareModernCanvas = options.prepareModernCanvas;
   this._resizeRenderer = options.resizeRenderer;
 }
+
+/**
+ * 根据布局模式生成一帧的渲染 payload。
+ *
+ * @param {string} layoutMode - 布局模式：'legacy' | 'grid'
+ * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
+ */
 LayoutEngine.prototype.createRenderPayload = function (layoutMode) {
   if (layoutMode !== 'legacy') {
     return this._createModernRenderPayload();
   }
   return this._createLegacyRenderPayload();
 };
+
+/**
+ * 创建 legacy 模式的渲染 payload。
+ *
+ * 固定布局规则：
+ *   - 1 路源：640x480，单格
+ *   - 2 路源：1280x480，左右并列
+ *   - 3~4 路源：1280x960，2x2 宫格
+ * 每个单元格 640x480，源按索引依次放入。
+ *
+ * @returns {Object} 渲染 payload
+ */
 LayoutEngine.prototype._createLegacyRenderPayload = function () {
   var _this = this;
   var renderSources = this._sourceRegistry.sources.filter(function (source) {
@@ -33714,6 +33893,15 @@ LayoutEngine.prototype._createLegacyRenderPayload = function () {
     items: items
   };
 };
+
+/**
+ * 创建 grid 模式的渲染 payload。
+ *
+ * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
+ * 每个源按 slot 计算所在行列位置，支持动态增减源。
+ *
+ * @returns {Object} 渲染 payload
+ */
 LayoutEngine.prototype._createModernRenderPayload = function () {
   var _this2 = this;
   this._prepareModernCanvas();
@@ -33748,6 +33936,17 @@ LayoutEngine.prototype._createModernRenderPayload = function () {
     items: items
   };
 };
+
+/**
+ * 计算 grid 模式的网格行列数。
+ *
+ * 根据最大 slot 编号和总源数确定网格大小：
+ *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
+ *   3~4 路 → 2x2      5~6 路 → 按比例 2x3 或 3x2
+ *   7~9 路 → 3x3      10+ 路 → 尽可能接近正方形
+ *
+ * @returns {Object} { cols: number, rows: number }
+ */
 LayoutEngine.prototype._calcLayout = function () {
   var maxSlot = -1;
   this._sourceRegistry.sources.forEach(function (source) {
@@ -33793,6 +33992,18 @@ LayoutEngine.prototype._calcLayout = function () {
     rows: rows
   };
 };
+
+/**
+ * 计算一路视频在画布上的实际绘制矩形。
+ * 保持视频原始宽高比，在目标区域内居中显示。
+ *
+ * @param {HTMLVideoElement} video - video 元素
+ * @param {number} targetX - 目标区域左上角 X
+ * @param {number} targetY - 目标区域左上角 Y
+ * @param {number} targetWidth - 目标区域宽度
+ * @param {number} targetHeight - 目标区域高度
+ * @returns {Object|null} 绘制矩形 { x, y, width, height }，无法计算时返回 null
+ */
 LayoutEngine.prototype._calcDrawRect = function (video, targetX, targetY, targetWidth, targetHeight) {
   var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
   if (!newVideo || !newVideo.width || !newVideo.height) {
@@ -33805,6 +34016,17 @@ LayoutEngine.prototype._calcDrawRect = function (video, targetX, targetY, target
     height: newVideo.height
   };
 };
+
+/**
+ * 等比缩放视频，使其完全覆盖目标区域（封面效果 / cover）。
+ * 缩放后超出目标区域的部分被裁剪，视频在区域内居中。
+ *
+ * @param {number} width - 视频原始宽度（videoWidth）
+ * @param {number} height - 视频原始高度（videoHeight）
+ * @param {number} targetWidth - 目标区域宽度
+ * @param {number} targetHeight - 目标区域高度
+ * @returns {Object|null} { width, height, offsetX, offsetY }，无效尺寸返回 null
+ */
 LayoutEngine.prototype._scaleVideo = function (width, height, targetWidth, targetHeight) {
   var newWidth;
   var newHeight;
@@ -33813,10 +34035,12 @@ LayoutEngine.prototype._scaleVideo = function (width, height, targetWidth, targe
     return null;
   }
   if (width / height >= targetWidth / targetHeight) {
+    // 视频更宽（相对目标）：按目标宽度缩放，高度超出部分上下裁剪
     scale = targetWidth / width;
     newHeight = height * scale;
     newWidth = targetWidth;
   } else {
+    // 视频更高（相对目标）：按目标高度缩放，宽度超出部分左右裁剪
     scale = targetHeight / height;
     newWidth = width * scale;
     newHeight = targetHeight;
@@ -33833,14 +34057,44 @@ module.exports = LayoutEngine;
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+/**
+ * MixerConfig — 混流器配置归一化工具模块
+ *
+ * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
+ * 所有方法均为纯函数（无副作用），方便单元测试。
+ *
+ * @module MixerConfig
+ */
+
+/** 新版混流配置的识别关键字列表 */
 var MODERN_OPTION_KEYS = ['width', 'height', 'fps', 'layoutMode', 'backgroundColor', 'audioGain', 'renderMode', 'workerUrl', 'dropFrameWhenBusy', 'maxFrameQueue', 'preserveDrawingBuffer'];
+
+/** 合法的渲染后端模式集合 */
 var VALID_RENDER_MODES = {
   auto: true,
+  // 自动选择（优先 Worker WebGL2）
   'worker-webgl2': true,
+  // Worker 线程 WebGL2
   'main-webgl2': true,
+  // 主线程 WebGL2
   'worker-2d': true,
-  'main-2d': true
+  // Worker 线程 Canvas2D
+  'main-2d': true // 主线程 Canvas2D（最兼容）
 };
+
+/**
+ * 创建归一化的混流配置对象。
+ *
+ * 根据传入的 options 参数，检测是否使用了新版配置项（如 width/height/fps），
+ * 自动决定布局模式（legacy 或 grid），并对每个字段做合法性校验与默认值填充。
+ *
+ * @param {Object} [options={}] - 原始配置参数
+ * @returns {Object} 归一化后的配置对象
+ * @returns {boolean} returns.hasModernOptions - 是否显式传了新版配置项
+ * @returns {boolean} returns.hasExplicitRenderMode - 是否显式指定了渲染后端
+ * @returns {string} returns.layoutMode - 布局模式：'legacy' | 'grid'
+ * @returns {Object} returns.config - 归一化后的具体配置
+ */
 exports.create = function (options) {
   options = options || {};
   var hasModernOptions = exports.hasMixerOptions(options);
@@ -33864,17 +34118,43 @@ exports.create = function (options) {
     }
   };
 };
+
+/**
+ * 检测 options 中是否包含新版配置项。
+ * 旧版调用方不传任何配置时返回 false，保持 legacy 布局兼容。
+ *
+ * @param {Object} options - 用户传入的配置
+ * @returns {boolean} true=至少包含一个新版配置项
+ */
 exports.hasMixerOptions = function (options) {
   return Boolean(options && MODERN_OPTION_KEYS.some(function (key) {
     return Object.prototype.hasOwnProperty.call(options, key);
   }));
 };
+
+/**
+ * 归一化渲染模式字符串。
+ * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
+ *
+ * @param {*} value - 原始传入的 renderMode
+ * @param {string} fallback - 非法或未传时使用的备选值
+ * @returns {string} 合法的渲染模式
+ */
 exports.normalizeRenderMode = function (value, fallback) {
   if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
     return value;
   }
   return fallback || 'auto';
 };
+
+/**
+ * 归一化为正整数。
+ * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
+ *
+ * @param {*} value - 原始输入值
+ * @param {number|null} fallback - 非法时使用的备选值
+ * @returns {number|null} 归一化后的正整数，或 fallback
+ */
 exports.normalizePositiveInteger = function (value, fallback) {
   var numberValue = Number(value);
   if (Number.isFinite(numberValue) && numberValue > 0) {
@@ -33882,6 +34162,15 @@ exports.normalizePositiveInteger = function (value, fallback) {
   }
   return fallback;
 };
+
+/**
+ * 归一化 slot 值。
+ * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
+ *
+ * @param {*} value - 原始 slot 值
+ * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+ * @returns {number|null} 归一化后的 slot，非法则返回 null
+ */
 exports.normalizeSlot = function (value, index) {
   var numberValue = Number(value);
   if (!Number.isFinite(numberValue)) {
@@ -33889,6 +34178,15 @@ exports.normalizeSlot = function (value, index) {
   }
   return Math.max(0, Math.floor(numberValue)) + index;
 };
+
+/**
+ * 归一化音量增益值。
+ * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
+ *
+ * @param {*} value - 原始增益值
+ * @param {number} fallback - 非法时的备选值
+ * @returns {number} 归一化后的增益值（>= 0）
+ */
 exports.normalizeGain = function (value, fallback) {
   var numberValue = Number(value);
   if (Number.isFinite(numberValue) && numberValue >= 0) {
@@ -33896,6 +34194,18 @@ exports.normalizeGain = function (value, fallback) {
   }
   return fallback;
 };
+
+/**
+ * 统一 appendStream() 第二个参数的格式。
+ * 支持两种调用方式：
+ *   appendStream(stream, 3)               → 数字作为 slot
+ *   appendStream(stream, { slot, gain })  → 对象解构
+ *
+ * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
+ * @param {number} index - 数组索引，批量添加时 slot 递增
+ * @param {number} defaultGain - 未指定 gain 时使用的默认值
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined }
+ */
 exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   var options = {};
   if (typeof optionsOrSlot === 'number') {
@@ -34908,23 +35218,53 @@ Object.defineProperties(module.exports.prototype, {
 "use strict";
 
 /**
- * Small DOM helper for Mixer-owned media elements.
+ * MixerDomAdapter — 混流器 DOM 元素创建适配器
+ *
+ * 负责创建和管理混流器内部使用的 DOM 元素：
+ *   - 离屏 canvas：用于合成视频帧
+ *   - 隐藏 video 元素：用于播放每个 MediaStream
+ *
+ * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
+ *
+ * @module MixerDomAdapter
+ */
+
+/**
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {Object} options.config - 混流配置对象（含 width/height 等）
+ * @param {Object} options.logger - 日志记录器
  */
 function MixerDomAdapter(options) {
   options = options || {};
   this._config = options.config;
   this._logger = options.logger;
 }
+
+/**
+ * 创建一个隐藏的离屏 canvas 元素。
+ * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
+ *
+ * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
+ */
 MixerDomAdapter.prototype.createCanvas = function () {
   var canvas = document.createElement('canvas');
   canvas.setAttribute('style', 'display:none');
   return canvas;
 };
+
+/**
+ * 将 canvas 尺寸设置为配置值（grid 模式）。
+ * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
+ *
+ * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
+ */
 MixerDomAdapter.prototype.prepareModernCanvas = function (canvas) {
   var width = this._config.width || 1280;
   var height = this._config.height || 720;
 
-  // Setting canvas width/height clears it, so only touch dimensions when needed.
+  // canvas width/height 设置时会清空画布，只在尺寸变化时才写
   if (canvas.width !== width) {
     canvas.width = width;
   }
@@ -34932,6 +35272,14 @@ MixerDomAdapter.prototype.prepareModernCanvas = function (canvas) {
     canvas.height = height;
   }
 };
+
+/**
+ * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
+ * video 元素属性：display:none、muted、autoplay、playsinline。
+ *
+ * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
+ * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
+ */
 MixerDomAdapter.prototype.createVideoElement = function (mediaStream) {
   var _this = this;
   var video = document.createElement('video');
@@ -34952,23 +35300,63 @@ module.exports = MixerDomAdapter;
 "use strict";
 
 /**
- * Owns canvas captureStream outputs and mixed stream track composition.
+ * OutputStreamManager — 混流器输出流管理
+ *
+ * 负责混流器输出流的生命周期管理：
+ *   - canvas.captureStream() 获取视频流
+ *   - 音频轨注入到已返回的混合流（延迟添加音频场景）
+ *   - 停止时清理所有捕获的流轨道
+ *
+ * @module OutputStreamManager
+ */
+
+/**
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+ * @param {Object} options.config - 混流配置
+ * @param {Object} options.logger - 日志记录器
  */
 function OutputStreamManager(options) {
   options = options || {};
   this._canvas = options.canvas;
   this._config = options.config;
   this._logger = options.logger;
+
+  /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
   this._mixedStream = null;
+
+  /** @type {Array<MediaStream>} 所有通过 captureStream 创建的流的列表（用于停止时清理） */
   this._capturedStreams = [];
+
+  /** @type {MediaStream|null} 当前活跃的 captureStream 引用 */
   this._capturedStream = null;
+
+  /** @type {MediaStream|null} 输出视频流（仅含视频轨） */
   this._videoStream = null;
 }
+
+/**
+ * 检测当前视频流是否仍有 live（活跃）状态的视频轨。
+ *
+ * @returns {boolean} true=视频流存在且至少有一条 live 视频轨
+ */
 OutputStreamManager.prototype.hasLiveVideoStream = function () {
   return Boolean(this._videoStream && this._videoStream.getVideoTracks().some(function (track) {
     return track.readyState === 'live';
   }));
 };
+
+/**
+ * 获取视频输出流。
+ *
+ * 首次调用时先绘制一帧（确保 canvas 有内容），然后执行
+ * canvas.captureStream() 获取原始流，将其视频轨添加到新的 MediaStream 返回。
+ *
+ * @param {Function} drawFirstFrame - 绘制首帧的回调
+ * @returns {MediaStream} 仅包含视频轨的输出流
+ */
 OutputStreamManager.prototype.getVideoStream = function (drawFirstFrame) {
   var _this = this;
   if (this.hasLiveVideoStream()) {
@@ -34989,9 +35377,22 @@ OutputStreamManager.prototype.getVideoStream = function (drawFirstFrame) {
   this._capturedStreams.push(capturedStream);
   return this._videoStream;
 };
+
+/**
+ * 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨。
+ *
+ * @param {MediaStream} stream - 混合流（视频流，可能后续添加音频）
+ */
 OutputStreamManager.prototype.setMixedStream = function (stream) {
   this._mixedStream = stream;
 };
+
+/**
+ * 将音频流中的音轨去重地添加到目标流中。
+ *
+ * @param {MediaStream} targetStream - 目标流（一般是 video stream）
+ * @param {MediaStream} audioStream - 音频流（audio destination stream）
+ */
 OutputStreamManager.prototype.addAudioTracksToStream = function (targetStream, audioStream) {
   if (!targetStream || !audioStream) {
     return;
@@ -35004,6 +35405,16 @@ OutputStreamManager.prototype.addAudioTracksToStream = function (targetStream, a
     }
   });
 };
+
+/**
+ * 将音频轨补充到已返回的 mixed stream 中。
+ *
+ * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
+ * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨
+ * 注入到已返回的流。
+ *
+ * @param {MediaStream} audioStream - 音频流
+ */
 OutputStreamManager.prototype.ensureMixedStreamAudioTrack = function (audioStream) {
   var _this2 = this;
   if (!this._mixedStream || !audioStream || this._mixedStream.getAudioTracks().length > 0) {
@@ -35013,6 +35424,16 @@ OutputStreamManager.prototype.ensureMixedStreamAudioTrack = function (audioStrea
     _this2._mixedStream.addTrack(track);
   });
 };
+
+/**
+ * 停止所有输出流，释放资源。
+ *
+ * 清理步骤：
+ *   1. 清空内部引用
+ *   2. 停止所有 captureStream 的 tracks
+ *   3. 清空 capturedStreams 列表
+ *   4. 清除 canvas 上的 stream 引用
+ */
 OutputStreamManager.prototype.stop = function () {
   this._mixedStream = null;
   this._videoStream = null;
@@ -35025,6 +35446,8 @@ OutputStreamManager.prototype.stop = function () {
   this._capturedStreams = [];
   this._canvas.stream = null;
 };
+
+// 只读 getter 暴露给 MixerController 的 prototype getter 使用
 Object.defineProperties(OutputStreamManager.prototype, {
   mixedStream: {
     get: function get() {
@@ -35051,11 +35474,32 @@ module.exports = OutputStreamManager;
 },{}],78:[function(require,module,exports){
 "use strict";
 
+/**
+ * RenderLoop — 混流器渲染循环
+ *
+ * 负责混流器的视频渲染节奏控制：
+ *   - 通过 requestAnimationFrame 驱动帧循环
+ *   - 按配置的 fps 节流，避免不必要的绘制
+ *   - 管理渲染后端的生命周期（创建、销毁、故障降级）
+ *   - 检测 Worker 渲染器故障，自动降级到主线程 Canvas2D
+ *
+ * @module RenderLoop
+ */
+
 var RendererFactory = require('../mixer-renderer/RendererFactory');
 var MainCanvas2DRenderer = require('../mixer-renderer/MainCanvas2DRenderer');
 
 /**
- * Owns Mixer rendering cadence and renderer lifecycle.
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+ * @param {Object} options.config - 混流配置
+ * @param {Object} options.logger - 日志记录器
+ * @param {Function} options.getSources - 返回当前源列表的回调
+ * @param {Function} options.createRenderPayload - 创建渲染 payload 的函数
+ * @param {Function} options.syncExternalSourceAudio - 同步外部源音频的函数
+ * @param {Function} options.onStateChange - 状态变化回调（已弃用，保留为空函数）
  */
 function RenderLoop(options) {
   options = options || {};
@@ -35066,52 +35510,110 @@ function RenderLoop(options) {
   this._createRenderPayload = options.createRenderPayload;
   this._syncExternalSourceAudio = options.syncExternalSourceAudio;
   this._onStateChange = options.onStateChange;
+
+  /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
   this._renderer = null;
+
+  /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
   this._animationId = null;
+
+  /** @type {number} 上一次真正执行合成的时间戳（performance.now） */
   this._lastRenderTime = 0;
+
+  /** @type {number} 目标帧间隔（毫秒），由 fps 计算，0 表示不节流 */
   this._renderFrameInterval = this._config.fps ? 1000 / this._config.fps : 0;
+
+  /** @type {number} 连续渲染失败次数，用于诊断渲染后端异常 */
   this._renderErrorCount = 0;
+
+  /** @type {number} 连续 renderer 失败次数，达到阈值后切换到主线程 Canvas2D */
   this._rendererErrorCount = 0;
+
+  /** @type {boolean} 停止标记；设为 true 时 rAF 回调直接返回 */
   this._stopped = false;
+
+  // bind 一次避免每帧创建新函数
   this._boundRenderFrame = this.renderFrame.bind(this);
 }
+
+/**
+ * 恢复渲染循环（清除停止标记）。
+ */
 RenderLoop.prototype.resume = function () {
   this._stopped = false;
-  this._notifyStateChange();
 };
+
+/**
+ * 启动渲染循环。
+ * 先恢复再调度下一帧。
+ */
 RenderLoop.prototype.start = function () {
   this.resume();
   this._scheduleNextFrame();
 };
+
+/**
+ * 停止渲染循环。
+ * 取消待处理的 rAF，设置停止标记。
+ */
 RenderLoop.prototype.stop = function () {
   this._stopped = true;
   if (this._animationId) {
     window.cancelAnimationFrame(this._animationId);
     this._animationId = null;
   }
-  this._notifyStateChange();
 };
+
+/**
+ * 重置帧计时器。
+ * 在下一次渲染时忽略 fps 节流，立即合成一帧。
+ * 用于刚添加源时需要立即刷新画面的场景。
+ */
 RenderLoop.prototype.resetFrameTiming = function () {
   this._lastRenderTime = 0;
-  this._notifyStateChange();
 };
+
+/**
+ * 确保渲染后端已创建。
+ * 首次调用时通过 RendererFactory.createRenderer 根据配置创建实际渲染器。
+ *
+ * @returns {BaseRenderer} 当前渲染后端
+ */
 RenderLoop.prototype.ensureRenderer = function () {
   if (!this._renderer) {
     this._renderer = RendererFactory.createRenderer(this._canvas, this._config);
-    this._notifyStateChange();
   }
   return this._renderer;
 };
+
+/**
+ * 调整渲染器输出尺寸。
+ *
+ * @param {number} width - 新宽度
+ * @param {number} height - 新高度
+ */
 RenderLoop.prototype.resizeRenderer = function (width, height) {
   if (this._renderer) {
     this._renderer.resize(width, height);
   }
 };
+
+/**
+ * 从渲染器中移除一路源的绘制数据。
+ *
+ * @param {string} sourceId - 要移除的源 ID
+ */
 RenderLoop.prototype.removeSource = function (sourceId) {
   if (this._renderer && this._renderer.removeSource) {
     this._renderer.removeSource(sourceId);
   }
 };
+
+/**
+ * 获取当前渲染后端状态信息。
+ *
+ * @returns {Object} 渲染状态快照
+ */
 RenderLoop.prototype.getRenderInfo = function () {
   if (!this._renderer) {
     return {
@@ -35130,6 +35632,21 @@ RenderLoop.prototype.getRenderInfo = function () {
   }
   return this._renderer.getInfo();
 };
+
+/**
+ * 渲染一帧（requestAnimationFrame 回调）。
+ *
+ * 流程：
+ *   1. 检查停止标记，已停止则直接返回
+ *   2. 检查 fps 节流（是否已达到目标帧间隔），未到时跳过绘制
+ *   3. 同步外部音频源状态（检测 HTMLVideoElement 换源）
+ *   4. 构建渲染 payload 并交给 renderer 绘制
+ *   5. 检查渲染器健康状态（Worker 故障检测、错误计数）
+ *   6. 调度下一帧 rAF
+ *
+ * @param {number} [timestamp] - rAF 传入的高精度时间戳
+ * @param {boolean} [forceRender=false] - 是否强制渲染（忽略 fps 节流）
+ */
 RenderLoop.prototype.renderFrame = function (timestamp, forceRender) {
   if (this._stopped) {
     return;
@@ -35153,8 +35670,12 @@ RenderLoop.prototype.renderFrame = function (timestamp, forceRender) {
     this._handleRenderError(error);
   }
   this._scheduleNextFrame();
-  this._notifyStateChange();
 };
+
+/**
+ * 销毁渲染循环。
+ * 停止帧循环并销毁渲染后端，释放资源。
+ */
 RenderLoop.prototype.destroy = function () {
   this.stop();
   this._lastRenderTime = 0;
@@ -35162,8 +35683,18 @@ RenderLoop.prototype.destroy = function () {
     this._renderer.destroy();
     this._renderer = null;
   }
-  this._notifyStateChange();
 };
+
+/**
+ * 运行时降级到主线程 Canvas2D 渲染器。
+ *
+ * Worker 渲染器运行时失败后切到 main-2d。只在以下条件满足时降级：
+ *   - 当前渲染器不是 main-2d
+ *   - 当前是 Worker 渲染器或已标记为 worker-failed
+ *
+ * @param {string} reason - 降级原因描述
+ * @returns {boolean} true=降级成功
+ */
 RenderLoop.prototype.fallbackRendererToMain2D = function (reason) {
   var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
   if (currentInfo.actualMode === 'main-2d') {
@@ -35188,15 +35719,26 @@ RenderLoop.prototype.fallbackRendererToMain2D = function (reason) {
   renderer.init(this._canvas);
   this._renderer = renderer;
   this._rendererErrorCount = 0;
-  this._notifyStateChange();
   return true;
 };
+
+/**
+ * 调度下一帧 rAF。
+ * 已停止、已有待处理帧、或无源时跳过调度。
+ */
 RenderLoop.prototype._scheduleNextFrame = function () {
   if (this._stopped || this._animationId || this._getSources().length === 0) {
     return;
   }
   this._animationId = window.requestAnimationFrame(this._boundRenderFrame);
 };
+
+/**
+ * 检查渲染器运行健康状态。
+ * 检测 Worker 渲染器故障，累积错误计数达 2 次后触发降级。
+ *
+ * @param {BaseRenderer} renderer - 当前渲染后端
+ */
 RenderLoop.prototype._handleRendererInfo = function (renderer) {
   if (!renderer.getInfo) {
     return;
@@ -35211,6 +35753,13 @@ RenderLoop.prototype._handleRendererInfo = function (renderer) {
     this._rendererErrorCount = 0;
   }
 };
+
+/**
+ * 处理渲染异常。
+ * 累积错误计数达 2 次后触发降级到 main-2d。
+ *
+ * @param {Error} error - 渲染异常
+ */
 RenderLoop.prototype._handleRenderError = function (error) {
   var reason = "Mixer render failed: ".concat(error.message || String(error));
   this._renderErrorCount += 1;
@@ -35225,11 +35774,8 @@ RenderLoop.prototype._handleRenderError = function (error) {
     this.fallbackRendererToMain2D(reason);
   }
 };
-RenderLoop.prototype._notifyStateChange = function () {
-  if (this._onStateChange) {
-    this._onStateChange();
-  }
-};
+
+// 只读 getter 暴露给 MixerController 的 prototype getter 使用
 Object.defineProperties(RenderLoop.prototype, {
   renderer: {
     get: function get() {
@@ -35272,7 +35818,25 @@ module.exports = RenderLoop;
 "use strict";
 
 /**
- * Mixer input source registry.
+ * SourceRegistry — 混流器输入源注册表
+ *
+ * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
+ * 负责源的增删、ID 生成、slot 分配、状态查询等。
+ *
+ * @module SourceRegistry
+ */
+
+/**
+ * 构造函数。
+ *
+ * @param {Object} options
+ * @param {Object} options.logger - 日志记录器
+ * @param {Function} options.getLayoutMode - 返回当前布局模式（'legacy' | 'grid'）的回调
+ * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
+ * @param {Function} options.normalizeGain - 增益值归一化函数
+ * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
+ * @param {Function} options.onBeforeRemove - 源被移除前的回调（用于断开音频连接）
+ * @param {Function} options.onAfterRemove - 源被移除后的回调（用于清理渲染器、清空画布）
  */
 function SourceRegistry(options) {
   options = options || {};
@@ -35283,12 +35847,30 @@ function SourceRegistry(options) {
   this._createVideoElement = options.createVideoElement;
   this._onBeforeRemove = options.onBeforeRemove;
   this._onAfterRemove = options.onAfterRemove;
+
+  /** @type {Array<Object>} 当前所有输入源对象列表 */
   this.sources = [];
+
+  /** @type {Array<HTMLVideoElement>} 当前所有源对应的 video 元素列表（与 sources 同步） */
   this.videos = [];
+
+  /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
   this._sourceSeq = 0;
 }
+
+/**
+ * 添加一个新的输入源。
+ *
+ * grid 模式下，如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
+ *
+ * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
+ * @param {Object} [options={}] - 配置选项 { slot, gain }
+ * @returns {Object} 新建的 source 对象
+ */
 SourceRegistry.prototype.add = function (input, options) {
   var source = this._createSource(input, options || {});
+
+  // grid 模式下检查 slot 冲突，同 slot 旧源会被替换
   if (this._getLayoutMode() !== 'legacy' && typeof source.slot === 'number') {
     var oldSource = this.sources.find(function (item) {
       return item.slot === source.slot;
@@ -35304,35 +35886,63 @@ SourceRegistry.prototype.add = function (input, options) {
   this._syncVideos();
   return source;
 };
+
+/**
+ * 移除所有输入源（遍历快照逐一移除）。
+ */
 SourceRegistry.prototype.clear = function () {
   var _this = this;
   this.sources.slice().forEach(function (source) {
     _this.remove(source);
   });
 };
+
+/**
+ * 按 MediaStream 对象、stream.id 或内部 source.id 查找源。
+ *
+ * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
+ * @returns {Object|null} 找到的 source 对象，或 null
+ */
 SourceRegistry.prototype.find = function (streamOrId) {
   var _this2 = this;
   if (!streamOrId) {
     return null;
   }
   if (typeof streamOrId === 'string') {
+    // 先匹配 source.id，再匹配 stream.id
     return this.sources.find(function (source) {
       var stream = _this2.getStream(source);
       return source.id === streamOrId || stream && stream.id === streamOrId;
     }) || null;
   }
+
+  // 按 MediaStream 或 HTMLVideoElement 引用匹配
   var stream = streamOrId.mediaStream || streamOrId;
   return this.sources.find(function (source) {
     return source.stream === stream || source.video === streamOrId;
   }) || null;
 };
+
+/**
+ * 移除一个具体的 source 对象。
+ *
+ * 步骤：触发 onBeforeRemove（断开音频）→ 清理 ownedVideo（暂停、清空 srcObject、移除 DOM）→
+ * 从数组移除 → 同步 _videos → 触发 onAfterRemove（渲染器清理、画布清空）。
+ *
+ * @param {Object} source - 要移除的 source 对象
+ * @returns {boolean} true=成功移除；false=source 为空
+ */
 SourceRegistry.prototype.remove = function (source) {
   if (!source) {
     return false;
   }
+
+  // 先通知外部断开音频连接
   if (this._onBeforeRemove) {
     this._onBeforeRemove(source);
   }
+
+  // 如果是 mixr 内部创建的 video 元素，清理 DOM
   if (source.ownedVideo && source.video) {
     source.video.pause();
     source.video.srcObject = null;
@@ -35343,11 +35953,20 @@ SourceRegistry.prototype.remove = function (source) {
     this.sources.splice(index, 1);
   }
   this._syncVideos();
+
+  // 通知外部源已移除（渲染器清理、画布清空等）
   if (this._onAfterRemove) {
     this._onAfterRemove(source);
   }
   return true;
 };
+
+/**
+ * 返回当前所有源的快照。
+ * 返回新数组，外部修改不影响内部状态。
+ *
+ * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, hasAudio, hasVideo }
+ */
 SourceRegistry.prototype.getSnapshot = function () {
   var _this3 = this;
   return this.sources.map(function (source) {
@@ -35362,41 +35981,95 @@ SourceRegistry.prototype.getSnapshot = function () {
     };
   });
 };
+
+/**
+ * 获取 source 当前关联的 MediaStream。
+ *
+ * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
+ * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
+ *
+ * @param {Object} source - 内部 source 对象
+ * @returns {MediaStream|null} 当前 MediaStream
+ */
 SourceRegistry.prototype.getStream = function (source) {
   var stream = source.video && !source.ownedVideo ? source.video.srcObject : source.stream;
+
+  // 同步 stream 引用（外部换源场景）
   if (source.stream !== stream) {
     source.stream = stream;
   }
   return stream;
 };
+
+/**
+ * 检测是否至少有一路源有 live（活跃）状态的音频轨。
+ *
+ * @returns {boolean} true=至少一路有活跃音频
+ */
 SourceRegistry.prototype.hasAnyLiveAudioTrack = function () {
   var _this4 = this;
   return this.sources.some(function (source) {
     return _this4.hasLiveAudioTrack(source);
   });
 };
+
+/**
+ * 检测某路源是否有 live（活跃）状态的音频轨。
+ * 只混入 live 状态的音频轨，避免 ended track 导致 WebAudio 创建失败或无效混音。
+ *
+ * @param {Object} source - 内部 source 对象
+ * @returns {boolean} true=至少有一条 live 音频轨
+ */
 SourceRegistry.prototype.hasLiveAudioTrack = function (source) {
   var stream = this.getStream(source);
   return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(function (track) {
     return track.readyState === 'live';
   }));
 };
+
+/**
+ * 检测某路源是否有视频轨（不判断 readyState）。
+ * readyState 在绘制阶段才判断，刚加入但尚未出帧的源仍保留在布局中。
+ *
+ * @param {Object} source - 内部 source 对象
+ * @returns {boolean} true=至少有一条视频轨
+ */
 SourceRegistry.prototype.hasVideoTrack = function (source) {
   var stream = this.getStream(source);
   return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
 };
+
+/**
+ * 判断某路源当前是否可渲染。
+ * 条件：stream 存在且 active，并且有视频轨。
+ * 具体的视频帧是否能绘制由 video.readyState 在渲染阶段判断。
+ *
+ * @param {Object} source - 内部 source 对象
+ * @returns {boolean} true=可渲染
+ */
 SourceRegistry.prototype.isRenderable = function (source) {
   var stream = this.getStream(source);
   return Boolean(stream && stream.active && this.hasVideoTrack(source));
 };
+
+/**
+ * 创建一个内部 source 对象。
+ *
+ * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
+ * @param {Object} options - 配置 { slot, gain }
+ * @returns {Object} source 对象
+ * @throws {TypeError} 无效的 MediaStream
+ */
 SourceRegistry.prototype._createSource = function (input, options) {
   var video;
   var stream;
   var ownedVideo = false;
   if (input instanceof HTMLMediaElement) {
+    // 外部传入的 video 元素，混流器不接管生命周期
     video = input;
     stream = input.srcObject;
   } else {
+    // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
     stream = input && (input.mediaStream || input);
     if (!stream) {
       throw new TypeError('Invalid MediaStream.');
@@ -35411,15 +36084,29 @@ SourceRegistry.prototype._createSource = function (input, options) {
     slot: typeof options.slot === 'number' ? options.slot : null,
     gain: this._normalizeGain(options.gain, this._getDefaultGain()),
     audioSourceNode: null,
+    // WebAudio 源节点（由 AudioMixer 连接时赋值）
     gainNode: null,
+    // WebAudio 音量节点（由 AudioMixer 连接时赋值）
     audioStream: null,
+    // 当前已连接的音频流引用
     ownedVideo: ownedVideo
   };
+
+  // grid 模式下自动分配最小编号空闲 slot
   if (this._getLayoutMode() !== 'legacy' && source.slot === null) {
     source.slot = this._getNextSlot();
   }
   return source;
 };
+
+/**
+ * 为 source 生成唯一 ID。
+ * 优先使用 stream.id，冲突时追加自增序号确保唯一。
+ *
+ * @param {MediaStream} stream - 关联的 MediaStream
+ * @param {HTMLVideoElement} video - 关联的 video 元素
+ * @returns {string} 唯一 ID
+ */
 SourceRegistry.prototype._createSourceId = function (stream, video) {
   var baseId = stream && stream.id || video.id || "mixer-source-".concat(this._sourceSeq + 1);
   var sourceId = baseId;
@@ -35431,6 +36118,13 @@ SourceRegistry.prototype._createSourceId = function (stream, video) {
   }
   return sourceId;
 };
+
+/**
+ * 获取当前最小编号的空闲 slot（grid 模式用）。
+ * 从 0 开始递增查找，跳过已被占用的 slot 编号。
+ *
+ * @returns {number} 可用的 slot 编号
+ */
 SourceRegistry.prototype._getNextSlot = function () {
   var slot = 0;
   var occupiedSlots = this.sources.reduce(function (slots, source) {
@@ -35444,6 +36138,11 @@ SourceRegistry.prototype._getNextSlot = function () {
   }
   return slot;
 };
+
+/**
+ * 将 sources 数组中的 video 元素同步到 videos 数组。
+ * 外部代码通过 this.videos 即可遍历所有 video 元素。
+ */
 SourceRegistry.prototype._syncVideos = function () {
   var _this5 = this;
   this.videos.splice(0, this.videos.length);
