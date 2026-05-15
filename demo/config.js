@@ -40,6 +40,14 @@ const envs =
     iceServers         : [ { 'urls': 'turn:crtc.backqu.com:60000?transport=udp', 'username': 'ipcu', 'credential': 'yl_19cu' } ],
     iceTransportPolicy : 'relay'
   },
+  env_seanum : {
+    signalingUrl       : 'wss://rtc.seanum.com/wss',
+    sipDomain          : 'rtc.seanum.com',
+    secretKey          : 'Hhute4irUIs3oN5bVmBBiznpQmqr/B9u03cnfGq9avkbMgDoYTY0myGYwZHf/hE4kNRwV2zn6soGodPae/eWTo2KNcWhhjskcuc5F34ZTallikZRQvCVHS1GyP1OWgkp31OKfntagt16U1jyd/USPu9+MqcSxuL04iob7hOr4cva5t2gRVxmMJ+QFI5hc0KoGgTybS1tTunZdqP6/UxJTAPReNT2eTD7zu69JWxYXvOEukC81ksYPO2Zjx/Ux56TjoeS3XrkKzk6+XSvhDw4FwDFWkkT0RMw3J0vfHcvhdGy4o4KI6Nld2+PU3PjWZTt6BPxACgjuRnO7jZQIiGKKg==',
+    iceServers         : [ { 'urls': 'turn:rtc.seanum.com:60020?transport=udp', 'username': 'user', 'credential': '5g_26@cu' } ],
+    iceTransportPolicy : 'relay',
+    password           : '5g_26@'
+  },  
   env_pro40 : {
     signalingUrl : 'wss://pro.vsbc.com:60040/wss',
     sipDomain    : 'pro.vsbc.com',

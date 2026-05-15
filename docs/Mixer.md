@@ -59,7 +59,7 @@ lib/
 | 子模块 | 职责 |
 |--------|------|
 | `SourceRegistry` | 源的增删、ID 生成、slot 分配、状态查询 |
-| `LayoutEngine` | 按布局模式和 slot 计算每路视频的绘制矩形 |
+| `LayoutEngine` | 按 slot 计算每路视频的绘制矩形 |
 | `AudioMixer` | 延迟创建 AudioContext，每路独立 GainNode，WebAudio 混音 |
 | `OutputStreamManager` | `canvas.captureStream()`、音频轨注入、停止清理 |
 | `RenderLoop` | rAF 帧循环、fps 节流、调用渲染器绘制 |
@@ -78,12 +78,9 @@ lib/
 
 ## 2. 核心概念
 
-### 2.1 两种布局模式
+### 2.1 布局方式
 
-| 模式 | 触发条件 | 行为 |
-|------|----------|------|
-| `legacy` | 不传 `options` 或 options 无混流配置项 | 固定 640x480 单元格，最多 2×2 宫格。画布尺寸随源数量动态变化 |
-| `grid` | 传了 `options`（任意配置项）或 `appendStream(stream, slot)` | 固定输出分辨率（默认 1280x720），输入按 slot 在网格中定位 |
+固定输出分辨率（默认 1280x720），输入源按 slot 在网格中定位。画布尺寸不随源数量动态变化。
 
 ### 2.2 数据流路径
 
@@ -165,7 +162,7 @@ new MixerController(videos, options)
   id:              string,    // 优先 MediaStream.id（冲突追加 -1 -2 后缀）
   stream:          MediaStream,
   video:           HTMLVideoElement, // 播放输入视频的 <video>
-  slot:            number | null,    // grid 模式下网格位置
+  slot:            number,    // 网格位置
   gain:            number,           // 音频增益
   audioSourceNode: MediaStreamAudioSourceNode | null,  // 由 AudioMixer 连接
   gainNode:        GainNode | null,
@@ -174,7 +171,7 @@ new MixerController(videos, options)
 }
 ```
 
-**Slot 分配规则**（grid 模式）：
+**Slot 分配规则**：
 - 指定 slot → 放入目标位置，同 slot 旧源被覆盖
 - 未指定 slot → 从 0 开始自增分配最小编号空位
 - 批量添加时 slot 在数组内递增
@@ -236,7 +233,7 @@ RenderLoop.renderFrame(timestamp)
     │
     ├── fps 节流：未到目标间隔时跳过
     ├── 同步外部音频源（换源检测）
-    ├── LayoutEngine.createRenderPayload(layoutMode)
+    ├── LayoutEngine.createRenderPayload()
     ├── renderer.render(payload) → 绘制到 canvas
     ├── 检查 Worker 健康：连续失败 2 次 → 降级
     └── _scheduleNextFrame()
@@ -247,9 +244,7 @@ RenderLoop.renderFrame(timestamp)
 
 ### 3.7 MixerConfig（配置归一化）
 
-纯函数工具，提供 `MixerConfig.create(options)`：
-- 参数校验和默认值填充
-- 检测 `hasModernOptions`（是否有任何混流配置项）→ 决定 `layoutMode`
+纯函数工具，提供 `MixerConfig.create(options)`：参数校验和默认值填充。
 
 ### 3.8 MixerDomAdapter（DOM 适配器）
 
@@ -403,7 +398,6 @@ const mixer = new MediaStreamMixer([
   fps: 30,
   backgroundColor: '#000',
   audioGain: 0.8,
-  layoutMode: 'grid',
   renderMode: 'auto'
 });
 ```
@@ -416,11 +410,10 @@ const mixer = new MediaStreamMixer([
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `width/height` | `number` | 1280x720 (grid) / 动态 (legacy) | 输出分辨率 |
+| `width/height` | `number` | 1280x720 | 输出分辨率 |
 | `fps` | `number` | 浏览器自动 | 输出帧率 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色 |
 | `audioGain` | `number` | 0.8 | 全局默认音量 |
-| `layoutMode` | `string` | 由 options 自动决定 | `'grid'` / `'legacy'` |
 | `renderMode` | `string` | `'auto'` | 渲染后端选择 |
 | `workerUrl` | `string` | 使用 Blob Worker | 外部 Worker 脚本地址 |
 | `dropFrameWhenBusy` | `boolean` | `true` | Worker 忙时丢帧 |
@@ -428,11 +421,11 @@ const mixer = new MediaStreamMixer([
 
 ### 初始化步骤
 
-1. `MixerConfig.create(options)` 归一化配置 → 检测 `hasModernOptions` → 决定布局模式
+1. `MixerConfig.create(options)` 归一化配置
 2. 创建 `MixerDomAdapter` + 离屏 canvas
 3. `RendererFactory.createRenderer(canvas, config)` 创建渲染器实例
 4. 创建子模块：`SourceRegistry` → `OutputStreamManager` → `RenderLoop` → `AudioMixer` → `LayoutEngine`
-5. grid 模式预置 canvas 尺寸
+5. 预置 canvas 尺寸
 6. `appendStream(videos)` 将初始源加入混流
 7. 音频系统延迟创建，直到 `getAudioStream()` 才初始化
 
@@ -493,15 +486,14 @@ new MediaStreamMixer()
   │                                      ├── RendererFactory.createRenderer(canvas, config)
   │                                      │   └── 选择并初始化最佳渲染后端
   │                                      ├── 创建子模块
-  │                                      ├── grid 模式预置 canvas 尺寸
+  │                                      ├── 预置 canvas 尺寸
   │                                      └── appendStream([streamA])
   │                                           └── SourceRegistry.add(streamA)
   │                                               ├── _createSource() → ID + video 元素
-  │                                               └── slot 冲突检测（grid 模式）
+  │                                               └── slot 冲突检测
   │
   │  appendStream(streamB, 5)
   │ ──────────────────────────────────►  │
-  │                                      ├── _ensureModernLayout() → grid 升级
   │                                      └── SourceRegistry.add(streamB, { slot: 5 })
   │
   │  await getMixedStream()

@@ -501,21 +501,19 @@ async function testWorkerRendererKeepsEmptyPayload()
 
 async function testMixerConfigDefaults()
 {
-  const legacyConfig = MixerConfig.create({});
-  const gridConfig = MixerConfig.create({ width: '640', height: 360, fps: '15' });
+  const defaultConfig = MixerConfig.create({});
+  const customConfig = MixerConfig.create({ width: '640', height: 360, fps: '15' });
 
-  assert.strictEqual(legacyConfig.hasModernOptions, false);
-  assert.strictEqual(legacyConfig.layoutMode, 'legacy');
-  assert.strictEqual(legacyConfig.config.width, null);
-  assert.strictEqual(legacyConfig.config.height, null);
-  assert.strictEqual(legacyConfig.config.renderMode, 'main-2d');
+  // 默认值：width=1280, height=720, renderMode='auto'
+  assert.strictEqual(defaultConfig.width, 1280);
+  assert.strictEqual(defaultConfig.height, 720);
+  assert.strictEqual(defaultConfig.renderMode, 'auto');
 
-  assert.strictEqual(gridConfig.hasModernOptions, true);
-  assert.strictEqual(gridConfig.layoutMode, 'grid');
-  assert.strictEqual(gridConfig.config.width, 640);
-  assert.strictEqual(gridConfig.config.height, 360);
-  assert.strictEqual(gridConfig.config.fps, 15);
-  assert.strictEqual(gridConfig.config.renderMode, 'auto');
+  // 自定义值
+  assert.strictEqual(customConfig.width, 640);
+  assert.strictEqual(customConfig.height, 360);
+  assert.strictEqual(customConfig.fps, 15);
+  assert.strictEqual(customConfig.renderMode, 'auto');
 }
 
 async function testMixerConfigSourceOptions()

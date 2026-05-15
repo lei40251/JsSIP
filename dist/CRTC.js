@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026514858
+ * CRTC v1.13.0.2026515951
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210281716 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210301902 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210281716');
+debug('version %s', '1.13.0.405210301902');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210281716';
+    return '1.13.0.405210301902';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":92}],39:[function(require,module,exports){
@@ -33803,12 +33803,8 @@ module.exports = AudioMixer;
 /**
  * LayoutEngine — 混流器布局引擎
  *
- * 根据输入源的数量、slot 分配和布局模式（legacy / grid），
- * 计算每路视频在输出画布上的绘制位置和尺寸，生成渲染 payload。
- *
- * 布局模式：
- *   - legacy：固定 640x480 单元格，最多 2x2，向后兼容旧版调用方
- *   - grid：按 slot 和输出画布比例自动计算网格，支持动态增减
+ * 根据输入源的数量和 slot 分配，计算每路视频在固定输出画布上的绘制位置和尺寸，
+ * 生成渲染 payload。画布尺寸由配置指定（默认 1280x720），不随源数量动态变化。
  *
  * @module LayoutEngine
  */
@@ -33820,7 +33816,7 @@ module.exports = AudioMixer;
  * @param {Object} options.sourceRegistry - SourceRegistry 实例，用于获取输入源列表
  * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
  * @param {Object} options.config - 混流配置对象
- * @param {Function} options.prepareModernCanvas - 设置 grid 模式 canvas 尺寸的方法
+ * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
  * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
  */
 function LayoutEngine(options) {
@@ -33828,90 +33824,28 @@ function LayoutEngine(options) {
   this._sourceRegistry = options.sourceRegistry;
   this._canvas = options.canvas;
   this._config = options.config;
-  this._prepareModernCanvas = options.prepareModernCanvas;
+  this._prepareCanvas = options.prepareCanvas;
   this._resizeRenderer = options.resizeRenderer;
 }
 
 /**
- * 根据布局模式生成一帧的渲染 payload。
- *
- * @param {string} layoutMode - 布局模式：'legacy' | 'grid'
- * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
- */
-LayoutEngine.prototype.createRenderPayload = function (layoutMode) {
-  if (layoutMode !== 'legacy') {
-    return this._createModernRenderPayload();
-  }
-  return this._createLegacyRenderPayload();
-};
-
-/**
- * 创建 legacy 模式的渲染 payload。
- *
- * 固定布局规则：
- *   - 1 路源：640x480，单格
- *   - 2 路源：1280x480，左右并列
- *   - 3~4 路源：1280x960，2x2 宫格
- * 每个单元格 640x480，源按索引依次放入。
- *
- * @returns {Object} 渲染 payload
- */
-LayoutEngine.prototype._createLegacyRenderPayload = function () {
-  var _this = this;
-  var renderSources = this._sourceRegistry.sources.filter(function (source) {
-    return _this._sourceRegistry.isRenderable(source);
-  });
-  var rowCount = 1;
-  if (renderSources.length >= 3) {
-    rowCount = 2;
-  }
-  var canvasWidth = renderSources.length >= 2 ? 1280 : 640;
-  var canvasHeight = 480 * rowCount;
-  if (this._canvas.width !== canvasWidth) {
-    this._canvas.width = canvasWidth;
-  }
-  if (this._canvas.height !== canvasHeight) {
-    this._canvas.height = canvasHeight;
-  }
-  this._resizeRenderer(canvasWidth, canvasHeight);
-  var items = [];
-  renderSources.forEach(function (source, idx) {
-    var draw = _this._calcDrawRect(source.video, idx % 2 * 640, Math.floor(idx / 2) * 480, 640, 480);
-    if (draw) {
-      items.push({
-        id: source.id,
-        slot: source.slot,
-        video: source.video,
-        draw: draw
-      });
-    }
-  });
-  return {
-    width: canvasWidth,
-    height: canvasHeight,
-    backgroundColor: this._config.backgroundColor,
-    items: items
-  };
-};
-
-/**
- * 创建 grid 模式的渲染 payload。
+ * 生成一帧的渲染 payload。
  *
  * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
  * 每个源按 slot 计算所在行列位置，支持动态增减源。
  *
- * @returns {Object} 渲染 payload
+ * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
  */
-LayoutEngine.prototype._createModernRenderPayload = function () {
-  var _this2 = this;
-  this._prepareModernCanvas();
+LayoutEngine.prototype.createRenderPayload = function () {
+  var _this = this;
+  this._prepareCanvas();
   this._resizeRenderer(this._canvas.width, this._canvas.height);
   var layout = this._calcLayout();
   var cellWidth = this._canvas.width / layout.cols;
   var cellHeight = this._canvas.height / layout.rows;
   var items = [];
   this._sourceRegistry.sources.forEach(function (source) {
-    if (!_this2._sourceRegistry.isRenderable(source)) {
+    if (!_this._sourceRegistry.isRenderable(source)) {
       return;
     }
     var slot = typeof source.slot === 'number' ? source.slot : 0;
@@ -33919,7 +33853,7 @@ LayoutEngine.prototype._createModernRenderPayload = function () {
     var row = Math.floor(slot / layout.cols);
     var targetX = col * cellWidth;
     var targetY = row * cellHeight;
-    var draw = _this2._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+    var draw = _this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
     if (draw) {
       items.push({
         id: source.id,
@@ -33938,7 +33872,7 @@ LayoutEngine.prototype._createModernRenderPayload = function () {
 };
 
 /**
- * 计算 grid 模式的网格行列数。
+ * 计算网格的行列数。
  *
  * 根据最大 slot 编号和总源数确定网格大小：
  *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
@@ -34066,9 +34000,6 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
  * @module MixerConfig
  */
 
-/** 新版混流配置的识别关键字列表 */
-var MODERN_OPTION_KEYS = ['width', 'height', 'fps', 'layoutMode', 'backgroundColor', 'audioGain', 'renderMode', 'workerUrl', 'dropFrameWhenBusy', 'maxFrameQueue', 'preserveDrawingBuffer'];
-
 /** 合法的渲染后端模式集合 */
 var VALID_RENDER_MODES = {
   auto: true,
@@ -34085,51 +34016,33 @@ var VALID_RENDER_MODES = {
 /**
  * 创建归一化的混流配置对象。
  *
- * 根据传入的 options 参数，检测是否使用了新版配置项（如 width/height/fps），
- * 自动决定布局模式（legacy 或 grid），并对每个字段做合法性校验与默认值填充。
- *
  * @param {Object} [options={}] - 原始配置参数
  * @returns {Object} 归一化后的配置对象
- * @returns {boolean} returns.hasModernOptions - 是否显式传了新版配置项
- * @returns {boolean} returns.hasExplicitRenderMode - 是否显式指定了渲染后端
- * @returns {string} returns.layoutMode - 布局模式：'legacy' | 'grid'
- * @returns {Object} returns.config - 归一化后的具体配置
+ * @returns {number} returns.width - 输出宽度（默认 1280）
+ * @returns {number} returns.height - 输出高度（默认 720）
+ * @returns {number|null} returns.fps - 帧率（null=浏览器默认）
+ * @returns {string} returns.backgroundColor - 画布底色
+ * @returns {number} returns.audioGain - 全局默认音量增益
+ * @returns {string} returns.renderMode - 渲染后端选择
+ * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
+ * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
+ * @returns {number} returns.maxFrameQueue - 最大帧队列长度
+ * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
  */
 exports.create = function (options) {
   options = options || {};
-  var hasModernOptions = exports.hasMixerOptions(options);
-  var hasExplicitRenderMode = Object.prototype.hasOwnProperty.call(options, 'renderMode');
-  var layoutMode = options.layoutMode || (hasModernOptions ? 'grid' : 'legacy');
   return {
-    hasModernOptions: hasModernOptions,
-    hasExplicitRenderMode: hasExplicitRenderMode,
-    layoutMode: layoutMode,
-    config: {
-      width: exports.normalizePositiveInteger(options.width, layoutMode === 'legacy' ? null : 1280),
-      height: exports.normalizePositiveInteger(options.height, layoutMode === 'legacy' ? null : 720),
-      fps: exports.normalizePositiveInteger(options.fps, null),
-      backgroundColor: options.backgroundColor || '#000',
-      audioGain: exports.normalizeGain(options.audioGain, 0.8),
-      renderMode: exports.normalizeRenderMode(options.renderMode, layoutMode === 'legacy' ? 'main-2d' : 'auto'),
-      workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
-      dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
-      maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
-      preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true
-    }
+    width: exports.normalizePositiveInteger(options.width, 1280),
+    height: exports.normalizePositiveInteger(options.height, 720),
+    fps: exports.normalizePositiveInteger(options.fps, null),
+    backgroundColor: options.backgroundColor || '#000',
+    audioGain: exports.normalizeGain(options.audioGain, 0.8),
+    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
+    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
+    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
+    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
+    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true
   };
-};
-
-/**
- * 检测 options 中是否包含新版配置项。
- * 旧版调用方不传任何配置时返回 false，保持 legacy 布局兼容。
- *
- * @param {Object} options - 用户传入的配置
- * @returns {boolean} true=至少包含一个新版配置项
- */
-exports.hasMixerOptions = function (options) {
-  return Boolean(options && MODERN_OPTION_KEYS.some(function (key) {
-    return Object.prototype.hasOwnProperty.call(options, key);
-  }));
 };
 
 /**
@@ -34267,9 +34180,8 @@ var DEFAULT_AUDIO_INFO = Object.freeze({
  *   - 视频：按浏览器能力使用 Worker WebGL2 / 主线程 WebGL2 / Worker Canvas2D / 主线程 Canvas2D 绘制
  *   - 音频：用 WebAudio API，每路独立 GainNode 控制音量，汇总到 MediaStreamAudioDestinationNode
  *
- * 两种布局模式：
- *   - legacy：固定 640x480 单元格，最多 2x2，向后兼容旧版调用方
- *   - grid：按 slot 和输出画布比例自动计算网格，支持动态增减
+ * 布局方式：按 slot 和输出画布比例自动计算网格，画布尺寸由配置指定（默认 1280x720），
+ * 不随源数量动态变化。
  *
  * 使用示例：
  *   const mixer = new MediaStreamMixer([localStream, remoteStream], { width: 1280, height: 720 });
@@ -34289,14 +34201,12 @@ module.exports = /*#__PURE__*/function () {
    *     - HTMLVideoElement：外部 video 元素，需使用 srcObject=MediaStream（mixer 不接管生命周期）
    *     - { mediaStream: MediaStream }：SDK 内部包装对象
    * @param {Object} [options]
-   *   混流配置。只要传入 width/height/fps/layoutMode/backgroundColor/audioGain 中任意一项，
-   *   默认进入新版 grid 布局；完全不传配置时保持旧版 640x480 单元、最多 2x2 的行为。
-   * @param {number} [options.width=1280]  - 输出视频宽度（grid 模式默认 1280，legacy 模式动态）
-   * @param {number} [options.height=720]  - 输出视频高度（grid 模式默认 720，legacy 模式动态）
+   *   混流配置。
+   * @param {number} [options.width=1280]  - 输出视频宽度
+   * @param {number} [options.height=720]  - 输出视频高度
    * @param {number} [options.fps]         - 输出帧率（不传则浏览器自动选择）
    * @param {string} [options.backgroundColor='#000'] - 画布背景色
    * @param {number} [options.audioGain=0.8] - 全局默认音量增益
-   * @param {string} [options.layoutMode]  - 'grid' | 'legacy'
    * @param {string} [options.renderMode='auto']
    *   渲染后端：'auto' | 'worker-webgl2' | 'main-webgl2' | 'worker-2d' | 'main-2d'
    * @param {string} [options.workerUrl]
@@ -34326,31 +34236,7 @@ module.exports = /*#__PURE__*/function () {
     // -----------------------------------------------------------------------
 
     this._sourceRegistry = null;
-    var normalizedConfig = MixerConfig.create(options);
-
-    // -----------------------------------------------------------------------
-    // 布局模式与渲染控制
-    // -----------------------------------------------------------------------
-
-    /**
-     * 检测是否显式传了新版配置项。
-     * 避免旧项目无感升级后输出分辨率变化。
-     * @type {boolean}
-     */
-    this._hasModernOptions = normalizedConfig.hasModernOptions;
-
-    /**
-     * @type {boolean} 调用方是否显式选择了渲染后端。
-     * 用于区分“旧调用默认 main-2d”和“后续 slot 升级后可自动选择高性能后端”。
-     */
-    this._hasExplicitRenderMode = normalizedConfig.hasExplicitRenderMode;
-
-    /**
-     * @type {string} 布局模式：'legacy' | 'grid'
-     * - legacy：旧版固定宫格，画布尺寸动态
-     * - grid：新版 slot 网格，画布固定
-     */
-    this._layoutMode = normalizedConfig.layoutMode;
+    var config = MixerConfig.create(options);
 
     /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
     this._destroyed = false;
@@ -34384,7 +34270,7 @@ module.exports = /*#__PURE__*/function () {
      * @property {number}      audioGain       - 全局默认音量
      * @property {string}      renderMode      - 渲染后端选择
      */
-    this._config = normalizedConfig.config;
+    this._config = config;
     this._domAdapter = new MixerDomAdapter({
       config: this._config,
       logger: logger
@@ -34404,9 +34290,6 @@ module.exports = /*#__PURE__*/function () {
      */
     this._sourceRegistry = new SourceRegistry({
       logger: logger,
-      getLayoutMode: function getLayoutMode() {
-        return _this._layoutMode;
-      },
       getDefaultGain: function getDefaultGain() {
         return _this._config.audioGain;
       },
@@ -34458,14 +34341,10 @@ module.exports = /*#__PURE__*/function () {
       sourceRegistry: this._sourceRegistry,
       canvas: this._canvas,
       config: this._config,
-      prepareModernCanvas: this._prepareModernCanvas.bind(this),
+      prepareCanvas: this._prepareCanvas.bind(this),
       resizeRenderer: this._resizeRenderer.bind(this)
     });
-
-    // grid 模式预置 canvas 尺寸
-    if (this._layoutMode !== 'legacy') {
-      this._prepareModernCanvas();
-    }
+    this._prepareCanvas();
 
     // -- 将初始传入的源加入混流 --
     this.appendStream(videos);
@@ -34476,27 +34355,14 @@ module.exports = /*#__PURE__*/function () {
   // =========================================================================
 
   /**
-   * 检测 options 中是否显式包含新版混流配置项。
-   * 这是为了避免旧项目在升级后无感切换到 grid 模式，导致输出分辨率变化。
+   * 归一化渲染模式。
+   * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
    *
-   * @param {Object} options - 用户传入的配置对象
-   * @returns {boolean} true=调用方明确传了混流配置
+   * @param {*} value - 用户传入的 renderMode
+   * @param {string} fallback - 非法或未传时使用的模式
+   * @returns {string} 合法渲染模式
    */
   return _createClass(MediaStreamMixer, [{
-    key: "_hasMixerOptions",
-    value: function _hasMixerOptions(options) {
-      return MixerConfig.hasMixerOptions(options);
-    }
-
-    /**
-     * 归一化渲染模式。
-     * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
-     *
-     * @param {*} value - 用户传入的 renderMode
-     * @param {string} fallback - 非法或未传时使用的模式
-     * @returns {string} 合法渲染模式
-     */
-  }, {
     key: "_normalizeRenderMode",
     value: function _normalizeRenderMode(value, fallback) {
       return MixerConfig.normalizeRenderMode(value, fallback);
@@ -34560,43 +34426,13 @@ module.exports = /*#__PURE__*/function () {
       return MixerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
     }
 
-    // =========================================================================
-    //  布局模式管理
-    // =========================================================================
-
     /**
-     * 将 legacy 实例升级为 grid 模式。
-     * 旧实例一旦使用 slot 添加源，就升级为新版 grid 布局。
-     * 这是 appendStream(stream, slot) 的隐式语义。
-     *
-     * 副作用：修改 _layoutMode、_config.width/height、重置 canvas 尺寸。
+     * 设置输出画布尺寸。
      */
   }, {
-    key: "_ensureModernLayout",
-    value: function _ensureModernLayout() {
-      if (this._layoutMode !== 'legacy') {
-        return;
-      }
-      this._layoutMode = 'grid';
-      this._config.width = this._config.width || 1280;
-      this._config.height = this._config.height || 720;
-
-      // 旧调用如果在启动前通过 appendStream(stream, slot) 进入新版 slot 模式，
-      // 且调用方没有显式指定 renderMode，则允许使用 auto 后端选择。
-      if (!this._hasExplicitRenderMode && !this._renderer) {
-        this._config.renderMode = 'auto';
-      }
-      this._prepareModernCanvas();
-    }
-
-    /**
-     * 设置 grid 模式的固定输出画布尺寸。
-     * 与 legacy 模式不同，grid 模式下画布尺寸恒定不变。
-     */
-  }, {
-    key: "_prepareModernCanvas",
-    value: function _prepareModernCanvas() {
-      this._domAdapter.prepareModernCanvas(this._canvas);
+    key: "_prepareCanvas",
+    value: function _prepareCanvas() {
+      this._domAdapter.prepareCanvas(this._canvas);
     }
 
     /**
@@ -34766,7 +34602,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_createRenderPayload",
     value: function _createRenderPayload() {
-      return this._layoutEngine.createRenderPayload(this._layoutMode);
+      return this._layoutEngine.createRenderPayload();
     }
 
     // =========================================================================
@@ -34775,7 +34611,7 @@ module.exports = /*#__PURE__*/function () {
 
     /**
      * requestAnimationFrame 回调。
-     * 根据 _layoutMode 分发到 legacy 或 grid 绘制方法。
+     * 合成一帧画面到输出画布。
      * 当配置了 fps 时，rAF 仍负责调度，但真正合成按目标帧间隔节流。
      * 绘制完成后根据是否有源决定是否调度下一帧。
      *
@@ -34905,8 +34741,7 @@ module.exports = /*#__PURE__*/function () {
      *   appendStream(stream, { slot: 3, gain: 0.5 })
      *   appendStream([streamA, ...])  → 批量添加
      *
-     * 指定 slot 时会隐式将 legacy 模式升级为 grid 模式。
-     * grid 模式下同 slot 已有源会被新源覆盖。
+     * 同 slot 已有源会被新源覆盖。
      *
      * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
      * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
@@ -34926,11 +34761,6 @@ module.exports = /*#__PURE__*/function () {
         videos = [videos];
       }
       var appended = false;
-
-      // 只需首次判断是否需要升级到 grid 布局
-      if (typeof optionsOrSlot === 'number' || optionsOrSlot && typeof optionsOrSlot.slot === 'number') {
-        this._ensureModernLayout();
-      }
       videos.forEach(function (video, index) {
         var sourceOptions = _this2._normalizeSourceOptions(optionsOrSlot, index);
         _this2._sourceRegistry.add(video, sourceOptions);
@@ -35260,7 +35090,7 @@ MixerDomAdapter.prototype.createCanvas = function () {
  *
  * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
  */
-MixerDomAdapter.prototype.prepareModernCanvas = function (canvas) {
+MixerDomAdapter.prototype.prepareCanvas = function (canvas) {
   var width = this._config.width || 1280;
   var height = this._config.height || 720;
 
@@ -35831,7 +35661,6 @@ module.exports = RenderLoop;
  *
  * @param {Object} options
  * @param {Object} options.logger - 日志记录器
- * @param {Function} options.getLayoutMode - 返回当前布局模式（'legacy' | 'grid'）的回调
  * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
  * @param {Function} options.normalizeGain - 增益值归一化函数
  * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
@@ -35841,7 +35670,6 @@ module.exports = RenderLoop;
 function SourceRegistry(options) {
   options = options || {};
   this._logger = options.logger;
-  this._getLayoutMode = options.getLayoutMode;
   this._getDefaultGain = options.getDefaultGain;
   this._normalizeGain = options.normalizeGain;
   this._createVideoElement = options.createVideoElement;
@@ -35861,7 +35689,7 @@ function SourceRegistry(options) {
 /**
  * 添加一个新的输入源。
  *
- * grid 模式下，如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
+ * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
  *
  * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
  * @param {Object} [options={}] - 配置选项 { slot, gain }
@@ -35870,8 +35698,8 @@ function SourceRegistry(options) {
 SourceRegistry.prototype.add = function (input, options) {
   var source = this._createSource(input, options || {});
 
-  // grid 模式下检查 slot 冲突，同 slot 旧源会被替换
-  if (this._getLayoutMode() !== 'legacy' && typeof source.slot === 'number') {
+  // 检查 slot 冲突，同 slot 旧源会被替换
+  if (typeof source.slot === 'number') {
     var oldSource = this.sources.find(function (item) {
       return item.slot === source.slot;
     });
@@ -36092,8 +35920,8 @@ SourceRegistry.prototype._createSource = function (input, options) {
     ownedVideo: ownedVideo
   };
 
-  // grid 模式下自动分配最小编号空闲 slot
-  if (this._getLayoutMode() !== 'legacy' && source.slot === null) {
+  // 未指定 slot 时自动分配最小编号空闲 slot
+  if (source.slot === null) {
     source.slot = this._getNextSlot();
   }
   return source;
@@ -36120,7 +35948,7 @@ SourceRegistry.prototype._createSourceId = function (stream, video) {
 };
 
 /**
- * 获取当前最小编号的空闲 slot（grid 模式用）。
+ * 获取当前最小编号的空闲 slot。
  * 从 0 开始递增查找，跳过已被占用的 slot 编号。
  *
  * @returns {number} 可用的 slot 编号
@@ -36161,12 +35989,37 @@ function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), 
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 /**
- * Mixer 内部渲染器基类。
+ * BaseRenderer — 渲染器基类
  *
- * 公开 SDK 不暴露这些类；它们只负责把 Mixer 已经算好的布局画到同一个 canvas。
- * Mixer 继续负责源管理、布局计算、音频混合和输出 MediaStream 生命周期。
+ * 定义所有渲染后端的统一接口。
+ * 渲染器只负责把 Mixer 算好的布局 payload 绘制到 canvas，
+ * 不关心源管理、布局计算、音频混音等业务逻辑。
+ *
+ * 子类必须实现：
+ *   - init(canvas)    — 初始化渲染上下文
+ *   - render(payload) — 绘制一帧
+ * 可选覆盖：
+ *   - resize(w, h)    — 调整输出尺寸
+ *   - removeSource(id) — 释放指定源的 GPU 资源
+ *   - destroy()       — 销毁所有资源
+ *
+ * @module BaseRenderer
  */
 module.exports = /*#__PURE__*/function () {
+  /**
+   * @param {Object} config - 混流配置（来自 MixerConfig）
+   * @param {string} [config.renderMode] - 请求的渲染模式
+   * @param {number} [config.fps] - 目标帧率
+   * @param {number} [config.width] - 输出宽度
+   * @param {number} [config.height] - 输出高度
+   * @param {Object} [info] - 渲染器元信息（子类传入，覆盖基类默认值）
+   * @param {string} [info.requestedMode] - 请求的渲染模式
+   * @param {string} [info.actualMode] - 实际使用的渲染模式
+   * @param {boolean} [info.isWorker] - 是否在 Worker 中运行
+   * @param {boolean} [info.isWebGL2] - 是否使用 WebGL2
+   * @param {boolean} [info.isFallback] - 是否为降级路径
+   * @param {string} [info.reason] - 降级/失败原因描述
+   */
   function BaseRenderer(config, info) {
     _classCallCheck(this, BaseRenderer);
     this._config = config || {};
@@ -36184,31 +36037,80 @@ module.exports = /*#__PURE__*/function () {
       height: this._config.height || null
     }, info || {});
   }
+
+  /**
+   * 初始化渲染上下文。
+   * 子类在此获取 canvas context、编译 shader 等。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   */
   return _createClass(BaseRenderer, [{
     key: "init",
     value: function init() {
       return true;
     }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * @param {Object} payload - 布局数据（由 LayoutEngine.createRenderPayload 生成）
+     * @param {number} payload.width - 画布宽度
+     * @param {number} payload.height - 画布高度
+     * @param {string} payload.backgroundColor - 背景色
+     * @param {Array<Object>} payload.items - 每路视频的绘制信息
+     */
   }, {
     key: "render",
     value: function render() {}
+
+    /**
+     * 调整输出画布尺寸。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
   }, {
     key: "resize",
     value: function resize(width, height) {
       this._info.width = width;
       this._info.height = height;
     }
+
+    /**
+     * 移除一路源的 GPU 资源（如 WebGL 纹理）。
+     * Worker 渲染器会将此操作转发到 Worker 线程。
+     *
+     * @param {string} id - 源 ID
+     */
   }, {
     key: "removeSource",
     value: function removeSource() {}
+
+    /**
+     * 销毁渲染器，释放所有 GPU 资源和上下文引用。
+     */
   }, {
     key: "destroy",
     value: function destroy() {}
+
+    /**
+     * 获取渲染器运行时信息快照。
+     * 返回副本，外部修改不影响内部状态。
+     *
+     * @returns {Object} 渲染状态信息
+     */
   }, {
     key: "getInfo",
     value: function getInfo() {
       return Object.assign({}, this._info);
     }
+
+    /**
+     * 更新运行时信息（仅内部使用，子类调用）。
+     *
+     * @param {Object} info - 要更新的字段
+     */
   }, {
     key: "_updateInfo",
     value: function _updateInfo(info) {
@@ -36235,15 +36137,25 @@ function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !==
 function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-var BaseRenderer = require('./BaseRenderer');
-
 /**
- * 主线程 Canvas2D 渲染器。
+ * MainCanvas2DRenderer — 主线程 Canvas2D 渲染器
  *
- * 这是旧版 Mixer 的稳定兜底路径。所有更高性能路径初始化失败时都会回到这里，
- * 因此它的行为尽量保持简单、确定，并与旧 drawImage 逻辑一致。
+ * 最基础的渲染路径，依赖 CanvasRenderingContext2D.drawImage() 将
+ * 各路视频绘制到输出 canvas。所有更高性能路径初始化失败时都会降级到这里。
+ *
+ * 特点：
+ *   - 兼容性最好，所有支持 Canvas 的浏览器均可使用
+ *   - 性能依赖浏览器 Canvas2D 实现的硬件加速能力
+ *   - 行为与旧版 Mixer drawImage 逻辑一致，作为稳定兜底
+ *
+ * @module MainCanvas2DRenderer
  */
+var BaseRenderer = require('./BaseRenderer');
 module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {Object} info - 渲染器元信息
+   */
   function MainCanvas2DRenderer(config, info) {
     var _this;
     _classCallCheck(this, MainCanvas2DRenderer);
@@ -36252,10 +36164,22 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       isWorker: false,
       isWebGL2: false
     }, info || {})]);
+
+    /** @type {HTMLCanvasElement|null} 输出 canvas */
     _this._canvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} Canvas2D 上下文 */
     _this._context = null;
     return _this;
   }
+
+  /**
+   * 初始化 Canvas2D 渲染上下文。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} Canvas2D context 不可用时抛出
+   */
   _inherits(MainCanvas2DRenderer, _BaseRenderer);
   return _createClass(MainCanvas2DRenderer, [{
     key: "init",
@@ -36270,6 +36194,14 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this.resize(canvas.width, canvas.height);
       return true;
     }
+
+    /**
+     * 调整输出尺寸，同步更新 canvas 元素的宽高。
+     * 只在尺寸真正变化时赋值，避免触发不必要的重绘。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
   }, {
     key: "resize",
     value: function resize(width, height) {
@@ -36284,6 +36216,17 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         this._canvas.height = height;
       }
     }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * 流程：
+     *   1. 调整 canvas 尺寸到 payload 尺寸
+     *   2. 填充背景色，覆盖上一帧残留
+     *   3. 遍历 items，按 draw 矩形依次调用 drawImage
+     *
+     * @param {Object} payload - 布局数据
+     */
   }, {
     key: "render",
     value: function render(payload) {
@@ -36293,7 +36236,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       this.resize(payload.width, payload.height);
 
-      // 每帧先铺背景色，确保源减少、slot 覆盖或 contain 留边时不会残留上一帧内容。
+      // 每帧先铺背景色，确保源减少、slot 覆盖或 contain 留边时不会残留上一帧内容
       this._context.fillStyle = payload.backgroundColor || '#000';
       this._context.fillRect(0, 0, payload.width, payload.height);
       payload.items.forEach(function (item) {
@@ -36304,6 +36247,10 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       });
       this._info.renderedFrames += 1;
     }
+
+    /**
+     * 销毁渲染器，清除 canvas 内容并释放上下文引用。
+     */
   }, {
     key: "destroy",
     value: function destroy() {
@@ -36334,19 +36281,28 @@ function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !==
 function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/**
+ * MainWebGL2Renderer — 主线程 WebGL2 渲染器
+ *
+ * 使用 WebGL2 将各路视频帧上传为纹理，通过 GPU shader 合成输出。
+ * 相比 Canvas2D 路径，缩放和合成由 GPU 处理，通常在高分辨率或多路源时更稳定。
+ *
+ * 适用场景：
+ *   - Safari / WKWebView：Worker + WebGL2 不稳定时，主线程 WebGL2 作为中间方案
+ *   - 需要 GPU 加速但又无法使用 Worker 的环境
+ *
+ * @module MainWebGL2Renderer
+ */
 var BaseRenderer = require('./BaseRenderer');
 var glHelpers = require('./helpers/gl');
 var colorHelper = require('./helpers/color');
 var VERTEX_SHADER = "#version 300 es\nin vec2 a_position;\nin vec2 a_texCoord;\nout vec2 v_texCoord;\nvoid main()\n{\n  gl_Position = vec4(a_position, 0.0, 1.0);\n  v_texCoord = a_texCoord;\n}";
 var FRAGMENT_SHADER = "#version 300 es\nprecision highp float;\nin vec2 v_texCoord;\nuniform sampler2D u_texture;\nout vec4 outColor;\nvoid main()\n{\n  outColor = texture(u_texture, v_texCoord);\n}";
-
-/**
- * 主线程 WebGL2 渲染器。
- *
- * Safari / WKWebView 常见情况是 Worker + WebGL2 不稳定或不可用，但主线程 WebGL2 可用。
- * 这一路不能降低主线程调度压力，但可以把缩放和合成交给 GPU，通常比多路 Canvas2D 更稳。
- */
 module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {Object} info - 渲染器元信息
+   */
   function MainWebGL2Renderer(config, info) {
     var _this;
     _classCallCheck(this, MainWebGL2Renderer);
@@ -36355,14 +36311,34 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       isWorker: false,
       isWebGL2: true
     }, info || {})]);
+
+    /** @type {HTMLCanvasElement|null} 输出 canvas */
     _this._canvas = null;
+
+    /** @type {WebGL2RenderingContext|null} WebGL2 上下文 */
     _this._gl = null;
+
+    /** @type {WebGLProgram|null} 合成用的 WebGL program */
     _this._program = null;
+
+    /** @type {WebGLBuffer|null} 全屏四边形顶点 buffer */
     _this._positionBuffer = null;
+
+    /** @type {WebGLBuffer|null} 纹理坐标 buffer */
     _this._texCoordBuffer = null;
+
+    /** @type {Object<string, WebGLTexture>} 每个源对应的纹理对象缓存 */
     _this._textures = {};
     return _this;
   }
+
+  /**
+   * 初始化 WebGL2 上下文并编译 shader program。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} WebGL2 context 不可用时抛出
+   */
   _inherits(MainWebGL2Renderer, _BaseRenderer);
   return _createClass(MainWebGL2Renderer, [{
     key: "init",
@@ -36381,6 +36357,11 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this.resize(canvas.width, canvas.height);
       return true;
     }
+
+    /**
+     * 编译 shader、链接 program、创建全屏四边形顶点数据。
+     * 顶点覆盖 [-1, 1] 范围，纹理坐标对应 [0, 1]。
+     */
   }, {
     key: "_setupProgram",
     value: function _setupProgram() {
@@ -36390,6 +36371,8 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this._program = glHelpers.createProgram(gl, vertexShader, fragmentShader);
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
+
+      // 全屏四边形：两个三角形组成一个矩形，覆盖整个裁剪空间
       this._positionBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -36401,6 +36384,13 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this._enableAttribute('a_texCoord', this._texCoordBuffer);
       gl.uniform1i(gl.getUniformLocation(this._program, 'u_texture'), 0);
     }
+
+    /**
+     * 启用顶点 attribute 并绑定 buffer。
+     *
+     * @param {string} name - shader 中 attribute 变量名
+     * @param {WebGLBuffer} buffer - 已填充数据的 buffer
+     */
   }, {
     key: "_enableAttribute",
     value: function _enableAttribute(name, buffer) {
@@ -36410,6 +36400,13 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
     }
+
+    /**
+     * 调整输出尺寸，同步更新 canvas 元素尺寸。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
   }, {
     key: "resize",
     value: function resize(width, height) {
@@ -36424,6 +36421,20 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         this._canvas.height = height;
       }
     }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * 流程：
+     *   1. 调整尺寸，清空背景色
+     *   2. 遍历 items，将每路视频帧上传到对应的纹理
+     *   3. 通过 gl.viewport 裁剪到每个 item 的绘制区域后提交绘制
+     *
+     * 纹理坐标说明：HTMLVideoElement 像素原点在左上角，WebGL 纹理坐标原点在左下角，
+     * 上传时通过 UNPACK_FLIP_Y_WEBGL 翻转，与 Worker WebGL2 路径保持一致。
+     *
+     * @param {Object} payload - 布局数据
+     */
   }, {
     key: "render",
     value: function render(payload) {
@@ -36444,8 +36455,6 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         }
         var texture = _this2._getTexture(item.id);
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        // HTMLVideoElement / HTMLCanvasElement 的像素原点是左上角，而 WebGL 纹理坐标原点按左下角处理。
-        // 在上传阶段翻转，比手动反转 shader texcoord 更稳定，也方便与 Worker WebGL2 路径保持一致。
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
         _this2._drawItem(item, payload.height);
@@ -36453,6 +36462,14 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       gl.flush();
       this._info.renderedFrames += 1;
     }
+
+    /**
+     * 获取或创建指定源的 WebGL 纹理。
+     * 纹理使用 CLAMP_TO_EDGE + LINEAR 滤波参数。
+     *
+     * @param {string} id - 源 ID
+     * @returns {WebGLTexture} 纹理对象
+     */
   }, {
     key: "_getTexture",
     value: function _getTexture(id) {
@@ -36461,6 +36478,20 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       return this._textures[id];
     }
+
+    /**
+     * 通过 gl.viewport 将全屏四边形裁剪到指定区域后绘制。
+     *
+     * viewport Y 坐标转换：WebGL 原点在左下角，canvas 原点在左上角，
+     * 因此 y = canvasHeight - draw.y - draw.height。
+     *
+     * @param {Object} item - 绘制项
+     * @param {number} item.draw.x - 绘制区域左上角 X
+     * @param {number} item.draw.y - 绘制区域左上角 Y
+     * @param {number} item.draw.width - 绘制区域宽度
+     * @param {number} item.draw.height - 绘制区域高度
+     * @param {number} canvasHeight - 画布总高度
+     */
   }, {
     key: "_drawItem",
     value: function _drawItem(item, canvasHeight) {
@@ -36476,6 +36507,12 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
+
+    /**
+     * 移除一路源的纹理缓存并释放 GPU 资源。
+     *
+     * @param {string} id - 源 ID
+     */
   }, {
     key: "removeSource",
     value: function removeSource(id) {
@@ -36485,6 +36522,16 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       delete this._textures[id];
     }
+
+    /**
+     * 销毁渲染器，释放所有 WebGL 资源。
+     *
+     * 清理步骤：
+     *   1. 删除所有纹理
+     *   2. 删除顶点和纹理坐标 buffer
+     *   3. 删除 shader program
+     *   4. 通过 WEBGL_lose_context 扩展强制释放 GPU 上下文
+     */
   }, {
     key: "destroy",
     value: function destroy() {
@@ -36519,19 +36566,35 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
 },{"./BaseRenderer":80,"./helpers/color":85,"./helpers/gl":86}],83:[function(require,module,exports){
 "use strict";
 
+/**
+ * RendererFactory — 渲染器工厂
+ *
+ * 根据 renderMode 配置选择合适的渲染后端：
+ *   - auto: 自动探测最优路径（Worker WebGL2 → Worker Canvas2D → 主线程 WebGL2 → 主线程 Canvas2D）
+ *   - worker-webgl2 / worker-2d: Worker 线程渲染
+ *   - main-webgl2 / main-2d: 主线程渲染
+ *
+ * 注意：这是 Mixer 中第一个初始化输出 canvas context 的位置，
+ * 不同渲染器需依次尝试，避免 context 抢占（canvas 只能有一个上下文）。
+ *
+ * @module RendererFactory
+ */
 var MainCanvas2DRenderer = require('./MainCanvas2DRenderer');
 var MainWebGL2Renderer = require('./MainWebGL2Renderer');
 var WorkerRenderer = require('./WorkerRenderer');
 
 /**
- * 根据 renderMode 创建实际渲染器。
+ * 创建渲染器实例。
  *
- * auto 模式优先尝试：
- *   worker-webgl2（Worker 内失败会自动降到 worker-2d）
- *   -> main-webgl2
- *   -> main-2d
+ * 自动模式（auto）的尝试顺序：
+ *   1. 如果检测到 Safari/WKWebView，优先尝试 main-webgl2（Worker 在这些平台不稳定）
+ *   2. 尝试 worker-webgl2（Worker 内 WebGL2）
+ *   3. Worker 内失败 → 尝试 main-webgl2（主线程 WebGL2）
+ *   4. WebGL2 不可用 → 回退 main-2d（Canvas2D）
  *
- * 注意：这里是 Mixer 第一个初始化输出 canvas context 的位置，避免不同 renderer 抢占 context。
+ * @param {HTMLCanvasElement} canvas - 输出 canvas
+ * @param {Object} config - 混流配置（含 renderMode）
+ * @returns {BaseRenderer} 渲染器实例
  */
 exports.createRenderer = function (canvas, config) {
   var mode = config.renderMode || 'auto';
@@ -36539,6 +36602,8 @@ exports.createRenderer = function (canvas, config) {
   if (mode === 'main-2d') {
     return createMain2D(canvas, config, false, '');
   }
+
+  // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
   if (mode === 'auto' && shouldPreferMainWebGL2()) {
     try {
       var renderer = new MainWebGL2Renderer(config, {
@@ -36552,6 +36617,8 @@ exports.createRenderer = function (canvas, config) {
       errors.push(error.message || String(error));
     }
   }
+
+  // 尝试 Worker 渲染路径
   if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
     try {
       var _renderer = new WorkerRenderer(config, {
@@ -36563,11 +36630,15 @@ exports.createRenderer = function (canvas, config) {
       return _renderer;
     } catch (error) {
       errors.push(error.message || String(error));
+
+      // 用户明确要求 Worker 但失败了 → 直接降级到主线程
       if (mode === 'worker-webgl2' || mode === 'worker-2d') {
         return createMainFallback(canvas, config, mode, errors.join('; '));
       }
     }
   }
+
+  // 尝试主线程 WebGL2
   if (mode === 'main-webgl2' || mode === 'auto') {
     try {
       var _renderer2 = new MainWebGL2Renderer(config, {
@@ -36581,8 +36652,21 @@ exports.createRenderer = function (canvas, config) {
       errors.push(error.message || String(error));
     }
   }
+
+  // 最终兜底：主线程 Canvas2D
   return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
 };
+
+/**
+ * Worker 失败后的主线程降级路径。
+ * 先尝试 main-webgl2，再回退到 main-2d。
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} config
+ * @param {string} requestedMode - 用户请求的模式
+ * @param {string} reason - 降级原因
+ * @returns {BaseRenderer}
+ */
 function createMainFallback(canvas, config, requestedMode, reason) {
   if (requestedMode !== 'worker-2d') {
     try {
@@ -36597,6 +36681,16 @@ function createMainFallback(canvas, config, requestedMode, reason) {
   }
   return createMain2D(canvas, config, true, reason);
 }
+
+/**
+ * 创建主线程 Canvas2D 渲染器（最终兜底）。
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} config
+ * @param {boolean} isFallback - 是否为降级路径
+ * @param {string} reason - 降级原因
+ * @returns {MainCanvas2DRenderer}
+ */
 function createMain2D(canvas, config, isFallback, reason) {
   var renderer = new MainCanvas2DRenderer(config, {
     requestedMode: config.renderMode || 'auto',
@@ -36606,6 +36700,15 @@ function createMain2D(canvas, config, isFallback, reason) {
   renderer.init(canvas);
   return renderer;
 }
+
+/**
+ * 检测是否应优先使用主线程 WebGL2。
+ *
+ * Safari 和 WKWebView 的 Worker + WebGL2 支持不稳定，
+ * 在这些浏览器上直接走 main-webgl2 避免 Worker 初始化的开销和风险。
+ *
+ * @returns {boolean} true=应优先使用主线程 WebGL2
+ */
 function shouldPreferMainWebGL2() {
   if (typeof navigator === 'undefined') {
     return false;
@@ -36638,21 +36741,34 @@ function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !==
 function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/**
+ * WorkerRenderer — Worker 线程渲染器
+ *
+ * 将渲染工作卸载到 WebWorker，通过 OffscreenCanvas 避免阻塞主线程。
+ *
+ * 架构说明：
+ *   1. 创建 OffscreenCanvas 并 transfer 到 Worker
+ *   2. Worker 内根据配置选择 WebGL2 或 Canvas2D 上下文
+ *   3. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer 到 Worker
+ *   4. Worker 渲染后通过 transferToImageBitmap() 传回 ImageBitmap
+ *   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
+ *
+ * 关键设计决策：不再 transfer 输出 canvas 本身。
+ * canvas.captureStream() 始终绑定主线程 canvas，避免部分浏览器
+ * 无法捕获 Worker 直接绘制结果而出现黑屏。
+ *
+ * @module WorkerRenderer
+ */
 var BaseRenderer = require('./BaseRenderer');
 var workerScript = require('./workerScript');
-
-/**
- * Worker 渲染器。
- *
- * 负责三件事：
- *   1. 创建独立 OffscreenCanvas 给 Worker 渲染；
- *   2. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer；
- *   3. Worker 渲染后传回 ImageBitmap，主线程写入真正用于 captureStream() 的输出 canvas。
- *
- * 注意：不再 transfer 输出 canvas 本身。这样 canvas.captureStream() 始终绑定主线程 canvas，
- * 避免部分浏览器无法捕获 Worker 直接绘制结果而出现黑屏。
- */
 module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {string} [config.workerUrl] - 外部 Worker 脚本地址（不传则使用 Blob Worker）
+   * @param {boolean} [config.dropFrameWhenBusy=true] - Worker 忙时是否丢弃新帧
+   * @param {number} [config.maxFrameQueue=1] - 最大帧队列长度
+   * @param {Object} info - 渲染器元信息
+   */
   function WorkerRenderer(config, info) {
     var _this;
     _classCallCheck(this, WorkerRenderer);
@@ -36661,18 +36777,56 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       isWorker: true,
       isWebGL2: false
     }, info || {})]);
+
+    /** @type {HTMLCanvasElement|null} 主线程输出 canvas（绑定 captureStream） */
     _this._canvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
     _this._outputContext = null;
+
+    /** @type {Worker|null} WebWorker 实例 */
     _this._worker = null;
+
+    /** @type {string|null} Worker 脚本的 Blob URL（用于后续 revoke） */
     _this._workerUrl = null;
+
+    /** @type {boolean} Worker 是否已完成初始化并回复 ready */
     _this._workerReady = false;
+
+    /** @type {boolean} Worker 正在处理上一帧，不能再发新帧 */
     _this._workerBusy = false;
+
+    /** @type {boolean} 正在从 video 抽取帧（异步操作进行中） */
     _this._extractingFrame = false;
+
+    /** @type {Array<Object>} 等待发送到 Worker 的帧队列 */
     _this._queuedPayloads = [];
+
+    /** @type {boolean} 销毁标记，设置后所有异步操作跳过 */
     _this._destroyed = false;
+
+    /**
+     * @type {'imagebitmap'|'videoframe'|null}
+     * 帧抽取方式。自动探测：优先 createImageBitmap，回退 VideoFrame。
+     * null 表示尚未确定。
+     */
     _this._frameFactory = null;
     return _this;
   }
+
+  /**
+   * 初始化 Worker 渲染器。
+   *
+   * 步骤：
+   *   1. 检查 Worker + OffscreenCanvas 可用性
+   *   2. 创建 Worker 实例（Blob URL 或外部脚本）
+   *   3. 创建 OffscreenCanvas 并 transfer 到 Worker
+   *   4. 等待 Worker 回复 ready 消息
+   *
+   * @param {HTMLCanvasElement} canvas - 主线程输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} Worker 或 OffscreenCanvas 不可用时抛出
+   */
   _inherits(WorkerRenderer, _BaseRenderer);
   return _createClass(WorkerRenderer, [{
     key: "init",
@@ -36691,6 +36845,8 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         if (!this._outputContext) {
           throw new Error('Canvas2D output context is not available');
         }
+
+        // 预填背景色，避免初始黑屏闪烁
         this._outputContext.fillStyle = this._config.backgroundColor || '#000';
         this._outputContext.fillRect(0, 0, canvas.width || 1, canvas.height || 1);
         this._outputContext.imageSmoothingEnabled = true;
@@ -36721,11 +36877,25 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       return true;
     }
+
+    /**
+     * 检查当前环境是否支持 Worker 渲染。
+     *
+     * @param {HTMLCanvasElement} canvas - 输出 canvas
+     * @returns {boolean} true=支持 Worker + OffscreenCanvas
+     */
   }, {
     key: "_canUseWorker",
     value: function _canUseWorker(canvas) {
       return Boolean(typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && canvas && canvas.getContext);
     }
+
+    /**
+     * 创建 Worker 实例。
+     * 优先使用外部脚本（workerUrl），否则生成 Blob Worker。
+     *
+     * @returns {Worker} Worker 实例
+     */
   }, {
     key: "_createWorker",
     value: function _createWorker() {
@@ -36738,6 +36908,18 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this._workerUrl = URL.createObjectURL(blob);
       return new Worker(this._workerUrl);
     }
+
+    /**
+     * 处理 Worker 返回的消息。
+     *
+     * 消息类型：
+     *   - ready: Worker 初始化完成，包含实际使用的渲染模式
+     *   - rendered: Worker 渲染完成，返回 ImageBitmap
+     *   - renderError: Worker 渲染失败
+     *   - failed: Worker 初始化失败
+     *
+     * @param {MessageEvent} event - Worker 消息事件
+     */
   }, {
     key: "_handleWorkerMessage",
     value: function _handleWorkerMessage(event) {
@@ -36755,6 +36937,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       if (data.type === 'rendered') {
         if (data.bitmap && this._outputContext) {
+          // 确保输出 canvas 尺寸与预期一致
           if (this._canvas.width !== this._info.width) {
             this._canvas.width = this._info.width;
           }
@@ -36791,11 +36974,30 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         });
       }
     }
+
+    /**
+     * 调整输出尺寸（委托到基类，保存宽高信息）。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
   }, {
     key: "resize",
     value: function resize(width, height) {
       _superPropGet(WorkerRenderer, "resize", this, 3)([width, height]);
     }
+
+    /**
+     * 提交一帧到 Worker 渲染。
+     *
+     * 流程：
+     *   1. Worker 未就绪 → 入队列等待
+     *   2. Worker 正忙且配置了丢帧 → 记录丢帧，替换队列中的最新帧
+     *   3. Worker 正忙且未配置丢帧 → 入队列（超出 maxFrameQueue 截断）
+     *   4. Worker 空闲 → 立即抽取帧并发送
+     *
+     * @param {Object} payload - 布局数据
+     */
   }, {
     key: "render",
     value: function render(payload) {
@@ -36815,9 +37017,18 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       this._renderInWorker(payload);
     }
+
+    /**
+     * 从 video 元素抽取帧并发送到 Worker。
+     *
+     * 异步执行：先在主线程创建 ImageBitmap/VideoFrame，
+     * 然后通过 postMessage transfer 给 Worker。
+     *
+     * @param {Object} payload - 布局数据
+     */
   }, {
     key: "_renderInWorker",
-    value: function () {
+    value: (function () {
       var _renderInWorker2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
         var result, _t;
         return _regenerator().w(function (_context) {
@@ -36873,6 +37084,16 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       return _renderInWorker;
     }()
+    /**
+     * 将 payload 入队列。
+     *
+     * 根据配置决定行为：
+     *   - dropFrameWhenBusy: 丢弃旧帧，只保留最新一帧
+     *   - 非丢帧模式: 追加到队列尾部，超出 maxFrameQueue 时丢弃最早帧
+     *
+     * @param {Object} payload - 布局数据
+     */
+    )
   }, {
     key: "_queuePayload",
     value: function _queuePayload(payload) {
@@ -36892,6 +37113,10 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         this._info.droppedFrames += 1;
       }
     }
+
+    /**
+     * 消费队列中的下一帧（Worker 空闲时调用）。
+     */
   }, {
     key: "_flushQueuedPayload",
     value: function _flushQueuedPayload() {
@@ -36901,9 +37126,18 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       var payload = this._queuedPayloads.shift();
       this._renderInWorker(payload);
     }
+
+    /**
+     * 从 payload 中提取所有 video 帧，生成可 transfer 的 ImageBitmap/VideoFrame。
+     *
+     * @param {Object} payload - 布局数据
+     * @returns {Promise<{items: Array<Object>, transfers: Array<*>}>}
+     *   items: 包含 id、draw 和 frame 的数组
+     *   transfers: 用于 postMessage transfer 的帧对象列表
+     */
   }, {
     key: "_createWorkerPayload",
-    value: function () {
+    value: (function () {
       var _createWorkerPayload2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(payload) {
         var items, transfers, idx, item, frame, _t2;
         return _regenerator().w(function (_context2) {
@@ -36960,9 +37194,24 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       return _createWorkerPayload;
     }()
+    /**
+     * 从 HTMLVideoElement 抽取一帧，自动选择最优 API。
+     *
+     * 探测顺序：
+     *   1. createImageBitmap(video) — 广泛支持，优先使用
+     *   2. new VideoFrame(video) — VideoFrame API，部分浏览器支持
+     *
+     * WebGL2 Worker 路径：ImageBitmap 上传到 WebGL 时浏览器可能不再处理
+     * UNPACK_FLIP_Y_WEBGL，因此在抽帧阶段传入 { imageOrientation: 'flipY' }
+     * 来补偿翻转。
+     *
+     * @param {HTMLVideoElement} video - 输入 video 元素
+     * @returns {Promise<ImageBitmap|VideoFrame>} 抽取的帧
+     */
+    )
   }, {
     key: "_createFrame",
-    value: function () {
+    value: (function () {
       var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(video) {
         var VideoFrameConstructor, bitmapOptions, bitmap, frame, _t3, _t4, _t5;
         return _regenerator().w(function (_context3) {
@@ -36974,8 +37223,6 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
                 break;
               }
               _context3.p = 1;
-              // Worker WebGL2 上传 ImageBitmap 时，部分浏览器不会再按 UNPACK_FLIP_Y_WEBGL 处理方向。
-              // 因此 WebGL2 Worker 路径在抽帧阶段就翻转一次；Worker Canvas2D 继续使用原始方向。
               bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
                 imageOrientation: 'flipY'
               } : undefined;
@@ -37035,6 +37282,12 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       }
       return _createFrame;
     }()
+    /**
+     * 释放未发送到 Worker 的帧资源（防止内存泄漏）。
+     *
+     * @param {Array<Object>} items - 包含 frame 的项列表
+     */
+    )
   }, {
     key: "_closeTransferFrames",
     value: function _closeTransferFrames(items) {
@@ -37044,6 +37297,12 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         }
       });
     }
+
+    /**
+     * 通知 Worker 移除一路源的纹理缓存。
+     *
+     * @param {string} id - 源 ID
+     */
   }, {
     key: "removeSource",
     value: function removeSource(id) {
@@ -37054,6 +37313,16 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         });
       }
     }
+
+    /**
+     * 销毁 Worker 渲染器。
+     *
+     * 清理步骤：
+     *   1. 设置销毁标记，阻止后续异步操作
+     *   2. 清空待处理帧队列
+     *   3. 释放输出上下文引用
+     *   4. 终止 Worker 线程 + revoke Blob URL
+     */
   }, {
     key: "destroy",
     value: function destroy() {
@@ -37065,6 +37334,11 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this._outputContext = null;
       this._destroyWorker();
     }
+
+    /**
+     * 终止 Worker 线程并释放相关资源。
+     * 先发送 destroy 消息通知 Worker 清理 GPU 资源，再 terminate。
+     */
   }, {
     key: "_destroyWorker",
     value: function _destroyWorker() {
@@ -37088,14 +37362,27 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
 "use strict";
 
 /**
- * 将常见 CSS 颜色转换为 WebGL clearColor 可用的 RGBA 数组。
+ * color — CSS 颜色解析工具
  *
- * 这里只做渲染兜底需要的轻量解析：
- *   - #rgb / #rrggbb
- *   - rgb(r,g,b) / rgba(r,g,b,a)
- * 其它复杂 CSS 颜色交给 Canvas2D 路径原生处理，WebGL 路径回退黑色。
+ * 将常见 CSS 颜色字符串解析为 WebGL clearColor 可用的 RGBA 数组。
+ * 只做渲染兜底需要的轻量解析，不处理复杂 CSS 颜色值（如 hsl、named colors）。
  *
- * @param {string} color - 用户传入的背景色
+ * 支持格式：
+ *   - #rgb（如 #fff → [1, 1, 1, 1]）
+ *   - #rrggbb（如 #ff0000 → [1, 0, 0, 1]）
+ *   - rgb(r, g, b)（如 rgb(255, 0, 0) → [1, 0, 0, 1]）
+ *   - rgba(r, g, b, a)（如 rgba(0, 0, 0, 0.5) → [0, 0, 0, 0.5]）
+ *
+ * 不支持的格式回退到纯黑 [0, 0, 0, 1]。
+ * Canvas2D 路径无需此工具（原生支持 CSS 颜色），仅 WebGL 路径使用。
+ *
+ * @module colorHelper
+ */
+
+/**
+ * 将 CSS 颜色字符串解析为归一化的 RGBA 数组。
+ *
+ * @param {string} color - CSS 颜色字符串
  * @returns {Array<number>} [r, g, b, a]，每个通道范围 0-1
  */
 exports.parseColor = function (color) {
@@ -37111,8 +37398,17 @@ exports.parseColor = function (color) {
   }
   return [0, 0, 0, 1];
 };
+
+/**
+ * 解析十六进制颜色。
+ *
+ * @param {string} value - #rgb 或 #rrggbb 格式
+ * @returns {Array<number>} [r, g, b, a]
+ */
 function parseHexColor(value) {
   var hex = value.slice(1);
+
+  // 展开简写 #RGB → #RRGGBB
   if (hex.length === 3) {
     hex = hex.split('').map(function (item) {
       return item + item;
@@ -37127,6 +37423,13 @@ function parseHexColor(value) {
   }
   return [(numberValue >> 16 & 255) / 255, (numberValue >> 8 & 255) / 255, (numberValue & 255) / 255, 1];
 }
+
+/**
+ * 解析 rgb/rgba 颜色。
+ *
+ * @param {string} value - rgb(r,g,b) 或 rgba(r,g,b,a) 格式
+ * @returns {Array<number>} [r, g, b, a]
+ */
 function parseRgbColor(value) {
   var matches = value.match(/rgba?\(([^)]+)\)/i);
   if (!matches) {
@@ -37142,11 +37445,29 @@ function parseRgbColor(value) {
   }
   return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
 }
+
+/**
+ * 将数值限制在指定范围内。
+ *
+ * @param {number} value - 待限制的值
+ * @param {number} min - 最小值
+ * @param {number} max - 最大值
+ * @returns {number} 限制后的值
+ */
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 },{}],86:[function(require,module,exports){
 "use strict";
+
+/**
+ * gl — WebGL 工具函数
+ *
+ * 提供 WebGL shader 编译、program 链接、纹理创建等公共操作。
+ * 被 MainWebGL2Renderer 和 Worker 内联脚本共同使用。
+ *
+ * @module glHelpers
+ */
 
 /**
  * 编译 WebGL shader。
@@ -37155,6 +37476,7 @@ function clamp(value, min, max) {
  * @param {number} shaderType - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
  * @param {string} shaderSource - GLSL 源码
  * @returns {WebGLShader} 编译后的 shader
+ * @throws {Error} 编译失败时抛出，包含 shader 编译日志
  */
 exports.compileShader = function (gl, shaderType, shaderSource) {
   var shader = gl.createShader(shaderType);
@@ -37175,6 +37497,7 @@ exports.compileShader = function (gl, shaderType, shaderSource) {
  * @param {WebGLShader} vertexShader - 顶点 shader
  * @param {WebGLShader} fragmentShader - 片元 shader
  * @returns {WebGLProgram} 链接后的 program
+ * @throws {Error} 链接失败时抛出，包含链接日志
  */
 exports.createProgram = function (gl, vertexShader, fragmentShader) {
   var program = gl.createProgram();
@@ -37190,10 +37513,14 @@ exports.createProgram = function (gl, vertexShader, fragmentShader) {
 };
 
 /**
- * 创建用于上传视频帧的 2D texture。
+ * 创建用于上传视频帧的 2D 纹理。
+ *
+ * 纹理参数：
+ *   - WRAP: CLAMP_TO_EDGE（避免边缘采样溢出）
+ *   - FILTER: LINEAR（双线性插值，保证缩放质量）
  *
  * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @returns {WebGLTexture} texture
+ * @returns {WebGLTexture} 初始化后的纹理对象
  */
 exports.createVideoTexture = function (gl) {
   var texture = gl.createTexture();
@@ -37209,12 +37536,23 @@ exports.createVideoTexture = function (gl) {
 "use strict";
 
 /**
- * 生成 Mixer Worker 的源码字符串。
+ * workerScript — Worker 内联脚本生成器
  *
- * Browserify 会把这个模块打进 SDK 主包，默认用 Blob Worker 运行，避免额外部署文件。
- * 如果业务侧 CSP 禁止 Blob Worker，可通过 options.workerUrl 指定外部 worker 脚本。
+ * 生成一个自包含的 WebWorker 渲染脚本源码字符串。
+ * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker，
+ * 无需额外部署 Worker 脚本文件。
  *
- * @returns {string} Worker 源码
+ * Worker 内部支持两种渲染模式：
+ *   - worker-webgl2: WebGL2 + OffscreenCanvas，GPU 加速
+ *   - worker-2d: Canvas2D + OffscreenCanvas，兼容兜底
+ *
+ * 消息协议：
+ *   - init(type, canvas, requestedMode, ...) → ready/failed
+ *   - render(type, payload) → rendered/renderError
+ *   - removeSource(type, id) → 无回复
+ *   - destroy(type) → 无回复
+ *
+ * @module workerScript
  */
 exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
