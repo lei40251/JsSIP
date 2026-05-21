@@ -89,6 +89,7 @@ function collectPrivateMethodNames(dir)
       let match;
       const classMethodPattern = /^\s+(_[A-Za-z0-9_]+)\s*\(/gm;
       const prototypeMethodPattern = /\.prototype\.(_[A-Za-z0-9_]+)\s*=/g;
+      const getterPattern = /get\s+(_[A-Za-z0-9_]+)\s*\(/gm;
 
       while ((match = classMethodPattern.exec(content)))
       {
@@ -96,6 +97,11 @@ function collectPrivateMethodNames(dir)
       }
 
       while ((match = prototypeMethodPattern.exec(content)))
+      {
+        names.add(match[1]);
+      }
+
+      while ((match = getterPattern.exec(content)))
       {
         names.add(match[1]);
       }
