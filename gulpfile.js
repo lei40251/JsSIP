@@ -87,7 +87,7 @@ function collectPrivateMethodNames(dir)
 
       const content = fs.readFileSync(filePath, 'utf8');
       let match;
-      const classMethodPattern = /^\s+(_[A-Za-z0-9_]+)\s*\(/gm;
+      const classMethodPattern = /^\s+(?:async\s+)?(_[A-Za-z0-9_]+)\s*\(/gm;
       const prototypeMethodPattern = /\.prototype\.(_[A-Za-z0-9_]+)\s*=/g;
       const getterPattern = /get\s+(_[A-Za-z0-9_]+)\s*\(/gm;
 

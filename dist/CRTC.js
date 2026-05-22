@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265191616
+ * CRTC v1.13.0.20265221321
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210383232 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210442642 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210383232');
+debug('version %s', '1.13.0.405210442642');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210383232';
+    return '1.13.0.405210442642';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":92}],39:[function(require,module,exports){
@@ -33986,8 +33986,8 @@ var LayoutEngine = /*#__PURE__*/function () {
     }
 
     /**
-     * 等比缩放视频，使其完全覆盖目标区域（封面效果 / cover）。
-     * 缩放后超出目标区域的部分被裁剪，视频在区域内居中。
+     * 等比缩放视频，使其完整显示在目标区域内（contain）。
+     * 缩放后剩余空间居中留边，视频不会被裁剪。
      *
      * @param {number} width - 视频原始宽度（videoWidth）
      * @param {number} height - 视频原始高度（videoHeight）
@@ -34005,12 +34005,12 @@ var LayoutEngine = /*#__PURE__*/function () {
         return null;
       }
       if (width / height >= targetWidth / targetHeight) {
-        // 视频更宽（相对目标）：按目标宽度缩放，高度超出部分上下裁剪
+        // 视频更宽（相对目标）：按目标宽度缩放，上下留边
         scale = targetWidth / width;
         newHeight = height * scale;
         newWidth = targetWidth;
       } else {
-        // 视频更高（相对目标）：按目标高度缩放，宽度超出部分左右裁剪
+        // 视频更高（相对目标）：按目标高度缩放，左右留边
         scale = targetHeight / height;
         newWidth = width * scale;
         newHeight = targetHeight;
