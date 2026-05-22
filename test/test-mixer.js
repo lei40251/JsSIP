@@ -169,10 +169,22 @@ class MockAudioNode
   connect(node)
   {
     this.connections.push(node);
+
+    if (node && node.inputs)
+    {
+      node.inputs.push(this);
+    }
   }
 
   disconnect()
   {
+    this.connections.forEach((node) =>
+    {
+      if (node && node.inputs)
+      {
+        node.inputs = node.inputs.filter((item) => item !== this);
+      }
+    });
     this.disconnected = true;
     this.connections = [];
   }
@@ -195,6 +207,7 @@ class MockAudioDestination extends MockAudioNode
     super();
 
     this.stream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+    this.inputs = [];
   }
 }
 
@@ -205,6 +218,7 @@ class MockAudioContext
     this.state = 'running';
     this.closed = false;
     this.sources = [];
+    this.destinations = [];
     MockAudioContext.instances.push(this);
   }
 
@@ -217,9 +231,12 @@ class MockAudioContext
 
   createMediaStreamDestination()
   {
-    this.destination = new MockAudioDestination();
+    const destination = new MockAudioDestination();
 
-    return this.destination;
+    this.destination = destination;
+    this.destinations.push(destination);
+
+    return destination;
   }
 
   createMediaStreamSource(stream)
@@ -473,6 +490,69 @@ async function testExternalVideoSrcObjectReconnectsAudio()
   mixer.stop();
 }
 
+async function testSlotAudioStreamsCreateIndependentBuses()
+{
+  resetMockState();
+
+  const streams = [];
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  for (let slot = 0; slot < 7; slot++)
+  {
+    const stream = createStream({ video: false, audio: true });
+
+    streams.push(stream);
+    mixer.appendStream(stream, slot);
+  }
+
+  const first = await mixer.getAudioStream({ slots: [ 1, 2, 3 ] });
+  const second = await mixer.getAudioStream({ slots: [ 1, 3, 5 ] });
+  const firstAgain = await mixer.getAudioStream({ slots: [ 3, 2, 1 ] });
+  const context = MockAudioContext.instances[0];
+
+  assert.ok(first);
+  assert.ok(second);
+  assert.notStrictEqual(second, first);
+  assert.strictEqual(firstAgain, first);
+  assert.strictEqual(context.destinations.length, 2);
+  assert.strictEqual(context.destinations[0].stream, first);
+  assert.strictEqual(context.destinations[1].stream, second);
+  assert.strictEqual(context.destinations[0].inputs.length, 3);
+  assert.strictEqual(context.destinations[1].inputs.length, 3);
+
+  mixer.removeStream(streams[2].id);
+  const refreshed = await mixer.getAudioStream({ slots: [ 1, 2, 3 ] });
+
+  assert.strictEqual(refreshed, first);
+  assert.strictEqual(context.destinations[0].inputs.length, 2);
+  assert.strictEqual(await mixer.getAudioStream({ slots: [] }), null);
+  assert.strictEqual(await mixer.getAudioStream({ slots: [ -1, 'x' ] }), null);
+
+  mixer.stop();
+}
+
+async function testDefaultAudioStreamStillMixesAllSources()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  for (let slot = 0; slot < 4; slot++)
+  {
+    mixer.appendStream(createStream({ video: false, audio: true }), slot);
+  }
+
+  const output = await mixer.getAudioStream();
+  const context = MockAudioContext.instances[0];
+
+  assert.ok(output);
+  assert.strictEqual(context.destinations.length, 1);
+  assert.strictEqual(context.destinations[0].inputs.length, 4);
+  assert.strictEqual(mixer.getAudioInfo().connectedSources, 4);
+
+  mixer.stop();
+}
+
 async function testWorkerRendererKeepsEmptyPayload()
 {
   const renderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {});
@@ -543,6 +623,8 @@ async function run()
     await testRepeatedOutputCallsReuseLiveStream();
     await testStopRejectsPublicReuse();
     await testExternalVideoSrcObjectReconnectsAudio();
+    await testSlotAudioStreamsCreateIndependentBuses();
+    await testDefaultAudioStreamStillMixesAllSources();
     await testWorkerRendererKeepsEmptyPayload();
     await testMixerConfigDefaults();
     await testMixerConfigSourceOptions();
