@@ -13,6 +13,7 @@ MixerController 采用**调解者模式**，不直接处理渲染、音频、布
 | `RenderLoop` | 帧循环：rAF 调度 + fps 节流 + 调用渲染器绘制 |
 | `MixerDomAdapter` | DOM 副作用：创建隐藏 canvas/video 元素 |
 | `MixerConfig` | 配置归一化：参数校验、默认值填充 |
+| `WatermarkManager` | 水印配置归一化、图片加载、文字缓存和绘制项计算 |
 
 ---
 
@@ -27,8 +28,10 @@ constructor(videos, options)
   ├── new OutputStreamManager(canvas, config)
   ├── new RenderLoop(canvas, config, { getSources, createRenderPayload, ... })
   ├── new AudioMixer(sourceRegistry, { getDestroyed, onAudioTrackAvailable })
-  ├── new LayoutEngine(sourceRegistry, { prepareCanvas, resizeRenderer })
+  ├── new WatermarkManager()
+  ├── new LayoutEngine(sourceRegistry, { prepareCanvas, resizeRenderer, createWatermarkItems })
   ├── _prepareCanvas()
+  ├── WatermarkManager.setWatermarks(options.watermarks)
   └── appendStream(videos)
         └── SourceRegistry.add()
               └── _mediaStreamToVideoElement()  ← 回调
@@ -91,9 +94,11 @@ stop()
 5. `new OutputStreamManager({ canvas, config, logger })` → 输出流管理器
 6. `new RenderLoop({ canvas, config, logger, getSources, createRenderPayload, syncExternalSourceAudio })` → 渲染循环
 7. `new AudioMixer({ logger, sourceRegistry, getDestroyed, onAudioTrackAvailable })` → 音频混音器
-8. `new LayoutEngine({ sourceRegistry, canvas, config, prepareCanvas, resizeRenderer })` → 布局引擎
+8. `new WatermarkManager()` → 水印管理器
+9. `new LayoutEngine({ sourceRegistry, canvas, config, prepareCanvas, resizeRenderer, createWatermarkItems })` → 布局引擎
 9. `this._prepareCanvas()` → 预置画布尺寸
-10. `this.appendStream(videos)` → 加入初始源
+10. `WatermarkManager.setWatermarks(options.watermarks)` → 加载初始水印
+11. `this.appendStream(videos)` → 加入初始源
 
 ---
 
@@ -185,12 +190,15 @@ SourceRegistry.remove(source)
   items: [
     { id: 'source-1', video: HTMLVideoElement, draw: { x, y, width, height } },
     ...
-  ]
+  ],
+  sourceWatermarks: [],
+  outputWatermarks: []
 }
 ```
 
 **设计意图**: MixerController 只决定"每路视频画在哪里"，具体的"怎么画"交给渲染器。
 这样 Canvas2D、WebGL2、Worker 可以复用完全一致的布局结果。
+水印绘制项由 WatermarkManager 根据当前 payload 追加，不改变源布局算法。
 
 ---
 
@@ -322,6 +330,20 @@ RenderLoop.start()  ← 恢复帧循环（之前可能因无源暂停）
   lastError: ''
 }
 ```
+
+#### `setWatermarks(watermarks)`
+
+**功能**: 替换全部水印配置。支持文字水印和图片水印；图片 URL 异步加载，加载失败只体现在 `getWatermarks()` 状态中，不中断混流。
+
+**返回值**: `Promise<Array<Object>>` — 当前水印快照。
+
+#### `clearWatermarks(filter)`
+
+**功能**: 清除水印。不传参数清空全部；可按 `{ id, target, slot, sourceId, streamId }` 删除匹配项。
+
+#### `getWatermarks()`
+
+**功能**: 返回水印状态快照，包含 `status` 和 `reason`，外部修改不会影响内部状态。
 
 #### `getMixedStream()`
 
@@ -478,6 +500,9 @@ RenderLoop.getSources
 
 RenderLoop.createRenderPayload
   └── () => this._createRenderPayload() → LayoutEngine.createRenderPayload()
+
+LayoutEngine.createWatermarkItems(payload)
+  └── WatermarkManager.createRenderItems(payload)
 
 RenderLoop.syncExternalSourceAudio
   └── () => this._syncExternalSourceAudio() → AudioMixer.syncExternalSourceAudio()

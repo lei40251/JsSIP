@@ -1,1058 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mixer v6.3 (输入/输出双重FPS控制)</title>
-    <link rel="stylesheet" href="./bootstrap-5.1.3-dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="./bootstrap-icons-1.8.1/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary: #0d6efd;
-            --danger: #dc3545;
-            --success: #198754;
-            --muted: #64748b;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            height: 100%;
-        }
-
-        body {
-            font-family: var(--bs-body-font-family);
-            background: #e8edf5;
-            color: #1f2937;
-            margin: 0;
-            min-height: 100%;
-        }
-
-        .min-h-0 {
-            min-height: 0;
-        }
-
-        .app-shell {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            padding: 0.75rem;
-            padding-bottom: 0.875rem;
-        }
-
-        .workspace-row {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow: hidden;
-            align-items: stretch;
-        }
-
-        .workspace-row > [class*="col-"] {
-            height: 100%;
-            min-height: 0;
-            min-width: 0;
-            overflow: hidden;
-        }
-
-        .panel-shell {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            overflow: hidden;
-            border: 0 !important;
-            border-radius: 0.5rem !important;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-            background: #fff;
-        }
-
-        .controls-stack {
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .controls-stack > .panel-shell {
-            flex: 0 1 auto;
-        }
-
-        .side-stack {
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .side-stack > .panel-shell {
-            flex: 0 0 auto;
-        }
-
-        .side-stack > #panel-submix {
-            flex: 1 1 0 !important;
-        }
-
-        #panel-submix {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        @media (min-width: 1200px) {
-            .workspace-row > .mixer-col-left {
-                flex: 0 0 300px;
-                max-width: 300px;
-                width: 300px;
-            }
-
-            .workspace-row > .mixer-col-main {
-                flex: 1 1 0;
-                max-width: none;
-                width: auto;
-            }
-
-            .workspace-row > .mixer-col-right {
-                flex: 0 0 380px;
-                max-width: 380px;
-                width: 380px;
-            }
-        }
-
-        .app-header {
-            backdrop-filter: blur(10px);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-            height: auto;
-            flex: 0 0 auto;
-            border: 0 !important;
-            border-radius: 0.5rem !important;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-            border: 1px solid rgba(148, 163, 184, 0.18) !important;
-        }
-
-        .preview-toolbar-actions {
-            display: flex;
-            gap: 0.35rem;
-            align-items: center;
-            justify-content: flex-end;
-            min-width: 0;
-            flex-wrap: wrap;
-        }
-
-        .preview-toolbar-actions .btn {
-            padding-left: 0.55rem;
-            padding-right: 0.55rem;
-        }
-
-        .panel-scroll {
-            min-height: 0;
-            overflow-y: auto;
-        }
-
-        .inspector-scroll {
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .inspector-scroll > section {
-            flex: 0 0 auto;
-        }
-
-        .preview-shell {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            height: 100%;
-            position: relative;
-        }
-
-        .preview-stage {
-            flex: 1 1 auto;
-            min-height: 0;
-            background: #050816;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-        }
-
-        .preview-titlebar,
-        .audio-viz-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.875rem;
-        }
-
-        .slot-grid-selector {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.35rem;
-        }
-
-        .slot-btn {
-            height: 1.72rem;
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.35rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.15s;
-            position: relative;
-            font-weight: 700;
-        }
-
-        .slot-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: #f8fbff;
-        }
-
-        .slot-btn.active {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-            box-shadow: none;
-        }
-
-        .slot-btn.occupied {
-            color: #0f172a;
-            border-color: #93c5fd;
-        }
-
-        .slot-btn.occupied::after {
-            content: '';
-            position: absolute;
-            right: 0.35rem;
-            top: 0.35rem;
-            width: 0.45rem;
-            height: 0.45rem;
-            border-radius: 50%;
-            background: var(--success);
-        }
-
-        .slot-btn.has-watermark::before {
-            content: 'WM';
-            position: absolute;
-            left: 0.3rem;
-            bottom: 0.2rem;
-            color: var(--primary);
-            font-size: 0.55rem;
-            font-weight: 800;
-        }
-
-        .slot-btn.active.has-watermark::before {
-            color: #fff;
-        }
-
-        .selected-slot-card {
-            display: grid;
-            grid-template-columns: 2rem minmax(0, 1fr);
-            gap: 0.4rem;
-            align-items: center;
-            padding: 0.3rem;
-            background: #f8fafc;
-            border: 1px solid #d7dee8;
-            border-radius: 0.35rem;
-        }
-
-        .selected-slot-number {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2rem;
-            height: 2rem;
-            background: var(--primary);
-            color: #fff;
-            border-radius: 0.35rem;
-            font-size: 1rem;
-            font-weight: 800;
-        }
-
-        .selected-slot-meta {
-            min-width: 0;
-            color: var(--muted);
-            font-size: 0.74rem;
-            line-height: 1.2;
-        }
-
-        .selected-slot-meta > div {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .submix-panel {
-            opacity: 0.55;
-            pointer-events: none;
-        }
-
-        .submix-panel.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .status-line,
-        .submix-status {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            font-family: monospace;
-            color: var(--muted);
-            line-height: 1.5;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .submix-list {
-            display: grid;
-            gap: 0.45rem;
-            margin-top: 0.45rem;
-            flex: 1 1 auto;
-            align-content: start;
-            min-height: 0;
-            max-height: none;
-            overflow-y: auto;
-        }
-
-        .submix-actions {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.25rem;
-        }
-
-        .submix-actions .btn {
-            min-width: 0;
-            padding-left: 0.25rem;
-            padding-right: 0.25rem;
-            font-size: 0.78rem;
-        }
-
-        .submix-empty {
-            color: #94a3b8;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        .submix-item {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 0.5rem;
-            align-items: center;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.35rem;
-            padding: 0.35rem;
-            background: #fff;
-        }
-
-        .submix-item audio {
-            grid-column: 1 / -1;
-            width: 100%;
-            height: 1.5rem;
-        }
-
-        .submix-label {
-            min-width: 0;
-            font-size: 0.875rem;
-            font-family: monospace;
-            color: #334155;
-            overflow-wrap: anywhere;
-        }
-
-        .btn-mini {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            border-radius: 0.25rem;
-        }
-
-        .btn {
-            border-radius: 0.35rem;
-            font-weight: 600;
-            transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-            white-space: nowrap;
-        }
-
-        .btn:disabled,
-        .form-control:disabled,
-        .form-select:disabled {
-            cursor: not-allowed;
-            opacity: 0.62;
-        }
-
-        .panel-disabled {
-            opacity: 0.58;
-            background: #f8fafc;
-        }
-
-        .panel-disabled::after {
-            content: '启动后可操作';
-            position: absolute;
-            top: 0.45rem;
-            right: 0.5rem;
-            padding: 0.1rem 0.35rem;
-            border-radius: 0.35rem;
-            background: #e2e8f0;
-            color: #64748b;
-            font-size: 0.72rem;
-            font-weight: 700;
-            pointer-events: none;
-        }
-
-        .btn-primary {
-            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.18);
-        }
-
-        .btn-primary:hover {
-            background: #0b5ed7;
-            box-shadow: 0 6px 14px rgba(13, 110, 253, 0.24);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-primary,
-        .btn-outline-secondary,
-        .btn-outline-danger {
-            border-width: 1px;
-            background: #fff;
-        }
-
-        .btn-outline-primary {
-            border-color: #b8cdf7;
-            color: #355070;
-        }
-
-        .btn-outline-primary:hover {
-            background: #f7fbff;
-            color: #0d6efd;
-            border-color: #6ea8fe;
-            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.10);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-secondary {
-            border-color: #d5dbe3;
-            color: #475569;
-        }
-
-        .btn-outline-secondary:hover {
-            background: #f8fafc;
-            color: #334155;
-            border-color: #b8c2d1;
-            box-shadow: 0 4px 10px rgba(71, 85, 105, 0.10);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-danger {
-            border-color: #f0b6bf;
-            color: #b42335;
-        }
-
-        .btn-outline-danger:hover {
-            background: #fff6f7;
-            color: #dc3545;
-            border-color: #ef8d98;
-            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.10);
-            transform: translateY(-1px);
-        }
-
-        video#mixed-video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            background: #000;
-        }
-
-        #grid-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .grid-cell-label {
-            position: absolute;
-            border: 1px dashed rgba(255, 255, 255, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255, 255, 255, 0.2);
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .audio-viz {
-            height: 28px;
-            flex-shrink: 0;
-            background: #1e293b;
-            position: relative;
-            border-top: 1px solid #334155;
-        }
-
-        canvas#viz-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        .source-strip {
-            height: 92px;
-            flex-shrink: 0;
-            background: #f8fafc;
-            padding: 7px 8px 9px;
-            display: grid;
-            grid-template-columns: repeat(9, minmax(0, 1fr));
-            gap: 6px;
-            overflow: hidden;
-            align-items: center;
-            border-top: 1px solid #e2e8f0;
-            border-bottom: 1px solid #d7dee8;
-            box-shadow: inset 0 -1px 0 #cbd5e1;
-        }
-
-        .source-strip-empty {
-            grid-column: 1 / -1;
-            color: #64748b;
-            font-size: 12px;
-            margin: auto;
-        }
-
-        .source-thumb {
-            width: 100%;
-            min-width: 0;
-            height: 100%;
-            background: #000;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.35rem;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .source-thumb.selected {
-            border-color: #0d6efd !important;
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
-        }
-
-        .source-thumb video {
-            flex: 1;
-            width: 100%;
-            object-fit: cover;
-            opacity: 0.8;
-        }
-
-        .source-thumb .media-placeholder {
-            flex: 1;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 8px;
-            box-sizing: border-box;
-            color: #e2e8f0;
-            background: #0f172a;
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1.3;
-        }
-
-        .source-thumb .info {
-            background: #334155;
-            color: white;
-            font-size: 9px;
-            padding: 2px 3px;
-            text-align: center;
-            line-height: 1.25;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .source-thumb .slot-tag {
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            background: #0d6efd;
-            color: white;
-            width: 18px;
-            height: 18px;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            z-index: 2;
-        }
-
-        .source-thumb .remove-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 18px;
-            height: 18px;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            cursor: pointer;
-            border: none;
-            z-index: 2;
-        }
-
-        .watermark-list {
-            display: grid;
-            gap: 6px;
-            max-height: 90px;
-            overflow-y: auto;
-        }
-
-        .hidden-state-sink {
-            display: none !important;
-        }
-
-        .watermark-item {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 6px;
-            padding: 7px;
-            background: #fff;
-            border: 1px solid #d7dee8;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1.35;
-            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
-        }
-
-        .watermark-id {
-            font-family: monospace;
-            font-weight: 700;
-            overflow-wrap: anywhere;
-        }
-
-        .watermark-meta {
-            grid-column: 1 / -1;
-            color: var(--muted);
-            font-family: monospace;
-        }
-
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 22px;
-            padding: 3px 7px;
-            border-radius: 999px;
-            background: #e2e8f0;
-            color: #475569;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .pill.ready {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.22rem;
-            font-size: 11.5px;
-            font-family: monospace;
-            line-height: 1.3;
-        }
-
-        .stat-cell {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.5rem;
-            padding: 4px 7px;
-            background: #fff;
-            border: 1px solid #d7dee8;
-            border-radius: 0.35rem;
-            min-width: 0;
-            overflow-wrap: anywhere;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .stat-cell span {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: right;
-        }
-
-        .stats-panel h2 {
-            margin-bottom: 0.35rem !important;
-        }
-
-        .compact-card {
-            background: #f8fafc;
-            border: 1px solid #d7dee8;
-            border-radius: 0.5rem;
-            padding: 0.625rem;
-        }
-
-        .compact-card h2 {
-            font-size: 0.85rem;
-            margin-bottom: 0.45rem;
-        }
-
-        .compact-card .form-label {
-            font-size: 0.72rem;
-        }
-
-        .compact-card .mb-3 {
-            margin-bottom: 0.45rem !important;
-        }
-
-        .compact-card .btn-sm,
-        .compact-card .form-control-sm,
-        .compact-card .form-select-sm {
-            min-height: 31px;
-            font-size: 0.82rem;
-            padding-top: 0.2rem;
-            padding-bottom: 0.2rem;
-        }
-
-        .compact-card .status-line,
-        .compact-card .submix-status {
-            margin-top: 0.45rem;
-            font-size: 0.75rem;
-        }
-
-        .inspector-note {
-            color: #64748b;
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        @media (max-width: 1220px) {
-            body {
-                overflow: auto;
-            }
-
-            .app-shell {
-                height: auto;
-                min-height: 100vh;
-            }
-
-            .workspace-row {
-                overflow: visible;
-            }
-
-            .panel-shell {
-                min-height: 0;
-            }
-        }
-
-        @media (max-width: 820px) {
-            .app-shell {
-                padding: 0.75rem;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="app-shell container-fluid">
-        <header class="app-header p-2 mb-2">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-xl-3">
-                    <div class="d-flex flex-column gap-1">
-                        <h1 class="h5 mb-0">Mixer v6.3 工作台</h1>
-                        <div class="text-secondary small">CRTC.Mixer SDK 演示 · 输出、槽位、水印、子混音</div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-7">
-                    <div class="row g-2">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small mb-1" for="cfg-out-res">输出分辨率</label>
-                            <select class="form-select form-select-sm" id="cfg-out-res">
-                                <optgroup label="横屏">
-                                    <option value="1920x1080">1080p (1920x1080)</option>
-                                    <option value="1280x720" selected>720p (1280x720)</option>
-                                    <option value="640x480">480p (640x480)</option>
-                                    <option value="640x360">360p (640x360)</option>
-                                </optgroup>
-                                <optgroup label="竖屏">
-                                    <option value="1080x1920">1080p 竖屏</option>
-                                    <option value="720x1280">720p 竖屏</option>
-                                    <option value="480x640">480p 竖屏</option>
-                                    <option value="360x640">360p 竖屏</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small mb-1" for="cfg-fps">输出帧率</label>
-                            <select class="form-select form-select-sm" id="cfg-fps">
-                                <option value="60">60 FPS</option>
-                                <option value="30" selected>30 FPS</option>
-                                <option value="15">15 FPS</option>
-                                <option value="5">5 FPS</option>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label small mb-1" for="cfg-render-mode">渲染后端</label>
-                            <select class="form-select form-select-sm" id="cfg-render-mode">
-                                <option value="auto">自动</option>
-                                <option value="worker-webgl2">Worker + WebGL2</option>
-                                <option value="main-webgl2" selected>主线程 + WebGL2</option>
-                                <option value="worker-2d">Worker + Canvas2D</option>
-                                <option value="main-2d">主线程 + Canvas2D</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="row g-2 flex-grow-1 workspace-row min-h-0">
-            <div class="col-12 mixer-col-left d-flex min-h-0">
-                <div class="controls-stack d-flex flex-column gap-1 flex-fill min-h-0">
-                    <section id="panel-sources" class="panel-shell panel-disabled p-2">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">目标槽位</h2>
-                            <span class="badge bg-light text-dark border">槽位</span>
-                        </div>
-                        <div class="selected-slot-card mb-2">
-                            <div class="selected-slot-number" id="selected-slot-number">0</div>
-                            <div class="selected-slot-meta">
-                                <div class="fw-semibold text-dark">当前操作目标</div>
-                                <div id="selected-slot-source">无源</div>
-                                <div id="selected-slot-watermark">无槽位水印</div>
-                            </div>
-                        </div>
-                        <div class="slot-grid-selector" id="slot-selector"></div>
-                    </section>
-
-                    <section id="panel-add-source" class="panel-shell panel-disabled p-2">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">添加输入源</h2>
-                            <span class="badge bg-light text-dark border">输入</span>
-                        </div>
-                        <div class="row g-1 mb-2">
-                            <div class="col-7">
-                                <label class="form-label small mb-1" for="cfg-in-res">输入分辨率</label>
-                                <select class="form-select form-select-sm" id="cfg-in-res">
-                                    <option value="auto">自动</option>
-                                    <optgroup label="横屏">
-                                        <option value="1920x1080">1080p</option>
-                                        <option value="1280x720">720p</option>
-                                        <option value="654x480">480p</option>
-                                        <option value="640x360">360p</option>
-                                    </optgroup>
-                                    <optgroup label="竖屏">
-                                        <option value="1080x1920">1080p 竖屏</option>
-                                        <option value="720x1280">720p 竖屏</option>
-                                        <option value="480x654">480p 竖屏</option>
-                                        <option value="360x640">360p 竖屏</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                            <div class="col-5">
-                                <label class="form-label small mb-1" for="cfg-in-fps">输入帧率</label>
-                                <select class="form-select form-select-sm" id="cfg-in-fps">
-                                    <option value="60">60 FPS</option>
-                                    <option value="30" selected>30 FPS</option>
-                                    <option value="15">15 FPS</option>
-                                    <option value="10">10 FPS</option>
-                                    <option value="5">5 FPS</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row g-1 row-cols-3">
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtual()">音视频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtualVideoOnly()">仅视频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtualAudioOnly()">仅音频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addCamera()">摄像头</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addScreen()">屏幕共享</button></div>
-                            <div class="col"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearAll()">清空</button></div>
-                        </div>
-                    </section>
-
-                    <section class="panel-shell p-2 stats-panel">
-                        <h2 class="h6 mb-2">统计</h2>
-                        <div class="stats-grid">
-                            <div class="stat-cell">Canvas <span id="stat-size">-</span></div>
-                            <div class="stat-cell">Layout <span id="stat-layout">-</span></div>
-                            <div class="stat-cell">Audio <span><span id="stat-audio">0</span> Ch</span></div>
-                            <div class="stat-cell">AudioState <span id="stat-audio-state">-</span></div>
-                            <div class="stat-cell">Renderer <span id="stat-renderer">-</span></div>
-                            <div class="stat-cell">Dropped <span id="stat-dropped">0</span></div>
-                            <div class="stat-cell">Reason <span id="stat-render-reason">-</span></div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <div class="col-12 mixer-col-main d-flex min-h-0">
-                <section class="preview-shell panel-shell flex-fill overflow-hidden">
-                    <div class="d-flex justify-content-between align-items-center border-bottom px-3 py-2 bg-light">
-                        <div>
-                            <div class="fw-semibold">输出预览</div>
-                            <div class="text-secondary small">网格叠加 · 音频表 · 源缩略图</div>
-                        </div>
-                        <div class="preview-toolbar-actions">
-                            <div id="status-badge" class="badge bg-secondary align-self-center">就绪</div>
-                            <button id="btn-start" class="btn btn-primary btn-sm">
-                                <i class="bi bi-play-fill me-1"></i>启动
-                            </button>
-                            <button id="btn-stop" class="btn btn-danger btn-sm" style="display:none;">
-                                <i class="bi bi-stop-fill me-1"></i>停止
-                            </button>
-                            <div id="audio-monitor-row" style="display:none;">
-                                <button id="btn-monitor-audio" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-volume-up-fill me-1"></i>监听
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="preview-stage">
-                        <video id="mixed-video" autoplay playsinline muted></video>
-                        <div id="grid-overlay"></div>
-                    </div>
-                    <div class="audio-viz">
-                        <canvas id="viz-canvas"></canvas>
-                        <div class="position-absolute top-0 start-0 px-2 text-success small fw-bold">音频混合</div>
-                    </div>
-                    <div class="source-strip" id="thumbs-container">
-                        <div class="source-strip-empty">(暂无输入源)</div>
-                    </div>
-                </section>
-            </div>
-
-            <div class="col-12 mixer-col-right d-flex min-h-0">
-                <aside class="side-stack d-flex flex-column gap-2 flex-fill min-h-0 overflow-hidden">
-                    <section class="panel-shell panel-disabled p-2" id="panel-watermark">
-                        <div class="inspector-scroll d-flex flex-column gap-1">
-                        <section class="compact-card">
-                            <h2 class="visually-hidden">输出水印</h2>
-                            <div class="row g-2">
-                                <div class="col-5">
-                                    <label class="form-label mb-1" for="wm-output-text">全局文字</label>
-                                    <input class="form-control form-control-sm" id="wm-output-text" value="CRTC 直播">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-output-text-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-output-text-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-right">右上</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-right" selected>右下</option>
-                                        <option value="center">居中</option>
-                                    </select>
-                                </div>
-                                <div class="col-3 d-flex align-items-end">
-                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputTextWatermark()">应用文字</button>
-                                </div>
-                                <div class="col-5">
-                                    <label class="form-label mb-1" for="wm-output-image">图片地址</label>
-                                    <input class="form-control form-control-sm" id="wm-output-image" placeholder="https://example.com/logo.png">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-output-image-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-output-image-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-right" selected>右上</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-right">右下</option>
-                                        <option value="center">居中</option>
-                                    </select>
-                                </div>
-                                <div class="col-3 d-flex align-items-end">
-                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputImageWatermark()">应用图片</button>
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearOutputWatermarks()">清除全局水印</button>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="compact-card">
-                            <h2 class="visually-hidden">槽位水印</h2>
-                            <div class="row g-2 align-items-end">
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-select">目标槽位</label>
-                                    <select class="form-select form-select-sm" id="wm-slot-select"></select>
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-text">名牌文字</label>
-                                    <input class="form-control form-control-sm" id="wm-slot-text" value="Slot">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-slot-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-right">右上</option>
-                                        <option value="bottom-left" selected>左下</option>
-                                        <option value="bottom-right">右下</option>
-                                        <option value="center">居中</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="status-line">
-                                当前槽位: <span id="wm-selected-slot">0</span> · <span id="wm-slot-source-state">无源</span> · <span id="wm-slot-watermark-state">无水印</span>
-                            </div>
-                            <div class="row g-2 mt-1">
-                                <div class="col-6"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.applySlotNameWatermark()">应用名牌</button></div>
-                                <div class="col-6"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearSelectedSlotWatermark()">清除当前</button></div>
-                                <div class="col-12"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearAllWatermarks()">清除全部水印</button></div>
-                            </div>
-                        </section>
-
-                        </div>
-                    </section>
-
-                    <section class="panel-shell panel-disabled p-2" id="panel-submix">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">子混音</h2>
-                            <span class="submix-status m-0">输出: <span id="submix-status">-</span></span>
-                        </div>
-                        <div class="submix-actions">
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([0, 1, 2])">0,1,2</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([1, 3, 5])">1,3,5</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([2, 4, 6])">2,4,6</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSelectedSlotSubmix()">当前</button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="app.stopAllSubmixes()">停止</button>
-                        </div>
-                        <div id="submix-list" class="submix-list">
-                            <div class="submix-empty">暂无子混音</div>
-                        </div>
-                    </section>
-                </aside>
-            </div>
-        </div>
-        <div class="hidden-state-sink" aria-hidden="true">
-            <span id="diagnostic-selected-slot">槽位 0 · 无源 · 无水印</span>
-            <div id="watermark-list">
-                <div class="submix-empty">暂无水印</div>
-            </div>
-        </div>
-    </div>
-
-    <!--
-  这个页面是 CRTC.Mixer 的功能演示页。
-  注意：真正的混流逻辑来自 ../../dist/CRTC.min.js 中的 CRTC.Mixer；
-  页面里的 JS 只负责采集测试输入源、操作 slot、渲染缩略图和展示统计信息。
--->
-    <script src="./bootstrap-5.1.3-dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../dist/CRTC.min.js"></script>
-    <script>
         // ==========================================
         // 1. Utils (虚拟源 - 支持动态FPS控制)
         // ==========================================
@@ -1219,7 +165,6 @@
                 btnMonitorAudio: document.getElementById('btn-monitor-audio'),
                 panelAddSource: document.getElementById('panel-add-source'),
                 panelSubmix: document.getElementById('panel-submix'),
-                panelWatermark: document.getElementById('panel-watermark'),
                 submixList: document.getElementById('submix-list'),
                 submixStatus: document.getElementById('submix-status'),
                 panelSources: document.getElementById('panel-sources'),
@@ -1230,16 +175,19 @@
                 selectedSlotWatermark: document.getElementById('selected-slot-watermark'),
                 diagnosticSelectedSlot: document.getElementById('diagnostic-selected-slot'),
                 wmOutputText: document.getElementById('wm-output-text'),
-                wmOutputTextPosition: document.getElementById('wm-output-text-position'),
                 wmOutputImage: document.getElementById('wm-output-image'),
-                wmOutputImagePosition: document.getElementById('wm-output-image-position'),
                 wmSlotSelect: document.getElementById('wm-slot-select'),
                 wmSelectedSlot: document.getElementById('wm-selected-slot'),
                 wmSlotSourceState: document.getElementById('wm-slot-source-state'),
                 wmSlotWatermarkState: document.getElementById('wm-slot-watermark-state'),
                 wmSlotText: document.getElementById('wm-slot-text'),
-                wmSlotPosition: document.getElementById('wm-slot-position'),
                 watermarkList: document.getElementById('watermark-list'),
+                tabs: Array.from(document.querySelectorAll('.tab-btn')),
+                tabPanes: {
+                    watermark : document.getElementById('tab-watermark'),
+                    submix    : document.getElementById('tab-submix'),
+                    diagnostics : document.getElementById('tab-diagnostics')
+                },
                 statsLayout: document.getElementById('stat-layout'),
                 statsAudio: document.getElementById('stat-audio'),
                 statsAudioState: document.getElementById('stat-audio-state'),
@@ -1262,10 +210,13 @@
                 for (let i = 0; i < 9; i++) {
                     const opt = document.createElement('option');
                     opt.value = i;
-                    opt.innerText = `槽位 ${i}`;
+                    opt.innerText = `slot ${i}`;
                     this.ui.wmSlotSelect.appendChild(opt);
                 }
                 this.ui.wmSlotSelect.onchange = () => this.selectSlot(parseInt(this.ui.wmSlotSelect.value, 10));
+                this.ui.tabs.forEach(tab => {
+                    tab.onclick = () => this.setInspectorTab(tab.dataset.tab);
+                });
                 this.selectSlot(0);
 
                 // 绑定启动/停止按钮。输入源按钮通过 HTML 上的 onclick 直接调用 app.addXxx()。
@@ -1273,23 +224,7 @@
                 this.ui.btnStop.onclick = () => this.stop();
                 this.ui.btnMonitorAudio.onclick = () => this.toggleMonitorAudio();
                 this.updateMonitorAudioUI();
-                this.setRunningUI(false);
-            },
-
-            setPanelEnabled(panel, enabled) {
-                if (!panel) return;
-
-                panel.classList.toggle('panel-disabled', !enabled);
-                panel.querySelectorAll('button, input, select').forEach(el => {
-                    el.disabled = !enabled;
-                });
-            },
-
-            setRunningUI(running) {
-                this.setPanelEnabled(this.ui.panelSources, running);
-                this.setPanelEnabled(this.ui.panelAddSource, running);
-                this.setPanelEnabled(this.ui.panelSubmix, running);
-                this.setPanelEnabled(this.ui.panelWatermark, running);
+                this.setInspectorTab('watermark');
             },
 
             selectSlot(idx) {
@@ -1328,6 +263,15 @@
                 this.refreshSelectedSlotSummary();
             },
 
+            setInspectorTab(name) {
+                this.ui.tabs.forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.tab === name);
+                });
+                Object.entries(this.ui.tabPanes).forEach(([key, pane]) => {
+                    pane.classList.toggle('active', key === name);
+                });
+            },
+
             getSelectedSource() {
                 if (!this.mixer) return null;
                 return this.mixer.getSources().find(source => source.slot === this.currentSlot) || null;
@@ -1349,7 +293,7 @@
                 const hasWatermark = this.hasSlotWatermark(this.currentSlot);
                 const sourceState = source ? `已占用 · ${source.id}` : '无源';
                 const watermarkState = hasWatermark ? '已设置 slot 水印' : '无 slot 水印';
-                const summary = `槽位 ${this.currentSlot} · ${sourceState} · ${watermarkState}`;
+                const summary = `slot ${this.currentSlot} · ${sourceState} · ${watermarkState}`;
 
                 this.ui.selectedSlotSource.innerText = sourceState;
                 this.ui.selectedSlotWatermark.innerText = watermarkState;
@@ -1400,7 +344,7 @@
                     target   : 'output',
                     type     : 'text',
                     text     : this.ui.wmOutputText.value || 'CRTC Live',
-                    position : this.ui.wmOutputTextPosition.value || 'bottom-right'
+                    position : 'bottom-right'
                 };
             },
 
@@ -1414,7 +358,7 @@
                     type     : 'image',
                     image    : image,
                     width    : 160,
-                    position : this.ui.wmOutputImagePosition.value || 'top-right'
+                    position : 'top-right'
                 };
             },
 
@@ -1425,29 +369,26 @@
                     slot     : slot,
                     type     : 'text',
                     text     : text,
-                    position : this.ui.wmSlotPosition.value || 'bottom-left',
+                    position : 'bottom-left',
                     margin   : 12
                 };
             },
 
             async applyOutputTextWatermark() {
-                const next = this.getWatermarkSnapshot().filter(item => item.target !== 'output');
-                next.push(this.buildOutputTextWatermark());
-                const imageWatermark = this.buildOutputImageWatermark();
-                if (imageWatermark) next.push(imageWatermark);
-
-                await this.applyWatermarks(next);
+                await this.applyWatermarks([
+                    this.buildOutputTextWatermark(),
+                    ...this.getWatermarkSnapshot().filter(item => !(item.target === 'output' && item.id === 'output-image'))
+                ]);
             },
 
             async applyOutputImageWatermark() {
                 const watermark = this.buildOutputImageWatermark();
                 if (!watermark) return;
 
-                const next = this.getWatermarkSnapshot().filter(item => item.target !== 'output');
-                next.push(this.buildOutputTextWatermark());
-                next.push(watermark);
-
-                await this.applyWatermarks(next);
+                await this.applyWatermarks([
+                    watermark,
+                    ...this.getWatermarkSnapshot().filter(item => !(item.target === 'output' && item.id === 'output-text'))
+                ]);
             },
 
             async clearOutputWatermarks() {
@@ -1461,7 +402,7 @@
             async applySlotNameWatermark() {
                 if (!this.mixer) return;
 
-                const text = this.ui.wmSlotText.value || `槽位 ${this.currentSlot}`;
+                const text = this.ui.wmSlotText.value || `Slot ${this.currentSlot}`;
                 const next = this.getWatermarkSnapshot().filter(item => !(item.target === 'source' && item.slot === this.currentSlot));
                 next.push(this.buildSlotWatermark(this.currentSlot, text));
                 await this.applyWatermarks(next);
@@ -1513,10 +454,14 @@
                     this.ui.btnStart.style.display = 'none';
                     this.ui.btnStop.style.display = 'block';
                     this.ui.audioMonitorRow.style.display = 'block';
-                    this.setRunningUI(true);
+                    this.ui.panelSources.style.opacity = '1';
+                    this.ui.panelSources.style.pointerEvents = 'auto';
+                    this.ui.panelAddSource.style.opacity = '1';
+                    this.ui.panelAddSource.style.pointerEvents = 'auto';
                     this.ui.panelSubmix.classList.add('active');
                     this.ui.statusBadge.innerText = "运行中";
-                    this.ui.statusBadge.className = 'badge bg-success align-self-center';
+                    this.ui.statusBadge.style.background = "#4ade80";
+                    this.ui.statusBadge.style.color = "white";
                     this.ui.statsSize.innerText = `${w}x${h} @ ${fps}fps`;
                     this.ui.thumbs.innerHTML = '';
                     this.updateRenderInfo();
@@ -1557,11 +502,15 @@
                 this.ui.btnStart.style.display = 'block';
                 this.ui.btnStop.style.display = 'none';
                 this.ui.audioMonitorRow.style.display = 'none';
-                this.setRunningUI(false);
+                this.ui.panelSources.style.opacity = '0.5';
+                this.ui.panelSources.style.pointerEvents = 'none';
+                this.ui.panelAddSource.style.opacity = '0.5';
+                this.ui.panelAddSource.style.pointerEvents = 'none';
                 this.ui.panelSubmix.classList.remove('active');
                 this.ui.statusBadge.innerText = "已停止";
-                this.ui.statusBadge.className = 'badge bg-secondary align-self-center';
-                this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
+                this.ui.statusBadge.style.background = "#e2e8f0";
+                this.ui.statusBadge.style.color = "#475569";
+                this.ui.thumbs.innerHTML = '<div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>';
                 this.ui.overlay.innerHTML = '';
                 this.ui.statsAudioState.innerText = '-';
                 this.ui.statsRenderer.innerText = '-';
@@ -1615,7 +564,7 @@
                     if (!stream || stream.getAudioTracks().length === 0) {
                         submix.audio.pause();
                         submix.audio.srcObject = null;
-                        submix.label.innerText = `槽位 ${key} 无可用音频`;
+                        submix.label.innerText = `slots ${key} 无可用音频`;
                         this.updateStats();
 
                         return;
@@ -1623,7 +572,7 @@
 
                     submix.audio.srcObject = stream;
                     await submix.audio.play();
-                    submix.label.innerText = `槽位 ${key}`;
+                    submix.label.innerText = `slots ${key}`;
                     this.updateSubmixStatus();
                     this.updateStats();
                 } catch (e) {
@@ -1654,10 +603,11 @@
 
                 const label = document.createElement('div');
                 label.className = 'submix-label';
-                label.innerText = `槽位 ${key}`;
+                label.innerText = `slots ${key}`;
 
                 const stopButton = document.createElement('button');
-                stopButton.className = 'btn btn-outline-danger btn-sm btn-mini';
+                stopButton.className = 'btn-outline btn-mini';
+                stopButton.style.color = 'var(--danger)';
                 stopButton.innerText = '停止';
                 stopButton.onclick = () => this.stopSubmix(slots);
 
@@ -1805,7 +755,7 @@
                 const el = document.getElementById(`thumb-${id}`);
                 if (el) el.remove();
                 if (this.ui.thumbs.children.length === 0) {
-                    this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
+                    this.ui.thumbs.innerHTML = '<div style="color:#94a3b8; font-size:12px; margin:auto;">(暂无输入源)</div>';
                 }
                 this.updateSlotUI();
                 this.updateStats();
@@ -2059,10 +1009,6 @@
             }
         };
 
-        window.app = app;
         app.init();
         window.addEventListener('pagehide', () => app.stop());
-    </script>
-</body>
-
-</html>
+    

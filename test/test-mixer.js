@@ -106,6 +106,10 @@ class MockCanvas2DContext
   constructor()
   {
     this.fillStyle = '#000';
+    this.font = '';
+    this.textBaseline = '';
+    this.textAlign = '';
+    this.globalAlpha = 1;
     this.imageSmoothingEnabled = false;
     this.operations = [];
   }
@@ -120,9 +124,23 @@ class MockCanvas2DContext
     this.operations.push({ type: 'clearRect', x, y, width, height });
   }
 
-  drawImage()
+  drawImage(...args)
   {
-    this.operations.push({ type: 'drawImage' });
+    this.operations.push({
+      type        : 'drawImage',
+      globalAlpha : this.globalAlpha,
+      args        : args
+    });
+  }
+
+  fillText(text, x, y)
+  {
+    this.operations.push({ type: 'fillText', text, x, y });
+  }
+
+  measureText(text)
+  {
+    return { width: String(text).length * 12 };
   }
 }
 
@@ -134,6 +152,7 @@ class MockCanvasElement
     this.height = 0;
     this.stream = null;
     this._context2d = new MockCanvas2DContext();
+    MockCanvasElement.instances.push(this);
   }
 
   setAttribute() {}
@@ -157,6 +176,8 @@ class MockCanvasElement
     return stream;
   }
 }
+
+MockCanvasElement.instances = [];
 
 class MockAudioNode
 {
@@ -355,6 +376,7 @@ function resetMockState()
   nextAnimationFrameId = 1;
   animationFrames = {};
   MockAudioContext.instances = [];
+  MockCanvasElement.instances = [];
 }
 
 function createStream(options)
@@ -553,6 +575,145 @@ async function testDefaultAudioStreamStillMixesAllSources()
   mixer.stop();
 }
 
+async function testWatermarkConfigAndFiltering()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    watermarks : {
+      id       : 'brand',
+      type     : 'text',
+      text     : 'CRTC',
+      position : 'bottom-right'
+    }
+  });
+
+  await flushAsync();
+
+  let watermarks = mixer.getWatermarks();
+
+  assert.strictEqual(watermarks.length, 1);
+  assert.strictEqual(watermarks[0].id, 'brand');
+  assert.strictEqual(watermarks[0].target, 'output');
+  assert.strictEqual(watermarks[0].status, 'ready');
+
+  await mixer.setWatermarks([
+    { id: 'slot0', target: 'source', slot: 0, text: 'Host', position: 'bottom-left' },
+    { id: 'slot1', target: 'source', slot: 1, text: 'Guest', position: 'bottom-left' },
+    { id: 'global', target: 'output', text: 'Live' }
+  ]);
+
+  mixer.clearWatermarks({ slot: 1 });
+  watermarks = mixer.getWatermarks();
+
+  assert.deepStrictEqual(watermarks.map((item) => item.id).sort(), [ 'global', 'slot0' ]);
+  mixer.clearWatermarks();
+  assert.strictEqual(mixer.getWatermarks().length, 0);
+
+  mixer.stop();
+  assert.throws(() => mixer.getWatermarks(), /has been stopped/);
+  assert.throws(() => mixer.clearWatermarks(), /has been stopped/);
+  await assertRejects(() => mixer.setWatermarks([]), /has been stopped/);
+}
+
+async function testCanvas2DWatermarkDrawOrder()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const sourceA = createStream();
+  const sourceB = createStream();
+
+  mixer.appendStream(sourceA, 0);
+  mixer.appendStream(sourceB, 1);
+  await mixer.setWatermarks([
+    {
+      id              : 'slot0',
+      target          : 'source',
+      slot            : 0,
+      text            : 'Host',
+      opacity         : 0.5,
+      position        : 'bottom-left',
+      backgroundColor : 'rgba(0,0,0,0)'
+    },
+    {
+      id              : 'brand',
+      target          : 'output',
+      text            : 'CRTC',
+      opacity         : 0.75,
+      position        : 'top-right',
+      backgroundColor : 'rgba(0,0,0,0)'
+    }
+  ]);
+
+  mixer.getVideoStream();
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const outputContext = mixer._canvas._context2d;
+  const drawImages = outputContext.operations.filter((operation) => operation.type === 'drawImage');
+
+  assert.strictEqual(drawImages.length, 4);
+  assert.strictEqual(drawImages[0].globalAlpha, 1);
+  assert.strictEqual(drawImages[1].globalAlpha, 1);
+  assert.strictEqual(drawImages[2].globalAlpha, 0.5);
+  assert.strictEqual(drawImages[3].globalAlpha, 0.75);
+  assert.strictEqual(outputContext.globalAlpha, 1);
+
+  mixer.stop();
+}
+
+async function testWorkerRendererCarriesWatermarkPayload()
+{
+  const renderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {});
+  const messages = [];
+  const closed = [];
+  const sourceFrame = { close: () => closed.push('source') };
+  const watermarkFrame = { close: () => closed.push('watermark') };
+
+  renderer._worker = {
+    postMessage : function(message, transfers)
+    {
+      messages.push({ message, transfers });
+    }
+  };
+  renderer._workerReady = true;
+  renderer._createFrame = function()
+  {
+    return Promise.resolve(sourceFrame);
+  };
+  renderer._createWatermarkFrame = function()
+  {
+    return Promise.resolve(watermarkFrame);
+  };
+
+  await renderer._renderInWorker({
+    width           : 320,
+    height          : 180,
+    backgroundColor : '#123456',
+    items           : [
+      { id: 'source-1', video: { readyState: 2 }, draw: { x: 0, y: 0, width: 100, height: 80 } }
+    ],
+    sourceWatermarks : [
+      { id: 'wm-1', image: { width: 40, height: 20 }, opacity: 0.5, draw: { x: 4, y: 5, width: 40, height: 20 } }
+    ],
+    outputWatermarks : []
+  });
+
+  assert.strictEqual(messages.length, 1);
+  assert.strictEqual(messages[0].message.type, 'render');
+  assert.strictEqual(messages[0].message.payload.items.length, 1);
+  assert.strictEqual(messages[0].message.payload.sourceWatermarks.length, 1);
+  assert.strictEqual(messages[0].transfers.length, 2);
+  renderer._closeTransferFrames(messages[0].message.payload.items);
+  renderer._closeTransferFrames(messages[0].message.payload.sourceWatermarks);
+  assert.deepStrictEqual(closed, [ 'source', 'watermark' ]);
+}
+
 async function testWorkerRendererKeepsEmptyPayload()
 {
   const renderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {});
@@ -625,6 +786,9 @@ async function run()
     await testExternalVideoSrcObjectReconnectsAudio();
     await testSlotAudioStreamsCreateIndependentBuses();
     await testDefaultAudioStreamStillMixesAllSources();
+    await testWatermarkConfigAndFiltering();
+    await testCanvas2DWatermarkDrawOrder();
+    await testWorkerRendererCarriesWatermarkPayload();
     await testWorkerRendererKeepsEmptyPayload();
     await testMixerConfigDefaults();
     await testMixerConfigSourceOptions();

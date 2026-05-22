@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026522178
+ * CRTC v1.13.0.20265221757
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3274,7 +3274,7 @@ var User = /*#__PURE__*/function () {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":91}],31:[function(require,module,exports){
+},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":92}],31:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210443416 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210443514 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210443416');
+debug('version %s', '1.13.0.405210443514');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,10 +16893,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210443416';
+    return '1.13.0.405210443514';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":92}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17013,7 +17013,7 @@ module.exports = /*#__PURE__*/function () {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":92}],40:[function(require,module,exports){
+},{"debug":93}],40:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17275,7 +17275,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":90}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":91}],41:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17664,7 +17664,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":90}],44:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":91}],44:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -24550,7 +24550,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":91,"events":90,"sdp-transform":99}],47:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":92,"events":91,"sdp-transform":100}],47:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24717,7 +24717,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":90}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":91}],48:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24826,7 +24826,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":90}],49:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":91}],49:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25039,7 +25039,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":90}],51:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":91}],51:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -26272,7 +26272,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":99}],54:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":100}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -26855,7 +26855,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":61,"events":90}],56:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":61,"events":91}],56:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -27576,7 +27576,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":90}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":91}],58:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29147,7 +29147,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":88,"events":90,"jsencrypt":95}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":89,"events":91,"jsencrypt":96}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -34109,6 +34109,7 @@ var LayoutEngine = /*#__PURE__*/function () {
    * @param {Object} options.config - 混流配置对象
    * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
    * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
+   * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
    */
   function LayoutEngine(options) {
     _classCallCheck(this, LayoutEngine);
@@ -34118,6 +34119,7 @@ var LayoutEngine = /*#__PURE__*/function () {
     this._config = options.config;
     this._prepareCanvas = options.prepareCanvas;
     this._resizeRenderer = options.resizeRenderer;
+    this._createWatermarkItems = options.createWatermarkItems;
   }
 
   /**
@@ -34151,18 +34153,40 @@ var LayoutEngine = /*#__PURE__*/function () {
         if (draw) {
           items.push({
             id: source.id,
+            streamId: _this._getSourceStreamId(source),
             slot: slot,
             video: source.video,
             draw: draw
           });
         }
       });
-      return {
+      var payload = {
         width: this._canvas.width,
         height: this._canvas.height,
         backgroundColor: this._config.backgroundColor,
-        items: items
+        items: items,
+        sourceWatermarks: [],
+        outputWatermarks: []
       };
+      var watermarks = this._createWatermarkItems ? this._createWatermarkItems(payload) : null;
+      if (watermarks) {
+        payload.sourceWatermarks = watermarks.sourceWatermarks || [];
+        payload.outputWatermarks = watermarks.outputWatermarks || [];
+      }
+      return payload;
+    }
+
+    /**
+     * 获取 source 关联的 stream id，用于 source watermark 匹配。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {string|null} stream id
+     */
+  }, {
+    key: "_getSourceStreamId",
+    value: function _getSourceStreamId(source) {
+      var stream = this._sourceRegistry.getStream(source);
+      return stream ? stream.id : null;
     }
 
     /**
@@ -34343,7 +34367,8 @@ exports.create = function (options) {
     workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
     dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
     maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
-    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true
+    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
+    watermarks: options.watermarks || []
   };
 };
 
@@ -34456,6 +34481,7 @@ var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
 var MixerConfig = require('./MixerConfig');
 var MixerDomAdapter = require('./MixerDomAdapter');
+var WatermarkManager = require('./WatermarkManager');
 var logger = new Logger('MediaStreamMixer');
 
 /**
@@ -34558,6 +34584,7 @@ module.exports = /*#__PURE__*/function () {
     this._audioRefreshPending = false;
     this._outputStreamManager = null;
     this._domAdapter = null;
+    this._watermarkManager = null;
 
     // -----------------------------------------------------------------------
     // 混流配置
@@ -34575,6 +34602,9 @@ module.exports = /*#__PURE__*/function () {
     this._config = config;
     this._domAdapter = new MixerDomAdapter({
       config: this._config,
+      logger: logger
+    });
+    this._watermarkManager = new WatermarkManager({
       logger: logger
     });
 
@@ -34712,9 +34742,17 @@ module.exports = /*#__PURE__*/function () {
       canvas: this._canvas,
       config: this._config,
       prepareCanvas: this._prepareCanvas.bind(this),
-      resizeRenderer: this._resizeRenderer.bind(this)
+      resizeRenderer: this._resizeRenderer.bind(this),
+      createWatermarkItems: function createWatermarkItems(payload) {
+        return _this._createWatermarkItems(payload);
+      }
     });
     this._prepareCanvas();
+    this._watermarkManager.setWatermarks(this._config.watermarks).then(function () {
+      if (!_this._destroyed) {
+        _this._drawVideosToCanvas(undefined, true);
+      }
+    });
 
     // -- 将初始传入的源加入混流 --
     this.appendStream(videos);
@@ -34975,6 +35013,18 @@ module.exports = /*#__PURE__*/function () {
       return this._layoutEngine.createRenderPayload();
     }
 
+    /**
+     * 构建当前帧水印绘制项。
+     *
+     * @param {Object} payload - 基础渲染 payload
+     * @returns {Object} { sourceWatermarks, outputWatermarks }
+     */
+  }, {
+    key: "_createWatermarkItems",
+    value: function _createWatermarkItems(payload) {
+      return this._watermarkManager.createRenderItems(payload);
+    }
+
     // =========================================================================
     //  主渲染循环（rAF）
     // =========================================================================
@@ -35219,6 +35269,48 @@ module.exports = /*#__PURE__*/function () {
     }
 
     /**
+     * 替换全部水印配置。
+     *
+     * @param {Array<Object>|Object|null} watermarks - 水印配置
+     * @returns {Promise<Array<Object>>} 当前水印快照
+     */
+  }, {
+    key: "setWatermarks",
+    value: function setWatermarks(watermarks) {
+      var _this4 = this;
+      this._assertNotDestroyed('setWatermarks()');
+      return this._watermarkManager.setWatermarks(watermarks).then(function (snapshot) {
+        _this4._drawVideosToCanvas(undefined, true);
+        return snapshot;
+      });
+    }
+
+    /**
+     * 清除水印。
+     *
+     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
+     */
+  }, {
+    key: "clearWatermarks",
+    value: function clearWatermarks(filter) {
+      this._assertNotDestroyed('clearWatermarks()');
+      this._watermarkManager.clearWatermarks(filter);
+      this._drawVideosToCanvas(undefined, true);
+    }
+
+    /**
+     * 获取当前水印状态快照。
+     *
+     * @returns {Array<Object>} 水印状态列表
+     */
+  }, {
+    key: "getWatermarks",
+    value: function getWatermarks() {
+      this._assertNotDestroyed('getWatermarks()');
+      return this._watermarkManager.getWatermarks();
+    }
+
+    /**
      * 获取合并了视频和音频的完整输出流。
      *
      * 流程：
@@ -35267,7 +35359,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "getVideoStream",
     value: function getVideoStream() {
-      var _this4 = this;
+      var _this5 = this;
       logger.debug('getVideoStream()');
       this._assertNotDestroyed('getVideoStream()');
       this._renderLoop.resume();
@@ -35276,8 +35368,8 @@ module.exports = /*#__PURE__*/function () {
         return this._outputStreamManager.videoStream;
       }
       var videoStream = this._outputStreamManager.getVideoStream(function () {
-        _this4._renderLoop.resetFrameTiming();
-        _this4._drawVideosToCanvas(undefined, true);
+        _this5._renderLoop.resetFrameTiming();
+        _this5._drawVideosToCanvas(undefined, true);
       });
       return videoStream;
     }
@@ -35410,7 +35502,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Logger":39,"./AudioMixer":72,"./LayoutEngine":73,"./MixerConfig":74,"./MixerDomAdapter":76,"./OutputStreamManager":77,"./RenderLoop":78,"./SourceRegistry":79}],76:[function(require,module,exports){
+},{"../Logger":39,"./AudioMixer":72,"./LayoutEngine":73,"./MixerConfig":74,"./MixerDomAdapter":76,"./OutputStreamManager":77,"./RenderLoop":78,"./SourceRegistry":79,"./WatermarkManager":80}],76:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -36069,7 +36161,7 @@ var RenderLoop = /*#__PURE__*/function () {
   }]);
 }();
 module.exports = RenderLoop;
-},{"../mixer-renderer/MainCanvas2DRenderer":81,"../mixer-renderer/RendererFactory":83}],79:[function(require,module,exports){
+},{"../mixer-renderer/MainCanvas2DRenderer":82,"../mixer-renderer/RendererFactory":84}],79:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -36449,6 +36541,461 @@ function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), 
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 /**
+ * WatermarkManager — Mixer 水印配置、加载和布局模块
+ *
+ * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
+ * 或每路 source 的 draw 区域计算最终绘制矩形。
+ *
+ * @module WatermarkManager
+ */
+
+var DEFAULT_TEXT_COLOR = '#fff';
+var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
+var DEFAULT_FONT_SIZE = 28;
+var DEFAULT_PADDING = 8;
+var DEFAULT_MARGIN = 16;
+var WatermarkManager = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   */
+  function WatermarkManager(options) {
+    _classCallCheck(this, WatermarkManager);
+    options = options || {};
+    this._logger = options.logger;
+    this._watermarks = [];
+    this._seq = 0;
+  }
+
+  /**
+   * 替换全部水印。图片 URL 会异步加载，加载失败只更新状态，不中断混流。
+   *
+   * @param {Array<Object>|Object|null} watermarks - 水印配置
+   * @returns {Promise<Array<Object>>} 当前水印快照
+   */
+  return _createClass(WatermarkManager, [{
+    key: "setWatermarks",
+    value: function setWatermarks(watermarks) {
+      var _this = this;
+      var list = this._normalizeWatermarkList(watermarks);
+      this._watermarks = list.map(function (watermark) {
+        return _this._normalizeWatermark(watermark);
+      });
+      var loads = this._watermarks.map(function (watermark) {
+        return _this._prepareWatermark(watermark);
+      });
+      return Promise.all(loads).then(function () {
+        return _this.getWatermarks();
+      });
+    }
+
+    /**
+     * 按条件清除水印。不传 filter 时清空全部。
+     *
+     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
+     */
+  }, {
+    key: "clearWatermarks",
+    value: function clearWatermarks(filter) {
+      var _this2 = this;
+      if (!filter) {
+        this._watermarks = [];
+        return;
+      }
+      this._watermarks = this._watermarks.filter(function (watermark) {
+        return !_this2._matchesFilter(watermark, filter);
+      });
+    }
+
+    /**
+     * 返回当前水印只读快照。
+     *
+     * @returns {Array<Object>} 水印状态列表
+     */
+  }, {
+    key: "getWatermarks",
+    value: function getWatermarks() {
+      return this._watermarks.map(function (watermark) {
+        return {
+          id: watermark.id,
+          target: watermark.target,
+          type: watermark.type,
+          text: watermark.text,
+          slot: watermark.slot,
+          sourceId: watermark.sourceId,
+          streamId: watermark.streamId,
+          position: clonePosition(watermark.position),
+          opacity: watermark.opacity,
+          width: watermark.width,
+          height: watermark.height,
+          status: watermark.status,
+          reason: watermark.reason
+        };
+      });
+    }
+
+    /**
+     * 根据当前渲染 payload 计算 output/source 两类水印绘制项。
+     *
+     * @param {Object} payload - { width, height, items }
+     * @returns {Object} { sourceWatermarks, outputWatermarks }
+     */
+  }, {
+    key: "createRenderItems",
+    value: function createRenderItems(payload) {
+      var _this3 = this;
+      payload = payload || {};
+      var outputArea = {
+        x: 0,
+        y: 0,
+        width: payload.width || 1,
+        height: payload.height || 1
+      };
+      var sourceWatermarks = [];
+      var outputWatermarks = [];
+      this._watermarks.forEach(function (watermark) {
+        if (watermark.status !== 'ready' || !watermark.image) {
+          return;
+        }
+        if (watermark.target === 'source') {
+          (payload.items || []).forEach(function (item) {
+            if (!_this3._matchesSource(watermark, item)) {
+              return;
+            }
+            sourceWatermarks.push(_this3._createDrawItem(watermark, item.draw, item));
+          });
+          return;
+        }
+        outputWatermarks.push(_this3._createDrawItem(watermark, outputArea, null));
+      });
+      return {
+        sourceWatermarks: sourceWatermarks.filter(Boolean),
+        outputWatermarks: outputWatermarks.filter(Boolean)
+      };
+    }
+  }, {
+    key: "_normalizeWatermarkList",
+    value: function _normalizeWatermarkList(watermarks) {
+      if (!watermarks) {
+        return [];
+      }
+      if (watermarks instanceof Array) {
+        return watermarks;
+      }
+      return [watermarks];
+    }
+  }, {
+    key: "_normalizeWatermark",
+    value: function _normalizeWatermark(input) {
+      input = input || {};
+      var type = input.type === 'image' || input.image ? 'image' : 'text';
+      var target = input.target === 'source' ? 'source' : 'output';
+      var id = typeof input.id === 'string' && input.id ? input.id : "watermark-".concat(++this._seq);
+      var fontSize = normalizePositiveInteger(input.fontSize, DEFAULT_FONT_SIZE);
+      return {
+        id: id,
+        target: target,
+        type: type,
+        text: typeof input.text === 'string' ? input.text : '',
+        imageInput: input.image || null,
+        image: null,
+        slot: normalizeSlot(input.slot),
+        sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
+        streamId: typeof input.streamId === 'string' ? input.streamId : null,
+        position: normalizePosition(input.position),
+        width: normalizePositiveInteger(input.width, null),
+        height: normalizePositiveInteger(input.height, null),
+        font: typeof input.font === 'string' && input.font ? input.font : null,
+        fontSize: fontSize,
+        color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
+        backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
+        opacity: normalizeOpacity(input.opacity),
+        padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
+        margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
+        status: 'pending',
+        reason: ''
+      };
+    }
+  }, {
+    key: "_prepareWatermark",
+    value: function _prepareWatermark(watermark) {
+      if (watermark.type === 'image') {
+        return this._prepareImageWatermark(watermark);
+      }
+      watermark.image = this._createTextSurface(watermark);
+      watermark.status = watermark.image ? 'ready' : 'error';
+      watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
+      return Promise.resolve(watermark);
+    }
+  }, {
+    key: "_prepareImageWatermark",
+    value: function _prepareImageWatermark(watermark) {
+      var _this4 = this;
+      var image = watermark.imageInput;
+      if (!image) {
+        watermark.status = 'error';
+        watermark.reason = 'Missing image';
+        return Promise.resolve(watermark);
+      }
+      if (typeof image === 'string') {
+        return this._loadImage(image).then(function (loadedImage) {
+          watermark.image = loadedImage;
+          watermark.status = 'ready';
+          watermark.reason = '';
+          return watermark;
+        })["catch"](function (error) {
+          watermark.status = 'error';
+          watermark.reason = error.message || String(error);
+          if (_this4._logger) {
+            _this4._logger.warn("Watermark image failed to load: ".concat(watermark.reason));
+          }
+          return watermark;
+        });
+      }
+      watermark.image = image;
+      watermark.status = 'ready';
+      watermark.reason = '';
+      return Promise.resolve(watermark);
+    }
+  }, {
+    key: "_loadImage",
+    value: function _loadImage(url) {
+      return new Promise(function (resolve, reject) {
+        if (typeof Image === 'undefined') {
+          reject(new Error('Image constructor is unavailable'));
+          return;
+        }
+        var image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = function () {
+          return resolve(image);
+        };
+        image.onerror = function () {
+          return reject(new Error("Failed to load image: ".concat(url)));
+        };
+        image.src = url;
+      });
+    }
+  }, {
+    key: "_createTextSurface",
+    value: function _createTextSurface(watermark) {
+      if (typeof document === 'undefined' || !document.createElement) {
+        return null;
+      }
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext && canvas.getContext('2d');
+      if (!context) {
+        return null;
+      }
+      var text = watermark.text || '';
+      var font = watermark.font || "bold ".concat(watermark.fontSize, "px sans-serif");
+      context.font = font;
+      var measured = context.measureText ? context.measureText(text).width : text.length * watermark.fontSize * 0.6;
+      var width = Math.max(1, Math.ceil(measured + watermark.padding * 2));
+      var height = Math.max(1, Math.ceil(watermark.fontSize * 1.35 + watermark.padding * 2));
+      canvas.width = width;
+      canvas.height = height;
+      context.font = font;
+      context.textBaseline = 'middle';
+      context.textAlign = 'left';
+      if (watermark.backgroundColor) {
+        context.fillStyle = watermark.backgroundColor;
+        context.fillRect(0, 0, width, height);
+      }
+      context.fillStyle = watermark.color;
+      if (context.fillText) {
+        context.fillText(text, watermark.padding, height / 2);
+      }
+      return canvas;
+    }
+  }, {
+    key: "_createDrawItem",
+    value: function _createDrawItem(watermark, area, sourceItem) {
+      if (!area || !watermark.image) {
+        return null;
+      }
+      var imageWidth = watermark.image.width || watermark.image.videoWidth || 1;
+      var imageHeight = watermark.image.height || watermark.image.videoHeight || 1;
+      var size = this._resolveSize(watermark, imageWidth, imageHeight);
+      var draw = this._resolveDrawRect(watermark, area, size.width, size.height);
+      if (!draw || draw.width <= 0 || draw.height <= 0) {
+        return null;
+      }
+      return {
+        id: watermark.id,
+        target: watermark.target,
+        type: watermark.type,
+        image: watermark.image,
+        opacity: watermark.opacity,
+        draw: draw,
+        sourceId: sourceItem ? sourceItem.id : null,
+        slot: sourceItem ? sourceItem.slot : null,
+        streamId: sourceItem ? sourceItem.streamId : null
+      };
+    }
+  }, {
+    key: "_resolveSize",
+    value: function _resolveSize(watermark, imageWidth, imageHeight) {
+      var width = watermark.width;
+      var height = watermark.height;
+      if (width && !height) {
+        height = width * imageHeight / imageWidth;
+      } else if (!width && height) {
+        width = height * imageWidth / imageHeight;
+      } else if (!width && !height) {
+        width = imageWidth;
+        height = imageHeight;
+      }
+      return {
+        width: Math.max(1, width),
+        height: Math.max(1, height)
+      };
+    }
+  }, {
+    key: "_resolveDrawRect",
+    value: function _resolveDrawRect(watermark, area, width, height) {
+      var position = watermark.position;
+      var x;
+      var y;
+      if (position && _typeof(position) === 'object') {
+        x = area.x + position.x;
+        y = area.y + position.y;
+      } else {
+        var margin = watermark.margin;
+        switch (position) {
+          case 'top-left':
+            x = area.x + margin;
+            y = area.y + margin;
+            break;
+          case 'top-right':
+            x = area.x + area.width - width - margin;
+            y = area.y + margin;
+            break;
+          case 'bottom-left':
+            x = area.x + margin;
+            y = area.y + area.height - height - margin;
+            break;
+          case 'center':
+            x = area.x + (area.width - width) / 2;
+            y = area.y + (area.height - height) / 2;
+            break;
+          case 'bottom-right':
+          default:
+            x = area.x + area.width - width - margin;
+            y = area.y + area.height - height - margin;
+            break;
+        }
+      }
+      return {
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(width),
+        height: Math.round(height)
+      };
+    }
+  }, {
+    key: "_matchesSource",
+    value: function _matchesSource(watermark, item) {
+      if (!item) {
+        return false;
+      }
+      if (watermark.sourceId) {
+        return watermark.sourceId === item.id;
+      }
+      if (watermark.streamId) {
+        return watermark.streamId === item.streamId;
+      }
+      if (typeof watermark.slot === 'number') {
+        return watermark.slot === item.slot;
+      }
+      return true;
+    }
+  }, {
+    key: "_matchesFilter",
+    value: function _matchesFilter(watermark, filter) {
+      if (filter.id !== undefined && watermark.id !== filter.id) {
+        return false;
+      }
+      if (filter.target !== undefined && watermark.target !== filter.target) {
+        return false;
+      }
+      if (filter.slot !== undefined && watermark.slot !== filter.slot) {
+        return false;
+      }
+      if (filter.sourceId !== undefined && watermark.sourceId !== filter.sourceId) {
+        return false;
+      }
+      if (filter.streamId !== undefined && watermark.streamId !== filter.streamId) {
+        return false;
+      }
+      return true;
+    }
+  }]);
+}();
+function normalizePositiveInteger(value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  return fallback;
+}
+function normalizeNonNegativeInteger(value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return fallback;
+}
+function normalizeOpacity(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return Math.min(1, Math.max(0, numberValue));
+  }
+  return 1;
+}
+function normalizeSlot(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return null;
+}
+function normalizePosition(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && _typeof(value) === 'object') {
+    var x = Number(value.x);
+    var y = Number(value.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return {
+        x: x,
+        y: y
+      };
+    }
+  }
+  return 'bottom-right';
+}
+function clonePosition(position) {
+  if (position && _typeof(position) === 'object') {
+    return {
+      x: position.x,
+      y: position.y
+    };
+  }
+  return position;
+}
+module.exports = WatermarkManager;
+},{}],81:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
  * BaseRenderer — 渲染器基类
  *
  * 定义所有渲染后端的统一接口。
@@ -36578,7 +37125,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -36705,7 +37252,32 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         }
         _this2._context.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
       });
+      this._drawWatermarks(payload.sourceWatermarks);
+      this._drawWatermarks(payload.outputWatermarks);
       this._info.renderedFrames += 1;
+    }
+
+    /**
+     * 绘制水印列表。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     */
+  }, {
+    key: "_drawWatermarks",
+    value: function _drawWatermarks(watermarks) {
+      var _this3 = this;
+      if (!this._context) {
+        return;
+      }
+      (watermarks || []).forEach(function (watermark) {
+        if (!watermark.image || !watermark.draw) {
+          return;
+        }
+        var previousAlpha = typeof _this3._context.globalAlpha === 'number' ? _this3._context.globalAlpha : 1;
+        _this3._context.globalAlpha = watermark.opacity;
+        _this3._context.drawImage(watermark.image, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
+        _this3._context.globalAlpha = previousAlpha;
+      });
     }
 
     /**
@@ -36722,7 +37294,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
     }
   }]);
 }(BaseRenderer);
-},{"./BaseRenderer":80}],82:[function(require,module,exports){
+},{"./BaseRenderer":81}],83:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -36789,6 +37361,9 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
 
     /** @type {Object<string, WebGLTexture>} 每个源对应的纹理对象缓存 */
     _this._textures = {};
+
+    /** @type {Object<string, WebGLTexture>} 每个水印对应的纹理对象缓存 */
+    _this._watermarkTextures = {};
     return _this;
   }
 
@@ -36909,6 +37484,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.activeTexture(gl.TEXTURE0);
+      gl.disable(gl.BLEND);
       payload.items.forEach(function (item) {
         if (!item.video || item.video.readyState < 2) {
           return;
@@ -36919,6 +37495,8 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
         _this2._drawItem(item, payload.height);
       });
+      this._drawWatermarks(payload.sourceWatermarks, payload.height);
+      this._drawWatermarks(payload.outputWatermarks, payload.height);
       gl.flush();
       this._info.renderedFrames += 1;
     }
@@ -36969,6 +37547,72 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
     }
 
     /**
+     * 绘制水印列表。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     * @param {number} canvasHeight - 画布总高度
+     */
+  }, {
+    key: "_drawWatermarks",
+    value: function _drawWatermarks(watermarks, canvasHeight) {
+      var _this3 = this;
+      if (!this._gl || !(watermarks || []).length) {
+        return;
+      }
+      var gl = this._gl;
+      var activeKeys = {};
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      (watermarks || []).forEach(function (watermark) {
+        if (!watermark.image || !watermark.draw) {
+          return;
+        }
+        var key = "".concat(watermark.id, ":").concat(watermark.sourceId || (typeof watermark.slot === 'number' ? watermark.slot : 'output'));
+        var texture = _this3._getWatermarkTexture(key);
+        activeKeys[key] = true;
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.image);
+        _this3._drawItem(watermark, canvasHeight);
+      });
+      gl.disable(gl.BLEND);
+      this._cleanupUnusedWatermarkTextures(activeKeys);
+    }
+
+    /**
+     * 获取或创建指定水印的 WebGL 纹理。
+     *
+     * @param {string} key - 水印纹理 key
+     * @returns {WebGLTexture} 纹理对象
+     */
+  }, {
+    key: "_getWatermarkTexture",
+    value: function _getWatermarkTexture(key) {
+      if (!this._watermarkTextures[key]) {
+        this._watermarkTextures[key] = glHelpers.createVideoTexture(this._gl);
+      }
+      return this._watermarkTextures[key];
+    }
+
+    /**
+     * 清理不再出现的水印纹理。
+     *
+     * @param {Object} activeKeys - 当前帧出现的水印 key
+     */
+  }, {
+    key: "_cleanupUnusedWatermarkTextures",
+    value: function _cleanupUnusedWatermarkTextures(activeKeys) {
+      var _this4 = this;
+      Object.keys(this._watermarkTextures).forEach(function (key) {
+        if (activeKeys[key]) {
+          return;
+        }
+        _this4._gl.deleteTexture(_this4._watermarkTextures[key]);
+        delete _this4._watermarkTextures[key];
+      });
+    }
+
+    /**
      * 移除一路源的纹理缓存并释放 GPU 资源。
      *
      * @param {string} id - 源 ID
@@ -36995,15 +37639,19 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
   }, {
     key: "destroy",
     value: function destroy() {
-      var _this3 = this;
+      var _this5 = this;
       var gl = this._gl;
       if (!gl) {
         return;
       }
       Object.keys(this._textures).forEach(function (id) {
-        gl.deleteTexture(_this3._textures[id]);
+        gl.deleteTexture(_this5._textures[id]);
       });
       this._textures = {};
+      Object.keys(this._watermarkTextures).forEach(function (id) {
+        gl.deleteTexture(_this5._watermarkTextures[id]);
+      });
+      this._watermarkTextures = {};
       if (this._positionBuffer) {
         gl.deleteBuffer(this._positionBuffer);
       }
@@ -37023,7 +37671,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
     }
   }]);
 }(BaseRenderer);
-},{"./BaseRenderer":80,"./helpers/color":85,"./helpers/gl":86}],83:[function(require,module,exports){
+},{"./BaseRenderer":81,"./helpers/color":86,"./helpers/gl":87}],84:[function(require,module,exports){
 "use strict";
 
 /**
@@ -37178,7 +37826,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":81,"./MainWebGL2Renderer":82,"./WorkerRenderer":84}],84:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":82,"./MainWebGL2Renderer":83,"./WorkerRenderer":85}],85:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -37516,7 +38164,9 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
                   width: payload.width,
                   height: payload.height,
                   backgroundColor: payload.backgroundColor,
-                  items: result.items
+                  items: result.items,
+                  sourceWatermarks: result.sourceWatermarks,
+                  outputWatermarks: result.outputWatermarks
                 }
               }, result.transfers);
               _context.n = 5;
@@ -37591,19 +38241,22 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
      * 从 payload 中提取所有 video 帧，生成可 transfer 的 ImageBitmap/VideoFrame。
      *
      * @param {Object} payload - 布局数据
-     * @returns {Promise<{items: Array<Object>, transfers: Array<*>}>}
+     * @returns {Promise<Object>}
      *   items: 包含 id、draw 和 frame 的数组
+     *   sourceWatermarks/outputWatermarks: 包含水印 frame 和 draw 的数组
      *   transfers: 用于 postMessage transfer 的帧对象列表
      */
   }, {
     key: "_createWorkerPayload",
     value: (function () {
       var _createWorkerPayload2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(payload) {
-        var items, transfers, idx, item, frame, _t2;
+        var items, sourceWatermarks, outputWatermarks, transfers, idx, item, frame, _t2;
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.p = _context2.n) {
             case 0:
               items = [];
+              sourceWatermarks = [];
+              outputWatermarks = [];
               transfers = [];
               _context2.p = 1;
               idx = 0;
@@ -37634,25 +38287,89 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
               _context2.n = 2;
               break;
             case 6:
-              _context2.n = 8;
-              break;
+              _context2.n = 7;
+              return this._appendWorkerWatermarks(payload.sourceWatermarks, sourceWatermarks, transfers);
             case 7:
-              _context2.p = 7;
+              _context2.n = 8;
+              return this._appendWorkerWatermarks(payload.outputWatermarks, outputWatermarks, transfers);
+            case 8:
+              _context2.n = 10;
+              break;
+            case 9:
+              _context2.p = 9;
               _t2 = _context2.v;
               this._closeTransferFrames(items);
+              this._closeTransferFrames(sourceWatermarks);
+              this._closeTransferFrames(outputWatermarks);
               throw _t2;
-            case 8:
+            case 10:
               return _context2.a(2, {
                 items: items,
+                sourceWatermarks: sourceWatermarks,
+                outputWatermarks: outputWatermarks,
                 transfers: transfers
               });
           }
-        }, _callee2, this, [[1, 7]]);
+        }, _callee2, this, [[1, 9]]);
       }));
       function _createWorkerPayload(_x2) {
         return _createWorkerPayload2.apply(this, arguments);
       }
       return _createWorkerPayload;
+    }()
+    /**
+     * 将主线程水印图面转成可 transfer 的 frame。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     * @param {Array<Object>} target - Worker payload 目标列表
+     * @param {Array<*>} transfers - transfer 列表
+     */
+    )
+  }, {
+    key: "_appendWorkerWatermarks",
+    value: (function () {
+      var _appendWorkerWatermarks2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(watermarks, target, transfers) {
+        var idx, watermark, frame;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              idx = 0;
+            case 1:
+              if (!(idx < (watermarks || []).length)) {
+                _context3.n = 5;
+                break;
+              }
+              watermark = watermarks[idx];
+              if (!(!watermark.image || !watermark.draw)) {
+                _context3.n = 2;
+                break;
+              }
+              return _context3.a(3, 4);
+            case 2:
+              _context3.n = 3;
+              return this._createWatermarkFrame(watermark.image);
+            case 3:
+              frame = _context3.v;
+              target.push({
+                id: watermark.id,
+                draw: watermark.draw,
+                opacity: watermark.opacity,
+                frame: frame
+              });
+              transfers.push(frame);
+            case 4:
+              ++idx;
+              _context3.n = 1;
+              break;
+            case 5:
+              return _context3.a(2);
+          }
+        }, _callee3, this);
+      }));
+      function _appendWorkerWatermarks(_x3, _x4, _x5) {
+        return _appendWorkerWatermarks2.apply(this, arguments);
+      }
+      return _appendWorkerWatermarks;
     }()
     /**
      * 从 HTMLVideoElement 抽取一帧，自动选择最优 API。
@@ -37672,75 +38389,114 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
   }, {
     key: "_createFrame",
     value: (function () {
-      var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(video) {
+      var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(video) {
         var VideoFrameConstructor, bitmapOptions, bitmap, frame, _t3, _t4, _t5;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.p = _context3.n) {
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.p = _context4.n) {
             case 0:
               VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
               if (!(this._frameFactory === 'imagebitmap' || this._frameFactory === null && typeof createImageBitmap !== 'undefined')) {
-                _context3.n = 7;
+                _context4.n = 7;
                 break;
               }
-              _context3.p = 1;
+              _context4.p = 1;
               bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
                 imageOrientation: 'flipY'
               } : undefined;
               if (!bitmapOptions) {
-                _context3.n = 3;
+                _context4.n = 3;
                 break;
               }
-              _context3.n = 2;
+              _context4.n = 2;
               return createImageBitmap(video, bitmapOptions);
             case 2:
-              _t3 = _context3.v;
-              _context3.n = 5;
+              _t3 = _context4.v;
+              _context4.n = 5;
               break;
             case 3:
-              _context3.n = 4;
+              _context4.n = 4;
               return createImageBitmap(video);
             case 4:
-              _t3 = _context3.v;
+              _t3 = _context4.v;
             case 5:
               bitmap = _t3;
               this._frameFactory = 'imagebitmap';
-              return _context3.a(2, bitmap);
+              return _context4.a(2, bitmap);
             case 6:
-              _context3.p = 6;
-              _t4 = _context3.v;
+              _context4.p = 6;
+              _t4 = _context4.v;
               if (!(this._frameFactory === 'imagebitmap')) {
-                _context3.n = 7;
+                _context4.n = 7;
                 break;
               }
               throw _t4;
             case 7:
               if (!(this._frameFactory === 'videoframe' || this._frameFactory === null && VideoFrameConstructor)) {
-                _context3.n = 10;
+                _context4.n = 10;
                 break;
               }
-              _context3.p = 8;
+              _context4.p = 8;
               frame = new VideoFrameConstructor(video);
               this._frameFactory = 'videoframe';
-              return _context3.a(2, frame);
+              return _context4.a(2, frame);
             case 9:
-              _context3.p = 9;
-              _t5 = _context3.v;
+              _context4.p = 9;
+              _t5 = _context4.v;
               if (!(this._frameFactory === 'videoframe')) {
-                _context3.n = 10;
+                _context4.n = 10;
                 break;
               }
               throw _t5;
             case 10:
               throw new Error('VideoFrame and createImageBitmap are unavailable');
             case 11:
-              return _context3.a(2);
+              return _context4.a(2);
           }
-        }, _callee3, this, [[8, 9], [1, 6]]);
+        }, _callee4, this, [[8, 9], [1, 6]]);
       }));
-      function _createFrame(_x3) {
+      function _createFrame(_x6) {
         return _createFrame2.apply(this, arguments);
       }
       return _createFrame;
+    }()
+    /**
+     * 从水印图面创建可 transfer 的 ImageBitmap/VideoFrame。
+     *
+     * @param {*} image - Canvas/Image/ImageBitmap
+     * @returns {Promise<ImageBitmap|VideoFrame>} 可 transfer 的帧
+     */
+    )
+  }, {
+    key: "_createWatermarkFrame",
+    value: (function () {
+      var _createWatermarkFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(image) {
+        var VideoFrameConstructor;
+        return _regenerator().w(function (_context5) {
+          while (1) switch (_context5.n) {
+            case 0:
+              if (!(typeof createImageBitmap !== 'undefined')) {
+                _context5.n = 1;
+                break;
+              }
+              return _context5.a(2, createImageBitmap(image));
+            case 1:
+              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
+              if (!VideoFrameConstructor) {
+                _context5.n = 2;
+                break;
+              }
+              return _context5.a(2, new VideoFrameConstructor(image));
+            case 2:
+              throw new Error('Watermark frame extraction is unavailable');
+            case 3:
+              return _context5.a(2);
+          }
+        }, _callee5);
+      }));
+      function _createWatermarkFrame(_x7) {
+        return _createWatermarkFrame2.apply(this, arguments);
+      }
+      return _createWatermarkFrame;
     }()
     /**
      * 释放未发送到 Worker 的帧资源（防止内存泄漏）。
@@ -37818,7 +38574,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
     }
   }]);
 }(BaseRenderer);
-},{"./BaseRenderer":80,"./workerScript":87}],85:[function(require,module,exports){
+},{"./BaseRenderer":81,"./workerScript":88}],86:[function(require,module,exports){
 "use strict";
 
 /**
@@ -37917,7 +38673,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],86:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 "use strict";
 
 /**
@@ -37992,7 +38748,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 "use strict";
 
 /**
@@ -38016,9 +38772,9 @@ exports.createVideoTexture = function (gl) {
  */
 exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
-  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\\\nin vec2 a_position;\\\\nin vec2 a_texCoord;\\\\nout vec2 v_texCoord;\\\\nvoid main() {\\\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\\\n  v_texCoord = a_texCoord;\\\\n}\\\\n\",FRAGMENT_SHADER=\"#version 300 es\\\\nprecision highp float;\\\\nin vec2 v_texCoord;\\\\nuniform sampler2D u_texture;\\\\nout vec4 outColor;\\\\nvoid main() {\\\\n  outColor = texture(u_texture, v_texCoord);\\\\n}\\\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;try{if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){destroyWebGL2(),backgroundColor=e.backgroundColor||backgroundColor}try{initCanvas2D(),actualMode=\"worker-2d\",postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"Worker WebGL2 unavailable, fallback to Worker Canvas2D\"})}catch(e){postMessage({type:\"failed\",reason:e.message||String(e)})}}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame);var t=e.draw,a=Math.round(t.x),o=Math.round(height-t.y-t.height),n=Math.round(t.width),l=Math.round(t.height);n<=0||l<=0||(gl.viewport(a,o,n,l),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}}),gl.flush()}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
+  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\\\nin vec2 a_position;\\\\nin vec2 a_texCoord;\\\\nout vec2 v_texCoord;\\\\nvoid main() {\\\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\\\n  v_texCoord = a_texCoord;\\\\n}\\\\n\",FRAGMENT_SHADER=\"#version 300 es\\\\nprecision highp float;\\\\nin vec2 v_texCoord;\\\\nuniform sampler2D u_texture;\\\\nout vec4 outColor;\\\\nvoid main() {\\\\n  outColor = texture(u_texture, v_texCoord);\\\\n}\\\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;try{if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){destroyWebGL2(),backgroundColor=e.backgroundColor||backgroundColor}try{initCanvas2D(),actualMode=\"worker-2d\",postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"Worker WebGL2 unavailable, fallback to Worker Canvas2D\"})}catch(e){postMessage({type:\"failed\",reason:e.message||String(e)})}}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
 };
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -38227,7 +38983,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],89:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],90:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -38379,7 +39135,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -38904,7 +39660,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -40685,7 +41441,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":89,"buffer":91,"ieee754":94}],92:[function(require,module,exports){
+},{"base64-js":90,"buffer":92,"ieee754":95}],93:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -40961,7 +41717,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":93,"_process":97}],93:[function(require,module,exports){
+},{"./common":94,"_process":98}],94:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -41255,7 +42011,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":96}],94:[function(require,module,exports){
+},{"ms":97}],95:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -41342,7 +42098,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -46733,7 +47489,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],96:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -46897,7 +47653,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -47083,7 +47839,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -47579,7 +48335,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],99:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -47594,7 +48350,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":98,"./parser":100,"./writer":101}],100:[function(require,module,exports){
+},{"./grammar":99,"./parser":101,"./writer":102}],101:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -47720,7 +48476,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":98}],101:[function(require,module,exports){
+},{"./grammar":99}],102:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -47836,5 +48592,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":98}]},{},[38])(38)
+},{"./grammar":99}]},{},[38])(38)
 });

@@ -125,11 +125,18 @@ MediaStream / HTMLVideoElement
       }
     },
     // ...
+  ],
+  sourceWatermarks: [
+    { id: 'slot0', image: HTMLCanvasElement, opacity: 0.9, draw: { x, y, width, height } }
+  ],
+  outputWatermarks: [
+    { id: 'brand', image: HTMLCanvasElement, opacity: 0.85, draw: { x, y, width, height } }
   ]
 }
 ```
 
 渲染器只需遍历 `items`，按 `draw` 矩形绘制每个 `video`，铺满背景色即可。这样渲染器与业务逻辑完全解耦。
+水印绘制顺序固定为：背景色 → 视频源 → 每路源水印 → 全局输出水印。
 
 ---
 
@@ -418,6 +425,32 @@ const mixer = new MediaStreamMixer([
 | `workerUrl` | `string` | 使用 Blob Worker | 外部 Worker 脚本地址 |
 | `dropFrameWhenBusy` | `boolean` | `true` | Worker 忙时丢帧 |
 | `maxFrameQueue` | `number` | 1 | 帧队列最大长度 |
+| `watermarks` | `Array<Object>` | `[]` | 初始水印配置，支持文字和图片 |
+
+### 水印配置
+
+```js
+const mixer = new CRTC.Mixer([], {
+  width: 1280,
+  height: 720,
+  watermarks: [
+    { id: 'brand', target: 'output', type: 'text', text: 'CRTC', position: 'bottom-right' },
+    { id: 'slot0-name', target: 'source', slot: 0, type: 'text', text: 'Host', position: 'bottom-left' }
+  ]
+});
+```
+
+字段说明：
+
+| 字段 | 说明 |
+|------|------|
+| `target` | `'output'` 全局输出水印，或 `'source'` 每路源水印；默认 `'output'` |
+| `type` | `'text'` 或 `'image'`；传 `image` 时自动按图片处理 |
+| `text` | 文字水印内容 |
+| `image` | 图片 URL、`HTMLImageElement`、`HTMLCanvasElement`、`ImageBitmap` |
+| `slot/sourceId/streamId` | source 水印匹配条件，优先级 `sourceId > streamId > slot` |
+| `position` | 预设位置，或 `{ x, y }` 坐标；默认 `'bottom-right'` |
+| `width/height/font/fontSize/color/backgroundColor/opacity/padding/margin` | 水印尺寸和样式，非法值回退默认值 |
 
 ### 初始化步骤
 
@@ -443,6 +476,9 @@ const mixer = new MediaStreamMixer([
 | `getSources()` | — | `Array<Object>` | 源信息快照：`{ id, streamId, slot, gain, hasAudio, hasVideo }` |
 | `getRenderInfo()` | — | `Object` | 渲染后端状态：`{ requestedMode, actualMode, isWorker, isWebGL2, isFallback, renderedFrames, droppedFrames, fps }` |
 | `getAudioInfo()` | — | `Object` | 音频系统状态：`{ status, contextState, sourceCount, liveSourceCount, connectedSources }` |
+| `setWatermarks(watermarks)` | `Array/Object/null` | `Promise<Array<Object>>` | 替换全部水印，图片 URL 异步加载 |
+| `clearWatermarks(filter?)` | `Object` | — | 清除全部或按 `{ id, target, slot, sourceId, streamId }` 清除 |
+| `getWatermarks()` | — | `Array<Object>` | 返回水印只读快照，包含 `status/reason` |
 | `getMixedStream()` | — | `Promise<MediaStream>` | 完整音视频混合流 |
 | `getVideoStream()` | — | `MediaStream` | 仅视频轨 |
 | `getAudioStream()` | — | `Promise<MediaStream\|null>` | 仅音频轨 |
