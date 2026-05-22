@@ -800,17 +800,17 @@
                             <label class="form-label small mb-1" for="cfg-fps">输出帧率</label>
                             <select class="form-select form-select-sm" id="cfg-fps">
                                 <option value="60">60 FPS</option>
-                                <option value="30" selected>30 FPS</option>
-                                <option value="15">15 FPS</option>
+                                <option value="30">30 FPS</option>
+                                <option value="15" selected>15 FPS</option>
                                 <option value="5">5 FPS</option>
                             </select>
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small mb-1" for="cfg-render-mode">渲染后端</label>
                             <select class="form-select form-select-sm" id="cfg-render-mode">
-                                <option value="auto">自动</option>
+                                <option value="auto" selected>自动</option>
                                 <option value="worker-webgl2">Worker + WebGL2</option>
-                                <option value="main-webgl2" selected>主线程 + WebGL2</option>
+                                <option value="main-webgl2">主线程 + WebGL2</option>
                                 <option value="worker-2d">Worker + Canvas2D</option>
                                 <option value="main-2d">主线程 + Canvas2D</option>
                             </select>
@@ -867,8 +867,8 @@
                                 <label class="form-label small mb-1" for="cfg-in-fps">输入帧率</label>
                                 <select class="form-select form-select-sm" id="cfg-in-fps">
                                     <option value="60">60 FPS</option>
-                                    <option value="30" selected>30 FPS</option>
-                                    <option value="15">15 FPS</option>
+                                    <option value="30">30 FPS</option>
+                                    <option value="15" selected>15 FPS</option>
                                     <option value="10">10 FPS</option>
                                     <option value="5">5 FPS</option>
                                 </select>
@@ -951,14 +951,25 @@
                                     <label class="form-label mb-1" for="wm-output-text-position">位置</label>
                                     <select class="form-select form-select-sm" id="wm-output-text-position">
                                         <option value="top-left">左上</option>
+                                        <option value="top-center">上中</option>
                                         <option value="top-right">右上</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-right" selected>右下</option>
                                         <option value="center">居中</option>
+                                        <option value="bottom-left">左下</option>
+                                        <option value="bottom-center">下中</option>
+                                        <option value="bottom-right" selected>右下</option>
+                                        <option value="custom">坐标</option>
                                     </select>
                                 </div>
                                 <div class="col-3 d-flex align-items-end">
                                     <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputTextWatermark()">应用文字</button>
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-output-text-x">文字 X</label>
+                                    <input class="form-control form-control-sm" id="wm-output-text-x" type="number" value="16">
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-output-text-y">文字 Y</label>
+                                    <input class="form-control form-control-sm" id="wm-output-text-y" type="number" value="16">
                                 </div>
                                 <div class="col-5">
                                     <label class="form-label mb-1" for="wm-output-image">图片地址</label>
@@ -968,14 +979,25 @@
                                     <label class="form-label mb-1" for="wm-output-image-position">位置</label>
                                     <select class="form-select form-select-sm" id="wm-output-image-position">
                                         <option value="top-left">左上</option>
+                                        <option value="top-center">上中</option>
                                         <option value="top-right" selected>右上</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-right">右下</option>
                                         <option value="center">居中</option>
+                                        <option value="bottom-left">左下</option>
+                                        <option value="bottom-center">下中</option>
+                                        <option value="bottom-right">右下</option>
+                                        <option value="custom">坐标</option>
                                     </select>
                                 </div>
                                 <div class="col-3 d-flex align-items-end">
                                     <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputImageWatermark()">应用图片</button>
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-output-image-x">图片 X</label>
+                                    <input class="form-control form-control-sm" id="wm-output-image-x" type="number" value="16">
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-output-image-y">图片 Y</label>
+                                    <input class="form-control form-control-sm" id="wm-output-image-y" type="number" value="16">
                                 </div>
                                 <div class="col-12">
                                     <button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearOutputWatermarks()">清除全局水印</button>
@@ -998,11 +1020,22 @@
                                     <label class="form-label mb-1" for="wm-slot-position">位置</label>
                                     <select class="form-select form-select-sm" id="wm-slot-position">
                                         <option value="top-left">左上</option>
+                                        <option value="top-center">上中</option>
                                         <option value="top-right">右上</option>
-                                        <option value="bottom-left" selected>左下</option>
-                                        <option value="bottom-right">右下</option>
                                         <option value="center">居中</option>
+                                        <option value="bottom-left" selected>左下</option>
+                                        <option value="bottom-center">下中</option>
+                                        <option value="bottom-right">右下</option>
+                                        <option value="custom">坐标</option>
                                     </select>
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-slot-x">名牌 X</label>
+                                    <input class="form-control form-control-sm" id="wm-slot-x" type="number" value="12">
+                                </div>
+                                <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
+                                    <label class="form-label mb-1" for="wm-slot-y">名牌 Y</label>
+                                    <input class="form-control form-control-sm" id="wm-slot-y" type="number" value="12">
                                 </div>
                             </div>
                             <div class="status-line">
@@ -1231,14 +1264,20 @@
                 diagnosticSelectedSlot: document.getElementById('diagnostic-selected-slot'),
                 wmOutputText: document.getElementById('wm-output-text'),
                 wmOutputTextPosition: document.getElementById('wm-output-text-position'),
+                wmOutputTextX: document.getElementById('wm-output-text-x'),
+                wmOutputTextY: document.getElementById('wm-output-text-y'),
                 wmOutputImage: document.getElementById('wm-output-image'),
                 wmOutputImagePosition: document.getElementById('wm-output-image-position'),
+                wmOutputImageX: document.getElementById('wm-output-image-x'),
+                wmOutputImageY: document.getElementById('wm-output-image-y'),
                 wmSlotSelect: document.getElementById('wm-slot-select'),
                 wmSelectedSlot: document.getElementById('wm-selected-slot'),
                 wmSlotSourceState: document.getElementById('wm-slot-source-state'),
                 wmSlotWatermarkState: document.getElementById('wm-slot-watermark-state'),
                 wmSlotText: document.getElementById('wm-slot-text'),
                 wmSlotPosition: document.getElementById('wm-slot-position'),
+                wmSlotX: document.getElementById('wm-slot-x'),
+                wmSlotY: document.getElementById('wm-slot-y'),
                 watermarkList: document.getElementById('watermark-list'),
                 statsLayout: document.getElementById('stat-layout'),
                 statsAudio: document.getElementById('stat-audio'),
@@ -1272,8 +1311,30 @@
                 this.ui.btnStart.onclick = () => this.start();
                 this.ui.btnStop.onclick = () => this.stop();
                 this.ui.btnMonitorAudio.onclick = () => this.toggleMonitorAudio();
+                this.bindWatermarkPositionControls();
                 this.updateMonitorAudioUI();
                 this.setRunningUI(false);
+            },
+
+            bindWatermarkPositionControls() {
+                const controls = [
+                    { select: this.ui.wmOutputTextPosition, selector: '.wm-output-text-coordinate' },
+                    { select: this.ui.wmOutputImagePosition, selector: '.wm-output-image-coordinate' },
+                    { select: this.ui.wmSlotPosition, selector: '.wm-slot-coordinate' }
+                ];
+
+                controls.forEach(({ select, selector }) => {
+                    if (!select) return;
+
+                    const update = () => {
+                        document.querySelectorAll(selector).forEach((field) => {
+                            field.classList.toggle('d-none', select.value !== 'custom');
+                        });
+                    };
+
+                    select.addEventListener('change', update);
+                    update();
+                });
             },
 
             setPanelEnabled(panel, enabled) {
@@ -1376,10 +1437,13 @@
                     row.className = 'watermark-item';
 
                     const statusClass = item.status === 'ready' ? 'ready' : '';
+                    const positionText = item.position && typeof item.position === 'object'
+                        ? `(${item.position.x},${item.position.y})`
+                        : (item.position || '-');
                     row.innerHTML = `
                         <div class="watermark-id">${item.id}</div>
                         <div class="pill ${statusClass}">${item.status || '-'}</div>
-                        <div class="watermark-meta">target=${item.target} · slot=${item.slot === null || item.slot === undefined ? '-' : item.slot} · type=${item.type} · reason=${item.reason || '-'}</div>
+                        <div class="watermark-meta">target=${item.target} · slot=${item.slot === null || item.slot === undefined ? '-' : item.slot} · type=${item.type} · position=${positionText} · reason=${item.reason || '-'}</div>
                     `;
                     this.ui.watermarkList.appendChild(row);
                 });
@@ -1394,13 +1458,31 @@
                 this.updateSlotUI();
             },
 
+            readWatermarkPosition(selectEl, xEl, yEl, fallback) {
+                const value = selectEl && selectEl.value ? selectEl.value : fallback;
+                if (value !== 'custom') return value;
+
+                const x = Number(xEl && xEl.value);
+                const y = Number(yEl && yEl.value);
+
+                return {
+                    x : Number.isFinite(x) ? x : 0,
+                    y : Number.isFinite(y) ? y : 0
+                };
+            },
+
             buildOutputTextWatermark() {
                 return {
                     id       : 'output-text',
                     target   : 'output',
                     type     : 'text',
                     text     : this.ui.wmOutputText.value || 'CRTC Live',
-                    position : this.ui.wmOutputTextPosition.value || 'bottom-right'
+                    position : this.readWatermarkPosition(
+                        this.ui.wmOutputTextPosition,
+                        this.ui.wmOutputTextX,
+                        this.ui.wmOutputTextY,
+                        'bottom-right'
+                    )
                 };
             },
 
@@ -1414,7 +1496,12 @@
                     type     : 'image',
                     image    : image,
                     width    : 160,
-                    position : this.ui.wmOutputImagePosition.value || 'top-right'
+                    position : this.readWatermarkPosition(
+                        this.ui.wmOutputImagePosition,
+                        this.ui.wmOutputImageX,
+                        this.ui.wmOutputImageY,
+                        'top-right'
+                    )
                 };
             },
 
@@ -1425,7 +1512,12 @@
                     slot     : slot,
                     type     : 'text',
                     text     : text,
-                    position : this.ui.wmSlotPosition.value || 'bottom-left',
+                    position : this.readWatermarkPosition(
+                        this.ui.wmSlotPosition,
+                        this.ui.wmSlotX,
+                        this.ui.wmSlotY,
+                        'bottom-left'
+                    ),
                     margin   : 12
                 };
             },

@@ -353,10 +353,11 @@ renderFrame(timestamp, forceRender)
 <pre><code>WorkerRenderer 故障 × 2 或渲染异常 × 2
     │
     ▼
-fallbackRendererToMain2D(reason)
+fallbackRenderer(reason)
     ├─ 条件：当前不是 main-2d &amp;&amp; 是 Worker 或 worker-failed
     ├─ destroy() 当前 renderer
-    └─ new MainCanvas2DRenderer() → init(canvas)</code></pre>
+    ├─ auto: main-webgl2 → worker-2d → main-2d
+    └─ explicit worker mode: main-webgl2/main-2d fallback</code></pre>
 <p><strong>fps 节流</strong>: 非调整 rAF 间隔，而是在 rAF 回调内跳过未到间隔的帧。<code>forceRender=true</code> 跳过节流。</p>
 <p><strong>无源暂停</strong>: 源列表为空时不调度 rAF，<code>appendStream()</code> 后显式 <code>RenderLoop.start()</code> 恢复。</p>
 <hr>
@@ -514,8 +515,9 @@ Worker 线程（workerScript）
 <p><strong>运行期降级</strong>（Worker 已创建后异步失败，或渲染连续异常）:</p>
 <pre><code>WorkerRenderer 故障 × 2
     → destroy 当前 renderer
-    → new MainCanvas2DRenderer() → init(canvas)</code></pre>
-<p>这里的运行期降级只切到 <code>main-2d</code>。<code>main-webgl2</code> 只参与 RendererFactory 的同步创建失败 fallback，不参与 Worker 运行期失败后的二次尝试。</p>
+    → auto: main-webgl2 → worker-2d → main-2d
+    → explicit worker mode: main-webgl2/main-2d fallback</code></pre>
+<p>auto 的运行期降级顺序与初始化顺序保持一致：<code>worker-webgl2</code> 失败后先尝试 <code>main-webgl2</code>，再尝试 <code>worker-2d</code>，最后回到 <code>main-2d</code>。</p>
 <hr>
 <h2 id="跨文件调用链">跨文件调用链</h2>
 <h3 id="完整的一帧渲染流程">完整的一帧渲染流程</h3>
@@ -702,7 +704,7 @@ lib/mixer-renderer/
 <li><strong>Canvas Context 抢占</strong>: canvas 同一时间只能有一个 context（2D 或 WebGL2），RendererFactory 是唯一允许初始化 canvas context 的地方。</li>
 <li><strong>Worker 输出 canvas 不 transfer</strong>: WorkerRenderer 不将输出 canvas transfer 到 Worker，而是主线程持有 canvas，Worker 返回 ImageBitmap 后通过 <code>drawImage()</code> 写入。这是为了确保 <code>captureStream()</code> 始终绑定主线程 canvas，避免部分浏览器黑屏。</li>
 <li><strong>AudioContext 延迟创建</strong>: 符合浏览器 autoplay 政策，需用户交互后才能恢复。</li>
-<li><strong>Worker 故障降级</strong>: 连续 2 次错误触发自动降级到 <code>MainCanvas2DRenderer</code>。</li>
+<li><strong>Worker 故障降级</strong>: auto 模式按 <code>worker-webgl2 → main-webgl2 → worker-2d → main-2d</code> 自动降级。</li>
 <li><strong>去重保护</strong>: 多处通过 <code>track.id</code> 进行去重（音频轨注入、WebAudio 连接）。</li>
 <li><strong>fps 节流</strong>: 不调整 rAF 间隔，在 rAF 回调内按时间戳跳过未到间隔的帧。</li>
 <li><strong>WebGL Y 坐标</strong>: 主线程和 Worker 的 WebGL 路径都通过 <code>UNPACK_FLIP_Y_WEBGL</code> 翻转纹理，确保视频方向正确。</li>

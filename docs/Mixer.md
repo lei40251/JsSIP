@@ -368,7 +368,9 @@ renderMode: 'auto'（默认）
     │   ├── 成功 → worker-webgl2 ✓
     │   └── 失败 → 尝试 main-webgl2
     │       ├── 成功 → main-webgl2 (降级)
-    │       └── 失败 → main-2d (兜底)
+    │       └── 失败 → 尝试 worker-2d
+    │           ├── 成功 → worker-2d (降级)
+    │           └── 失败 → main-2d (兜底)
     │
     └── Worker 运行时连续失败 2 次 → RenderLoop 触发降级到 main-2d
 
@@ -402,7 +404,7 @@ const mixer = new MediaStreamMixer([
 ], {
   width: 1280,
   height: 720,
-  fps: 30,
+  fps: 15,
   backgroundColor: '#000',
   audioGain: 0.8,
   renderMode: 'auto'
@@ -418,7 +420,7 @@ const mixer = new MediaStreamMixer([
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `width/height` | `number` | 1280x720 | 输出分辨率 |
-| `fps` | `number` | 浏览器自动 | 输出帧率 |
+| `fps` | `number` | 15 | 输出帧率 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色 |
 | `audioGain` | `number` | 0.8 | 全局默认音量 |
 | `renderMode` | `string` | `'auto'` | 渲染后端选择 |
@@ -435,7 +437,9 @@ const mixer = new CRTC.Mixer([], {
   height: 720,
   watermarks: [
     { id: 'brand', target: 'output', type: 'text', text: 'CRTC', position: 'bottom-right' },
-    { id: 'slot0-name', target: 'source', slot: 0, type: 'text', text: 'Host', position: 'bottom-left' }
+    { id: 'slot0-name', target: 'source', slot: 0, type: 'text', text: 'Host', position: 'bottom-left' },
+    { id: 'notice', target: 'output', type: 'text', text: 'LIVE', position: 'top-center' },
+    { id: 'custom-logo', target: 'output', type: 'image', image: logoImage, position: { x: 24, y: 24 } }
   ]
 });
 ```
@@ -449,7 +453,7 @@ const mixer = new CRTC.Mixer([], {
 | `text` | 文字水印内容 |
 | `image` | 图片 URL、`HTMLImageElement`、`HTMLCanvasElement`、`ImageBitmap` |
 | `slot/sourceId/streamId` | source 水印匹配条件，优先级 `sourceId > streamId > slot` |
-| `position` | 预设位置，或 `{ x, y }` 坐标；默认 `'bottom-right'` |
+| `position` | 预设位置，或 `{ x, y }` 坐标；默认 `'bottom-right'`。预设支持 `'top-left'`、`'top-center'`、`'top-right'`、`'center'`、`'bottom-left'`、`'bottom-center'`、`'bottom-right'`；坐标相对目标区域左上角，全局水印相对输出画布，source 水印相对该源绘制区域 |
 | `width/height/font/fontSize/color/backgroundColor/opacity/padding/margin` | 水印尺寸和样式，非法值回退默认值 |
 
 ### 初始化步骤

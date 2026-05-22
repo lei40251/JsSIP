@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265221757
+ * CRTC v1.13.0.2026523113
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210443514 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210460226 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210443514');
+debug('version %s', '1.13.0.405210460226');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210443514';
+    return '1.13.0.405210460226';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
@@ -34346,7 +34346,7 @@ var VALID_RENDER_MODES = {
  * @returns {Object} 归一化后的配置对象
  * @returns {number} returns.width - 输出宽度（默认 1280）
  * @returns {number} returns.height - 输出高度（默认 720）
- * @returns {number|null} returns.fps - 帧率（null=浏览器默认）
+ * @returns {number} returns.fps - 输出帧率（默认 15）
  * @returns {string} returns.backgroundColor - 画布底色
  * @returns {number} returns.audioGain - 全局默认音量增益
  * @returns {string} returns.renderMode - 渲染后端选择
@@ -34360,7 +34360,7 @@ exports.create = function (options) {
   return {
     width: exports.normalizePositiveInteger(options.width, 1280),
     height: exports.normalizePositiveInteger(options.height, 720),
-    fps: exports.normalizePositiveInteger(options.fps, null),
+    fps: exports.normalizePositiveInteger(options.fps, 15),
     backgroundColor: options.backgroundColor || '#000',
     audioGain: exports.normalizeGain(options.audioGain, 0.8),
     renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
@@ -35810,6 +35810,8 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 
 var RendererFactory = require('../mixer-renderer/RendererFactory');
 var MainCanvas2DRenderer = require('../mixer-renderer/MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('../mixer-renderer/MainWebGL2Renderer');
+var WorkerRenderer = require('../mixer-renderer/WorkerRenderer');
 var RenderLoop = /*#__PURE__*/function () {
   /**
    * @param {Object} options
@@ -35911,8 +35913,13 @@ var RenderLoop = /*#__PURE__*/function () {
   }, {
     key: "ensureRenderer",
     value: function ensureRenderer() {
+      var _this = this;
       if (!this._renderer) {
-        this._renderer = RendererFactory.createRenderer(this._canvas, this._config);
+        this._renderer = RendererFactory.createRenderer(this._canvas, this._config, {
+          onWorkerFatalError: function onWorkerFatalError(reason) {
+            _this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
+          }
+        });
       }
       return this._renderer;
     }
@@ -36037,8 +36044,8 @@ var RenderLoop = /*#__PURE__*/function () {
      * @returns {boolean} true=降级成功
      */
   }, {
-    key: "fallbackRendererToMain2D",
-    value: function fallbackRendererToMain2D(reason) {
+    key: "fallbackRenderer",
+    value: function fallbackRenderer(reason) {
       var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
       if (currentInfo.actualMode === 'main-2d') {
         return false;
@@ -36047,6 +36054,31 @@ var RenderLoop = /*#__PURE__*/function () {
         return false;
       }
       if (this._renderer && this._renderer.destroy) {
+        this._renderer.destroy();
+      }
+      if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
+        var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
+        if (mainWebGL2) {
+          return true;
+        }
+        var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
+        if (worker2D) {
+          return true;
+        }
+      }
+      return this.fallbackRendererToMain2D(reason, currentInfo);
+    }
+  }, {
+    key: "fallbackRendererToMain2D",
+    value: function fallbackRendererToMain2D(reason, info) {
+      var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
+      if (currentInfo.actualMode === 'main-2d') {
+        return false;
+      }
+      if (!info && !currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
+        return false;
+      }
+      if (!info && this._renderer && this._renderer.destroy) {
         this._renderer.destroy();
       }
       var renderer = new MainCanvas2DRenderer(this._config, {
@@ -36063,6 +36095,57 @@ var RenderLoop = /*#__PURE__*/function () {
       this._renderer = renderer;
       this._rendererErrorCount = 0;
       return true;
+    }
+  }, {
+    key: "_tryFallbackToMainWebGL2",
+    value: function _tryFallbackToMainWebGL2(currentInfo, reason) {
+      try {
+        var renderer = new MainWebGL2Renderer(this._config, {
+          requestedMode: currentInfo.requestedMode || this._config.renderMode,
+          actualMode: 'main-webgl2',
+          isWorker: false,
+          isWebGL2: true,
+          isFallback: true,
+          reason: reason,
+          droppedFrames: currentInfo.droppedFrames || 0,
+          renderedFrames: currentInfo.renderedFrames || 0
+        });
+        renderer.init(this._canvas);
+        this._renderer = renderer;
+        this._rendererErrorCount = 0;
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+  }, {
+    key: "_tryFallbackToWorker2D",
+    value: function _tryFallbackToWorker2D(currentInfo, reason) {
+      var _this2 = this;
+      try {
+        var workerConfig = Object.assign({}, this._config, {
+          renderMode: 'worker-2d'
+        });
+        var renderer = new WorkerRenderer(workerConfig, {
+          requestedMode: currentInfo.requestedMode || this._config.renderMode,
+          actualMode: 'worker-init',
+          isWorker: true,
+          isWebGL2: false,
+          isFallback: true,
+          reason: reason,
+          droppedFrames: currentInfo.droppedFrames || 0,
+          renderedFrames: currentInfo.renderedFrames || 0,
+          onFatalError: function onFatalError(fallbackReason) {
+            _this2.fallbackRendererToMain2D(fallbackReason || 'Worker Canvas2D renderer failed at runtime');
+          }
+        });
+        renderer.init(this._canvas);
+        this._renderer = renderer;
+        this._rendererErrorCount = 0;
+        return true;
+      } catch (error) {
+        return false;
+      }
     }
 
     /**
@@ -36094,7 +36177,7 @@ var RenderLoop = /*#__PURE__*/function () {
       if (info.actualMode === 'worker-failed' || info.isWorker && info.isFallback && info.reason) {
         this._rendererErrorCount += 1;
         if (this._rendererErrorCount >= 2) {
-          this.fallbackRendererToMain2D(info.reason || 'Worker renderer failed at runtime');
+          this.fallbackRenderer(info.reason || 'Worker renderer failed at runtime');
         }
       } else {
         this._rendererErrorCount = 0;
@@ -36120,7 +36203,7 @@ var RenderLoop = /*#__PURE__*/function () {
         });
       }
       if (this._renderErrorCount >= 2) {
-        this.fallbackRendererToMain2D(reason);
+        this.fallbackRenderer(reason);
       }
     }
   }, {
@@ -36161,7 +36244,7 @@ var RenderLoop = /*#__PURE__*/function () {
   }]);
 }();
 module.exports = RenderLoop;
-},{"../mixer-renderer/MainCanvas2DRenderer":82,"../mixer-renderer/RendererFactory":84}],79:[function(require,module,exports){
+},{"../mixer-renderer/MainCanvas2DRenderer":82,"../mixer-renderer/MainWebGL2Renderer":83,"../mixer-renderer/RendererFactory":84,"../mixer-renderer/WorkerRenderer":85}],79:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -36867,12 +36950,20 @@ var WatermarkManager = /*#__PURE__*/function () {
             x = area.x + margin;
             y = area.y + margin;
             break;
+          case 'top-center':
+            x = area.x + (area.width - width) / 2;
+            y = area.y + margin;
+            break;
           case 'top-right':
             x = area.x + area.width - width - margin;
             y = area.y + margin;
             break;
           case 'bottom-left':
             x = area.x + margin;
+            y = area.y + area.height - height - margin;
+            break;
+          case 'bottom-center':
+            x = area.x + (area.width - width) / 2;
             y = area.y + area.height - height - margin;
             break;
           case 'center':
@@ -37678,7 +37769,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
  * RendererFactory — 渲染器工厂
  *
  * 根据 renderMode 配置选择合适的渲染后端：
- *   - auto: 自动探测最优路径（Worker WebGL2 → Worker Canvas2D → 主线程 WebGL2 → 主线程 Canvas2D）
+ *   - auto: 自动探测最优路径（Worker WebGL2 → 主线程 WebGL2 → Worker Canvas2D → 主线程 Canvas2D）
  *   - worker-webgl2 / worker-2d: Worker 线程渲染
  *   - main-webgl2 / main-2d: 主线程渲染
  *
@@ -37697,16 +37788,18 @@ var WorkerRenderer = require('./WorkerRenderer');
  * 自动模式（auto）的尝试顺序：
  *   1. 如果检测到 Safari/WKWebView，优先尝试 main-webgl2（Worker 在这些平台不稳定）
  *   2. 尝试 worker-webgl2（Worker 内 WebGL2）
- *   3. Worker 内失败 → 尝试 main-webgl2（主线程 WebGL2）
- *   4. WebGL2 不可用 → 回退 main-2d（Canvas2D）
+ *   3. Worker WebGL2 失败 → 尝试 main-webgl2（主线程 WebGL2）
+ *   4. Main WebGL2 不可用 → 尝试 worker-2d（Worker Canvas2D）
+ *   5. Worker Canvas2D 不可用 → 回退 main-2d（主线程 Canvas2D）
  *
  * @param {HTMLCanvasElement} canvas - 输出 canvas
  * @param {Object} config - 混流配置（含 renderMode）
  * @returns {BaseRenderer} 渲染器实例
  */
-exports.createRenderer = function (canvas, config) {
+exports.createRenderer = function (canvas, config, hooks) {
   var mode = config.renderMode || 'auto';
   var errors = [];
+  hooks = hooks || {};
   if (mode === 'main-2d') {
     return createMain2D(canvas, config, false, '');
   }
@@ -37726,13 +37819,19 @@ exports.createRenderer = function (canvas, config) {
     }
   }
 
-  // 尝试 Worker 渲染路径
+  // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
+  // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
   if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
     try {
-      var _renderer = new WorkerRenderer(config, {
+      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
+      var workerConfig = Object.assign({}, config, {
+        renderMode: workerMode
+      });
+      var _renderer = new WorkerRenderer(workerConfig, {
         requestedMode: mode,
         isFallback: false,
-        reason: ''
+        reason: '',
+        onFatalError: hooks.onWorkerFatalError
       });
       _renderer.init(canvas);
       return _renderer;
@@ -37880,11 +37979,15 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
   function WorkerRenderer(config, info) {
     var _this;
     _classCallCheck(this, WorkerRenderer);
+    var rendererInfo = Object.assign({}, info || {});
+    var onFatalError = typeof rendererInfo.onFatalError === 'function' ? rendererInfo.onFatalError : null;
+    delete rendererInfo.onFatalError;
     _this = _callSuper(this, WorkerRenderer, [config, Object.assign({
       actualMode: 'worker-init',
       isWorker: true,
       isWebGL2: false
-    }, info || {})]);
+    }, rendererInfo)]);
+    _this._onFatalError = onFatalError;
 
     /** @type {HTMLCanvasElement|null} 主线程输出 canvas（绑定 captureStream） */
     _this._canvas = null;
@@ -37912,6 +38015,9 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
 
     /** @type {boolean} 销毁标记，设置后所有异步操作跳过 */
     _this._destroyed = false;
+
+    /** @type {boolean} 避免同一个 Worker 故障重复触发主线程降级 */
+    _this._fatalErrorNotified = false;
 
     /**
      * @type {'imagebitmap'|'videoframe'|null}
@@ -37947,29 +38053,20 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
       this.resize(canvas.width, canvas.height);
       try {
         this._worker = this._createWorker();
-        this._outputContext = canvas.getContext('2d', {
-          alpha: false
-        }) || canvas.getContext('2d');
-        if (!this._outputContext) {
-          throw new Error('Canvas2D output context is not available');
-        }
-
-        // 预填背景色，避免初始黑屏闪烁
-        this._outputContext.fillStyle = this._config.backgroundColor || '#000';
-        this._outputContext.fillRect(0, 0, canvas.width || 1, canvas.height || 1);
-        this._outputContext.imageSmoothingEnabled = true;
         var offscreenCanvas = new OffscreenCanvas(canvas.width || 1, canvas.height || 1);
         this._worker.onmessage = function (event) {
           return _this2._handleWorkerMessage(event);
         };
         this._worker.onerror = function (error) {
+          var reason = "Worker renderer error: ".concat(error.message || 'unknown');
           _this2._workerBusy = false;
           _this2._extractingFrame = false;
           _this2._updateInfo({
             actualMode: 'worker-failed',
             isFallback: true,
-            reason: "Worker renderer error: ".concat(error.message || 'unknown')
+            reason: reason
           });
+          _this2._notifyFatalError(reason);
         };
         this._worker.postMessage({
           type: 'init',
@@ -38033,6 +38130,16 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
     value: function _handleWorkerMessage(event) {
       var data = event.data || {};
       if (data.type === 'ready') {
+        if (!this._ensureOutputContext()) {
+          this._workerReady = false;
+          this._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: 'Canvas2D output context is not available'
+          });
+          this._notifyFatalError('Canvas2D output context is not available');
+          return;
+        }
         this._workerReady = true;
         this._updateInfo({
           actualMode: data.actualMode,
@@ -38072,15 +38179,46 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         return;
       }
       if (data.type === 'failed') {
+        var reason = data.reason || 'Worker renderer initialization failed';
         this._workerBusy = false;
         this._workerReady = false;
         this._extractingFrame = false;
         this._updateInfo({
           actualMode: 'worker-failed',
           isFallback: true,
-          reason: data.reason || 'Worker renderer initialization failed'
+          reason: reason
         });
+        this._notifyFatalError(reason);
       }
+    }
+  }, {
+    key: "_notifyFatalError",
+    value: function _notifyFatalError(reason) {
+      if (this._fatalErrorNotified || this._destroyed || !this._onFatalError) {
+        return;
+      }
+      this._fatalErrorNotified = true;
+      this._onFatalError(reason);
+    }
+  }, {
+    key: "_ensureOutputContext",
+    value: function _ensureOutputContext() {
+      if (this._outputContext) {
+        return true;
+      }
+      if (!this._canvas || !this._canvas.getContext) {
+        return false;
+      }
+      this._outputContext = this._canvas.getContext('2d', {
+        alpha: false
+      }) || this._canvas.getContext('2d');
+      if (!this._outputContext) {
+        return false;
+      }
+      this._outputContext.fillStyle = this._config.backgroundColor || '#000';
+      this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
+      this._outputContext.imageSmoothingEnabled = true;
+      return true;
     }
 
     /**
@@ -38772,7 +38910,7 @@ exports.createVideoTexture = function (gl) {
  */
 exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
-  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\\\nin vec2 a_position;\\\\nin vec2 a_texCoord;\\\\nout vec2 v_texCoord;\\\\nvoid main() {\\\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\\\n  v_texCoord = a_texCoord;\\\\n}\\\\n\",FRAGMENT_SHADER=\"#version 300 es\\\\nprecision highp float;\\\\nin vec2 v_texCoord;\\\\nuniform sampler2D u_texture;\\\\nout vec4 outColor;\\\\nvoid main() {\\\\n  outColor = texture(u_texture, v_texCoord);\\\\n}\\\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;try{if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){destroyWebGL2(),backgroundColor=e.backgroundColor||backgroundColor}try{initCanvas2D(),actualMode=\"worker-2d\",postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"Worker WebGL2 unavailable, fallback to Worker Canvas2D\"})}catch(e){postMessage({type:\"failed\",reason:e.message||String(e)})}}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
+  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\\\nin vec2 a_position;\\\\nin vec2 a_texCoord;\\\\nout vec2 v_texCoord;\\\\nvoid main() {\\\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\\\n  v_texCoord = a_texCoord;\\\\n}\\\\n\",FRAGMENT_SHADER=\"#version 300 es\\\\nprecision highp float;\\\\nin vec2 v_texCoord;\\\\nuniform sampler2D u_texture;\\\\nout vec4 outColor;\\\\nvoid main() {\\\\n  outColor = texture(u_texture, v_texCoord);\\\\n}\\\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)try{return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){return destroyWebGL2(),void postMessage({type:\"failed\",reason:r.message||String(r)})}if(\"worker-2d\"===requestedMode)try{return initCanvas2D(),actualMode=\"worker-2d\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"\"})}catch(e){return void postMessage({type:\"failed\",reason:e.message||String(e)})}postMessage({type:\"failed\",reason:\"Unsupported worker render mode: \"+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
 };
 },{}],89:[function(require,module,exports){
 "use strict";

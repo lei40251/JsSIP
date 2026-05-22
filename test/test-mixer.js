@@ -1,6 +1,7 @@
 const assert = require('assert');
 const Mixer = require('../lib/Mixer');
 const MixerConfig = require('../lib/mixer-core/MixerConfig');
+const WatermarkManager = require('../lib/mixer-core/WatermarkManager');
 const WorkerRenderer = require('../lib/mixer-renderer/WorkerRenderer');
 
 let nextTrackId = 1;
@@ -144,6 +145,75 @@ class MockCanvas2DContext
   }
 }
 
+class MockWebGL2Context
+{
+  constructor()
+  {
+    this.VERTEX_SHADER = 0x8B31;
+    this.FRAGMENT_SHADER = 0x8B30;
+    this.COMPILE_STATUS = 0x8B81;
+    this.LINK_STATUS = 0x8B82;
+    this.ARRAY_BUFFER = 0x8892;
+    this.STATIC_DRAW = 0x88E4;
+    this.TEXTURE_2D = 0x0DE1;
+    this.TEXTURE_WRAP_S = 0x2802;
+    this.TEXTURE_WRAP_T = 0x2803;
+    this.CLAMP_TO_EDGE = 0x812F;
+    this.TEXTURE_MIN_FILTER = 0x2801;
+    this.TEXTURE_MAG_FILTER = 0x2800;
+    this.LINEAR = 0x2601;
+    this.TEXTURE0 = 0x84C0;
+    this.COLOR_BUFFER_BIT = 0x4000;
+    this.BLEND = 0x0BE2;
+    this.SRC_ALPHA = 0x0302;
+    this.ONE_MINUS_SRC_ALPHA = 0x0303;
+    this.UNPACK_FLIP_Y_WEBGL = 0x9240;
+    this.RGBA = 0x1908;
+    this.UNSIGNED_BYTE = 0x1401;
+    this.TRIANGLE_STRIP = 0x0005;
+    this.FLOAT = 0x1406;
+  }
+
+  createShader(type) { return { type }; }
+  shaderSource() {}
+  compileShader() {}
+  getShaderParameter() { return true; }
+  getShaderInfoLog() { return ''; }
+  deleteShader() {}
+  createProgram() { return {}; }
+  attachShader() {}
+  linkProgram() {}
+  getProgramParameter() { return true; }
+  getProgramInfoLog() { return ''; }
+  deleteProgram() {}
+  createBuffer() { return {}; }
+  bindBuffer() {}
+  bufferData() {}
+  useProgram() {}
+  getAttribLocation() { return 0; }
+  enableVertexAttribArray() {}
+  vertexAttribPointer() {}
+  getUniformLocation() { return {}; }
+  uniform1i() {}
+  createTexture() { return {}; }
+  bindTexture() {}
+  texParameteri() {}
+  clearColor() {}
+  clear() {}
+  activeTexture() {}
+  disable() {}
+  enable() {}
+  blendFunc() {}
+  pixelStorei() {}
+  texImage2D() {}
+  viewport() {}
+  drawArrays() {}
+  flush() {}
+  deleteTexture() {}
+  deleteBuffer() {}
+  getExtension() { return { loseContext: function() {} }; }
+}
+
 class MockCanvasElement
 {
   constructor()
@@ -152,6 +222,7 @@ class MockCanvasElement
     this.height = 0;
     this.stream = null;
     this._context2d = new MockCanvas2DContext();
+    this._contextWebGL2 = null;
     MockCanvasElement.instances.push(this);
   }
 
@@ -162,6 +233,13 @@ class MockCanvasElement
     if (type === '2d')
     {
       return this._context2d;
+    }
+
+    if (type === 'webgl2' && MockCanvasElement.webgl2Supported)
+    {
+      this._contextWebGL2 = this._contextWebGL2 || new MockWebGL2Context();
+
+      return this._contextWebGL2;
     }
 
     return null;
@@ -178,6 +256,7 @@ class MockCanvasElement
 }
 
 MockCanvasElement.instances = [];
+MockCanvasElement.webgl2Supported = false;
 
 class MockAudioNode
 {
@@ -285,11 +364,52 @@ class MockAudioContext
 
 MockAudioContext.instances = [];
 
+class MockWorker
+{
+  constructor()
+  {
+    this.messages = [];
+    this.terminated = false;
+    this.onmessage = null;
+    this.onerror = null;
+    MockWorker.instances.push(this);
+  }
+
+  postMessage(message)
+  {
+    this.messages.push(message);
+  }
+
+  terminate()
+  {
+    this.terminated = true;
+  }
+}
+
+MockWorker.instances = [];
+
+class MockOffscreenCanvas
+{
+  constructor(width, height)
+  {
+    this.width = width;
+    this.height = height;
+  }
+
+  getContext()
+  {
+    return null;
+  }
+}
+
 function installBrowserMocks()
 {
   const snapshots = {
     MediaStream      : saveGlobal('MediaStream'),
     HTMLMediaElement : saveGlobal('HTMLMediaElement'),
+    Worker           : saveGlobal('Worker'),
+    OffscreenCanvas  : saveGlobal('OffscreenCanvas'),
+    URL              : saveGlobal('URL'),
     window           : saveGlobal('window'),
     document         : saveGlobal('document'),
     performance      : saveGlobal('performance')
@@ -299,6 +419,15 @@ function installBrowserMocks()
 
   global.MediaStream = MockMediaStream;
   global.HTMLMediaElement = MockHTMLMediaElement;
+  global.Worker = MockWorker;
+  global.OffscreenCanvas = MockOffscreenCanvas;
+  global.URL = {
+    createObjectURL : function()
+    {
+      return 'blob:mock-worker';
+    },
+    revokeObjectURL : function() {}
+  };
   global.window = {
     AudioContext          : MockAudioContext,
     webkitAudioContext    : MockAudioContext,
@@ -342,6 +471,9 @@ function installBrowserMocks()
   {
     restoreGlobal('MediaStream', snapshots.MediaStream);
     restoreGlobal('HTMLMediaElement', snapshots.HTMLMediaElement);
+    restoreGlobal('Worker', snapshots.Worker);
+    restoreGlobal('OffscreenCanvas', snapshots.OffscreenCanvas);
+    restoreGlobal('URL', snapshots.URL);
     restoreGlobal('window', snapshots.window);
     restoreGlobal('document', snapshots.document);
     restoreGlobal('performance', snapshots.performance);
@@ -377,6 +509,8 @@ function resetMockState()
   animationFrames = {};
   MockAudioContext.instances = [];
   MockCanvasElement.instances = [];
+  MockCanvasElement.webgl2Supported = false;
+  MockWorker.instances = [];
 }
 
 function createStream(options)
@@ -667,6 +801,142 @@ async function testCanvas2DWatermarkDrawOrder()
   mixer.stop();
 }
 
+async function testAutoRendererFallbackPrefersMainWebGL2()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(MockWorker.instances.length, 1);
+
+  MockWorker.instances[0].onmessage({
+    data : {
+      type   : 'failed',
+      reason : 'Worker WebGL2 unavailable'
+    }
+  });
+
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.requestedMode, 'auto');
+  assert.strictEqual(info.actualMode, 'main-webgl2');
+  assert.strictEqual(info.isFallback, true);
+  assert.strictEqual(info.reason, 'Worker WebGL2 unavailable');
+
+  mixer.stop();
+}
+
+async function testAutoRendererFallbackTriesWorker2DBeforeMain2D()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(MockWorker.instances.length, 1);
+
+  MockWorker.instances[0].onmessage({
+    data : {
+      type   : 'failed',
+      reason : 'Worker WebGL2 unavailable'
+    }
+  });
+
+  let info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.requestedMode, 'auto');
+  assert.strictEqual(info.actualMode, 'worker-init');
+  assert.strictEqual(info.isFallback, true);
+  assert.strictEqual(MockWorker.instances.length, 2);
+
+  MockWorker.instances[1].onmessage({
+    data : {
+      type       : 'ready',
+      actualMode : 'worker-2d',
+      isWebGL2   : false,
+      reason     : ''
+    }
+  });
+
+  info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.requestedMode, 'auto');
+  assert.strictEqual(info.actualMode, 'worker-2d');
+  assert.strictEqual(info.isFallback, true);
+
+  mixer.stop();
+}
+
+async function testAutoRendererFallbackEndsAtMain2D()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  MockWorker.instances[0].onmessage({
+    data : {
+      type   : 'failed',
+      reason : 'Worker WebGL2 unavailable'
+    }
+  });
+  MockWorker.instances[1].onmessage({
+    data : {
+      type   : 'failed',
+      reason : 'Worker Canvas2D unavailable'
+    }
+  });
+
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.requestedMode, 'auto');
+  assert.strictEqual(info.actualMode, 'main-2d');
+  assert.strictEqual(info.isFallback, true);
+  assert.strictEqual(info.reason, 'Worker Canvas2D unavailable');
+
+  mixer.stop();
+}
+
+async function testWatermarkPresetAndCoordinatePositions()
+{
+  resetMockState();
+
+  const manager = new WatermarkManager();
+
+  await manager.setWatermarks([
+    { id: 'top-center', text: 'AB', position: 'top-center', margin: 10 },
+    { id: 'bottom-center', text: 'AB', position: 'bottom-center', margin: 10 },
+    { id: 'coordinate', text: 'AB', position: { x: 7, y: 11 } }
+  ]);
+
+  const items = manager.createRenderItems({ width: 320, height: 180, items: [] }).outputWatermarks;
+  const byId = items.reduce((map, item) =>
+  {
+    map[item.id] = item;
+
+    return map;
+  }, {});
+
+  assert.strictEqual(byId['top-center'].draw.x, 140);
+  assert.strictEqual(byId['top-center'].draw.y, 10);
+  assert.strictEqual(byId['bottom-center'].draw.x, 140);
+  assert.strictEqual(byId['bottom-center'].draw.y, 116);
+  assert.deepStrictEqual(byId.coordinate.draw, { x: 7, y: 11, width: 40, height: 54 });
+}
+
 async function testWorkerRendererCarriesWatermarkPayload()
 {
   const renderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {});
@@ -745,9 +1015,10 @@ async function testMixerConfigDefaults()
   const defaultConfig = MixerConfig.create({});
   const customConfig = MixerConfig.create({ width: '640', height: 360, fps: '15' });
 
-  // 默认值：width=1280, height=720, renderMode='auto'
+  // 默认值：width=1280, height=720, fps=15, renderMode='auto'
   assert.strictEqual(defaultConfig.width, 1280);
   assert.strictEqual(defaultConfig.height, 720);
+  assert.strictEqual(defaultConfig.fps, 15);
   assert.strictEqual(defaultConfig.renderMode, 'auto');
 
   // 自定义值
@@ -788,6 +1059,10 @@ async function run()
     await testDefaultAudioStreamStillMixesAllSources();
     await testWatermarkConfigAndFiltering();
     await testCanvas2DWatermarkDrawOrder();
+    await testAutoRendererFallbackPrefersMainWebGL2();
+    await testAutoRendererFallbackTriesWorker2DBeforeMain2D();
+    await testAutoRendererFallbackEndsAtMain2D();
+    await testWatermarkPresetAndCoordinatePositions();
     await testWorkerRendererCarriesWatermarkPayload();
     await testWorkerRendererKeepsEmptyPayload();
     await testMixerConfigDefaults();

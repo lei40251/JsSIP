@@ -127,7 +127,7 @@ stop()
 | `_prepareCanvas()` | 调用 `domAdapter.prepareCanvas(this._canvas)`，设置画布尺寸 |
 | `_ensureRenderer()` | 确保渲染后端已初始化，委派给 `RenderLoop.ensureRenderer()` |
 | `_resizeRenderer(width, height)` | 将画布尺寸同步给渲染器，委派给 `RenderLoop.resizeRenderer()` |
-| `_fallbackRendererToMain2D(reason)` | Worker 运行时失败后降级到主线程 Canvas2D，委派给 `RenderLoop.fallbackRendererToMain2D()` |
+| `_fallbackRendererToMain2D(reason)` | 显式落到主线程 Canvas2D 的内部兜底，完整 auto 降级链由 `RenderLoop.fallbackRenderer()` 处理 |
 | `_assertNotDestroyed(methodName)` | 防 `stop()` 后继续操作，抛 `Error` 要求重新 new 实例 |
 
 ---

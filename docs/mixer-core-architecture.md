@@ -212,7 +212,7 @@ constructor(videos, options)
 | `normalizeGain(value, fallback)` | 音量增益归一化 | ≥0，允许放大（>1） |
 | `normalizeSourceOptions(optionsOrSlot, index, defaultGain)` | appendStream 参数归一化 | 支持 `(stream, 3)` 和 `(stream, {slot, gain})` 两种调用形式 |
 
-**默认配置**: width=1280, height=720, fps=null, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true
+**默认配置**: width=1280, height=720, fps=15, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true
 
 ---
 
@@ -339,10 +339,11 @@ renderFrame(timestamp, forceRender)
 WorkerRenderer 故障 × 2 或渲染异常 × 2
     │
     ▼
-fallbackRendererToMain2D(reason)
+fallbackRenderer(reason)
     ├─ 条件：当前不是 main-2d && 是 Worker 或 worker-failed
     ├─ destroy() 当前 renderer
-    └─ new MainCanvas2DRenderer() → init(canvas)
+    ├─ auto: main-webgl2 → worker-2d → main-2d
+    └─ explicit worker mode: main-webgl2/main-2d fallback
 ```
 
 **fps 节流**: 非调整 rAF 间隔，而是在 rAF 回调内跳过未到间隔的帧。`forceRender=true` 跳过节流。
@@ -524,11 +525,13 @@ RendererFactory.createRenderer(canvas, config)
     │         └─ 同步失败 → 继续走 auto 的后续 Worker / main fallback 尝试
     │
     ├─ mode === 'auto' && 非 Safari
-    │   └─ ▶ new WorkerRenderer() → init(canvas)
-    │         ├─ 同步成功 ✔（actualMode 先是 worker-init，ready 后变为 worker-webgl2 或 worker-2d）
-    │         └─ 失败 → new MainWebGL2Renderer()
+    │   └─ ▶ new WorkerRenderer(worker-webgl2) → init(canvas)
+    │         ├─ ready → worker-webgl2 ✔
+    │         └─ failed → new MainWebGL2Renderer()
     │               ├─ 成功 ✔
-    │               └─ 失败 → new MainCanvas2DRenderer() ✔
+    │               └─ 失败 → new WorkerRenderer(worker-2d)
+    │                     ├─ ready → worker-2d ✔
+    │                     └─ failed → new MainCanvas2DRenderer() ✔
     │
     ├─ mode === 'worker-webgl2' / 'worker-2d'
     │   └─ ▶ new WorkerRenderer() → init(canvas)
@@ -545,12 +548,13 @@ RendererFactory.createRenderer(canvas, config)
 
 **运行期降级**（Worker 已创建后异步失败，或渲染连续异常）:
 ```
-WorkerRenderer 故障 × 2
+WorkerRenderer 故障
     → destroy 当前 renderer
-    → new MainCanvas2DRenderer() → init(canvas)
+    → auto: main-webgl2 → worker-2d → main-2d
+    → explicit worker mode: main-webgl2/main-2d fallback
 ```
 
-这里的运行期降级只切到 `main-2d`。`main-webgl2` 只参与 RendererFactory 的同步创建失败 fallback，不参与 Worker 运行期失败后的二次尝试。
+auto 的运行期降级顺序与初始化顺序保持一致：`worker-webgl2` 失败后先尝试 `main-webgl2`，再尝试 `worker-2d`，最后回到 `main-2d`。
 
 ---
 
@@ -763,7 +767,7 @@ lib/mixer-renderer/
 2. **Canvas Context 抢占**: canvas 同一时间只能有一个 context（2D 或 WebGL2），RendererFactory 是唯一允许初始化 canvas context 的地方。
 3. **Worker 输出 canvas 不 transfer**: WorkerRenderer 不将输出 canvas transfer 到 Worker，而是主线程持有 canvas，Worker 返回 ImageBitmap 后通过 `drawImage()` 写入。这是为了确保 `captureStream()` 始终绑定主线程 canvas，避免部分浏览器黑屏。
 4. **AudioContext 延迟创建**: 符合浏览器 autoplay 政策，需用户交互后才能恢复。
-5. **Worker 故障降级**: 连续 2 次错误触发自动降级到 `MainCanvas2DRenderer`。
+5. **Worker 故障降级**: auto 模式按 `worker-webgl2 → main-webgl2 → worker-2d → main-2d` 自动降级。
 6. **去重保护**: 多处通过 `track.id` 进行去重（音频轨注入、WebAudio 连接）。
 7. **fps 节流**: 不调整 rAF 间隔，在 rAF 回调内按时间戳跳过未到间隔的帧。
 8. **WebGL Y 坐标**: 主线程和 Worker 的 WebGL 路径都通过 `UNPACK_FLIP_Y_WEBGL` 翻转纹理，确保视频方向正确。
