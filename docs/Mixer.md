@@ -485,8 +485,10 @@ const mixer = new CRTC.Mixer([], {
 | `getWatermarks()` | — | `Array<Object>` | 返回水印只读快照，包含 `status/reason` |
 | `getMixedStream()` | — | `Promise<MediaStream>` | 完整音视频混合流 |
 | `getVideoStream()` | — | `MediaStream` | 仅视频轨 |
-| `getAudioStream()` | — | `Promise<MediaStream\|null>` | 仅音频轨 |
+| `getAudioStream(options?)` | `undefined` 或 `{ slots:number[] }` | `Promise<MediaStream\|null>` | 仅音频轨；传 `slots` 时返回指定槽位子混音 |
 | `stop()` | — | — | 释放所有资源，实例不再可用 |
+
+`getAudioStream()` 始终返回纯音频 `MediaStream`，不会为了播放兼容性额外添加视频轨。移动端本地监听时建议在用户点击事件中创建/绑定 `<audio controls playsinline>` 并立即调用 `play()`，如果浏览器拦截自动播放，可保留原生控制条让用户再次点击播放。
 
 ---
 

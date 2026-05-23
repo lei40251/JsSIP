@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026523211
+ * CRTC v1.13.0.20265232352
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210464202 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210464704 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210464202');
+debug('version %s', '1.13.0.405210464704');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210464202';
+    return '1.13.0.405210464704';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
@@ -33406,8 +33406,8 @@ var AudioMixer = /*#__PURE__*/function () {
     this._sourceRegistry = options.sourceRegistry;
     this._onAudioTrackAvailable = options.onAudioTrackAvailable;
 
-    /** @type {Array<MediaStreamAudioSourceNode>} 已连接的 WebAudio 源节点列表 */
-    this._audioSources = [];
+    /** @type {Set<MediaStreamAudioSourceNode>} 已连接的 WebAudio 源节点集合 */
+    this._audioSources = new Set();
 
     /** @type {MediaStreamAudioDestinationNode|null} 混音输出目标节点 */
     this._audioDestination = null;
@@ -33427,8 +33427,14 @@ var AudioMixer = /*#__PURE__*/function () {
     /** @type {Promise|null} 正在进行的音频刷新操作 */
     this._audioRefreshPromise = null;
 
+    /** @type {boolean} 是否已有排队等待的批量刷新 */
+    this._audioRefreshScheduled = false;
+
     /** @type {boolean} 刷新过程中又有新的刷新请求标记 */
     this._audioRefreshPending = false;
+
+    /** @type {Promise<boolean>|null} 音频系统初始化锁，避免并发创建多个 AudioContext */
+    this._audioSystemReadyPromise = null;
 
     /** @type {Object} 音频系统状态信息（调试用） */
     this._audioInfo = {
@@ -33483,23 +33489,41 @@ var AudioMixer = /*#__PURE__*/function () {
       if (!this._audioRequested || this._getDestroyed()) {
         return;
       }
+      if (this._audioRefreshScheduled) {
+        this._audioRefreshPending = true;
+        return;
+      }
+      this._audioRefreshScheduled = true;
+      this._queueAudioRefresh(function () {
+        _this._audioRefreshScheduled = false;
+        _this._runScheduledRefresh();
+      });
+    }
+  }, {
+    key: "_runScheduledRefresh",
+    value: function _runScheduledRefresh() {
+      var _this2 = this;
+      if (!this._audioRequested || this._getDestroyed()) {
+        this._audioRefreshPending = false;
+        return;
+      }
       if (this._audioRefreshPromise) {
         this._audioRefreshPending = true;
         return;
       }
       this._audioRefreshPromise = this._refreshRequestedAudioConnections()["catch"](function (error) {
-        _this._logger.warn("Failed to refresh mixed audio: ".concat(error.message || String(error)));
-        _this._updateAudioInfo({
+        _this2._logger.warn("Failed to refresh mixed audio: ".concat(error.message || String(error)));
+        _this2._updateAudioInfo({
           status: 'failed',
           reason: 'Failed to refresh mixed audio',
           lastError: error.message || String(error)
         });
       }).then(function (stream) {
-        var needsAnotherRefresh = _this._audioRefreshPending;
-        _this._audioRefreshPromise = null;
-        _this._audioRefreshPending = false;
+        var needsAnotherRefresh = _this2._audioRefreshPending;
+        _this2._audioRefreshPromise = null;
+        _this2._audioRefreshPending = false;
         if (needsAnotherRefresh) {
-          _this.scheduleRefresh();
+          _this2.scheduleRefresh();
         }
         return stream || null;
       });
@@ -33515,24 +33539,26 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "syncExternalSourceAudio",
     value: function syncExternalSourceAudio() {
-      var _this2 = this;
+      var _this3 = this;
       if (!this._audioRequested && !this._audioContext) {
         return;
       }
       var needsRefresh = false;
       this._sourceRegistry.sources.forEach(function (source) {
         var previousStream = source.stream;
-        var currentStream = _this2._sourceRegistry.getStream(source);
+        var currentStream = _this3._sourceRegistry.getStream(source);
+        var previousSignature = source.audioTrackSignature;
+        var currentSignature = _this3._getAudioTrackSignature(currentStream);
 
-        // 已有音频连接但 stream 变化了，断开旧连接
-        if (source.audioSourceNode && source.audioStream !== currentStream) {
-          _this2.disconnectSource(source);
+        // 已有音频连接但音频轨真正变化了，断开旧连接
+        if (source.audioSourceNode && !_this3._isSameAudioTrackSignature(previousSignature, currentSignature)) {
+          _this3.disconnectSource(source);
           needsRefresh = true;
           return;
         }
 
-        // stream 引用变化且有音频轨，需要刷新连接
-        if (currentStream && currentStream !== previousStream && _this2._sourceRegistry.hasLiveAudioTrack(source)) {
+        // stream 引用变化但音频轨不变时无需重建 source；只有新增音轨才刷新连接。
+        if (currentStream && currentStream !== previousStream && _this3._sourceRegistry.hasLiveAudioTrack(source) && !source.audioSourceNode) {
           needsRefresh = true;
         }
       });
@@ -33554,23 +33580,37 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "disconnectSource",
     value: function disconnectSource(source) {
-      var _this3 = this;
+      this._destroySourceNode(source);
+    }
+  }, {
+    key: "_destroySourceNode",
+    value: function _destroySourceNode(source) {
+      var _this4 = this;
       var audioSourceNode = source.audioSourceNode;
+      var masterGainNode = source.masterGainNode;
       this._audioBuses.forEach(function (bus) {
-        return _this3._disconnectBusSource(bus, source);
+        return _this4._disconnectBusSource(bus, source);
       });
       if (source.gainNode) {
-        source.gainNode.disconnect();
+        this._disposeOutputGain(source, source.gainNode, true);
         source.gainNode = null;
       }
       source.audioStream = null;
+      source.audioTrackId = null;
+      source.audioTrackSignature = null;
       if (audioSourceNode) {
-        this._audioSources = this._audioSources.filter(function (sourceNode) {
-          return sourceNode !== audioSourceNode;
-        });
-        audioSourceNode.disconnect();
+        this._audioSources["delete"](audioSourceNode);
+        this._safeDisconnect(audioSourceNode);
+      }
+      if (masterGainNode) {
+        this._safeDisconnect(masterGainNode);
       }
       source.audioSourceNode = null;
+      source.masterGainNode = null;
+      if (source.outputGains) {
+        source.outputGains.clear();
+        source.outputGains = null;
+      }
     }
 
     /**
@@ -33598,26 +33638,35 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "stop",
     value: function stop() {
-      var _this4 = this;
+      var _this5 = this;
       if (this._audioDestination) {
-        try {
-          this._audioDestination.disconnect();
-        } catch (error) {}
+        this._safeDisconnect(this._audioDestination);
         this._audioDestination = null;
       }
-      if (this._audioContext) {
-        this._audioContext.close();
-      }
+      this._sourceRegistry.sources.forEach(function (source) {
+        _this5._destroySourceNode(source);
+      });
+      var audioContext = this._audioContext;
+
+      // 先断开引用，防止 stop 后并发路径继续复用旧 context。
       this._audioContext = null;
-      this._audioSources = [];
+      this._audioSystemReadyPromise = null;
+      if (audioContext) {
+        audioContext.close()["catch"](function (error) {
+          _this5._logger.warn("Failed to close AudioContext: ".concat(error.message || String(error)));
+        });
+      }
+      this._audioSources = new Set();
       this._audioBuses.forEach(function (bus) {
-        _this4._disconnectAudioBus(bus);
+        _this5._disconnectAudioBus(bus);
       });
       this._audioBuses.clear();
       this._audioRequested = false;
       this._defaultAudioRequested = false;
       this._audioRefreshPromise = null;
+      this._audioRefreshScheduled = false;
       this._audioRefreshPending = false;
+      this._audioSystemReadyPromise = null;
       this._updateAudioInfo({
         status: 'stopped',
         reason: 'Mixer stopped'
@@ -33635,7 +33684,7 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_ensureAudioSystem",
     value: function _ensureAudioSystem(options) {
-      var _this5 = this;
+      var _this6 = this;
       options = Object.assign({
         defaultDestination: true
       }, options || {});
@@ -33653,31 +33702,38 @@ var AudioMixer = /*#__PURE__*/function () {
           });
           return Promise.resolve(false);
         }
-        this._audioContext = new AudioContextConstructor();
+        this._audioContext = this._createAudioContext(AudioContextConstructor);
+      }
+      if (this._audioSystemReadyPromise) {
+        return this._audioSystemReadyPromise;
       }
 
       // 浏览器自动暂停时，尝试恢复
       var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
-      return resumePromise.then(function () {
-        if (_this5._getDestroyed()) {
+      this._audioSystemReadyPromise = resumePromise.then(function () {
+        if (_this6._getDestroyed()) {
+          _this6._audioSystemReadyPromise = null;
           return false;
         }
-        if (options.defaultDestination && !_this5._audioDestination) {
-          _this5._audioDestination = _this5._audioContext.createMediaStreamDestination();
+        if (options.defaultDestination && !_this6._audioDestination) {
+          _this6._audioDestination = _this6._createAudioDestination();
         }
-        _this5._updateAudioInfo({
-          status: _this5._audioContext.state === 'suspended' ? 'suspended' : 'ready',
+        _this6._updateAudioInfo({
+          status: _this6._audioContext.state === 'suspended' ? 'suspended' : 'ready',
           reason: ''
         });
+        _this6._audioSystemReadyPromise = null;
         return true;
       })["catch"](function (error) {
-        _this5._updateAudioInfo({
+        _this6._updateAudioInfo({
           status: 'failed',
           reason: 'AudioContext resume failed',
           lastError: error.message || String(error)
         });
+        _this6._audioSystemReadyPromise = null;
         return false;
       });
+      return this._audioSystemReadyPromise;
     }
 
     /**
@@ -33717,6 +33773,68 @@ var AudioMixer = /*#__PURE__*/function () {
         slots: slots
       };
     }
+  }, {
+    key: "_queueAudioRefresh",
+    value: function _queueAudioRefresh(callback) {
+      if (typeof setTimeout === 'function') {
+        setTimeout(callback, 0);
+        return;
+      }
+      Promise.resolve().then(callback);
+    }
+  }, {
+    key: "_createAudioContext",
+    value: function _createAudioContext(AudioContextConstructor) {
+      try {
+        return new AudioContextConstructor({
+          sampleRate: 48000
+        });
+      } catch (error) {
+        return new AudioContextConstructor();
+      }
+    }
+  }, {
+    key: "_createAudioDestination",
+    value: function _createAudioDestination() {
+      var destination = this._audioContext.createMediaStreamDestination();
+      return destination;
+    }
+  }, {
+    key: "_isDestinationTrackHealthy",
+    value: function _isDestinationTrackHealthy(destination) {
+      if (!destination || !destination.stream || !destination.stream.getAudioTracks) {
+        return false;
+      }
+      var tracks = destination.stream.getAudioTracks();
+      return tracks.some(function (track) {
+        return track && track.readyState === 'live';
+      });
+    }
+  }, {
+    key: "_ensureBusDestination",
+    value: function _ensureBusDestination(bus) {
+      var _this7 = this;
+      if (!bus) {
+        return null;
+      }
+      if (!bus.destination) {
+        bus.destination = this._createAudioDestination();
+        return bus.destination;
+      }
+      if (!this._isDestinationTrackHealthy(bus.destination)) {
+        var track = bus.destination.stream.getAudioTracks()[0];
+        var ended = track && track.readyState === 'ended';
+        if (ended) {
+          bus.connections.forEach(function (connection) {
+            _this7._disposeOutputGain(connection.source || null, connection.gainNode, true);
+          });
+          bus.connections.clear();
+          this._safeDisconnect(bus.destination);
+          bus.destination = this._createAudioDestination();
+        }
+      }
+      return bus.destination;
+    }
 
     /**
      * 获取或创建按 slot 组合输出的音频 bus。
@@ -33755,17 +33873,17 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_refreshRequestedAudioConnections",
     value: function _refreshRequestedAudioConnections() {
-      var _this6 = this;
+      var _this8 = this;
       var chain = Promise.resolve(null);
       if (this._defaultAudioRequested) {
         chain = chain.then(function () {
-          return _this6._refreshAudioConnections();
+          return _this8._refreshAudioConnections();
         });
       }
       this._audioBuses.forEach(function (bus) {
         if (bus.requested) {
           chain = chain.then(function () {
-            return _this6._refreshAudioConnections(bus);
+            return _this8._refreshAudioConnections(bus);
           });
         }
       });
@@ -33781,12 +33899,12 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_getLiveAudioSources",
     value: function _getLiveAudioSources(bus) {
-      var _this7 = this;
+      var _this9 = this;
       return this._sourceRegistry.sources.filter(function (source) {
         if (bus && bus.slots.indexOf(source.slot) === -1) {
           return false;
         }
-        return _this7._sourceRegistry.hasLiveAudioTrack(source);
+        return _this9._sourceRegistry.hasLiveAudioTrack(source);
       });
     }
 
@@ -33799,7 +33917,7 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_getTargetConnectionCount",
     value: function _getTargetConnectionCount(bus) {
-      return bus ? bus.connections.size : this._audioSources.length;
+      return bus ? bus.connections.size : this._audioSources.size;
     }
 
     /**
@@ -33839,7 +33957,7 @@ var AudioMixer = /*#__PURE__*/function () {
         return;
       }
       if (connection.gainNode) {
-        connection.gainNode.disconnect();
+        this._disposeOutputGain(source, connection.gainNode, true);
       }
       bus.connections["delete"](source.id);
       this._updateTargetAudioInfo(bus);
@@ -33853,19 +33971,18 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_disconnectAudioBus",
     value: function _disconnectAudioBus(bus) {
+      var _this0 = this;
       if (!bus) {
         return;
       }
       bus.connections.forEach(function (connection) {
         if (connection.gainNode) {
-          connection.gainNode.disconnect();
+          _this0._disposeOutputGain(connection.source || null, connection.gainNode, true);
         }
       });
       bus.connections.clear();
       if (bus.destination) {
-        try {
-          bus.destination.disconnect();
-        } catch (error) {}
+        this._safeDisconnect(bus.destination);
         bus.destination = null;
       }
     }
@@ -33884,7 +34001,7 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_refreshAudioConnections",
     value: function _refreshAudioConnections(bus) {
-      var _this8 = this;
+      var _this1 = this;
       if (!this._audioRequested && !bus || this._getDestroyed()) {
         this._updateAudioInfo({
           status: this._getDestroyed() ? 'stopped' : 'not-requested',
@@ -33895,28 +34012,31 @@ var AudioMixer = /*#__PURE__*/function () {
 
       // 先清理已无音频轨的旧连接
       this._sourceRegistry.sources.forEach(function (source) {
-        var stream = _this8._sourceRegistry.getStream(source);
-        if (source.audioSourceNode && (!_this8._sourceRegistry.hasLiveAudioTrack(source) || source.audioStream !== stream)) {
-          _this8.disconnectSource(source);
+        var stream = _this1._sourceRegistry.getStream(source);
+        var signature = _this1._getAudioTrackSignature(stream);
+        var shouldDestroySource = source.audioSourceNode && (!_this1._sourceRegistry.hasLiveAudioTrack(source) || !_this1._isSameAudioTrackSignature(source.audioTrackSignature, signature));
+        if (shouldDestroySource) {
+          _this1.disconnectSource(source);
         }
       });
       if (bus) {
         bus.connections.forEach(function (connection, sourceId) {
-          var source = _this8._sourceRegistry.find(sourceId);
-          var streamChanged = source && _this8._sourceRegistry.getStream(source) !== connection.audioStream;
-          var shouldDisconnect = !source || bus.slots.indexOf(source.slot) === -1 || !_this8._sourceRegistry.hasLiveAudioTrack(source) || streamChanged;
+          var source = _this1._sourceRegistry.find(sourceId);
+          var stream = source && _this1._sourceRegistry.getStream(source);
+          var signature = _this1._getAudioTrackSignature(stream);
+          var trackChanged = source && !_this1._isSameAudioTrackSignature(source.audioTrackSignature, signature);
+          var shouldDisconnect = !source || bus.slots.indexOf(source.slot) === -1 || !_this1._sourceRegistry.hasLiveAudioTrack(source) || trackChanged;
           if (shouldDisconnect) {
-            if (connection.gainNode) {
-              connection.gainNode.disconnect();
-            }
-            bus.connections["delete"](sourceId);
+            _this1._disconnectBusSource(bus, connection.source || source || {
+              id: sourceId
+            });
           }
         });
       }
-      var liveSources = this._getLiveAudioSources(bus);
+      var liveSourcesBeforeReady = this._getLiveAudioSources(bus);
 
-      // 没有 live 音频源，跳过
-      if (liveSources.length === 0) {
+      // 默认全量混音保持延迟创建：无源时不创建 AudioContext。
+      if (!bus && liveSourcesBeforeReady.length === 0) {
         this._logger.debug('No live audio sources, skip audio stream creation');
         this._updateTargetAudioInfo(bus, {
           status: 'no-source',
@@ -33928,31 +34048,44 @@ var AudioMixer = /*#__PURE__*/function () {
         defaultDestination: !bus
       }).then(function (ready) {
         if (!ready) {
-          _this8._updateAudioInfo({
-            status: _this8._audioInfo.status === 'failed' ? 'failed' : 'not-started',
-            reason: _this8._audioInfo.reason || 'Audio system is not ready'
+          _this1._updateAudioInfo({
+            status: _this1._audioInfo.status === 'failed' ? 'failed' : 'not-started',
+            reason: _this1._audioInfo.reason || 'Audio system is not ready'
           });
           return null;
         }
         if (bus && !bus.destination) {
-          bus.destination = _this8._audioContext.createMediaStreamDestination();
+          _this1._ensureBusDestination(bus);
+        } else if (bus) {
+          _this1._ensureBusDestination(bus);
+        }
+        var liveSources = _this1._getLiveAudioSources(bus);
+
+        // 子混音 bus 返回稳定的纯音频流；即使当前无源，后续 append 后也复用同一个 destination。
+        if (liveSources.length === 0) {
+          _this1._logger.debug('No live audio sources, skip audio source connection');
+          _this1._updateTargetAudioInfo(bus, {
+            status: 'no-source',
+            reason: 'No live audio source'
+          });
+          return bus ? bus.destination.stream : null;
         }
         var connectedSources = liveSources.filter(function (source) {
-          return _this8._connectSource(source, bus);
+          return _this1._connectSource(source, bus);
         });
-        if (_this8._getTargetConnectionCount(bus) === 0 && connectedSources.length === 0) {
-          _this8._logger.warn('No valid audio sources, skip audio stream creation');
-          _this8._updateTargetAudioInfo(bus, {
+        if (_this1._getTargetConnectionCount(bus) === 0 && connectedSources.length === 0) {
+          _this1._logger.warn('No valid audio sources, skip audio stream creation');
+          _this1._updateTargetAudioInfo(bus, {
             status: 'failed',
             reason: 'No audio source connected'
           });
           return null;
         }
-        _this8._updateTargetAudioInfo(bus, {
-          status: _this8._audioContext && _this8._audioContext.state === 'suspended' ? 'suspended' : 'mixing',
+        _this1._updateTargetAudioInfo(bus, {
+          status: _this1._audioContext && _this1._audioContext.state === 'suspended' ? 'suspended' : 'mixing',
           reason: ''
         });
-        return bus ? bus.destination.stream : _this8._audioDestination.stream;
+        return bus ? bus.destination.stream : _this1._audioDestination.stream;
       });
     }
 
@@ -33969,6 +34102,8 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_connectSource",
     value: function _connectSource(source, bus) {
       var stream = this._sourceRegistry.getStream(source);
+      var signature = this._getAudioTrackSignature(stream);
+      var trackId = signature && signature.id;
       if (!this._audioContext || !this._sourceRegistry.hasLiveAudioTrack(source)) {
         return false;
       }
@@ -33979,42 +34114,50 @@ var AudioMixer = /*#__PURE__*/function () {
         return false;
       }
       if (source.audioSourceNode) {
-        if (source.audioStream !== stream) {
+        if (!this._isSameAudioTrackSignature(source.audioTrackSignature, signature)) {
           this.disconnectSource(source);
         }
       }
       try {
+        if (bus && bus.connections.has(source.id)) {
+          this._syncSourceOutputGains(source);
+          return true;
+        }
         var audioSourceNode = source.audioSourceNode || this._audioContext.createMediaStreamSource(stream);
+        var masterGainNode = source.masterGainNode || this._audioContext.createGain();
         var gainNode = this._audioContext.createGain();
         gainNode.gain.value = source.gain;
+        this._registerOutputGain(source, gainNode);
         if (!source.audioSourceNode) {
           source.audioSourceNode = audioSourceNode;
+          source.masterGainNode = masterGainNode;
           source.audioStream = stream;
+          source.audioTrackId = trackId;
+          source.audioTrackSignature = signature;
+          masterGainNode.gain.value = 1;
+          audioSourceNode.connect(masterGainNode);
         }
         if (bus) {
-          if (bus.connections.has(source.id)) {
-            return false;
-          }
-          audioSourceNode.connect(gainNode);
+          masterGainNode.connect(gainNode);
           gainNode.connect(bus.destination);
           bus.connections.set(source.id, {
             audioSourceNode: audioSourceNode,
+            masterGainNode: masterGainNode,
             gainNode: gainNode,
-            audioStream: stream
+            source: source,
+            audioStream: stream,
+            audioTrackId: trackId
           });
           return true;
         }
         if (source.gainNode) {
+          this._syncSourceOutputGains(source);
           return false;
         }
-        audioSourceNode.connect(gainNode);
+        masterGainNode.connect(gainNode);
         gainNode.connect(this._audioDestination);
         source.gainNode = gainNode;
-        if (!this._audioSources.some(function (sourceNode) {
-          return sourceNode === audioSourceNode;
-        })) {
-          this._audioSources.push(audioSourceNode);
-        }
+        this._audioSources.add(audioSourceNode);
         if (this._onAudioTrackAvailable) {
           this._onAudioTrackAvailable(this._audioDestination.stream);
         }
@@ -34039,17 +34182,106 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "_updateAudioInfo",
     value: function _updateAudioInfo(info) {
-      var _this9 = this;
+      var _this10 = this;
       Object.assign(this._audioInfo, {
         requested: this._audioRequested,
         contextState: this._audioContext ? this._audioContext.state : null,
         sourceCount: this._sourceRegistry.sources.length,
         liveSourceCount: this._sourceRegistry.sources.filter(function (source) {
-          return _this9._sourceRegistry.hasLiveAudioTrack(source);
+          return _this10._sourceRegistry.hasLiveAudioTrack(source);
         }).length,
-        connectedSources: this._audioSources.length,
+        connectedSources: this._countConnectedSources(),
         outputTracks: this._audioDestination ? this._audioDestination.stream.getAudioTracks().length : 0
       }, info || {});
+    }
+  }, {
+    key: "_countConnectedSources",
+    value: function _countConnectedSources() {
+      var busConnections = 0;
+      this._audioBuses.forEach(function (bus) {
+        busConnections += bus.connections.size;
+      });
+      return this._audioSources.size + busConnections;
+    }
+  }, {
+    key: "_registerOutputGain",
+    value: function _registerOutputGain(source, gainNode) {
+      if (!source || !gainNode) {
+        return;
+      }
+      if (!source.outputGains) {
+        source.outputGains = new Set();
+      }
+      source.outputGains.add(gainNode);
+    }
+  }, {
+    key: "_disposeOutputGain",
+    value: function _disposeOutputGain(source, gainNode, disconnect) {
+      if (!gainNode) {
+        return;
+      }
+      try {
+        gainNode.gain.value = 0;
+      } catch (error) {}
+      if (source && source.outputGains) {
+        source.outputGains["delete"](gainNode);
+      }
+      if (disconnect) {
+        this._safeDisconnect(gainNode);
+      }
+    }
+  }, {
+    key: "_syncSourceOutputGains",
+    value: function _syncSourceOutputGains(source) {
+      if (!source || !source.outputGains) {
+        return;
+      }
+      source.outputGains.forEach(function (gainNode) {
+        if (gainNode && gainNode.gain) {
+          gainNode.gain.value = source.gain;
+        }
+      });
+    }
+  }, {
+    key: "_safeDisconnect",
+    value: function _safeDisconnect(node) {
+      if (!node || !node.disconnect) {
+        return;
+      }
+      try {
+        node.disconnect();
+      } catch (error) {}
+    }
+  }, {
+    key: "_getAudioTrackId",
+    value: function _getAudioTrackId(stream) {
+      var signature = this._getAudioTrackSignature(stream);
+      return signature ? signature.id : null;
+    }
+  }, {
+    key: "_getAudioTrackSignature",
+    value: function _getAudioTrackSignature(stream) {
+      if (!stream || !stream.getAudioTracks) {
+        return null;
+      }
+      var track = stream.getAudioTracks().find(function (item) {
+        return item.readyState === 'live';
+      }) || stream.getAudioTracks()[0];
+      if (!track) {
+        return null;
+      }
+      return {
+        track: track,
+        id: track.id || ''
+      };
+    }
+  }, {
+    key: "_isSameAudioTrackSignature",
+    value: function _isSameAudioTrackSignature(previous, current) {
+      if (!previous || !current) {
+        return previous === current;
+      }
+      return previous.track === current.track && previous.id === current.id;
     }
   }, {
     key: "requested",
@@ -34064,7 +34296,7 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "audioSources",
     get: function get() {
-      return this._audioSources;
+      return Array.from(this._audioSources);
     }
   }, {
     key: "audioDestination",
@@ -36577,10 +36809,18 @@ var SourceRegistry = /*#__PURE__*/function () {
         gain: this._normalizeGain(options.gain, this._getDefaultGain()),
         audioSourceNode: null,
         // WebAudio 源节点（由 AudioMixer 连接时赋值）
+        masterGainNode: null,
+        // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
         gainNode: null,
-        // WebAudio 音量节点（由 AudioMixer 连接时赋值）
+        // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
+        outputGains: new Set(),
+        // 该源所有下游 gain，用于后续音量同步和安全清理
         audioStream: null,
         // 当前已连接的音频流引用
+        audioTrackId: null,
+        // 当前已连接的音频轨 id，用于判断是否真正换轨
+        audioTrackSignature: null,
+        // 音频轨身份签名（track 对象 + id）
         ownedVideo: ownedVideo
       };
 

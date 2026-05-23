@@ -132,9 +132,9 @@
 
         @media (min-width: 1200px) {
             .workspace-row>.mixer-col-left {
-                flex: 0 0 320px;
-                max-width: 320px;
-                width: 320px;
+                flex: 0 0 360px;
+                max-width: 360px;
+                width: 360px;
             }
 
             .workspace-row>.mixer-col-main {
@@ -144,9 +144,9 @@
             }
 
             .workspace-row>.mixer-col-right {
-                flex: 0 0 340px;
-                max-width: 340px;
-                width: 340px;
+                flex: 0 0 360px;
+                max-width: 360px;
+                width: 360px;
             }
         }
 
@@ -269,7 +269,7 @@
 
         .slot-grid-selector {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.35rem;
         }
 
@@ -414,6 +414,11 @@
             min-width: 0;
             padding-left: 0.375rem;
             padding-right: 0.375rem;
+        }
+
+        .watermark-narrow-control {
+            width: 100% !important;
+            max-width: 100%;
         }
 
         .submix-empty {
@@ -571,7 +576,7 @@
             background: linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%);
             padding: 6px 8px 8px;
             display: grid;
-            grid-template-columns: repeat(9, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 6px;
             overflow-x: auto;
             overflow-y: hidden;
@@ -882,7 +887,7 @@
                             <span class="badge bg-light text-dark border">槽位</span>
                         </div>
                         <div class="selected-slot-card mb-2">
-                            <div class="selected-slot-number" id="selected-slot-number">0</div>
+                            <div class="selected-slot-number" id="selected-slot-number">1</div>
                             <div class="selected-slot-meta">
                                 <div class="fw-semibold text-dark">操作目标</div>
                                 <div id="selected-slot-source">无源</div>
@@ -984,17 +989,17 @@
                                         <label class="form-label mb-1" for="wm-output-text-y">文字 Y</label>
                                         <input class="form-control" id="wm-output-text-y" type="number" value="16">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3">
                                         <label class="form-label mb-1" for="wm-output-text-size">字号</label>
-                                        <input class="form-control" id="wm-output-text-size" type="number" min="10"
-                                            value="28">
+                                        <input class="form-control watermark-narrow-control" id="wm-output-text-size"
+                                            type="number" min="10" value="28">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3">
                                         <label class="form-label mb-1" for="wm-output-text-color">文字颜色</label>
-                                        <input class="form-control form-control-color w-100" id="wm-output-text-color"
-                                            type="color" value="#ffffff">
+                                        <input class="form-control form-control-color watermark-narrow-control"
+                                            id="wm-output-text-color" type="color" value="#ffffff">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-6">
                                         <label class="form-label mb-1" for="wm-output-text-bg-color">背景颜色</label>
                                         <input class="form-control" id="wm-output-text-bg-color"
                                             value="rgba(0,0,0,0.45)">
@@ -1068,24 +1073,23 @@
                                         <label class="form-label mb-1" for="wm-slot-y">名牌 Y</label>
                                         <input class="form-control " id="wm-slot-y" type="number" value="12">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3">
                                         <label class="form-label mb-1" for="wm-slot-size">字号</label>
-                                        <input class="form-control" id="wm-slot-size" type="number" min="10"
-                                            value="28">
+                                        <input class="form-control watermark-narrow-control" id="wm-slot-size"
+                                            type="number" min="10" value="28">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-3">
                                         <label class="form-label mb-1" for="wm-slot-color">文字颜色</label>
-                                        <input class="form-control form-control-color w-100" id="wm-slot-color"
-                                            type="color" value="#ffffff">
+                                        <input class="form-control form-control-color watermark-narrow-control"
+                                            id="wm-slot-color" type="color" value="#ffffff">
                                     </div>
-                                    <div class="col-4">
+                                    <div class="col-6">
                                         <label class="form-label mb-1" for="wm-slot-bg-color">背景颜色</label>
-                                        <input class="form-control" id="wm-slot-bg-color"
-                                            value="rgba(0,0,0,0.45)">
+                                        <input class="form-control" id="wm-slot-bg-color" value="rgba(0,0,0,0.45)">
                                     </div>
                                 </div>
                                 <div class="status-line">
-                                    当前槽位: <span id="wm-selected-slot">0</span> · <span
+                                    当前槽位: <span id="wm-selected-slot">1</span> · <span
                                         id="wm-slot-source-state">无源</span> · <span
                                         id="wm-slot-watermark-state">无水印</span>
                                 </div>
@@ -1190,9 +1194,9 @@
                             <span class="submix-status m-0">输出: <span id="submix-status">-</span></span>
                         </div>
                         <div class="submix-actions">
-                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([0, 1, 2])">0,1,2</button>
-                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([1, 3, 5])">1,3,5</button>
-                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([2, 4, 6])">2,4,6</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([0, 1, 2])">123</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([0, 1, 3])">124</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([0, 2, 3])">134</button>
                             <button class="btn btn-outline-primary" onclick="app.listenSelectedSlotSubmix()">当前</button>
                             <button class="btn btn-outline-danger" onclick="app.stopAllSubmixes()">停止</button>
                         </div>
@@ -1217,7 +1221,7 @@
             </div>
         </div>
         <div class="hidden-state-sink" aria-hidden="true">
-            <span id="diagnostic-selected-slot">槽位 0 · 无源 · 无水印</span>
+            <span id="diagnostic-selected-slot">槽位 1 · 无源 · 无水印</span>
             <div id="watermark-list">
                 <div class="submix-empty">暂无水印</div>
             </div>
@@ -1381,11 +1385,18 @@
             // 当前选中的目标 slot。添加新源时会传给 CRTC.Mixer.appendStream(stream, slot)。
             currentSlot: 0,
 
+            // demo 只开放 1-4 四个源位；SDK 内部仍保持 0-based slot 语义。
+            maxDemoSources: 4,
+
             // 输出预览默认静音，只有用户点击“监听输出”后才打开本地播放，满足浏览器自动播放策略。
             monitorAudio: false,
 
             // 每组子混音使用独立 audio 元素，不影响右侧 mixed-video 的默认全量混音预览。
             activeSubmixes: new Map(),
+
+            // Android Chrome 对 WebAudio 产出的 MediaStream 直接交给 audio 元素播放不稳定。
+            // 这里仅作为 demo 本地监听兜底，SDK 输出仍然是纯音频 MediaStream。
+            submixPlaybackCtx: null,
 
             // 缓存页面元素，避免每次操作都重复 querySelector/getElementById。
             ui: {
@@ -1445,19 +1456,19 @@
             },
 
             init() {
-                // 初始化 0-8 共 9 个 slot 按钮；Mixer 内部会根据最大 slot 自动计算 1/2/4/6/9 宫格布局。
-                for (let i = 0; i < 9; i++) {
+                // demo 只展示 1-4 四个源位；内部传给 SDK 的 slot 仍然是 0-3。
+                for (let i = 0; i < this.maxDemoSources; i++) {
                     const btn = document.createElement('div');
                     btn.className = 'slot-btn';
-                    btn.innerText = i;
+                    btn.innerText = this.formatSlotLabel(i);
                     btn.dataset.slot = i;
                     btn.onclick = () => this.selectSlot(i);
                     this.ui.slotGrid.appendChild(btn);
                 }
-                for (let i = 0; i < 9; i++) {
+                for (let i = 0; i < this.maxDemoSources; i++) {
                     const opt = document.createElement('option');
                     opt.value = i;
-                    opt.innerText = `槽位 ${i}`;
+                    opt.innerText = `槽位 ${this.formatSlotLabel(i)}`;
                     this.ui.wmSlotSelect.appendChild(opt);
                 }
                 this.ui.wmSlotSelect.onchange = () => this.selectSlot(parseInt(this.ui.wmSlotSelect.value, 10));
@@ -1522,17 +1533,20 @@
                     return;
                 }
 
-                const cols = Math.min(Math.max(count, 3), 9);
+                const cols = Math.min(Math.max(count, 2), this.maxDemoSources);
                 // this.ui.thumbs.style.gridTemplateColumns = `repeat(${cols}, minmax(220px, 1fr))`;
             },
 
             getCompactInsertSlot(preferredSlot) {
+                preferredSlot = this.clampSlot(preferredSlot);
                 const occupied = new Set(this.localStreams.map(item => item.slot));
                 // 同槽位已占用：保持覆盖行为（与原 demo 语义一致）
                 if (occupied.has(preferredSlot)) return preferredSlot;
 
+                if (this.localStreams.length >= this.maxDemoSources) return preferredSlot;
+
                 // 空槽位但过于跳跃时，优先落到当前连续尾部，避免出现 0/1/8 这类稀疏布局
-                const tailSlot = this.localStreams.length;
+                const tailSlot = Math.min(this.localStreams.length, this.maxDemoSources - 1);
                 if (preferredSlot > tailSlot) return tailSlot;
 
                 // 其余情况按用户选中的可用槽位落点
@@ -1557,7 +1571,7 @@
 
                 this.localStreams = sorted;
                 this.rebuildThumbsFromLocalStreams();
-                this.currentSlot = Math.min(this.currentSlot, Math.max(this.localStreams.length - 1, 0));
+                this.currentSlot = this.clampSlot(Math.min(this.currentSlot, Math.max(this.localStreams.length - 1, 0)));
             },
 
             rebuildThumbsFromLocalStreams() {
@@ -1629,8 +1643,24 @@
                 this.setPanelEnabled(this.ui.panelWatermark, running);
             },
 
+            formatSlotLabel(slot) {
+                return String(Number(slot) + 1);
+            },
+
+            formatSlotList(slots) {
+                return slots.map(slot => this.formatSlotLabel(slot)).join(',');
+            },
+
+            clampSlot(slot) {
+                const value = Number(slot);
+                if (!Number.isInteger(value)) return 0;
+
+                return Math.min(Math.max(value, 0), this.maxDemoSources - 1);
+            },
+
             selectSlot(idx) {
                 // 只改变 demo 当前选中的目标位置，不会立即影响 Mixer。
+                idx = this.clampSlot(idx);
                 this.currentSlot = idx;
                 const btns = this.ui.slotGrid.children;
                 for (let b of btns) {
@@ -1638,7 +1668,7 @@
                     b.classList.toggle('active', slot === idx);
                     b.classList.toggle('has-watermark', this.hasSlotWatermark(slot));
                 }
-                this.ui.selectedSlotNumber.innerText = idx;
+                this.ui.selectedSlotNumber.innerText = this.formatSlotLabel(idx);
                 this.ui.wmSlotSelect.value = String(idx);
                 this.refreshSelectedSlotSummary();
                 this.refreshWatermarkList();
@@ -1686,11 +1716,12 @@
                 const hasWatermark = this.hasSlotWatermark(this.currentSlot);
                 const sourceState = source ? `已占用 · ${source.id}` : '无源';
                 const watermarkState = hasWatermark ? '已设置 slot 水印' : '无 slot 水印';
-                const summary = `槽位 ${this.currentSlot} · ${sourceState} · ${watermarkState}`;
+                const slotLabel = this.formatSlotLabel(this.currentSlot);
+                const summary = `槽位 ${slotLabel} · ${sourceState} · ${watermarkState}`;
 
                 this.ui.selectedSlotSource.innerText = sourceState;
                 this.ui.selectedSlotWatermark.innerText = watermarkState;
-                this.ui.wmSelectedSlot.innerText = String(this.currentSlot);
+                this.ui.wmSelectedSlot.innerText = slotLabel;
                 this.ui.wmSlotSourceState.innerText = source ? `源 ${source.id}` : '无源';
                 this.ui.wmSlotWatermarkState.innerText = watermarkState;
                 this.ui.diagnosticSelectedSlot.innerText = summary;
@@ -1844,7 +1875,7 @@
             async applySlotNameWatermark() {
                 if (!this.mixer) return;
 
-                const text = this.ui.wmSlotText.value || `槽位 ${this.currentSlot}`;
+                const text = this.ui.wmSlotText.value || `槽位 ${this.formatSlotLabel(this.currentSlot)}`;
                 const next = this.getWatermarkSnapshot().filter(item => !(item.target === 'source' && item.slot === this.currentSlot));
                 next.push(this.buildSlotWatermark(this.currentSlot, text));
                 await this.applyWatermarks(next);
@@ -1937,6 +1968,7 @@
                 this.localStreams = [];
                 this.monitorAudio = false;
                 this.stopAllSubmixes();
+                this.closeSubmixPlaybackContext();
                 this.ui.mixedVideo.srcObject = null;
                 this.ui.mixedVideo.muted = true;
                 this.ui.btnStart.style.display = 'block';
@@ -1986,36 +2018,181 @@
                 this.ui.btnMonitorAudio.disabled = !this.mixer;
             },
 
-            async listenSubmix(slots) {
+            async listenSubmix(slots, options = {}) {
                 if (!this.mixer) return;
 
                 const normalizedSlots = this.normalizeSubmixSlots(slots);
                 if (!normalizedSlots.length) return;
 
                 const key = normalizedSlots.join(',');
+                const displayKey = this.formatSlotList(normalizedSlots);
+                const submix = this.ensureSubmixItem(key, normalizedSlots);
+                const silent = Boolean(options.silent);
+                const shouldPlay = !silent && options.play !== false;
 
                 try {
-                    const stream = await this.mixer.getAudioStream({ slots: normalizedSlots });
-                    const submix = this.ensureSubmixItem(key, normalizedSlots);
+                    submix.label.innerText = `槽位 ${displayKey} 准备中...`;
+                    const useWebAudioPlayback = this.shouldUseSubmixWebAudioPlayback();
+                    if (shouldPlay) {
+                        this.pauseOtherSubmixes(key);
+                        if (useWebAudioPlayback) {
+                            await this.withTimeout(this.ensureSubmixPlaybackContext(), 800, 'submix playback context resume timeout');
+                        }
+                        submix.audio.pause();
+                        submix.audio.removeAttribute('src');
+                        submix.audio.srcObject = null;
+                        submix.audio.load();
+                    }
 
-                    if (!stream || stream.getAudioTracks().length === 0) {
+                    const stream = await this.mixer.getAudioStream({ slots: normalizedSlots });
+                    const trackCount = stream ? stream.getAudioTracks().length : 0;
+
+                    if (!stream) {
                         submix.audio.pause();
                         submix.audio.srcObject = null;
-                        submix.label.innerText = `槽位 ${key} 无可用音频`;
+                        submix.audio.load();
+                        submix.label.innerText = `槽位 ${displayKey} 无可用音频`;
                         this.updateStats();
 
                         return;
                     }
 
+                    const wasPaused = submix.audio.paused;
                     submix.audio.srcObject = stream;
-                    await submix.audio.play();
-                    submix.label.innerText = `槽位 ${key}`;
+                    submix.audio.muted = useWebAudioPlayback;
+                    if (useWebAudioPlayback) {
+                        await this.waitNextFrame();
+                    }
+                    if (shouldPlay || !wasPaused) {
+                        if (useWebAudioPlayback) {
+                            await this.withTimeout(this.startSubmixWebAudioPlayback(submix, normalizedSlots, stream), 800, 'submix webaudio playback timeout');
+                            submix.audio.play().catch(() => { });
+                        } else {
+                            await this.withTimeout(submix.audio.play(), 1200, 'submix audio element play timeout');
+                        }
+                    }
+                    submix.label.innerText = `槽位 ${displayKey} · ${trackCount} 音轨`;
                     this.updateSubmixStatus();
                     this.updateStats();
                 } catch (e) {
-                    this.removeSubmixItem(key);
-                    alert("监听子混音失败: " + e.message);
+                    const detail = this.getSubmixDebugText(normalizedSlots);
+                    submix.label.innerText = `槽位 ${displayKey} 播放被阻止，可再点播放器播放`;
+                    this.updateStats();
+
+                    if (!silent) {
+                        alert(`监听子混音失败: ${e.message}\n${detail}`);
+                    }
                 }
+            },
+
+            waitNextFrame() {
+                return new Promise((resolve) => {
+                    window.requestAnimationFrame(() => resolve());
+                });
+            },
+
+            withTimeout(promise, timeout, message) {
+                let timer = null;
+
+                return Promise.race([
+                    Promise.resolve(promise).catch((error) => ({ error })),
+                    new Promise((resolve) => {
+                        timer = window.setTimeout(() => resolve({ timedOut: true, message }), timeout);
+                    })
+                ]).then((result) => {
+                    if (timer) window.clearTimeout(timer);
+
+                    return result;
+                });
+            },
+
+            pauseOtherSubmixes(activeKey) {
+                this.activeSubmixes.forEach((item, key) => {
+                    if (key !== activeKey) {
+                        item.audio.pause();
+                        this.stopSubmixWebAudioPlayback(item);
+                    }
+                });
+            },
+
+            shouldUseSubmixWebAudioPlayback() {
+                const ua = navigator.userAgent || '';
+
+                return /Android/i.test(ua) && /Chrome|CriOS/i.test(ua) && !/Edg|OPR|Firefox/i.test(ua);
+            },
+
+            ensureSubmixPlaybackContext() {
+                if (!this.submixPlaybackCtx) {
+                    this.submixPlaybackCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                if (this.submixPlaybackCtx.state === 'suspended') {
+                    return this.submixPlaybackCtx.resume().then(() => this.submixPlaybackCtx);
+                }
+
+                return Promise.resolve(this.submixPlaybackCtx);
+            },
+
+            async startSubmixWebAudioPlayback(submix, slots, fallbackStream) {
+                this.stopSubmixWebAudioPlayback(submix);
+                const ctx = await this.ensureSubmixPlaybackContext();
+                const streams = this.getLocalAudioStreamsForSlots(slots);
+
+                if (!streams.length && fallbackStream) {
+                    streams.push(fallbackStream);
+                }
+
+                submix.playbackSources = streams.map((stream) => {
+                    const source = ctx.createMediaStreamSource(stream);
+                    const gain = ctx.createGain();
+
+                    gain.gain.value = 1;
+                    source.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    return { source, gain, stream };
+                });
+            },
+
+            stopSubmixWebAudioPlayback(submix) {
+                if (!submix || !submix.playbackSources) return;
+
+                submix.playbackSources.forEach((item) => {
+                    try { item.source.disconnect(); } catch (e) { }
+                    try { item.gain.disconnect(); } catch (e) { }
+                });
+                submix.playbackSources = [];
+            },
+
+            getLocalAudioStreamsForSlots(slots) {
+                return this.localStreams
+                    .filter(item => slots.indexOf(item.slot) !== -1)
+                    .map(item => item.stream)
+                    .filter(stream => stream && stream.getAudioTracks && stream.getAudioTracks().some(track => track.readyState === 'live'));
+            },
+
+            closeSubmixPlaybackContext() {
+                if (!this.submixPlaybackCtx) return;
+
+                try { this.submixPlaybackCtx.close(); } catch (e) { }
+                this.submixPlaybackCtx = null;
+            },
+
+            getSubmixDebugText(slots) {
+                const info = this.mixer && this.mixer.getAudioInfo ? this.mixer.getAudioInfo() : null;
+                const tracks = Array.from(this.activeSubmixes.values())
+                    .filter(item => item.slots.join(',') === slots.join(','))
+                    .map(item => item.audio.srcObject ? item.audio.srcObject.getAudioTracks().length : 0)[0] || 0;
+
+                if (!info) return `slots=${slots.join(',')}, tracks=${tracks}`;
+
+                return [
+                    `slots=${slots.join(',')}`,
+                    `tracks=${tracks}`,
+                    `audioStatus=${info.status}`,
+                    `contextState=${info.contextState || '-'}`,
+                    `liveSources=${info.liveSourceCount}`
+                ].join(', ');
             },
 
             normalizeSubmixSlots(slots) {
@@ -2023,7 +2200,7 @@
 
                 return slots
                     .map(slot => Number(slot))
-                    .filter(slot => Number.isInteger(slot) && slot >= 0)
+                    .filter(slot => Number.isInteger(slot) && slot >= 0 && slot < this.maxDemoSources)
                     .filter((slot, index, values) => values.indexOf(slot) === index)
                     .sort((a, b) => a - b);
             },
@@ -2040,7 +2217,7 @@
 
                 const label = document.createElement('div');
                 label.className = 'submix-label';
-                label.innerText = `槽位 ${key}`;
+                label.innerText = `槽位 ${this.formatSlotList(slots)}`;
 
                 const stopButton = document.createElement('button');
                 stopButton.className = 'btn btn-outline-danger';
@@ -2050,7 +2227,11 @@
                 const audio = document.createElement('audio');
                 audio.autoplay = true;
                 audio.controls = true;
+                audio.muted = false;
                 audio.playsInline = true;
+                audio.preload = 'auto';
+                audio.setAttribute('playsinline', '');
+                audio.setAttribute('webkit-playsinline', '');
 
                 row.appendChild(label);
                 row.appendChild(stopButton);
@@ -2062,8 +2243,15 @@
                     slots: slots.slice(),
                     row,
                     label,
-                    audio
+                    audio,
+                    playbackSource: null
                 };
+                audio.onplay = () => {
+                    if (this.shouldUseSubmixWebAudioPlayback() && audio.srcObject) {
+                        this.startSubmixWebAudioPlayback(submix, submix.slots, audio.srcObject).catch(() => { });
+                    }
+                };
+                audio.onpause = () => this.stopSubmixWebAudioPlayback(submix);
                 this.activeSubmixes.set(key, submix);
                 this.updateSubmixStatus();
 
@@ -2095,6 +2283,7 @@
                 if (!submix) return;
 
                 submix.audio.pause();
+                this.stopSubmixWebAudioPlayback(submix);
                 submix.audio.srcObject = null;
                 submix.row.remove();
                 this.activeSubmixes.delete(key);
@@ -2112,6 +2301,14 @@
                 if (!this.mixer) return;
                 const slot = this.getCompactInsertSlot(this.currentSlot);
 
+                if (this.localStreams.length >= this.maxDemoSources && !this.localStreams.some(item => item.slot === slot)) {
+                    stream.getTracks().forEach(track => track.stop());
+                    if (stream.stopInternal) stream.stopInternal();
+                    alert(`当前 demo 只支持 ${this.maxDemoSources} 个输入源，请先删除或覆盖已有源位。`);
+
+                    return;
+                }
+
                 // demo 与 SDK 的 slot 语义保持一致：同一个 slot 再加源会覆盖旧源。
                 // 这里先停止 demo 侧旧输入源，避免被覆盖后摄像头/屏幕仍在采集。
                 this.removeLocalStreamBySlot(slot);
@@ -2127,7 +2324,7 @@
 
                 const occupied = new Set(this.localStreams.map(item => item.slot));
                 let nextSlot = slot;
-                for (let i = 0; i < 9; i++) {
+                for (let i = 0; i < this.maxDemoSources; i++) {
                     if (!occupied.has(i)) { nextSlot = i; break; }
                 }
                 this.selectSlot(nextSlot);
@@ -2162,9 +2359,10 @@
                     ? '<video autoplay muted playsinline></video>'
                     : `<div class="media-placeholder">♪<br>${meta.note || 'Audio'}</div>`;
                 const trackInfo = `${hasVideo ? 'V' : '-'} / ${hasAudio ? 'A' : '-'}${meta.note ? ' · ' + meta.note : ''}`;
+                const slotLabel = this.formatSlotLabel(slot);
 
                 div.innerHTML = `
-            <div class="slot-tag">${slot}</div>
+            <div class="slot-tag">${slotLabel}</div>
             <div class="remove-btn" onclick="app.removeSource('${stream.id}')">&times;</div>
             ${mediaMarkup}
             <div class="info">${label}<br>${trackInfo}</div>
@@ -2309,7 +2507,7 @@
                 if (!this.activeSubmixes.size) return;
 
                 Array.from(this.activeSubmixes.values()).forEach(submix => {
-                    this.listenSubmix(submix.slots);
+                    this.listenSubmix(submix.slots, { silent: true, play: false });
                 });
             },
 
@@ -2354,7 +2552,7 @@
                 sources.forEach(s => {
                     if (typeof s.slot === 'number' && s.slot > maxSlot) maxSlot = s.slot;
                 });
-                const count = Math.max(maxSlot + 1, sources.length, 1);
+                const count = Math.min(Math.max(maxSlot + 1, sources.length, 1), this.maxDemoSources);
                 const resVal = document.getElementById('cfg-out-res').value;
                 const [w, h] = resVal.split('x').map(Number);
                 const isPortrait = h > w;
@@ -2365,14 +2563,6 @@
                     if (isPortrait) { cols = 1; rows = 2; } else { cols = 2; rows = 1; }
                 }
                 else if (count <= 4) { cols = 2; rows = 2; }
-                else if (count <= 6) {
-                    if (isPortrait) { cols = 2; rows = 3; } else { cols = 3; rows = 2; }
-                }
-                else if (count <= 9) { cols = 3; rows = 3; }
-                else {
-                    cols = Math.ceil(Math.sqrt(count));
-                    rows = Math.ceil(count / cols);
-                }
 
                 return { cols, rows };
             },
@@ -2399,7 +2589,7 @@
                         div.style.top = (r * hPct) + '%';
                         div.style.width = wPct + '%';
                         div.style.height = hPct + '%';
-                        div.innerText = r * cols + c;
+                        div.innerText = this.formatSlotLabel(r * cols + c);
                         this.ui.overlay.appendChild(div);
                     }
                 }
