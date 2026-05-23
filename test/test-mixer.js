@@ -3,6 +3,7 @@ const Mixer = require('../lib/Mixer');
 const MixerConfig = require('../lib/mixer-core/MixerConfig');
 const WatermarkManager = require('../lib/mixer-core/WatermarkManager');
 const WorkerRenderer = require('../lib/mixer-renderer/WorkerRenderer');
+const vm = require('vm');
 
 let nextTrackId = 1;
 let nextStreamId = 1;
@@ -366,8 +367,10 @@ MockAudioContext.instances = [];
 
 class MockWorker
 {
-  constructor()
+  constructor(url)
   {
+    this.url = url;
+    this.script = MockWorker.scripts[url] || '';
     this.messages = [];
     this.terminated = false;
     this.onmessage = null;
@@ -387,6 +390,7 @@ class MockWorker
 }
 
 MockWorker.instances = [];
+MockWorker.scripts = {};
 
 class MockOffscreenCanvas
 {
@@ -410,6 +414,7 @@ function installBrowserMocks()
     Worker           : saveGlobal('Worker'),
     OffscreenCanvas  : saveGlobal('OffscreenCanvas'),
     URL              : saveGlobal('URL'),
+    Blob             : saveGlobal('Blob'),
     window           : saveGlobal('window'),
     document         : saveGlobal('document'),
     performance      : saveGlobal('performance')
@@ -422,11 +427,19 @@ function installBrowserMocks()
   global.Worker = MockWorker;
   global.OffscreenCanvas = MockOffscreenCanvas;
   global.URL = {
-    createObjectURL : function()
+    createObjectURL : function(blob)
     {
-      return 'blob:mock-worker';
+      const url = `blob:mock-worker-${Object.keys(MockWorker.scripts).length + 1}`;
+
+      MockWorker.scripts[url] = blob && blob.parts ? blob.parts.join('') : '';
+
+      return url;
     },
     revokeObjectURL : function() {}
+  };
+  global.Blob = function(parts)
+  {
+    this.parts = parts || [];
   };
   global.window = {
     AudioContext          : MockAudioContext,
@@ -474,6 +487,7 @@ function installBrowserMocks()
     restoreGlobal('Worker', snapshots.Worker);
     restoreGlobal('OffscreenCanvas', snapshots.OffscreenCanvas);
     restoreGlobal('URL', snapshots.URL);
+    restoreGlobal('Blob', snapshots.Blob);
     restoreGlobal('window', snapshots.window);
     restoreGlobal('document', snapshots.document);
     restoreGlobal('performance', snapshots.performance);
@@ -511,6 +525,7 @@ function resetMockState()
   MockCanvasElement.instances = [];
   MockCanvasElement.webgl2Supported = false;
   MockWorker.instances = [];
+  MockWorker.scripts = {};
 }
 
 function createStream(options)
@@ -528,6 +543,21 @@ function createStream(options)
   }
 
   return new MockMediaStream(tracks);
+}
+
+function readWorkerShaderSource(script)
+{
+  const context = {
+    self        : {},
+    postMessage : function() {}
+  };
+
+  vm.runInNewContext(
+    `${script};this.shaderSource={vertexShader:VERTEX_SHADER,fragmentShader:FRAGMENT_SHADER};`,
+    context
+  );
+
+  return context.shaderSource;
 }
 
 async function flushAsync()
@@ -801,6 +831,43 @@ async function testCanvas2DWatermarkDrawOrder()
   mixer.stop();
 }
 
+async function testEmptyInitialRenderDoesNotCreateRenderer()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'not-started');
+  assert.strictEqual(MockWorker.instances.length, 0);
+
+  mixer.stop();
+}
+
+async function testWorkerShaderUsesRuntimeNewlines()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(MockWorker.instances.length, 1);
+
+  const script = MockWorker.instances[0].script;
+  const shaderSource = readWorkerShaderSource(script);
+  const vertexShader = shaderSource.vertexShader;
+  const fragmentShader = shaderSource.fragmentShader;
+
+  assert(vertexShader.includes('#version 300 es\nin vec2 a_position'));
+  assert(fragmentShader.includes('#version 300 es\nprecision highp float'));
+  assert(!vertexShader.includes('\\\\n'));
+  assert(!fragmentShader.includes('\\\\n'));
+
+  mixer.stop();
+}
+
 async function testAutoRendererFallbackPrefersMainWebGL2()
 {
   resetMockState();
@@ -1059,6 +1126,8 @@ async function run()
     await testDefaultAudioStreamStillMixesAllSources();
     await testWatermarkConfigAndFiltering();
     await testCanvas2DWatermarkDrawOrder();
+    await testEmptyInitialRenderDoesNotCreateRenderer();
+    await testWorkerShaderUsesRuntimeNewlines();
     await testAutoRendererFallbackPrefersMainWebGL2();
     await testAutoRendererFallbackTriesWorker2DBeforeMain2D();
     await testAutoRendererFallbackEndsAtMain2D();
