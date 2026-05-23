@@ -13,6 +13,9 @@
             --danger: #dc3545;
             --success: #198754;
             --muted: #64748b;
+            --space-xs: 0.375rem;
+            --space-sm: 0.5rem;
+            --space-md: 0.75rem;
         }
 
         * {
@@ -52,7 +55,7 @@
             align-items: stretch;
         }
 
-        .workspace-row > [class*="col-"] {
+        .workspace-row>[class*="col-"] {
             height: 100%;
             min-height: 0;
             min-width: 0;
@@ -71,26 +74,54 @@
             background: #fff;
         }
 
+        .panel-shell.p-2 {
+            padding: var(--space-md) !important;
+        }
+
+        .panel-shell .row {
+            --bs-gutter-x: var(--space-sm);
+            --bs-gutter-y: var(--space-sm);
+        }
+
+        .panel-shell .form-label {
+            margin-bottom: var(--space-xs) !important;
+        }
+
+        .panel-shell .mb-2 {
+            margin-bottom: var(--space-sm) !important;
+        }
+
+        .panel-shell .mt-1 {
+            margin-top: var(--space-sm) !important;
+        }
+
         .controls-stack {
             min-height: 0;
             overflow: hidden;
+            gap: var(--space-md) !important;
         }
 
-        .controls-stack > .panel-shell {
+        .controls-stack>.panel-shell {
             flex: 0 1 auto;
+        }
+
+        .controls-stack>#panel-watermark {
+            flex: 1 1 0;
+            min-height: 0;
         }
 
         .side-stack {
             min-height: 0;
             overflow: hidden;
+            gap: var(--space-md) !important;
         }
 
-        .side-stack > .panel-shell {
+        .side-stack>.panel-shell {
             flex: 0 0 auto;
         }
 
-        .side-stack > #panel-submix {
-            flex: 1 1 0 !important;
+        .side-stack>#panel-submix {
+            flex: 0 0 auto !important;
         }
 
         #panel-submix {
@@ -100,22 +131,22 @@
         }
 
         @media (min-width: 1200px) {
-            .workspace-row > .mixer-col-left {
-                flex: 0 0 300px;
-                max-width: 300px;
-                width: 300px;
+            .workspace-row>.mixer-col-left {
+                flex: 0 0 320px;
+                max-width: 320px;
+                width: 320px;
             }
 
-            .workspace-row > .mixer-col-main {
+            .workspace-row>.mixer-col-main {
                 flex: 1 1 0;
                 max-width: none;
                 width: auto;
             }
 
-            .workspace-row > .mixer-col-right {
-                flex: 0 0 380px;
-                max-width: 380px;
-                width: 380px;
+            .workspace-row>.mixer-col-right {
+                flex: 0 0 340px;
+                max-width: 340px;
+                width: 340px;
             }
         }
 
@@ -128,6 +159,7 @@
             border-radius: 0.5rem !important;
             box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
             border: 1px solid rgba(148, 163, 184, 0.18) !important;
+            padding: 0.7rem 0.95rem !important;
         }
 
         .preview-toolbar-actions {
@@ -144,6 +176,40 @@
             padding-right: 0.55rem;
         }
 
+        .output-param-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        .output-param-footer {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            justify-content: flex-end;
+            margin-top: var(--space-sm);
+        }
+
+        .output-param-footer .btn {
+            min-width: 4.2rem;
+        }
+
+        .output-param-footer #audio-monitor-row {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .preview-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+            padding: var(--space-md);
+            background: #f8fafc;
+        }
+
         .panel-scroll {
             min-height: 0;
             overflow-y: auto;
@@ -151,10 +217,10 @@
 
         .inspector-scroll {
             min-height: 0;
-            overflow: hidden;
+            overflow-y: auto;
         }
 
-        .inspector-scroll > section {
+        .inspector-scroll>section {
             flex: 0 0 auto;
         }
 
@@ -169,12 +235,28 @@
         .preview-stage {
             flex: 1 1 auto;
             min-height: 0;
-            background: #050816;
+            background:
+                radial-gradient(circle at top, rgba(96, 165, 250, 0.14), transparent 46%),
+                linear-gradient(180deg, #313944 0%, #232a33 100%);
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
             position: relative;
+            padding: var(--space-md);
+        }
+
+        .preview-stage-frame {
+            position: relative;
+            background: #1f232a;
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            flex: 0 0 auto;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: hidden;
+            box-shadow:
+                0 18px 36px rgba(15, 23, 42, 0.26),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
 
         .preview-titlebar,
@@ -192,7 +274,7 @@
         }
 
         .slot-btn {
-            height: 1.72rem;
+            height: 2.44rem;
             background: #fff;
             border: 1px solid #cbd5e1;
             border-radius: 0.35rem;
@@ -266,7 +348,7 @@
             align-items: center;
             justify-content: center;
             width: 2rem;
-            height: 2rem;
+            height: 3rem;
             background: var(--primary);
             color: #fff;
             border-radius: 0.35rem;
@@ -281,7 +363,7 @@
             line-height: 1.2;
         }
 
-        .selected-slot-meta > div {
+        .selected-slot-meta>div {
             min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -313,26 +395,25 @@
 
         .submix-list {
             display: grid;
-            gap: 0.45rem;
-            margin-top: 0.45rem;
-            flex: 1 1 auto;
+            gap: var(--space-sm);
+            margin-top: var(--space-sm);
+            flex: 0 0 auto;
             align-content: start;
             min-height: 0;
             max-height: none;
-            overflow-y: auto;
+            overflow: visible;
         }
 
         .submix-actions {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.25rem;
+            gap: var(--space-sm);
         }
 
         .submix-actions .btn {
             min-width: 0;
-            padding-left: 0.25rem;
-            padding-right: 0.25rem;
-            font-size: 0.78rem;
+            padding-left: 0.375rem;
+            padding-right: 0.375rem;
         }
 
         .submix-empty {
@@ -366,12 +447,6 @@
             overflow-wrap: anywhere;
         }
 
-        .btn-mini {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            border-radius: 0.25rem;
-        }
-
         .btn {
             border-radius: 0.35rem;
             font-weight: 600;
@@ -392,17 +467,7 @@
         }
 
         .panel-disabled::after {
-            content: '启动后可操作';
-            position: absolute;
-            top: 0.45rem;
-            right: 0.5rem;
-            padding: 0.1rem 0.35rem;
-            border-radius: 0.35rem;
-            background: #e2e8f0;
-            color: #64748b;
-            font-size: 0.72rem;
-            font-weight: 700;
-            pointer-events: none;
+            content: none;
         }
 
         .btn-primary {
@@ -487,7 +552,7 @@
         }
 
         .audio-viz {
-            height: 28px;
+            height: 18px;
             flex-shrink: 0;
             background: #1e293b;
             position: relative;
@@ -501,18 +566,19 @@
         }
 
         .source-strip {
-            height: 92px;
+            height: 128px;
             flex-shrink: 0;
-            background: #f8fafc;
-            padding: 7px 8px 9px;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%);
+            padding: 6px 8px 8px;
             display: grid;
             grid-template-columns: repeat(9, minmax(0, 1fr));
             gap: 6px;
-            overflow: hidden;
-            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            align-items: stretch;
             border-top: 1px solid #e2e8f0;
             border-bottom: 1px solid #d7dee8;
-            box-shadow: inset 0 -1px 0 #cbd5e1;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
         }
 
         .source-strip-empty {
@@ -523,7 +589,7 @@
         }
 
         .source-thumb {
-            width: 100%;
+            width: 100px;
             min-width: 0;
             height: 100%;
             background: #000;
@@ -567,7 +633,8 @@
             background: #334155;
             color: white;
             font-size: 9px;
-            padding: 2px 3px;
+            min-height: 18px;
+            padding: 2px 5px;
             text-align: center;
             line-height: 1.25;
             white-space: nowrap;
@@ -666,8 +733,8 @@
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 0.22rem;
-            font-size: 11.5px;
+            gap: var(--space-xs);
+            font-size: 12px;
             font-family: monospace;
             line-height: 1.3;
         }
@@ -703,12 +770,16 @@
             background: #f8fafc;
             border: 1px solid #d7dee8;
             border-radius: 0.5rem;
-            padding: 0.625rem;
+            padding: var(--space-md);
         }
 
         .compact-card h2 {
             font-size: 0.85rem;
             margin-bottom: 0.45rem;
+        }
+
+        #panel-watermark .compact-card h2 {
+            display: none;
         }
 
         .compact-card .form-label {
@@ -719,9 +790,8 @@
             margin-bottom: 0.45rem !important;
         }
 
-        .compact-card .btn-sm,
-        .compact-card .form-control-sm,
-        .compact-card .form-select-sm {
+        .compact-card .,
+        .compact-card . {
             min-height: 31px;
             font-size: 0.82rem;
             padding-top: 0.2rem;
@@ -732,6 +802,33 @@
         .compact-card .submix-status {
             margin-top: 0.45rem;
             font-size: 0.75rem;
+        }
+
+        .watermark-mode-tabs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-sm);
+            padding: var(--space-xs);
+            border: 1px solid #d7dee8;
+            border-radius: 0.5rem;
+            background: #f1f5f9;
+        }
+
+        .watermark-mode-btn {
+            border: 1px solid #cbd5e1;
+            border-radius: 0.4rem;
+            background: #fff;
+            color: #475569;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.15s ease;
+        }
+
+        .watermark-mode-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
         }
 
         .inspector-note {
@@ -769,60 +866,16 @@
 
 <body>
     <div class="app-shell container-fluid">
-        <header class="app-header p-2 mb-2">
-            <div class="row g-2 align-items-end">
-                <div class="col-12 col-xl-3">
-                    <div class="d-flex flex-column gap-1">
-                        <h1 class="h5 mb-0">Mixer v6.3 工作台</h1>
-                        <div class="text-secondary small">CRTC.Mixer SDK 演示 · 输出、槽位、水印、子混音</div>
-                    </div>
-                </div>
-                <div class="col-12 col-xl-7">
-                    <div class="row g-2">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small mb-1" for="cfg-out-res">输出分辨率</label>
-                            <select class="form-select form-select-sm" id="cfg-out-res">
-                                <optgroup label="横屏">
-                                    <option value="1920x1080">1080p (1920x1080)</option>
-                                    <option value="1280x720" selected>720p (1280x720)</option>
-                                    <option value="640x480">480p (640x480)</option>
-                                    <option value="640x360">360p (640x360)</option>
-                                </optgroup>
-                                <optgroup label="竖屏">
-                                    <option value="1080x1920">1080p 竖屏</option>
-                                    <option value="720x1280">720p 竖屏</option>
-                                    <option value="480x640">480p 竖屏</option>
-                                    <option value="360x640">360p 竖屏</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small mb-1" for="cfg-fps">输出帧率</label>
-                            <select class="form-select form-select-sm" id="cfg-fps">
-                                <option value="60">60 FPS</option>
-                                <option value="30">30 FPS</option>
-                                <option value="15" selected>15 FPS</option>
-                                <option value="5">5 FPS</option>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label small mb-1" for="cfg-render-mode">渲染后端</label>
-                            <select class="form-select form-select-sm" id="cfg-render-mode">
-                                <option value="auto" selected>自动</option>
-                                <option value="worker-webgl2">Worker + WebGL2</option>
-                                <option value="main-webgl2">主线程 + WebGL2</option>
-                                <option value="worker-2d">Worker + Canvas2D</option>
-                                <option value="main-2d">主线程 + Canvas2D</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+        <header class="app-header mb-2">
+            <div class="d-flex flex-column gap-1">
+                <h1 class="h5 mb-0">Mixer v6.3 工作台</h1>
+                <div class="text-secondary small">CRTC.Mixer SDK 演示 · 输出、槽位、水印、子混音</div>
             </div>
         </header>
 
         <div class="row g-2 flex-grow-1 workspace-row min-h-0">
             <div class="col-12 mixer-col-left d-flex min-h-0">
-                <div class="controls-stack d-flex flex-column gap-1 flex-fill min-h-0">
+                <div class="controls-stack d-flex flex-column flex-fill min-h-0">
                     <section id="panel-sources" class="panel-shell panel-disabled p-2">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <h2 class="h6 mb-0">目标槽位</h2>
@@ -831,7 +884,7 @@
                         <div class="selected-slot-card mb-2">
                             <div class="selected-slot-number" id="selected-slot-number">0</div>
                             <div class="selected-slot-meta">
-                                <div class="fw-semibold text-dark">当前操作目标</div>
+                                <div class="fw-semibold text-dark">操作目标</div>
                                 <div id="selected-slot-source">无源</div>
                                 <div id="selected-slot-watermark">无槽位水印</div>
                             </div>
@@ -847,7 +900,7 @@
                         <div class="row g-1 mb-2">
                             <div class="col-7">
                                 <label class="form-label small mb-1" for="cfg-in-res">输入分辨率</label>
-                                <select class="form-select form-select-sm" id="cfg-in-res">
+                                <select class="form-select" id="cfg-in-res">
                                     <option value="auto">自动</option>
                                     <optgroup label="横屏">
                                         <option value="1920x1080">1080p</option>
@@ -865,7 +918,7 @@
                             </div>
                             <div class="col-5">
                                 <label class="form-label small mb-1" for="cfg-in-fps">输入帧率</label>
-                                <select class="form-select form-select-sm" id="cfg-in-fps">
+                                <select class="form-select" id="cfg-in-fps">
                                     <option value="60">60 FPS</option>
                                     <option value="30">30 FPS</option>
                                     <option value="15" selected>15 FPS</option>
@@ -876,12 +929,275 @@
                         </div>
 
                         <div class="row g-1 row-cols-3">
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtual()">音视频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtualVideoOnly()">仅视频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addVirtualAudioOnly()">仅音频</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addCamera()">摄像头</button></div>
-                            <div class="col"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.addScreen()">屏幕共享</button></div>
-                            <div class="col"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearAll()">清空</button></div>
+                            <div class="col"><button class="btn btn-outline-primary w-100"
+                                    onclick="app.addVirtual()">音视频</button></div>
+                            <div class="col"><button class="btn btn-outline-primary w-100"
+                                    onclick="app.addVirtualVideoOnly()">仅视频</button></div>
+                            <div class="col"><button class="btn btn-outline-primary w-100"
+                                    onclick="app.addVirtualAudioOnly()">仅音频</button></div>
+                            <div class="col"><button class="btn btn-outline-primary w-100"
+                                    onclick="app.addCamera()">摄像头</button></div>
+                            <div class="col"><button class="btn btn-outline-primary w-100"
+                                    onclick="app.addScreen()">屏幕共享</button></div>
+                            <div class="col"><button class="btn btn-outline-danger w-100"
+                                    onclick="app.clearAll()">清空</button></div>
+                        </div>
+                    </section>
+
+                    <section class="panel-shell panel-disabled p-2" id="panel-watermark">
+                        <div class="inspector-scroll d-flex flex-column gap-1">
+                            <div class="watermark-mode-tabs">
+                                <button type="button" class="watermark-mode-btn active"
+                                    data-watermark-mode="output">全局水印</button>
+                                <button type="button" class="watermark-mode-btn"
+                                    data-watermark-mode="slot">槽位水印</button>
+                            </div>
+                            <section class="compact-card" data-watermark-section="output">
+                                <h2 class="visually-hidden">输出水印</h2>
+                                <div class="row g-2">
+                                    <div class="col-5">
+                                        <label class="form-label mb-1" for="wm-output-text">全局文字</label>
+                                        <input class="form-control" id="wm-output-text" value="CRTC 直播">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-output-text-position">位置</label>
+                                        <select class="form-select" id="wm-output-text-position">
+                                            <option value="top-left">左上</option>
+                                            <option value="top-center">上中</option>
+                                            <option value="top-right">右上</option>
+                                            <option value="center">居中</option>
+                                            <option value="bottom-left">左下</option>
+                                            <option value="bottom-center">下中</option>
+                                            <option value="bottom-right" selected>右下</option>
+                                            <option value="custom">坐标</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-3 d-flex align-items-end">
+                                        <button class="btn btn-outline-primary w-100"
+                                            onclick="app.applyOutputTextWatermark()">应用</button>
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-output-text-x">文字 X</label>
+                                        <input class="form-control" id="wm-output-text-x" type="number" value="16">
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-output-text-y">文字 Y</label>
+                                        <input class="form-control" id="wm-output-text-y" type="number" value="16">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-output-text-size">字号</label>
+                                        <input class="form-control" id="wm-output-text-size" type="number" min="10"
+                                            value="28">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-output-text-color">文字颜色</label>
+                                        <input class="form-control form-control-color w-100" id="wm-output-text-color"
+                                            type="color" value="#ffffff">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-output-text-bg-color">背景颜色</label>
+                                        <input class="form-control" id="wm-output-text-bg-color"
+                                            value="rgba(0,0,0,0.45)">
+                                    </div>
+                                    <div class="col-5">
+                                        <label class="form-label mb-1" for="wm-output-image">图片地址</label>
+                                        <input class="form-control" id="wm-output-image"
+                                            placeholder="https://example.com/logo.png">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-output-image-position">位置</label>
+                                        <select class="form-select" id="wm-output-image-position">
+                                            <option value="top-left">左上</option>
+                                            <option value="top-center">上中</option>
+                                            <option value="top-right" selected>右上</option>
+                                            <option value="center">居中</option>
+                                            <option value="bottom-left">左下</option>
+                                            <option value="bottom-center">下中</option>
+                                            <option value="bottom-right">右下</option>
+                                            <option value="custom">坐标</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-3 d-flex align-items-end">
+                                        <button class="btn btn-outline-primary w-100"
+                                            onclick="app.applyOutputImageWatermark()">应用</button>
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-output-image-x">图片 X</label>
+                                        <input class="form-control " id="wm-output-image-x" type="number" value="16">
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-output-image-y">图片 Y</label>
+                                        <input class="form-control " id="wm-output-image-y" type="number" value="16">
+                                    </div>
+                                    <div class="col-12">
+                                        <button class="btn btn-outline-danger w-100"
+                                            onclick="app.clearOutputWatermarks()">清除全局水印</button>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="compact-card d-none" data-watermark-section="slot">
+                                <h2 class="visually-hidden">槽位水印</h2>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-select">目标槽位</label>
+                                        <select class="form-select " id="wm-slot-select"></select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-text">名牌文字</label>
+                                        <input class="form-control " id="wm-slot-text" value="Slot">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-position">位置</label>
+                                        <select class="form-select " id="wm-slot-position">
+                                            <option value="top-left">左上</option>
+                                            <option value="top-center">上中</option>
+                                            <option value="top-right">右上</option>
+                                            <option value="center">居中</option>
+                                            <option value="bottom-left" selected>左下</option>
+                                            <option value="bottom-center">下中</option>
+                                            <option value="bottom-right">右下</option>
+                                            <option value="custom">坐标</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-slot-x">名牌 X</label>
+                                        <input class="form-control " id="wm-slot-x" type="number" value="12">
+                                    </div>
+                                    <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
+                                        <label class="form-label mb-1" for="wm-slot-y">名牌 Y</label>
+                                        <input class="form-control " id="wm-slot-y" type="number" value="12">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-size">字号</label>
+                                        <input class="form-control" id="wm-slot-size" type="number" min="10"
+                                            value="28">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-color">文字颜色</label>
+                                        <input class="form-control form-control-color w-100" id="wm-slot-color"
+                                            type="color" value="#ffffff">
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label mb-1" for="wm-slot-bg-color">背景颜色</label>
+                                        <input class="form-control" id="wm-slot-bg-color"
+                                            value="rgba(0,0,0,0.45)">
+                                    </div>
+                                </div>
+                                <div class="status-line">
+                                    当前槽位: <span id="wm-selected-slot">0</span> · <span
+                                        id="wm-slot-source-state">无源</span> · <span
+                                        id="wm-slot-watermark-state">无水印</span>
+                                </div>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6"><button class="btn btn-outline-primary w-100"
+                                            onclick="app.applySlotNameWatermark()">应用名牌</button></div>
+                                    <div class="col-6"><button class="btn btn-outline-danger w-100"
+                                            onclick="app.clearSelectedSlotWatermark()">清除当前</button></div>
+                                    <div class="col-12"><button class="btn btn-outline-danger w-100"
+                                            onclick="app.clearAllSlotWatermarks()">清除全部槽位水印</button></div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <div class="col-12 mixer-col-main d-flex min-h-0">
+                <section class="preview-shell panel-shell flex-fill overflow-hidden">
+                    <div class="preview-topbar">
+                        <div>
+                            <div class="fw-semibold">输出预览</div>
+                            <div class="text-secondary small">网格叠加 · 音频表 · 源缩略图</div>
+                        </div>
+                        <div id="status-badge" class="badge bg-secondary align-self-center">就绪</div>
+                    </div>
+                    <div class="preview-stage">
+                        <div class="preview-stage-frame" id="preview-stage-frame">
+                            <video id="mixed-video" autoplay playsinline muted></video>
+                            <div id="grid-overlay"></div>
+                        </div>
+                    </div>
+                    <div class="audio-viz">
+                        <canvas id="viz-canvas"></canvas>
+                        <div class="position-absolute top-0 start-0 px-2 text-success small fw-bold">音频混合</div>
+                    </div>
+                    <div class="source-strip" id="thumbs-container">
+                        <div class="source-strip-empty">(暂无输入源)</div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-12 mixer-col-right d-flex min-h-0">
+                <aside class="side-stack d-flex flex-column flex-fill min-h-0 overflow-hidden">
+                    <section class="panel-shell p-2">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6 col-xl-12">
+                                <label class="form-label small mb-1" for="cfg-out-res">输出分辨率</label>
+                                <select class="form-select " id="cfg-out-res">
+                                    <optgroup label="横屏">
+                                        <option value="1920x1080">1080p (1920x1080)</option>
+                                        <option value="1280x720" selected>720p (1280x720)</option>
+                                        <option value="640x480">480p (640x480)</option>
+                                        <option value="640x360">360p (640x360)</option>
+                                    </optgroup>
+                                    <optgroup label="竖屏">
+                                        <option value="1080x1920">1080p 竖屏</option>
+                                        <option value="720x1280">720p 竖屏</option>
+                                        <option value="480x640">480p 竖屏</option>
+                                        <option value="360x640">360p 竖屏</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3 col-xl-6">
+                                <label class="form-label small mb-1" for="cfg-fps">输出帧率</label>
+                                <select class="form-select " id="cfg-fps">
+                                    <option value="60">60 FPS</option>
+                                    <option value="30">30 FPS</option>
+                                    <option value="15" selected>15 FPS</option>
+                                    <option value="5">5 FPS</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3 col-xl-6">
+                                <label class="form-label small mb-1" for="cfg-render-mode">渲染后端</label>
+                                <select class="form-select " id="cfg-render-mode">
+                                    <option value="auto" selected>自动</option>
+                                    <option value="worker-webgl2">Worker + WebGL2</option>
+                                    <option value="main-webgl2">主线程 + WebGL2</option>
+                                    <option value="worker-2d">Worker + Canvas2D</option>
+                                    <option value="main-2d">主线程 + Canvas2D</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="output-param-footer">
+                            <div id="audio-monitor-row" style="display:none;">
+                                <button id="btn-monitor-audio" class="btn btn-outline-secondary">
+                                    <i class="bi bi-volume-up-fill me-1"></i>监听
+                                </button>
+                            </div>
+                            <button id="btn-start" class="btn btn-primary">
+                                <i class="bi bi-play-fill me-1"></i>启动
+                            </button>
+                            <button id="btn-stop" class="btn btn-danger" style="display:none;">
+                                <i class="bi bi-stop-fill me-1"></i>停止
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="panel-shell panel-disabled p-2" id="panel-submix">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h2 class="h6 mb-0">子混音</h2>
+                            <span class="submix-status m-0">输出: <span id="submix-status">-</span></span>
+                        </div>
+                        <div class="submix-actions">
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([0, 1, 2])">0,1,2</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([1, 3, 5])">1,3,5</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSubmix([2, 4, 6])">2,4,6</button>
+                            <button class="btn btn-outline-primary" onclick="app.listenSelectedSlotSubmix()">当前</button>
+                            <button class="btn btn-outline-danger" onclick="app.stopAllSubmixes()">停止</button>
+                        </div>
+                        <div id="submix-list" class="submix-list">
+                            <div class="submix-empty">暂无子混音</div>
                         </div>
                     </section>
 
@@ -895,176 +1211,6 @@
                             <div class="stat-cell">Renderer <span id="stat-renderer">-</span></div>
                             <div class="stat-cell">Dropped <span id="stat-dropped">0</span></div>
                             <div class="stat-cell">Reason <span id="stat-render-reason">-</span></div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-
-            <div class="col-12 mixer-col-main d-flex min-h-0">
-                <section class="preview-shell panel-shell flex-fill overflow-hidden">
-                    <div class="d-flex justify-content-between align-items-center border-bottom px-3 py-2 bg-light">
-                        <div>
-                            <div class="fw-semibold">输出预览</div>
-                            <div class="text-secondary small">网格叠加 · 音频表 · 源缩略图</div>
-                        </div>
-                        <div class="preview-toolbar-actions">
-                            <div id="status-badge" class="badge bg-secondary align-self-center">就绪</div>
-                            <button id="btn-start" class="btn btn-primary btn-sm">
-                                <i class="bi bi-play-fill me-1"></i>启动
-                            </button>
-                            <button id="btn-stop" class="btn btn-danger btn-sm" style="display:none;">
-                                <i class="bi bi-stop-fill me-1"></i>停止
-                            </button>
-                            <div id="audio-monitor-row" style="display:none;">
-                                <button id="btn-monitor-audio" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-volume-up-fill me-1"></i>监听
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="preview-stage">
-                        <video id="mixed-video" autoplay playsinline muted></video>
-                        <div id="grid-overlay"></div>
-                    </div>
-                    <div class="audio-viz">
-                        <canvas id="viz-canvas"></canvas>
-                        <div class="position-absolute top-0 start-0 px-2 text-success small fw-bold">音频混合</div>
-                    </div>
-                    <div class="source-strip" id="thumbs-container">
-                        <div class="source-strip-empty">(暂无输入源)</div>
-                    </div>
-                </section>
-            </div>
-
-            <div class="col-12 mixer-col-right d-flex min-h-0">
-                <aside class="side-stack d-flex flex-column gap-2 flex-fill min-h-0 overflow-hidden">
-                    <section class="panel-shell panel-disabled p-2" id="panel-watermark">
-                        <div class="inspector-scroll d-flex flex-column gap-1">
-                        <section class="compact-card">
-                            <h2 class="visually-hidden">输出水印</h2>
-                            <div class="row g-2">
-                                <div class="col-5">
-                                    <label class="form-label mb-1" for="wm-output-text">全局文字</label>
-                                    <input class="form-control form-control-sm" id="wm-output-text" value="CRTC 直播">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-output-text-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-output-text-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-center">上中</option>
-                                        <option value="top-right">右上</option>
-                                        <option value="center">居中</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-center">下中</option>
-                                        <option value="bottom-right" selected>右下</option>
-                                        <option value="custom">坐标</option>
-                                    </select>
-                                </div>
-                                <div class="col-3 d-flex align-items-end">
-                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputTextWatermark()">应用文字</button>
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-output-text-x">文字 X</label>
-                                    <input class="form-control form-control-sm" id="wm-output-text-x" type="number" value="16">
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-output-text-y">文字 Y</label>
-                                    <input class="form-control form-control-sm" id="wm-output-text-y" type="number" value="16">
-                                </div>
-                                <div class="col-5">
-                                    <label class="form-label mb-1" for="wm-output-image">图片地址</label>
-                                    <input class="form-control form-control-sm" id="wm-output-image" placeholder="https://example.com/logo.png">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-output-image-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-output-image-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-center">上中</option>
-                                        <option value="top-right" selected>右上</option>
-                                        <option value="center">居中</option>
-                                        <option value="bottom-left">左下</option>
-                                        <option value="bottom-center">下中</option>
-                                        <option value="bottom-right">右下</option>
-                                        <option value="custom">坐标</option>
-                                    </select>
-                                </div>
-                                <div class="col-3 d-flex align-items-end">
-                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="app.applyOutputImageWatermark()">应用图片</button>
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-output-image-x">图片 X</label>
-                                    <input class="form-control form-control-sm" id="wm-output-image-x" type="number" value="16">
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-output-image-y">图片 Y</label>
-                                    <input class="form-control form-control-sm" id="wm-output-image-y" type="number" value="16">
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearOutputWatermarks()">清除全局水印</button>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="compact-card">
-                            <h2 class="visually-hidden">槽位水印</h2>
-                            <div class="row g-2 align-items-end">
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-select">目标槽位</label>
-                                    <select class="form-select form-select-sm" id="wm-slot-select"></select>
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-text">名牌文字</label>
-                                    <input class="form-control form-control-sm" id="wm-slot-text" value="Slot">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label mb-1" for="wm-slot-position">位置</label>
-                                    <select class="form-select form-select-sm" id="wm-slot-position">
-                                        <option value="top-left">左上</option>
-                                        <option value="top-center">上中</option>
-                                        <option value="top-right">右上</option>
-                                        <option value="center">居中</option>
-                                        <option value="bottom-left" selected>左下</option>
-                                        <option value="bottom-center">下中</option>
-                                        <option value="bottom-right">右下</option>
-                                        <option value="custom">坐标</option>
-                                    </select>
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-slot-x">名牌 X</label>
-                                    <input class="form-control form-control-sm" id="wm-slot-x" type="number" value="12">
-                                </div>
-                                <div class="col-6 watermark-coordinate-field wm-slot-coordinate d-none">
-                                    <label class="form-label mb-1" for="wm-slot-y">名牌 Y</label>
-                                    <input class="form-control form-control-sm" id="wm-slot-y" type="number" value="12">
-                                </div>
-                            </div>
-                            <div class="status-line">
-                                当前槽位: <span id="wm-selected-slot">0</span> · <span id="wm-slot-source-state">无源</span> · <span id="wm-slot-watermark-state">无水印</span>
-                            </div>
-                            <div class="row g-2 mt-1">
-                                <div class="col-6"><button class="btn btn-outline-primary btn-sm w-100" onclick="app.applySlotNameWatermark()">应用名牌</button></div>
-                                <div class="col-6"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearSelectedSlotWatermark()">清除当前</button></div>
-                                <div class="col-12"><button class="btn btn-outline-danger btn-sm w-100" onclick="app.clearAllWatermarks()">清除全部水印</button></div>
-                            </div>
-                        </section>
-
-                        </div>
-                    </section>
-
-                    <section class="panel-shell panel-disabled p-2" id="panel-submix">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">子混音</h2>
-                            <span class="submix-status m-0">输出: <span id="submix-status">-</span></span>
-                        </div>
-                        <div class="submix-actions">
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([0, 1, 2])">0,1,2</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([1, 3, 5])">1,3,5</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSubmix([2, 4, 6])">2,4,6</button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="app.listenSelectedSlotSubmix()">当前</button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="app.stopAllSubmixes()">停止</button>
-                        </div>
-                        <div id="submix-list" class="submix-list">
-                            <div class="submix-empty">暂无子混音</div>
                         </div>
                     </section>
                 </aside>
@@ -1110,10 +1256,10 @@
                 ]);
                 mixed.id = `virtual-${id}-${Date.now()}`;
                 mixed.demoMeta = {
-                    hasVideo : Boolean(options.video),
-                    hasAudio : Boolean(options.audio),
-                    note     : audioData ? audioData.note : '',
-                    hue      : hue
+                    hasVideo: Boolean(options.video),
+                    hasAudio: Boolean(options.audio),
+                    note: audioData ? audioData.note : '',
+                    hue: hue
                 };
 
                 // MediaStream.stopInternal 不是浏览器标准 API，只是 demo 为虚拟源补的清理钩子。
@@ -1206,13 +1352,13 @@
                 beatTimer = window.setInterval(pulse, 520 + (noteIndex * 130));
 
                 return {
-                    stream : dest.stream,
+                    stream: dest.stream,
                     note,
-                    stop   : () => {
+                    stop: () => {
                         if (beatTimer) window.clearInterval(beatTimer);
-                        try { osc.stop(); } catch (e) {}
-                        try { osc.disconnect(); } catch (e) {}
-                        try { gain.disconnect(); } catch (e) {}
+                        try { osc.stop(); } catch (e) { }
+                        try { osc.disconnect(); } catch (e) { }
+                        try { gain.disconnect(); } catch (e) { }
                     }
                 };
             }
@@ -1246,6 +1392,7 @@
                 slotGrid: document.getElementById('slot-selector'),
                 mixedVideo: document.getElementById('mixed-video'),
                 thumbs: document.getElementById('thumbs-container'),
+                previewStage: document.querySelector('.preview-stage'),
                 btnStart: document.getElementById('btn-start'),
                 btnStop: document.getElementById('btn-stop'),
                 audioMonitorRow: document.getElementById('audio-monitor-row'),
@@ -1258,6 +1405,7 @@
                 panelSources: document.getElementById('panel-sources'),
                 statusBadge: document.getElementById('status-badge'),
                 overlay: document.getElementById('grid-overlay'),
+                previewStageFrame: document.getElementById('preview-stage-frame'),
                 selectedSlotNumber: document.getElementById('selected-slot-number'),
                 selectedSlotSource: document.getElementById('selected-slot-source'),
                 selectedSlotWatermark: document.getElementById('selected-slot-watermark'),
@@ -1266,6 +1414,9 @@
                 wmOutputTextPosition: document.getElementById('wm-output-text-position'),
                 wmOutputTextX: document.getElementById('wm-output-text-x'),
                 wmOutputTextY: document.getElementById('wm-output-text-y'),
+                wmOutputTextSize: document.getElementById('wm-output-text-size'),
+                wmOutputTextColor: document.getElementById('wm-output-text-color'),
+                wmOutputTextBgColor: document.getElementById('wm-output-text-bg-color'),
                 wmOutputImage: document.getElementById('wm-output-image'),
                 wmOutputImagePosition: document.getElementById('wm-output-image-position'),
                 wmOutputImageX: document.getElementById('wm-output-image-x'),
@@ -1278,6 +1429,11 @@
                 wmSlotPosition: document.getElementById('wm-slot-position'),
                 wmSlotX: document.getElementById('wm-slot-x'),
                 wmSlotY: document.getElementById('wm-slot-y'),
+                wmSlotSize: document.getElementById('wm-slot-size'),
+                wmSlotColor: document.getElementById('wm-slot-color'),
+                wmSlotBgColor: document.getElementById('wm-slot-bg-color'),
+                watermarkModeButtons: document.querySelectorAll('[data-watermark-mode]'),
+                watermarkSections: document.querySelectorAll('[data-watermark-section]'),
                 watermarkList: document.getElementById('watermark-list'),
                 statsLayout: document.getElementById('stat-layout'),
                 statsAudio: document.getElementById('stat-audio'),
@@ -1312,8 +1468,128 @@
                 this.ui.btnStop.onclick = () => this.stop();
                 this.ui.btnMonitorAudio.onclick = () => this.toggleMonitorAudio();
                 this.bindWatermarkPositionControls();
+                this.bindWatermarkModeTabs();
+                this.bindOutputResolutionControl();
+                window.addEventListener('resize', () => this.syncPreviewFrameRatio());
                 this.updateMonitorAudioUI();
                 this.setRunningUI(false);
+            },
+
+            bindOutputResolutionControl() {
+                const select = document.getElementById('cfg-out-res');
+                if (!select) return;
+
+                select.addEventListener('change', () => this.syncPreviewFrameRatio());
+                this.syncPreviewFrameRatio();
+            },
+
+            syncPreviewFrameRatio() {
+                const frame = this.ui.previewStageFrame;
+                const stage = this.ui.previewStage;
+                if (!frame) return;
+
+                const [w, h] = document.getElementById('cfg-out-res').value.split('x').map(Number);
+                if (!w || !h) return;
+
+                if (!stage) return;
+
+                const style = window.getComputedStyle(stage);
+                const padX = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+                const padY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+                const availW = Math.max(stage.clientWidth - padX, 0);
+                const availH = Math.max(stage.clientHeight - padY, 0);
+                if (!availW || !availH) return;
+
+                const ratio = w / h;
+                let fitW = availW;
+                let fitH = fitW / ratio;
+                if (fitH > availH) {
+                    fitH = availH;
+                    fitW = fitH * ratio;
+                }
+
+                frame.style.width = `${Math.floor(fitW)}px`;
+                frame.style.height = `${Math.floor(fitH)}px`;
+            },
+
+            updateThumbStripLayout() {
+                if (!this.ui.thumbs) return;
+
+                const thumbs = this.ui.thumbs.querySelectorAll('.source-thumb');
+                const count = thumbs.length;
+                if (!count) {
+                    this.ui.thumbs.style.gridTemplateColumns = '';
+                    return;
+                }
+
+                const cols = Math.min(Math.max(count, 3), 9);
+                // this.ui.thumbs.style.gridTemplateColumns = `repeat(${cols}, minmax(220px, 1fr))`;
+            },
+
+            getCompactInsertSlot(preferredSlot) {
+                const occupied = new Set(this.localStreams.map(item => item.slot));
+                // 同槽位已占用：保持覆盖行为（与原 demo 语义一致）
+                if (occupied.has(preferredSlot)) return preferredSlot;
+
+                // 空槽位但过于跳跃时，优先落到当前连续尾部，避免出现 0/1/8 这类稀疏布局
+                const tailSlot = this.localStreams.length;
+                if (preferredSlot > tailSlot) return tailSlot;
+
+                // 其余情况按用户选中的可用槽位落点
+                return preferredSlot;
+            },
+
+            compactSlotsIfSparse() {
+                if (!this.mixer || this.localStreams.length <= 1) return;
+
+                const sorted = this.localStreams.slice().sort((a, b) => a.slot - b.slot);
+                const needCompact = sorted.some((item, index) => item.slot !== index);
+                if (!needCompact) return;
+
+                sorted.forEach((item) => {
+                    this.mixer.removeStream(item.stream.id);
+                });
+
+                sorted.forEach((item, index) => {
+                    this.mixer.appendStream(item.stream, index);
+                    item.slot = index;
+                });
+
+                this.localStreams = sorted;
+                this.rebuildThumbsFromLocalStreams();
+                this.currentSlot = Math.min(this.currentSlot, Math.max(this.localStreams.length - 1, 0));
+            },
+
+            rebuildThumbsFromLocalStreams() {
+                if (!this.ui.thumbs) return;
+
+                const sorted = this.localStreams.slice().sort((a, b) => a.slot - b.slot);
+                this.ui.thumbs.innerHTML = '';
+                sorted.forEach(item => this.addThumb(item.stream, item.label || '输入源', item.slot));
+                if (!sorted.length) {
+                    this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
+                }
+                this.updateThumbStripLayout();
+            },
+
+            bindWatermarkModeTabs() {
+                const buttons = this.ui.watermarkModeButtons || [];
+                const sections = this.ui.watermarkSections || [];
+                if (!buttons.length || !sections.length) return;
+
+                const setMode = (mode) => {
+                    buttons.forEach((btn) => {
+                        btn.classList.toggle('active', btn.dataset.watermarkMode === mode);
+                    });
+                    sections.forEach((section) => {
+                        section.classList.toggle('d-none', section.dataset.watermarkSection !== mode);
+                    });
+                };
+
+                buttons.forEach((btn) => {
+                    btn.addEventListener('click', () => setMode(btn.dataset.watermarkMode || 'output'));
+                });
+                setMode('output');
             },
 
             bindWatermarkPositionControls() {
@@ -1466,18 +1742,28 @@
                 const y = Number(yEl && yEl.value);
 
                 return {
-                    x : Number.isFinite(x) ? x : 0,
-                    y : Number.isFinite(y) ? y : 0
+                    x: Number.isFinite(x) ? x : 0,
+                    y: Number.isFinite(y) ? y : 0
                 };
+            },
+
+            readPositiveNumber(inputEl, fallback) {
+                const value = Number(inputEl && inputEl.value);
+                return Number.isFinite(value) && value > 0 ? value : fallback;
             },
 
             buildOutputTextWatermark() {
                 return {
-                    id       : 'output-text',
-                    target   : 'output',
-                    type     : 'text',
-                    text     : this.ui.wmOutputText.value || 'CRTC Live',
-                    position : this.readWatermarkPosition(
+                    id: 'output-text',
+                    target: 'output',
+                    type: 'text',
+                    text: this.ui.wmOutputText.value || 'CRTC Live',
+                    fontSize: this.readPositiveNumber(this.ui.wmOutputTextSize, 28),
+                    color: (this.ui.wmOutputTextColor && this.ui.wmOutputTextColor.value) || '#ffffff',
+                    backgroundColor: (this.ui.wmOutputTextBgColor && this.ui.wmOutputTextBgColor.value) || 'rgba(0,0,0,0.45)',
+                    padding: 3,
+                    backgroundRadius: 3,
+                    position: this.readWatermarkPosition(
                         this.ui.wmOutputTextPosition,
                         this.ui.wmOutputTextX,
                         this.ui.wmOutputTextY,
@@ -1491,12 +1777,12 @@
                 if (!image) return null;
 
                 return {
-                    id       : 'output-image',
-                    target   : 'output',
-                    type     : 'image',
-                    image    : image,
-                    width    : 160,
-                    position : this.readWatermarkPosition(
+                    id: 'output-image',
+                    target: 'output',
+                    type: 'image',
+                    image: image,
+                    width: 160,
+                    position: this.readWatermarkPosition(
                         this.ui.wmOutputImagePosition,
                         this.ui.wmOutputImageX,
                         this.ui.wmOutputImageY,
@@ -1507,18 +1793,23 @@
 
             buildSlotWatermark(slot, text) {
                 return {
-                    id       : `slot-${slot}-name`,
-                    target   : 'source',
-                    slot     : slot,
-                    type     : 'text',
-                    text     : text,
-                    position : this.readWatermarkPosition(
+                    id: `slot-${slot}-name`,
+                    target: 'source',
+                    slot: slot,
+                    type: 'text',
+                    text: text,
+                    fontSize: this.readPositiveNumber(this.ui.wmSlotSize, 28),
+                    color: (this.ui.wmSlotColor && this.ui.wmSlotColor.value) || '#ffffff',
+                    backgroundColor: (this.ui.wmSlotBgColor && this.ui.wmSlotBgColor.value) || 'rgba(0,0,0,0.45)',
+                    padding: 3,
+                    backgroundRadius: 3,
+                    position: this.readWatermarkPosition(
                         this.ui.wmSlotPosition,
                         this.ui.wmSlotX,
                         this.ui.wmSlotY,
                         'bottom-left'
                     ),
-                    margin   : 12
+                    margin: 12
                 };
             },
 
@@ -1545,7 +1836,7 @@
             async clearOutputWatermarks() {
                 if (!this.mixer) return;
 
-                this.mixer.clearWatermark({ target: 'output' });
+                this.mixer.clearWatermarks({ target: 'output' });
                 this.refreshWatermarkList();
                 this.updateSlotUI();
             },
@@ -1562,15 +1853,15 @@
             clearSelectedSlotWatermark() {
                 if (!this.mixer) return;
 
-                this.mixer.clearWatermark({ target: 'source', slot: this.currentSlot });
+                this.mixer.clearWatermarks({ target: 'source', slot: this.currentSlot });
                 this.refreshWatermarkList();
                 this.updateSlotUI();
             },
 
-            clearAllWatermarks() {
+            clearAllSlotWatermarks() {
                 if (!this.mixer) return;
 
-                this.mixer.clearWatermark();
+                this.mixer.clearWatermarks({ target: 'source' });
                 this.refreshWatermarkList();
                 this.updateSlotUI();
             },
@@ -1610,6 +1901,8 @@
                     this.ui.statusBadge.innerText = "运行中";
                     this.ui.statusBadge.className = 'badge bg-success align-self-center';
                     this.ui.statsSize.innerText = `${w}x${h} @ ${fps}fps`;
+                    this.syncPreviewFrameRatio();
+                    this.updateThumbStripLayout();
                     this.ui.thumbs.innerHTML = '';
                     this.updateRenderInfo();
                     this.refreshSelectedSlotSummary();
@@ -1654,6 +1947,7 @@
                 this.ui.statusBadge.innerText = "已停止";
                 this.ui.statusBadge.className = 'badge bg-secondary align-self-center';
                 this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
+                this.updateThumbStripLayout();
                 this.ui.overlay.innerHTML = '';
                 this.ui.statsAudioState.innerText = '-';
                 this.ui.statsRenderer.innerText = '-';
@@ -1749,7 +2043,7 @@
                 label.innerText = `槽位 ${key}`;
 
                 const stopButton = document.createElement('button');
-                stopButton.className = 'btn btn-outline-danger btn-sm btn-mini';
+                stopButton.className = 'btn btn-outline-danger';
                 stopButton.innerText = '停止';
                 stopButton.onclick = () => this.stopSubmix(slots);
 
@@ -1816,7 +2110,7 @@
 
             async _handleStreamAdd(stream, label) {
                 if (!this.mixer) return;
-                const slot = this.currentSlot;
+                const slot = this.getCompactInsertSlot(this.currentSlot);
 
                 // demo 与 SDK 的 slot 语义保持一致：同一个 slot 再加源会覆盖旧源。
                 // 这里先停止 demo 侧旧输入源，避免被覆盖后摄像头/屏幕仍在采集。
@@ -1826,12 +2120,17 @@
                 // 第二个参数是 slot 编号；Mixer 内部会根据 slot 计算画面位置。
                 this.mixer.appendStream(stream, slot);
 
-                this.localStreams.push({ stream, slot });
+                this.localStreams.push({ stream, slot, label });
                 this.addThumb(stream, label, slot);
+                this.compactSlotsIfSparse();
                 this.updateSlotUI();
 
-                let nextSlot = slot + 1;
-                if (nextSlot < 9) this.selectSlot(nextSlot);
+                const occupied = new Set(this.localStreams.map(item => item.slot));
+                let nextSlot = slot;
+                for (let i = 0; i < 9; i++) {
+                    if (!occupied.has(i)) { nextSlot = i; break; }
+                }
+                this.selectSlot(nextSlot);
 
                 this.updateStats();
                 this.refreshActiveSubmix();
@@ -1877,6 +2176,7 @@
                 const nextThumb = thumbs.find(t => parseInt(t.dataset.slot) > slot);
                 if (nextThumb) this.ui.thumbs.insertBefore(div, nextThumb);
                 else this.ui.thumbs.appendChild(div);
+                this.updateThumbStripLayout();
             },
 
             removeSource(id) {
@@ -1899,6 +2199,9 @@
                 if (this.ui.thumbs.children.length === 0) {
                     this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
                 }
+                this.compactSlotsIfSparse();
+                this.rebuildThumbsFromLocalStreams();
+                this.updateThumbStripLayout();
                 this.updateSlotUI();
                 this.updateStats();
                 this.refreshActiveSubmix();
@@ -1921,31 +2224,31 @@
             addVirtual() {
                 const next = this.counter + 1;
                 this._createVirtual({
-                    video      : true,
-                    audio      : true,
-                    label      : `SRC-${next}`,
-                    thumbLabel : `音视频 ${next}`
+                    video: true,
+                    audio: true,
+                    label: `SRC-${next}`,
+                    thumbLabel: `音视频 ${next}`
                 });
             },
 
             addVirtualVideoOnly() {
                 const next = this.counter + 1;
                 this._createVirtual({
-                    video      : true,
-                    audio      : false,
-                    label      : `VIDEO-${next}`,
-                    videoText  : 'VIDEO ONLY',
-                    thumbLabel : `仅视频 ${next}`
+                    video: true,
+                    audio: false,
+                    label: `VIDEO-${next}`,
+                    videoText: 'VIDEO ONLY',
+                    thumbLabel: `仅视频 ${next}`
                 });
             },
 
             addVirtualAudioOnly() {
                 const next = this.counter + 1;
                 this._createVirtual({
-                    video      : false,
-                    audio      : true,
-                    label      : `AUDIO-${next}`,
-                    thumbLabel : `仅音频 ${next}`
+                    video: false,
+                    audio: true,
+                    label: `AUDIO-${next}`,
+                    thumbLabel: `仅音频 ${next}`
                 });
             },
 
@@ -1989,6 +2292,7 @@
 
             updateStats() {
                 if (!this.mixer) return;
+                this.syncPreviewFrameRatio();
 
                 // 统计信息全部从 Mixer.getSources() 快照得出，避免依赖 SDK 私有字段。
                 const sources = this.mixer.getSources();
@@ -2081,6 +2385,7 @@
 
             drawOverlay(cols, rows) {
                 // 根据 rows/cols 在预览区画一个百分比定位的网格，不影响真实输出流。
+                this.syncPreviewFrameRatio();
                 this.ui.overlay.style.width = '100%';
                 this.ui.overlay.style.height = '100%';
                 this.ui.overlay.innerHTML = '';

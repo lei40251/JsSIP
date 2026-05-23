@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026523131
+ * CRTC v1.13.0.2026523211
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210460262 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210464202 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210460262');
+debug('version %s', '1.13.0.405210464202');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210460262';
+    return '1.13.0.405210464202';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
@@ -36009,13 +36009,13 @@ var RenderLoop = /*#__PURE__*/function () {
           if (!this._shouldRenderPayload(payload)) {
             this._lastRenderTime = now;
             this._renderErrorCount = 0;
-            return;
+          } else {
+            var renderer = this.ensureRenderer();
+            renderer.render(payload);
+            this._handleRendererInfo(renderer);
+            this._lastRenderTime = now;
+            this._renderErrorCount = 0;
           }
-          var renderer = this.ensureRenderer();
-          renderer.render(payload);
-          this._handleRendererInfo(renderer);
-          this._lastRenderTime = now;
-          this._renderErrorCount = 0;
         }
       } catch (error) {
         this._handleRenderError(error);
@@ -36529,6 +36529,20 @@ var SourceRegistry = /*#__PURE__*/function () {
     }
 
     /**
+     * 判断对象是否具备 MediaStream 的基本接口。
+     *
+     * 这个私有方法会被构建脚本收集到保留名单里，避免压缩产物把调用点和定义名拆开。
+     *
+     * @param {*} stream - 待校验对象
+     * @returns {boolean} true=满足 MediaStream 基本接口
+     */
+  }, {
+    key: "_isMediaStreamLike",
+    value: function _isMediaStreamLike(stream) {
+      return Boolean(stream && typeof stream.getTracks === 'function' && typeof stream.getAudioTracks === 'function' && typeof stream.getVideoTracks === 'function');
+    }
+
+    /**
      * 创建一个内部 source 对象。
      *
      * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
@@ -36549,7 +36563,7 @@ var SourceRegistry = /*#__PURE__*/function () {
       } else {
         // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
         stream = input && (input.mediaStream || input);
-        if (!stream) {
+        if (!this._isMediaStreamLike(stream)) {
           throw new TypeError('Invalid MediaStream.');
         }
         video = this._createVideoElement(stream);
@@ -36658,7 +36672,8 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
 var DEFAULT_TEXT_COLOR = '#fff';
 var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
 var DEFAULT_FONT_SIZE = 28;
-var DEFAULT_PADDING = 8;
+var DEFAULT_PADDING = 3;
+var DEFAULT_BACKGROUND_RADIUS = 3;
 var DEFAULT_MARGIN = 16;
 var WatermarkManager = /*#__PURE__*/function () {
   /**
@@ -36734,6 +36749,12 @@ var WatermarkManager = /*#__PURE__*/function () {
           opacity: watermark.opacity,
           width: watermark.width,
           height: watermark.height,
+          fontSize: watermark.fontSize,
+          color: watermark.color,
+          backgroundColor: watermark.backgroundColor,
+          padding: watermark.padding,
+          backgroundRadius: watermark.backgroundRadius,
+          margin: watermark.margin,
           status: watermark.status,
           reason: watermark.reason
         };
@@ -36798,6 +36819,7 @@ var WatermarkManager = /*#__PURE__*/function () {
       var target = input.target === 'source' ? 'source' : 'output';
       var id = typeof input.id === 'string' && input.id ? input.id : "watermark-".concat(++this._seq);
       var fontSize = normalizePositiveInteger(input.fontSize, DEFAULT_FONT_SIZE);
+      var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
       return {
         id: id,
         target: target,
@@ -36817,6 +36839,7 @@ var WatermarkManager = /*#__PURE__*/function () {
         backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
         opacity: normalizeOpacity(input.opacity),
         padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
+        backgroundRadius: normalizeNonNegativeInteger(backgroundRadiusInput, DEFAULT_BACKGROUND_RADIUS),
         margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
         status: 'pending',
         reason: ''
@@ -36896,21 +36919,24 @@ var WatermarkManager = /*#__PURE__*/function () {
       var text = watermark.text || '';
       var font = watermark.font || "bold ".concat(watermark.fontSize, "px sans-serif");
       context.font = font;
-      var measured = context.measureText ? context.measureText(text).width : text.length * watermark.fontSize * 0.6;
+      var metrics = context.measureText ? context.measureText(text) : null;
+      var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
+      var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
+      var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
       var width = Math.max(1, Math.ceil(measured + watermark.padding * 2));
-      var height = Math.max(1, Math.ceil(watermark.fontSize * 1.35 + watermark.padding * 2));
+      var height = Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2));
       canvas.width = width;
       canvas.height = height;
       context.font = font;
-      context.textBaseline = 'middle';
+      context.textBaseline = 'alphabetic';
       context.textAlign = 'left';
       if (watermark.backgroundColor) {
         context.fillStyle = watermark.backgroundColor;
-        context.fillRect(0, 0, width, height);
+        fillRoundedRect(context, 0, 0, width, height, watermark.backgroundRadius);
       }
       context.fillStyle = watermark.color;
       if (context.fillText) {
-        context.fillText(text, watermark.padding, height / 2);
+        context.fillText(text, watermark.padding, watermark.padding + ascent);
       }
       return canvas;
     }
@@ -37098,6 +37124,31 @@ function clonePosition(position) {
     };
   }
   return position;
+}
+function fillRoundedRect(context, x, y, width, height, radius) {
+  var safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
+  if (!safeRadius || typeof context.beginPath !== 'function') {
+    context.fillRect(x, y, width, height);
+    return;
+  }
+  if (typeof context.roundRect === 'function') {
+    context.beginPath();
+    context.roundRect(x, y, width, height, safeRadius);
+    context.fill();
+    return;
+  }
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+  context.fill();
 }
 module.exports = WatermarkManager;
 },{}],81:[function(require,module,exports){
@@ -37685,7 +37736,7 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
         var texture = _this3._getWatermarkTexture(key);
         activeKeys[key] = true;
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.image);
         _this3._drawItem(watermark, canvasHeight);
       });
@@ -38639,7 +38690,9 @@ module.exports = /*#__PURE__*/function (_BaseRenderer) {
                 _context5.n = 1;
                 break;
               }
-              return _context5.a(2, createImageBitmap(image));
+              return _context5.a(2, createImageBitmap(image, {
+                imageOrientation: 'flipY'
+              }));
             case 1:
               VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
               if (!VideoFrameConstructor) {
@@ -38933,7 +38986,7 @@ exports.createVideoTexture = function (gl) {
  */
 exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
-  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n\",FRAGMENT_SHADER=\"#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nout vec4 outColor;\\nvoid main() {\\n  outColor = texture(u_texture, v_texCoord);\\n}\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)try{return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){return destroyWebGL2(),void postMessage({type:\"failed\",reason:r.message||String(r)})}if(\"worker-2d\"===requestedMode)try{return initCanvas2D(),actualMode=\"worker-2d\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"\"})}catch(e){return void postMessage({type:\"failed\",reason:e.message||String(e)})}postMessage({type:\"failed\",reason:\"Unsupported worker render mode: \"+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
+  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n\",FRAGMENT_SHADER=\"#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nout vec4 outColor;\\nvoid main() {\\n  outColor = texture(u_texture, v_texCoord);\\n}\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)try{return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){return destroyWebGL2(),void postMessage({type:\"failed\",reason:r.message||String(r)})}if(\"worker-2d\"===requestedMode)try{return initCanvas2D(),actualMode=\"worker-2d\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"\"})}catch(e){return void postMessage({type:\"failed\",reason:e.message||String(e)})}postMessage({type:\"failed\",reason:\"Unsupported worker render mode: \"+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!1),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
 };
 },{}],89:[function(require,module,exports){
 "use strict";

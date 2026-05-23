@@ -997,11 +997,11 @@ async function testWatermarkPresetAndCoordinatePositions()
     return map;
   }, {});
 
-  assert.strictEqual(byId['top-center'].draw.x, 140);
+  assert.strictEqual(byId['top-center'].draw.x, 145);
   assert.strictEqual(byId['top-center'].draw.y, 10);
-  assert.strictEqual(byId['bottom-center'].draw.x, 140);
-  assert.strictEqual(byId['bottom-center'].draw.y, 116);
-  assert.deepStrictEqual(byId.coordinate.draw, { x: 7, y: 11, width: 40, height: 54 });
+  assert.strictEqual(byId['bottom-center'].draw.x, 145);
+  assert.strictEqual(byId['bottom-center'].draw.y, 134);
+  assert.deepStrictEqual(byId.coordinate.draw, { x: 7, y: 11, width: 30, height: 36 });
 }
 
 async function testWorkerRendererCarriesWatermarkPayload()
