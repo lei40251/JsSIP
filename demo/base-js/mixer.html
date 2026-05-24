@@ -2044,7 +2044,7 @@
                         submix.audio.load();
                     }
 
-                    const stream = await this.mixer.getAudioStream({ slots: normalizedSlots });
+                    const stream = await this.mixer.getAudioStream({ slots: normalizedSlots, isolated: true });
                     const trackCount = stream ? stream.getAudioTracks().length : 0;
 
                     if (!stream) {
@@ -2136,11 +2136,7 @@
             async startSubmixWebAudioPlayback(submix, slots, fallbackStream) {
                 this.stopSubmixWebAudioPlayback(submix);
                 const ctx = await this.ensureSubmixPlaybackContext();
-                const streams = this.getLocalAudioStreamsForSlots(slots);
-
-                if (!streams.length && fallbackStream) {
-                    streams.push(fallbackStream);
-                }
+                const streams = fallbackStream ? [fallbackStream] : [];
 
                 submix.playbackSources = streams.map((stream) => {
                     const source = ctx.createMediaStreamSource(stream);
@@ -2162,13 +2158,6 @@
                     try { item.gain.disconnect(); } catch (e) { }
                 });
                 submix.playbackSources = [];
-            },
-
-            getLocalAudioStreamsForSlots(slots) {
-                return this.localStreams
-                    .filter(item => slots.indexOf(item.slot) !== -1)
-                    .map(item => item.stream)
-                    .filter(stream => stream && stream.getAudioTracks && stream.getAudioTracks().some(track => track.readyState === 'live'));
             },
 
             closeSubmixPlaybackContext() {

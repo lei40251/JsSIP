@@ -30,6 +30,13 @@ class MockMediaStreamTrack
       this.onended();
     }
   }
+
+  clone()
+  {
+    const cloned = new MockMediaStreamTrack(this.kind);
+
+    return cloned;
+  }
 }
 
 class MockMediaStream
@@ -364,6 +371,7 @@ class MockAudioContext
 
     return Promise.resolve();
   }
+
 }
 
 MockAudioContext.instances = [];
@@ -983,6 +991,34 @@ async function testDestinationTrackHealthRecreatesEndedBusDestination()
   mixer.stop();
 }
 
+async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  for (let slot = 0; slot < 4; slot++)
+  {
+    mixer.appendStream(createStream({ video: false, audio: true }), slot);
+  }
+
+  const first = await mixer.getAudioStream({ slots: [ 0, 1 ], isolated: true });
+  const second = await mixer.getAudioStream({ slots: [ 2, 3 ], isolated: true });
+  const firstAgain = await mixer.getAudioStream({ slots: [ 1, 0 ], isolated: true });
+
+  assert.ok(first);
+  assert.ok(second);
+  assert.notStrictEqual(first, second);
+  assert.strictEqual(firstAgain, first);
+  assert.strictEqual(first.getVideoTracks().length, 0);
+  assert.strictEqual(second.getVideoTracks().length, 0);
+  assert.strictEqual(MockAudioContext.instances.length, 2);
+
+  mixer.stop();
+  assert.strictEqual(MockAudioContext.instances[0].closed, true);
+  assert.strictEqual(MockAudioContext.instances[1].closed, true);
+}
+
 async function testWatermarkConfigAndFiltering()
 {
   resetMockState();
@@ -1376,6 +1412,7 @@ async function run()
     await testAudioRefreshIsBatchedIntoSingleMicrotask();
     await testDestinationTrackHealthRecreatesSilentBusDestination();
     await testDestinationTrackHealthRecreatesEndedBusDestination();
+    await testIsolatedSlotAudioStreamsCreateIndependentContexts();
     await testWatermarkConfigAndFiltering();
     await testCanvas2DWatermarkDrawOrder();
     await testEmptyInitialRenderDoesNotCreateRenderer();
