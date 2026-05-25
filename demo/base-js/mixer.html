@@ -50,13 +50,13 @@
                                     <optgroup label="横屏">
                                         <option value="1920x1080">1080p</option>
                                         <option value="1280x720">720p</option>
-                                        <option value="654x480">480p</option>
+                                        <option value="640x480">480p</option>
                                         <option value="640x360">360p</option>
                                     </optgroup>
                                     <optgroup label="竖屏">
                                         <option value="1080x1920">1080p 竖屏</option>
                                         <option value="720x1280">720p 竖屏</option>
-                                        <option value="480x654">480p 竖屏</option>
+                                        <option value="480x640">480p 竖屏</option>
                                         <option value="360x640">360p 竖屏</option>
                                     </optgroup>
                                 </select>
@@ -264,7 +264,7 @@
                     </div>
                     <div class="audio-viz">
                         <canvas id="viz-canvas"></canvas>
-                        <div class="position-absolute top-0 start-0 px-2 text-success small fw-bold">音频混合</div>
+                        <div class="audio-viz-label">音频混合</div>
                     </div>
                     <div class="source-strip" id="thumbs-container">
                         <div class="source-strip-empty">(暂无输入源)</div>
@@ -378,8 +378,8 @@
     <script src="./js/app-base.js"></script>
     <script src="./js/app-mixer.js"></script>
     <script>
-      app.init();
-      window.addEventListener('pagehide', () => app.stop());
+        app.init();
+        window.addEventListener('pagehide', () => app.stop());
     </script>
 </body>
 

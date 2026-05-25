@@ -5,7 +5,7 @@ const app = {
   localStreams      : [],
   counter           : 0,
   currentSlot       : 0,
-  maxDemoSources    : 4,
+  maxDemoSources    : 9,
   monitorAudio      : false,
   activeSubmixes    : new Map(),
   submixPlaybackCtx : null,
@@ -384,7 +384,10 @@ const app = {
             <div class="slot-tag">${slotLabel}</div>
             <div class="remove-btn" onclick="app.removeSource('${stream.id}')">&times;</div>
             ${mediaMarkup}
-            <div class="info">${label}<br>${trackInfo}</div>
+            <div class="info">
+                <div class="info-title">${label}</div>
+                <div class="info-meta">${trackInfo}</div>
+            </div>
         `;
     const video = div.querySelector('video');
 
@@ -642,6 +645,7 @@ const app = {
       if (s.stopInternal) s.stopInternal();
     });
     this.localStreams = [];
+    this.counter = 0;
     this.monitorAudio = false;
     this.stopAllSubmixes();
     this.closeSubmixPlaybackContext();
@@ -663,6 +667,51 @@ const app = {
     this.updateMonitorAudioUI();
     this.updateSlotUI();
     this.refreshSelectedSlotSummary();
+    this.refreshWatermarkList();
+    this.resetConfigUI();
+  },
+
+  /**
+   * 停止后重置所有配置控件到默认值。
+   */
+  resetConfigUI()
+  {
+    this.currentSlot = 0;
+    const defaults = {
+      'cfg-out-res'           : '1280x720',
+      'cfg-fps'               : '15',
+      'cfg-render-mode'       : 'auto',
+      'cfg-in-res'            : 'auto',
+      'cfg-in-fps'            : '15',
+      'wm-output-text'        : 'CRTC 直播',
+      'wm-output-text-position' : 'bottom-right',
+      'wm-output-text-color'  : '#ffffff',
+      'wm-output-text-bg-color' : 'rgba(0,0,0,0.45)',
+      'wm-output-text-size'   : '28',
+      'wm-output-text-x'      : '16',
+      'wm-output-text-y'      : '16',
+      'wm-output-image'       : '',
+      'wm-output-image-position' : 'top-right',
+      'wm-output-image-x'     : '16',
+      'wm-output-image-y'     : '16',
+      'wm-output-image-url'   : '',
+      'wm-slot-text'          : 'Slot',
+      'wm-slot-position'      : 'bottom-left',
+      'wm-slot-x'             : '12',
+      'wm-slot-y'             : '12',
+      'wm-slot-size'          : '28',
+      'wm-slot-color'         : '#ffffff',
+      'wm-slot-bg-color'      : 'rgba(0,0,0,0.45)'
+    };
+
+    Object.entries(defaults).forEach(([ id, val ]) =>
+    {
+      const el = document.getElementById(id);
+
+      if (el) el.value = val;
+    });
+    this.syncPreviewFrameRatio();
+    this.selectSlot(0);
     this.refreshWatermarkList();
   },
 
@@ -1049,17 +1098,7 @@ const app = {
 
   getCompactInsertSlot(preferredSlot)
   {
-    preferredSlot = this.clampSlot(preferredSlot);
-    const occupied = new Set(this.localStreams.map((item) => item.slot));
-
-    if (occupied.has(preferredSlot)) return preferredSlot;
-    if (this.localStreams.length >= this.maxDemoSources) return preferredSlot;
-
-    const tailSlot = Math.min(this.localStreams.length, this.maxDemoSources - 1);
-
-    if (preferredSlot > tailSlot) return tailSlot;
-
-    return preferredSlot;
+    return this.clampSlot(preferredSlot);
   },
 
   readWatermarkPosition(selectEl, xEl, yEl, fallback)
@@ -1206,6 +1245,12 @@ const app = {
       else { cols = 2; rows = 1; }
     }
     else if (count <= 4) { cols = 2; rows = 2; }
+    else if (count <= 6)
+    {
+      if (isPortrait) { cols = 2; rows = 3; }
+      else { cols = 3; rows = 2; }
+    }
+    else { cols = 3; rows = 3; }
 
     return { cols, rows };
   }

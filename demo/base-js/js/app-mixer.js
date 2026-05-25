@@ -471,9 +471,6 @@ Object.assign(window.app, {
     this.localStreams.push({ stream, slot, label });
     // 添加缩略图到界面
     this.addThumb(stream, label, slot);
-    // 压缩可能产生的空洞
-    this.compactSlotsIfSparse();
-    // 更新槽位选择器样式
     this.updateSlotUI();
 
     // 自动选中下一个空槽位
@@ -534,9 +531,6 @@ Object.assign(window.app, {
     {
       this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
     }
-    // 压缩槽位空洞并刷新所有关联 UI
-    this.compactSlotsIfSparse();
-    this.rebuildThumbsFromLocalStreams();
     this.updateSlotUI();
     this.updateStats();
     this.refreshActiveSubmix();
