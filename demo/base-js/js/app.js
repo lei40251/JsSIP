@@ -304,7 +304,10 @@ ua.on('registrationFailed', function(data)
  */
 ua.on('newRTCSession', function(e) 
 {
+  console.warn('dOS: ', detectRemoteOS(e.request));
+
   console.warn('nsession: ', e);
+
 
   confirmed = false;
 
@@ -473,6 +476,9 @@ ua.on('newRTCSession', function(e)
       {
         // 可以播放本地铃声
       }
+      
+      // 用于通话未接通的情况，只以第一次检测为准
+      console.warn('dOS: ', detectRemoteOS(d.response));
 
       setStatus('对方已振铃，请等待接听');
     }
@@ -921,6 +927,11 @@ ua.on('newRTCSession', function(e)
     {
       d.accept(videoConstraints);
     }
+  });
+
+  e.session.on('accepted', (d) => 
+  {    
+    console.warn('dOS: ', detectRemoteOS(d.response));
   });
 
   /**
@@ -2527,4 +2538,43 @@ async function mediaStreamProcessor(mediastream)
   setStatus('视频增加了虚拟背景');
   
   return processedStream;
+}
+
+/**
+ * 判断远端手机系统
+ *
+ * @param request
+ * @returns {'ios' | 'android' | 'unknown'}
+ */
+function detectRemoteOS(request)
+{
+  if (!request || typeof request.getHeader !== 'function')
+  {
+    return 'unknown';
+  }
+
+  // 获取 header
+  const userAgent = request.getHeader('User-Agent') || '';
+  const server = request.getHeader('Server') || '';
+
+  // 合并统一判断
+  const headerText = `${userAgent} ${server}`.toLowerCase();
+
+  // 两个 header 都没有
+  if (!userAgent && !server)
+  {
+    return 'unknown';
+  }
+
+  // iOS 特征
+  if (
+    headerText.includes('ios') ||
+    headerText.includes('iphone')
+  )
+  {
+    return 'ios';
+  }
+
+  // 其余默认安卓
+  return 'android';
 }
