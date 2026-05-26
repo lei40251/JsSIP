@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265261711
+ * CRTC v1.13.0.20265262139
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210523422 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210524278 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210523422');
+debug('version %s', '1.13.0.405210524278');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210523422';
+    return '1.13.0.405210524278';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
@@ -33482,7 +33482,15 @@ var AudioMixer = /*#__PURE__*/function () {
       });
 
       // 显式要求 isolated 时，slot 子混音走独立 AudioContext。
+      // 为贴近旧实现并规避 Android 浏览器上的 clone 兼容问题：
+      // 1) 每次调用都重建该 key 的 isolated 子混音上下文与 destination
+      // 2) 连接时直接使用原始 stream，不 clone track
       if (request.type === 'slots' && options && options.isolated === true) {
+        var existing = this._isolatedSubmixes.get(request.key);
+        if (existing) {
+          this._disconnectIsolatedSubmix(existing, true);
+          this._isolatedSubmixes["delete"](request.key);
+        }
         var isolatedSubmix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
         isolatedSubmix.requested = true;
         return this._refreshIsolatedSubmixConnections(isolatedSubmix);
@@ -33522,6 +33530,45 @@ var AudioMixer = /*#__PURE__*/function () {
       var submix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
       submix.requested = true;
       return this._refreshIsolatedSubmixConnections(submix);
+    }
+
+    /**
+     * 释放指定 slots 的子混音请求与连接。
+     * 用于上层在切换子混音组合时主动回收旧链路，避免长期占用音频资源。
+     *
+     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
+     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
+     */
+  }, {
+    key: "releaseSubmixAudioStream",
+    value: function releaseSubmixAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
+      var request = this._normalizeAudioRequest(options);
+      if (!request || request.type !== 'slots') {
+        return false;
+      }
+      if (options && options.isolated === true) {
+        var submix = this._isolatedSubmixes.get(request.key);
+        if (!submix) {
+          return false;
+        }
+        submix.requested = false;
+        this._disconnectIsolatedSubmix(submix, true);
+        this._isolatedSubmixes["delete"](request.key);
+        this._refreshRequestedState();
+        return true;
+      }
+      var bus = this._audioBuses.get(request.key);
+      if (!bus) {
+        return false;
+      }
+      bus.requested = false;
+      this._disconnectAudioBus(bus);
+      this._audioBuses["delete"](request.key);
+      this._refreshRequestedState();
+      return true;
     }
 
     /**
@@ -33865,6 +33912,17 @@ var AudioMixer = /*#__PURE__*/function () {
         return;
       }
       Promise.resolve().then(callback);
+    }
+  }, {
+    key: "_refreshRequestedState",
+    value: function _refreshRequestedState() {
+      var hasRequestedBus = Array.from(this._audioBuses.values()).some(function (bus) {
+        return bus && bus.requested;
+      });
+      var hasRequestedIsolatedSubmix = Array.from(this._isolatedSubmixes.values()).some(function (submix) {
+        return submix && submix.requested;
+      });
+      this._audioRequested = this._defaultAudioRequested || hasRequestedBus || hasRequestedIsolatedSubmix;
     }
   }, {
     key: "_createAudioContext",
@@ -34213,7 +34271,6 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_refreshIsolatedSubmixConnections",
     value: function _refreshIsolatedSubmixConnections(submix) {
       var _this11 = this;
-      console.warn('aaa: ', submix);
       if (this._logger && submix) {
         this._logger.debug("Refreshing isolated submix connections: key=".concat(submix.key));
       }
@@ -34255,24 +34312,11 @@ var AudioMixer = /*#__PURE__*/function () {
             return;
           }
           try {
-            var originalTrack = signature.track;
+            // Android 某些浏览器上同源 track clone 后用于多路 isolated 子混音会出现静音，
+            // 这里统一回退到旧实现：直接使用原始 stream 建 source。
             var clonedTrack = null;
-            var clonedStream = null;
+            var clonedStream = stream;
             var ownsClonedTrack = false;
-            if (originalTrack && originalTrack.clone) {
-              try {
-                clonedTrack = originalTrack.clone();
-                clonedStream = new MediaStream([clonedTrack]);
-                ownsClonedTrack = true;
-              } catch (error) {
-                // clone 失败时退回原始 stream，避免直接丢失该路子混音。
-                clonedTrack = null;
-                clonedStream = stream;
-                ownsClonedTrack = false;
-              }
-            } else {
-              clonedStream = stream;
-            }
             var sourceNode = submix.audioContext.createMediaStreamSource(clonedStream);
             var gainNode = submix.audioContext.createGain();
             gainNode.gain.value = source.gain;
@@ -36034,8 +36078,23 @@ module.exports = /*#__PURE__*/function () {
         return _getIsolatedSubmixAudioStream.apply(this, arguments);
       }
       return getIsolatedSubmixAudioStream;
-    }() // -- SourceRegistry 委派 --
+    }()
+    /**
+     * 释放指定 slots 的子混音请求与资源。
+     *
+     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
+     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
+     */
     )
+  }, {
+    key: "releaseSubmixAudioStream",
+    value: function releaseSubmixAudioStream(options) {
+      logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      this._assertNotDestroyed('releaseSubmixAudioStream()');
+      return this._audioMixer.releaseSubmixAudioStream(options);
+    }
+
+    // -- SourceRegistry 委派 --
   }, {
     key: "_sources",
     get: function get() {

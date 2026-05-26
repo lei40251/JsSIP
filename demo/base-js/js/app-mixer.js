@@ -306,9 +306,9 @@ Object.assign(window.app, {
     const submix = this.ensureSubmixItem(key, normalizedSlots);
     const silent = Boolean(options.silent);
     const shouldPlay = !silent && options.play !== false;
-    const useWebAudioPlayback = this.shouldUseSubmixWebAudioPlayback();
-    // Android + Chrome 场景优先使用非 isolated 子混音，避免多 AudioContext 切换导致无声
-    const useIsolatedSubmix = !useWebAudioPlayback;
+    // 子混音统一用 isolated 输出，播放统一交给 WebAudio（支持多路并行有声）。
+    const useWebAudioPlayback = true;
+    const useIsolatedSubmix = true;
 
     try
     {
@@ -361,22 +361,16 @@ Object.assign(window.app, {
         return;
       }
 
-      // 记忆 audio 元素之前的暂停状态，用于决定是否恢复播放
-      const wasPaused = submix.audio.paused;
-
       // 将音频流绑定到 UI 元素
       submix.audio.srcObject = playbackStream;
-      // WebAudio 模式下 audio 元素静音，由 AudioContext 输出
+      // 仅作为流容器，不直接出声；实际音频由 WebAudio 输出。
       submix.audio.muted = useWebAudioPlayback;
-      // WebAudio 模式不依赖 audio 元素播放，避免 Android 多媒体焦点互斥导致互相 pause
-      submix.audio.autoplay = !useWebAudioPlayback;
+      submix.audio.autoplay = false;
       if (useWebAudioPlayback)
       {
-        // 等待一帧确保 srcObject 已绑定
         await new Promise((r) => window.requestAnimationFrame(() => r()));
       }
-      // 需要自动播放或之前未暂停时触发播放
-      if (shouldPlay || !wasPaused)
+      if (shouldPlay)
       {
         if (useWebAudioPlayback)
         {
@@ -386,15 +380,23 @@ Object.assign(window.app, {
             800,
             'submix webaudio playback timeout'
           );
+          submix.isPlaying = true;
         }
         else
         {
           // 普通模式：直接通过 audio 元素播放
           await this.withTimeout(submix.audio.play(), 1200, 'submix audio element play timeout');
+          submix.isPlaying = true;
         }
+      }
+      else
+      {
+        submix.isPlaying = false;
       }
       // 更新状态显示
       submix.label.innerText = `槽位 ${displayKey} · ${trackCount} 音轨`;
+      submix.isolated = useIsolatedSubmix;
+      this.updateSubmixControlUI(submix);
       this.updateSubmixStatus();
       this.updateStats();
     }

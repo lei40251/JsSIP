@@ -1009,14 +1009,16 @@ async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
   assert.ok(first);
   assert.ok(second);
   assert.notStrictEqual(first, second);
-  assert.strictEqual(firstAgain, first);
+  assert.notStrictEqual(firstAgain, first);
   assert.strictEqual(first.getVideoTracks().length, 0);
   assert.strictEqual(second.getVideoTracks().length, 0);
-  assert.strictEqual(MockAudioContext.instances.length, 2);
+  assert.strictEqual(firstAgain.getVideoTracks().length, 0);
+  assert.strictEqual(MockAudioContext.instances.length, 3);
 
   mixer.stop();
   assert.strictEqual(MockAudioContext.instances[0].closed, true);
   assert.strictEqual(MockAudioContext.instances[1].closed, true);
+  assert.strictEqual(MockAudioContext.instances[2].closed, true);
 }
 
 async function testReleaseIsolatedSubmixAudioStreamClosesContext()

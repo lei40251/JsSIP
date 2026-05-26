@@ -9,6 +9,7 @@ const app = {
   monitorAudio      : false,
   outputVideoStream : null,
   outputMixedStream : null,
+  outputPlayback    : null,
   activeSubmixes    : new Map(),
   submixPlaybackCtx : null,
   vizToken          : 0,
@@ -618,6 +619,7 @@ const app = {
   {
     this.outputVideoStream = null;
     this.outputMixedStream = null;
+    this.stopOutputWebAudioPlayback();
     this.ui.mixedVideo.muted = true;
     this.stopAllSubmixes();
     this.updateMonitorAudioUI();
@@ -667,6 +669,7 @@ const app = {
     this.monitorAudio = false;
     this.outputVideoStream = null;
     this.outputMixedStream = null;
+    this.stopOutputWebAudioPlayback();
     this.vizToken++;
     this.stopAllSubmixes();
     this.closeSubmixPlaybackContext();
@@ -757,11 +760,13 @@ const app = {
 
           this.outputMixedStream = stream;
           this.monitorAudio = true;
-          await this.setPreviewStream(stream, { muted: false });
+          await this.setPreviewStream(stream, { muted: true });
+          await this.startOutputWebAudioPlayback(stream);
         })
         .catch(async(e) =>
         {
           this.monitorAudio = false;
+          this.stopOutputWebAudioPlayback();
           await this.setPreviewStream(fallbackPreviewStream, {
             muted             : true,
             suppressPlayError : true
@@ -775,6 +780,7 @@ const app = {
     }
 
     this.monitorAudio = false;
+    this.stopOutputWebAudioPlayback();
     
     return this.setPreviewStream(fallbackPreviewStream, {
       muted             : true,
@@ -798,10 +804,149 @@ const app = {
     {
       if (key !== activeKey)
       {
-        item.audio.pause();
+        item.isPlaying = false;
         this.stopSubmixWebAudioPlayback(item);
+        this.updateSubmixControlUI(item);
       }
     });
+  },
+
+  updateSubmixControlUI(submix)
+  {
+    if (!submix) return;
+
+    if (submix.playButton)
+    {
+      submix.playButton.innerText = submix.isPlaying ? '暂停' : '播放';
+    }
+
+    if (submix.muteButton)
+    {
+      submix.muteButton.innerText = submix.isMuted ? '🔇' : '🔊';
+      submix.muteButton.setAttribute('aria-label', submix.isMuted ? '取消静音' : '静音');
+    }
+
+    if (submix.volumeInput)
+    {
+      submix.volumeInput.value = String(Math.round((submix.volume || 1) * 100));
+    }
+  },
+
+  applySubmixGain(submix)
+  {
+    if (!submix || !submix.playbackSources) return;
+
+    const gainValue = submix.isMuted ? 0 : (submix.volume || 1);
+
+    submix.playbackSources.forEach((item) =>
+    {
+      if (item.gain && item.gain.gain)
+      {
+        item.gain.gain.value = gainValue;
+      }
+    });
+  },
+
+  stopOutputWebAudioPlayback()
+  {
+    if (!this.outputPlayback) return;
+    const item = this.outputPlayback;
+
+    try { item.source.disconnect(); }
+    catch (e) {}
+    try { item.gain.disconnect(); }
+    catch (e) {}
+    if (item.ownedTracks && item.ownedTracks.length)
+    {
+      item.ownedTracks.forEach((track) =>
+      {
+        try { track.stop(); }
+        catch (e) {}
+      });
+    }
+    this.outputPlayback = null;
+  },
+
+  async startOutputWebAudioPlayback(stream)
+  {
+    this.stopOutputWebAudioPlayback();
+    if (!stream) return;
+
+    const ctx = await this.ensureSubmixPlaybackContext();
+    const tracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+    let playbackStream = stream;
+    let ownedTracks = [];
+
+    if (tracks.length)
+    {
+      const clonedTracks = tracks.map((track) =>
+      {
+        try { return track.clone ? track.clone() : null; }
+        catch (e) { return null; }
+      }).filter(Boolean);
+
+      if (clonedTracks.length)
+      {
+        playbackStream = new MediaStream(clonedTracks);
+        ownedTracks = clonedTracks;
+      }
+    }
+
+    const source = ctx.createMediaStreamSource(playbackStream);
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    this.outputPlayback = { source, gain, ownedTracks };
+  },
+
+  toggleSubmixPlay(key)
+  {
+    const submix = this.activeSubmixes.get(key);
+
+    if (!submix || !submix.audio || !submix.audio.srcObject) return;
+
+    if (submix.isPlaying)
+    {
+      submix.isPlaying = false;
+      this.stopSubmixWebAudioPlayback(submix);
+      this.updateSubmixControlUI(submix);
+
+      return;
+    }
+
+    this.startSubmixWebAudioPlayback(submix, submix.audio.srcObject)
+      .then(() =>
+      {
+        submix.isPlaying = true;
+        this.applySubmixGain(submix);
+        this.updateSubmixControlUI(submix);
+      })
+      .catch(() => {});
+  },
+
+  toggleSubmixMute(key)
+  {
+    const submix = this.activeSubmixes.get(key);
+
+    if (!submix) return;
+
+    submix.isMuted = !submix.isMuted;
+    this.applySubmixGain(submix);
+    this.updateSubmixControlUI(submix);
+  },
+
+  setSubmixVolume(key, value)
+  {
+    const submix = this.activeSubmixes.get(key);
+
+    if (!submix) return;
+
+    const normalized = Math.max(0, Math.min(1, Number(value)));
+
+    submix.volume = Number.isFinite(normalized) ? normalized : 1;
+    this.applySubmixGain(submix);
+    this.updateSubmixControlUI(submix);
   },
 
   releaseSubmixAudioRequest(slots, isolated)
@@ -885,7 +1030,7 @@ const app = {
       const source = ctx.createMediaStreamSource(item.stream);
       const gain = ctx.createGain();
 
-      gain.gain.value = 1;
+      gain.gain.value = submix && submix.isMuted ? 0 : ((submix && submix.volume) || 1);
       source.connect(gain);
       gain.connect(ctx.destination);
 
@@ -946,22 +1091,57 @@ const app = {
 
     const stopButton = document.createElement('button');
 
-    stopButton.className = 'btn btn-outline-danger';
+    stopButton.className = 'btn btn-outline-danger btn-submix-stop';
     stopButton.innerText = '停止';
     stopButton.onclick = () => this.stopSubmix(slots);
 
+    const controls = document.createElement('div');
+
+    controls.className = 'submix-controls';
+
+    const playButton = document.createElement('button');
+
+    playButton.className = 'btn btn-outline-primary btn-submix-play';
+    playButton.innerText = '暂停';
+    playButton.onclick = () => this.toggleSubmixPlay(key);
+
+    const muteButton = document.createElement('button');
+
+    muteButton.className = 'btn btn-outline-secondary btn-submix-mute';
+    muteButton.innerText = '🔊';
+    muteButton.onclick = () => this.toggleSubmixMute(key);
+    
+    const volumeInput = document.createElement('input');
+
+    volumeInput.type = 'range';
+    volumeInput.className = 'submix-volume';
+    volumeInput.min = '0';
+    volumeInput.max = '100';
+    volumeInput.step = '1';
+    volumeInput.value = '100';
+    volumeInput.oninput = (event) =>
+    {
+      this.setSubmixVolume(key, Number(event.target.value) / 100);
+    };
+
+    controls.appendChild(playButton);
+    controls.appendChild(muteButton);
+    controls.appendChild(stopButton);
+    controls.appendChild(volumeInput);
+
     const audio = document.createElement('audio');
 
-    audio.autoplay = true;
-    audio.controls = true;
-    audio.muted = false;
+    audio.autoplay = false;
+    audio.controls = false;
+    audio.muted = true;
     audio.playsInline = true;
     audio.preload = 'auto';
     audio.setAttribute('playsinline', '');
     audio.setAttribute('webkit-playsinline', '');
+    audio.style.display = 'none';
 
     row.appendChild(label);
-    row.appendChild(stopButton);
+    row.appendChild(controls);
     row.appendChild(audio);
     this.ui.submixList.appendChild(row);
 
@@ -971,24 +1151,19 @@ const app = {
       row,
       label,
       audio,
-      playbackSource : null
+      controls,
+      playButton,
+      muteButton,
+      volumeInput,
+      isolated       : true,
+      playbackSource : null,
+      isPlaying      : true,
+      isMuted        : false,
+      volume         : 1
     };
 
-    audio.onplay = () =>
-    {
-      if (this.shouldUseSubmixWebAudioPlayback() && audio.srcObject)
-      {
-        this.startSubmixWebAudioPlayback(submix, audio.srcObject).catch(() => { });
-      }
-    };
-    audio.onpause = () =>
-    {
-      // Android WebAudio 子混音模式下，audio 元素可能被系统媒体焦点自动 pause，
-      // 不应把它当作用户停止意图，否则会误断开正在并行播放的子混音。
-      if (this.shouldUseSubmixWebAudioPlayback()) return;
-      this.stopSubmixWebAudioPlayback(submix);
-    };
     this.activeSubmixes.set(key, submix);
+    this.updateSubmixControlUI(submix);
     this.updateSubmixStatus();
 
     return submix;
@@ -1009,9 +1184,9 @@ const app = {
 
     if (!submix) return;
 
-    submix.audio.pause();
+    submix.isPlaying = false;
     this.stopSubmixWebAudioPlayback(submix);
-    this.releaseSubmixAudioRequest(submix.slots, this.shouldUseSubmixWebAudioPlayback() ? false : true);
+    this.releaseSubmixAudioRequest(submix.slots, submix.isolated !== false);
     submix.audio.srcObject = null;
     submix.row.remove();
     this.activeSubmixes.delete(key);
