@@ -611,6 +611,15 @@ const app = {
     }
   },
 
+  isBenignMediaPlayInterruption(error)
+  {
+    const message = error && error.message ? String(error.message) : '';
+
+    return message.indexOf('interrupted by a new load request') !== -1 ||
+      message.indexOf('The play() request was interrupted') !== -1 ||
+      message.indexOf('AbortError') !== -1;
+  },
+
   // ==========================================================
   // UI 回调 — 被 app-mixer.js 中的 SDK 方法调用
   // ==========================================================
@@ -771,7 +780,10 @@ const app = {
             muted             : true,
             suppressPlayError : true
           });
-          this.showNotification(`监听输出失败: ${e.message}`);
+          if (!this.isBenignMediaPlayInterruption(e))
+          {
+            this.showNotification(`监听输出失败: ${e.message}`);
+          }
         })
         .finally(() =>
         {
