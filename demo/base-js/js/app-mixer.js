@@ -13,7 +13,7 @@ Object.assign(window.app, {
   /**
    * 启动 Mixer 实例。
    * 从 UI 控件读取输出分辨率、帧率和渲染后端配置，创建 CRTC.Mixer，
-   * 获取混流输出流后通知 UI 层展示预览。
+   * 默认仅获取视频输出流用于预览；完整音视频混流由 UI 层在用户点击监听时按需获取。
    *
    * @async
    * @fires onMixerStarting - 启动前通知 UI 做准备工作
@@ -40,8 +40,8 @@ Object.assign(window.app, {
 
     try
     {
-      // 获取混流输出流（可能需异步等待渲染管线就绪）
-      const outStream = await this.mixer.getMixedStream();
+      // 启动阶段仅获取视频输出流，避免默认拉起完整音频混流
+      const outStream = this.mixer.getVideoStream();
 
       // 通知 UI 层展示预览视频
       this.onMixerStarted(outStream, w, h, fps);
@@ -136,6 +136,28 @@ Object.assign(window.app, {
   isRunning()
   {
     return Boolean(this.mixer);
+  },
+
+  /**
+   * 获取仅包含视频轨的输出流。
+   *
+   * @returns {MediaStream|null} 仅视频的输出流；无 mixer 时返回 null。
+   */
+  getOutputVideoStream()
+  {
+    return this.mixer ? this.mixer.getVideoStream() : null;
+  },
+
+  /**
+   * 获取包含音视频轨的完整输出混流。
+   * UI 层仅在用户主动监听输出时调用，避免启动阶段初始化默认音频混流。
+   *
+   * @async
+   * @returns {Promise<MediaStream|null>} 完整混流；无 mixer 时返回 null。
+   */
+  async getOutputMixedStream()
+  {
+    return this.mixer ? this.mixer.getMixedStream() : null;
   },
 
   /**

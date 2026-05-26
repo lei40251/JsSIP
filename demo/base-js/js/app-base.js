@@ -7,13 +7,16 @@ const app = {
   currentSlot       : 0,
   maxDemoSources    : 9,
   monitorAudio      : false,
+  outputVideoStream : null,
+  outputMixedStream : null,
   activeSubmixes    : new Map(),
   submixPlaybackCtx : null,
+  vizToken          : 0,
 
   // ==========================================================
   // DOM 引用
   // ==========================================================
-  ui: {
+  ui : {
     slotGrid              : document.getElementById('slot-selector'),
     mixedVideo            : document.getElementById('mixed-video'),
     thumbs                : document.getElementById('thumbs-container'),
@@ -534,29 +537,16 @@ const app = {
 
   startViz(stream)
   {
+    const token = ++this.vizToken;
     const audioTracks = stream.getAudioTracks();
     const cvs = document.getElementById('viz-canvas');
     const ctx = cvs.getContext('2d');
 
     if (audioTracks.length === 0)
     {
-      const waitForAudio = () =>
-      {
-        if (!this.isRunning()) return;
-        cvs.width = cvs.clientWidth; cvs.height = cvs.clientHeight;
-        ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-        if (stream.getAudioTracks().length > 0)
-        {
-          this.startViz(stream);
-
-          return;
-        }
-
-        requestAnimationFrame(waitForAudio);
-      };
-
-      waitForAudio();
+      cvs.width = cvs.clientWidth;
+      cvs.height = cvs.clientHeight;
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
 
       return;
     }
@@ -570,7 +560,7 @@ const app = {
     const data = new Uint8Array(an.frequencyBinCount);
     const draw = () =>
     {
-      if (!this.isRunning())
+      if (!this.isRunning() || token !== this.vizToken)
       {
         ac.close();
 
@@ -596,12 +586,38 @@ const app = {
     draw();
   },
 
+  createVideoOnlyPreviewStream(stream)
+  {
+    if (!stream) return null;
+
+    return new MediaStream(stream.getVideoTracks());
+  },
+
+  async setPreviewStream(stream, { muted = true, suppressPlayError = false } = {})
+  {
+    if (!stream) return;
+
+    this.ui.mixedVideo.srcObject = stream;
+    this.ui.mixedVideo.muted = muted;
+    this.startViz(stream);
+    try
+    {
+      await this.ui.mixedVideo.play();
+    }
+    catch (e)
+    {
+      if (!suppressPlayError) throw e;
+    }
+  },
+
   // ==========================================================
   // UI 回调 — 被 app-mixer.js 中的 SDK 方法调用
   // ==========================================================
 
   onMixerStarting()
   {
+    this.outputVideoStream = null;
+    this.outputMixedStream = null;
     this.ui.mixedVideo.muted = true;
     this.stopAllSubmixes();
     this.updateMonitorAudioUI();
@@ -609,8 +625,12 @@ const app = {
 
   onMixerStarted(outStream, w, h, fps)
   {
-    this.ui.mixedVideo.srcObject = outStream;
-    this.ui.mixedVideo.muted = !this.monitorAudio;
+    this.outputVideoStream = outStream;
+    this.outputMixedStream = null;
+    this.setPreviewStream(this.createVideoOnlyPreviewStream(outStream), {
+      muted             : true,
+      suppressPlayError : true
+    });
 
     this.ui.btnStart.style.display = 'none';
     this.ui.btnStop.style.display = 'block';
@@ -625,8 +645,6 @@ const app = {
     this.updateRenderInfo();
     this.refreshSelectedSlotSummary();
     this.refreshWatermarkList();
-
-    this.startViz(outStream);
     this.startRenderInfoLoop();
   },
 
@@ -647,6 +665,9 @@ const app = {
     this.localStreams = [];
     this.counter = 0;
     this.monitorAudio = false;
+    this.outputVideoStream = null;
+    this.outputMixedStream = null;
+    this.vizToken++;
     this.stopAllSubmixes();
     this.closeSubmixPlaybackContext();
     this.ui.mixedVideo.srcObject = null;
@@ -678,30 +699,30 @@ const app = {
   {
     this.currentSlot = 0;
     const defaults = {
-      'cfg-out-res'           : '1280x720',
-      'cfg-fps'               : '15',
-      'cfg-render-mode'       : 'auto',
-      'cfg-in-res'            : 'auto',
-      'cfg-in-fps'            : '15',
-      'wm-output-text'        : 'CRTC 直播',
-      'wm-output-text-position' : 'bottom-right',
-      'wm-output-text-color'  : '#ffffff',
-      'wm-output-text-bg-color' : 'rgba(0,0,0,0.45)',
-      'wm-output-text-size'   : '28',
-      'wm-output-text-x'      : '16',
-      'wm-output-text-y'      : '16',
-      'wm-output-image'       : '',
+      'cfg-out-res'              : '1280x720',
+      'cfg-fps'                  : '15',
+      'cfg-render-mode'          : 'auto',
+      'cfg-in-res'               : 'auto',
+      'cfg-in-fps'               : '15',
+      'wm-output-text'           : 'CRTC 直播',
+      'wm-output-text-position'  : 'bottom-right',
+      'wm-output-text-color'     : '#ffffff',
+      'wm-output-text-bg-color'  : 'rgba(0,0,0,0.45)',
+      'wm-output-text-size'      : '28',
+      'wm-output-text-x'         : '16',
+      'wm-output-text-y'         : '16',
+      'wm-output-image'          : '',
       'wm-output-image-position' : 'top-right',
-      'wm-output-image-x'     : '16',
-      'wm-output-image-y'     : '16',
-      'wm-output-image-url'   : '',
-      'wm-slot-text'          : 'Slot',
-      'wm-slot-position'      : 'bottom-left',
-      'wm-slot-x'             : '12',
-      'wm-slot-y'             : '12',
-      'wm-slot-size'          : '28',
-      'wm-slot-color'         : '#ffffff',
-      'wm-slot-bg-color'      : 'rgba(0,0,0,0.45)'
+      'wm-output-image-x'        : '16',
+      'wm-output-image-y'        : '16',
+      'wm-output-image-url'      : '',
+      'wm-slot-text'             : 'Slot',
+      'wm-slot-position'         : 'bottom-left',
+      'wm-slot-x'                : '12',
+      'wm-slot-y'                : '12',
+      'wm-slot-size'             : '28',
+      'wm-slot-color'            : '#ffffff',
+      'wm-slot-bg-color'         : 'rgba(0,0,0,0.45)'
     };
 
     Object.entries(defaults).forEach(([ id, val ]) =>
@@ -721,28 +742,49 @@ const app = {
 
   toggleMonitorAudio()
   {
-    if (!this.isRunning() || !this.ui.mixedVideo.srcObject) return;
+    if (!this.isRunning() || !this.outputVideoStream) return;
 
     const enable = !this.monitorAudio;
+    const fallbackPreviewStream = this.createVideoOnlyPreviewStream(this.outputMixedStream || this.outputVideoStream);
 
-    this.monitorAudio = enable;
-    this.ui.mixedVideo.muted = !enable;
-
+    this.ui.btnMonitorAudio.disabled = true;
     if (enable)
     {
-      try
-      {
-        this.ui.mixedVideo.play();
-      }
-      catch (e)
-      {
-        this.monitorAudio = false;
-        this.ui.mixedVideo.muted = true;
-        this.showNotification(`监听输出失败: ${e.message}`);
-      }
+      return this.getOutputMixedStream()
+        .then(async(stream) =>
+        {
+          if (!stream) return;
+
+          this.outputMixedStream = stream;
+          this.monitorAudio = true;
+          await this.setPreviewStream(stream, { muted: false });
+        })
+        .catch(async(e) =>
+        {
+          this.monitorAudio = false;
+          await this.setPreviewStream(fallbackPreviewStream, {
+            muted             : true,
+            suppressPlayError : true
+          });
+          this.showNotification(`监听输出失败: ${e.message}`);
+        })
+        .finally(() =>
+        {
+          this.updateMonitorAudioUI();
+        });
     }
 
-    this.updateMonitorAudioUI();
+    this.monitorAudio = false;
+    
+    return this.setPreviewStream(fallbackPreviewStream, {
+      muted             : true,
+      suppressPlayError : true
+    })
+      .catch(() => { })
+      .finally(() =>
+      {
+        this.updateMonitorAudioUI();
+      });
   },
 
   listenSelectedSlotSubmix()

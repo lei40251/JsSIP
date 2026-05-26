@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026525928
+ * CRTC v1.13.0.20265261711
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210501856 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210523422 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210501856');
+debug('version %s', '1.13.0.405210523422');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210501856';
+    return '1.13.0.405210523422';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
@@ -33451,6 +33451,9 @@ var AudioMixer = /*#__PURE__*/function () {
       reason: '',
       lastError: ''
     };
+    if (this._logger) {
+      this._logger.debug('AudioMixer constructed');
+    }
   }
 
   /**
@@ -33462,8 +33465,14 @@ var AudioMixer = /*#__PURE__*/function () {
   return _createClass(AudioMixer, [{
     key: "getAudioStream",
     value: function getAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
       var request = this._normalizeAudioRequest(options);
       if (!request) {
+        if (this._logger) {
+          this._logger.warn('getAudioStream() ignored: invalid request');
+        }
         return Promise.resolve(null);
       }
       this._audioRequested = true;
@@ -33497,6 +33506,9 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "getIsolatedSubmixAudioStream",
     value: function getIsolatedSubmixAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
       var request = this._normalizeAudioRequest(options);
       if (!request || request.type !== 'slots') {
         return Promise.resolve(null);
@@ -33521,6 +33533,9 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "scheduleRefresh",
     value: function scheduleRefresh() {
       var _this = this;
+      if (this._logger) {
+        this._logger.debug("scheduleRefresh(): requested=".concat(this._audioRequested, " destroyed=").concat(this._getDestroyed()));
+      }
       if (!this._audioRequested || this._getDestroyed()) {
         return;
       }
@@ -33538,6 +33553,9 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_runScheduledRefresh",
     value: function _runScheduledRefresh() {
       var _this2 = this;
+      if (this._logger) {
+        this._logger.debug('Running scheduled audio refresh');
+      }
       if (!this._audioRequested || this._getDestroyed()) {
         this._audioRefreshPending = false;
         return;
@@ -33598,6 +33616,9 @@ var AudioMixer = /*#__PURE__*/function () {
         }
       });
       if (needsRefresh) {
+        if (this._logger) {
+          this._logger.debug('External source audio changed, scheduling refresh');
+        }
         this.scheduleRefresh();
       }
     }
@@ -33615,6 +33636,9 @@ var AudioMixer = /*#__PURE__*/function () {
   }, {
     key: "disconnectSource",
     value: function disconnectSource(source) {
+      if (this._logger && source) {
+        this._logger.debug("Disconnecting audio source: id=".concat(source.id));
+      }
       this._destroySourceNode(source);
     }
   }, {
@@ -33677,6 +33701,9 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "stop",
     value: function stop() {
       var _this5 = this;
+      if (this._logger) {
+        this._logger.debug('Stopping AudioMixer');
+      }
       if (this._audioDestination) {
         this._safeDisconnect(this._audioDestination);
         this._audioDestination = null;
@@ -33730,6 +33757,9 @@ var AudioMixer = /*#__PURE__*/function () {
       options = Object.assign({
         defaultDestination: true
       }, options || {});
+      if (this._logger) {
+        this._logger.debug("Ensuring audio system: defaultDestination=".concat(options.defaultDestination));
+      }
       if (this._getDestroyed()) {
         return Promise.resolve(false);
       }
@@ -33789,12 +33819,18 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_normalizeAudioRequest",
     value: function _normalizeAudioRequest(options) {
       if (options === undefined || options === null) {
+        if (this._logger) {
+          this._logger.debug('Audio request normalized to default mix');
+        }
         return {
           type: 'default'
         };
       }
       var rawSlots = options instanceof Array ? options : options.slots;
       if (!(rawSlots instanceof Array)) {
+        if (this._logger) {
+          this._logger.warn("Audio request invalid: ".concat(JSON.stringify(options)));
+        }
         return null;
       }
       var slots = rawSlots.map(function (slot) {
@@ -33807,7 +33843,13 @@ var AudioMixer = /*#__PURE__*/function () {
         return a - b;
       });
       if (slots.length === 0) {
+        if (this._logger) {
+          this._logger.warn("Audio request empty after normalization: ".concat(JSON.stringify(options)));
+        }
         return null;
+      }
+      if (this._logger) {
+        this._logger.debug("Audio request normalized: slots=".concat(slots.join(',')));
       }
       return {
         type: 'slots',
@@ -33903,6 +33945,9 @@ var AudioMixer = /*#__PURE__*/function () {
           }
         };
         this._audioBuses.set(key, bus);
+        if (this._logger) {
+          this._logger.debug("Audio bus created: key=".concat(key, " slots=").concat(slots.join(',')));
+        }
       }
       return bus;
     }
@@ -34024,6 +34069,9 @@ var AudioMixer = /*#__PURE__*/function () {
       if (!bus) {
         return;
       }
+      if (this._logger) {
+        this._logger.debug("Disconnecting audio bus: key=".concat(bus.key));
+      }
       bus.connections.forEach(function (connection) {
         if (connection.gainNode) {
           _this0._disposeOutputGain(connection.source || null, connection.gainNode, true);
@@ -34058,6 +34106,9 @@ var AudioMixer = /*#__PURE__*/function () {
           readyPromise: null
         };
         this._isolatedSubmixes.set(key, submix);
+        if (this._logger) {
+          this._logger.debug("Isolated submix created: key=".concat(key, " slots=").concat(slots.join(',')));
+        }
       }
       return submix;
     }
@@ -34065,6 +34116,9 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_ensureIsolatedSubmixSystem",
     value: function _ensureIsolatedSubmixSystem(submix) {
       var _this1 = this;
+      if (this._logger && submix) {
+        this._logger.debug("Ensuring isolated submix system: key=".concat(submix.key));
+      }
       if (!submix || this._getDestroyed()) {
         return Promise.resolve(false);
       }
@@ -34126,6 +34180,9 @@ var AudioMixer = /*#__PURE__*/function () {
       if (!submix) {
         return;
       }
+      if (this._logger) {
+        this._logger.debug("Disconnecting isolated submix: key=".concat(submix.key, " closeContext=").concat(closeContext));
+      }
       submix.connections.forEach(function (connection) {
         if (connection.gainNode) {
           _this10._disposeOutputGain(connection.source || null, connection.gainNode, true);
@@ -34156,6 +34213,10 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_refreshIsolatedSubmixConnections",
     value: function _refreshIsolatedSubmixConnections(submix) {
       var _this11 = this;
+      console.warn('aaa: ', submix);
+      if (this._logger && submix) {
+        this._logger.debug("Refreshing isolated submix connections: key=".concat(submix.key));
+      }
       if (!submix || this._getDestroyed()) {
         return Promise.resolve(null);
       }
@@ -34250,6 +34311,9 @@ var AudioMixer = /*#__PURE__*/function () {
     key: "_refreshAudioConnections",
     value: function _refreshAudioConnections(bus) {
       var _this12 = this;
+      if (this._logger) {
+        this._logger.debug("Refreshing audio connections: target=".concat(bus ? "bus:".concat(bus.key) : 'default'));
+      }
       if (!this._audioRequested && !bus || this._getDestroyed()) {
         this._updateAudioInfo({
           status: this._getDestroyed() ? 'stopped' : 'not-requested',
@@ -34367,6 +34431,9 @@ var AudioMixer = /*#__PURE__*/function () {
         }
       }
       try {
+        if (this._logger) {
+          this._logger.debug("Connecting audio source: id=".concat(source.id, " target=").concat(bus ? "bus:".concat(bus.key) : 'default'));
+        }
         if (bus && bus.connections.has(source.id)) {
           this._syncSourceOutputGains(source);
           return true;
@@ -34441,6 +34508,9 @@ var AudioMixer = /*#__PURE__*/function () {
         connectedSources: this._countConnectedSources(),
         outputTracks: this._audioDestination ? this._audioDestination.stream.getAudioTracks().length : 0
       }, info || {});
+      if (info && this._logger) {
+        this._logger.debug("Audio info updated: ".concat(JSON.stringify(this._audioInfo)));
+      }
     }
   }, {
     key: "_countConnectedSources",
@@ -34604,6 +34674,10 @@ var LayoutEngine = /*#__PURE__*/function () {
     this._prepareCanvas = options.prepareCanvas;
     this._resizeRenderer = options.resizeRenderer;
     this._createWatermarkItems = options.createWatermarkItems;
+    this._logger = options.logger || null;
+    if (this._logger) {
+      this._logger.debug('LayoutEngine constructed');
+    }
   }
 
   /**
@@ -34656,6 +34730,9 @@ var LayoutEngine = /*#__PURE__*/function () {
       if (watermarks) {
         payload.sourceWatermarks = watermarks.sourceWatermarks || [];
         payload.outputWatermarks = watermarks.outputWatermarks || [];
+      }
+      if (this._logger) {
+        this._logger.debug("Render payload created: size=".concat(payload.width, "x").concat(payload.height, " items=").concat(items.length, " sourceWatermarks=").concat(payload.sourceWatermarks.length, " outputWatermarks=").concat(payload.outputWatermarks.length));
       }
       return payload;
     }
@@ -34725,10 +34802,14 @@ var LayoutEngine = /*#__PURE__*/function () {
         cols = Math.ceil(Math.sqrt(count));
         rows = Math.ceil(count / cols);
       }
-      return {
+      var layout = {
         cols: cols,
         rows: rows
       };
+      if (this._logger) {
+        this._logger.debug("Layout calculated: count=".concat(count, " cols=").concat(cols, " rows=").concat(rows, " portrait=").concat(isPortrait));
+      }
+      return layout;
     }
 
     /**
@@ -34810,6 +34891,9 @@ function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == 
  * @module MixerConfig
  */
 
+var Logger = require('../Logger');
+var logger = new Logger('MixerConfig');
+
 /** 合法的渲染后端模式集合 */
 var VALID_RENDER_MODES = {
   auto: true,
@@ -34841,7 +34925,7 @@ var VALID_RENDER_MODES = {
  */
 exports.create = function (options) {
   options = options || {};
-  return {
+  var config = {
     width: exports.normalizePositiveInteger(options.width, 1280),
     height: exports.normalizePositiveInteger(options.height, 720),
     fps: exports.normalizePositiveInteger(options.fps, 15),
@@ -34854,6 +34938,8 @@ exports.create = function (options) {
     preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
     watermarks: options.watermarks || []
   };
+  logger.debug("Config created: ".concat(JSON.stringify(config)));
+  return config;
 };
 
 /**
@@ -34868,6 +34954,7 @@ exports.normalizeRenderMode = function (value, fallback) {
   if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
     return value;
   }
+  logger.debug("normalizeRenderMode fallback: value=".concat(value, " fallback=").concat(fallback || 'auto'));
   return fallback || 'auto';
 };
 
@@ -34884,6 +34971,7 @@ exports.normalizePositiveInteger = function (value, fallback) {
   if (Number.isFinite(numberValue) && numberValue > 0) {
     return Math.floor(numberValue);
   }
+  logger.debug("normalizePositiveInteger fallback: value=".concat(value, " fallback=").concat(fallback));
   return fallback;
 };
 
@@ -34898,6 +34986,7 @@ exports.normalizePositiveInteger = function (value, fallback) {
 exports.normalizeSlot = function (value, index) {
   var numberValue = Number(value);
   if (!Number.isFinite(numberValue)) {
+    logger.debug("normalizeSlot invalid: value=".concat(value, " index=").concat(index));
     return null;
   }
   return Math.max(0, Math.floor(numberValue)) + index;
@@ -34916,6 +35005,7 @@ exports.normalizeGain = function (value, fallback) {
   if (Number.isFinite(numberValue) && numberValue >= 0) {
     return numberValue;
   }
+  logger.debug("normalizeGain fallback: value=".concat(value, " fallback=").concat(fallback));
   return fallback;
 };
 
@@ -34942,9 +35032,10 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
       options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
     }
   }
+  logger.debug("normalizeSourceOptions: index=".concat(index, " options=").concat(JSON.stringify(options)));
   return options;
 };
-},{}],75:[function(require,module,exports){
+},{"../Logger":39}],75:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -35225,6 +35316,7 @@ module.exports = /*#__PURE__*/function () {
       sourceRegistry: this._sourceRegistry,
       canvas: this._canvas,
       config: this._config,
+      logger: logger,
       prepareCanvas: this._prepareCanvas.bind(this),
       resizeRenderer: this._resizeRenderer.bind(this),
       createWatermarkItems: function createWatermarkItems(payload) {
@@ -35233,6 +35325,7 @@ module.exports = /*#__PURE__*/function () {
     });
     this._prepareCanvas();
     this._watermarkManager.setWatermarks(this._config.watermarks).then(function () {
+      logger.debug("Initial watermarks ready: count=".concat(_this._config.watermarks ? _this._config.watermarks.length : 0));
       if (!_this._destroyed) {
         _this._drawVideosToCanvas(undefined, true);
       }
@@ -35324,6 +35417,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_prepareCanvas",
     value: function _prepareCanvas() {
+      logger.debug('Preparing mixer canvas');
       this._domAdapter.prepareCanvas(this._canvas);
     }
 
@@ -35338,6 +35432,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_ensureRenderer",
     value: function _ensureRenderer() {
+      logger.debug('Ensuring mixer renderer');
       var renderer = this._renderLoop.ensureRenderer();
       return renderer;
     }
@@ -35351,6 +35446,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_resizeRenderer",
     value: function _resizeRenderer(width, height) {
+      logger.debug("Resizing renderer: ".concat(width, "x").concat(height));
       this._renderLoop.resizeRenderer(width, height);
     }
 
@@ -35366,6 +35462,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_fallbackRendererToMain2D",
     value: function _fallbackRendererToMain2D(reason) {
+      logger.warn("Fallback to main-2d requested: ".concat(reason));
       var fallbacked = this._renderLoop.fallbackRendererToMain2D(reason);
       return fallbacked;
     }
@@ -35401,6 +35498,9 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_removeSource",
     value: function _removeSource(source) {
+      if (source) {
+        logger.debug("Removing mixer source: id=".concat(source.id, " slot=").concat(source.slot));
+      }
       var removed = this._sourceRegistry.remove(source);
       return removed;
     }
@@ -35526,6 +35626,9 @@ module.exports = /*#__PURE__*/function () {
     key: "_drawVideosToCanvas",
     value: function _drawVideosToCanvas(timestamp) {
       var forceRender = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+      if (forceRender) {
+        logger.debug('Force rendering mixer frame');
+      }
       this._renderLoop.renderFrame(timestamp, forceRender);
     }
 
@@ -35543,6 +35646,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_mediaStreamToVideoElement",
     value: function _mediaStreamToVideoElement(mediaStream) {
+      logger.debug('Creating internal video element from media stream');
       return this._domAdapter.createVideoElement(mediaStream);
     }
 
@@ -35556,6 +35660,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_scheduleAudioRefresh",
     value: function _scheduleAudioRefresh() {
+      logger.debug('Scheduling mixer audio refresh');
       this._audioMixer.scheduleRefresh();
     }
 
@@ -35565,6 +35670,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_syncExternalSourceAudio",
     value: function _syncExternalSourceAudio() {
+      logger.debug('Syncing external source audio');
       this._audioMixer.syncExternalSourceAudio();
     }
 
@@ -35580,6 +35686,9 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_disconnectAudio",
     value: function _disconnectAudio(source) {
+      if (source) {
+        logger.debug("Disconnecting mixer audio: id=".concat(source.id));
+      }
       this._audioMixer.disconnectSource(source);
     }
 
@@ -35592,6 +35701,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_ensureMixedStreamAudioTrack",
     value: function _ensureMixedStreamAudioTrack(audioStream) {
+      logger.debug('Ensuring mixed stream audio track');
       this._outputStreamManager.ensureMixedStreamAudioTrack(audioStream || this._audioDestination && this._audioDestination.stream);
     }
 
@@ -35604,6 +35714,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "_addAudioTracksToStream",
     value: function _addAudioTracksToStream(targetStream, audioStream) {
+      logger.debug('Adding audio tracks to mixed output stream');
       this._outputStreamManager.addAudioTracksToStream(targetStream, audioStream);
     }
 
@@ -35656,7 +35767,7 @@ module.exports = /*#__PURE__*/function () {
     key: "appendStream",
     value: function appendStream(videos, optionsOrSlot) {
       var _this2 = this;
-      logger.debug('appendStream');
+      logger.debug("appendStream: count=".concat(videos instanceof Array ? videos.length : 1));
       this._assertNotDestroyed('appendStream()');
       if (!videos) {
         throw new TypeError('First parameter is required.');
@@ -35692,7 +35803,7 @@ module.exports = /*#__PURE__*/function () {
   }, {
     key: "removeStream",
     value: function removeStream(streamOrId) {
-      logger.debug('removeStream');
+      logger.debug("removeStream: ".concat(typeof streamOrId === 'string' ? streamOrId : '[object]'));
       this._assertNotDestroyed('removeStream()');
       return this._removeSource(this._findSource(streamOrId));
     }
@@ -35705,7 +35816,7 @@ module.exports = /*#__PURE__*/function () {
     key: "clearStreams",
     value: function clearStreams() {
       var _this3 = this;
-      logger.debug('clearStreams');
+      logger.debug("clearStreams: count=".concat(this._sources.length));
       var sources = this._sources.slice();
       sources.forEach(function (source) {
         _this3._removeSource(source);
@@ -35723,6 +35834,7 @@ module.exports = /*#__PURE__*/function () {
     key: "getSources",
     value: function getSources() {
       this._assertNotDestroyed('getSources()');
+      logger.debug("getSources(): count=".concat(this._sources.length));
       return this._sourceRegistry.getSnapshot();
     }
 
@@ -35763,6 +35875,7 @@ module.exports = /*#__PURE__*/function () {
     value: function setWatermarks(watermarks) {
       var _this4 = this;
       this._assertNotDestroyed('setWatermarks()');
+      logger.debug("setWatermarks(): count=".concat(watermarks instanceof Array ? watermarks.length : watermarks ? 1 : 0));
       return this._watermarkManager.setWatermarks(watermarks).then(function (snapshot) {
         _this4._drawVideosToCanvas(undefined, true);
         return snapshot;
@@ -35778,6 +35891,7 @@ module.exports = /*#__PURE__*/function () {
     key: "clearWatermarks",
     value: function clearWatermarks(filter) {
       this._assertNotDestroyed('clearWatermarks()');
+      logger.debug("clearWatermarks(): filter=".concat(JSON.stringify(filter || null)));
       this._watermarkManager.clearWatermarks(filter);
       this._drawVideosToCanvas(undefined, true);
     }
@@ -35791,6 +35905,7 @@ module.exports = /*#__PURE__*/function () {
     key: "getWatermarks",
     value: function getWatermarks() {
       this._assertNotDestroyed('getWatermarks()');
+      logger.debug('getWatermarks()');
       return this._watermarkManager.getWatermarks();
     }
 
@@ -35823,6 +35938,7 @@ module.exports = /*#__PURE__*/function () {
               return this.getAudioStream();
             case 1:
               mixedAudioStream = _context.v;
+              logger.debug("getMixedStream() audio resolved: tracks=".concat(mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0));
               this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
               return _context.a(2, mixedVideoStream);
           }
@@ -35855,6 +35971,7 @@ module.exports = /*#__PURE__*/function () {
         _this5._renderLoop.resetFrameTiming();
         _this5._drawVideosToCanvas(undefined, true);
       });
+      logger.debug("getVideoStream() created: tracks=".concat(videoStream.getVideoTracks().length));
       return videoStream;
     }
 
@@ -35872,7 +35989,7 @@ module.exports = /*#__PURE__*/function () {
         return _regenerator().w(function (_context2) {
           while (1) switch (_context2.n) {
             case 0:
-              logger.debug('getAudioStream()');
+              logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
               this._assertNotDestroyed('getAudioStream()');
               _context2.n = 1;
               return this._audioMixer.getAudioStream(options);
@@ -35903,7 +36020,7 @@ module.exports = /*#__PURE__*/function () {
         return _regenerator().w(function (_context3) {
           while (1) switch (_context3.n) {
             case 0:
-              logger.debug('getIsolatedSubmixAudioStream()');
+              logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
               this._assertNotDestroyed('getIsolatedSubmixAudioStream()');
               _context3.n = 1;
               return this._audioMixer.getIsolatedSubmixAudioStream(options);
@@ -36048,6 +36165,9 @@ var MixerDomAdapter = /*#__PURE__*/function () {
     options = options || {};
     this._config = options.config;
     this._logger = options.logger;
+    if (this._logger) {
+      this._logger.debug('MixerDomAdapter constructed');
+    }
   }
 
   /**
@@ -36061,6 +36181,9 @@ var MixerDomAdapter = /*#__PURE__*/function () {
     value: function createCanvas() {
       var canvas = document.createElement('canvas');
       canvas.setAttribute('style', 'display:none');
+      if (this._logger) {
+        this._logger.debug('Hidden mixer canvas created');
+      }
       return canvas;
     }
 
@@ -36075,13 +36198,19 @@ var MixerDomAdapter = /*#__PURE__*/function () {
     value: function prepareCanvas(canvas) {
       var width = this._config.width || 1280;
       var height = this._config.height || 720;
+      var resized = false;
 
       // canvas width/height 设置时会清空画布，只在尺寸变化时才写
       if (canvas.width !== width) {
         canvas.width = width;
+        resized = true;
       }
       if (canvas.height !== height) {
         canvas.height = height;
+        resized = true;
+      }
+      if (resized && this._logger) {
+        this._logger.debug("Canvas prepared: ".concat(width, "x").concat(height));
       }
     }
 
@@ -36102,6 +36231,11 @@ var MixerDomAdapter = /*#__PURE__*/function () {
       video.autoplay = true;
       video.setAttribute('playsinline', '');
       video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
+      if (this._logger) {
+        var stream = video.srcObject;
+        var streamId = stream && stream.id ? stream.id : 'unknown';
+        this._logger.debug("Video element created for stream ".concat(streamId));
+      }
       video.play()["catch"](function (error) {
         var stream = video.srcObject;
         var streamId = stream && stream.id ? stream.id : 'unknown';
@@ -36156,6 +36290,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
 
     /** @type {MediaStream|null} 输出视频流（仅含视频轨） */
     this._videoStream = null;
+    if (this._logger) {
+      this._logger.debug('OutputStreamManager constructed');
+    }
   }
 
   /**
@@ -36185,6 +36322,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
     value: function getVideoStream(drawFirstFrame) {
       var _this = this;
       if (this.hasLiveVideoStream()) {
+        if (this._logger) {
+          this._logger.debug('Reusing existing live video stream');
+        }
         return this._videoStream;
       }
       drawFirstFrame();
@@ -36200,6 +36340,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
       this._capturedStream = capturedStream;
       this._videoStream = videoStream;
       this._capturedStreams.push(capturedStream);
+      if (this._logger) {
+        this._logger.debug("Created new video stream: tracks=".concat(videoStream.getVideoTracks().length));
+      }
       return this._videoStream;
     }
 
@@ -36212,6 +36355,10 @@ var OutputStreamManager = /*#__PURE__*/function () {
     key: "setMixedStream",
     value: function setMixedStream(stream) {
       this._mixedStream = stream;
+      if (this._logger) {
+        var trackCount = stream && stream.getTracks ? stream.getTracks().length : 0;
+        this._logger.debug("Mixed stream set: tracks=".concat(trackCount));
+      }
     }
 
     /**
@@ -36223,6 +36370,7 @@ var OutputStreamManager = /*#__PURE__*/function () {
   }, {
     key: "addAudioTracksToStream",
     value: function addAudioTracksToStream(targetStream, audioStream) {
+      var _this2 = this;
       if (!targetStream || !audioStream) {
         return;
       }
@@ -36231,6 +36379,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
           return item.id === track.id;
         })) {
           targetStream.addTrack(track);
+          if (_this2._logger) {
+            _this2._logger.debug("Audio track added to target stream: ".concat(track.id));
+          }
         }
       });
     }
@@ -36247,12 +36398,15 @@ var OutputStreamManager = /*#__PURE__*/function () {
   }, {
     key: "ensureMixedStreamAudioTrack",
     value: function ensureMixedStreamAudioTrack(audioStream) {
-      var _this2 = this;
+      var _this3 = this;
       if (!this._mixedStream || !audioStream || this._mixedStream.getAudioTracks().length > 0) {
         return;
       }
       audioStream.getAudioTracks().forEach(function (track) {
-        _this2._mixedStream.addTrack(track);
+        _this3._mixedStream.addTrack(track);
+        if (_this3._logger) {
+          _this3._logger.debug("Mixed stream audio track injected: ".concat(track.id));
+        }
       });
     }
 
@@ -36268,6 +36422,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
   }, {
     key: "stop",
     value: function stop() {
+      if (this._logger) {
+        this._logger.debug("Stopping output streams: captured=".concat(this._capturedStreams.length));
+      }
       this._mixedStream = null;
       this._videoStream = null;
       this._capturedStream = null;
@@ -36278,6 +36435,9 @@ var OutputStreamManager = /*#__PURE__*/function () {
       });
       this._capturedStreams = [];
       this._canvas.stream = null;
+      if (this._logger) {
+        this._logger.debug('Output streams stopped');
+      }
     }
   }, {
     key: "mixedStream",
@@ -36372,6 +36532,9 @@ var RenderLoop = /*#__PURE__*/function () {
 
     // bind 一次避免每帧创建新函数
     this._boundRenderFrame = this.renderFrame.bind(this);
+    if (this._logger) {
+      this._logger.debug("RenderLoop constructed: fps=".concat(this._config.fps || 0, " renderMode=").concat(this._config.renderMode));
+    }
   }
 
   /**
@@ -36381,6 +36544,9 @@ var RenderLoop = /*#__PURE__*/function () {
     key: "resume",
     value: function resume() {
       this._stopped = false;
+      if (this._logger) {
+        this._logger.debug('RenderLoop resumed');
+      }
     }
 
     /**
@@ -36390,6 +36556,9 @@ var RenderLoop = /*#__PURE__*/function () {
   }, {
     key: "start",
     value: function start() {
+      if (this._logger) {
+        this._logger.debug('RenderLoop start requested');
+      }
       this.resume();
       this._scheduleNextFrame();
     }
@@ -36402,6 +36571,9 @@ var RenderLoop = /*#__PURE__*/function () {
     key: "stop",
     value: function stop() {
       this._stopped = true;
+      if (this._logger) {
+        this._logger.debug('RenderLoop stopped');
+      }
       if (this._animationId) {
         window.cancelAnimationFrame(this._animationId);
         this._animationId = null;
@@ -36417,6 +36589,9 @@ var RenderLoop = /*#__PURE__*/function () {
     key: "resetFrameTiming",
     value: function resetFrameTiming() {
       this._lastRenderTime = 0;
+      if (this._logger) {
+        this._logger.debug('RenderLoop frame timing reset');
+      }
     }
 
     /**
@@ -36430,6 +36605,9 @@ var RenderLoop = /*#__PURE__*/function () {
     value: function ensureRenderer() {
       var _this = this;
       if (!this._renderer) {
+        if (this._logger) {
+          this._logger.debug("Creating renderer: requestedMode=".concat(this._config.renderMode));
+        }
         this._renderer = RendererFactory.createRenderer(this._canvas, this._config, {
           onWorkerFatalError: function onWorkerFatalError(reason) {
             _this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
@@ -36545,6 +36723,9 @@ var RenderLoop = /*#__PURE__*/function () {
   }, {
     key: "destroy",
     value: function destroy() {
+      if (this._logger) {
+        this._logger.debug('Destroying RenderLoop');
+      }
       this.stop();
       this._lastRenderTime = 0;
       if (this._renderer) {
@@ -36567,6 +36748,9 @@ var RenderLoop = /*#__PURE__*/function () {
   }, {
     key: "fallbackRenderer",
     value: function fallbackRenderer(reason) {
+      if (this._logger) {
+        this._logger.warn("Fallback renderer requested: ".concat(reason));
+      }
       var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
       if (currentInfo.actualMode === 'main-2d') {
         return false;
@@ -36592,6 +36776,9 @@ var RenderLoop = /*#__PURE__*/function () {
   }, {
     key: "fallbackRendererToMain2D",
     value: function fallbackRendererToMain2D(reason, info) {
+      if (this._logger) {
+        this._logger.warn("Falling back to main-2d: ".concat(reason));
+      }
       var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
       if (currentInfo.actualMode === 'main-2d') {
         return false;
@@ -36634,8 +36821,14 @@ var RenderLoop = /*#__PURE__*/function () {
         renderer.init(this._canvas);
         this._renderer = renderer;
         this._rendererErrorCount = 0;
+        if (this._logger) {
+          this._logger.warn("Fallback succeeded: main-webgl2 reason=".concat(reason));
+        }
         return true;
       } catch (error) {
+        if (this._logger) {
+          this._logger.warn("Fallback to main-webgl2 failed: ".concat(error.message || String(error)));
+        }
         return false;
       }
     }
@@ -36663,8 +36856,14 @@ var RenderLoop = /*#__PURE__*/function () {
         renderer.init(this._canvas);
         this._renderer = renderer;
         this._rendererErrorCount = 0;
+        if (this._logger) {
+          this._logger.warn("Fallback succeeded: worker-2d reason=".concat(reason));
+        }
         return true;
       } catch (error) {
+        if (this._logger) {
+          this._logger.warn("Fallback to worker-2d failed: ".concat(error.message || String(error)));
+        }
         return false;
       }
     }
@@ -36827,6 +37026,9 @@ var SourceRegistry = /*#__PURE__*/function () {
 
     /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
     this._sourceSeq = 0;
+    if (this._logger) {
+      this._logger.debug('SourceRegistry constructed');
+    }
   }
 
   /**
@@ -36857,6 +37059,9 @@ var SourceRegistry = /*#__PURE__*/function () {
       }
       this.sources.push(source);
       this._syncVideos();
+      if (this._logger) {
+        this._logger.debug("Source added: id=".concat(source.id, " slot=").concat(source.slot, " gain=").concat(source.gain));
+      }
       return source;
     }
 
@@ -36867,6 +37072,9 @@ var SourceRegistry = /*#__PURE__*/function () {
     key: "clear",
     value: function clear() {
       var _this = this;
+      if (this._logger) {
+        this._logger.debug("Clearing all sources: count=".concat(this.sources.length));
+      }
       this.sources.slice().forEach(function (source) {
         _this.remove(source);
       });
@@ -36915,6 +37123,9 @@ var SourceRegistry = /*#__PURE__*/function () {
       if (!source) {
         return false;
       }
+      if (this._logger) {
+        this._logger.debug("Removing source: id=".concat(source.id, " slot=").concat(source.slot));
+      }
 
       // 先通知外部断开音频连接
       if (this._onBeforeRemove) {
@@ -36936,6 +37147,9 @@ var SourceRegistry = /*#__PURE__*/function () {
       // 通知外部源已移除（渲染器清理、画布清空等）
       if (this._onAfterRemove) {
         this._onAfterRemove(source);
+      }
+      if (this._logger) {
+        this._logger.debug("Source removed: id=".concat(source.id, " remaining=").concat(this.sources.length));
       }
       return true;
     }
@@ -37111,6 +37325,10 @@ var SourceRegistry = /*#__PURE__*/function () {
       if (source.slot === null) {
         source.slot = this._getNextSlot();
       }
+      if (this._logger) {
+        var streamId = stream && stream.id ? stream.id : 'unknown';
+        this._logger.debug("Source created: id=".concat(source.id, " stream=").concat(streamId, " slot=").concat(source.slot, " ownedVideo=").concat(ownedVideo));
+      }
       return source;
     }
 
@@ -37170,6 +37388,9 @@ var SourceRegistry = /*#__PURE__*/function () {
       this.sources.forEach(function (source) {
         _this5.videos.push(source.video);
       });
+      if (this._logger) {
+        this._logger.debug("Videos synced: sources=".concat(this.sources.length, " videos=").concat(this.videos.length));
+      }
     }
   }]);
 }();
@@ -37209,6 +37430,9 @@ var WatermarkManager = /*#__PURE__*/function () {
     this._logger = options.logger;
     this._watermarks = [];
     this._seq = 0;
+    if (this._logger) {
+      this._logger.debug('WatermarkManager constructed');
+    }
   }
 
   /**
@@ -37222,6 +37446,9 @@ var WatermarkManager = /*#__PURE__*/function () {
     value: function setWatermarks(watermarks) {
       var _this = this;
       var list = this._normalizeWatermarkList(watermarks);
+      if (this._logger) {
+        this._logger.debug("Setting watermarks: count=".concat(list.length));
+      }
       this._watermarks = list.map(function (watermark) {
         return _this._normalizeWatermark(watermark);
       });
@@ -37242,6 +37469,9 @@ var WatermarkManager = /*#__PURE__*/function () {
     key: "clearWatermarks",
     value: function clearWatermarks(filter) {
       var _this2 = this;
+      if (this._logger) {
+        this._logger.debug("Clearing watermarks: filter=".concat(JSON.stringify(filter || null)));
+      }
       if (!filter) {
         this._watermarks = [];
         return;
@@ -37371,6 +37601,9 @@ var WatermarkManager = /*#__PURE__*/function () {
   }, {
     key: "_prepareWatermark",
     value: function _prepareWatermark(watermark) {
+      if (this._logger) {
+        this._logger.debug("Preparing watermark: id=".concat(watermark.id, " type=").concat(watermark.type, " target=").concat(watermark.target));
+      }
       if (watermark.type === 'image') {
         return this._prepareImageWatermark(watermark);
       }
@@ -37390,6 +37623,9 @@ var WatermarkManager = /*#__PURE__*/function () {
         return Promise.resolve(watermark);
       }
       if (typeof image === 'string') {
+        if (this._logger) {
+          this._logger.debug("Loading watermark image: id=".concat(watermark.id, " url=").concat(image));
+        }
         return this._loadImage(image).then(function (loadedImage) {
           watermark.image = loadedImage;
           watermark.status = 'ready';
@@ -37407,6 +37643,9 @@ var WatermarkManager = /*#__PURE__*/function () {
       watermark.image = image;
       watermark.status = 'ready';
       watermark.reason = '';
+      if (this._logger) {
+        this._logger.debug("Watermark image prepared from element: id=".concat(watermark.id));
+      }
       return Promise.resolve(watermark);
     }
   }, {
