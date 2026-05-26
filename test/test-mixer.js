@@ -1,8 +1,8 @@
 const assert = require('assert');
 const Mixer = require('../lib/Mixer');
-const MixerConfig = require('../lib/mixer-core/MixerConfig');
-const WatermarkManager = require('../lib/mixer-core/WatermarkManager');
-const WorkerRenderer = require('../lib/mixer-renderer/WorkerRenderer');
+const MixerConfig = require('../lib/MixerCore/MixerConfig');
+const WatermarkManager = require('../lib/MixerCore/WatermarkManager');
+const WorkerRenderer = require('../lib/MixerRenderer/WorkerRenderer');
 const vm = require('vm');
 
 let nextTrackId = 1;
@@ -1474,3 +1474,4 @@ if (require.main === module)
     });
   });
 }
+

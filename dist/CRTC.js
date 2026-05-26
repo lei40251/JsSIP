@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265262139
+ * CRTC v1.13.0.20265262224
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3535,11 +3535,11 @@ exports.load = function (dst, src) {
     }
   }
 };
-},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":54,"./URI":60,"./Utils":61}],32:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":71,"./URI":77,"./Utils":78}],32:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210524278 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210524448 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4046,7 +4046,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":53,"./Transactions":57,"./Utils":61}],34:[function(require,module,exports){
+},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":70,"./Transactions":74,"./Utils":78}],34:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -4157,7 +4157,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Constants":32,"../RequestSender":52,"../Transactions":57}],35:[function(require,module,exports){
+},{"../Constants":32,"../RequestSender":69,"../Transactions":74}],35:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -4350,7 +4350,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Logger":39,"./Utils":61}],36:[function(require,module,exports){
+},{"./Logger":39,"./Utils":78}],36:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -16838,7 +16838,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":42,"./URI":60}],38:[function(require,module,exports){
+},{"./NameAddrHeader":59,"./URI":77}],38:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210524278');
+debug('version %s', '1.13.0.405210524448');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,10 +16893,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210524278';
+    return '1.13.0.405210524448';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":93}],39:[function(require,module,exports){
+},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17275,21 +17275,6460 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./URI":60,"./Utils":61,"events":91}],41:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./URI":77,"./Utils":78,"events":91}],41:[function(require,module,exports){
 "use strict";
 
 /**
  * Mixer 模块入口
  *
  * 这是 MediaStreamMixer 的公共入口点。旧代码通过 require('./Mixer') 引用，
- * 实际实现已拆分到 mixer-core/MixerController.js。
+ * 实际实现已拆分到 MixerCore/MixerController.js。
  * 此文件保留为 barrel 文件，确保向后兼容。
  *
  * @module Mixer
- * @see module:mixer-core/MixerController
+ * @see module:MixerCore/MixerController
  */
-module.exports = require('./mixer-core/MixerController');
-},{"./mixer-core/MixerController":75}],42:[function(require,module,exports){
+module.exports = require('./MixerCore/MixerController');
+},{"./MixerCore/MixerController":45}],42:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * AudioMixer — WebAudio 混音模块
+ *
+ * 负责混流器的音频处理部分：
+ *   - 延迟创建 AudioContext（用户交互后才初始化）
+ *   - 每路输入源独立 GainNode 控制音量
+ *   - 汇总到 MediaStreamAudioDestinationNode 输出
+ *   - 支持动态增删源、外部换源检测、自动重连
+ *
+ * @module AudioMixer
+ */
+var AudioMixer = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   * @param {Function} options.getDestroyed - 返回混流器是否已销毁的回调
+   * @param {Object} options.sourceRegistry - SourceRegistry 实例
+   * @param {Function} options.onAudioTrackAvailable - 音频轨可用时的回调（用于补充到 mixed stream）
+   */
+  function AudioMixer(options) {
+    _classCallCheck(this, AudioMixer);
+    options = options || {};
+    this._logger = options.logger;
+    this._getDestroyed = options.getDestroyed;
+    this._sourceRegistry = options.sourceRegistry;
+    this._onAudioTrackAvailable = options.onAudioTrackAvailable;
+
+    /** @type {Set<MediaStreamAudioSourceNode>} 已连接的 WebAudio 源节点集合 */
+    this._audioSources = new Set();
+
+    /** @type {MediaStreamAudioDestinationNode|null} 混音输出目标节点 */
+    this._audioDestination = null;
+
+    /** @type {Map<string,Object>} 按 slot 组合创建的子混音 bus */
+    this._audioBuses = new Map();
+
+    /** @type {Map<string,Object>} 按 slot 组合创建的独立 AudioContext 子混音 */
+    this._isolatedSubmixes = new Map();
+
+    /** @type {AudioContext|null} WebAudio 上下文（延迟创建） */
+    this._audioContext = null;
+
+    /** @type {boolean} 是否已请求获取音频流 */
+    this._audioRequested = false;
+
+    /** @type {boolean} 是否已请求默认全量音频流 */
+    this._defaultAudioRequested = false;
+
+    /** @type {Promise|null} 正在进行的音频刷新操作 */
+    this._audioRefreshPromise = null;
+
+    /** @type {boolean} 是否已有排队等待的批量刷新 */
+    this._audioRefreshScheduled = false;
+
+    /** @type {boolean} 刷新过程中又有新的刷新请求标记 */
+    this._audioRefreshPending = false;
+
+    /** @type {Promise<boolean>|null} 音频系统初始化锁，避免并发创建多个 AudioContext */
+    this._audioSystemReadyPromise = null;
+
+    /** @type {Object} 音频系统状态信息（调试用） */
+    this._audioInfo = {
+      requested: false,
+      status: 'not-requested',
+      contextState: null,
+      sourceCount: 0,
+      liveSourceCount: 0,
+      connectedSources: 0,
+      outputTracks: 0,
+      reason: '',
+      lastError: ''
+    };
+    if (this._logger) {
+      this._logger.debug('AudioMixer constructed');
+    }
+  }
+
+  /**
+   * 获取混合后的音频流。
+   * 初始化 AudioContext（延迟创建），连接所有源的音频到 destination。
+   *
+   * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
+   */
+  return _createClass(AudioMixer, [{
+    key: "getAudioStream",
+    value: function getAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
+      var request = this._normalizeAudioRequest(options);
+      if (!request) {
+        if (this._logger) {
+          this._logger.warn('getAudioStream() ignored: invalid request');
+        }
+        return Promise.resolve(null);
+      }
+      this._audioRequested = true;
+      this._updateAudioInfo({
+        status: 'requested',
+        reason: ''
+      });
+
+      // 显式要求 isolated 时，slot 子混音走独立 AudioContext。
+      // 为贴近旧实现并规避 Android 浏览器上的 clone 兼容问题：
+      // 1) 每次调用都重建该 key 的 isolated 子混音上下文与 destination
+      // 2) 连接时直接使用原始 stream，不 clone track
+      if (request.type === 'slots' && options && options.isolated === true) {
+        var existing = this._isolatedSubmixes.get(request.key);
+        if (existing) {
+          this._disconnectIsolatedSubmix(existing, true);
+          this._isolatedSubmixes["delete"](request.key);
+        }
+        var isolatedSubmix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
+        isolatedSubmix.requested = true;
+        return this._refreshIsolatedSubmixConnections(isolatedSubmix);
+      }
+      if (request.type === 'default') {
+        this._defaultAudioRequested = true;
+        return this._refreshAudioConnections();
+      }
+      var bus = this._getOrCreateAudioBus(request.key, request.slots);
+      bus.requested = true;
+      return this._refreshAudioConnections(bus);
+    }
+
+    /**
+     * 获取独立 AudioContext 的子混音音频流。
+     * 每个 slot 组合都会创建并复用自己的 AudioContext 与 destination。
+     *
+     * @param {Object|Array<number>} options - { slots: number[] } 或 slots 数组
+     * @returns {Promise<MediaStream|null>} 子混音音频流；参数无效时返回 null
+     */
+  }, {
+    key: "getIsolatedSubmixAudioStream",
+    value: function getIsolatedSubmixAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
+      var request = this._normalizeAudioRequest(options);
+      if (!request || request.type !== 'slots') {
+        return Promise.resolve(null);
+      }
+      this._audioRequested = true;
+      this._updateAudioInfo({
+        requested: true,
+        status: 'requested',
+        reason: ''
+      });
+      var submix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
+      submix.requested = true;
+      return this._refreshIsolatedSubmixConnections(submix);
+    }
+
+    /**
+     * 释放指定 slots 的子混音请求与连接。
+     * 用于上层在切换子混音组合时主动回收旧链路，避免长期占用音频资源。
+     *
+     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
+     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
+     */
+  }, {
+    key: "releaseSubmixAudioStream",
+    value: function releaseSubmixAudioStream(options) {
+      if (this._logger) {
+        this._logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      }
+      var request = this._normalizeAudioRequest(options);
+      if (!request || request.type !== 'slots') {
+        return false;
+      }
+      if (options && options.isolated === true) {
+        var submix = this._isolatedSubmixes.get(request.key);
+        if (!submix) {
+          return false;
+        }
+        submix.requested = false;
+        this._disconnectIsolatedSubmix(submix, true);
+        this._isolatedSubmixes["delete"](request.key);
+        this._refreshRequestedState();
+        return true;
+      }
+      var bus = this._audioBuses.get(request.key);
+      if (!bus) {
+        return false;
+      }
+      bus.requested = false;
+      this._disconnectAudioBus(bus);
+      this._audioBuses["delete"](request.key);
+      this._refreshRequestedState();
+      return true;
+    }
+
+    /**
+     * 计划一次异步音频刷新。
+     * 适用于不能直接 await 的路径（如 appendStream 循环内）。
+     * 如果已有正在进行的刷新，标记 pending 并在完成后自动重刷。
+     */
+  }, {
+    key: "scheduleRefresh",
+    value: function scheduleRefresh() {
+      var _this = this;
+      if (this._logger) {
+        this._logger.debug("scheduleRefresh(): requested=".concat(this._audioRequested, " destroyed=").concat(this._getDestroyed()));
+      }
+      if (!this._audioRequested || this._getDestroyed()) {
+        return;
+      }
+      if (this._audioRefreshScheduled) {
+        this._audioRefreshPending = true;
+        return;
+      }
+      this._audioRefreshScheduled = true;
+      this._queueAudioRefresh(function () {
+        _this._audioRefreshScheduled = false;
+        _this._runScheduledRefresh();
+      });
+    }
+  }, {
+    key: "_runScheduledRefresh",
+    value: function _runScheduledRefresh() {
+      var _this2 = this;
+      if (this._logger) {
+        this._logger.debug('Running scheduled audio refresh');
+      }
+      if (!this._audioRequested || this._getDestroyed()) {
+        this._audioRefreshPending = false;
+        return;
+      }
+      if (this._audioRefreshPromise) {
+        this._audioRefreshPending = true;
+        return;
+      }
+      this._audioRefreshPromise = this._refreshRequestedAudioConnections()["catch"](function (error) {
+        _this2._logger.warn("Failed to refresh mixed audio: ".concat(error.message || String(error)));
+        _this2._updateAudioInfo({
+          status: 'failed',
+          reason: 'Failed to refresh mixed audio',
+          lastError: error.message || String(error)
+        });
+      }).then(function (stream) {
+        var needsAnotherRefresh = _this2._audioRefreshPending;
+        _this2._audioRefreshPromise = null;
+        _this2._audioRefreshPending = false;
+        if (needsAnotherRefresh) {
+          _this2.scheduleRefresh();
+        }
+        return stream || null;
+      });
+    }
+
+    /**
+     * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
+     *
+     * 遍历所有源，检查 stream 引用是否变化。如果发现换源：
+     *   - 已有音频连接的源：断开旧连接，标记需要刷新
+     *   - 新出现音频轨的源：标记需要刷新
+     */
+  }, {
+    key: "syncExternalSourceAudio",
+    value: function syncExternalSourceAudio() {
+      var _this3 = this;
+      if (!this._audioRequested && !this._audioContext) {
+        return;
+      }
+      var needsRefresh = false;
+      this._sourceRegistry.sources.forEach(function (source) {
+        var previousStream = source.stream;
+        var currentStream = _this3._sourceRegistry.getStream(source);
+        var previousSignature = source.audioTrackSignature;
+        var currentSignature = _this3._getAudioTrackSignature(currentStream);
+
+        // 已有音频连接但音频轨真正变化了，断开旧连接
+        if (source.audioSourceNode && !_this3._isSameAudioTrackSignature(previousSignature, currentSignature)) {
+          _this3.disconnectSource(source);
+          needsRefresh = true;
+          return;
+        }
+
+        // stream 引用变化但音频轨不变时无需重建 source；只有新增音轨才刷新连接。
+        if (currentStream && currentStream !== previousStream && _this3._sourceRegistry.hasLiveAudioTrack(source) && !source.audioSourceNode) {
+          needsRefresh = true;
+        }
+      });
+      if (needsRefresh) {
+        if (this._logger) {
+          this._logger.debug('External source audio changed, scheduling refresh');
+        }
+        this.scheduleRefresh();
+      }
+    }
+
+    /**
+     * 断开一路源的音频连接，释放 WebAudio 节点。
+     *
+     * 调用场景：
+     *   - removeStream() 移除源时
+     *   - appendStream() 同 slot 覆盖时
+     *   - 外部 HTMLVideoElement 换源检测触发时
+     *
+     * @param {Object} source - 内部 source 对象
+     */
+  }, {
+    key: "disconnectSource",
+    value: function disconnectSource(source) {
+      if (this._logger && source) {
+        this._logger.debug("Disconnecting audio source: id=".concat(source.id));
+      }
+      this._destroySourceNode(source);
+    }
+  }, {
+    key: "_destroySourceNode",
+    value: function _destroySourceNode(source) {
+      var _this4 = this;
+      var audioSourceNode = source.audioSourceNode;
+      var masterGainNode = source.masterGainNode;
+      this._audioBuses.forEach(function (bus) {
+        return _this4._disconnectBusSource(bus, source);
+      });
+      this._isolatedSubmixes.forEach(function (submix) {
+        return _this4._disconnectIsolatedSubmixSource(submix, source);
+      });
+      if (source.gainNode) {
+        this._disposeOutputGain(source, source.gainNode, true);
+        source.gainNode = null;
+      }
+      source.audioStream = null;
+      source.audioTrackId = null;
+      source.audioTrackSignature = null;
+      if (audioSourceNode) {
+        this._audioSources["delete"](audioSourceNode);
+        this._safeDisconnect(audioSourceNode);
+      }
+      if (masterGainNode) {
+        this._safeDisconnect(masterGainNode);
+      }
+      source.audioSourceNode = null;
+      source.masterGainNode = null;
+      if (source.outputGains) {
+        source.outputGains.clear();
+        source.outputGains = null;
+      }
+    }
+
+    /**
+     * 获取当前音频系统状态快照。
+     * 返回副本，外部修改不影响内部状态。
+     *
+     * @returns {Object} 音频状态信息
+     */
+  }, {
+    key: "getInfo",
+    value: function getInfo() {
+      this._updateAudioInfo();
+      return Object.assign({}, this._audioInfo);
+    }
+
+    /**
+     * 停止音频系统，释放所有资源。
+     *
+     * 清理步骤：
+     *   1. 断开并清空 AudioDestination 节点
+     *   2. 关闭 AudioContext
+     *   3. 清空源节点列表
+     *   4. 重置请求状态
+     */
+  }, {
+    key: "stop",
+    value: function stop() {
+      var _this5 = this;
+      if (this._logger) {
+        this._logger.debug('Stopping AudioMixer');
+      }
+      if (this._audioDestination) {
+        this._safeDisconnect(this._audioDestination);
+        this._audioDestination = null;
+      }
+      this._sourceRegistry.sources.forEach(function (source) {
+        _this5._destroySourceNode(source);
+      });
+      var audioContext = this._audioContext;
+
+      // 先断开引用，防止 stop 后并发路径继续复用旧 context。
+      this._audioContext = null;
+      this._audioSystemReadyPromise = null;
+      if (audioContext) {
+        audioContext.close()["catch"](function (error) {
+          _this5._logger.warn("Failed to close AudioContext: ".concat(error.message || String(error)));
+        });
+      }
+      this._audioSources = new Set();
+      this._audioBuses.forEach(function (bus) {
+        _this5._disconnectAudioBus(bus);
+      });
+      this._audioBuses.clear();
+      this._isolatedSubmixes.forEach(function (submix) {
+        _this5._disconnectIsolatedSubmix(submix, true);
+      });
+      this._isolatedSubmixes.clear();
+      this._audioRequested = false;
+      this._defaultAudioRequested = false;
+      this._audioRefreshPromise = null;
+      this._audioRefreshScheduled = false;
+      this._audioRefreshPending = false;
+      this._audioSystemReadyPromise = null;
+      this._updateAudioInfo({
+        status: 'stopped',
+        reason: 'Mixer stopped'
+      });
+    }
+
+    /**
+     * 确保音频系统已初始化（创建 AudioContext + Destination）。
+     *
+     * 如果浏览器不支持 AudioContext 或恢复失败，Promise resolve false。
+     * AudioContext 在用户交互后自动 resume（浏览器 autoplay 政策）。
+     *
+     * @returns {Promise<boolean>} true=音频系统就绪
+     */
+  }, {
+    key: "_ensureAudioSystem",
+    value: function _ensureAudioSystem(options) {
+      var _this6 = this;
+      options = Object.assign({
+        defaultDestination: true
+      }, options || {});
+      if (this._logger) {
+        this._logger.debug("Ensuring audio system: defaultDestination=".concat(options.defaultDestination));
+      }
+      if (this._getDestroyed()) {
+        return Promise.resolve(false);
+      }
+      if (!this._audioContext) {
+        var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) {
+          this._logger.warn('AudioContext is not available');
+          this._updateAudioInfo({
+            status: 'failed',
+            reason: 'AudioContext is not available',
+            lastError: 'AudioContext is not available'
+          });
+          return Promise.resolve(false);
+        }
+        this._audioContext = this._createAudioContext(AudioContextConstructor);
+      }
+      if (this._audioSystemReadyPromise) {
+        return this._audioSystemReadyPromise;
+      }
+
+      // 浏览器自动暂停时，尝试恢复
+      var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
+      this._audioSystemReadyPromise = resumePromise.then(function () {
+        if (_this6._getDestroyed()) {
+          _this6._audioSystemReadyPromise = null;
+          return false;
+        }
+        if (options.defaultDestination && !_this6._audioDestination) {
+          _this6._audioDestination = _this6._createAudioDestination();
+        }
+        _this6._updateAudioInfo({
+          status: _this6._audioContext.state === 'suspended' ? 'suspended' : 'ready',
+          reason: ''
+        });
+        _this6._audioSystemReadyPromise = null;
+        return true;
+      })["catch"](function (error) {
+        _this6._updateAudioInfo({
+          status: 'failed',
+          reason: 'AudioContext resume failed',
+          lastError: error.message || String(error)
+        });
+        _this6._audioSystemReadyPromise = null;
+        return false;
+      });
+      return this._audioSystemReadyPromise;
+    }
+
+    /**
+     * 归一化 getAudioStream() 参数。
+     * 不传参数时返回默认全量混音；传 slots 时按 slot 组合创建子混音。
+     *
+     * @param {Object|Array<number>} options - getAudioStream 参数
+     * @returns {Object|null} { type:'default' } 或 { type:'slots', key, slots }
+     */
+  }, {
+    key: "_normalizeAudioRequest",
+    value: function _normalizeAudioRequest(options) {
+      if (options === undefined || options === null) {
+        if (this._logger) {
+          this._logger.debug('Audio request normalized to default mix');
+        }
+        return {
+          type: 'default'
+        };
+      }
+      var rawSlots = options instanceof Array ? options : options.slots;
+      if (!(rawSlots instanceof Array)) {
+        if (this._logger) {
+          this._logger.warn("Audio request invalid: ".concat(JSON.stringify(options)));
+        }
+        return null;
+      }
+      var slots = rawSlots.map(function (slot) {
+        return Number(slot);
+      }).filter(function (slot) {
+        return Number.isInteger(slot) && slot >= 0;
+      }).filter(function (slot, index, values) {
+        return values.indexOf(slot) === index;
+      }).sort(function (a, b) {
+        return a - b;
+      });
+      if (slots.length === 0) {
+        if (this._logger) {
+          this._logger.warn("Audio request empty after normalization: ".concat(JSON.stringify(options)));
+        }
+        return null;
+      }
+      if (this._logger) {
+        this._logger.debug("Audio request normalized: slots=".concat(slots.join(',')));
+      }
+      return {
+        type: 'slots',
+        key: slots.join(','),
+        slots: slots
+      };
+    }
+  }, {
+    key: "_queueAudioRefresh",
+    value: function _queueAudioRefresh(callback) {
+      if (typeof setTimeout === 'function') {
+        setTimeout(callback, 0);
+        return;
+      }
+      Promise.resolve().then(callback);
+    }
+  }, {
+    key: "_refreshRequestedState",
+    value: function _refreshRequestedState() {
+      var hasRequestedBus = Array.from(this._audioBuses.values()).some(function (bus) {
+        return bus && bus.requested;
+      });
+      var hasRequestedIsolatedSubmix = Array.from(this._isolatedSubmixes.values()).some(function (submix) {
+        return submix && submix.requested;
+      });
+      this._audioRequested = this._defaultAudioRequested || hasRequestedBus || hasRequestedIsolatedSubmix;
+    }
+  }, {
+    key: "_createAudioContext",
+    value: function _createAudioContext(AudioContextConstructor) {
+      try {
+        return new AudioContextConstructor({
+          sampleRate: 48000
+        });
+      } catch (error) {
+        return new AudioContextConstructor();
+      }
+    }
+  }, {
+    key: "_createAudioDestination",
+    value: function _createAudioDestination() {
+      var destination = this._audioContext.createMediaStreamDestination();
+      return destination;
+    }
+  }, {
+    key: "_isDestinationTrackHealthy",
+    value: function _isDestinationTrackHealthy(destination) {
+      if (!destination || !destination.stream || !destination.stream.getAudioTracks) {
+        return false;
+      }
+      var tracks = destination.stream.getAudioTracks();
+      return tracks.some(function (track) {
+        return track && track.readyState === 'live';
+      });
+    }
+  }, {
+    key: "_ensureBusDestination",
+    value: function _ensureBusDestination(bus) {
+      var _this7 = this;
+      if (!bus) {
+        return null;
+      }
+      if (!bus.destination) {
+        bus.destination = this._createAudioDestination();
+        return bus.destination;
+      }
+      if (!this._isDestinationTrackHealthy(bus.destination)) {
+        var track = bus.destination.stream.getAudioTracks()[0];
+        var ended = track && track.readyState === 'ended';
+        if (ended) {
+          bus.connections.forEach(function (connection) {
+            _this7._disposeOutputGain(connection.source || null, connection.gainNode, true);
+          });
+          bus.connections.clear();
+          this._safeDisconnect(bus.destination);
+          bus.destination = this._createAudioDestination();
+        }
+      }
+      return bus.destination;
+    }
+
+    /**
+     * 获取或创建按 slot 组合输出的音频 bus。
+     *
+     * @param {string} key - 归一化后的 slots key
+     * @param {Array<number>} slots - slot 列表
+     * @returns {Object} bus 对象
+     */
+  }, {
+    key: "_getOrCreateAudioBus",
+    value: function _getOrCreateAudioBus(key, slots) {
+      var bus = this._audioBuses.get(key);
+      if (!bus) {
+        bus = {
+          key: key,
+          slots: slots.slice(),
+          requested: false,
+          destination: null,
+          connections: new Map(),
+          info: {
+            status: 'not-requested',
+            connectedSources: 0,
+            outputTracks: 0
+          }
+        };
+        this._audioBuses.set(key, bus);
+        if (this._logger) {
+          this._logger.debug("Audio bus created: key=".concat(key, " slots=").concat(slots.join(',')));
+        }
+      }
+      return bus;
+    }
+
+    /**
+     * 刷新默认混音和所有已请求的子混音 bus。
+     *
+     * @returns {Promise<MediaStream|null>} 默认混音流或最后一次刷新结果
+     */
+  }, {
+    key: "_refreshRequestedAudioConnections",
+    value: function _refreshRequestedAudioConnections() {
+      var _this8 = this;
+      var chain = Promise.resolve(null);
+      if (this._defaultAudioRequested) {
+        chain = chain.then(function () {
+          return _this8._refreshAudioConnections();
+        });
+      }
+      this._audioBuses.forEach(function (bus) {
+        if (bus.requested) {
+          chain = chain.then(function () {
+            return _this8._refreshAudioConnections(bus);
+          });
+        }
+      });
+      this._isolatedSubmixes.forEach(function (submix) {
+        if (submix.requested) {
+          chain = chain.then(function () {
+            return _this8._refreshIsolatedSubmixConnections(submix);
+          });
+        }
+      });
+      return chain;
+    }
+
+    /**
+     * 获取目标混音应连接的 live 音频源。
+     *
+     * @param {Object|null} bus - 子混音 bus，不传则为默认全量混音
+     * @returns {Array<Object>} source 列表
+     */
+  }, {
+    key: "_getLiveAudioSources",
+    value: function _getLiveAudioSources(bus) {
+      var _this9 = this;
+      return this._sourceRegistry.sources.filter(function (source) {
+        if (bus && bus.slots.indexOf(source.slot) === -1) {
+          return false;
+        }
+        return _this9._sourceRegistry.hasLiveAudioTrack(source);
+      });
+    }
+
+    /**
+     * 返回指定目标当前连接数。
+     *
+     * @param {Object|null} bus - 子混音 bus，不传则为默认全量混音
+     * @returns {number} 连接数
+     */
+  }, {
+    key: "_getTargetConnectionCount",
+    value: function _getTargetConnectionCount(bus) {
+      return bus ? bus.connections.size : this._audioSources.size;
+    }
+
+    /**
+     * 更新默认混音或子混音状态。
+     *
+     * @param {Object|null} bus - 子混音 bus，不传则更新默认音频信息
+     * @param {Object} info - 状态字段
+     */
+  }, {
+    key: "_updateTargetAudioInfo",
+    value: function _updateTargetAudioInfo(bus, info) {
+      if (!bus) {
+        this._updateAudioInfo(info);
+        return;
+      }
+      Object.assign(bus.info, {
+        status: bus.info.status,
+        connectedSources: bus.connections.size,
+        outputTracks: bus.destination ? bus.destination.stream.getAudioTracks().length : 0
+      }, info || {});
+    }
+
+    /**
+     * 断开 source 在指定子混音 bus 上的连接。
+     *
+     * @param {Object} bus - 子混音 bus
+     * @param {Object} source - 内部 source 对象
+     */
+  }, {
+    key: "_disconnectBusSource",
+    value: function _disconnectBusSource(bus, source) {
+      if (!bus || !bus.connections) {
+        return;
+      }
+      var connection = bus.connections.get(source.id);
+      if (!connection) {
+        return;
+      }
+      if (connection.gainNode) {
+        this._disposeOutputGain(source, connection.gainNode, true);
+      }
+      bus.connections["delete"](source.id);
+      this._updateTargetAudioInfo(bus);
+    }
+
+    /**
+     * 断开并释放一个子混音 bus。
+     *
+     * @param {Object} bus - 子混音 bus
+     */
+  }, {
+    key: "_disconnectAudioBus",
+    value: function _disconnectAudioBus(bus) {
+      var _this0 = this;
+      if (!bus) {
+        return;
+      }
+      if (this._logger) {
+        this._logger.debug("Disconnecting audio bus: key=".concat(bus.key));
+      }
+      bus.connections.forEach(function (connection) {
+        if (connection.gainNode) {
+          _this0._disposeOutputGain(connection.source || null, connection.gainNode, true);
+        }
+      });
+      bus.connections.clear();
+      if (bus.destination) {
+        this._safeDisconnect(bus.destination);
+        bus.destination = null;
+      }
+    }
+
+    /**
+     * 获取或创建独立 AudioContext 子混音。
+     *
+     * @param {string} key - 归一化后的 slots key
+     * @param {Array<number>} slots - slot 列表
+     * @returns {Object} 子混音对象
+     */
+  }, {
+    key: "_getOrCreateIsolatedSubmix",
+    value: function _getOrCreateIsolatedSubmix(key, slots) {
+      var submix = this._isolatedSubmixes.get(key);
+      if (!submix) {
+        submix = {
+          key: key,
+          slots: slots.slice(),
+          requested: false,
+          audioContext: null,
+          destination: null,
+          connections: new Map(),
+          readyPromise: null
+        };
+        this._isolatedSubmixes.set(key, submix);
+        if (this._logger) {
+          this._logger.debug("Isolated submix created: key=".concat(key, " slots=").concat(slots.join(',')));
+        }
+      }
+      return submix;
+    }
+  }, {
+    key: "_ensureIsolatedSubmixSystem",
+    value: function _ensureIsolatedSubmixSystem(submix) {
+      var _this1 = this;
+      if (this._logger && submix) {
+        this._logger.debug("Ensuring isolated submix system: key=".concat(submix.key));
+      }
+      if (!submix || this._getDestroyed()) {
+        return Promise.resolve(false);
+      }
+      if (!submix.audioContext) {
+        var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextConstructor) {
+          this._logger.warn('AudioContext is not available');
+          return Promise.resolve(false);
+        }
+        submix.audioContext = this._createAudioContext(AudioContextConstructor);
+      }
+      if (submix.readyPromise) {
+        return submix.readyPromise;
+      }
+      var resumePromise = submix.audioContext.state === 'suspended' ? submix.audioContext.resume() : Promise.resolve();
+      submix.readyPromise = resumePromise.then(function () {
+        if (_this1._getDestroyed()) {
+          submix.readyPromise = null;
+          return false;
+        }
+        if (!submix.destination) {
+          submix.destination = submix.audioContext.createMediaStreamDestination();
+        }
+        submix.readyPromise = null;
+        return true;
+      })["catch"](function () {
+        submix.readyPromise = null;
+        return false;
+      });
+      return submix.readyPromise;
+    }
+  }, {
+    key: "_disconnectIsolatedSubmixSource",
+    value: function _disconnectIsolatedSubmixSource(submix, source) {
+      if (!submix || !submix.connections || !source) {
+        return;
+      }
+      var connection = submix.connections.get(source.id);
+      if (!connection) {
+        return;
+      }
+      if (connection.gainNode) {
+        this._disposeOutputGain(source, connection.gainNode, true);
+      }
+      if (connection.sourceNode) {
+        this._safeDisconnect(connection.sourceNode);
+      }
+      if (connection.ownsClonedTrack && connection.clonedTrack && connection.clonedTrack.stop) {
+        try {
+          connection.clonedTrack.stop();
+        } catch (error) {}
+      }
+      submix.connections["delete"](source.id);
+    }
+  }, {
+    key: "_disconnectIsolatedSubmix",
+    value: function _disconnectIsolatedSubmix(submix, closeContext) {
+      var _this10 = this;
+      if (!submix) {
+        return;
+      }
+      if (this._logger) {
+        this._logger.debug("Disconnecting isolated submix: key=".concat(submix.key, " closeContext=").concat(closeContext));
+      }
+      submix.connections.forEach(function (connection) {
+        if (connection.gainNode) {
+          _this10._disposeOutputGain(connection.source || null, connection.gainNode, true);
+        }
+        if (connection.sourceNode) {
+          _this10._safeDisconnect(connection.sourceNode);
+        }
+        if (connection.ownsClonedTrack && connection.clonedTrack && connection.clonedTrack.stop) {
+          try {
+            connection.clonedTrack.stop();
+          } catch (error) {}
+        }
+      });
+      submix.connections.clear();
+      if (submix.destination) {
+        this._safeDisconnect(submix.destination);
+        submix.destination = null;
+      }
+      if (closeContext && submix.audioContext) {
+        submix.audioContext.close()["catch"](function (error) {
+          _this10._logger.warn("Failed to close isolated AudioContext: ".concat(error.message || String(error)));
+        });
+        submix.audioContext = null;
+        submix.readyPromise = null;
+      }
+    }
+  }, {
+    key: "_refreshIsolatedSubmixConnections",
+    value: function _refreshIsolatedSubmixConnections(submix) {
+      var _this11 = this;
+      if (this._logger && submix) {
+        this._logger.debug("Refreshing isolated submix connections: key=".concat(submix.key));
+      }
+      if (!submix || this._getDestroyed()) {
+        return Promise.resolve(null);
+      }
+      submix.connections.forEach(function (connection, sourceId) {
+        var source = _this11._sourceRegistry.find(sourceId);
+        var stream = source && _this11._sourceRegistry.getStream(source);
+        var signature = _this11._getAudioTrackSignature(stream);
+        var shouldDisconnect = !source || submix.slots.indexOf(source.slot) === -1 || !_this11._sourceRegistry.hasLiveAudioTrack(source) || !_this11._isSameAudioTrackSignature(connection.audioTrackSignature, signature);
+        if (shouldDisconnect) {
+          _this11._disconnectIsolatedSubmixSource(submix, connection.source || source || {
+            id: sourceId
+          });
+        }
+      });
+      return this._ensureIsolatedSubmixSystem(submix).then(function (ready) {
+        if (!ready || !submix.destination || !submix.audioContext) {
+          return null;
+        }
+        if (!_this11._isDestinationTrackHealthy(submix.destination)) {
+          var track = submix.destination.stream.getAudioTracks()[0];
+          var ended = track && track.readyState === 'ended';
+          if (ended) {
+            _this11._disconnectIsolatedSubmix(submix, false);
+            submix.destination = submix.audioContext.createMediaStreamDestination();
+          }
+        }
+        var liveSources = _this11._getLiveAudioSources(submix);
+        liveSources.forEach(function (source) {
+          if (submix.connections.has(source.id)) {
+            _this11._syncSourceOutputGains(source);
+            return;
+          }
+          var stream = _this11._sourceRegistry.getStream(source);
+          var signature = _this11._getAudioTrackSignature(stream);
+          if (!stream || !signature) {
+            return;
+          }
+          try {
+            // Android 某些浏览器上同源 track clone 后用于多路 isolated 子混音会出现静音，
+            // 这里统一回退到旧实现：直接使用原始 stream 建 source。
+            var clonedTrack = null;
+            var clonedStream = stream;
+            var ownsClonedTrack = false;
+            var sourceNode = submix.audioContext.createMediaStreamSource(clonedStream);
+            var gainNode = submix.audioContext.createGain();
+            gainNode.gain.value = source.gain;
+            sourceNode.connect(gainNode);
+            gainNode.connect(submix.destination);
+            _this11._registerOutputGain(source, gainNode);
+            submix.connections.set(source.id, {
+              sourceNode: sourceNode,
+              gainNode: gainNode,
+              source: source,
+              audioTrackSignature: signature,
+              clonedTrack: clonedTrack,
+              clonedStream: clonedStream,
+              ownsClonedTrack: ownsClonedTrack
+            });
+          } catch (error) {
+            _this11._logger.warn("Failed to connect isolated submix source: ".concat(error.message || String(error)));
+          }
+        });
+        return submix.destination.stream;
+      });
+    }
+
+    /**
+     * 刷新所有音频连接。
+     *
+     * 核心流程：
+     *   1. 断开已无音频轨的旧源连接
+     *   2. 如果没有 live 音频源，返回 null
+     *   3. 确保音频系统已初始化
+     *   4. 遍历所有源，为有音频轨且未连接的源建立 WebAudio 连接
+     *
+     * @returns {Promise<MediaStream|null>} audio destination stream，或 null
+     */
+  }, {
+    key: "_refreshAudioConnections",
+    value: function _refreshAudioConnections(bus) {
+      var _this12 = this;
+      if (this._logger) {
+        this._logger.debug("Refreshing audio connections: target=".concat(bus ? "bus:".concat(bus.key) : 'default'));
+      }
+      if (!this._audioRequested && !bus || this._getDestroyed()) {
+        this._updateAudioInfo({
+          status: this._getDestroyed() ? 'stopped' : 'not-requested',
+          reason: this._getDestroyed() ? 'Mixer stopped' : ''
+        });
+        return Promise.resolve(null);
+      }
+
+      // 先清理已无音频轨的旧连接
+      this._sourceRegistry.sources.forEach(function (source) {
+        var stream = _this12._sourceRegistry.getStream(source);
+        var signature = _this12._getAudioTrackSignature(stream);
+        var shouldDestroySource = source.audioSourceNode && (!_this12._sourceRegistry.hasLiveAudioTrack(source) || !_this12._isSameAudioTrackSignature(source.audioTrackSignature, signature));
+        if (shouldDestroySource) {
+          _this12.disconnectSource(source);
+        }
+      });
+      if (bus) {
+        bus.connections.forEach(function (connection, sourceId) {
+          var source = _this12._sourceRegistry.find(sourceId);
+          var stream = source && _this12._sourceRegistry.getStream(source);
+          var signature = _this12._getAudioTrackSignature(stream);
+          var trackChanged = source && !_this12._isSameAudioTrackSignature(source.audioTrackSignature, signature);
+          var shouldDisconnect = !source || bus.slots.indexOf(source.slot) === -1 || !_this12._sourceRegistry.hasLiveAudioTrack(source) || trackChanged;
+          if (shouldDisconnect) {
+            _this12._disconnectBusSource(bus, connection.source || source || {
+              id: sourceId
+            });
+          }
+        });
+      }
+      var liveSourcesBeforeReady = this._getLiveAudioSources(bus);
+
+      // 默认全量混音保持延迟创建：无源时不创建 AudioContext。
+      if (!bus && liveSourcesBeforeReady.length === 0) {
+        this._logger.debug('No live audio sources, skip audio stream creation');
+        this._updateTargetAudioInfo(bus, {
+          status: 'no-source',
+          reason: 'No live audio source'
+        });
+        return Promise.resolve(null);
+      }
+      return this._ensureAudioSystem({
+        defaultDestination: !bus
+      }).then(function (ready) {
+        if (!ready) {
+          _this12._updateAudioInfo({
+            status: _this12._audioInfo.status === 'failed' ? 'failed' : 'not-started',
+            reason: _this12._audioInfo.reason || 'Audio system is not ready'
+          });
+          return null;
+        }
+        if (bus && !bus.destination) {
+          _this12._ensureBusDestination(bus);
+        } else if (bus) {
+          _this12._ensureBusDestination(bus);
+        }
+        var liveSources = _this12._getLiveAudioSources(bus);
+
+        // 子混音 bus 返回稳定的纯音频流；即使当前无源，后续 append 后也复用同一个 destination。
+        if (liveSources.length === 0) {
+          _this12._logger.debug('No live audio sources, skip audio source connection');
+          _this12._updateTargetAudioInfo(bus, {
+            status: 'no-source',
+            reason: 'No live audio source'
+          });
+          return bus ? bus.destination.stream : null;
+        }
+        var connectedSources = liveSources.filter(function (source) {
+          return _this12._connectSource(source, bus);
+        });
+        if (_this12._getTargetConnectionCount(bus) === 0 && connectedSources.length === 0) {
+          _this12._logger.warn('No valid audio sources, skip audio stream creation');
+          _this12._updateTargetAudioInfo(bus, {
+            status: 'failed',
+            reason: 'No audio source connected'
+          });
+          return null;
+        }
+        _this12._updateTargetAudioInfo(bus, {
+          status: _this12._audioContext && _this12._audioContext.state === 'suspended' ? 'suspended' : 'mixing',
+          reason: ''
+        });
+        return bus ? bus.destination.stream : _this12._audioDestination.stream;
+      });
+    }
+
+    /**
+     * 连接一路源的音频到混音输出。
+     *
+     * 流程：createMediaStreamSource → GainNode → destination
+     * 如果源已有音频连接且 stream 未变则跳过；如果 stream 变了则先断开再重连。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=成功连接
+     */
+  }, {
+    key: "_connectSource",
+    value: function _connectSource(source, bus) {
+      var stream = this._sourceRegistry.getStream(source);
+      var signature = this._getAudioTrackSignature(stream);
+      var trackId = signature && signature.id;
+      if (!this._audioContext || !this._sourceRegistry.hasLiveAudioTrack(source)) {
+        return false;
+      }
+      if (!bus && !this._audioDestination) {
+        return false;
+      }
+      if (bus && !bus.destination) {
+        return false;
+      }
+      if (source.audioSourceNode) {
+        if (!this._isSameAudioTrackSignature(source.audioTrackSignature, signature)) {
+          this.disconnectSource(source);
+        }
+      }
+      try {
+        if (this._logger) {
+          this._logger.debug("Connecting audio source: id=".concat(source.id, " target=").concat(bus ? "bus:".concat(bus.key) : 'default'));
+        }
+        if (bus && bus.connections.has(source.id)) {
+          this._syncSourceOutputGains(source);
+          return true;
+        }
+        var audioSourceNode = source.audioSourceNode || this._audioContext.createMediaStreamSource(stream);
+        var masterGainNode = source.masterGainNode || this._audioContext.createGain();
+        var gainNode = this._audioContext.createGain();
+        gainNode.gain.value = source.gain;
+        this._registerOutputGain(source, gainNode);
+        if (!source.audioSourceNode) {
+          source.audioSourceNode = audioSourceNode;
+          source.masterGainNode = masterGainNode;
+          source.audioStream = stream;
+          source.audioTrackId = trackId;
+          source.audioTrackSignature = signature;
+          masterGainNode.gain.value = 1;
+          audioSourceNode.connect(masterGainNode);
+        }
+        if (bus) {
+          masterGainNode.connect(gainNode);
+          gainNode.connect(bus.destination);
+          bus.connections.set(source.id, {
+            audioSourceNode: audioSourceNode,
+            masterGainNode: masterGainNode,
+            gainNode: gainNode,
+            source: source,
+            audioStream: stream,
+            audioTrackId: trackId
+          });
+          return true;
+        }
+        if (source.gainNode) {
+          this._syncSourceOutputGains(source);
+          return false;
+        }
+        masterGainNode.connect(gainNode);
+        gainNode.connect(this._audioDestination);
+        source.gainNode = gainNode;
+        this._audioSources.add(audioSourceNode);
+        if (this._onAudioTrackAvailable) {
+          this._onAudioTrackAvailable(this._audioDestination.stream);
+        }
+        this._logger.debug('audio tracks: ', stream.getAudioTracks().length);
+        return true;
+      } catch (error) {
+        this._logger.warn("Failed to connect audio source: ".concat(error.message));
+        this._updateAudioInfo({
+          status: 'failed',
+          reason: 'Failed to connect audio source',
+          lastError: error.message || String(error)
+        });
+        return false;
+      }
+    }
+
+    /**
+     * 更新音频状态信息（合并更新方式）。
+     *
+     * @param {Object} [info] - 要更新的字段（可选，不传则只同步计数器）
+     */
+  }, {
+    key: "_updateAudioInfo",
+    value: function _updateAudioInfo(info) {
+      var _this13 = this;
+      Object.assign(this._audioInfo, {
+        requested: this._audioRequested,
+        contextState: this._audioContext ? this._audioContext.state : null,
+        sourceCount: this._sourceRegistry.sources.length,
+        liveSourceCount: this._sourceRegistry.sources.filter(function (source) {
+          return _this13._sourceRegistry.hasLiveAudioTrack(source);
+        }).length,
+        connectedSources: this._countConnectedSources(),
+        outputTracks: this._audioDestination ? this._audioDestination.stream.getAudioTracks().length : 0
+      }, info || {});
+      if (info && this._logger) {
+        this._logger.debug("Audio info updated: ".concat(JSON.stringify(this._audioInfo)));
+      }
+    }
+  }, {
+    key: "_countConnectedSources",
+    value: function _countConnectedSources() {
+      var busConnections = 0;
+      var isolatedConnections = 0;
+      this._audioBuses.forEach(function (bus) {
+        busConnections += bus.connections.size;
+      });
+      this._isolatedSubmixes.forEach(function (submix) {
+        isolatedConnections += submix.connections.size;
+      });
+      return this._audioSources.size + busConnections + isolatedConnections;
+    }
+  }, {
+    key: "_registerOutputGain",
+    value: function _registerOutputGain(source, gainNode) {
+      if (!source || !gainNode) {
+        return;
+      }
+      if (!source.outputGains) {
+        source.outputGains = new Set();
+      }
+      source.outputGains.add(gainNode);
+    }
+  }, {
+    key: "_disposeOutputGain",
+    value: function _disposeOutputGain(source, gainNode, disconnect) {
+      if (!gainNode) {
+        return;
+      }
+      try {
+        gainNode.gain.value = 0;
+      } catch (error) {}
+      if (source && source.outputGains) {
+        source.outputGains["delete"](gainNode);
+      }
+      if (disconnect) {
+        this._safeDisconnect(gainNode);
+      }
+    }
+  }, {
+    key: "_syncSourceOutputGains",
+    value: function _syncSourceOutputGains(source) {
+      if (!source || !source.outputGains) {
+        return;
+      }
+      source.outputGains.forEach(function (gainNode) {
+        if (gainNode && gainNode.gain) {
+          gainNode.gain.value = source.gain;
+        }
+      });
+    }
+  }, {
+    key: "_safeDisconnect",
+    value: function _safeDisconnect(node) {
+      if (!node || !node.disconnect) {
+        return;
+      }
+      try {
+        node.disconnect();
+      } catch (error) {}
+    }
+  }, {
+    key: "_getAudioTrackId",
+    value: function _getAudioTrackId(stream) {
+      var signature = this._getAudioTrackSignature(stream);
+      return signature ? signature.id : null;
+    }
+  }, {
+    key: "_getAudioTrackSignature",
+    value: function _getAudioTrackSignature(stream) {
+      if (!stream || !stream.getAudioTracks) {
+        return null;
+      }
+      var track = stream.getAudioTracks().find(function (item) {
+        return item.readyState === 'live';
+      }) || stream.getAudioTracks()[0];
+      if (!track) {
+        return null;
+      }
+      return {
+        track: track,
+        id: track.id || ''
+      };
+    }
+  }, {
+    key: "_isSameAudioTrackSignature",
+    value: function _isSameAudioTrackSignature(previous, current) {
+      if (!previous || !current) {
+        return previous === current;
+      }
+      return previous.track === current.track && previous.id === current.id;
+    }
+  }, {
+    key: "requested",
+    get: function get() {
+      return this._audioRequested;
+    }
+  }, {
+    key: "hasAudioContext",
+    get: function get() {
+      return Boolean(this._audioContext);
+    }
+  }, {
+    key: "audioSources",
+    get: function get() {
+      return Array.from(this._audioSources);
+    }
+  }, {
+    key: "audioDestination",
+    get: function get() {
+      return this._audioDestination;
+    }
+  }, {
+    key: "audioContext",
+    get: function get() {
+      return this._audioContext;
+    }
+  }, {
+    key: "audioInfo",
+    get: function get() {
+      return this._audioInfo;
+    }
+  }]);
+}();
+module.exports = AudioMixer;
+},{}],43:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * LayoutEngine — 混流器布局引擎
+ *
+ * 根据输入源的数量和 slot 分配，计算每路视频在固定输出画布上的绘制位置和尺寸，
+ * 生成渲染 payload。画布尺寸由配置指定（默认 1280x720），不随源数量动态变化。
+ *
+ * @module LayoutEngine
+ */
+var LayoutEngine = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.sourceRegistry - SourceRegistry 实例
+   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+   * @param {Object} options.config - 混流配置对象
+   * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
+   * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
+   * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
+   */
+  function LayoutEngine(options) {
+    _classCallCheck(this, LayoutEngine);
+    options = options || {};
+    this._sourceRegistry = options.sourceRegistry;
+    this._canvas = options.canvas;
+    this._config = options.config;
+    this._prepareCanvas = options.prepareCanvas;
+    this._resizeRenderer = options.resizeRenderer;
+    this._createWatermarkItems = options.createWatermarkItems;
+    this._logger = options.logger || null;
+    if (this._logger) {
+      this._logger.debug('LayoutEngine constructed');
+    }
+  }
+
+  /**
+   * 生成一帧的渲染 payload。
+   *
+   * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
+   * 每个源按 slot 计算所在行列位置，支持动态增减源。
+   *
+   * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
+   */
+  return _createClass(LayoutEngine, [{
+    key: "createRenderPayload",
+    value: function createRenderPayload() {
+      var _this = this;
+      this._prepareCanvas();
+      this._resizeRenderer(this._canvas.width, this._canvas.height);
+      var layout = this._calcLayout();
+      var cellWidth = this._canvas.width / layout.cols;
+      var cellHeight = this._canvas.height / layout.rows;
+      var items = [];
+      this._sourceRegistry.sources.forEach(function (source) {
+        if (!_this._sourceRegistry.isRenderable(source)) {
+          return;
+        }
+        var slot = typeof source.slot === 'number' ? source.slot : 0;
+        var col = slot % layout.cols;
+        var row = Math.floor(slot / layout.cols);
+        var targetX = col * cellWidth;
+        var targetY = row * cellHeight;
+        var draw = _this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+        if (draw) {
+          items.push({
+            id: source.id,
+            streamId: _this._getSourceStreamId(source),
+            slot: slot,
+            video: source.video,
+            draw: draw
+          });
+        }
+      });
+      var payload = {
+        width: this._canvas.width,
+        height: this._canvas.height,
+        backgroundColor: this._config.backgroundColor,
+        items: items,
+        sourceWatermarks: [],
+        outputWatermarks: []
+      };
+      var watermarks = this._createWatermarkItems ? this._createWatermarkItems(payload) : null;
+      if (watermarks) {
+        payload.sourceWatermarks = watermarks.sourceWatermarks || [];
+        payload.outputWatermarks = watermarks.outputWatermarks || [];
+      }
+      if (this._logger) {
+        this._logger.debug("Render payload created: size=".concat(payload.width, "x").concat(payload.height, " items=").concat(items.length, " sourceWatermarks=").concat(payload.sourceWatermarks.length, " outputWatermarks=").concat(payload.outputWatermarks.length));
+      }
+      return payload;
+    }
+
+    /**
+     * 获取 source 关联的 stream id，用于 source watermark 匹配。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {string|null} stream id
+     */
+  }, {
+    key: "_getSourceStreamId",
+    value: function _getSourceStreamId(source) {
+      var stream = this._sourceRegistry.getStream(source);
+      return stream ? stream.id : null;
+    }
+
+    /**
+     * 计算网格的行列数。
+     *
+     * 根据最大 slot 编号和总源数确定网格大小：
+     *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
+     *   3~4 路 → 2x2      5~6 路 → 按比例 2x3 或 3x2
+     *   7~9 路 → 3x3      10+ 路 → 尽可能接近正方形
+     *
+     * @returns {Object} { cols: number, rows: number }
+     */
+  }, {
+    key: "_calcLayout",
+    value: function _calcLayout() {
+      var maxSlot = -1;
+      this._sourceRegistry.sources.forEach(function (source) {
+        if (typeof source.slot === 'number' && source.slot > maxSlot) {
+          maxSlot = source.slot;
+        }
+      });
+      var count = Math.max(maxSlot + 1, this._sourceRegistry.sources.length, 1);
+      var isPortrait = this._canvas.height > this._canvas.width;
+      var cols = 1;
+      var rows = 1;
+      if (count <= 1) {
+        cols = 1;
+        rows = 1;
+      } else if (count <= 2) {
+        if (isPortrait) {
+          cols = 1;
+          rows = 2;
+        } else {
+          cols = 2;
+          rows = 1;
+        }
+      } else if (count <= 4) {
+        cols = 2;
+        rows = 2;
+      } else if (count <= 6) {
+        if (isPortrait) {
+          cols = 2;
+          rows = 3;
+        } else {
+          cols = 3;
+          rows = 2;
+        }
+      } else if (count <= 9) {
+        cols = 3;
+        rows = 3;
+      } else {
+        cols = Math.ceil(Math.sqrt(count));
+        rows = Math.ceil(count / cols);
+      }
+      var layout = {
+        cols: cols,
+        rows: rows
+      };
+      if (this._logger) {
+        this._logger.debug("Layout calculated: count=".concat(count, " cols=").concat(cols, " rows=").concat(rows, " portrait=").concat(isPortrait));
+      }
+      return layout;
+    }
+
+    /**
+     * 计算一路视频在画布上的实际绘制矩形。
+     * 保持视频原始宽高比，在目标区域内居中显示。
+     *
+     * @param {HTMLVideoElement} video - video 元素
+     * @param {number} targetX - 目标区域左上角 X
+     * @param {number} targetY - 目标区域左上角 Y
+     * @param {number} targetWidth - 目标区域宽度
+     * @param {number} targetHeight - 目标区域高度
+     * @returns {Object|null} 绘制矩形 { x, y, width, height }，无法计算时返回 null
+     */
+  }, {
+    key: "_calcDrawRect",
+    value: function _calcDrawRect(video, targetX, targetY, targetWidth, targetHeight) {
+      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
+      if (!newVideo || !newVideo.width || !newVideo.height) {
+        return null;
+      }
+      return {
+        x: targetX + newVideo.offsetX,
+        y: targetY + newVideo.offsetY,
+        width: newVideo.width,
+        height: newVideo.height
+      };
+    }
+
+    /**
+     * 等比缩放视频，使其完整显示在目标区域内（contain）。
+     * 缩放后剩余空间居中留边，视频不会被裁剪。
+     *
+     * @param {number} width - 视频原始宽度（videoWidth）
+     * @param {number} height - 视频原始高度（videoHeight）
+     * @param {number} targetWidth - 目标区域宽度
+     * @param {number} targetHeight - 目标区域高度
+     * @returns {Object|null} { width, height, offsetX, offsetY }，无效尺寸返回 null
+     */
+  }, {
+    key: "_scaleVideo",
+    value: function _scaleVideo(width, height, targetWidth, targetHeight) {
+      var newWidth;
+      var newHeight;
+      var scale;
+      if (!width || !height) {
+        return null;
+      }
+      if (width / height >= targetWidth / targetHeight) {
+        // 视频更宽（相对目标）：按目标宽度缩放，上下留边
+        scale = targetWidth / width;
+        newHeight = height * scale;
+        newWidth = targetWidth;
+      } else {
+        // 视频更高（相对目标）：按目标高度缩放，左右留边
+        scale = targetHeight / height;
+        newWidth = width * scale;
+        newHeight = targetHeight;
+      }
+      return {
+        width: newWidth,
+        height: newHeight,
+        offsetX: Math.max(0, (targetWidth - newWidth) / 2),
+        offsetY: Math.max(0, (targetHeight - newHeight) / 2)
+      };
+    }
+  }]);
+}();
+module.exports = LayoutEngine;
+},{}],44:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+/**
+ * MixerConfig — 混流器配置归一化工具模块
+ *
+ * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
+ * 所有方法均为纯函数（无副作用），方便单元测试。
+ *
+ * @module MixerConfig
+ */
+
+var Logger = require('../Logger');
+var logger = new Logger('MixerConfig');
+
+/** 合法的渲染后端模式集合 */
+var VALID_RENDER_MODES = {
+  auto: true,
+  // 自动选择（优先 Worker WebGL2）
+  'worker-webgl2': true,
+  // Worker 线程 WebGL2
+  'main-webgl2': true,
+  // 主线程 WebGL2
+  'worker-2d': true,
+  // Worker 线程 Canvas2D
+  'main-2d': true // 主线程 Canvas2D（最兼容）
+};
+
+/**
+ * 创建归一化的混流配置对象。
+ *
+ * @param {Object} [options={}] - 原始配置参数
+ * @returns {Object} 归一化后的配置对象
+ * @returns {number} returns.width - 输出宽度（默认 1280）
+ * @returns {number} returns.height - 输出高度（默认 720）
+ * @returns {number} returns.fps - 输出帧率（默认 15）
+ * @returns {string} returns.backgroundColor - 画布底色
+ * @returns {number} returns.audioGain - 全局默认音量增益
+ * @returns {string} returns.renderMode - 渲染后端选择
+ * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
+ * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
+ * @returns {number} returns.maxFrameQueue - 最大帧队列长度
+ * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
+ */
+exports.create = function (options) {
+  options = options || {};
+  var config = {
+    width: exports.normalizePositiveInteger(options.width, 1280),
+    height: exports.normalizePositiveInteger(options.height, 720),
+    fps: exports.normalizePositiveInteger(options.fps, 15),
+    backgroundColor: options.backgroundColor || '#000',
+    audioGain: exports.normalizeGain(options.audioGain, 0.8),
+    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
+    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
+    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
+    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
+    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
+    watermarks: options.watermarks || []
+  };
+  logger.debug("Config created: ".concat(JSON.stringify(config)));
+  return config;
+};
+
+/**
+ * 归一化渲染模式字符串。
+ * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
+ *
+ * @param {*} value - 原始传入的 renderMode
+ * @param {string} fallback - 非法或未传时使用的备选值
+ * @returns {string} 合法的渲染模式
+ */
+exports.normalizeRenderMode = function (value, fallback) {
+  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
+    return value;
+  }
+  logger.debug("normalizeRenderMode fallback: value=".concat(value, " fallback=").concat(fallback || 'auto'));
+  return fallback || 'auto';
+};
+
+/**
+ * 归一化为正整数。
+ * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
+ *
+ * @param {*} value - 原始输入值
+ * @param {number|null} fallback - 非法时使用的备选值
+ * @returns {number|null} 归一化后的正整数，或 fallback
+ */
+exports.normalizePositiveInteger = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  logger.debug("normalizePositiveInteger fallback: value=".concat(value, " fallback=").concat(fallback));
+  return fallback;
+};
+
+/**
+ * 归一化 slot 值。
+ * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
+ *
+ * @param {*} value - 原始 slot 值
+ * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+ * @returns {number|null} 归一化后的 slot，非法则返回 null
+ */
+exports.normalizeSlot = function (value, index) {
+  var numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    logger.debug("normalizeSlot invalid: value=".concat(value, " index=").concat(index));
+    return null;
+  }
+  return Math.max(0, Math.floor(numberValue)) + index;
+};
+
+/**
+ * 归一化音量增益值。
+ * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
+ *
+ * @param {*} value - 原始增益值
+ * @param {number} fallback - 非法时的备选值
+ * @returns {number} 归一化后的增益值（>= 0）
+ */
+exports.normalizeGain = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return numberValue;
+  }
+  logger.debug("normalizeGain fallback: value=".concat(value, " fallback=").concat(fallback));
+  return fallback;
+};
+
+/**
+ * 统一 appendStream() 第二个参数的格式。
+ * 支持两种调用方式：
+ *   appendStream(stream, 3)               → 数字作为 slot
+ *   appendStream(stream, { slot, gain })  → 对象解构
+ *
+ * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
+ * @param {number} index - 数组索引，批量添加时 slot 递增
+ * @param {number} defaultGain - 未指定 gain 时使用的默认值
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined }
+ */
+exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
+  var options = {};
+  if (typeof optionsOrSlot === 'number') {
+    options.slot = exports.normalizeSlot(optionsOrSlot, index);
+  } else if (optionsOrSlot && _typeof(optionsOrSlot) === 'object') {
+    if (typeof optionsOrSlot.slot === 'number') {
+      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
+    }
+    if (typeof optionsOrSlot.gain === 'number') {
+      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
+    }
+  }
+  logger.debug("normalizeSourceOptions: index=".concat(index, " options=").concat(JSON.stringify(options)));
+  return options;
+};
+},{"../Logger":39}],45:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+var Logger = require('../Logger');
+var SourceRegistry = require('./SourceRegistry');
+var LayoutEngine = require('./LayoutEngine');
+var AudioMixer = require('./AudioMixer');
+var OutputStreamManager = require('./OutputStreamManager');
+var RenderLoop = require('./RenderLoop');
+var MixerConfig = require('./MixerConfig');
+var MixerDomAdapter = require('./MixerDomAdapter');
+var WatermarkManager = require('./WatermarkManager');
+var logger = new Logger('MediaStreamMixer');
+
+/**
+ * _audioInfo 的默认值，子模块未初始化或不可用时使用。
+ * @type {Object}
+ */
+var DEFAULT_AUDIO_INFO = Object.freeze({
+  requested: false,
+  status: 'not-requested',
+  contextState: null,
+  sourceCount: 0,
+  liveSourceCount: 0,
+  connectedSources: 0,
+  outputTracks: 0,
+  reason: '',
+  lastError: ''
+});
+
+/**
+ * MediaStreamMixer — 多路音视频混流器
+ *
+ * 功能：
+ *   - 将多个 MediaStream / HTMLVideoElement(srcObject=MediaStream) 合并为一个 MediaStream
+ *   - 视频：按浏览器能力使用 Worker WebGL2 / 主线程 WebGL2 / Worker Canvas2D / 主线程 Canvas2D 绘制
+ *   - 音频：用 WebAudio API，每路独立 GainNode 控制音量，汇总到 MediaStreamAudioDestinationNode
+ *
+ * 布局方式：按 slot 和输出画布比例自动计算网格，画布尺寸由配置指定（默认 1280x720），
+ * 不随源数量动态变化。
+ *
+ * 使用示例：
+ *   const mixer = new MediaStreamMixer([localStream, remoteStream], { width: 1280, height: 720 });
+ *   const output = await mixer.getMixedStream();
+ *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
+ */
+module.exports = /*#__PURE__*/function () {
+  // =========================================================================
+  //  构造与初始化
+  // =========================================================================
+
+  /**
+   * @param {Array<MediaStream|HTMLMediaElement>|MediaStream|HTMLMediaElement} videos
+   *   需要混流的输入源。为了兼容旧版 SDK，仍然支持只传数组；新版也允许传单个源。
+   *   每个元素可以是：
+   *     - MediaStream：原生 WebRTC 媒体流
+   *     - HTMLVideoElement：外部 video 元素，需使用 srcObject=MediaStream（mixer 不接管生命周期）
+   *     - { mediaStream: MediaStream }：SDK 内部包装对象
+   * @param {Object} [options]
+   *   混流配置。
+   * @param {number} [options.width=1280]  - 输出视频宽度
+   * @param {number} [options.height=720]  - 输出视频高度
+   * @param {number} [options.fps]         - 输出帧率（不传则浏览器自动选择）
+   * @param {string} [options.backgroundColor='#000'] - 画布背景色
+   * @param {number} [options.audioGain=0.8] - 全局默认音量增益
+   * @param {string} [options.renderMode='auto']
+   *   渲染后端：'auto' | 'worker-webgl2' | 'main-webgl2' | 'worker-2d' | 'main-2d'
+   * @param {string} [options.workerUrl]
+   *   可选外部 Worker 脚本地址；不传时默认使用 Blob Worker，部署更简单。
+   * @param {boolean} [options.dropFrameWhenBusy=true]
+   *   Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。
+   * @param {number} [options.maxFrameQueue=1]
+   *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
+   */
+  function MediaStreamMixer() {
+    var _this = this;
+    var videos = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    _classCallCheck(this, MediaStreamMixer);
+    // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
+    options = options || {};
+    videos = videos || [];
+
+    // 统一为数组，方便后续统一遍历
+    if (!(videos instanceof Array)) {
+      videos = [videos];
+    }
+    logger.debug("constructor: ".concat(videos.length));
+
+    // -----------------------------------------------------------------------
+    // 源管理
+    // -----------------------------------------------------------------------
+
+    this._sourceRegistry = null;
+    var config = MixerConfig.create(options);
+
+    /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
+    this._destroyed = false;
+
+    /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
+    this._renderLoop = null;
+
+    /** @type {number} 连续渲染失败次数，用于诊断渲染后端异常 */
+    // (delegated to RenderLoop via prototype getter)
+
+    // -----------------------------------------------------------------------
+    // WebAudio 相关
+    // -----------------------------------------------------------------------
+
+    this._audioMixer = null;
+    this._audioRefreshPromise = null;
+    this._audioRefreshPending = false;
+    this._outputStreamManager = null;
+    this._domAdapter = null;
+    this._watermarkManager = null;
+
+    // -----------------------------------------------------------------------
+    // 混流配置
+    // -----------------------------------------------------------------------
+
+    /**
+     * @type {Object}
+     * @property {number|null} width           - 输出宽度（legacy=null 动态，grid=1280）
+     * @property {number|null} height          - 输出高度（legacy=null 动态，grid=720）
+     * @property {number|null} fps             - 帧率（null=浏览器默认）
+     * @property {string}      backgroundColor - 画布底色
+     * @property {number}      audioGain       - 全局默认音量
+     * @property {string}      renderMode      - 渲染后端选择
+     */
+    this._config = config;
+    this._domAdapter = new MixerDomAdapter({
+      config: this._config,
+      logger: logger
+    });
+    this._watermarkManager = new WatermarkManager({
+      logger: logger
+    });
+
+    // -----------------------------------------------------------------------
+    // 渲染画布
+    // -----------------------------------------------------------------------
+
+    /** @type {HTMLCanvasElement} 离屏 canvas，所有视频帧合成到这里 */
+    this._canvas = this._domAdapter.createCanvas();
+
+    // -----------------------------------------------------------------------
+    // 源注册表（SourceRegistry）—— 统一管理所有视频/音频源的生命周期。
+    //
+    // 职责：
+    //   1. 维护源列表，处理增删查改
+    //   2. 创建对应的 <video> 元素（通过 createVideoElement）
+    //   3. 管理音频增益归一化（normalizeGain）
+    //   4. 在源移除时触发回调链：断音频 → 清渲染帧 → 清画布
+    //
+    // 回调链说明：
+    //   onBeforeRemove → 先断音频（_disconnectAudio），避免音频残留
+    //   onAfterRemove  → 如果渲染器已创建则通知渲染循环移除该源；
+    //                    如果全部源已清空且仍在输出流中，则清除画布（黑帧）
+    //   onAfterRemove 不直接访问 this._sourceRegistry，以减少时序耦合
+    // -----------------------------------------------------------------------
+
+    this._sourceRegistry = new SourceRegistry({
+      logger: logger,
+      getDefaultGain: function getDefaultGain() {
+        return _this._config.audioGain;
+      },
+      normalizeGain: this._normalizeGain.bind(this),
+      createVideoElement: this._mediaStreamToVideoElement.bind(this),
+      onBeforeRemove: function onBeforeRemove(source) {
+        return _this._disconnectAudio(source);
+      },
+      onAfterRemove: function onAfterRemove(source) {
+        if (_this._renderer) {
+          _this._renderLoop.removeSource(source.id);
+        }
+        if (!_this._isStopDrawingFrames && _this._sources.length === 0 && _this._videoStream) {
+          _this._drawVideosToCanvas(undefined, true);
+        }
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // 输出流管理器（OutputStreamManager）—— 将 canvas 内容导出为 MediaStream。
+    //
+    // 职责：
+    //   1. 通过 canvas.captureStream(fps) 获取输出视频轨道
+    //   2. 管理输出流的 fps、分辨率等参数（取自 this._config）
+    //   3. 提供 getVideoStream() / getMixedStream() 入口
+    //
+    // 依赖：需要 canvas 已创建、config 已就绪
+    // -----------------------------------------------------------------------
+
+    this._outputStreamManager = new OutputStreamManager({
+      canvas: this._canvas,
+      config: this._config,
+      logger: logger
+    });
+
+    // -----------------------------------------------------------------------
+    // 渲染循环（RenderLoop）—— 驱动每一帧的合成绘制。
+    //
+    // 职责：
+    //   1. 通过 requestAnimationFrame 驱动帧循环
+    //   2. 每次 tick 调用 createRenderPayload 收集源快照
+    //   3. 将快照交给 renderer 绘制到 canvas
+    //   4. 管理 fps 节流、暂停/恢复、状态上报
+    //   5. 同步外部音频进度（syncExternalSourceAudio）
+    //
+    // 注意：renderer（BaseRenderer 子类）是延迟创建的，
+    //       RenderLoop 内部通过 tryAcquireRenderer() 按需初始
+    // -----------------------------------------------------------------------
+
+    this._renderLoop = new RenderLoop({
+      canvas: this._canvas,
+      config: this._config,
+      logger: logger,
+      getSources: function getSources() {
+        return _this._sources;
+      },
+      createRenderPayload: function createRenderPayload() {
+        return _this._createRenderPayload();
+      },
+      syncExternalSourceAudio: function syncExternalSourceAudio() {
+        return _this._syncExternalSourceAudio();
+      },
+      onStateChange: function onStateChange() {}
+    });
+
+    // -----------------------------------------------------------------------
+    // 音频混音器（AudioMixer）—— 将所有源的音频轨道混合为一路输出。
+    //
+    // 职责：
+    //   1. 通过 WebAudio API（AudioContext, GainNode）创建混音管线
+    //   2. 监听 sourceRegistry 的增删事件，自动接入/断开源音频
+    //   3. 将混音结果以 MediaStream 形式回传给控制层
+    //   4. 检测并规避已销毁（_destroyed）后的操作
+    //
+    // 回调：
+    //   onAudioTrackAvailable → 将混音后的音频轨道挂到输出流上
+    //   getDestroyed          → 防销毁后误操作
+    // -----------------------------------------------------------------------
+
+    this._audioMixer = new AudioMixer({
+      logger: logger,
+      sourceRegistry: this._sourceRegistry,
+      getDestroyed: function getDestroyed() {
+        return _this._destroyed;
+      },
+      onAudioTrackAvailable: function onAudioTrackAvailable(audioStream) {
+        return _this._ensureMixedStreamAudioTrack(audioStream);
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // 布局引擎（LayoutEngine）—— 计算每个源在 canvas 上的位置和尺寸。
+    //
+    // 职责：
+    //   1. 根据 renderMode（legacy/grid）计算布局矩阵
+    //   2. 在源增删或画布尺寸变化时重新布局
+    //   3. 更新每个源的 _displayRect（供 renderer 绘制时使用）
+    //   4. 触发 canvas 尺寸调整（prepareCanvas → resizeRenderer）
+    //
+    // 注意：LayoutEngine 不直接操作渲染管线，只计算坐标；
+    //       实际绘制由 renderer 根据 _displayRect 执行。
+    //       这种分离使布局策略可热切换（如从 grid 切为 custom）
+    // -----------------------------------------------------------------------
+
+    this._layoutEngine = new LayoutEngine({
+      sourceRegistry: this._sourceRegistry,
+      canvas: this._canvas,
+      config: this._config,
+      logger: logger,
+      prepareCanvas: this._prepareCanvas.bind(this),
+      resizeRenderer: this._resizeRenderer.bind(this),
+      createWatermarkItems: function createWatermarkItems(payload) {
+        return _this._createWatermarkItems(payload);
+      }
+    });
+    this._prepareCanvas();
+    this._watermarkManager.setWatermarks(this._config.watermarks).then(function () {
+      logger.debug("Initial watermarks ready: count=".concat(_this._config.watermarks ? _this._config.watermarks.length : 0));
+      if (!_this._destroyed) {
+        _this._drawVideosToCanvas(undefined, true);
+      }
+    });
+
+    // -- 将初始传入的源加入混流 --
+    this.appendStream(videos);
+  }
+
+  // =========================================================================
+  //  配置检测与参数归一化
+  // =========================================================================
+
+  /**
+   * 归一化渲染模式。
+   * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
+   *
+   * @param {*} value - 用户传入的 renderMode
+   * @param {string} fallback - 非法或未传时使用的模式
+   * @returns {string} 合法渲染模式
+   */
+  return _createClass(MediaStreamMixer, [{
+    key: "_normalizeRenderMode",
+    value: function _normalizeRenderMode(value, fallback) {
+      return MixerConfig.normalizeRenderMode(value, fallback);
+    }
+
+    /**
+     * 将输入值归一化为正整数。
+     * 对外暴露的 width/height/fps 只接受正数；非法值回退默认值，不让 canvas 进入 0 尺寸。
+     *
+     * @param {*} value - 原始输入
+     * @param {number|null} fallback - 非法值时使用的备选值
+     * @returns {number|null} 归一化后的整数，或 fallback
+     */
+  }, {
+    key: "_normalizePositiveInteger",
+    value: function _normalizePositiveInteger(value, fallback) {
+      return MixerConfig.normalizePositiveInteger(value, fallback);
+    }
+
+    /**
+     * 归一化 slot 值。
+     * slot 只允许非负整数，数组批量添加时从起始 slot 递增（沿用演示页行为）。
+     *
+     * @param {*} value - 原始 slot 值
+     * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+     * @returns {number|null} 归一化后的 slot，非法则返回 null
+     */
+  }, {
+    key: "_normalizeSlot",
+    value: function _normalizeSlot(value, index) {
+      return MixerConfig.normalizeSlot(value, index);
+    }
+
+    /**
+     * 归一化音量增益值。
+     * 允许大于 1 做放大，但不允许负数。非法值使用全局默认音量。
+     *
+     * @param {*} value - 原始增益值
+     * @param {number} fallback - 非法时的备选值
+     * @returns {number} 归一化后的增益值（>= 0）
+     */
+  }, {
+    key: "_normalizeGain",
+    value: function _normalizeGain(value, fallback) {
+      return MixerConfig.normalizeGain(value, fallback);
+    }
+
+    /**
+     * 统一 appendStream() 第二个参数的格式。
+     * 支持两种调用方式：
+     *   appendStream(stream, 3)            → 数字作为 slot
+     *   appendStream(stream, { slot, gain }) → 对象解构
+     *
+     * @param {number|Object} optionsOrSlot - 原始参数
+     * @param {number} index - 数组索引，用于批量添加时 slot 递增
+     * @returns {Object} { slot: number|null, gain: number|undefined }
+     */
+  }, {
+    key: "_normalizeSourceOptions",
+    value: function _normalizeSourceOptions(optionsOrSlot, index) {
+      return MixerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+    }
+
+    /**
+     * 设置输出画布尺寸。
+     */
+  }, {
+    key: "_prepareCanvas",
+    value: function _prepareCanvas() {
+      logger.debug('Preparing mixer canvas');
+      this._domAdapter.prepareCanvas(this._canvas);
+    }
+
+    /**
+     * 确保渲染后端已经初始化。
+     *
+     * RendererFactory 是整个 Mixer 唯一允许初始化输出 canvas context 的地方。
+     * 这样可以避免不同 renderer 抢占同一个 canvas context。
+     *
+     * @returns {BaseRenderer} 当前实际使用的渲染后端
+     */
+  }, {
+    key: "_ensureRenderer",
+    value: function _ensureRenderer() {
+      logger.debug('Ensuring mixer renderer');
+      var renderer = this._renderLoop.ensureRenderer();
+      return renderer;
+    }
+
+    /**
+     * 将当前输出画布尺寸同步给 renderer。
+     *
+     * @param {number} width - 输出宽度
+     * @param {number} height - 输出高度
+     */
+  }, {
+    key: "_resizeRenderer",
+    value: function _resizeRenderer(width, height) {
+      logger.debug("Resizing renderer: ".concat(width, "x").concat(height));
+      this._renderLoop.resizeRenderer(width, height);
+    }
+
+    /**
+     * Worker renderer 运行时失败后的最终主线程 Canvas2D 兜底。
+     *
+     * auto 模式的完整运行期降级链在 RenderLoop.fallbackRenderer() 中处理；
+     * 此方法保留给显式要求直接落到 main-2d 的内部调用。
+     *
+     * @param {string} reason - fallback 原因
+     * @returns {boolean} true=完成 fallback
+     */
+  }, {
+    key: "_fallbackRendererToMain2D",
+    value: function _fallbackRendererToMain2D(reason) {
+      logger.warn("Fallback to main-2d requested: ".concat(reason));
+      var fallbacked = this._renderLoop.fallbackRendererToMain2D(reason);
+      return fallbacked;
+    }
+
+    /**
+     * 防止 stop() 后继续复用同一个实例。
+     *
+     * stop() 会释放 renderer、AudioContext、captureStream tracks 和内部源。
+     * 继续复用同一个实例容易让调用方拿到已 ended 的输出轨，因此明确要求重新 new Mixer。
+     *
+     * @param {string} methodName - 当前公开方法名
+     * @throws {Error} 实例已 stop
+     */
+  }, {
+    key: "_assertNotDestroyed",
+    value: function _assertNotDestroyed(methodName) {
+      if (this._destroyed) {
+        throw new Error("MediaStreamMixer has been stopped. Create a new mixer before calling ".concat(methodName, "."));
+      }
+    }
+
+    // =========================================================================
+    //  源移除与查找
+    // =========================================================================
+
+    /**
+     * 移除并清理一个 source 对象。
+     * 步骤：断开音频 → 释放 video 元素（仅 ownedVideo）→ 从 _sources 移除 → 同步 _videos。
+     *
+     * @param {Object} source - 要移除的 source 对象
+     * @returns {boolean} true=成功移除；false=source 为空
+     */
+  }, {
+    key: "_removeSource",
+    value: function _removeSource(source) {
+      if (source) {
+        logger.debug("Removing mixer source: id=".concat(source.id, " slot=").concat(source.slot));
+      }
+      var removed = this._sourceRegistry.remove(source);
+      return removed;
+    }
+
+    /**
+     * 按 MediaStream 对象、stream.id 或内部 source.id 查找 source。
+     *
+     * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
+     * @returns {Object|null} 找到的 source 对象，或 null
+     */
+  }, {
+    key: "_findSource",
+    value: function _findSource(streamOrId) {
+      return this._sourceRegistry.find(streamOrId);
+    }
+
+    // =========================================================================
+    //  源状态检测
+    // =========================================================================
+
+    /**
+     * 检测某路源是否有 live（活跃）状态的音频轨。
+     * 只混入 live 状态音频轨，避免 ended track 触发 WebAudio 创建失败或无效混音。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条 live 音频轨
+     */
+  }, {
+    key: "_hasLiveAudioTrack",
+    value: function _hasLiveAudioTrack(source) {
+      return this._sourceRegistry.hasLiveAudioTrack(source);
+    }
+
+    /**
+     * 检测某路源是否有视频轨（不判断 readyState）。
+     * readyState 在绘制阶段才判断；这样刚加入但尚未出帧的源仍保留在布局中。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条视频轨
+     */
+  }, {
+    key: "_hasVideoTrack",
+    value: function _hasVideoTrack(source) {
+      return this._sourceRegistry.hasVideoTrack(source);
+    }
+
+    /**
+     * 判断某路源当前是否可渲染。
+     * 条件：stream 存在且 active，并且有视频轨。
+     * 具体视频帧是否可画由 video.readyState 在绘制时判断。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=可渲染
+     */
+  }, {
+    key: "_isRenderable",
+    value: function _isRenderable(source) {
+      return this._sourceRegistry.isRenderable(source);
+    }
+
+    /**
+     * 获取 source 当前关联的 MediaStream。
+     *
+     * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
+     * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
+     *
+     * 注意：此方法仅同步 stream 引用，不断开音频。
+     * 如果外部替换了 srcObject，音频重连由 _connectAudio() 中的换源检测处理。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {MediaStream|null} 当前 MediaStream
+     */
+  }, {
+    key: "_getSourceStream",
+    value: function _getSourceStream(source) {
+      return this._sourceRegistry.getStream(source);
+    }
+
+    // =========================================================================
+    //  渲染数据构建
+    // =========================================================================
+
+    /**
+     * 构建一帧渲染 payload。
+     *
+     * Mixer 本身只负责决定每路视频应该画在哪里；真正的绘制由当前 renderer 完成。
+     * 这样 Canvas2D、WebGL2、Worker Canvas2D、Worker WebGL2 可以复用完全一致的布局结果。
+     *
+     * @returns {Object} renderer.render() 可直接消费的数据
+     */
+  }, {
+    key: "_createRenderPayload",
+    value: function _createRenderPayload() {
+      return this._layoutEngine.createRenderPayload();
+    }
+
+    /**
+     * 构建当前帧水印绘制项。
+     *
+     * @param {Object} payload - 基础渲染 payload
+     * @returns {Object} { sourceWatermarks, outputWatermarks }
+     */
+  }, {
+    key: "_createWatermarkItems",
+    value: function _createWatermarkItems(payload) {
+      return this._watermarkManager.createRenderItems(payload);
+    }
+
+    // =========================================================================
+    //  主渲染循环（rAF）
+    // =========================================================================
+
+    /**
+     * requestAnimationFrame 回调。
+     * 合成一帧画面到输出画布。
+     * 当配置了 fps 时，rAF 仍负责调度，但真正合成按目标帧间隔节流。
+     * 绘制完成后根据是否有源决定是否调度下一帧。
+     *
+     * @param {number} [timestamp] - requestAnimationFrame 传入的高精度时间戳
+     * @param {boolean} [forceRender=false] - 是否忽略 fps 节流立即合成一帧
+     */
+  }, {
+    key: "_drawVideosToCanvas",
+    value: function _drawVideosToCanvas(timestamp) {
+      var forceRender = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+      if (forceRender) {
+        logger.debug('Force rendering mixer frame');
+      }
+      this._renderLoop.renderFrame(timestamp, forceRender);
+    }
+
+    // =========================================================================
+    //  视频元素工具
+    // =========================================================================
+
+    /**
+     * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
+     * 创建的 video 元素：display:none、muted、autoplay、playsinline。
+     *
+     * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
+     * @returns {HTMLVideoElement} 可播放该流的隐藏 video
+     */
+  }, {
+    key: "_mediaStreamToVideoElement",
+    value: function _mediaStreamToVideoElement(mediaStream) {
+      logger.debug('Creating internal video element from media stream');
+      return this._domAdapter.createVideoElement(mediaStream);
+    }
+
+    // =========================================================================
+    //  音频连接与管理
+    // =========================================================================
+
+    /**
+     * 异步刷新音频连接；用于不能 await 的路径（appendStream / rAF）。
+     */
+  }, {
+    key: "_scheduleAudioRefresh",
+    value: function _scheduleAudioRefresh() {
+      logger.debug('Scheduling mixer audio refresh');
+      this._audioMixer.scheduleRefresh();
+    }
+
+    /**
+     * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
+     */
+  }, {
+    key: "_syncExternalSourceAudio",
+    value: function _syncExternalSourceAudio() {
+      logger.debug('Syncing external source audio');
+      this._audioMixer.syncExternalSourceAudio();
+    }
+
+    /**
+     * 断开一路 source 的音频连接，释放 WebAudio 节点。
+     * 在以下场景调用：
+     *   - removeStream() 移除源时
+     *   - appendStream() 同 slot 覆盖时
+     *   - HTMLVideoElement 外部换源时（由 _connectAudio 的换源检测触发）
+     *
+     * @param {Object} source - 内部 source 对象
+     */
+  }, {
+    key: "_disconnectAudio",
+    value: function _disconnectAudio(source) {
+      if (source) {
+        logger.debug("Disconnecting mixer audio: id=".concat(source.id));
+      }
+      this._audioMixer.disconnectSource(source);
+    }
+
+    /**
+     * 将 AudioDestination 的音频轨补充到已返回的 mixed stream 中。
+     *
+     * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
+     * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨注入到已返回的流。
+     */
+  }, {
+    key: "_ensureMixedStreamAudioTrack",
+    value: function _ensureMixedStreamAudioTrack(audioStream) {
+      logger.debug('Ensuring mixed stream audio track');
+      this._outputStreamManager.ensureMixedStreamAudioTrack(audioStream || this._audioDestination && this._audioDestination.stream);
+    }
+
+    /**
+     * 去重地将音频流中的音轨添加到目标流中。
+     *
+     * @param {MediaStream} targetStream - 目标流（一般是 video stream）
+     * @param {MediaStream} audioStream - 音频流（audio destination stream）
+     */
+  }, {
+    key: "_addAudioTracksToStream",
+    value: function _addAudioTracksToStream(targetStream, audioStream) {
+      logger.debug('Adding audio tracks to mixed output stream');
+      this._outputStreamManager.addAudioTracksToStream(targetStream, audioStream);
+    }
+
+    // =========================================================================
+    //  公开 API
+    // =========================================================================
+
+    /**
+     * 停止混流，释放所有资源。
+     *
+     * 清理步骤：
+     *   1. 设置停止标记 + cancelAnimationFrame 停止渲染循环
+     *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
+     *   3. 断开并关闭 AudioContext
+     *   4. 清空画布
+     *   5. 停止所有 captureStream 的 tracks
+     */
+  }, {
+    key: "stop",
+    value: function stop() {
+      logger.debug('stop');
+      if (this._destroyed) {
+        return;
+      }
+      this._destroyed = true;
+      this._renderLoop.stop();
+      this.clearStreams();
+      this._audioMixer.stop();
+      this._renderLoop.destroy();
+      this._outputStreamManager.stop();
+    }
+
+    /**
+     * 向混流器添加新的输入源。
+     *
+     * 支持多种调用方式：
+     *   appendStream(stream)          → 自动分配 slot（grid 模式）
+     *   appendStream(stream, 3)       → 指定 slot
+     *   appendStream(stream, { slot: 3, gain: 0.5 })
+     *   appendStream([streamA, ...])  → 批量添加
+     *
+     * 同 slot 已有源会被新源覆盖。
+     *
+     * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
+     * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
+     * @returns {boolean} true=至少成功添加了一个源
+     * @throws {TypeError} 未传 videos
+     */
+  }, {
+    key: "appendStream",
+    value: function appendStream(videos, optionsOrSlot) {
+      var _this2 = this;
+      logger.debug("appendStream: count=".concat(videos instanceof Array ? videos.length : 1));
+      this._assertNotDestroyed('appendStream()');
+      if (!videos) {
+        throw new TypeError('First parameter is required.');
+      }
+      if (!(videos instanceof Array)) {
+        videos = [videos];
+      }
+      var appended = false;
+      videos.forEach(function (video, index) {
+        var sourceOptions = _this2._normalizeSourceOptions(optionsOrSlot, index);
+        _this2._sourceRegistry.add(video, sourceOptions);
+        appended = true;
+
+        // 如果音频系统已初始化，立即连接该源的音频
+        if (_this2._audioMixer.hasAudioContext || _this2._audioMixer.requested) {
+          _this2._scheduleAudioRefresh();
+        }
+      });
+
+      // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
+      this._renderLoop.start();
+      return appended;
+    }
+
+    /**
+     * 按 MediaStream 或 ID 移除一路源。
+     *
+     * @param {MediaStream|string} streamOrId - 要移除的流或 ID
+     *   - MediaStream 对象：按引用匹配
+     *   - string：先匹配 source.id，再匹配 stream.id
+     * @returns {boolean} true=找到并移除了源
+     */
+  }, {
+    key: "removeStream",
+    value: function removeStream(streamOrId) {
+      logger.debug("removeStream: ".concat(typeof streamOrId === 'string' ? streamOrId : '[object]'));
+      this._assertNotDestroyed('removeStream()');
+      return this._removeSource(this._findSource(streamOrId));
+    }
+
+    /**
+     * 移除所有输入源。
+     * 遍历 _sources 快照逐条清理，过程中 _sources 数组会变化。
+     */
+  }, {
+    key: "clearStreams",
+    value: function clearStreams() {
+      var _this3 = this;
+      logger.debug("clearStreams: count=".concat(this._sources.length));
+      var sources = this._sources.slice();
+      sources.forEach(function (source) {
+        _this3._removeSource(source);
+      });
+    }
+
+    /**
+     * 返回当前所有源的快照。
+     * 返回新对象数组，外部修改不影响内部状态。
+     *
+     * @returns {Array<Object>} 源信息列表：
+     *   { id, streamId, slot, gain, hasAudio, hasVideo }
+     */
+  }, {
+    key: "getSources",
+    value: function getSources() {
+      this._assertNotDestroyed('getSources()');
+      logger.debug("getSources(): count=".concat(this._sources.length));
+      return this._sourceRegistry.getSnapshot();
+    }
+
+    /**
+     * 返回当前渲染后端状态。
+     *
+     * 这个 API 只读，不影响渲染；主要用于 demo 展示和线上排查性能问题。
+     * Worker 后端初始化有异步消息，因此刚启动时 actualMode 可能短暂显示 worker-init，
+     * 随后会更新为 worker-webgl2 或 worker-2d。
+     *
+     * @returns {Object} 渲染状态快照
+     */
+  }, {
+    key: "getRenderInfo",
+    value: function getRenderInfo() {
+      return this._renderLoop.getRenderInfo();
+    }
+
+    /**
+     * 返回当前音频混流状态。
+     *
+     * @returns {Object} 音频状态快照
+     */
+  }, {
+    key: "getAudioInfo",
+    value: function getAudioInfo() {
+      return this._audioMixer.getInfo();
+    }
+
+    /**
+     * 替换全部水印配置。
+     *
+     * @param {Array<Object>|Object|null} watermarks - 水印配置
+     * @returns {Promise<Array<Object>>} 当前水印快照
+     */
+  }, {
+    key: "setWatermarks",
+    value: function setWatermarks(watermarks) {
+      var _this4 = this;
+      this._assertNotDestroyed('setWatermarks()');
+      logger.debug("setWatermarks(): count=".concat(watermarks instanceof Array ? watermarks.length : watermarks ? 1 : 0));
+      return this._watermarkManager.setWatermarks(watermarks).then(function (snapshot) {
+        _this4._drawVideosToCanvas(undefined, true);
+        return snapshot;
+      });
+    }
+
+    /**
+     * 清除水印。
+     *
+     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
+     */
+  }, {
+    key: "clearWatermarks",
+    value: function clearWatermarks(filter) {
+      this._assertNotDestroyed('clearWatermarks()');
+      logger.debug("clearWatermarks(): filter=".concat(JSON.stringify(filter || null)));
+      this._watermarkManager.clearWatermarks(filter);
+      this._drawVideosToCanvas(undefined, true);
+    }
+
+    /**
+     * 获取当前水印状态快照。
+     *
+     * @returns {Array<Object>} 水印状态列表
+     */
+  }, {
+    key: "getWatermarks",
+    value: function getWatermarks() {
+      this._assertNotDestroyed('getWatermarks()');
+      logger.debug('getWatermarks()');
+      return this._watermarkManager.getWatermarks();
+    }
+
+    /**
+     * 获取合并了视频和音频的完整输出流。
+     *
+     * 流程：
+     *   1. getVideoStream() → 启动 rAF 渲染循环 + canvas.captureStream()
+     *   2. 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨
+     *   3. getAudioStream() → 初始化 AudioContext + 连接所有源的音频
+     *   4. 将音频流的音轨添加到视频流
+     *
+     * @returns {Promise<MediaStream>} 包含视频轨和音频轨的混合流
+     */
+  }, {
+    key: "getMixedStream",
+    value: (function () {
+      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+        var mixedVideoStream, mixedAudioStream;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              logger.debug('getMixedStream()');
+              this._assertNotDestroyed('getMixedStream()');
+              this._renderLoop.resume();
+              mixedVideoStream = this.getVideoStream(); // 先保存 mixed stream，再初始化音频；这样启动时无音频、后续 append 有音频源时，
+              // _connectAudio() 可以把 MediaStreamDestination 的音频轨补到已经返回给调用方的流里。
+              this._outputStreamManager.setMixedStream(mixedVideoStream);
+              _context.n = 1;
+              return this.getAudioStream();
+            case 1:
+              mixedAudioStream = _context.v;
+              logger.debug("getMixedStream() audio resolved: tracks=".concat(mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0));
+              this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
+              return _context.a(2, mixedVideoStream);
+          }
+        }, _callee, this);
+      }));
+      function getMixedStream() {
+        return _getMixedStream.apply(this, arguments);
+      }
+      return getMixedStream;
+    }()
+    /**
+     * 仅获取混合后的视频流（不含音频）。
+     * 启动 rAF 渲染循环，从 canvas 截取画面输出为 MediaStream。
+     *
+     * @returns {MediaStream} 仅包含视频轨的流
+     */
+    )
+  }, {
+    key: "getVideoStream",
+    value: function getVideoStream() {
+      var _this5 = this;
+      logger.debug('getVideoStream()');
+      this._assertNotDestroyed('getVideoStream()');
+      this._renderLoop.resume();
+      if (this._outputStreamManager.hasLiveVideoStream()) {
+        this._renderLoop.start();
+        return this._outputStreamManager.videoStream;
+      }
+      var videoStream = this._outputStreamManager.getVideoStream(function () {
+        _this5._renderLoop.resetFrameTiming();
+        _this5._drawVideosToCanvas(undefined, true);
+      });
+      logger.debug("getVideoStream() created: tracks=".concat(videoStream.getVideoTracks().length));
+      return videoStream;
+    }
+
+    /**
+     * 获取混合后的音频流。
+     * 初始化 AudioContext（延迟创建），连接所有源的音频到 MediaStreamAudioDestination。
+     *
+     * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
+     */
+  }, {
+    key: "getAudioStream",
+    value: (function () {
+      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(options) {
+        var audioStream;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.n) {
+            case 0:
+              logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
+              this._assertNotDestroyed('getAudioStream()');
+              _context2.n = 1;
+              return this._audioMixer.getAudioStream(options);
+            case 1:
+              audioStream = _context2.v;
+              return _context2.a(2, audioStream);
+          }
+        }, _callee2, this);
+      }));
+      function getAudioStream(_x) {
+        return _getAudioStream.apply(this, arguments);
+      }
+      return getAudioStream;
+    }()
+    /**
+     * 获取独立 AudioContext 的子混音音频流。
+     * 每个 slots 组合会创建并复用自己的 AudioContext。
+     *
+     * @param {Object|Array<number>} options - { slots:number[] } 或 slots 数组
+     * @returns {Promise<MediaStream|null>} 子混音音频流
+     */
+    )
+  }, {
+    key: "getIsolatedSubmixAudioStream",
+    value: (function () {
+      var _getIsolatedSubmixAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(options) {
+        var audioStream;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+              this._assertNotDestroyed('getIsolatedSubmixAudioStream()');
+              _context3.n = 1;
+              return this._audioMixer.getIsolatedSubmixAudioStream(options);
+            case 1:
+              audioStream = _context3.v;
+              return _context3.a(2, audioStream);
+          }
+        }, _callee3, this);
+      }));
+      function getIsolatedSubmixAudioStream(_x2) {
+        return _getIsolatedSubmixAudioStream.apply(this, arguments);
+      }
+      return getIsolatedSubmixAudioStream;
+    }()
+    /**
+     * 释放指定 slots 的子混音请求与资源。
+     *
+     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
+     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
+     */
+    )
+  }, {
+    key: "releaseSubmixAudioStream",
+    value: function releaseSubmixAudioStream(options) {
+      logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
+      this._assertNotDestroyed('releaseSubmixAudioStream()');
+      return this._audioMixer.releaseSubmixAudioStream(options);
+    }
+
+    // -- SourceRegistry 委派 --
+  }, {
+    key: "_sources",
+    get: function get() {
+      return this._sourceRegistry && this._sourceRegistry.sources || [];
+    }
+  }, {
+    key: "_videos",
+    get: function get() {
+      return this._sourceRegistry && this._sourceRegistry.videos || [];
+    }
+
+    // -- RenderLoop 委派 --
+  }, {
+    key: "_renderer",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.renderer || null;
+    }
+  }, {
+    key: "_animationId",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.animationId || null;
+    }
+  }, {
+    key: "_lastRenderTime",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.lastRenderTime || 0;
+    }
+  }, {
+    key: "_renderFrameInterval",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.renderFrameInterval || 0;
+    }
+  }, {
+    key: "_renderErrorCount",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.renderErrorCount || 0;
+    }
+  }, {
+    key: "_rendererErrorCount",
+    get: function get() {
+      return this._renderLoop && this._renderLoop.rendererErrorCount || 0;
+    }
+  }, {
+    key: "_isStopDrawingFrames",
+    get: function get() {
+      return this._renderLoop ? this._renderLoop.isStopped : false;
+    }
+
+    // -- AudioMixer 委派 --
+  }, {
+    key: "_audioSources",
+    get: function get() {
+      return this._audioMixer && this._audioMixer.audioSources || [];
+    }
+  }, {
+    key: "_audioDestination",
+    get: function get() {
+      return this._audioMixer && this._audioMixer.audioDestination || null;
+    }
+  }, {
+    key: "_audioContext",
+    get: function get() {
+      return this._audioMixer && this._audioMixer.audioContext || null;
+    }
+  }, {
+    key: "_audioRequested",
+    get: function get() {
+      return this._audioMixer ? this._audioMixer.requested : false;
+    }
+  }, {
+    key: "_audioInfo",
+    get: function get() {
+      return this._audioMixer && this._audioMixer.audioInfo || DEFAULT_AUDIO_INFO;
+    }
+
+    // -- OutputStreamManager 委派 --
+  }, {
+    key: "_mixedStream",
+    get: function get() {
+      return this._outputStreamManager && this._outputStreamManager.mixedStream || null;
+    }
+  }, {
+    key: "_capturedStreams",
+    get: function get() {
+      return this._outputStreamManager && this._outputStreamManager.capturedStreams || [];
+    }
+  }, {
+    key: "_capturedStream",
+    get: function get() {
+      return this._outputStreamManager && this._outputStreamManager.capturedStream || null;
+    }
+  }, {
+    key: "_videoStream",
+    get: function get() {
+      return this._outputStreamManager && this._outputStreamManager.videoStream || null;
+    }
+  }]);
+}();
+},{"../Logger":39,"./AudioMixer":42,"./LayoutEngine":43,"./MixerConfig":44,"./MixerDomAdapter":46,"./OutputStreamManager":47,"./RenderLoop":48,"./SourceRegistry":49,"./WatermarkManager":50}],46:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * MixerDomAdapter — 混流器 DOM 元素创建适配器
+ *
+ * 负责创建和管理混流器内部使用的 DOM 元素：
+ *   - 离屏 canvas：用于合成视频帧
+ *   - 隐藏 video 元素：用于播放每个 MediaStream
+ *
+ * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
+ *
+ * @module MixerDomAdapter
+ */
+var MixerDomAdapter = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.config - 混流配置对象（含 width/height 等）
+   * @param {Object} options.logger - 日志记录器
+   */
+  function MixerDomAdapter(options) {
+    _classCallCheck(this, MixerDomAdapter);
+    options = options || {};
+    this._config = options.config;
+    this._logger = options.logger;
+    if (this._logger) {
+      this._logger.debug('MixerDomAdapter constructed');
+    }
+  }
+
+  /**
+   * 创建一个隐藏的离屏 canvas 元素。
+   * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
+   *
+   * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
+   */
+  return _createClass(MixerDomAdapter, [{
+    key: "createCanvas",
+    value: function createCanvas() {
+      var canvas = document.createElement('canvas');
+      canvas.setAttribute('style', 'display:none');
+      if (this._logger) {
+        this._logger.debug('Hidden mixer canvas created');
+      }
+      return canvas;
+    }
+
+    /**
+     * 将 canvas 尺寸设置为配置值（grid 模式）。
+     * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
+     *
+     * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
+     */
+  }, {
+    key: "prepareCanvas",
+    value: function prepareCanvas(canvas) {
+      var width = this._config.width || 1280;
+      var height = this._config.height || 720;
+      var resized = false;
+
+      // canvas width/height 设置时会清空画布，只在尺寸变化时才写
+      if (canvas.width !== width) {
+        canvas.width = width;
+        resized = true;
+      }
+      if (canvas.height !== height) {
+        canvas.height = height;
+        resized = true;
+      }
+      if (resized && this._logger) {
+        this._logger.debug("Canvas prepared: ".concat(width, "x").concat(height));
+      }
+    }
+
+    /**
+     * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
+     * video 元素属性：display:none、muted、autoplay、playsinline。
+     *
+     * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
+     * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
+     */
+  }, {
+    key: "createVideoElement",
+    value: function createVideoElement(mediaStream) {
+      var _this = this;
+      var video = document.createElement('video');
+      video.setAttribute('style', 'display:none');
+      video.muted = true;
+      video.autoplay = true;
+      video.setAttribute('playsinline', '');
+      video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
+      if (this._logger) {
+        var stream = video.srcObject;
+        var streamId = stream && stream.id ? stream.id : 'unknown';
+        this._logger.debug("Video element created for stream ".concat(streamId));
+      }
+      video.play()["catch"](function (error) {
+        var stream = video.srcObject;
+        var streamId = stream && stream.id ? stream.id : 'unknown';
+        _this._logger.error("video play error for stream ".concat(streamId, ": ").concat(error.message || String(error)));
+      });
+      return video;
+    }
+  }]);
+}();
+module.exports = MixerDomAdapter;
+},{}],47:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * OutputStreamManager — 混流器输出流管理
+ *
+ * 负责混流器输出流的生命周期管理：
+ *   - canvas.captureStream() 获取视频流
+ *   - 音频轨注入到已返回的混合流（延迟添加音频场景）
+ *   - 停止时清理所有捕获的流轨道
+ *
+ * @module OutputStreamManager
+ */
+var OutputStreamManager = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+   * @param {Object} options.config - 混流配置
+   * @param {Object} options.logger - 日志记录器
+   */
+  function OutputStreamManager(options) {
+    _classCallCheck(this, OutputStreamManager);
+    options = options || {};
+    this._canvas = options.canvas;
+    this._config = options.config;
+    this._logger = options.logger;
+
+    /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
+    this._mixedStream = null;
+
+    /** @type {Array<MediaStream>} 所有通过 captureStream 创建的流的列表（用于停止时清理） */
+    this._capturedStreams = [];
+
+    /** @type {MediaStream|null} 当前活跃的 captureStream 引用 */
+    this._capturedStream = null;
+
+    /** @type {MediaStream|null} 输出视频流（仅含视频轨） */
+    this._videoStream = null;
+    if (this._logger) {
+      this._logger.debug('OutputStreamManager constructed');
+    }
+  }
+
+  /**
+   * 检测当前视频流是否仍有 live（活跃）状态的视频轨。
+   *
+   * @returns {boolean} true=视频流存在且至少有一条 live 视频轨
+   */
+  return _createClass(OutputStreamManager, [{
+    key: "hasLiveVideoStream",
+    value: function hasLiveVideoStream() {
+      return Boolean(this._videoStream && this._videoStream.getVideoTracks().some(function (track) {
+        return track.readyState === 'live';
+      }));
+    }
+
+    /**
+     * 获取视频输出流。
+     *
+     * 首次调用时先绘制一帧（确保 canvas 有内容），然后执行
+     * canvas.captureStream() 获取原始流，将其视频轨添加到新的 MediaStream 返回。
+     *
+     * @param {Function} drawFirstFrame - 绘制首帧的回调
+     * @returns {MediaStream} 仅包含视频轨的输出流
+     */
+  }, {
+    key: "getVideoStream",
+    value: function getVideoStream(drawFirstFrame) {
+      var _this = this;
+      if (this.hasLiveVideoStream()) {
+        if (this._logger) {
+          this._logger.debug('Reusing existing live video stream');
+        }
+        return this._videoStream;
+      }
+      drawFirstFrame();
+      var videoStream = new MediaStream();
+      var capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+      capturedStream.getVideoTracks().forEach(function (track) {
+        if (_this._logger) {
+          _this._logger.debug('track: ', track.id, track.enabled, track.readyState);
+        }
+        videoStream.addTrack(track);
+      });
+      this._canvas.stream = capturedStream;
+      this._capturedStream = capturedStream;
+      this._videoStream = videoStream;
+      this._capturedStreams.push(capturedStream);
+      if (this._logger) {
+        this._logger.debug("Created new video stream: tracks=".concat(videoStream.getVideoTracks().length));
+      }
+      return this._videoStream;
+    }
+
+    /**
+     * 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨。
+     *
+     * @param {MediaStream} stream - 混合流（视频流，可能后续添加音频）
+     */
+  }, {
+    key: "setMixedStream",
+    value: function setMixedStream(stream) {
+      this._mixedStream = stream;
+      if (this._logger) {
+        var trackCount = stream && stream.getTracks ? stream.getTracks().length : 0;
+        this._logger.debug("Mixed stream set: tracks=".concat(trackCount));
+      }
+    }
+
+    /**
+     * 将音频流中的音轨去重地添加到目标流中。
+     *
+     * @param {MediaStream} targetStream - 目标流（一般是 video stream）
+     * @param {MediaStream} audioStream - 音频流（audio destination stream）
+     */
+  }, {
+    key: "addAudioTracksToStream",
+    value: function addAudioTracksToStream(targetStream, audioStream) {
+      var _this2 = this;
+      if (!targetStream || !audioStream) {
+        return;
+      }
+      audioStream.getAudioTracks().forEach(function (track) {
+        if (!targetStream.getAudioTracks().some(function (item) {
+          return item.id === track.id;
+        })) {
+          targetStream.addTrack(track);
+          if (_this2._logger) {
+            _this2._logger.debug("Audio track added to target stream: ".concat(track.id));
+          }
+        }
+      });
+    }
+
+    /**
+     * 将音频轨补充到已返回的 mixed stream 中。
+     *
+     * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
+     * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨
+     * 注入到已返回的流。
+     *
+     * @param {MediaStream} audioStream - 音频流
+     */
+  }, {
+    key: "ensureMixedStreamAudioTrack",
+    value: function ensureMixedStreamAudioTrack(audioStream) {
+      var _this3 = this;
+      if (!this._mixedStream || !audioStream || this._mixedStream.getAudioTracks().length > 0) {
+        return;
+      }
+      audioStream.getAudioTracks().forEach(function (track) {
+        _this3._mixedStream.addTrack(track);
+        if (_this3._logger) {
+          _this3._logger.debug("Mixed stream audio track injected: ".concat(track.id));
+        }
+      });
+    }
+
+    /**
+     * 停止所有输出流，释放资源。
+     *
+     * 清理步骤：
+     *   1. 清空内部引用
+     *   2. 停止所有 captureStream 的 tracks
+     *   3. 清空 capturedStreams 列表
+     *   4. 清除 canvas 上的 stream 引用
+     */
+  }, {
+    key: "stop",
+    value: function stop() {
+      if (this._logger) {
+        this._logger.debug("Stopping output streams: captured=".concat(this._capturedStreams.length));
+      }
+      this._mixedStream = null;
+      this._videoStream = null;
+      this._capturedStream = null;
+      this._capturedStreams.forEach(function (stream) {
+        stream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      });
+      this._capturedStreams = [];
+      this._canvas.stream = null;
+      if (this._logger) {
+        this._logger.debug('Output streams stopped');
+      }
+    }
+  }, {
+    key: "mixedStream",
+    get: function get() {
+      return this._mixedStream;
+    }
+  }, {
+    key: "capturedStreams",
+    get: function get() {
+      return this._capturedStreams;
+    }
+  }, {
+    key: "capturedStream",
+    get: function get() {
+      return this._capturedStream;
+    }
+  }, {
+    key: "videoStream",
+    get: function get() {
+      return this._videoStream;
+    }
+  }]);
+}();
+module.exports = OutputStreamManager;
+},{}],48:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * RenderLoop — 混流器渲染循环
+ *
+ * 负责混流器的视频渲染节奏控制：
+ *   - 通过 requestAnimationFrame 驱动帧循环
+ *   - 按配置的 fps 节流，避免不必要的绘制
+ *   - 管理渲染后端的生命周期（创建、销毁、故障降级）
+ *   - 检测 Worker 渲染器故障，自动按配置降级到下一个可用后端
+ *
+ * @module RenderLoop
+ */
+
+var RendererFactory = require('../MixerRenderer/RendererFactory');
+var MainCanvas2DRenderer = require('../MixerRenderer/MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('../MixerRenderer/MainWebGL2Renderer');
+var WorkerRenderer = require('../MixerRenderer/WorkerRenderer');
+var RenderLoop = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
+   * @param {Object} options.config - 混流配置
+   * @param {Object} options.logger - 日志记录器
+   * @param {Function} options.getSources - 返回当前源列表的回调
+   * @param {Function} options.createRenderPayload - 创建渲染 payload 的函数
+   * @param {Function} options.syncExternalSourceAudio - 同步外部源音频的函数
+   * @param {Function} options.onStateChange - 状态变化回调（已弃用，保留为空函数）
+   */
+  function RenderLoop(options) {
+    _classCallCheck(this, RenderLoop);
+    options = options || {};
+    this._canvas = options.canvas;
+    this._config = options.config;
+    this._logger = options.logger;
+    this._getSources = options.getSources;
+    this._createRenderPayload = options.createRenderPayload;
+    this._syncExternalSourceAudio = options.syncExternalSourceAudio;
+    this._onStateChange = options.onStateChange;
+
+    /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
+    this._renderer = null;
+
+    /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
+    this._animationId = null;
+
+    /** @type {number} 上一次真正执行合成的时间戳（performance.now） */
+    this._lastRenderTime = 0;
+
+    /** @type {number} 目标帧间隔（毫秒），由 fps 计算，0 表示不节流 */
+    this._renderFrameInterval = this._config.fps ? 1000 / this._config.fps : 0;
+
+    /** @type {number} 连续渲染失败次数，用于诊断渲染后端异常 */
+    this._renderErrorCount = 0;
+
+    /** @type {number} 连续 renderer 失败次数，达到阈值后触发后端降级 */
+    this._rendererErrorCount = 0;
+
+    /** @type {boolean} 停止标记；设为 true 时 rAF 回调直接返回 */
+    this._stopped = false;
+
+    // bind 一次避免每帧创建新函数
+    this._boundRenderFrame = this.renderFrame.bind(this);
+    if (this._logger) {
+      this._logger.debug("RenderLoop constructed: fps=".concat(this._config.fps || 0, " renderMode=").concat(this._config.renderMode));
+    }
+  }
+
+  /**
+   * 恢复渲染循环（清除停止标记）。
+   */
+  return _createClass(RenderLoop, [{
+    key: "resume",
+    value: function resume() {
+      this._stopped = false;
+      if (this._logger) {
+        this._logger.debug('RenderLoop resumed');
+      }
+    }
+
+    /**
+     * 启动渲染循环。
+     * 先恢复再调度下一帧。
+     */
+  }, {
+    key: "start",
+    value: function start() {
+      if (this._logger) {
+        this._logger.debug('RenderLoop start requested');
+      }
+      this.resume();
+      this._scheduleNextFrame();
+    }
+
+    /**
+     * 停止渲染循环。
+     * 取消待处理的 rAF，设置停止标记。
+     */
+  }, {
+    key: "stop",
+    value: function stop() {
+      this._stopped = true;
+      if (this._logger) {
+        this._logger.debug('RenderLoop stopped');
+      }
+      if (this._animationId) {
+        window.cancelAnimationFrame(this._animationId);
+        this._animationId = null;
+      }
+    }
+
+    /**
+     * 重置帧计时器。
+     * 在下一次渲染时忽略 fps 节流，立即合成一帧。
+     * 用于刚添加源时需要立即刷新画面的场景。
+     */
+  }, {
+    key: "resetFrameTiming",
+    value: function resetFrameTiming() {
+      this._lastRenderTime = 0;
+      if (this._logger) {
+        this._logger.debug('RenderLoop frame timing reset');
+      }
+    }
+
+    /**
+     * 确保渲染后端已创建。
+     * 首次调用时通过 RendererFactory.createRenderer 根据配置创建实际渲染器。
+     *
+     * @returns {BaseRenderer} 当前渲染后端
+     */
+  }, {
+    key: "ensureRenderer",
+    value: function ensureRenderer() {
+      var _this = this;
+      if (!this._renderer) {
+        if (this._logger) {
+          this._logger.debug("Creating renderer: requestedMode=".concat(this._config.renderMode));
+        }
+        this._renderer = RendererFactory.createRenderer(this._canvas, this._config, {
+          onWorkerFatalError: function onWorkerFatalError(reason) {
+            _this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
+          }
+        });
+      }
+      return this._renderer;
+    }
+
+    /**
+     * 调整渲染器输出尺寸。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
+  }, {
+    key: "resizeRenderer",
+    value: function resizeRenderer(width, height) {
+      if (this._renderer) {
+        this._renderer.resize(width, height);
+      }
+    }
+
+    /**
+     * 从渲染器中移除一路源的绘制数据。
+     *
+     * @param {string} sourceId - 要移除的源 ID
+     */
+  }, {
+    key: "removeSource",
+    value: function removeSource(sourceId) {
+      if (this._renderer && this._renderer.removeSource) {
+        this._renderer.removeSource(sourceId);
+      }
+    }
+
+    /**
+     * 获取当前渲染后端状态信息。
+     *
+     * @returns {Object} 渲染状态快照
+     */
+  }, {
+    key: "getRenderInfo",
+    value: function getRenderInfo() {
+      if (!this._renderer) {
+        return {
+          requestedMode: this._config.renderMode,
+          actualMode: 'not-started',
+          isWorker: false,
+          isWebGL2: false,
+          isFallback: false,
+          reason: '',
+          droppedFrames: 0,
+          renderedFrames: 0,
+          fps: this._config.fps,
+          width: this._canvas.width || this._config.width,
+          height: this._canvas.height || this._config.height
+        };
+      }
+      return this._renderer.getInfo();
+    }
+
+    /**
+     * 渲染一帧（requestAnimationFrame 回调）。
+     *
+     * 流程：
+     *   1. 检查停止标记，已停止则直接返回
+     *   2. 检查 fps 节流（是否已达到目标帧间隔），未到时跳过绘制
+     *   3. 同步外部音频源状态（检测 HTMLVideoElement 换源）
+     *   4. 构建渲染 payload 并交给 renderer 绘制
+     *   5. 检查渲染器健康状态（Worker 故障检测、错误计数）
+     *   6. 调度下一帧 rAF
+     *
+     * @param {number} [timestamp] - rAF 传入的高精度时间戳
+     * @param {boolean} [forceRender=false] - 是否强制渲染（忽略 fps 节流）
+     */
+  }, {
+    key: "renderFrame",
+    value: function renderFrame(timestamp, forceRender) {
+      if (this._stopped) {
+        return;
+      }
+      if (!forceRender) {
+        this._animationId = null;
+      }
+      var now = typeof timestamp === 'number' ? timestamp : typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      var shouldRender = forceRender || !this._renderFrameInterval || !this._lastRenderTime || now - this._lastRenderTime >= this._renderFrameInterval;
+      try {
+        if (shouldRender) {
+          this._syncExternalSourceAudio();
+          var payload = this._createRenderPayload();
+          if (!this._shouldRenderPayload(payload)) {
+            this._lastRenderTime = now;
+            this._renderErrorCount = 0;
+          } else {
+            var renderer = this.ensureRenderer();
+            renderer.render(payload);
+            this._handleRendererInfo(renderer);
+            this._lastRenderTime = now;
+            this._renderErrorCount = 0;
+          }
+        }
+      } catch (error) {
+        this._handleRenderError(error);
+      }
+      this._scheduleNextFrame();
+    }
+
+    /**
+     * 销毁渲染循环。
+     * 停止帧循环并销毁渲染后端，释放资源。
+     */
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      if (this._logger) {
+        this._logger.debug('Destroying RenderLoop');
+      }
+      this.stop();
+      this._lastRenderTime = 0;
+      if (this._renderer) {
+        this._renderer.destroy();
+        this._renderer = null;
+      }
+    }
+
+    /**
+     * 运行时降级到下一个可用渲染器。
+     *
+     * auto 模式按 worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d 继续尝试。
+     * 只在以下条件满足时降级：
+     *   - 当前渲染器不是 main-2d
+     *   - 当前是 Worker 渲染器或已标记为 worker-failed
+     *
+     * @param {string} reason - 降级原因描述
+     * @returns {boolean} true=降级成功
+     */
+  }, {
+    key: "fallbackRenderer",
+    value: function fallbackRenderer(reason) {
+      if (this._logger) {
+        this._logger.warn("Fallback renderer requested: ".concat(reason));
+      }
+      var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
+      if (currentInfo.actualMode === 'main-2d') {
+        return false;
+      }
+      if (!currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
+        return false;
+      }
+      if (this._renderer && this._renderer.destroy) {
+        this._renderer.destroy();
+      }
+      if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
+        var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
+        if (mainWebGL2) {
+          return true;
+        }
+        var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
+        if (worker2D) {
+          return true;
+        }
+      }
+      return this.fallbackRendererToMain2D(reason, currentInfo);
+    }
+  }, {
+    key: "fallbackRendererToMain2D",
+    value: function fallbackRendererToMain2D(reason, info) {
+      if (this._logger) {
+        this._logger.warn("Falling back to main-2d: ".concat(reason));
+      }
+      var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
+      if (currentInfo.actualMode === 'main-2d') {
+        return false;
+      }
+      if (!info && !currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
+        return false;
+      }
+      if (!info && this._renderer && this._renderer.destroy) {
+        this._renderer.destroy();
+      }
+      var renderer = new MainCanvas2DRenderer(this._config, {
+        requestedMode: currentInfo.requestedMode || this._config.renderMode,
+        actualMode: 'main-2d',
+        isWorker: false,
+        isWebGL2: false,
+        isFallback: true,
+        reason: reason,
+        droppedFrames: currentInfo.droppedFrames || 0,
+        renderedFrames: currentInfo.renderedFrames || 0
+      });
+      renderer.init(this._canvas);
+      this._renderer = renderer;
+      this._rendererErrorCount = 0;
+      return true;
+    }
+  }, {
+    key: "_tryFallbackToMainWebGL2",
+    value: function _tryFallbackToMainWebGL2(currentInfo, reason) {
+      try {
+        var renderer = new MainWebGL2Renderer(this._config, {
+          requestedMode: currentInfo.requestedMode || this._config.renderMode,
+          actualMode: 'main-webgl2',
+          isWorker: false,
+          isWebGL2: true,
+          isFallback: true,
+          reason: reason,
+          droppedFrames: currentInfo.droppedFrames || 0,
+          renderedFrames: currentInfo.renderedFrames || 0
+        });
+        renderer.init(this._canvas);
+        this._renderer = renderer;
+        this._rendererErrorCount = 0;
+        if (this._logger) {
+          this._logger.warn("Fallback succeeded: main-webgl2 reason=".concat(reason));
+        }
+        return true;
+      } catch (error) {
+        if (this._logger) {
+          this._logger.warn("Fallback to main-webgl2 failed: ".concat(error.message || String(error)));
+        }
+        return false;
+      }
+    }
+  }, {
+    key: "_tryFallbackToWorker2D",
+    value: function _tryFallbackToWorker2D(currentInfo, reason) {
+      var _this2 = this;
+      try {
+        var workerConfig = Object.assign({}, this._config, {
+          renderMode: 'worker-2d'
+        });
+        var renderer = new WorkerRenderer(workerConfig, {
+          requestedMode: currentInfo.requestedMode || this._config.renderMode,
+          actualMode: 'worker-init',
+          isWorker: true,
+          isWebGL2: false,
+          isFallback: true,
+          reason: reason,
+          droppedFrames: currentInfo.droppedFrames || 0,
+          renderedFrames: currentInfo.renderedFrames || 0,
+          onFatalError: function onFatalError(fallbackReason) {
+            _this2.fallbackRendererToMain2D(fallbackReason || 'Worker Canvas2D renderer failed at runtime');
+          }
+        });
+        renderer.init(this._canvas);
+        this._renderer = renderer;
+        this._rendererErrorCount = 0;
+        if (this._logger) {
+          this._logger.warn("Fallback succeeded: worker-2d reason=".concat(reason));
+        }
+        return true;
+      } catch (error) {
+        if (this._logger) {
+          this._logger.warn("Fallback to worker-2d failed: ".concat(error.message || String(error)));
+        }
+        return false;
+      }
+    }
+
+    /**
+     * 调度下一帧 rAF。
+     * 已停止、已有待处理帧、或无源时跳过调度。
+     */
+  }, {
+    key: "_scheduleNextFrame",
+    value: function _scheduleNextFrame() {
+      if (this._stopped || this._animationId || this._getSources().length === 0) {
+        return;
+      }
+      this._animationId = window.requestAnimationFrame(this._boundRenderFrame);
+    }
+
+    /**
+     * 检查渲染器运行健康状态。
+     * 检测 Worker 渲染器故障，累积错误计数达 2 次后触发降级。
+     *
+     * @param {BaseRenderer} renderer - 当前渲染后端
+     */
+  }, {
+    key: "_handleRendererInfo",
+    value: function _handleRendererInfo(renderer) {
+      if (!renderer.getInfo) {
+        return;
+      }
+      var info = renderer.getInfo();
+      if (info.actualMode === 'worker-failed' || info.isWorker && info.isFallback && info.reason) {
+        this._rendererErrorCount += 1;
+        if (this._rendererErrorCount >= 2) {
+          this.fallbackRenderer(info.reason || 'Worker renderer failed at runtime');
+        }
+      } else {
+        this._rendererErrorCount = 0;
+      }
+    }
+
+    /**
+     * 空源、无水印且没有已创建 renderer 时跳过绘制。
+     * 这样构造阶段的强制刷新不会提前初始化 Worker/WebGL；
+     * 如果已有 renderer，则仍允许空 payload 清背景，避免移除所有源后残留上一帧。
+     *
+     * @param {Object} payload - 本帧渲染数据
+     * @returns {boolean} true=需要交给 renderer 绘制
+     */
+  }, {
+    key: "_shouldRenderPayload",
+    value: function _shouldRenderPayload(payload) {
+      if (this._renderer) {
+        return true;
+      }
+      return Boolean(payload && (payload.items && payload.items.length || payload.sourceWatermarks && payload.sourceWatermarks.length || payload.outputWatermarks && payload.outputWatermarks.length));
+    }
+
+    /**
+     * 处理渲染异常。
+     * 累积错误计数达 2 次后触发后端降级。
+     *
+     * @param {Error} error - 渲染异常
+     */
+  }, {
+    key: "_handleRenderError",
+    value: function _handleRenderError(error) {
+      var reason = "Mixer render failed: ".concat(error.message || String(error));
+      this._renderErrorCount += 1;
+      this._logger.warn(reason);
+      if (this._renderer && this._renderer._updateInfo) {
+        this._renderer._updateInfo({
+          isFallback: true,
+          reason: reason
+        });
+      }
+      if (this._renderErrorCount >= 2) {
+        this.fallbackRenderer(reason);
+      }
+    }
+  }, {
+    key: "renderer",
+    get: function get() {
+      return this._renderer;
+    }
+  }, {
+    key: "animationId",
+    get: function get() {
+      return this._animationId;
+    }
+  }, {
+    key: "lastRenderTime",
+    get: function get() {
+      return this._lastRenderTime;
+    }
+  }, {
+    key: "renderFrameInterval",
+    get: function get() {
+      return this._renderFrameInterval;
+    }
+  }, {
+    key: "renderErrorCount",
+    get: function get() {
+      return this._renderErrorCount;
+    }
+  }, {
+    key: "rendererErrorCount",
+    get: function get() {
+      return this._rendererErrorCount;
+    }
+  }, {
+    key: "isStopped",
+    get: function get() {
+      return this._stopped;
+    }
+  }]);
+}();
+module.exports = RenderLoop;
+},{"../MixerRenderer/MainCanvas2DRenderer":52,"../MixerRenderer/MainWebGL2Renderer":53,"../MixerRenderer/RendererFactory":54,"../MixerRenderer/WorkerRenderer":55}],49:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * SourceRegistry — 混流器输入源注册表
+ *
+ * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
+ * 负责源的增删、ID 生成、slot 分配、状态查询等。
+ *
+ * @module SourceRegistry
+ */
+var SourceRegistry = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
+   * @param {Function} options.normalizeGain - 增益值归一化函数
+   * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
+   * @param {Function} options.onBeforeRemove - 源被移除前的回调（用于断开音频连接）
+   * @param {Function} options.onAfterRemove - 源被移除后的回调（用于清理渲染器、清空画布）
+   */
+  function SourceRegistry(options) {
+    _classCallCheck(this, SourceRegistry);
+    options = options || {};
+    this._logger = options.logger;
+    this._getDefaultGain = options.getDefaultGain;
+    this._normalizeGain = options.normalizeGain;
+    this._createVideoElement = options.createVideoElement;
+    this._onBeforeRemove = options.onBeforeRemove;
+    this._onAfterRemove = options.onAfterRemove;
+
+    /** @type {Array<Object>} 当前所有输入源对象列表 */
+    this.sources = [];
+
+    /** @type {Array<HTMLVideoElement>} 当前所有源对应的 video 元素列表（与 sources 同步） */
+    this.videos = [];
+
+    /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
+    this._sourceSeq = 0;
+    if (this._logger) {
+      this._logger.debug('SourceRegistry constructed');
+    }
+  }
+
+  /**
+   * 添加一个新的输入源。
+   *
+   * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
+   *
+   * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
+   * @param {Object} [options={}] - 配置选项 { slot, gain }
+   * @returns {Object} 新建的 source 对象
+   */
+  return _createClass(SourceRegistry, [{
+    key: "add",
+    value: function add(input, options) {
+      var source = this._createSource(input, options || {});
+
+      // 检查 slot 冲突，同 slot 旧源会被替换
+      if (typeof source.slot === 'number') {
+        var oldSource = this.sources.find(function (item) {
+          return item.slot === source.slot;
+        });
+        if (oldSource) {
+          if (this._logger) {
+            this._logger.warn("Slot ".concat(source.slot, " overwritten."));
+          }
+          this.remove(oldSource);
+        }
+      }
+      this.sources.push(source);
+      this._syncVideos();
+      if (this._logger) {
+        this._logger.debug("Source added: id=".concat(source.id, " slot=").concat(source.slot, " gain=").concat(source.gain));
+      }
+      return source;
+    }
+
+    /**
+     * 移除所有输入源（遍历快照逐一移除）。
+     */
+  }, {
+    key: "clear",
+    value: function clear() {
+      var _this = this;
+      if (this._logger) {
+        this._logger.debug("Clearing all sources: count=".concat(this.sources.length));
+      }
+      this.sources.slice().forEach(function (source) {
+        _this.remove(source);
+      });
+    }
+
+    /**
+     * 按 MediaStream 对象、stream.id 或内部 source.id 查找源。
+     *
+     * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
+     * @returns {Object|null} 找到的 source 对象，或 null
+     */
+  }, {
+    key: "find",
+    value: function find(streamOrId) {
+      var _this2 = this;
+      if (!streamOrId) {
+        return null;
+      }
+      if (typeof streamOrId === 'string') {
+        // 先匹配 source.id，再匹配 stream.id
+        return this.sources.find(function (source) {
+          var stream = _this2.getStream(source);
+          return source.id === streamOrId || stream && stream.id === streamOrId;
+        }) || null;
+      }
+
+      // 按 MediaStream 或 HTMLVideoElement 引用匹配
+      var stream = streamOrId.mediaStream || streamOrId;
+      return this.sources.find(function (source) {
+        return source.stream === stream || source.video === streamOrId;
+      }) || null;
+    }
+
+    /**
+     * 移除一个具体的 source 对象。
+     *
+     * 步骤：触发 onBeforeRemove（断开音频）→ 清理 ownedVideo（暂停、清空 srcObject、移除 DOM）→
+     * 从数组移除 → 同步 _videos → 触发 onAfterRemove（渲染器清理、画布清空）。
+     *
+     * @param {Object} source - 要移除的 source 对象
+     * @returns {boolean} true=成功移除；false=source 为空
+     */
+  }, {
+    key: "remove",
+    value: function remove(source) {
+      if (!source) {
+        return false;
+      }
+      if (this._logger) {
+        this._logger.debug("Removing source: id=".concat(source.id, " slot=").concat(source.slot));
+      }
+
+      // 先通知外部断开音频连接
+      if (this._onBeforeRemove) {
+        this._onBeforeRemove(source);
+      }
+
+      // 如果是 mixr 内部创建的 video 元素，清理 DOM
+      if (source.ownedVideo && source.video) {
+        source.video.pause();
+        source.video.srcObject = null;
+        source.video.remove();
+      }
+      var index = this.sources.indexOf(source);
+      if (index !== -1) {
+        this.sources.splice(index, 1);
+      }
+      this._syncVideos();
+
+      // 通知外部源已移除（渲染器清理、画布清空等）
+      if (this._onAfterRemove) {
+        this._onAfterRemove(source);
+      }
+      if (this._logger) {
+        this._logger.debug("Source removed: id=".concat(source.id, " remaining=").concat(this.sources.length));
+      }
+      return true;
+    }
+
+    /**
+     * 返回当前所有源的快照。
+     * 返回新数组，外部修改不影响内部状态。
+     *
+     * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, hasAudio, hasVideo }
+     */
+  }, {
+    key: "getSnapshot",
+    value: function getSnapshot() {
+      var _this3 = this;
+      return this.sources.map(function (source) {
+        var stream = _this3.getStream(source);
+        return {
+          id: source.id,
+          streamId: stream ? stream.id : null,
+          slot: source.slot,
+          gain: source.gain,
+          hasAudio: _this3.hasLiveAudioTrack(source),
+          hasVideo: _this3.hasVideoTrack(source)
+        };
+      });
+    }
+
+    /**
+     * 获取 source 当前关联的 MediaStream。
+     *
+     * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
+     * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {MediaStream|null} 当前 MediaStream
+     */
+  }, {
+    key: "getStream",
+    value: function getStream(source) {
+      var stream = source.video && !source.ownedVideo ? source.video.srcObject : source.stream;
+
+      // 同步 stream 引用（外部换源场景）
+      if (source.stream !== stream) {
+        source.stream = stream;
+      }
+      return stream;
+    }
+
+    /**
+     * 检测是否至少有一路源有 live（活跃）状态的音频轨。
+     *
+     * @returns {boolean} true=至少一路有活跃音频
+     */
+  }, {
+    key: "hasAnyLiveAudioTrack",
+    value: function hasAnyLiveAudioTrack() {
+      var _this4 = this;
+      return this.sources.some(function (source) {
+        return _this4.hasLiveAudioTrack(source);
+      });
+    }
+
+    /**
+     * 检测某路源是否有 live（活跃）状态的音频轨。
+     * 只混入 live 状态的音频轨，避免 ended track 导致 WebAudio 创建失败或无效混音。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条 live 音频轨
+     */
+  }, {
+    key: "hasLiveAudioTrack",
+    value: function hasLiveAudioTrack(source) {
+      var stream = this.getStream(source);
+      return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(function (track) {
+        return track.readyState === 'live';
+      }));
+    }
+
+    /**
+     * 检测某路源是否有视频轨（不判断 readyState）。
+     * readyState 在绘制阶段才判断，刚加入但尚未出帧的源仍保留在布局中。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=至少有一条视频轨
+     */
+  }, {
+    key: "hasVideoTrack",
+    value: function hasVideoTrack(source) {
+      var stream = this.getStream(source);
+      return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
+    }
+
+    /**
+     * 判断某路源当前是否可渲染。
+     * 条件：stream 存在且 active，并且有视频轨。
+     * 具体的视频帧是否能绘制由 video.readyState 在渲染阶段判断。
+     *
+     * @param {Object} source - 内部 source 对象
+     * @returns {boolean} true=可渲染
+     */
+  }, {
+    key: "isRenderable",
+    value: function isRenderable(source) {
+      var stream = this.getStream(source);
+      return Boolean(stream && stream.active && this.hasVideoTrack(source));
+    }
+
+    /**
+     * 判断对象是否具备 MediaStream 的基本接口。
+     *
+     * 这个私有方法会被构建脚本收集到保留名单里，避免压缩产物把调用点和定义名拆开。
+     *
+     * @param {*} stream - 待校验对象
+     * @returns {boolean} true=满足 MediaStream 基本接口
+     */
+  }, {
+    key: "_isMediaStreamLike",
+    value: function _isMediaStreamLike(stream) {
+      return Boolean(stream && typeof stream.getTracks === 'function' && typeof stream.getAudioTracks === 'function' && typeof stream.getVideoTracks === 'function');
+    }
+
+    /**
+     * 创建一个内部 source 对象。
+     *
+     * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
+     * @param {Object} options - 配置 { slot, gain }
+     * @returns {Object} source 对象
+     * @throws {TypeError} 无效的 MediaStream
+     */
+  }, {
+    key: "_createSource",
+    value: function _createSource(input, options) {
+      var video;
+      var stream;
+      var ownedVideo = false;
+      if (input instanceof HTMLMediaElement) {
+        // 外部传入的 video 元素，混流器不接管生命周期
+        video = input;
+        stream = input.srcObject;
+      } else {
+        // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
+        stream = input && (input.mediaStream || input);
+        if (!this._isMediaStreamLike(stream)) {
+          throw new TypeError('Invalid MediaStream.');
+        }
+        video = this._createVideoElement(stream);
+        ownedVideo = true;
+      }
+      var source = {
+        id: this._createSourceId(stream, video),
+        stream: stream,
+        video: video,
+        slot: typeof options.slot === 'number' ? options.slot : null,
+        gain: this._normalizeGain(options.gain, this._getDefaultGain()),
+        audioSourceNode: null,
+        // WebAudio 源节点（由 AudioMixer 连接时赋值）
+        masterGainNode: null,
+        // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
+        gainNode: null,
+        // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
+        outputGains: new Set(),
+        // 该源所有下游 gain，用于后续音量同步和安全清理
+        audioStream: null,
+        // 当前已连接的音频流引用
+        audioTrackId: null,
+        // 当前已连接的音频轨 id，用于判断是否真正换轨
+        audioTrackSignature: null,
+        // 音频轨身份签名（track 对象 + id）
+        ownedVideo: ownedVideo
+      };
+
+      // 未指定 slot 时自动分配最小编号空闲 slot
+      if (source.slot === null) {
+        source.slot = this._getNextSlot();
+      }
+      if (this._logger) {
+        var streamId = stream && stream.id ? stream.id : 'unknown';
+        this._logger.debug("Source created: id=".concat(source.id, " stream=").concat(streamId, " slot=").concat(source.slot, " ownedVideo=").concat(ownedVideo));
+      }
+      return source;
+    }
+
+    /**
+     * 为 source 生成唯一 ID。
+     * 优先使用 stream.id，冲突时追加自增序号确保唯一。
+     *
+     * @param {MediaStream} stream - 关联的 MediaStream
+     * @param {HTMLVideoElement} video - 关联的 video 元素
+     * @returns {string} 唯一 ID
+     */
+  }, {
+    key: "_createSourceId",
+    value: function _createSourceId(stream, video) {
+      var baseId = stream && stream.id || video.id || "mixer-source-".concat(this._sourceSeq + 1);
+      var sourceId = baseId;
+      while (this.sources.some(function (source) {
+        return source.id === sourceId;
+      })) {
+        this._sourceSeq += 1;
+        sourceId = "".concat(baseId, "-").concat(this._sourceSeq);
+      }
+      return sourceId;
+    }
+
+    /**
+     * 获取当前最小编号的空闲 slot。
+     * 从 0 开始递增查找，跳过已被占用的 slot 编号。
+     *
+     * @returns {number} 可用的 slot 编号
+     */
+  }, {
+    key: "_getNextSlot",
+    value: function _getNextSlot() {
+      var slot = 0;
+      var occupiedSlots = this.sources.reduce(function (slots, source) {
+        if (typeof source.slot === 'number') {
+          slots[source.slot] = true;
+        }
+        return slots;
+      }, {});
+      while (occupiedSlots[slot]) {
+        slot += 1;
+      }
+      return slot;
+    }
+
+    /**
+     * 将 sources 数组中的 video 元素同步到 videos 数组。
+     * 外部代码通过 this.videos 即可遍历所有 video 元素。
+     */
+  }, {
+    key: "_syncVideos",
+    value: function _syncVideos() {
+      var _this5 = this;
+      this.videos.splice(0, this.videos.length);
+      this.sources.forEach(function (source) {
+        _this5.videos.push(source.video);
+      });
+      if (this._logger) {
+        this._logger.debug("Videos synced: sources=".concat(this.sources.length, " videos=").concat(this.videos.length));
+      }
+    }
+  }]);
+}();
+module.exports = SourceRegistry;
+},{}],50:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * WatermarkManager — Mixer 水印配置、加载和布局模块
+ *
+ * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
+ * 或每路 source 的 draw 区域计算最终绘制矩形。
+ *
+ * @module WatermarkManager
+ */
+
+var DEFAULT_TEXT_COLOR = '#fff';
+var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
+var DEFAULT_FONT_SIZE = 28;
+var DEFAULT_PADDING = 3;
+var DEFAULT_BACKGROUND_RADIUS = 3;
+var DEFAULT_MARGIN = 16;
+var WatermarkManager = /*#__PURE__*/function () {
+  /**
+   * @param {Object} options
+   * @param {Object} options.logger - 日志记录器
+   */
+  function WatermarkManager(options) {
+    _classCallCheck(this, WatermarkManager);
+    options = options || {};
+    this._logger = options.logger;
+    this._watermarks = [];
+    this._seq = 0;
+    if (this._logger) {
+      this._logger.debug('WatermarkManager constructed');
+    }
+  }
+
+  /**
+   * 替换全部水印。图片 URL 会异步加载，加载失败只更新状态，不中断混流。
+   *
+   * @param {Array<Object>|Object|null} watermarks - 水印配置
+   * @returns {Promise<Array<Object>>} 当前水印快照
+   */
+  return _createClass(WatermarkManager, [{
+    key: "setWatermarks",
+    value: function setWatermarks(watermarks) {
+      var _this = this;
+      var list = this._normalizeWatermarkList(watermarks);
+      if (this._logger) {
+        this._logger.debug("Setting watermarks: count=".concat(list.length));
+      }
+      this._watermarks = list.map(function (watermark) {
+        return _this._normalizeWatermark(watermark);
+      });
+      var loads = this._watermarks.map(function (watermark) {
+        return _this._prepareWatermark(watermark);
+      });
+      return Promise.all(loads).then(function () {
+        return _this.getWatermarks();
+      });
+    }
+
+    /**
+     * 按条件清除水印。不传 filter 时清空全部。
+     *
+     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
+     */
+  }, {
+    key: "clearWatermarks",
+    value: function clearWatermarks(filter) {
+      var _this2 = this;
+      if (this._logger) {
+        this._logger.debug("Clearing watermarks: filter=".concat(JSON.stringify(filter || null)));
+      }
+      if (!filter) {
+        this._watermarks = [];
+        return;
+      }
+      this._watermarks = this._watermarks.filter(function (watermark) {
+        return !_this2._matchesFilter(watermark, filter);
+      });
+    }
+
+    /**
+     * 返回当前水印只读快照。
+     *
+     * @returns {Array<Object>} 水印状态列表
+     */
+  }, {
+    key: "getWatermarks",
+    value: function getWatermarks() {
+      return this._watermarks.map(function (watermark) {
+        return {
+          id: watermark.id,
+          target: watermark.target,
+          type: watermark.type,
+          text: watermark.text,
+          slot: watermark.slot,
+          sourceId: watermark.sourceId,
+          streamId: watermark.streamId,
+          position: clonePosition(watermark.position),
+          opacity: watermark.opacity,
+          width: watermark.width,
+          height: watermark.height,
+          fontSize: watermark.fontSize,
+          color: watermark.color,
+          backgroundColor: watermark.backgroundColor,
+          padding: watermark.padding,
+          backgroundRadius: watermark.backgroundRadius,
+          margin: watermark.margin,
+          status: watermark.status,
+          reason: watermark.reason
+        };
+      });
+    }
+
+    /**
+     * 根据当前渲染 payload 计算 output/source 两类水印绘制项。
+     *
+     * @param {Object} payload - { width, height, items }
+     * @returns {Object} { sourceWatermarks, outputWatermarks }
+     */
+  }, {
+    key: "createRenderItems",
+    value: function createRenderItems(payload) {
+      var _this3 = this;
+      payload = payload || {};
+      var outputArea = {
+        x: 0,
+        y: 0,
+        width: payload.width || 1,
+        height: payload.height || 1
+      };
+      var sourceWatermarks = [];
+      var outputWatermarks = [];
+      this._watermarks.forEach(function (watermark) {
+        if (watermark.status !== 'ready' || !watermark.image) {
+          return;
+        }
+        if (watermark.target === 'source') {
+          (payload.items || []).forEach(function (item) {
+            if (!_this3._matchesSource(watermark, item)) {
+              return;
+            }
+            sourceWatermarks.push(_this3._createDrawItem(watermark, item.draw, item));
+          });
+          return;
+        }
+        outputWatermarks.push(_this3._createDrawItem(watermark, outputArea, null));
+      });
+      return {
+        sourceWatermarks: sourceWatermarks.filter(Boolean),
+        outputWatermarks: outputWatermarks.filter(Boolean)
+      };
+    }
+  }, {
+    key: "_normalizeWatermarkList",
+    value: function _normalizeWatermarkList(watermarks) {
+      if (!watermarks) {
+        return [];
+      }
+      if (watermarks instanceof Array) {
+        return watermarks;
+      }
+      return [watermarks];
+    }
+  }, {
+    key: "_normalizeWatermark",
+    value: function _normalizeWatermark(input) {
+      input = input || {};
+      var type = input.type === 'image' || input.image ? 'image' : 'text';
+      var target = input.target === 'source' ? 'source' : 'output';
+      var id = typeof input.id === 'string' && input.id ? input.id : "watermark-".concat(++this._seq);
+      var fontSize = normalizePositiveInteger(input.fontSize, DEFAULT_FONT_SIZE);
+      var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
+      return {
+        id: id,
+        target: target,
+        type: type,
+        text: typeof input.text === 'string' ? input.text : '',
+        imageInput: input.image || null,
+        image: null,
+        slot: normalizeSlot(input.slot),
+        sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
+        streamId: typeof input.streamId === 'string' ? input.streamId : null,
+        position: normalizePosition(input.position),
+        width: normalizePositiveInteger(input.width, null),
+        height: normalizePositiveInteger(input.height, null),
+        font: typeof input.font === 'string' && input.font ? input.font : null,
+        fontSize: fontSize,
+        color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
+        backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
+        opacity: normalizeOpacity(input.opacity),
+        padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
+        backgroundRadius: normalizeNonNegativeInteger(backgroundRadiusInput, DEFAULT_BACKGROUND_RADIUS),
+        margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
+        status: 'pending',
+        reason: ''
+      };
+    }
+  }, {
+    key: "_prepareWatermark",
+    value: function _prepareWatermark(watermark) {
+      if (this._logger) {
+        this._logger.debug("Preparing watermark: id=".concat(watermark.id, " type=").concat(watermark.type, " target=").concat(watermark.target));
+      }
+      if (watermark.type === 'image') {
+        return this._prepareImageWatermark(watermark);
+      }
+      watermark.image = this._createTextSurface(watermark);
+      watermark.status = watermark.image ? 'ready' : 'error';
+      watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
+      return Promise.resolve(watermark);
+    }
+  }, {
+    key: "_prepareImageWatermark",
+    value: function _prepareImageWatermark(watermark) {
+      var _this4 = this;
+      var image = watermark.imageInput;
+      if (!image) {
+        watermark.status = 'error';
+        watermark.reason = 'Missing image';
+        return Promise.resolve(watermark);
+      }
+      if (typeof image === 'string') {
+        if (this._logger) {
+          this._logger.debug("Loading watermark image: id=".concat(watermark.id, " url=").concat(image));
+        }
+        return this._loadImage(image).then(function (loadedImage) {
+          watermark.image = loadedImage;
+          watermark.status = 'ready';
+          watermark.reason = '';
+          return watermark;
+        })["catch"](function (error) {
+          watermark.status = 'error';
+          watermark.reason = error.message || String(error);
+          if (_this4._logger) {
+            _this4._logger.warn("Watermark image failed to load: ".concat(watermark.reason));
+          }
+          return watermark;
+        });
+      }
+      watermark.image = image;
+      watermark.status = 'ready';
+      watermark.reason = '';
+      if (this._logger) {
+        this._logger.debug("Watermark image prepared from element: id=".concat(watermark.id));
+      }
+      return Promise.resolve(watermark);
+    }
+  }, {
+    key: "_loadImage",
+    value: function _loadImage(url) {
+      return new Promise(function (resolve, reject) {
+        if (typeof Image === 'undefined') {
+          reject(new Error('Image constructor is unavailable'));
+          return;
+        }
+        var image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = function () {
+          return resolve(image);
+        };
+        image.onerror = function () {
+          return reject(new Error("Failed to load image: ".concat(url)));
+        };
+        image.src = url;
+      });
+    }
+  }, {
+    key: "_createTextSurface",
+    value: function _createTextSurface(watermark) {
+      if (typeof document === 'undefined' || !document.createElement) {
+        return null;
+      }
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext && canvas.getContext('2d');
+      if (!context) {
+        return null;
+      }
+      var text = watermark.text || '';
+      var font = watermark.font || "bold ".concat(watermark.fontSize, "px sans-serif");
+      context.font = font;
+      var metrics = context.measureText ? context.measureText(text) : null;
+      var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
+      var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
+      var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
+      var width = Math.max(1, Math.ceil(measured + watermark.padding * 2));
+      var height = Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2));
+      canvas.width = width;
+      canvas.height = height;
+      context.font = font;
+      context.textBaseline = 'alphabetic';
+      context.textAlign = 'left';
+      if (watermark.backgroundColor) {
+        context.fillStyle = watermark.backgroundColor;
+        fillRoundedRect(context, 0, 0, width, height, watermark.backgroundRadius);
+      }
+      context.fillStyle = watermark.color;
+      if (context.fillText) {
+        context.fillText(text, watermark.padding, watermark.padding + ascent);
+      }
+      return canvas;
+    }
+  }, {
+    key: "_createDrawItem",
+    value: function _createDrawItem(watermark, area, sourceItem) {
+      if (!area || !watermark.image) {
+        return null;
+      }
+      var imageWidth = watermark.image.width || watermark.image.videoWidth || 1;
+      var imageHeight = watermark.image.height || watermark.image.videoHeight || 1;
+      var size = this._resolveSize(watermark, imageWidth, imageHeight);
+      var draw = this._resolveDrawRect(watermark, area, size.width, size.height);
+      if (!draw || draw.width <= 0 || draw.height <= 0) {
+        return null;
+      }
+      return {
+        id: watermark.id,
+        target: watermark.target,
+        type: watermark.type,
+        image: watermark.image,
+        opacity: watermark.opacity,
+        draw: draw,
+        sourceId: sourceItem ? sourceItem.id : null,
+        slot: sourceItem ? sourceItem.slot : null,
+        streamId: sourceItem ? sourceItem.streamId : null
+      };
+    }
+  }, {
+    key: "_resolveSize",
+    value: function _resolveSize(watermark, imageWidth, imageHeight) {
+      var width = watermark.width;
+      var height = watermark.height;
+      if (width && !height) {
+        height = width * imageHeight / imageWidth;
+      } else if (!width && height) {
+        width = height * imageWidth / imageHeight;
+      } else if (!width && !height) {
+        width = imageWidth;
+        height = imageHeight;
+      }
+      return {
+        width: Math.max(1, width),
+        height: Math.max(1, height)
+      };
+    }
+  }, {
+    key: "_resolveDrawRect",
+    value: function _resolveDrawRect(watermark, area, width, height) {
+      var position = watermark.position;
+      var x;
+      var y;
+      if (position && _typeof(position) === 'object') {
+        x = area.x + position.x;
+        y = area.y + position.y;
+      } else {
+        var margin = watermark.margin;
+        switch (position) {
+          case 'top-left':
+            x = area.x + margin;
+            y = area.y + margin;
+            break;
+          case 'top-center':
+            x = area.x + (area.width - width) / 2;
+            y = area.y + margin;
+            break;
+          case 'top-right':
+            x = area.x + area.width - width - margin;
+            y = area.y + margin;
+            break;
+          case 'bottom-left':
+            x = area.x + margin;
+            y = area.y + area.height - height - margin;
+            break;
+          case 'bottom-center':
+            x = area.x + (area.width - width) / 2;
+            y = area.y + area.height - height - margin;
+            break;
+          case 'center':
+            x = area.x + (area.width - width) / 2;
+            y = area.y + (area.height - height) / 2;
+            break;
+          case 'bottom-right':
+          default:
+            x = area.x + area.width - width - margin;
+            y = area.y + area.height - height - margin;
+            break;
+        }
+      }
+      return {
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(width),
+        height: Math.round(height)
+      };
+    }
+  }, {
+    key: "_matchesSource",
+    value: function _matchesSource(watermark, item) {
+      if (!item) {
+        return false;
+      }
+      if (watermark.sourceId) {
+        return watermark.sourceId === item.id;
+      }
+      if (watermark.streamId) {
+        return watermark.streamId === item.streamId;
+      }
+      if (typeof watermark.slot === 'number') {
+        return watermark.slot === item.slot;
+      }
+      return true;
+    }
+  }, {
+    key: "_matchesFilter",
+    value: function _matchesFilter(watermark, filter) {
+      if (filter.id !== undefined && watermark.id !== filter.id) {
+        return false;
+      }
+      if (filter.target !== undefined && watermark.target !== filter.target) {
+        return false;
+      }
+      if (filter.slot !== undefined && watermark.slot !== filter.slot) {
+        return false;
+      }
+      if (filter.sourceId !== undefined && watermark.sourceId !== filter.sourceId) {
+        return false;
+      }
+      if (filter.streamId !== undefined && watermark.streamId !== filter.streamId) {
+        return false;
+      }
+      return true;
+    }
+  }]);
+}();
+function normalizePositiveInteger(value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  return fallback;
+}
+function normalizeNonNegativeInteger(value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return fallback;
+}
+function normalizeOpacity(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return Math.min(1, Math.max(0, numberValue));
+  }
+  return 1;
+}
+function normalizeSlot(value) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return Math.floor(numberValue);
+  }
+  return null;
+}
+function normalizePosition(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && _typeof(value) === 'object') {
+    var x = Number(value.x);
+    var y = Number(value.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return {
+        x: x,
+        y: y
+      };
+    }
+  }
+  return 'bottom-right';
+}
+function clonePosition(position) {
+  if (position && _typeof(position) === 'object') {
+    return {
+      x: position.x,
+      y: position.y
+    };
+  }
+  return position;
+}
+function fillRoundedRect(context, x, y, width, height, radius) {
+  var safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
+  if (!safeRadius || typeof context.beginPath !== 'function') {
+    context.fillRect(x, y, width, height);
+    return;
+  }
+  if (typeof context.roundRect === 'function') {
+    context.beginPath();
+    context.roundRect(x, y, width, height, safeRadius);
+    context.fill();
+    return;
+  }
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+  context.fill();
+}
+module.exports = WatermarkManager;
+},{}],51:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+/**
+ * BaseRenderer — 渲染器基类
+ *
+ * 定义所有渲染后端的统一接口。
+ * 渲染器只负责把 Mixer 算好的布局 payload 绘制到 canvas，
+ * 不关心源管理、布局计算、音频混音等业务逻辑。
+ *
+ * 子类必须实现：
+ *   - init(canvas)    — 初始化渲染上下文
+ *   - render(payload) — 绘制一帧
+ * 可选覆盖：
+ *   - resize(w, h)    — 调整输出尺寸
+ *   - removeSource(id) — 释放指定源的 GPU 资源
+ *   - destroy()       — 销毁所有资源
+ *
+ * @module BaseRenderer
+ */
+module.exports = /*#__PURE__*/function () {
+  /**
+   * @param {Object} config - 混流配置（来自 MixerConfig）
+   * @param {string} [config.renderMode] - 请求的渲染模式
+   * @param {number} [config.fps] - 目标帧率
+   * @param {number} [config.width] - 输出宽度
+   * @param {number} [config.height] - 输出高度
+   * @param {Object} [info] - 渲染器元信息（子类传入，覆盖基类默认值）
+   * @param {string} [info.requestedMode] - 请求的渲染模式
+   * @param {string} [info.actualMode] - 实际使用的渲染模式
+   * @param {boolean} [info.isWorker] - 是否在 Worker 中运行
+   * @param {boolean} [info.isWebGL2] - 是否使用 WebGL2
+   * @param {boolean} [info.isFallback] - 是否为降级路径
+   * @param {string} [info.reason] - 降级/失败原因描述
+   */
+  function BaseRenderer(config, info) {
+    _classCallCheck(this, BaseRenderer);
+    this._config = config || {};
+    this._info = Object.assign({
+      requestedMode: this._config.renderMode || 'main-2d',
+      actualMode: 'unknown',
+      isWorker: false,
+      isWebGL2: false,
+      isFallback: false,
+      reason: '',
+      droppedFrames: 0,
+      renderedFrames: 0,
+      fps: this._config.fps || null,
+      width: this._config.width || null,
+      height: this._config.height || null
+    }, info || {});
+  }
+
+  /**
+   * 初始化渲染上下文。
+   * 子类在此获取 canvas context、编译 shader 等。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   */
+  return _createClass(BaseRenderer, [{
+    key: "init",
+    value: function init() {
+      return true;
+    }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * @param {Object} payload - 布局数据（由 LayoutEngine.createRenderPayload 生成）
+     * @param {number} payload.width - 画布宽度
+     * @param {number} payload.height - 画布高度
+     * @param {string} payload.backgroundColor - 背景色
+     * @param {Array<Object>} payload.items - 每路视频的绘制信息
+     */
+  }, {
+    key: "render",
+    value: function render() {}
+
+    /**
+     * 调整输出画布尺寸。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      this._info.width = width;
+      this._info.height = height;
+    }
+
+    /**
+     * 移除一路源的 GPU 资源（如 WebGL 纹理）。
+     * Worker 渲染器会将此操作转发到 Worker 线程。
+     *
+     * @param {string} id - 源 ID
+     */
+  }, {
+    key: "removeSource",
+    value: function removeSource() {}
+
+    /**
+     * 销毁渲染器，释放所有 GPU 资源和上下文引用。
+     */
+  }, {
+    key: "destroy",
+    value: function destroy() {}
+
+    /**
+     * 获取渲染器运行时信息快照。
+     * 返回副本，外部修改不影响内部状态。
+     *
+     * @returns {Object} 渲染状态信息
+     */
+  }, {
+    key: "getInfo",
+    value: function getInfo() {
+      return Object.assign({}, this._info);
+    }
+
+    /**
+     * 更新运行时信息（仅内部使用，子类调用）。
+     *
+     * @param {Object} info - 要更新的字段
+     */
+  }, {
+    key: "_updateInfo",
+    value: function _updateInfo(info) {
+      Object.assign(this._info, info || {});
+    }
+  }]);
+}();
+},{}],52:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/**
+ * MainCanvas2DRenderer — 主线程 Canvas2D 渲染器
+ *
+ * 最基础的渲染路径，依赖 CanvasRenderingContext2D.drawImage() 将
+ * 各路视频绘制到输出 canvas。所有更高性能路径初始化失败时都会降级到这里。
+ *
+ * 特点：
+ *   - 兼容性最好，所有支持 Canvas 的浏览器均可使用
+ *   - 性能依赖浏览器 Canvas2D 实现的硬件加速能力
+ *   - 行为与旧版 Mixer drawImage 逻辑一致，作为稳定兜底
+ *
+ * @module MainCanvas2DRenderer
+ */
+var BaseRenderer = require('./BaseRenderer');
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {Object} info - 渲染器元信息
+   */
+  function MainCanvas2DRenderer(config, info) {
+    var _this;
+    _classCallCheck(this, MainCanvas2DRenderer);
+    _this = _callSuper(this, MainCanvas2DRenderer, [config, Object.assign({
+      actualMode: 'main-2d',
+      isWorker: false,
+      isWebGL2: false
+    }, info || {})]);
+
+    /** @type {HTMLCanvasElement|null} 输出 canvas */
+    _this._canvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} Canvas2D 上下文 */
+    _this._context = null;
+    return _this;
+  }
+
+  /**
+   * 初始化 Canvas2D 渲染上下文。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} Canvas2D context 不可用时抛出
+   */
+  _inherits(MainCanvas2DRenderer, _BaseRenderer);
+  return _createClass(MainCanvas2DRenderer, [{
+    key: "init",
+    value: function init(canvas) {
+      this._canvas = canvas;
+      this._context = canvas.getContext('2d', {
+        alpha: false
+      }) || canvas.getContext('2d');
+      if (!this._context) {
+        throw new Error('Canvas2D context is not available');
+      }
+      this.resize(canvas.width, canvas.height);
+      return true;
+    }
+
+    /**
+     * 调整输出尺寸，同步更新 canvas 元素的宽高。
+     * 只在尺寸真正变化时赋值，避免触发不必要的重绘。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(MainCanvas2DRenderer, "resize", this, 3)([width, height]);
+      if (!this._canvas) {
+        return;
+      }
+      if (this._canvas.width !== width) {
+        this._canvas.width = width;
+      }
+      if (this._canvas.height !== height) {
+        this._canvas.height = height;
+      }
+    }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * 流程：
+     *   1. 调整 canvas 尺寸到 payload 尺寸
+     *   2. 填充背景色，覆盖上一帧残留
+     *   3. 遍历 items，按 draw 矩形依次调用 drawImage
+     *
+     * @param {Object} payload - 布局数据
+     */
+  }, {
+    key: "render",
+    value: function render(payload) {
+      var _this2 = this;
+      if (!this._context || !payload) {
+        return;
+      }
+      this.resize(payload.width, payload.height);
+
+      // 每帧先铺背景色，确保源减少、slot 覆盖或 contain 留边时不会残留上一帧内容
+      this._context.fillStyle = payload.backgroundColor || '#000';
+      this._context.fillRect(0, 0, payload.width, payload.height);
+      payload.items.forEach(function (item) {
+        if (!item.video || item.video.readyState < 2) {
+          return;
+        }
+        _this2._context.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
+      });
+      this._drawWatermarks(payload.sourceWatermarks);
+      this._drawWatermarks(payload.outputWatermarks);
+      this._info.renderedFrames += 1;
+    }
+
+    /**
+     * 绘制水印列表。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     */
+  }, {
+    key: "_drawWatermarks",
+    value: function _drawWatermarks(watermarks) {
+      var _this3 = this;
+      if (!this._context) {
+        return;
+      }
+      (watermarks || []).forEach(function (watermark) {
+        if (!watermark.image || !watermark.draw) {
+          return;
+        }
+        var previousAlpha = typeof _this3._context.globalAlpha === 'number' ? _this3._context.globalAlpha : 1;
+        _this3._context.globalAlpha = watermark.opacity;
+        _this3._context.drawImage(watermark.image, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
+        _this3._context.globalAlpha = previousAlpha;
+      });
+    }
+
+    /**
+     * 销毁渲染器，清除 canvas 内容并释放上下文引用。
+     */
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      if (this._context && this._canvas) {
+        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+      }
+      this._context = null;
+      this._canvas = null;
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":51}],53:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/**
+ * MainWebGL2Renderer — 主线程 WebGL2 渲染器
+ *
+ * 使用 WebGL2 将各路视频帧上传为纹理，通过 GPU shader 合成输出。
+ * 相比 Canvas2D 路径，缩放和合成由 GPU 处理，通常在高分辨率或多路源时更稳定。
+ *
+ * 适用场景：
+ *   - Safari / WKWebView：Worker + WebGL2 不稳定时，主线程 WebGL2 作为中间方案
+ *   - 需要 GPU 加速但又无法使用 Worker 的环境
+ *
+ * @module MainWebGL2Renderer
+ */
+var BaseRenderer = require('./BaseRenderer');
+var glHelpers = require('./helpers/gl');
+var colorHelper = require('./helpers/color');
+var VERTEX_SHADER = "#version 300 es\nin vec2 a_position;\nin vec2 a_texCoord;\nout vec2 v_texCoord;\nvoid main()\n{\n  gl_Position = vec4(a_position, 0.0, 1.0);\n  v_texCoord = a_texCoord;\n}";
+var FRAGMENT_SHADER = "#version 300 es\nprecision highp float;\nin vec2 v_texCoord;\nuniform sampler2D u_texture;\nout vec4 outColor;\nvoid main()\n{\n  outColor = texture(u_texture, v_texCoord);\n}";
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {Object} info - 渲染器元信息
+   */
+  function MainWebGL2Renderer(config, info) {
+    var _this;
+    _classCallCheck(this, MainWebGL2Renderer);
+    _this = _callSuper(this, MainWebGL2Renderer, [config, Object.assign({
+      actualMode: 'main-webgl2',
+      isWorker: false,
+      isWebGL2: true
+    }, info || {})]);
+
+    /** @type {HTMLCanvasElement|null} 输出 canvas */
+    _this._canvas = null;
+
+    /** @type {WebGL2RenderingContext|null} WebGL2 上下文 */
+    _this._gl = null;
+
+    /** @type {WebGLProgram|null} 合成用的 WebGL program */
+    _this._program = null;
+
+    /** @type {WebGLBuffer|null} 全屏四边形顶点 buffer */
+    _this._positionBuffer = null;
+
+    /** @type {WebGLBuffer|null} 纹理坐标 buffer */
+    _this._texCoordBuffer = null;
+
+    /** @type {Object<string, WebGLTexture>} 每个源对应的纹理对象缓存 */
+    _this._textures = {};
+
+    /** @type {Object<string, WebGLTexture>} 每个水印对应的纹理对象缓存 */
+    _this._watermarkTextures = {};
+    return _this;
+  }
+
+  /**
+   * 初始化 WebGL2 上下文并编译 shader program。
+   *
+   * @param {HTMLCanvasElement} canvas - 输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} WebGL2 context 不可用时抛出
+   */
+  _inherits(MainWebGL2Renderer, _BaseRenderer);
+  return _createClass(MainWebGL2Renderer, [{
+    key: "init",
+    value: function init(canvas) {
+      this._canvas = canvas;
+      this._gl = canvas.getContext('webgl2', {
+        alpha: false,
+        antialias: false,
+        preserveDrawingBuffer: Boolean(this._config.preserveDrawingBuffer),
+        powerPreference: 'high-performance'
+      });
+      if (!this._gl) {
+        throw new Error('WebGL2 context is not available');
+      }
+      this._setupProgram();
+      this.resize(canvas.width, canvas.height);
+      return true;
+    }
+
+    /**
+     * 编译 shader、链接 program、创建全屏四边形顶点数据。
+     * 顶点覆盖 [-1, 1] 范围，纹理坐标对应 [0, 1]。
+     */
+  }, {
+    key: "_setupProgram",
+    value: function _setupProgram() {
+      var gl = this._gl;
+      var vertexShader = glHelpers.compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+      var fragmentShader = glHelpers.compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+      this._program = glHelpers.createProgram(gl, vertexShader, fragmentShader);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
+
+      // 全屏四边形：两个三角形组成一个矩形，覆盖整个裁剪空间
+      this._positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      this._texCoordBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._texCoordBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.useProgram(this._program);
+      this._enableAttribute('a_position', this._positionBuffer);
+      this._enableAttribute('a_texCoord', this._texCoordBuffer);
+      gl.uniform1i(gl.getUniformLocation(this._program, 'u_texture'), 0);
+    }
+
+    /**
+     * 启用顶点 attribute 并绑定 buffer。
+     *
+     * @param {string} name - shader 中 attribute 变量名
+     * @param {WebGLBuffer} buffer - 已填充数据的 buffer
+     */
+  }, {
+    key: "_enableAttribute",
+    value: function _enableAttribute(name, buffer) {
+      var gl = this._gl;
+      var location = gl.getAttribLocation(this._program, name);
+      gl.enableVertexAttribArray(location);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+    }
+
+    /**
+     * 调整输出尺寸，同步更新 canvas 元素尺寸。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(MainWebGL2Renderer, "resize", this, 3)([width, height]);
+      if (!this._canvas) {
+        return;
+      }
+      if (this._canvas.width !== width) {
+        this._canvas.width = width;
+      }
+      if (this._canvas.height !== height) {
+        this._canvas.height = height;
+      }
+    }
+
+    /**
+     * 绘制一帧到 canvas。
+     *
+     * 流程：
+     *   1. 调整尺寸，清空背景色
+     *   2. 遍历 items，将每路视频帧上传到对应的纹理
+     *   3. 通过 gl.viewport 裁剪到每个 item 的绘制区域后提交绘制
+     *
+     * 纹理坐标说明：HTMLVideoElement 像素原点在左上角，WebGL 纹理坐标原点在左下角，
+     * 上传时通过 UNPACK_FLIP_Y_WEBGL 翻转，与 Worker WebGL2 路径保持一致。
+     *
+     * @param {Object} payload - 布局数据
+     */
+  }, {
+    key: "render",
+    value: function render(payload) {
+      var _this2 = this;
+      if (!this._gl || !payload) {
+        return;
+      }
+      var gl = this._gl;
+      var clearColor = colorHelper.parseColor(payload.backgroundColor);
+      this.resize(payload.width, payload.height);
+      gl.useProgram(this._program);
+      gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.disable(gl.BLEND);
+      payload.items.forEach(function (item) {
+        if (!item.video || item.video.readyState < 2) {
+          return;
+        }
+        var texture = _this2._getTexture(item.id);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
+        _this2._drawItem(item, payload.height);
+      });
+      this._drawWatermarks(payload.sourceWatermarks, payload.height);
+      this._drawWatermarks(payload.outputWatermarks, payload.height);
+      gl.flush();
+      this._info.renderedFrames += 1;
+    }
+
+    /**
+     * 获取或创建指定源的 WebGL 纹理。
+     * 纹理使用 CLAMP_TO_EDGE + LINEAR 滤波参数。
+     *
+     * @param {string} id - 源 ID
+     * @returns {WebGLTexture} 纹理对象
+     */
+  }, {
+    key: "_getTexture",
+    value: function _getTexture(id) {
+      if (!this._textures[id]) {
+        this._textures[id] = glHelpers.createVideoTexture(this._gl);
+      }
+      return this._textures[id];
+    }
+
+    /**
+     * 通过 gl.viewport 将全屏四边形裁剪到指定区域后绘制。
+     *
+     * viewport Y 坐标转换：WebGL 原点在左下角，canvas 原点在左上角，
+     * 因此 y = canvasHeight - draw.y - draw.height。
+     *
+     * @param {Object} item - 绘制项
+     * @param {number} item.draw.x - 绘制区域左上角 X
+     * @param {number} item.draw.y - 绘制区域左上角 Y
+     * @param {number} item.draw.width - 绘制区域宽度
+     * @param {number} item.draw.height - 绘制区域高度
+     * @param {number} canvasHeight - 画布总高度
+     */
+  }, {
+    key: "_drawItem",
+    value: function _drawItem(item, canvasHeight) {
+      var gl = this._gl;
+      var draw = item.draw;
+      var viewportX = Math.round(draw.x);
+      var viewportY = Math.round(canvasHeight - draw.y - draw.height);
+      var viewportWidth = Math.round(draw.width);
+      var viewportHeight = Math.round(draw.height);
+      if (viewportWidth <= 0 || viewportHeight <= 0) {
+        return;
+      }
+      gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    /**
+     * 绘制水印列表。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     * @param {number} canvasHeight - 画布总高度
+     */
+  }, {
+    key: "_drawWatermarks",
+    value: function _drawWatermarks(watermarks, canvasHeight) {
+      var _this3 = this;
+      if (!this._gl || !(watermarks || []).length) {
+        return;
+      }
+      var gl = this._gl;
+      var activeKeys = {};
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      (watermarks || []).forEach(function (watermark) {
+        if (!watermark.image || !watermark.draw) {
+          return;
+        }
+        var key = "".concat(watermark.id, ":").concat(watermark.sourceId || (typeof watermark.slot === 'number' ? watermark.slot : 'output'));
+        var texture = _this3._getWatermarkTexture(key);
+        activeKeys[key] = true;
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.image);
+        _this3._drawItem(watermark, canvasHeight);
+      });
+      gl.disable(gl.BLEND);
+      this._cleanupUnusedWatermarkTextures(activeKeys);
+    }
+
+    /**
+     * 获取或创建指定水印的 WebGL 纹理。
+     *
+     * @param {string} key - 水印纹理 key
+     * @returns {WebGLTexture} 纹理对象
+     */
+  }, {
+    key: "_getWatermarkTexture",
+    value: function _getWatermarkTexture(key) {
+      if (!this._watermarkTextures[key]) {
+        this._watermarkTextures[key] = glHelpers.createVideoTexture(this._gl);
+      }
+      return this._watermarkTextures[key];
+    }
+
+    /**
+     * 清理不再出现的水印纹理。
+     *
+     * @param {Object} activeKeys - 当前帧出现的水印 key
+     */
+  }, {
+    key: "_cleanupUnusedWatermarkTextures",
+    value: function _cleanupUnusedWatermarkTextures(activeKeys) {
+      var _this4 = this;
+      Object.keys(this._watermarkTextures).forEach(function (key) {
+        if (activeKeys[key]) {
+          return;
+        }
+        _this4._gl.deleteTexture(_this4._watermarkTextures[key]);
+        delete _this4._watermarkTextures[key];
+      });
+    }
+
+    /**
+     * 移除一路源的纹理缓存并释放 GPU 资源。
+     *
+     * @param {string} id - 源 ID
+     */
+  }, {
+    key: "removeSource",
+    value: function removeSource(id) {
+      var texture = this._textures[id];
+      if (texture && this._gl) {
+        this._gl.deleteTexture(texture);
+      }
+      delete this._textures[id];
+    }
+
+    /**
+     * 销毁渲染器，释放所有 WebGL 资源。
+     *
+     * 清理步骤：
+     *   1. 删除所有纹理
+     *   2. 删除顶点和纹理坐标 buffer
+     *   3. 删除 shader program
+     *   4. 通过 WEBGL_lose_context 扩展强制释放 GPU 上下文
+     */
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      var _this5 = this;
+      var gl = this._gl;
+      if (!gl) {
+        return;
+      }
+      Object.keys(this._textures).forEach(function (id) {
+        gl.deleteTexture(_this5._textures[id]);
+      });
+      this._textures = {};
+      Object.keys(this._watermarkTextures).forEach(function (id) {
+        gl.deleteTexture(_this5._watermarkTextures[id]);
+      });
+      this._watermarkTextures = {};
+      if (this._positionBuffer) {
+        gl.deleteBuffer(this._positionBuffer);
+      }
+      if (this._texCoordBuffer) {
+        gl.deleteBuffer(this._texCoordBuffer);
+      }
+      if (this._program) {
+        gl.deleteProgram(this._program);
+      }
+      var loseContext = gl.getExtension('WEBGL_lose_context');
+      if (loseContext) {
+        loseContext.loseContext();
+      }
+      this._gl = null;
+      this._program = null;
+      this._canvas = null;
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":51,"./helpers/color":56,"./helpers/gl":57}],54:[function(require,module,exports){
+"use strict";
+
+/**
+ * RendererFactory — 渲染器工厂
+ *
+ * 根据 renderMode 配置选择合适的渲染后端：
+ *   - auto: 自动探测最优路径（Worker WebGL2 → 主线程 WebGL2 → Worker Canvas2D → 主线程 Canvas2D）
+ *   - worker-webgl2 / worker-2d: Worker 线程渲染
+ *   - main-webgl2 / main-2d: 主线程渲染
+ *
+ * 注意：这是 Mixer 中第一个初始化输出 canvas context 的位置，
+ * 不同渲染器需依次尝试，避免 context 抢占（canvas 只能有一个上下文）。
+ *
+ * @module RendererFactory
+ */
+var MainCanvas2DRenderer = require('./MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('./MainWebGL2Renderer');
+var WorkerRenderer = require('./WorkerRenderer');
+
+/**
+ * 创建渲染器实例。
+ *
+ * 自动模式（auto）的尝试顺序：
+ *   1. 如果检测到 Safari/WKWebView，优先尝试 main-webgl2（Worker 在这些平台不稳定）
+ *   2. 尝试 worker-webgl2（Worker 内 WebGL2）
+ *   3. Worker WebGL2 失败 → 尝试 main-webgl2（主线程 WebGL2）
+ *   4. Main WebGL2 不可用 → 尝试 worker-2d（Worker Canvas2D）
+ *   5. Worker Canvas2D 不可用 → 回退 main-2d（主线程 Canvas2D）
+ *
+ * @param {HTMLCanvasElement} canvas - 输出 canvas
+ * @param {Object} config - 混流配置（含 renderMode）
+ * @returns {BaseRenderer} 渲染器实例
+ */
+exports.createRenderer = function (canvas, config, hooks) {
+  var mode = config.renderMode || 'auto';
+  var errors = [];
+  hooks = hooks || {};
+  if (mode === 'main-2d') {
+    return createMain2D(canvas, config, false, '');
+  }
+
+  // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
+  if (mode === 'auto' && shouldPreferMainWebGL2()) {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: true,
+        reason: 'Safari/WKWebView prefers main-thread WebGL2 because Worker WebGL2 support is limited'
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+
+  // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
+  // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
+  if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
+    try {
+      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
+      var workerConfig = Object.assign({}, config, {
+        renderMode: workerMode
+      });
+      var _renderer = new WorkerRenderer(workerConfig, {
+        requestedMode: mode,
+        isFallback: false,
+        reason: '',
+        onFatalError: hooks.onWorkerFatalError
+      });
+      _renderer.init(canvas);
+      return _renderer;
+    } catch (error) {
+      errors.push(error.message || String(error));
+
+      // 用户明确要求 Worker 但失败了 → 直接降级到主线程
+      if (mode === 'worker-webgl2' || mode === 'worker-2d') {
+        return createMainFallback(canvas, config, mode, errors.join('; '));
+      }
+    }
+  }
+
+  // 尝试主线程 WebGL2
+  if (mode === 'main-webgl2' || mode === 'auto') {
+    try {
+      var _renderer2 = new MainWebGL2Renderer(config, {
+        requestedMode: mode,
+        isFallback: errors.length > 0,
+        reason: errors.join('; ')
+      });
+      _renderer2.init(canvas);
+      return _renderer2;
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+
+  // 最终兜底：主线程 Canvas2D
+  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
+};
+
+/**
+ * Worker 失败后的主线程降级路径。
+ * 先尝试 main-webgl2，再回退到 main-2d。
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} config
+ * @param {string} requestedMode - 用户请求的模式
+ * @param {string} reason - 降级原因
+ * @returns {BaseRenderer}
+ */
+function createMainFallback(canvas, config, requestedMode, reason) {
+  if (requestedMode !== 'worker-2d') {
+    try {
+      var renderer = new MainWebGL2Renderer(config, {
+        requestedMode: requestedMode,
+        isFallback: true,
+        reason: reason
+      });
+      renderer.init(canvas);
+      return renderer;
+    } catch (error) {}
+  }
+  return createMain2D(canvas, config, true, reason);
+}
+
+/**
+ * 创建主线程 Canvas2D 渲染器（最终兜底）。
+ *
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} config
+ * @param {boolean} isFallback - 是否为降级路径
+ * @param {string} reason - 降级原因
+ * @returns {MainCanvas2DRenderer}
+ */
+function createMain2D(canvas, config, isFallback, reason) {
+  var renderer = new MainCanvas2DRenderer(config, {
+    requestedMode: config.renderMode || 'auto',
+    isFallback: Boolean(isFallback),
+    reason: reason || ''
+  });
+  renderer.init(canvas);
+  return renderer;
+}
+
+/**
+ * 检测是否应优先使用主线程 WebGL2。
+ *
+ * Safari 和 WKWebView 的 Worker + WebGL2 支持不稳定，
+ * 在这些浏览器上直接走 main-webgl2 避免 Worker 初始化的开销和风险。
+ *
+ * @returns {boolean} true=应优先使用主线程 WebGL2
+ */
+function shouldPreferMainWebGL2() {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+  var ua = navigator.userAgent || '';
+  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+  var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
+  return isSafari || isIOSWebView;
+}
+},{"./MainCanvas2DRenderer":52,"./MainWebGL2Renderer":53,"./WorkerRenderer":55}],55:[function(require,module,exports){
+"use strict";
+
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
+function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
+function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
+function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
+function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
+function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
+function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
+function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
+function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
+function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+/**
+ * WorkerRenderer — Worker 线程渲染器
+ *
+ * 将渲染工作卸载到 WebWorker，通过 OffscreenCanvas 避免阻塞主线程。
+ *
+ * 架构说明：
+ *   1. 创建 OffscreenCanvas 并 transfer 到 Worker
+ *   2. Worker 内根据配置选择 WebGL2 或 Canvas2D 上下文
+ *   3. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer 到 Worker
+ *   4. Worker 渲染后通过 transferToImageBitmap() 传回 ImageBitmap
+ *   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
+ *
+ * 关键设计决策：不再 transfer 输出 canvas 本身。
+ * canvas.captureStream() 始终绑定主线程 canvas，避免部分浏览器
+ * 无法捕获 Worker 直接绘制结果而出现黑屏。
+ *
+ * @module WorkerRenderer
+ */
+var BaseRenderer = require('./BaseRenderer');
+var workerScript = require('./workerScript');
+module.exports = /*#__PURE__*/function (_BaseRenderer) {
+  /**
+   * @param {Object} config - 混流配置
+   * @param {string} [config.workerUrl] - 外部 Worker 脚本地址（不传则使用 Blob Worker）
+   * @param {boolean} [config.dropFrameWhenBusy=true] - Worker 忙时是否丢弃新帧
+   * @param {number} [config.maxFrameQueue=1] - 最大帧队列长度
+   * @param {Object} info - 渲染器元信息
+   */
+  function WorkerRenderer(config, info) {
+    var _this;
+    _classCallCheck(this, WorkerRenderer);
+    var rendererInfo = Object.assign({}, info || {});
+    var onFatalError = typeof rendererInfo.onFatalError === 'function' ? rendererInfo.onFatalError : null;
+    delete rendererInfo.onFatalError;
+    _this = _callSuper(this, WorkerRenderer, [config, Object.assign({
+      actualMode: 'worker-init',
+      isWorker: true,
+      isWebGL2: false
+    }, rendererInfo)]);
+    _this._onFatalError = onFatalError;
+
+    /** @type {HTMLCanvasElement|null} 主线程输出 canvas（绑定 captureStream） */
+    _this._canvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
+    _this._outputContext = null;
+
+    /** @type {Worker|null} WebWorker 实例 */
+    _this._worker = null;
+
+    /** @type {string|null} Worker 脚本的 Blob URL（用于后续 revoke） */
+    _this._workerUrl = null;
+
+    /** @type {boolean} Worker 是否已完成初始化并回复 ready */
+    _this._workerReady = false;
+
+    /** @type {boolean} Worker 正在处理上一帧，不能再发新帧 */
+    _this._workerBusy = false;
+
+    /** @type {boolean} 正在从 video 抽取帧（异步操作进行中） */
+    _this._extractingFrame = false;
+
+    /** @type {Array<Object>} 等待发送到 Worker 的帧队列 */
+    _this._queuedPayloads = [];
+
+    /** @type {boolean} 销毁标记，设置后所有异步操作跳过 */
+    _this._destroyed = false;
+
+    /** @type {boolean} 避免同一个 Worker 故障重复触发主线程降级 */
+    _this._fatalErrorNotified = false;
+
+    /**
+     * @type {'imagebitmap'|'videoframe'|null}
+     * 帧抽取方式。自动探测：优先 createImageBitmap，回退 VideoFrame。
+     * null 表示尚未确定。
+     */
+    _this._frameFactory = null;
+    return _this;
+  }
+
+  /**
+   * 初始化 Worker 渲染器。
+   *
+   * 步骤：
+   *   1. 检查 Worker + OffscreenCanvas 可用性
+   *   2. 创建 Worker 实例（Blob URL 或外部脚本）
+   *   3. 创建 OffscreenCanvas 并 transfer 到 Worker
+   *   4. 等待 Worker 回复 ready 消息
+   *
+   * @param {HTMLCanvasElement} canvas - 主线程输出 canvas
+   * @returns {boolean} true=初始化成功
+   * @throws {Error} Worker 或 OffscreenCanvas 不可用时抛出
+   */
+  _inherits(WorkerRenderer, _BaseRenderer);
+  return _createClass(WorkerRenderer, [{
+    key: "init",
+    value: function init(canvas) {
+      var _this2 = this;
+      if (!this._canUseWorker(canvas)) {
+        throw new Error('Worker OffscreenCanvas is not available');
+      }
+      this._canvas = canvas;
+      this.resize(canvas.width, canvas.height);
+      try {
+        this._worker = this._createWorker();
+        var offscreenCanvas = new OffscreenCanvas(canvas.width || 1, canvas.height || 1);
+        this._worker.onmessage = function (event) {
+          return _this2._handleWorkerMessage(event);
+        };
+        this._worker.onerror = function (error) {
+          var reason = "Worker renderer error: ".concat(error.message || 'unknown');
+          _this2._workerBusy = false;
+          _this2._extractingFrame = false;
+          _this2._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: reason
+          });
+          _this2._notifyFatalError(reason);
+        };
+        this._worker.postMessage({
+          type: 'init',
+          canvas: offscreenCanvas,
+          requestedMode: this._config.renderMode,
+          width: canvas.width,
+          height: canvas.height,
+          backgroundColor: this._config.backgroundColor
+        }, [offscreenCanvas]);
+      } catch (error) {
+        this._destroyWorker();
+        throw error;
+      }
+      return true;
+    }
+
+    /**
+     * 检查当前环境是否支持 Worker 渲染。
+     *
+     * @param {HTMLCanvasElement} canvas - 输出 canvas
+     * @returns {boolean} true=支持 Worker + OffscreenCanvas
+     */
+  }, {
+    key: "_canUseWorker",
+    value: function _canUseWorker(canvas) {
+      return Boolean(typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && canvas && canvas.getContext);
+    }
+
+    /**
+     * 创建 Worker 实例。
+     * 优先使用外部脚本（workerUrl），否则生成 Blob Worker。
+     *
+     * @returns {Worker} Worker 实例
+     */
+  }, {
+    key: "_createWorker",
+    value: function _createWorker() {
+      if (this._config.workerUrl) {
+        return new Worker(this._config.workerUrl);
+      }
+      var blob = new Blob([workerScript.createWorkerScript()], {
+        type: 'application/javascript'
+      });
+      this._workerUrl = URL.createObjectURL(blob);
+      return new Worker(this._workerUrl);
+    }
+
+    /**
+     * 处理 Worker 返回的消息。
+     *
+     * 消息类型：
+     *   - ready: Worker 初始化完成，包含实际使用的渲染模式
+     *   - rendered: Worker 渲染完成，返回 ImageBitmap
+     *   - renderError: Worker 渲染失败
+     *   - failed: Worker 初始化失败
+     *
+     * @param {MessageEvent} event - Worker 消息事件
+     */
+  }, {
+    key: "_handleWorkerMessage",
+    value: function _handleWorkerMessage(event) {
+      var data = event.data || {};
+      if (data.type === 'ready') {
+        if (!this._ensureOutputContext()) {
+          this._workerReady = false;
+          this._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: 'Canvas2D output context is not available'
+          });
+          this._notifyFatalError('Canvas2D output context is not available');
+          return;
+        }
+        this._workerReady = true;
+        this._updateInfo({
+          actualMode: data.actualMode,
+          isWorker: true,
+          isWebGL2: Boolean(data.isWebGL2),
+          reason: data.reason || this._info.reason
+        });
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'rendered') {
+        if (data.bitmap && this._outputContext) {
+          // 确保输出 canvas 尺寸与预期一致
+          if (this._canvas.width !== this._info.width) {
+            this._canvas.width = this._info.width;
+          }
+          if (this._canvas.height !== this._info.height) {
+            this._canvas.height = this._info.height;
+          }
+          this._outputContext.drawImage(data.bitmap, 0, 0, this._canvas.width, this._canvas.height);
+          if (data.bitmap.close) {
+            data.bitmap.close();
+          }
+        }
+        this._workerBusy = false;
+        this._info.renderedFrames += 1;
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'renderError') {
+        this._workerBusy = false;
+        this._updateInfo({
+          isFallback: true,
+          reason: data.reason || 'Worker render failed'
+        });
+        this._flushQueuedPayload();
+        return;
+      }
+      if (data.type === 'failed') {
+        var reason = data.reason || 'Worker renderer initialization failed';
+        this._workerBusy = false;
+        this._workerReady = false;
+        this._extractingFrame = false;
+        this._updateInfo({
+          actualMode: 'worker-failed',
+          isFallback: true,
+          reason: reason
+        });
+        this._notifyFatalError(reason);
+      }
+    }
+  }, {
+    key: "_notifyFatalError",
+    value: function _notifyFatalError(reason) {
+      if (this._fatalErrorNotified || this._destroyed || !this._onFatalError) {
+        return;
+      }
+      this._fatalErrorNotified = true;
+      this._onFatalError(reason);
+    }
+  }, {
+    key: "_ensureOutputContext",
+    value: function _ensureOutputContext() {
+      if (this._outputContext) {
+        return true;
+      }
+      if (!this._canvas || !this._canvas.getContext) {
+        return false;
+      }
+      this._outputContext = this._canvas.getContext('2d', {
+        alpha: false
+      }) || this._canvas.getContext('2d');
+      if (!this._outputContext) {
+        return false;
+      }
+      this._outputContext.fillStyle = this._config.backgroundColor || '#000';
+      this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
+      this._outputContext.imageSmoothingEnabled = true;
+      return true;
+    }
+
+    /**
+     * 调整输出尺寸（委托到基类，保存宽高信息）。
+     *
+     * @param {number} width - 新宽度
+     * @param {number} height - 新高度
+     */
+  }, {
+    key: "resize",
+    value: function resize(width, height) {
+      _superPropGet(WorkerRenderer, "resize", this, 3)([width, height]);
+    }
+
+    /**
+     * 提交一帧到 Worker 渲染。
+     *
+     * 流程：
+     *   1. Worker 未就绪 → 入队列等待
+     *   2. Worker 正忙且配置了丢帧 → 记录丢帧，替换队列中的最新帧
+     *   3. Worker 正忙且未配置丢帧 → 入队列（超出 maxFrameQueue 截断）
+     *   4. Worker 空闲 → 立即抽取帧并发送
+     *
+     * @param {Object} payload - 布局数据
+     */
+  }, {
+    key: "render",
+    value: function render(payload) {
+      if (this._destroyed) {
+        return;
+      }
+      if (!this._worker) {
+        return;
+      }
+      if (!this._workerReady) {
+        this._queuePayload(payload);
+        return;
+      }
+      if (this._workerBusy || this._extractingFrame) {
+        this._queuePayload(payload);
+        return;
+      }
+      this._renderInWorker(payload);
+    }
+
+    /**
+     * 从 video 元素抽取帧并发送到 Worker。
+     *
+     * 异步执行：先在主线程创建 ImageBitmap/VideoFrame，
+     * 然后通过 postMessage transfer 给 Worker。
+     *
+     * @param {Object} payload - 布局数据
+     */
+  }, {
+    key: "_renderInWorker",
+    value: (function () {
+      var _renderInWorker2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
+        var result, _t;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.p = _context.n) {
+            case 0:
+              this._extractingFrame = true;
+              result = null;
+              _context.p = 1;
+              _context.n = 2;
+              return this._createWorkerPayload(payload);
+            case 2:
+              result = _context.v;
+              this._extractingFrame = false;
+              if (!this._destroyed) {
+                _context.n = 3;
+                break;
+              }
+              this._closeTransferFrames(result.items);
+              return _context.a(2);
+            case 3:
+              this._workerBusy = true;
+              this._worker.postMessage({
+                type: 'render',
+                payload: {
+                  width: payload.width,
+                  height: payload.height,
+                  backgroundColor: payload.backgroundColor,
+                  items: result.items,
+                  sourceWatermarks: result.sourceWatermarks,
+                  outputWatermarks: result.outputWatermarks
+                }
+              }, result.transfers);
+              _context.n = 5;
+              break;
+            case 4:
+              _context.p = 4;
+              _t = _context.v;
+              if (result && result.items) {
+                this._closeTransferFrames(result.items);
+              }
+              this._extractingFrame = false;
+              this._workerBusy = false;
+              this._info.droppedFrames += 1;
+              this._updateInfo({
+                isFallback: true,
+                reason: "Worker frame extraction failed: ".concat(_t.message || String(_t))
+              });
+            case 5:
+              return _context.a(2);
+          }
+        }, _callee, this, [[1, 4]]);
+      }));
+      function _renderInWorker(_x) {
+        return _renderInWorker2.apply(this, arguments);
+      }
+      return _renderInWorker;
+    }()
+    /**
+     * 将 payload 入队列。
+     *
+     * 根据配置决定行为：
+     *   - dropFrameWhenBusy: 丢弃旧帧，只保留最新一帧
+     *   - 非丢帧模式: 追加到队列尾部，超出 maxFrameQueue 时丢弃最早帧
+     *
+     * @param {Object} payload - 布局数据
+     */
+    )
+  }, {
+    key: "_queuePayload",
+    value: function _queuePayload(payload) {
+      var maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
+      if (maxFrameQueue <= 0) {
+        this._info.droppedFrames += 1;
+        return;
+      }
+      if (this._config.dropFrameWhenBusy) {
+        this._info.droppedFrames += 1;
+        this._queuedPayloads = [payload];
+        return;
+      }
+      this._queuedPayloads.push(payload);
+      while (this._queuedPayloads.length > maxFrameQueue) {
+        this._queuedPayloads.shift();
+        this._info.droppedFrames += 1;
+      }
+    }
+
+    /**
+     * 消费队列中的下一帧（Worker 空闲时调用）。
+     */
+  }, {
+    key: "_flushQueuedPayload",
+    value: function _flushQueuedPayload() {
+      if (!this._queuedPayloads.length || this._destroyed || this._workerBusy || this._extractingFrame) {
+        return;
+      }
+      var payload = this._queuedPayloads.shift();
+      this._renderInWorker(payload);
+    }
+
+    /**
+     * 从 payload 中提取所有 video 帧，生成可 transfer 的 ImageBitmap/VideoFrame。
+     *
+     * @param {Object} payload - 布局数据
+     * @returns {Promise<Object>}
+     *   items: 包含 id、draw 和 frame 的数组
+     *   sourceWatermarks/outputWatermarks: 包含水印 frame 和 draw 的数组
+     *   transfers: 用于 postMessage transfer 的帧对象列表
+     */
+  }, {
+    key: "_createWorkerPayload",
+    value: (function () {
+      var _createWorkerPayload2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(payload) {
+        var items, sourceWatermarks, outputWatermarks, transfers, idx, item, frame, _t2;
+        return _regenerator().w(function (_context2) {
+          while (1) switch (_context2.p = _context2.n) {
+            case 0:
+              items = [];
+              sourceWatermarks = [];
+              outputWatermarks = [];
+              transfers = [];
+              _context2.p = 1;
+              idx = 0;
+            case 2:
+              if (!(idx < payload.items.length)) {
+                _context2.n = 6;
+                break;
+              }
+              item = payload.items[idx];
+              if (!(!item.video || item.video.readyState < 2)) {
+                _context2.n = 3;
+                break;
+              }
+              return _context2.a(3, 5);
+            case 3:
+              _context2.n = 4;
+              return this._createFrame(item.video);
+            case 4:
+              frame = _context2.v;
+              items.push({
+                id: item.id,
+                draw: item.draw,
+                frame: frame
+              });
+              transfers.push(frame);
+            case 5:
+              ++idx;
+              _context2.n = 2;
+              break;
+            case 6:
+              _context2.n = 7;
+              return this._appendWorkerWatermarks(payload.sourceWatermarks, sourceWatermarks, transfers);
+            case 7:
+              _context2.n = 8;
+              return this._appendWorkerWatermarks(payload.outputWatermarks, outputWatermarks, transfers);
+            case 8:
+              _context2.n = 10;
+              break;
+            case 9:
+              _context2.p = 9;
+              _t2 = _context2.v;
+              this._closeTransferFrames(items);
+              this._closeTransferFrames(sourceWatermarks);
+              this._closeTransferFrames(outputWatermarks);
+              throw _t2;
+            case 10:
+              return _context2.a(2, {
+                items: items,
+                sourceWatermarks: sourceWatermarks,
+                outputWatermarks: outputWatermarks,
+                transfers: transfers
+              });
+          }
+        }, _callee2, this, [[1, 9]]);
+      }));
+      function _createWorkerPayload(_x2) {
+        return _createWorkerPayload2.apply(this, arguments);
+      }
+      return _createWorkerPayload;
+    }()
+    /**
+     * 将主线程水印图面转成可 transfer 的 frame。
+     *
+     * @param {Array<Object>} watermarks - 水印绘制项
+     * @param {Array<Object>} target - Worker payload 目标列表
+     * @param {Array<*>} transfers - transfer 列表
+     */
+    )
+  }, {
+    key: "_appendWorkerWatermarks",
+    value: (function () {
+      var _appendWorkerWatermarks2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(watermarks, target, transfers) {
+        var idx, watermark, frame;
+        return _regenerator().w(function (_context3) {
+          while (1) switch (_context3.n) {
+            case 0:
+              idx = 0;
+            case 1:
+              if (!(idx < (watermarks || []).length)) {
+                _context3.n = 5;
+                break;
+              }
+              watermark = watermarks[idx];
+              if (!(!watermark.image || !watermark.draw)) {
+                _context3.n = 2;
+                break;
+              }
+              return _context3.a(3, 4);
+            case 2:
+              _context3.n = 3;
+              return this._createWatermarkFrame(watermark.image);
+            case 3:
+              frame = _context3.v;
+              target.push({
+                id: watermark.id,
+                draw: watermark.draw,
+                opacity: watermark.opacity,
+                frame: frame
+              });
+              transfers.push(frame);
+            case 4:
+              ++idx;
+              _context3.n = 1;
+              break;
+            case 5:
+              return _context3.a(2);
+          }
+        }, _callee3, this);
+      }));
+      function _appendWorkerWatermarks(_x3, _x4, _x5) {
+        return _appendWorkerWatermarks2.apply(this, arguments);
+      }
+      return _appendWorkerWatermarks;
+    }()
+    /**
+     * 从 HTMLVideoElement 抽取一帧，自动选择最优 API。
+     *
+     * 探测顺序：
+     *   1. createImageBitmap(video) — 广泛支持，优先使用
+     *   2. new VideoFrame(video) — VideoFrame API，部分浏览器支持
+     *
+     * WebGL2 Worker 路径：ImageBitmap 上传到 WebGL 时浏览器可能不再处理
+     * UNPACK_FLIP_Y_WEBGL，因此在抽帧阶段传入 { imageOrientation: 'flipY' }
+     * 来补偿翻转。
+     *
+     * @param {HTMLVideoElement} video - 输入 video 元素
+     * @returns {Promise<ImageBitmap|VideoFrame>} 抽取的帧
+     */
+    )
+  }, {
+    key: "_createFrame",
+    value: (function () {
+      var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(video) {
+        var VideoFrameConstructor, bitmapOptions, bitmap, frame, _t3, _t4, _t5;
+        return _regenerator().w(function (_context4) {
+          while (1) switch (_context4.p = _context4.n) {
+            case 0:
+              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
+              if (!(this._frameFactory === 'imagebitmap' || this._frameFactory === null && typeof createImageBitmap !== 'undefined')) {
+                _context4.n = 7;
+                break;
+              }
+              _context4.p = 1;
+              bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
+                imageOrientation: 'flipY'
+              } : undefined;
+              if (!bitmapOptions) {
+                _context4.n = 3;
+                break;
+              }
+              _context4.n = 2;
+              return createImageBitmap(video, bitmapOptions);
+            case 2:
+              _t3 = _context4.v;
+              _context4.n = 5;
+              break;
+            case 3:
+              _context4.n = 4;
+              return createImageBitmap(video);
+            case 4:
+              _t3 = _context4.v;
+            case 5:
+              bitmap = _t3;
+              this._frameFactory = 'imagebitmap';
+              return _context4.a(2, bitmap);
+            case 6:
+              _context4.p = 6;
+              _t4 = _context4.v;
+              if (!(this._frameFactory === 'imagebitmap')) {
+                _context4.n = 7;
+                break;
+              }
+              throw _t4;
+            case 7:
+              if (!(this._frameFactory === 'videoframe' || this._frameFactory === null && VideoFrameConstructor)) {
+                _context4.n = 10;
+                break;
+              }
+              _context4.p = 8;
+              frame = new VideoFrameConstructor(video);
+              this._frameFactory = 'videoframe';
+              return _context4.a(2, frame);
+            case 9:
+              _context4.p = 9;
+              _t5 = _context4.v;
+              if (!(this._frameFactory === 'videoframe')) {
+                _context4.n = 10;
+                break;
+              }
+              throw _t5;
+            case 10:
+              throw new Error('VideoFrame and createImageBitmap are unavailable');
+            case 11:
+              return _context4.a(2);
+          }
+        }, _callee4, this, [[8, 9], [1, 6]]);
+      }));
+      function _createFrame(_x6) {
+        return _createFrame2.apply(this, arguments);
+      }
+      return _createFrame;
+    }()
+    /**
+     * 从水印图面创建可 transfer 的 ImageBitmap/VideoFrame。
+     *
+     * @param {*} image - Canvas/Image/ImageBitmap
+     * @returns {Promise<ImageBitmap|VideoFrame>} 可 transfer 的帧
+     */
+    )
+  }, {
+    key: "_createWatermarkFrame",
+    value: (function () {
+      var _createWatermarkFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(image) {
+        var VideoFrameConstructor;
+        return _regenerator().w(function (_context5) {
+          while (1) switch (_context5.n) {
+            case 0:
+              if (!(typeof createImageBitmap !== 'undefined')) {
+                _context5.n = 1;
+                break;
+              }
+              return _context5.a(2, createImageBitmap(image, {
+                imageOrientation: 'flipY'
+              }));
+            case 1:
+              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
+              if (!VideoFrameConstructor) {
+                _context5.n = 2;
+                break;
+              }
+              return _context5.a(2, new VideoFrameConstructor(image));
+            case 2:
+              throw new Error('Watermark frame extraction is unavailable');
+            case 3:
+              return _context5.a(2);
+          }
+        }, _callee5);
+      }));
+      function _createWatermarkFrame(_x7) {
+        return _createWatermarkFrame2.apply(this, arguments);
+      }
+      return _createWatermarkFrame;
+    }()
+    /**
+     * 释放未发送到 Worker 的帧资源（防止内存泄漏）。
+     *
+     * @param {Array<Object>} items - 包含 frame 的项列表
+     */
+    )
+  }, {
+    key: "_closeTransferFrames",
+    value: function _closeTransferFrames(items) {
+      (items || []).forEach(function (item) {
+        if (item.frame && item.frame.close) {
+          item.frame.close();
+        }
+      });
+    }
+
+    /**
+     * 通知 Worker 移除一路源的纹理缓存。
+     *
+     * @param {string} id - 源 ID
+     */
+  }, {
+    key: "removeSource",
+    value: function removeSource(id) {
+      if (this._worker) {
+        this._worker.postMessage({
+          type: 'removeSource',
+          id: id
+        });
+      }
+    }
+
+    /**
+     * 销毁 Worker 渲染器。
+     *
+     * 清理步骤：
+     *   1. 设置销毁标记，阻止后续异步操作
+     *   2. 清空待处理帧队列
+     *   3. 释放输出上下文引用
+     *   4. 终止 Worker 线程 + revoke Blob URL
+     */
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      this._destroyed = true;
+      this._workerReady = false;
+      this._extractingFrame = false;
+      this._workerBusy = false;
+      this._queuedPayloads = [];
+      this._outputContext = null;
+      this._destroyWorker();
+    }
+
+    /**
+     * 终止 Worker 线程并释放相关资源。
+     * 先发送 destroy 消息通知 Worker 清理 GPU 资源，再 terminate。
+     */
+  }, {
+    key: "_destroyWorker",
+    value: function _destroyWorker() {
+      if (this._worker) {
+        try {
+          this._worker.postMessage({
+            type: 'destroy'
+          });
+        } catch (error) {}
+        this._worker.terminate();
+        this._worker = null;
+      }
+      if (this._workerUrl) {
+        URL.revokeObjectURL(this._workerUrl);
+        this._workerUrl = null;
+      }
+    }
+  }]);
+}(BaseRenderer);
+},{"./BaseRenderer":51,"./workerScript":58}],56:[function(require,module,exports){
+"use strict";
+
+/**
+ * color — CSS 颜色解析工具
+ *
+ * 将常见 CSS 颜色字符串解析为 WebGL clearColor 可用的 RGBA 数组。
+ * 只做渲染兜底需要的轻量解析，不处理复杂 CSS 颜色值（如 hsl、named colors）。
+ *
+ * 支持格式：
+ *   - #rgb（如 #fff → [1, 1, 1, 1]）
+ *   - #rrggbb（如 #ff0000 → [1, 0, 0, 1]）
+ *   - rgb(r, g, b)（如 rgb(255, 0, 0) → [1, 0, 0, 1]）
+ *   - rgba(r, g, b, a)（如 rgba(0, 0, 0, 0.5) → [0, 0, 0, 0.5]）
+ *
+ * 不支持的格式回退到纯黑 [0, 0, 0, 1]。
+ * Canvas2D 路径无需此工具（原生支持 CSS 颜色），仅 WebGL 路径使用。
+ *
+ * @module colorHelper
+ */
+
+/**
+ * 将 CSS 颜色字符串解析为归一化的 RGBA 数组。
+ *
+ * @param {string} color - CSS 颜色字符串
+ * @returns {Array<number>} [r, g, b, a]，每个通道范围 0-1
+ */
+exports.parseColor = function (color) {
+  if (!color || typeof color !== 'string') {
+    return [0, 0, 0, 1];
+  }
+  var value = color.trim();
+  if (value[0] === '#') {
+    return parseHexColor(value);
+  }
+  if (value.indexOf('rgb') === 0) {
+    return parseRgbColor(value);
+  }
+  return [0, 0, 0, 1];
+};
+
+/**
+ * 解析十六进制颜色。
+ *
+ * @param {string} value - #rgb 或 #rrggbb 格式
+ * @returns {Array<number>} [r, g, b, a]
+ */
+function parseHexColor(value) {
+  var hex = value.slice(1);
+
+  // 展开简写 #RGB → #RRGGBB
+  if (hex.length === 3) {
+    hex = hex.split('').map(function (item) {
+      return item + item;
+    }).join('');
+  }
+  if (hex.length !== 6) {
+    return [0, 0, 0, 1];
+  }
+  var numberValue = parseInt(hex, 16);
+  if (!Number.isFinite(numberValue)) {
+    return [0, 0, 0, 1];
+  }
+  return [(numberValue >> 16 & 255) / 255, (numberValue >> 8 & 255) / 255, (numberValue & 255) / 255, 1];
+}
+
+/**
+ * 解析 rgb/rgba 颜色。
+ *
+ * @param {string} value - rgb(r,g,b) 或 rgba(r,g,b,a) 格式
+ * @returns {Array<number>} [r, g, b, a]
+ */
+function parseRgbColor(value) {
+  var matches = value.match(/rgba?\(([^)]+)\)/i);
+  if (!matches) {
+    return [0, 0, 0, 1];
+  }
+  var parts = matches[1].split(',').map(function (item) {
+    return Number(item.trim());
+  });
+  if (parts.length < 3 || parts.some(function (item) {
+    return !Number.isFinite(item);
+  })) {
+    return [0, 0, 0, 1];
+  }
+  return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
+}
+
+/**
+ * 将数值限制在指定范围内。
+ *
+ * @param {number} value - 待限制的值
+ * @param {number} min - 最小值
+ * @param {number} max - 最大值
+ * @returns {number} 限制后的值
+ */
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+},{}],57:[function(require,module,exports){
+"use strict";
+
+/**
+ * gl — WebGL 工具函数
+ *
+ * 提供 WebGL shader 编译、program 链接、纹理创建等公共操作。
+ * 被 MainWebGL2Renderer 和 Worker 内联脚本共同使用。
+ *
+ * @module glHelpers
+ */
+
+/**
+ * 编译 WebGL shader。
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @param {number} shaderType - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
+ * @param {string} shaderSource - GLSL 源码
+ * @returns {WebGLShader} 编译后的 shader
+ * @throws {Error} 编译失败时抛出，包含 shader 编译日志
+ */
+exports.compileShader = function (gl, shaderType, shaderSource) {
+  var shader = gl.createShader(shaderType);
+  gl.shaderSource(shader, shaderSource);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    var message = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error("Could not compile shader: ".concat(message));
+  }
+  return shader;
+};
+
+/**
+ * 链接 WebGL program。
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @param {WebGLShader} vertexShader - 顶点 shader
+ * @param {WebGLShader} fragmentShader - 片元 shader
+ * @returns {WebGLProgram} 链接后的 program
+ * @throws {Error} 链接失败时抛出，包含链接日志
+ */
+exports.createProgram = function (gl, vertexShader, fragmentShader) {
+  var program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    var message = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error("Could not link WebGL program: ".concat(message));
+  }
+  return program;
+};
+
+/**
+ * 创建用于上传视频帧的 2D 纹理。
+ *
+ * 纹理参数：
+ *   - WRAP: CLAMP_TO_EDGE（避免边缘采样溢出）
+ *   - FILTER: LINEAR（双线性插值，保证缩放质量）
+ *
+ * @param {WebGL2RenderingContext} gl - WebGL2 上下文
+ * @returns {WebGLTexture} 初始化后的纹理对象
+ */
+exports.createVideoTexture = function (gl) {
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  return texture;
+};
+},{}],58:[function(require,module,exports){
+"use strict";
+
+/**
+ * workerScript — Worker 内联脚本生成器
+ *
+ * 生成一个自包含的 WebWorker 渲染脚本源码字符串。
+ * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker，
+ * 无需额外部署 Worker 脚本文件。
+ *
+ * Worker 内部支持两种渲染模式：
+ *   - worker-webgl2: WebGL2 + OffscreenCanvas，GPU 加速
+ *   - worker-2d: Canvas2D + OffscreenCanvas，兼容兜底
+ *
+ * 消息协议：
+ *   - init(type, canvas, requestedMode, ...) → ready/failed
+ *   - render(type, payload) → rendered/renderError
+ *   - removeSource(type, id) → 无回复
+ *   - destroy(type) → 无回复
+ *
+ * @module workerScript
+ */
+exports.createWorkerScript = function () {
+  // eslint-disable-next-line quotes
+  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n\",FRAGMENT_SHADER=\"#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nout vec4 outColor;\\nvoid main() {\\n  outColor = texture(u_texture, v_texCoord);\\n}\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)try{return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){return destroyWebGL2(),void postMessage({type:\"failed\",reason:r.message||String(r)})}if(\"worker-2d\"===requestedMode)try{return initCanvas2D(),actualMode=\"worker-2d\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"\"})}catch(e){return void postMessage({type:\"failed\",reason:e.message||String(e)})}postMessage({type:\"failed\",reason:\"Unsupported worker render mode: \"+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!1),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
+};
+},{}],59:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17409,7 +23848,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Grammar":37,"./URI":60}],43:[function(require,module,exports){
+},{"./Grammar":37,"./URI":77}],60:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -17664,7 +24103,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61,"events":91}],44:[function(require,module,exports){
+},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./Utils":78,"events":91}],61:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -17939,7 +24378,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":37,"./Logger":39,"./SIPMessage":53}],45:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./SIPMessage":70}],62:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -17948,7 +24387,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],46:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -24550,7 +30989,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }]);
 }(EventEmitter);
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":47,"./RTCSession/Info":48,"./RTCSession/ReferNotifier":49,"./RTCSession/ReferSubscriber":50,"./RequestSender":52,"./SIPMessage":53,"./Timers":56,"./Transactions":57,"./URI":60,"./Utils":61,"buffer":92,"events":91,"sdp-transform":100}],47:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":92,"events":91,"sdp-transform":100}],64:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24717,7 +31156,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":61,"events":91}],48:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":78,"events":91}],65:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24826,7 +31265,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Exceptions":36,"../Utils":61,"events":91}],49:[function(require,module,exports){
+},{"../Constants":32,"../Exceptions":36,"../Utils":78,"events":91}],66:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -24883,7 +31322,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Constants":32,"../Logger":39}],50:[function(require,module,exports){
+},{"../Constants":32,"../Logger":39}],67:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25039,7 +31478,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":61,"events":91}],51:[function(require,module,exports){
+},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":78,"events":91}],68:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25371,7 +31810,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":32,"./Logger":39,"./RequestSender":52,"./SIPMessage":53,"./Utils":61}],52:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./Utils":78}],69:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -25523,7 +31962,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":57}],53:[function(require,module,exports){
+},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":74}],70:[function(require,module,exports){
 "use strict";
 
 function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
@@ -26272,7 +32711,7 @@ module.exports = {
   IncomingRequest: IncomingRequest,
   IncomingResponse: IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":42,"./Utils":61,"sdp-transform":100}],54:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":59,"./Utils":78,"sdp-transform":100}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -26340,7 +32779,7 @@ exports.isSocket = function (socket) {
   }
   return true;
 };
-},{"./Grammar":37,"./Logger":39,"./Utils":61}],55:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39,"./Utils":78}],72:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -26855,7 +33294,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
   }]);
 }(EventEmitter);
-},{"./Constants":32,"./Logger":39,"./Utils":61,"events":91}],56:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Utils":78,"events":91}],73:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -26876,7 +33315,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],57:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -27576,7 +34015,7 @@ module.exports = {
   InviteServerTransaction: InviteServerTransaction,
   checkTransaction: checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Timers":56,"events":91}],58:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":70,"./Timers":73,"events":91}],75:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -27991,7 +34430,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":32,"./Logger":39,"./Socket":54,"./Utils":61}],59:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./Socket":71,"./Utils":78}],76:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29147,7 +35586,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":43,"./Parser":44,"./Pk":45,"./RTCSession":46,"./Registrator":51,"./SIPMessage":53,"./Transactions":57,"./Transport":58,"./URI":60,"./Utils":61,"./sanityCheck":89,"events":91,"jsencrypt":96}],60:[function(require,module,exports){
+},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":60,"./Parser":61,"./Pk":62,"./RTCSession":63,"./Registrator":68,"./SIPMessage":70,"./Transactions":74,"./Transport":75,"./URI":77,"./Utils":78,"./sanityCheck":89,"events":91,"jsencrypt":96}],77:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -29378,7 +35817,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Constants":32,"./Grammar":37,"./Utils":61}],61:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./Utils":78}],78:[function(require,module,exports){
 "use strict";
 
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
@@ -31243,7 +37682,7 @@ exports.disableVideoInSdp = function (sdp) {
   });
   return newSdp;
 };
-},{"./Constants":32,"./Grammar":37,"./URI":60}],62:[function(require,module,exports){
+},{"./Constants":32,"./Grammar":37,"./URI":77}],79:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -31346,7 +37785,7 @@ exports.createTimerWorker = function () {
   };
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],63:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -32119,7 +38558,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"../Logger":39,"./helpers/timerHelper.js":62,"./pipelines/webgl2/webgl2Pipeline.js":70}],64:[function(require,module,exports){
+},{"../Logger":39,"./helpers/timerHelper.js":79,"./pipelines/webgl2/webgl2Pipeline.js":87}],81:[function(require,module,exports){
 "use strict";
 
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
@@ -32340,7 +38779,7 @@ exports.readPixelsAsync = /*#__PURE__*/function () {
     return _ref.apply(this, arguments);
   };
 }();
-},{}],65:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -32485,7 +38924,7 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
     cleanUp: cleanUp
   };
 }
-},{"../helpers/webglHelper.js":64}],66:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81}],83:[function(require,module,exports){
 "use strict";
 
 var _templateObject, _templateObject2;
@@ -32603,7 +39042,7 @@ exports.buildBackgroundImageStage = function (gl, positionBuffer, texCoordBuffer
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],67:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81}],84:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -32693,7 +39132,7 @@ exports.buildJointBilateralFilterStage = function (gl, vertexShader, positionBuf
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],68:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81}],85:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -32789,7 +39228,7 @@ exports.buildResizingStage = function (gl, vertexShader, positionBuffer, texCoor
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],69:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81}],86:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -32848,7 +39287,7 @@ exports.buildSoftmaxStage = function (gl, vertexShader, positionBuffer, texCoord
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64}],70:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81}],87:[function(require,module,exports){
 "use strict";
 
 var _templateObject;
@@ -33222,7 +39661,7 @@ exports.buildWebGL2Pipeline = function (sourcePlayback, backgroundImage, backgro
     cleanUp: cleanUp
   };
 };
-},{"../helpers/webglHelper.js":64,"./backgroundBlurStage.js":65,"./backgroundImageStage.js":66,"./jointBilateralFilterStage.js":67,"./resizingStage.js":68,"./softmaxStage.js":69}],71:[function(require,module,exports){
+},{"../helpers/webglHelper.js":81,"./backgroundBlurStage.js":82,"./backgroundImageStage.js":83,"./jointBilateralFilterStage.js":84,"./resizingStage.js":85,"./softmaxStage.js":86}],88:[function(require,module,exports){
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
@@ -33370,6446 +39809,7 @@ module.exports = /*#__PURE__*/function () {
     }
   }]);
 }();
-},{"./Grammar":37,"./Logger":39}],72:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * AudioMixer — WebAudio 混音模块
- *
- * 负责混流器的音频处理部分：
- *   - 延迟创建 AudioContext（用户交互后才初始化）
- *   - 每路输入源独立 GainNode 控制音量
- *   - 汇总到 MediaStreamAudioDestinationNode 输出
- *   - 支持动态增删源、外部换源检测、自动重连
- *
- * @module AudioMixer
- */
-var AudioMixer = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {Object} options.logger - 日志记录器
-   * @param {Function} options.getDestroyed - 返回混流器是否已销毁的回调
-   * @param {Object} options.sourceRegistry - SourceRegistry 实例
-   * @param {Function} options.onAudioTrackAvailable - 音频轨可用时的回调（用于补充到 mixed stream）
-   */
-  function AudioMixer(options) {
-    _classCallCheck(this, AudioMixer);
-    options = options || {};
-    this._logger = options.logger;
-    this._getDestroyed = options.getDestroyed;
-    this._sourceRegistry = options.sourceRegistry;
-    this._onAudioTrackAvailable = options.onAudioTrackAvailable;
-
-    /** @type {Set<MediaStreamAudioSourceNode>} 已连接的 WebAudio 源节点集合 */
-    this._audioSources = new Set();
-
-    /** @type {MediaStreamAudioDestinationNode|null} 混音输出目标节点 */
-    this._audioDestination = null;
-
-    /** @type {Map<string,Object>} 按 slot 组合创建的子混音 bus */
-    this._audioBuses = new Map();
-
-    /** @type {Map<string,Object>} 按 slot 组合创建的独立 AudioContext 子混音 */
-    this._isolatedSubmixes = new Map();
-
-    /** @type {AudioContext|null} WebAudio 上下文（延迟创建） */
-    this._audioContext = null;
-
-    /** @type {boolean} 是否已请求获取音频流 */
-    this._audioRequested = false;
-
-    /** @type {boolean} 是否已请求默认全量音频流 */
-    this._defaultAudioRequested = false;
-
-    /** @type {Promise|null} 正在进行的音频刷新操作 */
-    this._audioRefreshPromise = null;
-
-    /** @type {boolean} 是否已有排队等待的批量刷新 */
-    this._audioRefreshScheduled = false;
-
-    /** @type {boolean} 刷新过程中又有新的刷新请求标记 */
-    this._audioRefreshPending = false;
-
-    /** @type {Promise<boolean>|null} 音频系统初始化锁，避免并发创建多个 AudioContext */
-    this._audioSystemReadyPromise = null;
-
-    /** @type {Object} 音频系统状态信息（调试用） */
-    this._audioInfo = {
-      requested: false,
-      status: 'not-requested',
-      contextState: null,
-      sourceCount: 0,
-      liveSourceCount: 0,
-      connectedSources: 0,
-      outputTracks: 0,
-      reason: '',
-      lastError: ''
-    };
-    if (this._logger) {
-      this._logger.debug('AudioMixer constructed');
-    }
-  }
-
-  /**
-   * 获取混合后的音频流。
-   * 初始化 AudioContext（延迟创建），连接所有源的音频到 destination。
-   *
-   * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
-   */
-  return _createClass(AudioMixer, [{
-    key: "getAudioStream",
-    value: function getAudioStream(options) {
-      if (this._logger) {
-        this._logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
-      }
-      var request = this._normalizeAudioRequest(options);
-      if (!request) {
-        if (this._logger) {
-          this._logger.warn('getAudioStream() ignored: invalid request');
-        }
-        return Promise.resolve(null);
-      }
-      this._audioRequested = true;
-      this._updateAudioInfo({
-        status: 'requested',
-        reason: ''
-      });
-
-      // 显式要求 isolated 时，slot 子混音走独立 AudioContext。
-      // 为贴近旧实现并规避 Android 浏览器上的 clone 兼容问题：
-      // 1) 每次调用都重建该 key 的 isolated 子混音上下文与 destination
-      // 2) 连接时直接使用原始 stream，不 clone track
-      if (request.type === 'slots' && options && options.isolated === true) {
-        var existing = this._isolatedSubmixes.get(request.key);
-        if (existing) {
-          this._disconnectIsolatedSubmix(existing, true);
-          this._isolatedSubmixes["delete"](request.key);
-        }
-        var isolatedSubmix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
-        isolatedSubmix.requested = true;
-        return this._refreshIsolatedSubmixConnections(isolatedSubmix);
-      }
-      if (request.type === 'default') {
-        this._defaultAudioRequested = true;
-        return this._refreshAudioConnections();
-      }
-      var bus = this._getOrCreateAudioBus(request.key, request.slots);
-      bus.requested = true;
-      return this._refreshAudioConnections(bus);
-    }
-
-    /**
-     * 获取独立 AudioContext 的子混音音频流。
-     * 每个 slot 组合都会创建并复用自己的 AudioContext 与 destination。
-     *
-     * @param {Object|Array<number>} options - { slots: number[] } 或 slots 数组
-     * @returns {Promise<MediaStream|null>} 子混音音频流；参数无效时返回 null
-     */
-  }, {
-    key: "getIsolatedSubmixAudioStream",
-    value: function getIsolatedSubmixAudioStream(options) {
-      if (this._logger) {
-        this._logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
-      }
-      var request = this._normalizeAudioRequest(options);
-      if (!request || request.type !== 'slots') {
-        return Promise.resolve(null);
-      }
-      this._audioRequested = true;
-      this._updateAudioInfo({
-        requested: true,
-        status: 'requested',
-        reason: ''
-      });
-      var submix = this._getOrCreateIsolatedSubmix(request.key, request.slots);
-      submix.requested = true;
-      return this._refreshIsolatedSubmixConnections(submix);
-    }
-
-    /**
-     * 释放指定 slots 的子混音请求与连接。
-     * 用于上层在切换子混音组合时主动回收旧链路，避免长期占用音频资源。
-     *
-     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
-     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
-     */
-  }, {
-    key: "releaseSubmixAudioStream",
-    value: function releaseSubmixAudioStream(options) {
-      if (this._logger) {
-        this._logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
-      }
-      var request = this._normalizeAudioRequest(options);
-      if (!request || request.type !== 'slots') {
-        return false;
-      }
-      if (options && options.isolated === true) {
-        var submix = this._isolatedSubmixes.get(request.key);
-        if (!submix) {
-          return false;
-        }
-        submix.requested = false;
-        this._disconnectIsolatedSubmix(submix, true);
-        this._isolatedSubmixes["delete"](request.key);
-        this._refreshRequestedState();
-        return true;
-      }
-      var bus = this._audioBuses.get(request.key);
-      if (!bus) {
-        return false;
-      }
-      bus.requested = false;
-      this._disconnectAudioBus(bus);
-      this._audioBuses["delete"](request.key);
-      this._refreshRequestedState();
-      return true;
-    }
-
-    /**
-     * 计划一次异步音频刷新。
-     * 适用于不能直接 await 的路径（如 appendStream 循环内）。
-     * 如果已有正在进行的刷新，标记 pending 并在完成后自动重刷。
-     */
-  }, {
-    key: "scheduleRefresh",
-    value: function scheduleRefresh() {
-      var _this = this;
-      if (this._logger) {
-        this._logger.debug("scheduleRefresh(): requested=".concat(this._audioRequested, " destroyed=").concat(this._getDestroyed()));
-      }
-      if (!this._audioRequested || this._getDestroyed()) {
-        return;
-      }
-      if (this._audioRefreshScheduled) {
-        this._audioRefreshPending = true;
-        return;
-      }
-      this._audioRefreshScheduled = true;
-      this._queueAudioRefresh(function () {
-        _this._audioRefreshScheduled = false;
-        _this._runScheduledRefresh();
-      });
-    }
-  }, {
-    key: "_runScheduledRefresh",
-    value: function _runScheduledRefresh() {
-      var _this2 = this;
-      if (this._logger) {
-        this._logger.debug('Running scheduled audio refresh');
-      }
-      if (!this._audioRequested || this._getDestroyed()) {
-        this._audioRefreshPending = false;
-        return;
-      }
-      if (this._audioRefreshPromise) {
-        this._audioRefreshPending = true;
-        return;
-      }
-      this._audioRefreshPromise = this._refreshRequestedAudioConnections()["catch"](function (error) {
-        _this2._logger.warn("Failed to refresh mixed audio: ".concat(error.message || String(error)));
-        _this2._updateAudioInfo({
-          status: 'failed',
-          reason: 'Failed to refresh mixed audio',
-          lastError: error.message || String(error)
-        });
-      }).then(function (stream) {
-        var needsAnotherRefresh = _this2._audioRefreshPending;
-        _this2._audioRefreshPromise = null;
-        _this2._audioRefreshPending = false;
-        if (needsAnotherRefresh) {
-          _this2.scheduleRefresh();
-        }
-        return stream || null;
-      });
-    }
-
-    /**
-     * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
-     *
-     * 遍历所有源，检查 stream 引用是否变化。如果发现换源：
-     *   - 已有音频连接的源：断开旧连接，标记需要刷新
-     *   - 新出现音频轨的源：标记需要刷新
-     */
-  }, {
-    key: "syncExternalSourceAudio",
-    value: function syncExternalSourceAudio() {
-      var _this3 = this;
-      if (!this._audioRequested && !this._audioContext) {
-        return;
-      }
-      var needsRefresh = false;
-      this._sourceRegistry.sources.forEach(function (source) {
-        var previousStream = source.stream;
-        var currentStream = _this3._sourceRegistry.getStream(source);
-        var previousSignature = source.audioTrackSignature;
-        var currentSignature = _this3._getAudioTrackSignature(currentStream);
-
-        // 已有音频连接但音频轨真正变化了，断开旧连接
-        if (source.audioSourceNode && !_this3._isSameAudioTrackSignature(previousSignature, currentSignature)) {
-          _this3.disconnectSource(source);
-          needsRefresh = true;
-          return;
-        }
-
-        // stream 引用变化但音频轨不变时无需重建 source；只有新增音轨才刷新连接。
-        if (currentStream && currentStream !== previousStream && _this3._sourceRegistry.hasLiveAudioTrack(source) && !source.audioSourceNode) {
-          needsRefresh = true;
-        }
-      });
-      if (needsRefresh) {
-        if (this._logger) {
-          this._logger.debug('External source audio changed, scheduling refresh');
-        }
-        this.scheduleRefresh();
-      }
-    }
-
-    /**
-     * 断开一路源的音频连接，释放 WebAudio 节点。
-     *
-     * 调用场景：
-     *   - removeStream() 移除源时
-     *   - appendStream() 同 slot 覆盖时
-     *   - 外部 HTMLVideoElement 换源检测触发时
-     *
-     * @param {Object} source - 内部 source 对象
-     */
-  }, {
-    key: "disconnectSource",
-    value: function disconnectSource(source) {
-      if (this._logger && source) {
-        this._logger.debug("Disconnecting audio source: id=".concat(source.id));
-      }
-      this._destroySourceNode(source);
-    }
-  }, {
-    key: "_destroySourceNode",
-    value: function _destroySourceNode(source) {
-      var _this4 = this;
-      var audioSourceNode = source.audioSourceNode;
-      var masterGainNode = source.masterGainNode;
-      this._audioBuses.forEach(function (bus) {
-        return _this4._disconnectBusSource(bus, source);
-      });
-      this._isolatedSubmixes.forEach(function (submix) {
-        return _this4._disconnectIsolatedSubmixSource(submix, source);
-      });
-      if (source.gainNode) {
-        this._disposeOutputGain(source, source.gainNode, true);
-        source.gainNode = null;
-      }
-      source.audioStream = null;
-      source.audioTrackId = null;
-      source.audioTrackSignature = null;
-      if (audioSourceNode) {
-        this._audioSources["delete"](audioSourceNode);
-        this._safeDisconnect(audioSourceNode);
-      }
-      if (masterGainNode) {
-        this._safeDisconnect(masterGainNode);
-      }
-      source.audioSourceNode = null;
-      source.masterGainNode = null;
-      if (source.outputGains) {
-        source.outputGains.clear();
-        source.outputGains = null;
-      }
-    }
-
-    /**
-     * 获取当前音频系统状态快照。
-     * 返回副本，外部修改不影响内部状态。
-     *
-     * @returns {Object} 音频状态信息
-     */
-  }, {
-    key: "getInfo",
-    value: function getInfo() {
-      this._updateAudioInfo();
-      return Object.assign({}, this._audioInfo);
-    }
-
-    /**
-     * 停止音频系统，释放所有资源。
-     *
-     * 清理步骤：
-     *   1. 断开并清空 AudioDestination 节点
-     *   2. 关闭 AudioContext
-     *   3. 清空源节点列表
-     *   4. 重置请求状态
-     */
-  }, {
-    key: "stop",
-    value: function stop() {
-      var _this5 = this;
-      if (this._logger) {
-        this._logger.debug('Stopping AudioMixer');
-      }
-      if (this._audioDestination) {
-        this._safeDisconnect(this._audioDestination);
-        this._audioDestination = null;
-      }
-      this._sourceRegistry.sources.forEach(function (source) {
-        _this5._destroySourceNode(source);
-      });
-      var audioContext = this._audioContext;
-
-      // 先断开引用，防止 stop 后并发路径继续复用旧 context。
-      this._audioContext = null;
-      this._audioSystemReadyPromise = null;
-      if (audioContext) {
-        audioContext.close()["catch"](function (error) {
-          _this5._logger.warn("Failed to close AudioContext: ".concat(error.message || String(error)));
-        });
-      }
-      this._audioSources = new Set();
-      this._audioBuses.forEach(function (bus) {
-        _this5._disconnectAudioBus(bus);
-      });
-      this._audioBuses.clear();
-      this._isolatedSubmixes.forEach(function (submix) {
-        _this5._disconnectIsolatedSubmix(submix, true);
-      });
-      this._isolatedSubmixes.clear();
-      this._audioRequested = false;
-      this._defaultAudioRequested = false;
-      this._audioRefreshPromise = null;
-      this._audioRefreshScheduled = false;
-      this._audioRefreshPending = false;
-      this._audioSystemReadyPromise = null;
-      this._updateAudioInfo({
-        status: 'stopped',
-        reason: 'Mixer stopped'
-      });
-    }
-
-    /**
-     * 确保音频系统已初始化（创建 AudioContext + Destination）。
-     *
-     * 如果浏览器不支持 AudioContext 或恢复失败，Promise resolve false。
-     * AudioContext 在用户交互后自动 resume（浏览器 autoplay 政策）。
-     *
-     * @returns {Promise<boolean>} true=音频系统就绪
-     */
-  }, {
-    key: "_ensureAudioSystem",
-    value: function _ensureAudioSystem(options) {
-      var _this6 = this;
-      options = Object.assign({
-        defaultDestination: true
-      }, options || {});
-      if (this._logger) {
-        this._logger.debug("Ensuring audio system: defaultDestination=".concat(options.defaultDestination));
-      }
-      if (this._getDestroyed()) {
-        return Promise.resolve(false);
-      }
-      if (!this._audioContext) {
-        var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextConstructor) {
-          this._logger.warn('AudioContext is not available');
-          this._updateAudioInfo({
-            status: 'failed',
-            reason: 'AudioContext is not available',
-            lastError: 'AudioContext is not available'
-          });
-          return Promise.resolve(false);
-        }
-        this._audioContext = this._createAudioContext(AudioContextConstructor);
-      }
-      if (this._audioSystemReadyPromise) {
-        return this._audioSystemReadyPromise;
-      }
-
-      // 浏览器自动暂停时，尝试恢复
-      var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
-      this._audioSystemReadyPromise = resumePromise.then(function () {
-        if (_this6._getDestroyed()) {
-          _this6._audioSystemReadyPromise = null;
-          return false;
-        }
-        if (options.defaultDestination && !_this6._audioDestination) {
-          _this6._audioDestination = _this6._createAudioDestination();
-        }
-        _this6._updateAudioInfo({
-          status: _this6._audioContext.state === 'suspended' ? 'suspended' : 'ready',
-          reason: ''
-        });
-        _this6._audioSystemReadyPromise = null;
-        return true;
-      })["catch"](function (error) {
-        _this6._updateAudioInfo({
-          status: 'failed',
-          reason: 'AudioContext resume failed',
-          lastError: error.message || String(error)
-        });
-        _this6._audioSystemReadyPromise = null;
-        return false;
-      });
-      return this._audioSystemReadyPromise;
-    }
-
-    /**
-     * 归一化 getAudioStream() 参数。
-     * 不传参数时返回默认全量混音；传 slots 时按 slot 组合创建子混音。
-     *
-     * @param {Object|Array<number>} options - getAudioStream 参数
-     * @returns {Object|null} { type:'default' } 或 { type:'slots', key, slots }
-     */
-  }, {
-    key: "_normalizeAudioRequest",
-    value: function _normalizeAudioRequest(options) {
-      if (options === undefined || options === null) {
-        if (this._logger) {
-          this._logger.debug('Audio request normalized to default mix');
-        }
-        return {
-          type: 'default'
-        };
-      }
-      var rawSlots = options instanceof Array ? options : options.slots;
-      if (!(rawSlots instanceof Array)) {
-        if (this._logger) {
-          this._logger.warn("Audio request invalid: ".concat(JSON.stringify(options)));
-        }
-        return null;
-      }
-      var slots = rawSlots.map(function (slot) {
-        return Number(slot);
-      }).filter(function (slot) {
-        return Number.isInteger(slot) && slot >= 0;
-      }).filter(function (slot, index, values) {
-        return values.indexOf(slot) === index;
-      }).sort(function (a, b) {
-        return a - b;
-      });
-      if (slots.length === 0) {
-        if (this._logger) {
-          this._logger.warn("Audio request empty after normalization: ".concat(JSON.stringify(options)));
-        }
-        return null;
-      }
-      if (this._logger) {
-        this._logger.debug("Audio request normalized: slots=".concat(slots.join(',')));
-      }
-      return {
-        type: 'slots',
-        key: slots.join(','),
-        slots: slots
-      };
-    }
-  }, {
-    key: "_queueAudioRefresh",
-    value: function _queueAudioRefresh(callback) {
-      if (typeof setTimeout === 'function') {
-        setTimeout(callback, 0);
-        return;
-      }
-      Promise.resolve().then(callback);
-    }
-  }, {
-    key: "_refreshRequestedState",
-    value: function _refreshRequestedState() {
-      var hasRequestedBus = Array.from(this._audioBuses.values()).some(function (bus) {
-        return bus && bus.requested;
-      });
-      var hasRequestedIsolatedSubmix = Array.from(this._isolatedSubmixes.values()).some(function (submix) {
-        return submix && submix.requested;
-      });
-      this._audioRequested = this._defaultAudioRequested || hasRequestedBus || hasRequestedIsolatedSubmix;
-    }
-  }, {
-    key: "_createAudioContext",
-    value: function _createAudioContext(AudioContextConstructor) {
-      try {
-        return new AudioContextConstructor({
-          sampleRate: 48000
-        });
-      } catch (error) {
-        return new AudioContextConstructor();
-      }
-    }
-  }, {
-    key: "_createAudioDestination",
-    value: function _createAudioDestination() {
-      var destination = this._audioContext.createMediaStreamDestination();
-      return destination;
-    }
-  }, {
-    key: "_isDestinationTrackHealthy",
-    value: function _isDestinationTrackHealthy(destination) {
-      if (!destination || !destination.stream || !destination.stream.getAudioTracks) {
-        return false;
-      }
-      var tracks = destination.stream.getAudioTracks();
-      return tracks.some(function (track) {
-        return track && track.readyState === 'live';
-      });
-    }
-  }, {
-    key: "_ensureBusDestination",
-    value: function _ensureBusDestination(bus) {
-      var _this7 = this;
-      if (!bus) {
-        return null;
-      }
-      if (!bus.destination) {
-        bus.destination = this._createAudioDestination();
-        return bus.destination;
-      }
-      if (!this._isDestinationTrackHealthy(bus.destination)) {
-        var track = bus.destination.stream.getAudioTracks()[0];
-        var ended = track && track.readyState === 'ended';
-        if (ended) {
-          bus.connections.forEach(function (connection) {
-            _this7._disposeOutputGain(connection.source || null, connection.gainNode, true);
-          });
-          bus.connections.clear();
-          this._safeDisconnect(bus.destination);
-          bus.destination = this._createAudioDestination();
-        }
-      }
-      return bus.destination;
-    }
-
-    /**
-     * 获取或创建按 slot 组合输出的音频 bus。
-     *
-     * @param {string} key - 归一化后的 slots key
-     * @param {Array<number>} slots - slot 列表
-     * @returns {Object} bus 对象
-     */
-  }, {
-    key: "_getOrCreateAudioBus",
-    value: function _getOrCreateAudioBus(key, slots) {
-      var bus = this._audioBuses.get(key);
-      if (!bus) {
-        bus = {
-          key: key,
-          slots: slots.slice(),
-          requested: false,
-          destination: null,
-          connections: new Map(),
-          info: {
-            status: 'not-requested',
-            connectedSources: 0,
-            outputTracks: 0
-          }
-        };
-        this._audioBuses.set(key, bus);
-        if (this._logger) {
-          this._logger.debug("Audio bus created: key=".concat(key, " slots=").concat(slots.join(',')));
-        }
-      }
-      return bus;
-    }
-
-    /**
-     * 刷新默认混音和所有已请求的子混音 bus。
-     *
-     * @returns {Promise<MediaStream|null>} 默认混音流或最后一次刷新结果
-     */
-  }, {
-    key: "_refreshRequestedAudioConnections",
-    value: function _refreshRequestedAudioConnections() {
-      var _this8 = this;
-      var chain = Promise.resolve(null);
-      if (this._defaultAudioRequested) {
-        chain = chain.then(function () {
-          return _this8._refreshAudioConnections();
-        });
-      }
-      this._audioBuses.forEach(function (bus) {
-        if (bus.requested) {
-          chain = chain.then(function () {
-            return _this8._refreshAudioConnections(bus);
-          });
-        }
-      });
-      this._isolatedSubmixes.forEach(function (submix) {
-        if (submix.requested) {
-          chain = chain.then(function () {
-            return _this8._refreshIsolatedSubmixConnections(submix);
-          });
-        }
-      });
-      return chain;
-    }
-
-    /**
-     * 获取目标混音应连接的 live 音频源。
-     *
-     * @param {Object|null} bus - 子混音 bus，不传则为默认全量混音
-     * @returns {Array<Object>} source 列表
-     */
-  }, {
-    key: "_getLiveAudioSources",
-    value: function _getLiveAudioSources(bus) {
-      var _this9 = this;
-      return this._sourceRegistry.sources.filter(function (source) {
-        if (bus && bus.slots.indexOf(source.slot) === -1) {
-          return false;
-        }
-        return _this9._sourceRegistry.hasLiveAudioTrack(source);
-      });
-    }
-
-    /**
-     * 返回指定目标当前连接数。
-     *
-     * @param {Object|null} bus - 子混音 bus，不传则为默认全量混音
-     * @returns {number} 连接数
-     */
-  }, {
-    key: "_getTargetConnectionCount",
-    value: function _getTargetConnectionCount(bus) {
-      return bus ? bus.connections.size : this._audioSources.size;
-    }
-
-    /**
-     * 更新默认混音或子混音状态。
-     *
-     * @param {Object|null} bus - 子混音 bus，不传则更新默认音频信息
-     * @param {Object} info - 状态字段
-     */
-  }, {
-    key: "_updateTargetAudioInfo",
-    value: function _updateTargetAudioInfo(bus, info) {
-      if (!bus) {
-        this._updateAudioInfo(info);
-        return;
-      }
-      Object.assign(bus.info, {
-        status: bus.info.status,
-        connectedSources: bus.connections.size,
-        outputTracks: bus.destination ? bus.destination.stream.getAudioTracks().length : 0
-      }, info || {});
-    }
-
-    /**
-     * 断开 source 在指定子混音 bus 上的连接。
-     *
-     * @param {Object} bus - 子混音 bus
-     * @param {Object} source - 内部 source 对象
-     */
-  }, {
-    key: "_disconnectBusSource",
-    value: function _disconnectBusSource(bus, source) {
-      if (!bus || !bus.connections) {
-        return;
-      }
-      var connection = bus.connections.get(source.id);
-      if (!connection) {
-        return;
-      }
-      if (connection.gainNode) {
-        this._disposeOutputGain(source, connection.gainNode, true);
-      }
-      bus.connections["delete"](source.id);
-      this._updateTargetAudioInfo(bus);
-    }
-
-    /**
-     * 断开并释放一个子混音 bus。
-     *
-     * @param {Object} bus - 子混音 bus
-     */
-  }, {
-    key: "_disconnectAudioBus",
-    value: function _disconnectAudioBus(bus) {
-      var _this0 = this;
-      if (!bus) {
-        return;
-      }
-      if (this._logger) {
-        this._logger.debug("Disconnecting audio bus: key=".concat(bus.key));
-      }
-      bus.connections.forEach(function (connection) {
-        if (connection.gainNode) {
-          _this0._disposeOutputGain(connection.source || null, connection.gainNode, true);
-        }
-      });
-      bus.connections.clear();
-      if (bus.destination) {
-        this._safeDisconnect(bus.destination);
-        bus.destination = null;
-      }
-    }
-
-    /**
-     * 获取或创建独立 AudioContext 子混音。
-     *
-     * @param {string} key - 归一化后的 slots key
-     * @param {Array<number>} slots - slot 列表
-     * @returns {Object} 子混音对象
-     */
-  }, {
-    key: "_getOrCreateIsolatedSubmix",
-    value: function _getOrCreateIsolatedSubmix(key, slots) {
-      var submix = this._isolatedSubmixes.get(key);
-      if (!submix) {
-        submix = {
-          key: key,
-          slots: slots.slice(),
-          requested: false,
-          audioContext: null,
-          destination: null,
-          connections: new Map(),
-          readyPromise: null
-        };
-        this._isolatedSubmixes.set(key, submix);
-        if (this._logger) {
-          this._logger.debug("Isolated submix created: key=".concat(key, " slots=").concat(slots.join(',')));
-        }
-      }
-      return submix;
-    }
-  }, {
-    key: "_ensureIsolatedSubmixSystem",
-    value: function _ensureIsolatedSubmixSystem(submix) {
-      var _this1 = this;
-      if (this._logger && submix) {
-        this._logger.debug("Ensuring isolated submix system: key=".concat(submix.key));
-      }
-      if (!submix || this._getDestroyed()) {
-        return Promise.resolve(false);
-      }
-      if (!submix.audioContext) {
-        var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextConstructor) {
-          this._logger.warn('AudioContext is not available');
-          return Promise.resolve(false);
-        }
-        submix.audioContext = this._createAudioContext(AudioContextConstructor);
-      }
-      if (submix.readyPromise) {
-        return submix.readyPromise;
-      }
-      var resumePromise = submix.audioContext.state === 'suspended' ? submix.audioContext.resume() : Promise.resolve();
-      submix.readyPromise = resumePromise.then(function () {
-        if (_this1._getDestroyed()) {
-          submix.readyPromise = null;
-          return false;
-        }
-        if (!submix.destination) {
-          submix.destination = submix.audioContext.createMediaStreamDestination();
-        }
-        submix.readyPromise = null;
-        return true;
-      })["catch"](function () {
-        submix.readyPromise = null;
-        return false;
-      });
-      return submix.readyPromise;
-    }
-  }, {
-    key: "_disconnectIsolatedSubmixSource",
-    value: function _disconnectIsolatedSubmixSource(submix, source) {
-      if (!submix || !submix.connections || !source) {
-        return;
-      }
-      var connection = submix.connections.get(source.id);
-      if (!connection) {
-        return;
-      }
-      if (connection.gainNode) {
-        this._disposeOutputGain(source, connection.gainNode, true);
-      }
-      if (connection.sourceNode) {
-        this._safeDisconnect(connection.sourceNode);
-      }
-      if (connection.ownsClonedTrack && connection.clonedTrack && connection.clonedTrack.stop) {
-        try {
-          connection.clonedTrack.stop();
-        } catch (error) {}
-      }
-      submix.connections["delete"](source.id);
-    }
-  }, {
-    key: "_disconnectIsolatedSubmix",
-    value: function _disconnectIsolatedSubmix(submix, closeContext) {
-      var _this10 = this;
-      if (!submix) {
-        return;
-      }
-      if (this._logger) {
-        this._logger.debug("Disconnecting isolated submix: key=".concat(submix.key, " closeContext=").concat(closeContext));
-      }
-      submix.connections.forEach(function (connection) {
-        if (connection.gainNode) {
-          _this10._disposeOutputGain(connection.source || null, connection.gainNode, true);
-        }
-        if (connection.sourceNode) {
-          _this10._safeDisconnect(connection.sourceNode);
-        }
-        if (connection.ownsClonedTrack && connection.clonedTrack && connection.clonedTrack.stop) {
-          try {
-            connection.clonedTrack.stop();
-          } catch (error) {}
-        }
-      });
-      submix.connections.clear();
-      if (submix.destination) {
-        this._safeDisconnect(submix.destination);
-        submix.destination = null;
-      }
-      if (closeContext && submix.audioContext) {
-        submix.audioContext.close()["catch"](function (error) {
-          _this10._logger.warn("Failed to close isolated AudioContext: ".concat(error.message || String(error)));
-        });
-        submix.audioContext = null;
-        submix.readyPromise = null;
-      }
-    }
-  }, {
-    key: "_refreshIsolatedSubmixConnections",
-    value: function _refreshIsolatedSubmixConnections(submix) {
-      var _this11 = this;
-      if (this._logger && submix) {
-        this._logger.debug("Refreshing isolated submix connections: key=".concat(submix.key));
-      }
-      if (!submix || this._getDestroyed()) {
-        return Promise.resolve(null);
-      }
-      submix.connections.forEach(function (connection, sourceId) {
-        var source = _this11._sourceRegistry.find(sourceId);
-        var stream = source && _this11._sourceRegistry.getStream(source);
-        var signature = _this11._getAudioTrackSignature(stream);
-        var shouldDisconnect = !source || submix.slots.indexOf(source.slot) === -1 || !_this11._sourceRegistry.hasLiveAudioTrack(source) || !_this11._isSameAudioTrackSignature(connection.audioTrackSignature, signature);
-        if (shouldDisconnect) {
-          _this11._disconnectIsolatedSubmixSource(submix, connection.source || source || {
-            id: sourceId
-          });
-        }
-      });
-      return this._ensureIsolatedSubmixSystem(submix).then(function (ready) {
-        if (!ready || !submix.destination || !submix.audioContext) {
-          return null;
-        }
-        if (!_this11._isDestinationTrackHealthy(submix.destination)) {
-          var track = submix.destination.stream.getAudioTracks()[0];
-          var ended = track && track.readyState === 'ended';
-          if (ended) {
-            _this11._disconnectIsolatedSubmix(submix, false);
-            submix.destination = submix.audioContext.createMediaStreamDestination();
-          }
-        }
-        var liveSources = _this11._getLiveAudioSources(submix);
-        liveSources.forEach(function (source) {
-          if (submix.connections.has(source.id)) {
-            _this11._syncSourceOutputGains(source);
-            return;
-          }
-          var stream = _this11._sourceRegistry.getStream(source);
-          var signature = _this11._getAudioTrackSignature(stream);
-          if (!stream || !signature) {
-            return;
-          }
-          try {
-            // Android 某些浏览器上同源 track clone 后用于多路 isolated 子混音会出现静音，
-            // 这里统一回退到旧实现：直接使用原始 stream 建 source。
-            var clonedTrack = null;
-            var clonedStream = stream;
-            var ownsClonedTrack = false;
-            var sourceNode = submix.audioContext.createMediaStreamSource(clonedStream);
-            var gainNode = submix.audioContext.createGain();
-            gainNode.gain.value = source.gain;
-            sourceNode.connect(gainNode);
-            gainNode.connect(submix.destination);
-            _this11._registerOutputGain(source, gainNode);
-            submix.connections.set(source.id, {
-              sourceNode: sourceNode,
-              gainNode: gainNode,
-              source: source,
-              audioTrackSignature: signature,
-              clonedTrack: clonedTrack,
-              clonedStream: clonedStream,
-              ownsClonedTrack: ownsClonedTrack
-            });
-          } catch (error) {
-            _this11._logger.warn("Failed to connect isolated submix source: ".concat(error.message || String(error)));
-          }
-        });
-        return submix.destination.stream;
-      });
-    }
-
-    /**
-     * 刷新所有音频连接。
-     *
-     * 核心流程：
-     *   1. 断开已无音频轨的旧源连接
-     *   2. 如果没有 live 音频源，返回 null
-     *   3. 确保音频系统已初始化
-     *   4. 遍历所有源，为有音频轨且未连接的源建立 WebAudio 连接
-     *
-     * @returns {Promise<MediaStream|null>} audio destination stream，或 null
-     */
-  }, {
-    key: "_refreshAudioConnections",
-    value: function _refreshAudioConnections(bus) {
-      var _this12 = this;
-      if (this._logger) {
-        this._logger.debug("Refreshing audio connections: target=".concat(bus ? "bus:".concat(bus.key) : 'default'));
-      }
-      if (!this._audioRequested && !bus || this._getDestroyed()) {
-        this._updateAudioInfo({
-          status: this._getDestroyed() ? 'stopped' : 'not-requested',
-          reason: this._getDestroyed() ? 'Mixer stopped' : ''
-        });
-        return Promise.resolve(null);
-      }
-
-      // 先清理已无音频轨的旧连接
-      this._sourceRegistry.sources.forEach(function (source) {
-        var stream = _this12._sourceRegistry.getStream(source);
-        var signature = _this12._getAudioTrackSignature(stream);
-        var shouldDestroySource = source.audioSourceNode && (!_this12._sourceRegistry.hasLiveAudioTrack(source) || !_this12._isSameAudioTrackSignature(source.audioTrackSignature, signature));
-        if (shouldDestroySource) {
-          _this12.disconnectSource(source);
-        }
-      });
-      if (bus) {
-        bus.connections.forEach(function (connection, sourceId) {
-          var source = _this12._sourceRegistry.find(sourceId);
-          var stream = source && _this12._sourceRegistry.getStream(source);
-          var signature = _this12._getAudioTrackSignature(stream);
-          var trackChanged = source && !_this12._isSameAudioTrackSignature(source.audioTrackSignature, signature);
-          var shouldDisconnect = !source || bus.slots.indexOf(source.slot) === -1 || !_this12._sourceRegistry.hasLiveAudioTrack(source) || trackChanged;
-          if (shouldDisconnect) {
-            _this12._disconnectBusSource(bus, connection.source || source || {
-              id: sourceId
-            });
-          }
-        });
-      }
-      var liveSourcesBeforeReady = this._getLiveAudioSources(bus);
-
-      // 默认全量混音保持延迟创建：无源时不创建 AudioContext。
-      if (!bus && liveSourcesBeforeReady.length === 0) {
-        this._logger.debug('No live audio sources, skip audio stream creation');
-        this._updateTargetAudioInfo(bus, {
-          status: 'no-source',
-          reason: 'No live audio source'
-        });
-        return Promise.resolve(null);
-      }
-      return this._ensureAudioSystem({
-        defaultDestination: !bus
-      }).then(function (ready) {
-        if (!ready) {
-          _this12._updateAudioInfo({
-            status: _this12._audioInfo.status === 'failed' ? 'failed' : 'not-started',
-            reason: _this12._audioInfo.reason || 'Audio system is not ready'
-          });
-          return null;
-        }
-        if (bus && !bus.destination) {
-          _this12._ensureBusDestination(bus);
-        } else if (bus) {
-          _this12._ensureBusDestination(bus);
-        }
-        var liveSources = _this12._getLiveAudioSources(bus);
-
-        // 子混音 bus 返回稳定的纯音频流；即使当前无源，后续 append 后也复用同一个 destination。
-        if (liveSources.length === 0) {
-          _this12._logger.debug('No live audio sources, skip audio source connection');
-          _this12._updateTargetAudioInfo(bus, {
-            status: 'no-source',
-            reason: 'No live audio source'
-          });
-          return bus ? bus.destination.stream : null;
-        }
-        var connectedSources = liveSources.filter(function (source) {
-          return _this12._connectSource(source, bus);
-        });
-        if (_this12._getTargetConnectionCount(bus) === 0 && connectedSources.length === 0) {
-          _this12._logger.warn('No valid audio sources, skip audio stream creation');
-          _this12._updateTargetAudioInfo(bus, {
-            status: 'failed',
-            reason: 'No audio source connected'
-          });
-          return null;
-        }
-        _this12._updateTargetAudioInfo(bus, {
-          status: _this12._audioContext && _this12._audioContext.state === 'suspended' ? 'suspended' : 'mixing',
-          reason: ''
-        });
-        return bus ? bus.destination.stream : _this12._audioDestination.stream;
-      });
-    }
-
-    /**
-     * 连接一路源的音频到混音输出。
-     *
-     * 流程：createMediaStreamSource → GainNode → destination
-     * 如果源已有音频连接且 stream 未变则跳过；如果 stream 变了则先断开再重连。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=成功连接
-     */
-  }, {
-    key: "_connectSource",
-    value: function _connectSource(source, bus) {
-      var stream = this._sourceRegistry.getStream(source);
-      var signature = this._getAudioTrackSignature(stream);
-      var trackId = signature && signature.id;
-      if (!this._audioContext || !this._sourceRegistry.hasLiveAudioTrack(source)) {
-        return false;
-      }
-      if (!bus && !this._audioDestination) {
-        return false;
-      }
-      if (bus && !bus.destination) {
-        return false;
-      }
-      if (source.audioSourceNode) {
-        if (!this._isSameAudioTrackSignature(source.audioTrackSignature, signature)) {
-          this.disconnectSource(source);
-        }
-      }
-      try {
-        if (this._logger) {
-          this._logger.debug("Connecting audio source: id=".concat(source.id, " target=").concat(bus ? "bus:".concat(bus.key) : 'default'));
-        }
-        if (bus && bus.connections.has(source.id)) {
-          this._syncSourceOutputGains(source);
-          return true;
-        }
-        var audioSourceNode = source.audioSourceNode || this._audioContext.createMediaStreamSource(stream);
-        var masterGainNode = source.masterGainNode || this._audioContext.createGain();
-        var gainNode = this._audioContext.createGain();
-        gainNode.gain.value = source.gain;
-        this._registerOutputGain(source, gainNode);
-        if (!source.audioSourceNode) {
-          source.audioSourceNode = audioSourceNode;
-          source.masterGainNode = masterGainNode;
-          source.audioStream = stream;
-          source.audioTrackId = trackId;
-          source.audioTrackSignature = signature;
-          masterGainNode.gain.value = 1;
-          audioSourceNode.connect(masterGainNode);
-        }
-        if (bus) {
-          masterGainNode.connect(gainNode);
-          gainNode.connect(bus.destination);
-          bus.connections.set(source.id, {
-            audioSourceNode: audioSourceNode,
-            masterGainNode: masterGainNode,
-            gainNode: gainNode,
-            source: source,
-            audioStream: stream,
-            audioTrackId: trackId
-          });
-          return true;
-        }
-        if (source.gainNode) {
-          this._syncSourceOutputGains(source);
-          return false;
-        }
-        masterGainNode.connect(gainNode);
-        gainNode.connect(this._audioDestination);
-        source.gainNode = gainNode;
-        this._audioSources.add(audioSourceNode);
-        if (this._onAudioTrackAvailable) {
-          this._onAudioTrackAvailable(this._audioDestination.stream);
-        }
-        this._logger.debug('audio tracks: ', stream.getAudioTracks().length);
-        return true;
-      } catch (error) {
-        this._logger.warn("Failed to connect audio source: ".concat(error.message));
-        this._updateAudioInfo({
-          status: 'failed',
-          reason: 'Failed to connect audio source',
-          lastError: error.message || String(error)
-        });
-        return false;
-      }
-    }
-
-    /**
-     * 更新音频状态信息（合并更新方式）。
-     *
-     * @param {Object} [info] - 要更新的字段（可选，不传则只同步计数器）
-     */
-  }, {
-    key: "_updateAudioInfo",
-    value: function _updateAudioInfo(info) {
-      var _this13 = this;
-      Object.assign(this._audioInfo, {
-        requested: this._audioRequested,
-        contextState: this._audioContext ? this._audioContext.state : null,
-        sourceCount: this._sourceRegistry.sources.length,
-        liveSourceCount: this._sourceRegistry.sources.filter(function (source) {
-          return _this13._sourceRegistry.hasLiveAudioTrack(source);
-        }).length,
-        connectedSources: this._countConnectedSources(),
-        outputTracks: this._audioDestination ? this._audioDestination.stream.getAudioTracks().length : 0
-      }, info || {});
-      if (info && this._logger) {
-        this._logger.debug("Audio info updated: ".concat(JSON.stringify(this._audioInfo)));
-      }
-    }
-  }, {
-    key: "_countConnectedSources",
-    value: function _countConnectedSources() {
-      var busConnections = 0;
-      var isolatedConnections = 0;
-      this._audioBuses.forEach(function (bus) {
-        busConnections += bus.connections.size;
-      });
-      this._isolatedSubmixes.forEach(function (submix) {
-        isolatedConnections += submix.connections.size;
-      });
-      return this._audioSources.size + busConnections + isolatedConnections;
-    }
-  }, {
-    key: "_registerOutputGain",
-    value: function _registerOutputGain(source, gainNode) {
-      if (!source || !gainNode) {
-        return;
-      }
-      if (!source.outputGains) {
-        source.outputGains = new Set();
-      }
-      source.outputGains.add(gainNode);
-    }
-  }, {
-    key: "_disposeOutputGain",
-    value: function _disposeOutputGain(source, gainNode, disconnect) {
-      if (!gainNode) {
-        return;
-      }
-      try {
-        gainNode.gain.value = 0;
-      } catch (error) {}
-      if (source && source.outputGains) {
-        source.outputGains["delete"](gainNode);
-      }
-      if (disconnect) {
-        this._safeDisconnect(gainNode);
-      }
-    }
-  }, {
-    key: "_syncSourceOutputGains",
-    value: function _syncSourceOutputGains(source) {
-      if (!source || !source.outputGains) {
-        return;
-      }
-      source.outputGains.forEach(function (gainNode) {
-        if (gainNode && gainNode.gain) {
-          gainNode.gain.value = source.gain;
-        }
-      });
-    }
-  }, {
-    key: "_safeDisconnect",
-    value: function _safeDisconnect(node) {
-      if (!node || !node.disconnect) {
-        return;
-      }
-      try {
-        node.disconnect();
-      } catch (error) {}
-    }
-  }, {
-    key: "_getAudioTrackId",
-    value: function _getAudioTrackId(stream) {
-      var signature = this._getAudioTrackSignature(stream);
-      return signature ? signature.id : null;
-    }
-  }, {
-    key: "_getAudioTrackSignature",
-    value: function _getAudioTrackSignature(stream) {
-      if (!stream || !stream.getAudioTracks) {
-        return null;
-      }
-      var track = stream.getAudioTracks().find(function (item) {
-        return item.readyState === 'live';
-      }) || stream.getAudioTracks()[0];
-      if (!track) {
-        return null;
-      }
-      return {
-        track: track,
-        id: track.id || ''
-      };
-    }
-  }, {
-    key: "_isSameAudioTrackSignature",
-    value: function _isSameAudioTrackSignature(previous, current) {
-      if (!previous || !current) {
-        return previous === current;
-      }
-      return previous.track === current.track && previous.id === current.id;
-    }
-  }, {
-    key: "requested",
-    get: function get() {
-      return this._audioRequested;
-    }
-  }, {
-    key: "hasAudioContext",
-    get: function get() {
-      return Boolean(this._audioContext);
-    }
-  }, {
-    key: "audioSources",
-    get: function get() {
-      return Array.from(this._audioSources);
-    }
-  }, {
-    key: "audioDestination",
-    get: function get() {
-      return this._audioDestination;
-    }
-  }, {
-    key: "audioContext",
-    get: function get() {
-      return this._audioContext;
-    }
-  }, {
-    key: "audioInfo",
-    get: function get() {
-      return this._audioInfo;
-    }
-  }]);
-}();
-module.exports = AudioMixer;
-},{}],73:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * LayoutEngine — 混流器布局引擎
- *
- * 根据输入源的数量和 slot 分配，计算每路视频在固定输出画布上的绘制位置和尺寸，
- * 生成渲染 payload。画布尺寸由配置指定（默认 1280x720），不随源数量动态变化。
- *
- * @module LayoutEngine
- */
-var LayoutEngine = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {Object} options.sourceRegistry - SourceRegistry 实例
-   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
-   * @param {Object} options.config - 混流配置对象
-   * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
-   * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
-   * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
-   */
-  function LayoutEngine(options) {
-    _classCallCheck(this, LayoutEngine);
-    options = options || {};
-    this._sourceRegistry = options.sourceRegistry;
-    this._canvas = options.canvas;
-    this._config = options.config;
-    this._prepareCanvas = options.prepareCanvas;
-    this._resizeRenderer = options.resizeRenderer;
-    this._createWatermarkItems = options.createWatermarkItems;
-    this._logger = options.logger || null;
-    if (this._logger) {
-      this._logger.debug('LayoutEngine constructed');
-    }
-  }
-
-  /**
-   * 生成一帧的渲染 payload。
-   *
-   * 按 slot 将源排列到自动计算的网格中，画板尺寸固定。
-   * 每个源按 slot 计算所在行列位置，支持动态增减源。
-   *
-   * @returns {Object} 渲染 payload { width, height, backgroundColor, items }
-   */
-  return _createClass(LayoutEngine, [{
-    key: "createRenderPayload",
-    value: function createRenderPayload() {
-      var _this = this;
-      this._prepareCanvas();
-      this._resizeRenderer(this._canvas.width, this._canvas.height);
-      var layout = this._calcLayout();
-      var cellWidth = this._canvas.width / layout.cols;
-      var cellHeight = this._canvas.height / layout.rows;
-      var items = [];
-      this._sourceRegistry.sources.forEach(function (source) {
-        if (!_this._sourceRegistry.isRenderable(source)) {
-          return;
-        }
-        var slot = typeof source.slot === 'number' ? source.slot : 0;
-        var col = slot % layout.cols;
-        var row = Math.floor(slot / layout.cols);
-        var targetX = col * cellWidth;
-        var targetY = row * cellHeight;
-        var draw = _this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
-        if (draw) {
-          items.push({
-            id: source.id,
-            streamId: _this._getSourceStreamId(source),
-            slot: slot,
-            video: source.video,
-            draw: draw
-          });
-        }
-      });
-      var payload = {
-        width: this._canvas.width,
-        height: this._canvas.height,
-        backgroundColor: this._config.backgroundColor,
-        items: items,
-        sourceWatermarks: [],
-        outputWatermarks: []
-      };
-      var watermarks = this._createWatermarkItems ? this._createWatermarkItems(payload) : null;
-      if (watermarks) {
-        payload.sourceWatermarks = watermarks.sourceWatermarks || [];
-        payload.outputWatermarks = watermarks.outputWatermarks || [];
-      }
-      if (this._logger) {
-        this._logger.debug("Render payload created: size=".concat(payload.width, "x").concat(payload.height, " items=").concat(items.length, " sourceWatermarks=").concat(payload.sourceWatermarks.length, " outputWatermarks=").concat(payload.outputWatermarks.length));
-      }
-      return payload;
-    }
-
-    /**
-     * 获取 source 关联的 stream id，用于 source watermark 匹配。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {string|null} stream id
-     */
-  }, {
-    key: "_getSourceStreamId",
-    value: function _getSourceStreamId(source) {
-      var stream = this._sourceRegistry.getStream(source);
-      return stream ? stream.id : null;
-    }
-
-    /**
-     * 计算网格的行列数。
-     *
-     * 根据最大 slot 编号和总源数确定网格大小：
-     *   1 路 → 1x1         2 路 → 按画布比例 1x2 或 2x1
-     *   3~4 路 → 2x2      5~6 路 → 按比例 2x3 或 3x2
-     *   7~9 路 → 3x3      10+ 路 → 尽可能接近正方形
-     *
-     * @returns {Object} { cols: number, rows: number }
-     */
-  }, {
-    key: "_calcLayout",
-    value: function _calcLayout() {
-      var maxSlot = -1;
-      this._sourceRegistry.sources.forEach(function (source) {
-        if (typeof source.slot === 'number' && source.slot > maxSlot) {
-          maxSlot = source.slot;
-        }
-      });
-      var count = Math.max(maxSlot + 1, this._sourceRegistry.sources.length, 1);
-      var isPortrait = this._canvas.height > this._canvas.width;
-      var cols = 1;
-      var rows = 1;
-      if (count <= 1) {
-        cols = 1;
-        rows = 1;
-      } else if (count <= 2) {
-        if (isPortrait) {
-          cols = 1;
-          rows = 2;
-        } else {
-          cols = 2;
-          rows = 1;
-        }
-      } else if (count <= 4) {
-        cols = 2;
-        rows = 2;
-      } else if (count <= 6) {
-        if (isPortrait) {
-          cols = 2;
-          rows = 3;
-        } else {
-          cols = 3;
-          rows = 2;
-        }
-      } else if (count <= 9) {
-        cols = 3;
-        rows = 3;
-      } else {
-        cols = Math.ceil(Math.sqrt(count));
-        rows = Math.ceil(count / cols);
-      }
-      var layout = {
-        cols: cols,
-        rows: rows
-      };
-      if (this._logger) {
-        this._logger.debug("Layout calculated: count=".concat(count, " cols=").concat(cols, " rows=").concat(rows, " portrait=").concat(isPortrait));
-      }
-      return layout;
-    }
-
-    /**
-     * 计算一路视频在画布上的实际绘制矩形。
-     * 保持视频原始宽高比，在目标区域内居中显示。
-     *
-     * @param {HTMLVideoElement} video - video 元素
-     * @param {number} targetX - 目标区域左上角 X
-     * @param {number} targetY - 目标区域左上角 Y
-     * @param {number} targetWidth - 目标区域宽度
-     * @param {number} targetHeight - 目标区域高度
-     * @returns {Object|null} 绘制矩形 { x, y, width, height }，无法计算时返回 null
-     */
-  }, {
-    key: "_calcDrawRect",
-    value: function _calcDrawRect(video, targetX, targetY, targetWidth, targetHeight) {
-      var newVideo = this._scaleVideo(video.videoWidth, video.videoHeight, targetWidth, targetHeight);
-      if (!newVideo || !newVideo.width || !newVideo.height) {
-        return null;
-      }
-      return {
-        x: targetX + newVideo.offsetX,
-        y: targetY + newVideo.offsetY,
-        width: newVideo.width,
-        height: newVideo.height
-      };
-    }
-
-    /**
-     * 等比缩放视频，使其完整显示在目标区域内（contain）。
-     * 缩放后剩余空间居中留边，视频不会被裁剪。
-     *
-     * @param {number} width - 视频原始宽度（videoWidth）
-     * @param {number} height - 视频原始高度（videoHeight）
-     * @param {number} targetWidth - 目标区域宽度
-     * @param {number} targetHeight - 目标区域高度
-     * @returns {Object|null} { width, height, offsetX, offsetY }，无效尺寸返回 null
-     */
-  }, {
-    key: "_scaleVideo",
-    value: function _scaleVideo(width, height, targetWidth, targetHeight) {
-      var newWidth;
-      var newHeight;
-      var scale;
-      if (!width || !height) {
-        return null;
-      }
-      if (width / height >= targetWidth / targetHeight) {
-        // 视频更宽（相对目标）：按目标宽度缩放，上下留边
-        scale = targetWidth / width;
-        newHeight = height * scale;
-        newWidth = targetWidth;
-      } else {
-        // 视频更高（相对目标）：按目标高度缩放，左右留边
-        scale = targetHeight / height;
-        newWidth = width * scale;
-        newHeight = targetHeight;
-      }
-      return {
-        width: newWidth,
-        height: newHeight,
-        offsetX: Math.max(0, (targetWidth - newWidth) / 2),
-        offsetY: Math.max(0, (targetHeight - newHeight) / 2)
-      };
-    }
-  }]);
-}();
-module.exports = LayoutEngine;
-},{}],74:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-/**
- * MixerConfig — 混流器配置归一化工具模块
- *
- * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
- * 所有方法均为纯函数（无副作用），方便单元测试。
- *
- * @module MixerConfig
- */
-
-var Logger = require('../Logger');
-var logger = new Logger('MixerConfig');
-
-/** 合法的渲染后端模式集合 */
-var VALID_RENDER_MODES = {
-  auto: true,
-  // 自动选择（优先 Worker WebGL2）
-  'worker-webgl2': true,
-  // Worker 线程 WebGL2
-  'main-webgl2': true,
-  // 主线程 WebGL2
-  'worker-2d': true,
-  // Worker 线程 Canvas2D
-  'main-2d': true // 主线程 Canvas2D（最兼容）
-};
-
-/**
- * 创建归一化的混流配置对象。
- *
- * @param {Object} [options={}] - 原始配置参数
- * @returns {Object} 归一化后的配置对象
- * @returns {number} returns.width - 输出宽度（默认 1280）
- * @returns {number} returns.height - 输出高度（默认 720）
- * @returns {number} returns.fps - 输出帧率（默认 15）
- * @returns {string} returns.backgroundColor - 画布底色
- * @returns {number} returns.audioGain - 全局默认音量增益
- * @returns {string} returns.renderMode - 渲染后端选择
- * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
- * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
- * @returns {number} returns.maxFrameQueue - 最大帧队列长度
- * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
- */
-exports.create = function (options) {
-  options = options || {};
-  var config = {
-    width: exports.normalizePositiveInteger(options.width, 1280),
-    height: exports.normalizePositiveInteger(options.height, 720),
-    fps: exports.normalizePositiveInteger(options.fps, 15),
-    backgroundColor: options.backgroundColor || '#000',
-    audioGain: exports.normalizeGain(options.audioGain, 0.8),
-    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
-    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
-    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
-    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
-    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
-    watermarks: options.watermarks || []
-  };
-  logger.debug("Config created: ".concat(JSON.stringify(config)));
-  return config;
-};
-
-/**
- * 归一化渲染模式字符串。
- * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
- *
- * @param {*} value - 原始传入的 renderMode
- * @param {string} fallback - 非法或未传时使用的备选值
- * @returns {string} 合法的渲染模式
- */
-exports.normalizeRenderMode = function (value, fallback) {
-  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
-    return value;
-  }
-  logger.debug("normalizeRenderMode fallback: value=".concat(value, " fallback=").concat(fallback || 'auto'));
-  return fallback || 'auto';
-};
-
-/**
- * 归一化为正整数。
- * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
- *
- * @param {*} value - 原始输入值
- * @param {number|null} fallback - 非法时使用的备选值
- * @returns {number|null} 归一化后的正整数，或 fallback
- */
-exports.normalizePositiveInteger = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue > 0) {
-    return Math.floor(numberValue);
-  }
-  logger.debug("normalizePositiveInteger fallback: value=".concat(value, " fallback=").concat(fallback));
-  return fallback;
-};
-
-/**
- * 归一化 slot 值。
- * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
- *
- * @param {*} value - 原始 slot 值
- * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
- * @returns {number|null} 归一化后的 slot，非法则返回 null
- */
-exports.normalizeSlot = function (value, index) {
-  var numberValue = Number(value);
-  if (!Number.isFinite(numberValue)) {
-    logger.debug("normalizeSlot invalid: value=".concat(value, " index=").concat(index));
-    return null;
-  }
-  return Math.max(0, Math.floor(numberValue)) + index;
-};
-
-/**
- * 归一化音量增益值。
- * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
- *
- * @param {*} value - 原始增益值
- * @param {number} fallback - 非法时的备选值
- * @returns {number} 归一化后的增益值（>= 0）
- */
-exports.normalizeGain = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return numberValue;
-  }
-  logger.debug("normalizeGain fallback: value=".concat(value, " fallback=").concat(fallback));
-  return fallback;
-};
-
-/**
- * 统一 appendStream() 第二个参数的格式。
- * 支持两种调用方式：
- *   appendStream(stream, 3)               → 数字作为 slot
- *   appendStream(stream, { slot, gain })  → 对象解构
- *
- * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
- * @param {number} index - 数组索引，批量添加时 slot 递增
- * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined }
- */
-exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
-  var options = {};
-  if (typeof optionsOrSlot === 'number') {
-    options.slot = exports.normalizeSlot(optionsOrSlot, index);
-  } else if (optionsOrSlot && _typeof(optionsOrSlot) === 'object') {
-    if (typeof optionsOrSlot.slot === 'number') {
-      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
-    }
-    if (typeof optionsOrSlot.gain === 'number') {
-      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
-    }
-  }
-  logger.debug("normalizeSourceOptions: index=".concat(index, " options=").concat(JSON.stringify(options)));
-  return options;
-};
-},{"../Logger":39}],75:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-var Logger = require('../Logger');
-var SourceRegistry = require('./SourceRegistry');
-var LayoutEngine = require('./LayoutEngine');
-var AudioMixer = require('./AudioMixer');
-var OutputStreamManager = require('./OutputStreamManager');
-var RenderLoop = require('./RenderLoop');
-var MixerConfig = require('./MixerConfig');
-var MixerDomAdapter = require('./MixerDomAdapter');
-var WatermarkManager = require('./WatermarkManager');
-var logger = new Logger('MediaStreamMixer');
-
-/**
- * _audioInfo 的默认值，子模块未初始化或不可用时使用。
- * @type {Object}
- */
-var DEFAULT_AUDIO_INFO = Object.freeze({
-  requested: false,
-  status: 'not-requested',
-  contextState: null,
-  sourceCount: 0,
-  liveSourceCount: 0,
-  connectedSources: 0,
-  outputTracks: 0,
-  reason: '',
-  lastError: ''
-});
-
-/**
- * MediaStreamMixer — 多路音视频混流器
- *
- * 功能：
- *   - 将多个 MediaStream / HTMLVideoElement(srcObject=MediaStream) 合并为一个 MediaStream
- *   - 视频：按浏览器能力使用 Worker WebGL2 / 主线程 WebGL2 / Worker Canvas2D / 主线程 Canvas2D 绘制
- *   - 音频：用 WebAudio API，每路独立 GainNode 控制音量，汇总到 MediaStreamAudioDestinationNode
- *
- * 布局方式：按 slot 和输出画布比例自动计算网格，画布尺寸由配置指定（默认 1280x720），
- * 不随源数量动态变化。
- *
- * 使用示例：
- *   const mixer = new MediaStreamMixer([localStream, remoteStream], { width: 1280, height: 720 });
- *   const output = await mixer.getMixedStream();
- *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
- */
-module.exports = /*#__PURE__*/function () {
-  // =========================================================================
-  //  构造与初始化
-  // =========================================================================
-
-  /**
-   * @param {Array<MediaStream|HTMLMediaElement>|MediaStream|HTMLMediaElement} videos
-   *   需要混流的输入源。为了兼容旧版 SDK，仍然支持只传数组；新版也允许传单个源。
-   *   每个元素可以是：
-   *     - MediaStream：原生 WebRTC 媒体流
-   *     - HTMLVideoElement：外部 video 元素，需使用 srcObject=MediaStream（mixer 不接管生命周期）
-   *     - { mediaStream: MediaStream }：SDK 内部包装对象
-   * @param {Object} [options]
-   *   混流配置。
-   * @param {number} [options.width=1280]  - 输出视频宽度
-   * @param {number} [options.height=720]  - 输出视频高度
-   * @param {number} [options.fps]         - 输出帧率（不传则浏览器自动选择）
-   * @param {string} [options.backgroundColor='#000'] - 画布背景色
-   * @param {number} [options.audioGain=0.8] - 全局默认音量增益
-   * @param {string} [options.renderMode='auto']
-   *   渲染后端：'auto' | 'worker-webgl2' | 'main-webgl2' | 'worker-2d' | 'main-2d'
-   * @param {string} [options.workerUrl]
-   *   可选外部 Worker 脚本地址；不传时默认使用 Blob Worker，部署更简单。
-   * @param {boolean} [options.dropFrameWhenBusy=true]
-   *   Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。
-   * @param {number} [options.maxFrameQueue=1]
-   *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
-   */
-  function MediaStreamMixer() {
-    var _this = this;
-    var videos = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    _classCallCheck(this, MediaStreamMixer);
-    // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
-    options = options || {};
-    videos = videos || [];
-
-    // 统一为数组，方便后续统一遍历
-    if (!(videos instanceof Array)) {
-      videos = [videos];
-    }
-    logger.debug("constructor: ".concat(videos.length));
-
-    // -----------------------------------------------------------------------
-    // 源管理
-    // -----------------------------------------------------------------------
-
-    this._sourceRegistry = null;
-    var config = MixerConfig.create(options);
-
-    /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
-    this._destroyed = false;
-
-    /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
-    this._renderLoop = null;
-
-    /** @type {number} 连续渲染失败次数，用于诊断渲染后端异常 */
-    // (delegated to RenderLoop via prototype getter)
-
-    // -----------------------------------------------------------------------
-    // WebAudio 相关
-    // -----------------------------------------------------------------------
-
-    this._audioMixer = null;
-    this._audioRefreshPromise = null;
-    this._audioRefreshPending = false;
-    this._outputStreamManager = null;
-    this._domAdapter = null;
-    this._watermarkManager = null;
-
-    // -----------------------------------------------------------------------
-    // 混流配置
-    // -----------------------------------------------------------------------
-
-    /**
-     * @type {Object}
-     * @property {number|null} width           - 输出宽度（legacy=null 动态，grid=1280）
-     * @property {number|null} height          - 输出高度（legacy=null 动态，grid=720）
-     * @property {number|null} fps             - 帧率（null=浏览器默认）
-     * @property {string}      backgroundColor - 画布底色
-     * @property {number}      audioGain       - 全局默认音量
-     * @property {string}      renderMode      - 渲染后端选择
-     */
-    this._config = config;
-    this._domAdapter = new MixerDomAdapter({
-      config: this._config,
-      logger: logger
-    });
-    this._watermarkManager = new WatermarkManager({
-      logger: logger
-    });
-
-    // -----------------------------------------------------------------------
-    // 渲染画布
-    // -----------------------------------------------------------------------
-
-    /** @type {HTMLCanvasElement} 离屏 canvas，所有视频帧合成到这里 */
-    this._canvas = this._domAdapter.createCanvas();
-
-    // -----------------------------------------------------------------------
-    // 源注册表（SourceRegistry）—— 统一管理所有视频/音频源的生命周期。
-    //
-    // 职责：
-    //   1. 维护源列表，处理增删查改
-    //   2. 创建对应的 <video> 元素（通过 createVideoElement）
-    //   3. 管理音频增益归一化（normalizeGain）
-    //   4. 在源移除时触发回调链：断音频 → 清渲染帧 → 清画布
-    //
-    // 回调链说明：
-    //   onBeforeRemove → 先断音频（_disconnectAudio），避免音频残留
-    //   onAfterRemove  → 如果渲染器已创建则通知渲染循环移除该源；
-    //                    如果全部源已清空且仍在输出流中，则清除画布（黑帧）
-    //   onAfterRemove 不直接访问 this._sourceRegistry，以减少时序耦合
-    // -----------------------------------------------------------------------
-
-    this._sourceRegistry = new SourceRegistry({
-      logger: logger,
-      getDefaultGain: function getDefaultGain() {
-        return _this._config.audioGain;
-      },
-      normalizeGain: this._normalizeGain.bind(this),
-      createVideoElement: this._mediaStreamToVideoElement.bind(this),
-      onBeforeRemove: function onBeforeRemove(source) {
-        return _this._disconnectAudio(source);
-      },
-      onAfterRemove: function onAfterRemove(source) {
-        if (_this._renderer) {
-          _this._renderLoop.removeSource(source.id);
-        }
-        if (!_this._isStopDrawingFrames && _this._sources.length === 0 && _this._videoStream) {
-          _this._drawVideosToCanvas(undefined, true);
-        }
-      }
-    });
-
-    // -----------------------------------------------------------------------
-    // 输出流管理器（OutputStreamManager）—— 将 canvas 内容导出为 MediaStream。
-    //
-    // 职责：
-    //   1. 通过 canvas.captureStream(fps) 获取输出视频轨道
-    //   2. 管理输出流的 fps、分辨率等参数（取自 this._config）
-    //   3. 提供 getVideoStream() / getMixedStream() 入口
-    //
-    // 依赖：需要 canvas 已创建、config 已就绪
-    // -----------------------------------------------------------------------
-
-    this._outputStreamManager = new OutputStreamManager({
-      canvas: this._canvas,
-      config: this._config,
-      logger: logger
-    });
-
-    // -----------------------------------------------------------------------
-    // 渲染循环（RenderLoop）—— 驱动每一帧的合成绘制。
-    //
-    // 职责：
-    //   1. 通过 requestAnimationFrame 驱动帧循环
-    //   2. 每次 tick 调用 createRenderPayload 收集源快照
-    //   3. 将快照交给 renderer 绘制到 canvas
-    //   4. 管理 fps 节流、暂停/恢复、状态上报
-    //   5. 同步外部音频进度（syncExternalSourceAudio）
-    //
-    // 注意：renderer（BaseRenderer 子类）是延迟创建的，
-    //       RenderLoop 内部通过 tryAcquireRenderer() 按需初始
-    // -----------------------------------------------------------------------
-
-    this._renderLoop = new RenderLoop({
-      canvas: this._canvas,
-      config: this._config,
-      logger: logger,
-      getSources: function getSources() {
-        return _this._sources;
-      },
-      createRenderPayload: function createRenderPayload() {
-        return _this._createRenderPayload();
-      },
-      syncExternalSourceAudio: function syncExternalSourceAudio() {
-        return _this._syncExternalSourceAudio();
-      },
-      onStateChange: function onStateChange() {}
-    });
-
-    // -----------------------------------------------------------------------
-    // 音频混音器（AudioMixer）—— 将所有源的音频轨道混合为一路输出。
-    //
-    // 职责：
-    //   1. 通过 WebAudio API（AudioContext, GainNode）创建混音管线
-    //   2. 监听 sourceRegistry 的增删事件，自动接入/断开源音频
-    //   3. 将混音结果以 MediaStream 形式回传给控制层
-    //   4. 检测并规避已销毁（_destroyed）后的操作
-    //
-    // 回调：
-    //   onAudioTrackAvailable → 将混音后的音频轨道挂到输出流上
-    //   getDestroyed          → 防销毁后误操作
-    // -----------------------------------------------------------------------
-
-    this._audioMixer = new AudioMixer({
-      logger: logger,
-      sourceRegistry: this._sourceRegistry,
-      getDestroyed: function getDestroyed() {
-        return _this._destroyed;
-      },
-      onAudioTrackAvailable: function onAudioTrackAvailable(audioStream) {
-        return _this._ensureMixedStreamAudioTrack(audioStream);
-      }
-    });
-
-    // -----------------------------------------------------------------------
-    // 布局引擎（LayoutEngine）—— 计算每个源在 canvas 上的位置和尺寸。
-    //
-    // 职责：
-    //   1. 根据 renderMode（legacy/grid）计算布局矩阵
-    //   2. 在源增删或画布尺寸变化时重新布局
-    //   3. 更新每个源的 _displayRect（供 renderer 绘制时使用）
-    //   4. 触发 canvas 尺寸调整（prepareCanvas → resizeRenderer）
-    //
-    // 注意：LayoutEngine 不直接操作渲染管线，只计算坐标；
-    //       实际绘制由 renderer 根据 _displayRect 执行。
-    //       这种分离使布局策略可热切换（如从 grid 切为 custom）
-    // -----------------------------------------------------------------------
-
-    this._layoutEngine = new LayoutEngine({
-      sourceRegistry: this._sourceRegistry,
-      canvas: this._canvas,
-      config: this._config,
-      logger: logger,
-      prepareCanvas: this._prepareCanvas.bind(this),
-      resizeRenderer: this._resizeRenderer.bind(this),
-      createWatermarkItems: function createWatermarkItems(payload) {
-        return _this._createWatermarkItems(payload);
-      }
-    });
-    this._prepareCanvas();
-    this._watermarkManager.setWatermarks(this._config.watermarks).then(function () {
-      logger.debug("Initial watermarks ready: count=".concat(_this._config.watermarks ? _this._config.watermarks.length : 0));
-      if (!_this._destroyed) {
-        _this._drawVideosToCanvas(undefined, true);
-      }
-    });
-
-    // -- 将初始传入的源加入混流 --
-    this.appendStream(videos);
-  }
-
-  // =========================================================================
-  //  配置检测与参数归一化
-  // =========================================================================
-
-  /**
-   * 归一化渲染模式。
-   * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
-   *
-   * @param {*} value - 用户传入的 renderMode
-   * @param {string} fallback - 非法或未传时使用的模式
-   * @returns {string} 合法渲染模式
-   */
-  return _createClass(MediaStreamMixer, [{
-    key: "_normalizeRenderMode",
-    value: function _normalizeRenderMode(value, fallback) {
-      return MixerConfig.normalizeRenderMode(value, fallback);
-    }
-
-    /**
-     * 将输入值归一化为正整数。
-     * 对外暴露的 width/height/fps 只接受正数；非法值回退默认值，不让 canvas 进入 0 尺寸。
-     *
-     * @param {*} value - 原始输入
-     * @param {number|null} fallback - 非法值时使用的备选值
-     * @returns {number|null} 归一化后的整数，或 fallback
-     */
-  }, {
-    key: "_normalizePositiveInteger",
-    value: function _normalizePositiveInteger(value, fallback) {
-      return MixerConfig.normalizePositiveInteger(value, fallback);
-    }
-
-    /**
-     * 归一化 slot 值。
-     * slot 只允许非负整数，数组批量添加时从起始 slot 递增（沿用演示页行为）。
-     *
-     * @param {*} value - 原始 slot 值
-     * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
-     * @returns {number|null} 归一化后的 slot，非法则返回 null
-     */
-  }, {
-    key: "_normalizeSlot",
-    value: function _normalizeSlot(value, index) {
-      return MixerConfig.normalizeSlot(value, index);
-    }
-
-    /**
-     * 归一化音量增益值。
-     * 允许大于 1 做放大，但不允许负数。非法值使用全局默认音量。
-     *
-     * @param {*} value - 原始增益值
-     * @param {number} fallback - 非法时的备选值
-     * @returns {number} 归一化后的增益值（>= 0）
-     */
-  }, {
-    key: "_normalizeGain",
-    value: function _normalizeGain(value, fallback) {
-      return MixerConfig.normalizeGain(value, fallback);
-    }
-
-    /**
-     * 统一 appendStream() 第二个参数的格式。
-     * 支持两种调用方式：
-     *   appendStream(stream, 3)            → 数字作为 slot
-     *   appendStream(stream, { slot, gain }) → 对象解构
-     *
-     * @param {number|Object} optionsOrSlot - 原始参数
-     * @param {number} index - 数组索引，用于批量添加时 slot 递增
-     * @returns {Object} { slot: number|null, gain: number|undefined }
-     */
-  }, {
-    key: "_normalizeSourceOptions",
-    value: function _normalizeSourceOptions(optionsOrSlot, index) {
-      return MixerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
-    }
-
-    /**
-     * 设置输出画布尺寸。
-     */
-  }, {
-    key: "_prepareCanvas",
-    value: function _prepareCanvas() {
-      logger.debug('Preparing mixer canvas');
-      this._domAdapter.prepareCanvas(this._canvas);
-    }
-
-    /**
-     * 确保渲染后端已经初始化。
-     *
-     * RendererFactory 是整个 Mixer 唯一允许初始化输出 canvas context 的地方。
-     * 这样可以避免不同 renderer 抢占同一个 canvas context。
-     *
-     * @returns {BaseRenderer} 当前实际使用的渲染后端
-     */
-  }, {
-    key: "_ensureRenderer",
-    value: function _ensureRenderer() {
-      logger.debug('Ensuring mixer renderer');
-      var renderer = this._renderLoop.ensureRenderer();
-      return renderer;
-    }
-
-    /**
-     * 将当前输出画布尺寸同步给 renderer。
-     *
-     * @param {number} width - 输出宽度
-     * @param {number} height - 输出高度
-     */
-  }, {
-    key: "_resizeRenderer",
-    value: function _resizeRenderer(width, height) {
-      logger.debug("Resizing renderer: ".concat(width, "x").concat(height));
-      this._renderLoop.resizeRenderer(width, height);
-    }
-
-    /**
-     * Worker renderer 运行时失败后的最终主线程 Canvas2D 兜底。
-     *
-     * auto 模式的完整运行期降级链在 RenderLoop.fallbackRenderer() 中处理；
-     * 此方法保留给显式要求直接落到 main-2d 的内部调用。
-     *
-     * @param {string} reason - fallback 原因
-     * @returns {boolean} true=完成 fallback
-     */
-  }, {
-    key: "_fallbackRendererToMain2D",
-    value: function _fallbackRendererToMain2D(reason) {
-      logger.warn("Fallback to main-2d requested: ".concat(reason));
-      var fallbacked = this._renderLoop.fallbackRendererToMain2D(reason);
-      return fallbacked;
-    }
-
-    /**
-     * 防止 stop() 后继续复用同一个实例。
-     *
-     * stop() 会释放 renderer、AudioContext、captureStream tracks 和内部源。
-     * 继续复用同一个实例容易让调用方拿到已 ended 的输出轨，因此明确要求重新 new Mixer。
-     *
-     * @param {string} methodName - 当前公开方法名
-     * @throws {Error} 实例已 stop
-     */
-  }, {
-    key: "_assertNotDestroyed",
-    value: function _assertNotDestroyed(methodName) {
-      if (this._destroyed) {
-        throw new Error("MediaStreamMixer has been stopped. Create a new mixer before calling ".concat(methodName, "."));
-      }
-    }
-
-    // =========================================================================
-    //  源移除与查找
-    // =========================================================================
-
-    /**
-     * 移除并清理一个 source 对象。
-     * 步骤：断开音频 → 释放 video 元素（仅 ownedVideo）→ 从 _sources 移除 → 同步 _videos。
-     *
-     * @param {Object} source - 要移除的 source 对象
-     * @returns {boolean} true=成功移除；false=source 为空
-     */
-  }, {
-    key: "_removeSource",
-    value: function _removeSource(source) {
-      if (source) {
-        logger.debug("Removing mixer source: id=".concat(source.id, " slot=").concat(source.slot));
-      }
-      var removed = this._sourceRegistry.remove(source);
-      return removed;
-    }
-
-    /**
-     * 按 MediaStream 对象、stream.id 或内部 source.id 查找 source。
-     *
-     * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
-     * @returns {Object|null} 找到的 source 对象，或 null
-     */
-  }, {
-    key: "_findSource",
-    value: function _findSource(streamOrId) {
-      return this._sourceRegistry.find(streamOrId);
-    }
-
-    // =========================================================================
-    //  源状态检测
-    // =========================================================================
-
-    /**
-     * 检测某路源是否有 live（活跃）状态的音频轨。
-     * 只混入 live 状态音频轨，避免 ended track 触发 WebAudio 创建失败或无效混音。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=至少有一条 live 音频轨
-     */
-  }, {
-    key: "_hasLiveAudioTrack",
-    value: function _hasLiveAudioTrack(source) {
-      return this._sourceRegistry.hasLiveAudioTrack(source);
-    }
-
-    /**
-     * 检测某路源是否有视频轨（不判断 readyState）。
-     * readyState 在绘制阶段才判断；这样刚加入但尚未出帧的源仍保留在布局中。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=至少有一条视频轨
-     */
-  }, {
-    key: "_hasVideoTrack",
-    value: function _hasVideoTrack(source) {
-      return this._sourceRegistry.hasVideoTrack(source);
-    }
-
-    /**
-     * 判断某路源当前是否可渲染。
-     * 条件：stream 存在且 active，并且有视频轨。
-     * 具体视频帧是否可画由 video.readyState 在绘制时判断。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=可渲染
-     */
-  }, {
-    key: "_isRenderable",
-    value: function _isRenderable(source) {
-      return this._sourceRegistry.isRenderable(source);
-    }
-
-    /**
-     * 获取 source 当前关联的 MediaStream。
-     *
-     * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
-     * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
-     *
-     * 注意：此方法仅同步 stream 引用，不断开音频。
-     * 如果外部替换了 srcObject，音频重连由 _connectAudio() 中的换源检测处理。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {MediaStream|null} 当前 MediaStream
-     */
-  }, {
-    key: "_getSourceStream",
-    value: function _getSourceStream(source) {
-      return this._sourceRegistry.getStream(source);
-    }
-
-    // =========================================================================
-    //  渲染数据构建
-    // =========================================================================
-
-    /**
-     * 构建一帧渲染 payload。
-     *
-     * Mixer 本身只负责决定每路视频应该画在哪里；真正的绘制由当前 renderer 完成。
-     * 这样 Canvas2D、WebGL2、Worker Canvas2D、Worker WebGL2 可以复用完全一致的布局结果。
-     *
-     * @returns {Object} renderer.render() 可直接消费的数据
-     */
-  }, {
-    key: "_createRenderPayload",
-    value: function _createRenderPayload() {
-      return this._layoutEngine.createRenderPayload();
-    }
-
-    /**
-     * 构建当前帧水印绘制项。
-     *
-     * @param {Object} payload - 基础渲染 payload
-     * @returns {Object} { sourceWatermarks, outputWatermarks }
-     */
-  }, {
-    key: "_createWatermarkItems",
-    value: function _createWatermarkItems(payload) {
-      return this._watermarkManager.createRenderItems(payload);
-    }
-
-    // =========================================================================
-    //  主渲染循环（rAF）
-    // =========================================================================
-
-    /**
-     * requestAnimationFrame 回调。
-     * 合成一帧画面到输出画布。
-     * 当配置了 fps 时，rAF 仍负责调度，但真正合成按目标帧间隔节流。
-     * 绘制完成后根据是否有源决定是否调度下一帧。
-     *
-     * @param {number} [timestamp] - requestAnimationFrame 传入的高精度时间戳
-     * @param {boolean} [forceRender=false] - 是否忽略 fps 节流立即合成一帧
-     */
-  }, {
-    key: "_drawVideosToCanvas",
-    value: function _drawVideosToCanvas(timestamp) {
-      var forceRender = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-      if (forceRender) {
-        logger.debug('Force rendering mixer frame');
-      }
-      this._renderLoop.renderFrame(timestamp, forceRender);
-    }
-
-    // =========================================================================
-    //  视频元素工具
-    // =========================================================================
-
-    /**
-     * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
-     * 创建的 video 元素：display:none、muted、autoplay、playsinline。
-     *
-     * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
-     * @returns {HTMLVideoElement} 可播放该流的隐藏 video
-     */
-  }, {
-    key: "_mediaStreamToVideoElement",
-    value: function _mediaStreamToVideoElement(mediaStream) {
-      logger.debug('Creating internal video element from media stream');
-      return this._domAdapter.createVideoElement(mediaStream);
-    }
-
-    // =========================================================================
-    //  音频连接与管理
-    // =========================================================================
-
-    /**
-     * 异步刷新音频连接；用于不能 await 的路径（appendStream / rAF）。
-     */
-  }, {
-    key: "_scheduleAudioRefresh",
-    value: function _scheduleAudioRefresh() {
-      logger.debug('Scheduling mixer audio refresh');
-      this._audioMixer.scheduleRefresh();
-    }
-
-    /**
-     * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
-     */
-  }, {
-    key: "_syncExternalSourceAudio",
-    value: function _syncExternalSourceAudio() {
-      logger.debug('Syncing external source audio');
-      this._audioMixer.syncExternalSourceAudio();
-    }
-
-    /**
-     * 断开一路 source 的音频连接，释放 WebAudio 节点。
-     * 在以下场景调用：
-     *   - removeStream() 移除源时
-     *   - appendStream() 同 slot 覆盖时
-     *   - HTMLVideoElement 外部换源时（由 _connectAudio 的换源检测触发）
-     *
-     * @param {Object} source - 内部 source 对象
-     */
-  }, {
-    key: "_disconnectAudio",
-    value: function _disconnectAudio(source) {
-      if (source) {
-        logger.debug("Disconnecting mixer audio: id=".concat(source.id));
-      }
-      this._audioMixer.disconnectSource(source);
-    }
-
-    /**
-     * 将 AudioDestination 的音频轨补充到已返回的 mixed stream 中。
-     *
-     * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
-     * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨注入到已返回的流。
-     */
-  }, {
-    key: "_ensureMixedStreamAudioTrack",
-    value: function _ensureMixedStreamAudioTrack(audioStream) {
-      logger.debug('Ensuring mixed stream audio track');
-      this._outputStreamManager.ensureMixedStreamAudioTrack(audioStream || this._audioDestination && this._audioDestination.stream);
-    }
-
-    /**
-     * 去重地将音频流中的音轨添加到目标流中。
-     *
-     * @param {MediaStream} targetStream - 目标流（一般是 video stream）
-     * @param {MediaStream} audioStream - 音频流（audio destination stream）
-     */
-  }, {
-    key: "_addAudioTracksToStream",
-    value: function _addAudioTracksToStream(targetStream, audioStream) {
-      logger.debug('Adding audio tracks to mixed output stream');
-      this._outputStreamManager.addAudioTracksToStream(targetStream, audioStream);
-    }
-
-    // =========================================================================
-    //  公开 API
-    // =========================================================================
-
-    /**
-     * 停止混流，释放所有资源。
-     *
-     * 清理步骤：
-     *   1. 设置停止标记 + cancelAnimationFrame 停止渲染循环
-     *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
-     *   3. 断开并关闭 AudioContext
-     *   4. 清空画布
-     *   5. 停止所有 captureStream 的 tracks
-     */
-  }, {
-    key: "stop",
-    value: function stop() {
-      logger.debug('stop');
-      if (this._destroyed) {
-        return;
-      }
-      this._destroyed = true;
-      this._renderLoop.stop();
-      this.clearStreams();
-      this._audioMixer.stop();
-      this._renderLoop.destroy();
-      this._outputStreamManager.stop();
-    }
-
-    /**
-     * 向混流器添加新的输入源。
-     *
-     * 支持多种调用方式：
-     *   appendStream(stream)          → 自动分配 slot（grid 模式）
-     *   appendStream(stream, 3)       → 指定 slot
-     *   appendStream(stream, { slot: 3, gain: 0.5 })
-     *   appendStream([streamA, ...])  → 批量添加
-     *
-     * 同 slot 已有源会被新源覆盖。
-     *
-     * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
-     * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
-     * @returns {boolean} true=至少成功添加了一个源
-     * @throws {TypeError} 未传 videos
-     */
-  }, {
-    key: "appendStream",
-    value: function appendStream(videos, optionsOrSlot) {
-      var _this2 = this;
-      logger.debug("appendStream: count=".concat(videos instanceof Array ? videos.length : 1));
-      this._assertNotDestroyed('appendStream()');
-      if (!videos) {
-        throw new TypeError('First parameter is required.');
-      }
-      if (!(videos instanceof Array)) {
-        videos = [videos];
-      }
-      var appended = false;
-      videos.forEach(function (video, index) {
-        var sourceOptions = _this2._normalizeSourceOptions(optionsOrSlot, index);
-        _this2._sourceRegistry.add(video, sourceOptions);
-        appended = true;
-
-        // 如果音频系统已初始化，立即连接该源的音频
-        if (_this2._audioMixer.hasAudioContext || _this2._audioMixer.requested) {
-          _this2._scheduleAudioRefresh();
-        }
-      });
-
-      // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
-      this._renderLoop.start();
-      return appended;
-    }
-
-    /**
-     * 按 MediaStream 或 ID 移除一路源。
-     *
-     * @param {MediaStream|string} streamOrId - 要移除的流或 ID
-     *   - MediaStream 对象：按引用匹配
-     *   - string：先匹配 source.id，再匹配 stream.id
-     * @returns {boolean} true=找到并移除了源
-     */
-  }, {
-    key: "removeStream",
-    value: function removeStream(streamOrId) {
-      logger.debug("removeStream: ".concat(typeof streamOrId === 'string' ? streamOrId : '[object]'));
-      this._assertNotDestroyed('removeStream()');
-      return this._removeSource(this._findSource(streamOrId));
-    }
-
-    /**
-     * 移除所有输入源。
-     * 遍历 _sources 快照逐条清理，过程中 _sources 数组会变化。
-     */
-  }, {
-    key: "clearStreams",
-    value: function clearStreams() {
-      var _this3 = this;
-      logger.debug("clearStreams: count=".concat(this._sources.length));
-      var sources = this._sources.slice();
-      sources.forEach(function (source) {
-        _this3._removeSource(source);
-      });
-    }
-
-    /**
-     * 返回当前所有源的快照。
-     * 返回新对象数组，外部修改不影响内部状态。
-     *
-     * @returns {Array<Object>} 源信息列表：
-     *   { id, streamId, slot, gain, hasAudio, hasVideo }
-     */
-  }, {
-    key: "getSources",
-    value: function getSources() {
-      this._assertNotDestroyed('getSources()');
-      logger.debug("getSources(): count=".concat(this._sources.length));
-      return this._sourceRegistry.getSnapshot();
-    }
-
-    /**
-     * 返回当前渲染后端状态。
-     *
-     * 这个 API 只读，不影响渲染；主要用于 demo 展示和线上排查性能问题。
-     * Worker 后端初始化有异步消息，因此刚启动时 actualMode 可能短暂显示 worker-init，
-     * 随后会更新为 worker-webgl2 或 worker-2d。
-     *
-     * @returns {Object} 渲染状态快照
-     */
-  }, {
-    key: "getRenderInfo",
-    value: function getRenderInfo() {
-      return this._renderLoop.getRenderInfo();
-    }
-
-    /**
-     * 返回当前音频混流状态。
-     *
-     * @returns {Object} 音频状态快照
-     */
-  }, {
-    key: "getAudioInfo",
-    value: function getAudioInfo() {
-      return this._audioMixer.getInfo();
-    }
-
-    /**
-     * 替换全部水印配置。
-     *
-     * @param {Array<Object>|Object|null} watermarks - 水印配置
-     * @returns {Promise<Array<Object>>} 当前水印快照
-     */
-  }, {
-    key: "setWatermarks",
-    value: function setWatermarks(watermarks) {
-      var _this4 = this;
-      this._assertNotDestroyed('setWatermarks()');
-      logger.debug("setWatermarks(): count=".concat(watermarks instanceof Array ? watermarks.length : watermarks ? 1 : 0));
-      return this._watermarkManager.setWatermarks(watermarks).then(function (snapshot) {
-        _this4._drawVideosToCanvas(undefined, true);
-        return snapshot;
-      });
-    }
-
-    /**
-     * 清除水印。
-     *
-     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
-     */
-  }, {
-    key: "clearWatermarks",
-    value: function clearWatermarks(filter) {
-      this._assertNotDestroyed('clearWatermarks()');
-      logger.debug("clearWatermarks(): filter=".concat(JSON.stringify(filter || null)));
-      this._watermarkManager.clearWatermarks(filter);
-      this._drawVideosToCanvas(undefined, true);
-    }
-
-    /**
-     * 获取当前水印状态快照。
-     *
-     * @returns {Array<Object>} 水印状态列表
-     */
-  }, {
-    key: "getWatermarks",
-    value: function getWatermarks() {
-      this._assertNotDestroyed('getWatermarks()');
-      logger.debug('getWatermarks()');
-      return this._watermarkManager.getWatermarks();
-    }
-
-    /**
-     * 获取合并了视频和音频的完整输出流。
-     *
-     * 流程：
-     *   1. getVideoStream() → 启动 rAF 渲染循环 + canvas.captureStream()
-     *   2. 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨
-     *   3. getAudioStream() → 初始化 AudioContext + 连接所有源的音频
-     *   4. 将音频流的音轨添加到视频流
-     *
-     * @returns {Promise<MediaStream>} 包含视频轨和音频轨的混合流
-     */
-  }, {
-    key: "getMixedStream",
-    value: (function () {
-      var _getMixedStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-        var mixedVideoStream, mixedAudioStream;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.n) {
-            case 0:
-              logger.debug('getMixedStream()');
-              this._assertNotDestroyed('getMixedStream()');
-              this._renderLoop.resume();
-              mixedVideoStream = this.getVideoStream(); // 先保存 mixed stream，再初始化音频；这样启动时无音频、后续 append 有音频源时，
-              // _connectAudio() 可以把 MediaStreamDestination 的音频轨补到已经返回给调用方的流里。
-              this._outputStreamManager.setMixedStream(mixedVideoStream);
-              _context.n = 1;
-              return this.getAudioStream();
-            case 1:
-              mixedAudioStream = _context.v;
-              logger.debug("getMixedStream() audio resolved: tracks=".concat(mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0));
-              this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
-              return _context.a(2, mixedVideoStream);
-          }
-        }, _callee, this);
-      }));
-      function getMixedStream() {
-        return _getMixedStream.apply(this, arguments);
-      }
-      return getMixedStream;
-    }()
-    /**
-     * 仅获取混合后的视频流（不含音频）。
-     * 启动 rAF 渲染循环，从 canvas 截取画面输出为 MediaStream。
-     *
-     * @returns {MediaStream} 仅包含视频轨的流
-     */
-    )
-  }, {
-    key: "getVideoStream",
-    value: function getVideoStream() {
-      var _this5 = this;
-      logger.debug('getVideoStream()');
-      this._assertNotDestroyed('getVideoStream()');
-      this._renderLoop.resume();
-      if (this._outputStreamManager.hasLiveVideoStream()) {
-        this._renderLoop.start();
-        return this._outputStreamManager.videoStream;
-      }
-      var videoStream = this._outputStreamManager.getVideoStream(function () {
-        _this5._renderLoop.resetFrameTiming();
-        _this5._drawVideosToCanvas(undefined, true);
-      });
-      logger.debug("getVideoStream() created: tracks=".concat(videoStream.getVideoTracks().length));
-      return videoStream;
-    }
-
-    /**
-     * 获取混合后的音频流。
-     * 初始化 AudioContext（延迟创建），连接所有源的音频到 MediaStreamAudioDestination。
-     *
-     * @returns {Promise<MediaStream|null>} 仅包含音频轨的流；无音频源时返回 null
-     */
-  }, {
-    key: "getAudioStream",
-    value: (function () {
-      var _getAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(options) {
-        var audioStream;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.n) {
-            case 0:
-              logger.debug("getAudioStream(): ".concat(JSON.stringify(options || null)));
-              this._assertNotDestroyed('getAudioStream()');
-              _context2.n = 1;
-              return this._audioMixer.getAudioStream(options);
-            case 1:
-              audioStream = _context2.v;
-              return _context2.a(2, audioStream);
-          }
-        }, _callee2, this);
-      }));
-      function getAudioStream(_x) {
-        return _getAudioStream.apply(this, arguments);
-      }
-      return getAudioStream;
-    }()
-    /**
-     * 获取独立 AudioContext 的子混音音频流。
-     * 每个 slots 组合会创建并复用自己的 AudioContext。
-     *
-     * @param {Object|Array<number>} options - { slots:number[] } 或 slots 数组
-     * @returns {Promise<MediaStream|null>} 子混音音频流
-     */
-    )
-  }, {
-    key: "getIsolatedSubmixAudioStream",
-    value: (function () {
-      var _getIsolatedSubmixAudioStream = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(options) {
-        var audioStream;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
-            case 0:
-              logger.debug("getIsolatedSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
-              this._assertNotDestroyed('getIsolatedSubmixAudioStream()');
-              _context3.n = 1;
-              return this._audioMixer.getIsolatedSubmixAudioStream(options);
-            case 1:
-              audioStream = _context3.v;
-              return _context3.a(2, audioStream);
-          }
-        }, _callee3, this);
-      }));
-      function getIsolatedSubmixAudioStream(_x2) {
-        return _getIsolatedSubmixAudioStream.apply(this, arguments);
-      }
-      return getIsolatedSubmixAudioStream;
-    }()
-    /**
-     * 释放指定 slots 的子混音请求与资源。
-     *
-     * @param {Object|Array<number>} options - { slots:number[], isolated?:boolean } 或 slots 数组
-     * @returns {boolean} true 表示成功释放；false 表示参数无效或目标不存在
-     */
-    )
-  }, {
-    key: "releaseSubmixAudioStream",
-    value: function releaseSubmixAudioStream(options) {
-      logger.debug("releaseSubmixAudioStream(): ".concat(JSON.stringify(options || null)));
-      this._assertNotDestroyed('releaseSubmixAudioStream()');
-      return this._audioMixer.releaseSubmixAudioStream(options);
-    }
-
-    // -- SourceRegistry 委派 --
-  }, {
-    key: "_sources",
-    get: function get() {
-      return this._sourceRegistry && this._sourceRegistry.sources || [];
-    }
-  }, {
-    key: "_videos",
-    get: function get() {
-      return this._sourceRegistry && this._sourceRegistry.videos || [];
-    }
-
-    // -- RenderLoop 委派 --
-  }, {
-    key: "_renderer",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.renderer || null;
-    }
-  }, {
-    key: "_animationId",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.animationId || null;
-    }
-  }, {
-    key: "_lastRenderTime",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.lastRenderTime || 0;
-    }
-  }, {
-    key: "_renderFrameInterval",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.renderFrameInterval || 0;
-    }
-  }, {
-    key: "_renderErrorCount",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.renderErrorCount || 0;
-    }
-  }, {
-    key: "_rendererErrorCount",
-    get: function get() {
-      return this._renderLoop && this._renderLoop.rendererErrorCount || 0;
-    }
-  }, {
-    key: "_isStopDrawingFrames",
-    get: function get() {
-      return this._renderLoop ? this._renderLoop.isStopped : false;
-    }
-
-    // -- AudioMixer 委派 --
-  }, {
-    key: "_audioSources",
-    get: function get() {
-      return this._audioMixer && this._audioMixer.audioSources || [];
-    }
-  }, {
-    key: "_audioDestination",
-    get: function get() {
-      return this._audioMixer && this._audioMixer.audioDestination || null;
-    }
-  }, {
-    key: "_audioContext",
-    get: function get() {
-      return this._audioMixer && this._audioMixer.audioContext || null;
-    }
-  }, {
-    key: "_audioRequested",
-    get: function get() {
-      return this._audioMixer ? this._audioMixer.requested : false;
-    }
-  }, {
-    key: "_audioInfo",
-    get: function get() {
-      return this._audioMixer && this._audioMixer.audioInfo || DEFAULT_AUDIO_INFO;
-    }
-
-    // -- OutputStreamManager 委派 --
-  }, {
-    key: "_mixedStream",
-    get: function get() {
-      return this._outputStreamManager && this._outputStreamManager.mixedStream || null;
-    }
-  }, {
-    key: "_capturedStreams",
-    get: function get() {
-      return this._outputStreamManager && this._outputStreamManager.capturedStreams || [];
-    }
-  }, {
-    key: "_capturedStream",
-    get: function get() {
-      return this._outputStreamManager && this._outputStreamManager.capturedStream || null;
-    }
-  }, {
-    key: "_videoStream",
-    get: function get() {
-      return this._outputStreamManager && this._outputStreamManager.videoStream || null;
-    }
-  }]);
-}();
-},{"../Logger":39,"./AudioMixer":72,"./LayoutEngine":73,"./MixerConfig":74,"./MixerDomAdapter":76,"./OutputStreamManager":77,"./RenderLoop":78,"./SourceRegistry":79,"./WatermarkManager":80}],76:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * MixerDomAdapter — 混流器 DOM 元素创建适配器
- *
- * 负责创建和管理混流器内部使用的 DOM 元素：
- *   - 离屏 canvas：用于合成视频帧
- *   - 隐藏 video 元素：用于播放每个 MediaStream
- *
- * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
- *
- * @module MixerDomAdapter
- */
-var MixerDomAdapter = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {Object} options.config - 混流配置对象（含 width/height 等）
-   * @param {Object} options.logger - 日志记录器
-   */
-  function MixerDomAdapter(options) {
-    _classCallCheck(this, MixerDomAdapter);
-    options = options || {};
-    this._config = options.config;
-    this._logger = options.logger;
-    if (this._logger) {
-      this._logger.debug('MixerDomAdapter constructed');
-    }
-  }
-
-  /**
-   * 创建一个隐藏的离屏 canvas 元素。
-   * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
-   *
-   * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
-   */
-  return _createClass(MixerDomAdapter, [{
-    key: "createCanvas",
-    value: function createCanvas() {
-      var canvas = document.createElement('canvas');
-      canvas.setAttribute('style', 'display:none');
-      if (this._logger) {
-        this._logger.debug('Hidden mixer canvas created');
-      }
-      return canvas;
-    }
-
-    /**
-     * 将 canvas 尺寸设置为配置值（grid 模式）。
-     * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
-     *
-     * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
-     */
-  }, {
-    key: "prepareCanvas",
-    value: function prepareCanvas(canvas) {
-      var width = this._config.width || 1280;
-      var height = this._config.height || 720;
-      var resized = false;
-
-      // canvas width/height 设置时会清空画布，只在尺寸变化时才写
-      if (canvas.width !== width) {
-        canvas.width = width;
-        resized = true;
-      }
-      if (canvas.height !== height) {
-        canvas.height = height;
-        resized = true;
-      }
-      if (resized && this._logger) {
-        this._logger.debug("Canvas prepared: ".concat(width, "x").concat(height));
-      }
-    }
-
-    /**
-     * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
-     * video 元素属性：display:none、muted、autoplay、playsinline。
-     *
-     * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
-     * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
-     */
-  }, {
-    key: "createVideoElement",
-    value: function createVideoElement(mediaStream) {
-      var _this = this;
-      var video = document.createElement('video');
-      video.setAttribute('style', 'display:none');
-      video.muted = true;
-      video.autoplay = true;
-      video.setAttribute('playsinline', '');
-      video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
-      if (this._logger) {
-        var stream = video.srcObject;
-        var streamId = stream && stream.id ? stream.id : 'unknown';
-        this._logger.debug("Video element created for stream ".concat(streamId));
-      }
-      video.play()["catch"](function (error) {
-        var stream = video.srcObject;
-        var streamId = stream && stream.id ? stream.id : 'unknown';
-        _this._logger.error("video play error for stream ".concat(streamId, ": ").concat(error.message || String(error)));
-      });
-      return video;
-    }
-  }]);
-}();
-module.exports = MixerDomAdapter;
-},{}],77:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * OutputStreamManager — 混流器输出流管理
- *
- * 负责混流器输出流的生命周期管理：
- *   - canvas.captureStream() 获取视频流
- *   - 音频轨注入到已返回的混合流（延迟添加音频场景）
- *   - 停止时清理所有捕获的流轨道
- *
- * @module OutputStreamManager
- */
-var OutputStreamManager = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
-   * @param {Object} options.config - 混流配置
-   * @param {Object} options.logger - 日志记录器
-   */
-  function OutputStreamManager(options) {
-    _classCallCheck(this, OutputStreamManager);
-    options = options || {};
-    this._canvas = options.canvas;
-    this._config = options.config;
-    this._logger = options.logger;
-
-    /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
-    this._mixedStream = null;
-
-    /** @type {Array<MediaStream>} 所有通过 captureStream 创建的流的列表（用于停止时清理） */
-    this._capturedStreams = [];
-
-    /** @type {MediaStream|null} 当前活跃的 captureStream 引用 */
-    this._capturedStream = null;
-
-    /** @type {MediaStream|null} 输出视频流（仅含视频轨） */
-    this._videoStream = null;
-    if (this._logger) {
-      this._logger.debug('OutputStreamManager constructed');
-    }
-  }
-
-  /**
-   * 检测当前视频流是否仍有 live（活跃）状态的视频轨。
-   *
-   * @returns {boolean} true=视频流存在且至少有一条 live 视频轨
-   */
-  return _createClass(OutputStreamManager, [{
-    key: "hasLiveVideoStream",
-    value: function hasLiveVideoStream() {
-      return Boolean(this._videoStream && this._videoStream.getVideoTracks().some(function (track) {
-        return track.readyState === 'live';
-      }));
-    }
-
-    /**
-     * 获取视频输出流。
-     *
-     * 首次调用时先绘制一帧（确保 canvas 有内容），然后执行
-     * canvas.captureStream() 获取原始流，将其视频轨添加到新的 MediaStream 返回。
-     *
-     * @param {Function} drawFirstFrame - 绘制首帧的回调
-     * @returns {MediaStream} 仅包含视频轨的输出流
-     */
-  }, {
-    key: "getVideoStream",
-    value: function getVideoStream(drawFirstFrame) {
-      var _this = this;
-      if (this.hasLiveVideoStream()) {
-        if (this._logger) {
-          this._logger.debug('Reusing existing live video stream');
-        }
-        return this._videoStream;
-      }
-      drawFirstFrame();
-      var videoStream = new MediaStream();
-      var capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
-      capturedStream.getVideoTracks().forEach(function (track) {
-        if (_this._logger) {
-          _this._logger.debug('track: ', track.id, track.enabled, track.readyState);
-        }
-        videoStream.addTrack(track);
-      });
-      this._canvas.stream = capturedStream;
-      this._capturedStream = capturedStream;
-      this._videoStream = videoStream;
-      this._capturedStreams.push(capturedStream);
-      if (this._logger) {
-        this._logger.debug("Created new video stream: tracks=".concat(videoStream.getVideoTracks().length));
-      }
-      return this._videoStream;
-    }
-
-    /**
-     * 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨。
-     *
-     * @param {MediaStream} stream - 混合流（视频流，可能后续添加音频）
-     */
-  }, {
-    key: "setMixedStream",
-    value: function setMixedStream(stream) {
-      this._mixedStream = stream;
-      if (this._logger) {
-        var trackCount = stream && stream.getTracks ? stream.getTracks().length : 0;
-        this._logger.debug("Mixed stream set: tracks=".concat(trackCount));
-      }
-    }
-
-    /**
-     * 将音频流中的音轨去重地添加到目标流中。
-     *
-     * @param {MediaStream} targetStream - 目标流（一般是 video stream）
-     * @param {MediaStream} audioStream - 音频流（audio destination stream）
-     */
-  }, {
-    key: "addAudioTracksToStream",
-    value: function addAudioTracksToStream(targetStream, audioStream) {
-      var _this2 = this;
-      if (!targetStream || !audioStream) {
-        return;
-      }
-      audioStream.getAudioTracks().forEach(function (track) {
-        if (!targetStream.getAudioTracks().some(function (item) {
-          return item.id === track.id;
-        })) {
-          targetStream.addTrack(track);
-          if (_this2._logger) {
-            _this2._logger.debug("Audio track added to target stream: ".concat(track.id));
-          }
-        }
-      });
-    }
-
-    /**
-     * 将音频轨补充到已返回的 mixed stream 中。
-     *
-     * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
-     * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨
-     * 注入到已返回的流。
-     *
-     * @param {MediaStream} audioStream - 音频流
-     */
-  }, {
-    key: "ensureMixedStreamAudioTrack",
-    value: function ensureMixedStreamAudioTrack(audioStream) {
-      var _this3 = this;
-      if (!this._mixedStream || !audioStream || this._mixedStream.getAudioTracks().length > 0) {
-        return;
-      }
-      audioStream.getAudioTracks().forEach(function (track) {
-        _this3._mixedStream.addTrack(track);
-        if (_this3._logger) {
-          _this3._logger.debug("Mixed stream audio track injected: ".concat(track.id));
-        }
-      });
-    }
-
-    /**
-     * 停止所有输出流，释放资源。
-     *
-     * 清理步骤：
-     *   1. 清空内部引用
-     *   2. 停止所有 captureStream 的 tracks
-     *   3. 清空 capturedStreams 列表
-     *   4. 清除 canvas 上的 stream 引用
-     */
-  }, {
-    key: "stop",
-    value: function stop() {
-      if (this._logger) {
-        this._logger.debug("Stopping output streams: captured=".concat(this._capturedStreams.length));
-      }
-      this._mixedStream = null;
-      this._videoStream = null;
-      this._capturedStream = null;
-      this._capturedStreams.forEach(function (stream) {
-        stream.getTracks().forEach(function (track) {
-          track.stop();
-        });
-      });
-      this._capturedStreams = [];
-      this._canvas.stream = null;
-      if (this._logger) {
-        this._logger.debug('Output streams stopped');
-      }
-    }
-  }, {
-    key: "mixedStream",
-    get: function get() {
-      return this._mixedStream;
-    }
-  }, {
-    key: "capturedStreams",
-    get: function get() {
-      return this._capturedStreams;
-    }
-  }, {
-    key: "capturedStream",
-    get: function get() {
-      return this._capturedStream;
-    }
-  }, {
-    key: "videoStream",
-    get: function get() {
-      return this._videoStream;
-    }
-  }]);
-}();
-module.exports = OutputStreamManager;
-},{}],78:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * RenderLoop — 混流器渲染循环
- *
- * 负责混流器的视频渲染节奏控制：
- *   - 通过 requestAnimationFrame 驱动帧循环
- *   - 按配置的 fps 节流，避免不必要的绘制
- *   - 管理渲染后端的生命周期（创建、销毁、故障降级）
- *   - 检测 Worker 渲染器故障，自动按配置降级到下一个可用后端
- *
- * @module RenderLoop
- */
-
-var RendererFactory = require('../mixer-renderer/RendererFactory');
-var MainCanvas2DRenderer = require('../mixer-renderer/MainCanvas2DRenderer');
-var MainWebGL2Renderer = require('../mixer-renderer/MainWebGL2Renderer');
-var WorkerRenderer = require('../mixer-renderer/WorkerRenderer');
-var RenderLoop = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
-   * @param {Object} options.config - 混流配置
-   * @param {Object} options.logger - 日志记录器
-   * @param {Function} options.getSources - 返回当前源列表的回调
-   * @param {Function} options.createRenderPayload - 创建渲染 payload 的函数
-   * @param {Function} options.syncExternalSourceAudio - 同步外部源音频的函数
-   * @param {Function} options.onStateChange - 状态变化回调（已弃用，保留为空函数）
-   */
-  function RenderLoop(options) {
-    _classCallCheck(this, RenderLoop);
-    options = options || {};
-    this._canvas = options.canvas;
-    this._config = options.config;
-    this._logger = options.logger;
-    this._getSources = options.getSources;
-    this._createRenderPayload = options.createRenderPayload;
-    this._syncExternalSourceAudio = options.syncExternalSourceAudio;
-    this._onStateChange = options.onStateChange;
-
-    /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
-    this._renderer = null;
-
-    /** @type {number|null} requestAnimationFrame 返回的 ID，用于 cancel */
-    this._animationId = null;
-
-    /** @type {number} 上一次真正执行合成的时间戳（performance.now） */
-    this._lastRenderTime = 0;
-
-    /** @type {number} 目标帧间隔（毫秒），由 fps 计算，0 表示不节流 */
-    this._renderFrameInterval = this._config.fps ? 1000 / this._config.fps : 0;
-
-    /** @type {number} 连续渲染失败次数，用于诊断渲染后端异常 */
-    this._renderErrorCount = 0;
-
-    /** @type {number} 连续 renderer 失败次数，达到阈值后触发后端降级 */
-    this._rendererErrorCount = 0;
-
-    /** @type {boolean} 停止标记；设为 true 时 rAF 回调直接返回 */
-    this._stopped = false;
-
-    // bind 一次避免每帧创建新函数
-    this._boundRenderFrame = this.renderFrame.bind(this);
-    if (this._logger) {
-      this._logger.debug("RenderLoop constructed: fps=".concat(this._config.fps || 0, " renderMode=").concat(this._config.renderMode));
-    }
-  }
-
-  /**
-   * 恢复渲染循环（清除停止标记）。
-   */
-  return _createClass(RenderLoop, [{
-    key: "resume",
-    value: function resume() {
-      this._stopped = false;
-      if (this._logger) {
-        this._logger.debug('RenderLoop resumed');
-      }
-    }
-
-    /**
-     * 启动渲染循环。
-     * 先恢复再调度下一帧。
-     */
-  }, {
-    key: "start",
-    value: function start() {
-      if (this._logger) {
-        this._logger.debug('RenderLoop start requested');
-      }
-      this.resume();
-      this._scheduleNextFrame();
-    }
-
-    /**
-     * 停止渲染循环。
-     * 取消待处理的 rAF，设置停止标记。
-     */
-  }, {
-    key: "stop",
-    value: function stop() {
-      this._stopped = true;
-      if (this._logger) {
-        this._logger.debug('RenderLoop stopped');
-      }
-      if (this._animationId) {
-        window.cancelAnimationFrame(this._animationId);
-        this._animationId = null;
-      }
-    }
-
-    /**
-     * 重置帧计时器。
-     * 在下一次渲染时忽略 fps 节流，立即合成一帧。
-     * 用于刚添加源时需要立即刷新画面的场景。
-     */
-  }, {
-    key: "resetFrameTiming",
-    value: function resetFrameTiming() {
-      this._lastRenderTime = 0;
-      if (this._logger) {
-        this._logger.debug('RenderLoop frame timing reset');
-      }
-    }
-
-    /**
-     * 确保渲染后端已创建。
-     * 首次调用时通过 RendererFactory.createRenderer 根据配置创建实际渲染器。
-     *
-     * @returns {BaseRenderer} 当前渲染后端
-     */
-  }, {
-    key: "ensureRenderer",
-    value: function ensureRenderer() {
-      var _this = this;
-      if (!this._renderer) {
-        if (this._logger) {
-          this._logger.debug("Creating renderer: requestedMode=".concat(this._config.renderMode));
-        }
-        this._renderer = RendererFactory.createRenderer(this._canvas, this._config, {
-          onWorkerFatalError: function onWorkerFatalError(reason) {
-            _this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
-          }
-        });
-      }
-      return this._renderer;
-    }
-
-    /**
-     * 调整渲染器输出尺寸。
-     *
-     * @param {number} width - 新宽度
-     * @param {number} height - 新高度
-     */
-  }, {
-    key: "resizeRenderer",
-    value: function resizeRenderer(width, height) {
-      if (this._renderer) {
-        this._renderer.resize(width, height);
-      }
-    }
-
-    /**
-     * 从渲染器中移除一路源的绘制数据。
-     *
-     * @param {string} sourceId - 要移除的源 ID
-     */
-  }, {
-    key: "removeSource",
-    value: function removeSource(sourceId) {
-      if (this._renderer && this._renderer.removeSource) {
-        this._renderer.removeSource(sourceId);
-      }
-    }
-
-    /**
-     * 获取当前渲染后端状态信息。
-     *
-     * @returns {Object} 渲染状态快照
-     */
-  }, {
-    key: "getRenderInfo",
-    value: function getRenderInfo() {
-      if (!this._renderer) {
-        return {
-          requestedMode: this._config.renderMode,
-          actualMode: 'not-started',
-          isWorker: false,
-          isWebGL2: false,
-          isFallback: false,
-          reason: '',
-          droppedFrames: 0,
-          renderedFrames: 0,
-          fps: this._config.fps,
-          width: this._canvas.width || this._config.width,
-          height: this._canvas.height || this._config.height
-        };
-      }
-      return this._renderer.getInfo();
-    }
-
-    /**
-     * 渲染一帧（requestAnimationFrame 回调）。
-     *
-     * 流程：
-     *   1. 检查停止标记，已停止则直接返回
-     *   2. 检查 fps 节流（是否已达到目标帧间隔），未到时跳过绘制
-     *   3. 同步外部音频源状态（检测 HTMLVideoElement 换源）
-     *   4. 构建渲染 payload 并交给 renderer 绘制
-     *   5. 检查渲染器健康状态（Worker 故障检测、错误计数）
-     *   6. 调度下一帧 rAF
-     *
-     * @param {number} [timestamp] - rAF 传入的高精度时间戳
-     * @param {boolean} [forceRender=false] - 是否强制渲染（忽略 fps 节流）
-     */
-  }, {
-    key: "renderFrame",
-    value: function renderFrame(timestamp, forceRender) {
-      if (this._stopped) {
-        return;
-      }
-      if (!forceRender) {
-        this._animationId = null;
-      }
-      var now = typeof timestamp === 'number' ? timestamp : typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
-      var shouldRender = forceRender || !this._renderFrameInterval || !this._lastRenderTime || now - this._lastRenderTime >= this._renderFrameInterval;
-      try {
-        if (shouldRender) {
-          this._syncExternalSourceAudio();
-          var payload = this._createRenderPayload();
-          if (!this._shouldRenderPayload(payload)) {
-            this._lastRenderTime = now;
-            this._renderErrorCount = 0;
-          } else {
-            var renderer = this.ensureRenderer();
-            renderer.render(payload);
-            this._handleRendererInfo(renderer);
-            this._lastRenderTime = now;
-            this._renderErrorCount = 0;
-          }
-        }
-      } catch (error) {
-        this._handleRenderError(error);
-      }
-      this._scheduleNextFrame();
-    }
-
-    /**
-     * 销毁渲染循环。
-     * 停止帧循环并销毁渲染后端，释放资源。
-     */
-  }, {
-    key: "destroy",
-    value: function destroy() {
-      if (this._logger) {
-        this._logger.debug('Destroying RenderLoop');
-      }
-      this.stop();
-      this._lastRenderTime = 0;
-      if (this._renderer) {
-        this._renderer.destroy();
-        this._renderer = null;
-      }
-    }
-
-    /**
-     * 运行时降级到下一个可用渲染器。
-     *
-     * auto 模式按 worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d 继续尝试。
-     * 只在以下条件满足时降级：
-     *   - 当前渲染器不是 main-2d
-     *   - 当前是 Worker 渲染器或已标记为 worker-failed
-     *
-     * @param {string} reason - 降级原因描述
-     * @returns {boolean} true=降级成功
-     */
-  }, {
-    key: "fallbackRenderer",
-    value: function fallbackRenderer(reason) {
-      if (this._logger) {
-        this._logger.warn("Fallback renderer requested: ".concat(reason));
-      }
-      var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
-      if (currentInfo.actualMode === 'main-2d') {
-        return false;
-      }
-      if (!currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
-        return false;
-      }
-      if (this._renderer && this._renderer.destroy) {
-        this._renderer.destroy();
-      }
-      if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
-        var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
-        if (mainWebGL2) {
-          return true;
-        }
-        var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
-        if (worker2D) {
-          return true;
-        }
-      }
-      return this.fallbackRendererToMain2D(reason, currentInfo);
-    }
-  }, {
-    key: "fallbackRendererToMain2D",
-    value: function fallbackRendererToMain2D(reason, info) {
-      if (this._logger) {
-        this._logger.warn("Falling back to main-2d: ".concat(reason));
-      }
-      var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
-      if (currentInfo.actualMode === 'main-2d') {
-        return false;
-      }
-      if (!info && !currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
-        return false;
-      }
-      if (!info && this._renderer && this._renderer.destroy) {
-        this._renderer.destroy();
-      }
-      var renderer = new MainCanvas2DRenderer(this._config, {
-        requestedMode: currentInfo.requestedMode || this._config.renderMode,
-        actualMode: 'main-2d',
-        isWorker: false,
-        isWebGL2: false,
-        isFallback: true,
-        reason: reason,
-        droppedFrames: currentInfo.droppedFrames || 0,
-        renderedFrames: currentInfo.renderedFrames || 0
-      });
-      renderer.init(this._canvas);
-      this._renderer = renderer;
-      this._rendererErrorCount = 0;
-      return true;
-    }
-  }, {
-    key: "_tryFallbackToMainWebGL2",
-    value: function _tryFallbackToMainWebGL2(currentInfo, reason) {
-      try {
-        var renderer = new MainWebGL2Renderer(this._config, {
-          requestedMode: currentInfo.requestedMode || this._config.renderMode,
-          actualMode: 'main-webgl2',
-          isWorker: false,
-          isWebGL2: true,
-          isFallback: true,
-          reason: reason,
-          droppedFrames: currentInfo.droppedFrames || 0,
-          renderedFrames: currentInfo.renderedFrames || 0
-        });
-        renderer.init(this._canvas);
-        this._renderer = renderer;
-        this._rendererErrorCount = 0;
-        if (this._logger) {
-          this._logger.warn("Fallback succeeded: main-webgl2 reason=".concat(reason));
-        }
-        return true;
-      } catch (error) {
-        if (this._logger) {
-          this._logger.warn("Fallback to main-webgl2 failed: ".concat(error.message || String(error)));
-        }
-        return false;
-      }
-    }
-  }, {
-    key: "_tryFallbackToWorker2D",
-    value: function _tryFallbackToWorker2D(currentInfo, reason) {
-      var _this2 = this;
-      try {
-        var workerConfig = Object.assign({}, this._config, {
-          renderMode: 'worker-2d'
-        });
-        var renderer = new WorkerRenderer(workerConfig, {
-          requestedMode: currentInfo.requestedMode || this._config.renderMode,
-          actualMode: 'worker-init',
-          isWorker: true,
-          isWebGL2: false,
-          isFallback: true,
-          reason: reason,
-          droppedFrames: currentInfo.droppedFrames || 0,
-          renderedFrames: currentInfo.renderedFrames || 0,
-          onFatalError: function onFatalError(fallbackReason) {
-            _this2.fallbackRendererToMain2D(fallbackReason || 'Worker Canvas2D renderer failed at runtime');
-          }
-        });
-        renderer.init(this._canvas);
-        this._renderer = renderer;
-        this._rendererErrorCount = 0;
-        if (this._logger) {
-          this._logger.warn("Fallback succeeded: worker-2d reason=".concat(reason));
-        }
-        return true;
-      } catch (error) {
-        if (this._logger) {
-          this._logger.warn("Fallback to worker-2d failed: ".concat(error.message || String(error)));
-        }
-        return false;
-      }
-    }
-
-    /**
-     * 调度下一帧 rAF。
-     * 已停止、已有待处理帧、或无源时跳过调度。
-     */
-  }, {
-    key: "_scheduleNextFrame",
-    value: function _scheduleNextFrame() {
-      if (this._stopped || this._animationId || this._getSources().length === 0) {
-        return;
-      }
-      this._animationId = window.requestAnimationFrame(this._boundRenderFrame);
-    }
-
-    /**
-     * 检查渲染器运行健康状态。
-     * 检测 Worker 渲染器故障，累积错误计数达 2 次后触发降级。
-     *
-     * @param {BaseRenderer} renderer - 当前渲染后端
-     */
-  }, {
-    key: "_handleRendererInfo",
-    value: function _handleRendererInfo(renderer) {
-      if (!renderer.getInfo) {
-        return;
-      }
-      var info = renderer.getInfo();
-      if (info.actualMode === 'worker-failed' || info.isWorker && info.isFallback && info.reason) {
-        this._rendererErrorCount += 1;
-        if (this._rendererErrorCount >= 2) {
-          this.fallbackRenderer(info.reason || 'Worker renderer failed at runtime');
-        }
-      } else {
-        this._rendererErrorCount = 0;
-      }
-    }
-
-    /**
-     * 空源、无水印且没有已创建 renderer 时跳过绘制。
-     * 这样构造阶段的强制刷新不会提前初始化 Worker/WebGL；
-     * 如果已有 renderer，则仍允许空 payload 清背景，避免移除所有源后残留上一帧。
-     *
-     * @param {Object} payload - 本帧渲染数据
-     * @returns {boolean} true=需要交给 renderer 绘制
-     */
-  }, {
-    key: "_shouldRenderPayload",
-    value: function _shouldRenderPayload(payload) {
-      if (this._renderer) {
-        return true;
-      }
-      return Boolean(payload && (payload.items && payload.items.length || payload.sourceWatermarks && payload.sourceWatermarks.length || payload.outputWatermarks && payload.outputWatermarks.length));
-    }
-
-    /**
-     * 处理渲染异常。
-     * 累积错误计数达 2 次后触发后端降级。
-     *
-     * @param {Error} error - 渲染异常
-     */
-  }, {
-    key: "_handleRenderError",
-    value: function _handleRenderError(error) {
-      var reason = "Mixer render failed: ".concat(error.message || String(error));
-      this._renderErrorCount += 1;
-      this._logger.warn(reason);
-      if (this._renderer && this._renderer._updateInfo) {
-        this._renderer._updateInfo({
-          isFallback: true,
-          reason: reason
-        });
-      }
-      if (this._renderErrorCount >= 2) {
-        this.fallbackRenderer(reason);
-      }
-    }
-  }, {
-    key: "renderer",
-    get: function get() {
-      return this._renderer;
-    }
-  }, {
-    key: "animationId",
-    get: function get() {
-      return this._animationId;
-    }
-  }, {
-    key: "lastRenderTime",
-    get: function get() {
-      return this._lastRenderTime;
-    }
-  }, {
-    key: "renderFrameInterval",
-    get: function get() {
-      return this._renderFrameInterval;
-    }
-  }, {
-    key: "renderErrorCount",
-    get: function get() {
-      return this._renderErrorCount;
-    }
-  }, {
-    key: "rendererErrorCount",
-    get: function get() {
-      return this._rendererErrorCount;
-    }
-  }, {
-    key: "isStopped",
-    get: function get() {
-      return this._stopped;
-    }
-  }]);
-}();
-module.exports = RenderLoop;
-},{"../mixer-renderer/MainCanvas2DRenderer":82,"../mixer-renderer/MainWebGL2Renderer":83,"../mixer-renderer/RendererFactory":84,"../mixer-renderer/WorkerRenderer":85}],79:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * SourceRegistry — 混流器输入源注册表
- *
- * 管理所有参与混流的输入源（MediaStream / HTMLVideoElement）。
- * 负责源的增删、ID 生成、slot 分配、状态查询等。
- *
- * @module SourceRegistry
- */
-var SourceRegistry = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {Object} options.logger - 日志记录器
-   * @param {Function} options.getDefaultGain - 返回默认音量增益的回调
-   * @param {Function} options.normalizeGain - 增益值归一化函数
-   * @param {Function} options.createVideoElement - 创建隐藏 video 元素的工厂函数
-   * @param {Function} options.onBeforeRemove - 源被移除前的回调（用于断开音频连接）
-   * @param {Function} options.onAfterRemove - 源被移除后的回调（用于清理渲染器、清空画布）
-   */
-  function SourceRegistry(options) {
-    _classCallCheck(this, SourceRegistry);
-    options = options || {};
-    this._logger = options.logger;
-    this._getDefaultGain = options.getDefaultGain;
-    this._normalizeGain = options.normalizeGain;
-    this._createVideoElement = options.createVideoElement;
-    this._onBeforeRemove = options.onBeforeRemove;
-    this._onAfterRemove = options.onAfterRemove;
-
-    /** @type {Array<Object>} 当前所有输入源对象列表 */
-    this.sources = [];
-
-    /** @type {Array<HTMLVideoElement>} 当前所有源对应的 video 元素列表（与 sources 同步） */
-    this.videos = [];
-
-    /** @type {number} 内部自增 ID 序列，用于生成唯一 source ID */
-    this._sourceSeq = 0;
-    if (this._logger) {
-      this._logger.debug('SourceRegistry constructed');
-    }
-  }
-
-  /**
-   * 添加一个新的输入源。
-   *
-   * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
-   *
-   * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
-   * @param {Object} [options={}] - 配置选项 { slot, gain }
-   * @returns {Object} 新建的 source 对象
-   */
-  return _createClass(SourceRegistry, [{
-    key: "add",
-    value: function add(input, options) {
-      var source = this._createSource(input, options || {});
-
-      // 检查 slot 冲突，同 slot 旧源会被替换
-      if (typeof source.slot === 'number') {
-        var oldSource = this.sources.find(function (item) {
-          return item.slot === source.slot;
-        });
-        if (oldSource) {
-          if (this._logger) {
-            this._logger.warn("Slot ".concat(source.slot, " overwritten."));
-          }
-          this.remove(oldSource);
-        }
-      }
-      this.sources.push(source);
-      this._syncVideos();
-      if (this._logger) {
-        this._logger.debug("Source added: id=".concat(source.id, " slot=").concat(source.slot, " gain=").concat(source.gain));
-      }
-      return source;
-    }
-
-    /**
-     * 移除所有输入源（遍历快照逐一移除）。
-     */
-  }, {
-    key: "clear",
-    value: function clear() {
-      var _this = this;
-      if (this._logger) {
-        this._logger.debug("Clearing all sources: count=".concat(this.sources.length));
-      }
-      this.sources.slice().forEach(function (source) {
-        _this.remove(source);
-      });
-    }
-
-    /**
-     * 按 MediaStream 对象、stream.id 或内部 source.id 查找源。
-     *
-     * @param {MediaStream|string|HTMLVideoElement} streamOrId - 查找依据
-     * @returns {Object|null} 找到的 source 对象，或 null
-     */
-  }, {
-    key: "find",
-    value: function find(streamOrId) {
-      var _this2 = this;
-      if (!streamOrId) {
-        return null;
-      }
-      if (typeof streamOrId === 'string') {
-        // 先匹配 source.id，再匹配 stream.id
-        return this.sources.find(function (source) {
-          var stream = _this2.getStream(source);
-          return source.id === streamOrId || stream && stream.id === streamOrId;
-        }) || null;
-      }
-
-      // 按 MediaStream 或 HTMLVideoElement 引用匹配
-      var stream = streamOrId.mediaStream || streamOrId;
-      return this.sources.find(function (source) {
-        return source.stream === stream || source.video === streamOrId;
-      }) || null;
-    }
-
-    /**
-     * 移除一个具体的 source 对象。
-     *
-     * 步骤：触发 onBeforeRemove（断开音频）→ 清理 ownedVideo（暂停、清空 srcObject、移除 DOM）→
-     * 从数组移除 → 同步 _videos → 触发 onAfterRemove（渲染器清理、画布清空）。
-     *
-     * @param {Object} source - 要移除的 source 对象
-     * @returns {boolean} true=成功移除；false=source 为空
-     */
-  }, {
-    key: "remove",
-    value: function remove(source) {
-      if (!source) {
-        return false;
-      }
-      if (this._logger) {
-        this._logger.debug("Removing source: id=".concat(source.id, " slot=").concat(source.slot));
-      }
-
-      // 先通知外部断开音频连接
-      if (this._onBeforeRemove) {
-        this._onBeforeRemove(source);
-      }
-
-      // 如果是 mixr 内部创建的 video 元素，清理 DOM
-      if (source.ownedVideo && source.video) {
-        source.video.pause();
-        source.video.srcObject = null;
-        source.video.remove();
-      }
-      var index = this.sources.indexOf(source);
-      if (index !== -1) {
-        this.sources.splice(index, 1);
-      }
-      this._syncVideos();
-
-      // 通知外部源已移除（渲染器清理、画布清空等）
-      if (this._onAfterRemove) {
-        this._onAfterRemove(source);
-      }
-      if (this._logger) {
-        this._logger.debug("Source removed: id=".concat(source.id, " remaining=").concat(this.sources.length));
-      }
-      return true;
-    }
-
-    /**
-     * 返回当前所有源的快照。
-     * 返回新数组，外部修改不影响内部状态。
-     *
-     * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, hasAudio, hasVideo }
-     */
-  }, {
-    key: "getSnapshot",
-    value: function getSnapshot() {
-      var _this3 = this;
-      return this.sources.map(function (source) {
-        var stream = _this3.getStream(source);
-        return {
-          id: source.id,
-          streamId: stream ? stream.id : null,
-          slot: source.slot,
-          gain: source.gain,
-          hasAudio: _this3.hasLiveAudioTrack(source),
-          hasVideo: _this3.hasVideoTrack(source)
-        };
-      });
-    }
-
-    /**
-     * 获取 source 当前关联的 MediaStream。
-     *
-     * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
-     * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {MediaStream|null} 当前 MediaStream
-     */
-  }, {
-    key: "getStream",
-    value: function getStream(source) {
-      var stream = source.video && !source.ownedVideo ? source.video.srcObject : source.stream;
-
-      // 同步 stream 引用（外部换源场景）
-      if (source.stream !== stream) {
-        source.stream = stream;
-      }
-      return stream;
-    }
-
-    /**
-     * 检测是否至少有一路源有 live（活跃）状态的音频轨。
-     *
-     * @returns {boolean} true=至少一路有活跃音频
-     */
-  }, {
-    key: "hasAnyLiveAudioTrack",
-    value: function hasAnyLiveAudioTrack() {
-      var _this4 = this;
-      return this.sources.some(function (source) {
-        return _this4.hasLiveAudioTrack(source);
-      });
-    }
-
-    /**
-     * 检测某路源是否有 live（活跃）状态的音频轨。
-     * 只混入 live 状态的音频轨，避免 ended track 导致 WebAudio 创建失败或无效混音。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=至少有一条 live 音频轨
-     */
-  }, {
-    key: "hasLiveAudioTrack",
-    value: function hasLiveAudioTrack(source) {
-      var stream = this.getStream(source);
-      return Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().some(function (track) {
-        return track.readyState === 'live';
-      }));
-    }
-
-    /**
-     * 检测某路源是否有视频轨（不判断 readyState）。
-     * readyState 在绘制阶段才判断，刚加入但尚未出帧的源仍保留在布局中。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=至少有一条视频轨
-     */
-  }, {
-    key: "hasVideoTrack",
-    value: function hasVideoTrack(source) {
-      var stream = this.getStream(source);
-      return Boolean(stream && stream.getVideoTracks && stream.getVideoTracks().length > 0);
-    }
-
-    /**
-     * 判断某路源当前是否可渲染。
-     * 条件：stream 存在且 active，并且有视频轨。
-     * 具体的视频帧是否能绘制由 video.readyState 在渲染阶段判断。
-     *
-     * @param {Object} source - 内部 source 对象
-     * @returns {boolean} true=可渲染
-     */
-  }, {
-    key: "isRenderable",
-    value: function isRenderable(source) {
-      var stream = this.getStream(source);
-      return Boolean(stream && stream.active && this.hasVideoTrack(source));
-    }
-
-    /**
-     * 判断对象是否具备 MediaStream 的基本接口。
-     *
-     * 这个私有方法会被构建脚本收集到保留名单里，避免压缩产物把调用点和定义名拆开。
-     *
-     * @param {*} stream - 待校验对象
-     * @returns {boolean} true=满足 MediaStream 基本接口
-     */
-  }, {
-    key: "_isMediaStreamLike",
-    value: function _isMediaStreamLike(stream) {
-      return Boolean(stream && typeof stream.getTracks === 'function' && typeof stream.getAudioTracks === 'function' && typeof stream.getVideoTracks === 'function');
-    }
-
-    /**
-     * 创建一个内部 source 对象。
-     *
-     * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
-     * @param {Object} options - 配置 { slot, gain }
-     * @returns {Object} source 对象
-     * @throws {TypeError} 无效的 MediaStream
-     */
-  }, {
-    key: "_createSource",
-    value: function _createSource(input, options) {
-      var video;
-      var stream;
-      var ownedVideo = false;
-      if (input instanceof HTMLMediaElement) {
-        // 外部传入的 video 元素，混流器不接管生命周期
-        video = input;
-        stream = input.srcObject;
-      } else {
-        // MediaStream 或 { mediaStream } 包装，内部创建隐藏 video
-        stream = input && (input.mediaStream || input);
-        if (!this._isMediaStreamLike(stream)) {
-          throw new TypeError('Invalid MediaStream.');
-        }
-        video = this._createVideoElement(stream);
-        ownedVideo = true;
-      }
-      var source = {
-        id: this._createSourceId(stream, video),
-        stream: stream,
-        video: video,
-        slot: typeof options.slot === 'number' ? options.slot : null,
-        gain: this._normalizeGain(options.gain, this._getDefaultGain()),
-        audioSourceNode: null,
-        // WebAudio 源节点（由 AudioMixer 连接时赋值）
-        masterGainNode: null,
-        // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
-        gainNode: null,
-        // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
-        outputGains: new Set(),
-        // 该源所有下游 gain，用于后续音量同步和安全清理
-        audioStream: null,
-        // 当前已连接的音频流引用
-        audioTrackId: null,
-        // 当前已连接的音频轨 id，用于判断是否真正换轨
-        audioTrackSignature: null,
-        // 音频轨身份签名（track 对象 + id）
-        ownedVideo: ownedVideo
-      };
-
-      // 未指定 slot 时自动分配最小编号空闲 slot
-      if (source.slot === null) {
-        source.slot = this._getNextSlot();
-      }
-      if (this._logger) {
-        var streamId = stream && stream.id ? stream.id : 'unknown';
-        this._logger.debug("Source created: id=".concat(source.id, " stream=").concat(streamId, " slot=").concat(source.slot, " ownedVideo=").concat(ownedVideo));
-      }
-      return source;
-    }
-
-    /**
-     * 为 source 生成唯一 ID。
-     * 优先使用 stream.id，冲突时追加自增序号确保唯一。
-     *
-     * @param {MediaStream} stream - 关联的 MediaStream
-     * @param {HTMLVideoElement} video - 关联的 video 元素
-     * @returns {string} 唯一 ID
-     */
-  }, {
-    key: "_createSourceId",
-    value: function _createSourceId(stream, video) {
-      var baseId = stream && stream.id || video.id || "mixer-source-".concat(this._sourceSeq + 1);
-      var sourceId = baseId;
-      while (this.sources.some(function (source) {
-        return source.id === sourceId;
-      })) {
-        this._sourceSeq += 1;
-        sourceId = "".concat(baseId, "-").concat(this._sourceSeq);
-      }
-      return sourceId;
-    }
-
-    /**
-     * 获取当前最小编号的空闲 slot。
-     * 从 0 开始递增查找，跳过已被占用的 slot 编号。
-     *
-     * @returns {number} 可用的 slot 编号
-     */
-  }, {
-    key: "_getNextSlot",
-    value: function _getNextSlot() {
-      var slot = 0;
-      var occupiedSlots = this.sources.reduce(function (slots, source) {
-        if (typeof source.slot === 'number') {
-          slots[source.slot] = true;
-        }
-        return slots;
-      }, {});
-      while (occupiedSlots[slot]) {
-        slot += 1;
-      }
-      return slot;
-    }
-
-    /**
-     * 将 sources 数组中的 video 元素同步到 videos 数组。
-     * 外部代码通过 this.videos 即可遍历所有 video 元素。
-     */
-  }, {
-    key: "_syncVideos",
-    value: function _syncVideos() {
-      var _this5 = this;
-      this.videos.splice(0, this.videos.length);
-      this.sources.forEach(function (source) {
-        _this5.videos.push(source.video);
-      });
-      if (this._logger) {
-        this._logger.debug("Videos synced: sources=".concat(this.sources.length, " videos=").concat(this.videos.length));
-      }
-    }
-  }]);
-}();
-module.exports = SourceRegistry;
-},{}],80:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * WatermarkManager — Mixer 水印配置、加载和布局模块
- *
- * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
- * 或每路 source 的 draw 区域计算最终绘制矩形。
- *
- * @module WatermarkManager
- */
-
-var DEFAULT_TEXT_COLOR = '#fff';
-var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
-var DEFAULT_FONT_SIZE = 28;
-var DEFAULT_PADDING = 3;
-var DEFAULT_BACKGROUND_RADIUS = 3;
-var DEFAULT_MARGIN = 16;
-var WatermarkManager = /*#__PURE__*/function () {
-  /**
-   * @param {Object} options
-   * @param {Object} options.logger - 日志记录器
-   */
-  function WatermarkManager(options) {
-    _classCallCheck(this, WatermarkManager);
-    options = options || {};
-    this._logger = options.logger;
-    this._watermarks = [];
-    this._seq = 0;
-    if (this._logger) {
-      this._logger.debug('WatermarkManager constructed');
-    }
-  }
-
-  /**
-   * 替换全部水印。图片 URL 会异步加载，加载失败只更新状态，不中断混流。
-   *
-   * @param {Array<Object>|Object|null} watermarks - 水印配置
-   * @returns {Promise<Array<Object>>} 当前水印快照
-   */
-  return _createClass(WatermarkManager, [{
-    key: "setWatermarks",
-    value: function setWatermarks(watermarks) {
-      var _this = this;
-      var list = this._normalizeWatermarkList(watermarks);
-      if (this._logger) {
-        this._logger.debug("Setting watermarks: count=".concat(list.length));
-      }
-      this._watermarks = list.map(function (watermark) {
-        return _this._normalizeWatermark(watermark);
-      });
-      var loads = this._watermarks.map(function (watermark) {
-        return _this._prepareWatermark(watermark);
-      });
-      return Promise.all(loads).then(function () {
-        return _this.getWatermarks();
-      });
-    }
-
-    /**
-     * 按条件清除水印。不传 filter 时清空全部。
-     *
-     * @param {Object} [filter] - { id, target, slot, sourceId, streamId }
-     */
-  }, {
-    key: "clearWatermarks",
-    value: function clearWatermarks(filter) {
-      var _this2 = this;
-      if (this._logger) {
-        this._logger.debug("Clearing watermarks: filter=".concat(JSON.stringify(filter || null)));
-      }
-      if (!filter) {
-        this._watermarks = [];
-        return;
-      }
-      this._watermarks = this._watermarks.filter(function (watermark) {
-        return !_this2._matchesFilter(watermark, filter);
-      });
-    }
-
-    /**
-     * 返回当前水印只读快照。
-     *
-     * @returns {Array<Object>} 水印状态列表
-     */
-  }, {
-    key: "getWatermarks",
-    value: function getWatermarks() {
-      return this._watermarks.map(function (watermark) {
-        return {
-          id: watermark.id,
-          target: watermark.target,
-          type: watermark.type,
-          text: watermark.text,
-          slot: watermark.slot,
-          sourceId: watermark.sourceId,
-          streamId: watermark.streamId,
-          position: clonePosition(watermark.position),
-          opacity: watermark.opacity,
-          width: watermark.width,
-          height: watermark.height,
-          fontSize: watermark.fontSize,
-          color: watermark.color,
-          backgroundColor: watermark.backgroundColor,
-          padding: watermark.padding,
-          backgroundRadius: watermark.backgroundRadius,
-          margin: watermark.margin,
-          status: watermark.status,
-          reason: watermark.reason
-        };
-      });
-    }
-
-    /**
-     * 根据当前渲染 payload 计算 output/source 两类水印绘制项。
-     *
-     * @param {Object} payload - { width, height, items }
-     * @returns {Object} { sourceWatermarks, outputWatermarks }
-     */
-  }, {
-    key: "createRenderItems",
-    value: function createRenderItems(payload) {
-      var _this3 = this;
-      payload = payload || {};
-      var outputArea = {
-        x: 0,
-        y: 0,
-        width: payload.width || 1,
-        height: payload.height || 1
-      };
-      var sourceWatermarks = [];
-      var outputWatermarks = [];
-      this._watermarks.forEach(function (watermark) {
-        if (watermark.status !== 'ready' || !watermark.image) {
-          return;
-        }
-        if (watermark.target === 'source') {
-          (payload.items || []).forEach(function (item) {
-            if (!_this3._matchesSource(watermark, item)) {
-              return;
-            }
-            sourceWatermarks.push(_this3._createDrawItem(watermark, item.draw, item));
-          });
-          return;
-        }
-        outputWatermarks.push(_this3._createDrawItem(watermark, outputArea, null));
-      });
-      return {
-        sourceWatermarks: sourceWatermarks.filter(Boolean),
-        outputWatermarks: outputWatermarks.filter(Boolean)
-      };
-    }
-  }, {
-    key: "_normalizeWatermarkList",
-    value: function _normalizeWatermarkList(watermarks) {
-      if (!watermarks) {
-        return [];
-      }
-      if (watermarks instanceof Array) {
-        return watermarks;
-      }
-      return [watermarks];
-    }
-  }, {
-    key: "_normalizeWatermark",
-    value: function _normalizeWatermark(input) {
-      input = input || {};
-      var type = input.type === 'image' || input.image ? 'image' : 'text';
-      var target = input.target === 'source' ? 'source' : 'output';
-      var id = typeof input.id === 'string' && input.id ? input.id : "watermark-".concat(++this._seq);
-      var fontSize = normalizePositiveInteger(input.fontSize, DEFAULT_FONT_SIZE);
-      var backgroundRadiusInput = input.backgroundRadius !== undefined ? input.backgroundRadius : input.borderRadius;
-      return {
-        id: id,
-        target: target,
-        type: type,
-        text: typeof input.text === 'string' ? input.text : '',
-        imageInput: input.image || null,
-        image: null,
-        slot: normalizeSlot(input.slot),
-        sourceId: typeof input.sourceId === 'string' ? input.sourceId : null,
-        streamId: typeof input.streamId === 'string' ? input.streamId : null,
-        position: normalizePosition(input.position),
-        width: normalizePositiveInteger(input.width, null),
-        height: normalizePositiveInteger(input.height, null),
-        font: typeof input.font === 'string' && input.font ? input.font : null,
-        fontSize: fontSize,
-        color: typeof input.color === 'string' ? input.color : DEFAULT_TEXT_COLOR,
-        backgroundColor: typeof input.backgroundColor === 'string' ? input.backgroundColor : DEFAULT_TEXT_BACKGROUND,
-        opacity: normalizeOpacity(input.opacity),
-        padding: normalizeNonNegativeInteger(input.padding, DEFAULT_PADDING),
-        backgroundRadius: normalizeNonNegativeInteger(backgroundRadiusInput, DEFAULT_BACKGROUND_RADIUS),
-        margin: normalizeNonNegativeInteger(input.margin, DEFAULT_MARGIN),
-        status: 'pending',
-        reason: ''
-      };
-    }
-  }, {
-    key: "_prepareWatermark",
-    value: function _prepareWatermark(watermark) {
-      if (this._logger) {
-        this._logger.debug("Preparing watermark: id=".concat(watermark.id, " type=").concat(watermark.type, " target=").concat(watermark.target));
-      }
-      if (watermark.type === 'image') {
-        return this._prepareImageWatermark(watermark);
-      }
-      watermark.image = this._createTextSurface(watermark);
-      watermark.status = watermark.image ? 'ready' : 'error';
-      watermark.reason = watermark.image ? '' : 'Canvas is unavailable';
-      return Promise.resolve(watermark);
-    }
-  }, {
-    key: "_prepareImageWatermark",
-    value: function _prepareImageWatermark(watermark) {
-      var _this4 = this;
-      var image = watermark.imageInput;
-      if (!image) {
-        watermark.status = 'error';
-        watermark.reason = 'Missing image';
-        return Promise.resolve(watermark);
-      }
-      if (typeof image === 'string') {
-        if (this._logger) {
-          this._logger.debug("Loading watermark image: id=".concat(watermark.id, " url=").concat(image));
-        }
-        return this._loadImage(image).then(function (loadedImage) {
-          watermark.image = loadedImage;
-          watermark.status = 'ready';
-          watermark.reason = '';
-          return watermark;
-        })["catch"](function (error) {
-          watermark.status = 'error';
-          watermark.reason = error.message || String(error);
-          if (_this4._logger) {
-            _this4._logger.warn("Watermark image failed to load: ".concat(watermark.reason));
-          }
-          return watermark;
-        });
-      }
-      watermark.image = image;
-      watermark.status = 'ready';
-      watermark.reason = '';
-      if (this._logger) {
-        this._logger.debug("Watermark image prepared from element: id=".concat(watermark.id));
-      }
-      return Promise.resolve(watermark);
-    }
-  }, {
-    key: "_loadImage",
-    value: function _loadImage(url) {
-      return new Promise(function (resolve, reject) {
-        if (typeof Image === 'undefined') {
-          reject(new Error('Image constructor is unavailable'));
-          return;
-        }
-        var image = new Image();
-        image.crossOrigin = 'anonymous';
-        image.onload = function () {
-          return resolve(image);
-        };
-        image.onerror = function () {
-          return reject(new Error("Failed to load image: ".concat(url)));
-        };
-        image.src = url;
-      });
-    }
-  }, {
-    key: "_createTextSurface",
-    value: function _createTextSurface(watermark) {
-      if (typeof document === 'undefined' || !document.createElement) {
-        return null;
-      }
-      var canvas = document.createElement('canvas');
-      var context = canvas.getContext && canvas.getContext('2d');
-      if (!context) {
-        return null;
-      }
-      var text = watermark.text || '';
-      var font = watermark.font || "bold ".concat(watermark.fontSize, "px sans-serif");
-      context.font = font;
-      var metrics = context.measureText ? context.measureText(text) : null;
-      var measured = metrics ? metrics.width : text.length * watermark.fontSize * 0.6;
-      var ascent = metrics && Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : watermark.fontSize * 0.8;
-      var descent = metrics && Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : watermark.fontSize * 0.25;
-      var width = Math.max(1, Math.ceil(measured + watermark.padding * 2));
-      var height = Math.max(1, Math.ceil(ascent + descent + watermark.padding * 2));
-      canvas.width = width;
-      canvas.height = height;
-      context.font = font;
-      context.textBaseline = 'alphabetic';
-      context.textAlign = 'left';
-      if (watermark.backgroundColor) {
-        context.fillStyle = watermark.backgroundColor;
-        fillRoundedRect(context, 0, 0, width, height, watermark.backgroundRadius);
-      }
-      context.fillStyle = watermark.color;
-      if (context.fillText) {
-        context.fillText(text, watermark.padding, watermark.padding + ascent);
-      }
-      return canvas;
-    }
-  }, {
-    key: "_createDrawItem",
-    value: function _createDrawItem(watermark, area, sourceItem) {
-      if (!area || !watermark.image) {
-        return null;
-      }
-      var imageWidth = watermark.image.width || watermark.image.videoWidth || 1;
-      var imageHeight = watermark.image.height || watermark.image.videoHeight || 1;
-      var size = this._resolveSize(watermark, imageWidth, imageHeight);
-      var draw = this._resolveDrawRect(watermark, area, size.width, size.height);
-      if (!draw || draw.width <= 0 || draw.height <= 0) {
-        return null;
-      }
-      return {
-        id: watermark.id,
-        target: watermark.target,
-        type: watermark.type,
-        image: watermark.image,
-        opacity: watermark.opacity,
-        draw: draw,
-        sourceId: sourceItem ? sourceItem.id : null,
-        slot: sourceItem ? sourceItem.slot : null,
-        streamId: sourceItem ? sourceItem.streamId : null
-      };
-    }
-  }, {
-    key: "_resolveSize",
-    value: function _resolveSize(watermark, imageWidth, imageHeight) {
-      var width = watermark.width;
-      var height = watermark.height;
-      if (width && !height) {
-        height = width * imageHeight / imageWidth;
-      } else if (!width && height) {
-        width = height * imageWidth / imageHeight;
-      } else if (!width && !height) {
-        width = imageWidth;
-        height = imageHeight;
-      }
-      return {
-        width: Math.max(1, width),
-        height: Math.max(1, height)
-      };
-    }
-  }, {
-    key: "_resolveDrawRect",
-    value: function _resolveDrawRect(watermark, area, width, height) {
-      var position = watermark.position;
-      var x;
-      var y;
-      if (position && _typeof(position) === 'object') {
-        x = area.x + position.x;
-        y = area.y + position.y;
-      } else {
-        var margin = watermark.margin;
-        switch (position) {
-          case 'top-left':
-            x = area.x + margin;
-            y = area.y + margin;
-            break;
-          case 'top-center':
-            x = area.x + (area.width - width) / 2;
-            y = area.y + margin;
-            break;
-          case 'top-right':
-            x = area.x + area.width - width - margin;
-            y = area.y + margin;
-            break;
-          case 'bottom-left':
-            x = area.x + margin;
-            y = area.y + area.height - height - margin;
-            break;
-          case 'bottom-center':
-            x = area.x + (area.width - width) / 2;
-            y = area.y + area.height - height - margin;
-            break;
-          case 'center':
-            x = area.x + (area.width - width) / 2;
-            y = area.y + (area.height - height) / 2;
-            break;
-          case 'bottom-right':
-          default:
-            x = area.x + area.width - width - margin;
-            y = area.y + area.height - height - margin;
-            break;
-        }
-      }
-      return {
-        x: Math.round(x),
-        y: Math.round(y),
-        width: Math.round(width),
-        height: Math.round(height)
-      };
-    }
-  }, {
-    key: "_matchesSource",
-    value: function _matchesSource(watermark, item) {
-      if (!item) {
-        return false;
-      }
-      if (watermark.sourceId) {
-        return watermark.sourceId === item.id;
-      }
-      if (watermark.streamId) {
-        return watermark.streamId === item.streamId;
-      }
-      if (typeof watermark.slot === 'number') {
-        return watermark.slot === item.slot;
-      }
-      return true;
-    }
-  }, {
-    key: "_matchesFilter",
-    value: function _matchesFilter(watermark, filter) {
-      if (filter.id !== undefined && watermark.id !== filter.id) {
-        return false;
-      }
-      if (filter.target !== undefined && watermark.target !== filter.target) {
-        return false;
-      }
-      if (filter.slot !== undefined && watermark.slot !== filter.slot) {
-        return false;
-      }
-      if (filter.sourceId !== undefined && watermark.sourceId !== filter.sourceId) {
-        return false;
-      }
-      if (filter.streamId !== undefined && watermark.streamId !== filter.streamId) {
-        return false;
-      }
-      return true;
-    }
-  }]);
-}();
-function normalizePositiveInteger(value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue > 0) {
-    return Math.floor(numberValue);
-  }
-  return fallback;
-}
-function normalizeNonNegativeInteger(value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return Math.floor(numberValue);
-  }
-  return fallback;
-}
-function normalizeOpacity(value) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue)) {
-    return Math.min(1, Math.max(0, numberValue));
-  }
-  return 1;
-}
-function normalizeSlot(value) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return Math.floor(numberValue);
-  }
-  return null;
-}
-function normalizePosition(value) {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (value && _typeof(value) === 'object') {
-    var x = Number(value.x);
-    var y = Number(value.y);
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      return {
-        x: x,
-        y: y
-      };
-    }
-  }
-  return 'bottom-right';
-}
-function clonePosition(position) {
-  if (position && _typeof(position) === 'object') {
-    return {
-      x: position.x,
-      y: position.y
-    };
-  }
-  return position;
-}
-function fillRoundedRect(context, x, y, width, height, radius) {
-  var safeRadius = Math.max(0, Math.min(radius || 0, width / 2, height / 2));
-  if (!safeRadius || typeof context.beginPath !== 'function') {
-    context.fillRect(x, y, width, height);
-    return;
-  }
-  if (typeof context.roundRect === 'function') {
-    context.beginPath();
-    context.roundRect(x, y, width, height, safeRadius);
-    context.fill();
-    return;
-  }
-  context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.lineTo(x + width - safeRadius, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
-  context.lineTo(x + width, y + height - safeRadius);
-  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
-  context.lineTo(x + safeRadius, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
-  context.lineTo(x, y + safeRadius);
-  context.quadraticCurveTo(x, y, x + safeRadius, y);
-  context.closePath();
-  context.fill();
-}
-module.exports = WatermarkManager;
-},{}],81:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/**
- * BaseRenderer — 渲染器基类
- *
- * 定义所有渲染后端的统一接口。
- * 渲染器只负责把 Mixer 算好的布局 payload 绘制到 canvas，
- * 不关心源管理、布局计算、音频混音等业务逻辑。
- *
- * 子类必须实现：
- *   - init(canvas)    — 初始化渲染上下文
- *   - render(payload) — 绘制一帧
- * 可选覆盖：
- *   - resize(w, h)    — 调整输出尺寸
- *   - removeSource(id) — 释放指定源的 GPU 资源
- *   - destroy()       — 销毁所有资源
- *
- * @module BaseRenderer
- */
-module.exports = /*#__PURE__*/function () {
-  /**
-   * @param {Object} config - 混流配置（来自 MixerConfig）
-   * @param {string} [config.renderMode] - 请求的渲染模式
-   * @param {number} [config.fps] - 目标帧率
-   * @param {number} [config.width] - 输出宽度
-   * @param {number} [config.height] - 输出高度
-   * @param {Object} [info] - 渲染器元信息（子类传入，覆盖基类默认值）
-   * @param {string} [info.requestedMode] - 请求的渲染模式
-   * @param {string} [info.actualMode] - 实际使用的渲染模式
-   * @param {boolean} [info.isWorker] - 是否在 Worker 中运行
-   * @param {boolean} [info.isWebGL2] - 是否使用 WebGL2
-   * @param {boolean} [info.isFallback] - 是否为降级路径
-   * @param {string} [info.reason] - 降级/失败原因描述
-   */
-  function BaseRenderer(config, info) {
-    _classCallCheck(this, BaseRenderer);
-    this._config = config || {};
-    this._info = Object.assign({
-      requestedMode: this._config.renderMode || 'main-2d',
-      actualMode: 'unknown',
-      isWorker: false,
-      isWebGL2: false,
-      isFallback: false,
-      reason: '',
-      droppedFrames: 0,
-      renderedFrames: 0,
-      fps: this._config.fps || null,
-      width: this._config.width || null,
-      height: this._config.height || null
-    }, info || {});
-  }
-
-  /**
-   * 初始化渲染上下文。
-   * 子类在此获取 canvas context、编译 shader 等。
-   *
-   * @param {HTMLCanvasElement} canvas - 输出 canvas
-   * @returns {boolean} true=初始化成功
-   */
-  return _createClass(BaseRenderer, [{
-    key: "init",
-    value: function init() {
-      return true;
-    }
-
-    /**
-     * 绘制一帧到 canvas。
-     *
-     * @param {Object} payload - 布局数据（由 LayoutEngine.createRenderPayload 生成）
-     * @param {number} payload.width - 画布宽度
-     * @param {number} payload.height - 画布高度
-     * @param {string} payload.backgroundColor - 背景色
-     * @param {Array<Object>} payload.items - 每路视频的绘制信息
-     */
-  }, {
-    key: "render",
-    value: function render() {}
-
-    /**
-     * 调整输出画布尺寸。
-     *
-     * @param {number} width - 新宽度
-     * @param {number} height - 新高度
-     */
-  }, {
-    key: "resize",
-    value: function resize(width, height) {
-      this._info.width = width;
-      this._info.height = height;
-    }
-
-    /**
-     * 移除一路源的 GPU 资源（如 WebGL 纹理）。
-     * Worker 渲染器会将此操作转发到 Worker 线程。
-     *
-     * @param {string} id - 源 ID
-     */
-  }, {
-    key: "removeSource",
-    value: function removeSource() {}
-
-    /**
-     * 销毁渲染器，释放所有 GPU 资源和上下文引用。
-     */
-  }, {
-    key: "destroy",
-    value: function destroy() {}
-
-    /**
-     * 获取渲染器运行时信息快照。
-     * 返回副本，外部修改不影响内部状态。
-     *
-     * @returns {Object} 渲染状态信息
-     */
-  }, {
-    key: "getInfo",
-    value: function getInfo() {
-      return Object.assign({}, this._info);
-    }
-
-    /**
-     * 更新运行时信息（仅内部使用，子类调用）。
-     *
-     * @param {Object} info - 要更新的字段
-     */
-  }, {
-    key: "_updateInfo",
-    value: function _updateInfo(info) {
-      Object.assign(this._info, info || {});
-    }
-  }]);
-}();
-},{}],82:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
-function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
-function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
-function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
-function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
-function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
-function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-/**
- * MainCanvas2DRenderer — 主线程 Canvas2D 渲染器
- *
- * 最基础的渲染路径，依赖 CanvasRenderingContext2D.drawImage() 将
- * 各路视频绘制到输出 canvas。所有更高性能路径初始化失败时都会降级到这里。
- *
- * 特点：
- *   - 兼容性最好，所有支持 Canvas 的浏览器均可使用
- *   - 性能依赖浏览器 Canvas2D 实现的硬件加速能力
- *   - 行为与旧版 Mixer drawImage 逻辑一致，作为稳定兜底
- *
- * @module MainCanvas2DRenderer
- */
-var BaseRenderer = require('./BaseRenderer');
-module.exports = /*#__PURE__*/function (_BaseRenderer) {
-  /**
-   * @param {Object} config - 混流配置
-   * @param {Object} info - 渲染器元信息
-   */
-  function MainCanvas2DRenderer(config, info) {
-    var _this;
-    _classCallCheck(this, MainCanvas2DRenderer);
-    _this = _callSuper(this, MainCanvas2DRenderer, [config, Object.assign({
-      actualMode: 'main-2d',
-      isWorker: false,
-      isWebGL2: false
-    }, info || {})]);
-
-    /** @type {HTMLCanvasElement|null} 输出 canvas */
-    _this._canvas = null;
-
-    /** @type {CanvasRenderingContext2D|null} Canvas2D 上下文 */
-    _this._context = null;
-    return _this;
-  }
-
-  /**
-   * 初始化 Canvas2D 渲染上下文。
-   *
-   * @param {HTMLCanvasElement} canvas - 输出 canvas
-   * @returns {boolean} true=初始化成功
-   * @throws {Error} Canvas2D context 不可用时抛出
-   */
-  _inherits(MainCanvas2DRenderer, _BaseRenderer);
-  return _createClass(MainCanvas2DRenderer, [{
-    key: "init",
-    value: function init(canvas) {
-      this._canvas = canvas;
-      this._context = canvas.getContext('2d', {
-        alpha: false
-      }) || canvas.getContext('2d');
-      if (!this._context) {
-        throw new Error('Canvas2D context is not available');
-      }
-      this.resize(canvas.width, canvas.height);
-      return true;
-    }
-
-    /**
-     * 调整输出尺寸，同步更新 canvas 元素的宽高。
-     * 只在尺寸真正变化时赋值，避免触发不必要的重绘。
-     *
-     * @param {number} width - 新宽度
-     * @param {number} height - 新高度
-     */
-  }, {
-    key: "resize",
-    value: function resize(width, height) {
-      _superPropGet(MainCanvas2DRenderer, "resize", this, 3)([width, height]);
-      if (!this._canvas) {
-        return;
-      }
-      if (this._canvas.width !== width) {
-        this._canvas.width = width;
-      }
-      if (this._canvas.height !== height) {
-        this._canvas.height = height;
-      }
-    }
-
-    /**
-     * 绘制一帧到 canvas。
-     *
-     * 流程：
-     *   1. 调整 canvas 尺寸到 payload 尺寸
-     *   2. 填充背景色，覆盖上一帧残留
-     *   3. 遍历 items，按 draw 矩形依次调用 drawImage
-     *
-     * @param {Object} payload - 布局数据
-     */
-  }, {
-    key: "render",
-    value: function render(payload) {
-      var _this2 = this;
-      if (!this._context || !payload) {
-        return;
-      }
-      this.resize(payload.width, payload.height);
-
-      // 每帧先铺背景色，确保源减少、slot 覆盖或 contain 留边时不会残留上一帧内容
-      this._context.fillStyle = payload.backgroundColor || '#000';
-      this._context.fillRect(0, 0, payload.width, payload.height);
-      payload.items.forEach(function (item) {
-        if (!item.video || item.video.readyState < 2) {
-          return;
-        }
-        _this2._context.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
-      });
-      this._drawWatermarks(payload.sourceWatermarks);
-      this._drawWatermarks(payload.outputWatermarks);
-      this._info.renderedFrames += 1;
-    }
-
-    /**
-     * 绘制水印列表。
-     *
-     * @param {Array<Object>} watermarks - 水印绘制项
-     */
-  }, {
-    key: "_drawWatermarks",
-    value: function _drawWatermarks(watermarks) {
-      var _this3 = this;
-      if (!this._context) {
-        return;
-      }
-      (watermarks || []).forEach(function (watermark) {
-        if (!watermark.image || !watermark.draw) {
-          return;
-        }
-        var previousAlpha = typeof _this3._context.globalAlpha === 'number' ? _this3._context.globalAlpha : 1;
-        _this3._context.globalAlpha = watermark.opacity;
-        _this3._context.drawImage(watermark.image, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
-        _this3._context.globalAlpha = previousAlpha;
-      });
-    }
-
-    /**
-     * 销毁渲染器，清除 canvas 内容并释放上下文引用。
-     */
-  }, {
-    key: "destroy",
-    value: function destroy() {
-      if (this._context && this._canvas) {
-        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
-      }
-      this._context = null;
-      this._canvas = null;
-    }
-  }]);
-}(BaseRenderer);
-},{"./BaseRenderer":81}],83:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
-function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
-function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
-function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
-function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
-function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
-function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-/**
- * MainWebGL2Renderer — 主线程 WebGL2 渲染器
- *
- * 使用 WebGL2 将各路视频帧上传为纹理，通过 GPU shader 合成输出。
- * 相比 Canvas2D 路径，缩放和合成由 GPU 处理，通常在高分辨率或多路源时更稳定。
- *
- * 适用场景：
- *   - Safari / WKWebView：Worker + WebGL2 不稳定时，主线程 WebGL2 作为中间方案
- *   - 需要 GPU 加速但又无法使用 Worker 的环境
- *
- * @module MainWebGL2Renderer
- */
-var BaseRenderer = require('./BaseRenderer');
-var glHelpers = require('./helpers/gl');
-var colorHelper = require('./helpers/color');
-var VERTEX_SHADER = "#version 300 es\nin vec2 a_position;\nin vec2 a_texCoord;\nout vec2 v_texCoord;\nvoid main()\n{\n  gl_Position = vec4(a_position, 0.0, 1.0);\n  v_texCoord = a_texCoord;\n}";
-var FRAGMENT_SHADER = "#version 300 es\nprecision highp float;\nin vec2 v_texCoord;\nuniform sampler2D u_texture;\nout vec4 outColor;\nvoid main()\n{\n  outColor = texture(u_texture, v_texCoord);\n}";
-module.exports = /*#__PURE__*/function (_BaseRenderer) {
-  /**
-   * @param {Object} config - 混流配置
-   * @param {Object} info - 渲染器元信息
-   */
-  function MainWebGL2Renderer(config, info) {
-    var _this;
-    _classCallCheck(this, MainWebGL2Renderer);
-    _this = _callSuper(this, MainWebGL2Renderer, [config, Object.assign({
-      actualMode: 'main-webgl2',
-      isWorker: false,
-      isWebGL2: true
-    }, info || {})]);
-
-    /** @type {HTMLCanvasElement|null} 输出 canvas */
-    _this._canvas = null;
-
-    /** @type {WebGL2RenderingContext|null} WebGL2 上下文 */
-    _this._gl = null;
-
-    /** @type {WebGLProgram|null} 合成用的 WebGL program */
-    _this._program = null;
-
-    /** @type {WebGLBuffer|null} 全屏四边形顶点 buffer */
-    _this._positionBuffer = null;
-
-    /** @type {WebGLBuffer|null} 纹理坐标 buffer */
-    _this._texCoordBuffer = null;
-
-    /** @type {Object<string, WebGLTexture>} 每个源对应的纹理对象缓存 */
-    _this._textures = {};
-
-    /** @type {Object<string, WebGLTexture>} 每个水印对应的纹理对象缓存 */
-    _this._watermarkTextures = {};
-    return _this;
-  }
-
-  /**
-   * 初始化 WebGL2 上下文并编译 shader program。
-   *
-   * @param {HTMLCanvasElement} canvas - 输出 canvas
-   * @returns {boolean} true=初始化成功
-   * @throws {Error} WebGL2 context 不可用时抛出
-   */
-  _inherits(MainWebGL2Renderer, _BaseRenderer);
-  return _createClass(MainWebGL2Renderer, [{
-    key: "init",
-    value: function init(canvas) {
-      this._canvas = canvas;
-      this._gl = canvas.getContext('webgl2', {
-        alpha: false,
-        antialias: false,
-        preserveDrawingBuffer: Boolean(this._config.preserveDrawingBuffer),
-        powerPreference: 'high-performance'
-      });
-      if (!this._gl) {
-        throw new Error('WebGL2 context is not available');
-      }
-      this._setupProgram();
-      this.resize(canvas.width, canvas.height);
-      return true;
-    }
-
-    /**
-     * 编译 shader、链接 program、创建全屏四边形顶点数据。
-     * 顶点覆盖 [-1, 1] 范围，纹理坐标对应 [0, 1]。
-     */
-  }, {
-    key: "_setupProgram",
-    value: function _setupProgram() {
-      var gl = this._gl;
-      var vertexShader = glHelpers.compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
-      var fragmentShader = glHelpers.compileShader(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-      this._program = glHelpers.createProgram(gl, vertexShader, fragmentShader);
-      gl.deleteShader(vertexShader);
-      gl.deleteShader(fragmentShader);
-
-      // 全屏四边形：两个三角形组成一个矩形，覆盖整个裁剪空间
-      this._positionBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-      this._texCoordBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._texCoordBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
-      gl.useProgram(this._program);
-      this._enableAttribute('a_position', this._positionBuffer);
-      this._enableAttribute('a_texCoord', this._texCoordBuffer);
-      gl.uniform1i(gl.getUniformLocation(this._program, 'u_texture'), 0);
-    }
-
-    /**
-     * 启用顶点 attribute 并绑定 buffer。
-     *
-     * @param {string} name - shader 中 attribute 变量名
-     * @param {WebGLBuffer} buffer - 已填充数据的 buffer
-     */
-  }, {
-    key: "_enableAttribute",
-    value: function _enableAttribute(name, buffer) {
-      var gl = this._gl;
-      var location = gl.getAttribLocation(this._program, name);
-      gl.enableVertexAttribArray(location);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
-    }
-
-    /**
-     * 调整输出尺寸，同步更新 canvas 元素尺寸。
-     *
-     * @param {number} width - 新宽度
-     * @param {number} height - 新高度
-     */
-  }, {
-    key: "resize",
-    value: function resize(width, height) {
-      _superPropGet(MainWebGL2Renderer, "resize", this, 3)([width, height]);
-      if (!this._canvas) {
-        return;
-      }
-      if (this._canvas.width !== width) {
-        this._canvas.width = width;
-      }
-      if (this._canvas.height !== height) {
-        this._canvas.height = height;
-      }
-    }
-
-    /**
-     * 绘制一帧到 canvas。
-     *
-     * 流程：
-     *   1. 调整尺寸，清空背景色
-     *   2. 遍历 items，将每路视频帧上传到对应的纹理
-     *   3. 通过 gl.viewport 裁剪到每个 item 的绘制区域后提交绘制
-     *
-     * 纹理坐标说明：HTMLVideoElement 像素原点在左上角，WebGL 纹理坐标原点在左下角，
-     * 上传时通过 UNPACK_FLIP_Y_WEBGL 翻转，与 Worker WebGL2 路径保持一致。
-     *
-     * @param {Object} payload - 布局数据
-     */
-  }, {
-    key: "render",
-    value: function render(payload) {
-      var _this2 = this;
-      if (!this._gl || !payload) {
-        return;
-      }
-      var gl = this._gl;
-      var clearColor = colorHelper.parseColor(payload.backgroundColor);
-      this.resize(payload.width, payload.height);
-      gl.useProgram(this._program);
-      gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.disable(gl.BLEND);
-      payload.items.forEach(function (item) {
-        if (!item.video || item.video.readyState < 2) {
-          return;
-        }
-        var texture = _this2._getTexture(item.id);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
-        _this2._drawItem(item, payload.height);
-      });
-      this._drawWatermarks(payload.sourceWatermarks, payload.height);
-      this._drawWatermarks(payload.outputWatermarks, payload.height);
-      gl.flush();
-      this._info.renderedFrames += 1;
-    }
-
-    /**
-     * 获取或创建指定源的 WebGL 纹理。
-     * 纹理使用 CLAMP_TO_EDGE + LINEAR 滤波参数。
-     *
-     * @param {string} id - 源 ID
-     * @returns {WebGLTexture} 纹理对象
-     */
-  }, {
-    key: "_getTexture",
-    value: function _getTexture(id) {
-      if (!this._textures[id]) {
-        this._textures[id] = glHelpers.createVideoTexture(this._gl);
-      }
-      return this._textures[id];
-    }
-
-    /**
-     * 通过 gl.viewport 将全屏四边形裁剪到指定区域后绘制。
-     *
-     * viewport Y 坐标转换：WebGL 原点在左下角，canvas 原点在左上角，
-     * 因此 y = canvasHeight - draw.y - draw.height。
-     *
-     * @param {Object} item - 绘制项
-     * @param {number} item.draw.x - 绘制区域左上角 X
-     * @param {number} item.draw.y - 绘制区域左上角 Y
-     * @param {number} item.draw.width - 绘制区域宽度
-     * @param {number} item.draw.height - 绘制区域高度
-     * @param {number} canvasHeight - 画布总高度
-     */
-  }, {
-    key: "_drawItem",
-    value: function _drawItem(item, canvasHeight) {
-      var gl = this._gl;
-      var draw = item.draw;
-      var viewportX = Math.round(draw.x);
-      var viewportY = Math.round(canvasHeight - draw.y - draw.height);
-      var viewportWidth = Math.round(draw.width);
-      var viewportHeight = Math.round(draw.height);
-      if (viewportWidth <= 0 || viewportHeight <= 0) {
-        return;
-      }
-      gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    }
-
-    /**
-     * 绘制水印列表。
-     *
-     * @param {Array<Object>} watermarks - 水印绘制项
-     * @param {number} canvasHeight - 画布总高度
-     */
-  }, {
-    key: "_drawWatermarks",
-    value: function _drawWatermarks(watermarks, canvasHeight) {
-      var _this3 = this;
-      if (!this._gl || !(watermarks || []).length) {
-        return;
-      }
-      var gl = this._gl;
-      var activeKeys = {};
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      (watermarks || []).forEach(function (watermark) {
-        if (!watermark.image || !watermark.draw) {
-          return;
-        }
-        var key = "".concat(watermark.id, ":").concat(watermark.sourceId || (typeof watermark.slot === 'number' ? watermark.slot : 'output'));
-        var texture = _this3._getWatermarkTexture(key);
-        activeKeys[key] = true;
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.image);
-        _this3._drawItem(watermark, canvasHeight);
-      });
-      gl.disable(gl.BLEND);
-      this._cleanupUnusedWatermarkTextures(activeKeys);
-    }
-
-    /**
-     * 获取或创建指定水印的 WebGL 纹理。
-     *
-     * @param {string} key - 水印纹理 key
-     * @returns {WebGLTexture} 纹理对象
-     */
-  }, {
-    key: "_getWatermarkTexture",
-    value: function _getWatermarkTexture(key) {
-      if (!this._watermarkTextures[key]) {
-        this._watermarkTextures[key] = glHelpers.createVideoTexture(this._gl);
-      }
-      return this._watermarkTextures[key];
-    }
-
-    /**
-     * 清理不再出现的水印纹理。
-     *
-     * @param {Object} activeKeys - 当前帧出现的水印 key
-     */
-  }, {
-    key: "_cleanupUnusedWatermarkTextures",
-    value: function _cleanupUnusedWatermarkTextures(activeKeys) {
-      var _this4 = this;
-      Object.keys(this._watermarkTextures).forEach(function (key) {
-        if (activeKeys[key]) {
-          return;
-        }
-        _this4._gl.deleteTexture(_this4._watermarkTextures[key]);
-        delete _this4._watermarkTextures[key];
-      });
-    }
-
-    /**
-     * 移除一路源的纹理缓存并释放 GPU 资源。
-     *
-     * @param {string} id - 源 ID
-     */
-  }, {
-    key: "removeSource",
-    value: function removeSource(id) {
-      var texture = this._textures[id];
-      if (texture && this._gl) {
-        this._gl.deleteTexture(texture);
-      }
-      delete this._textures[id];
-    }
-
-    /**
-     * 销毁渲染器，释放所有 WebGL 资源。
-     *
-     * 清理步骤：
-     *   1. 删除所有纹理
-     *   2. 删除顶点和纹理坐标 buffer
-     *   3. 删除 shader program
-     *   4. 通过 WEBGL_lose_context 扩展强制释放 GPU 上下文
-     */
-  }, {
-    key: "destroy",
-    value: function destroy() {
-      var _this5 = this;
-      var gl = this._gl;
-      if (!gl) {
-        return;
-      }
-      Object.keys(this._textures).forEach(function (id) {
-        gl.deleteTexture(_this5._textures[id]);
-      });
-      this._textures = {};
-      Object.keys(this._watermarkTextures).forEach(function (id) {
-        gl.deleteTexture(_this5._watermarkTextures[id]);
-      });
-      this._watermarkTextures = {};
-      if (this._positionBuffer) {
-        gl.deleteBuffer(this._positionBuffer);
-      }
-      if (this._texCoordBuffer) {
-        gl.deleteBuffer(this._texCoordBuffer);
-      }
-      if (this._program) {
-        gl.deleteProgram(this._program);
-      }
-      var loseContext = gl.getExtension('WEBGL_lose_context');
-      if (loseContext) {
-        loseContext.loseContext();
-      }
-      this._gl = null;
-      this._program = null;
-      this._canvas = null;
-    }
-  }]);
-}(BaseRenderer);
-},{"./BaseRenderer":81,"./helpers/color":86,"./helpers/gl":87}],84:[function(require,module,exports){
-"use strict";
-
-/**
- * RendererFactory — 渲染器工厂
- *
- * 根据 renderMode 配置选择合适的渲染后端：
- *   - auto: 自动探测最优路径（Worker WebGL2 → 主线程 WebGL2 → Worker Canvas2D → 主线程 Canvas2D）
- *   - worker-webgl2 / worker-2d: Worker 线程渲染
- *   - main-webgl2 / main-2d: 主线程渲染
- *
- * 注意：这是 Mixer 中第一个初始化输出 canvas context 的位置，
- * 不同渲染器需依次尝试，避免 context 抢占（canvas 只能有一个上下文）。
- *
- * @module RendererFactory
- */
-var MainCanvas2DRenderer = require('./MainCanvas2DRenderer');
-var MainWebGL2Renderer = require('./MainWebGL2Renderer');
-var WorkerRenderer = require('./WorkerRenderer');
-
-/**
- * 创建渲染器实例。
- *
- * 自动模式（auto）的尝试顺序：
- *   1. 如果检测到 Safari/WKWebView，优先尝试 main-webgl2（Worker 在这些平台不稳定）
- *   2. 尝试 worker-webgl2（Worker 内 WebGL2）
- *   3. Worker WebGL2 失败 → 尝试 main-webgl2（主线程 WebGL2）
- *   4. Main WebGL2 不可用 → 尝试 worker-2d（Worker Canvas2D）
- *   5. Worker Canvas2D 不可用 → 回退 main-2d（主线程 Canvas2D）
- *
- * @param {HTMLCanvasElement} canvas - 输出 canvas
- * @param {Object} config - 混流配置（含 renderMode）
- * @returns {BaseRenderer} 渲染器实例
- */
-exports.createRenderer = function (canvas, config, hooks) {
-  var mode = config.renderMode || 'auto';
-  var errors = [];
-  hooks = hooks || {};
-  if (mode === 'main-2d') {
-    return createMain2D(canvas, config, false, '');
-  }
-
-  // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
-  if (mode === 'auto' && shouldPreferMainWebGL2()) {
-    try {
-      var renderer = new MainWebGL2Renderer(config, {
-        requestedMode: mode,
-        isFallback: true,
-        reason: 'Safari/WKWebView prefers main-thread WebGL2 because Worker WebGL2 support is limited'
-      });
-      renderer.init(canvas);
-      return renderer;
-    } catch (error) {
-      errors.push(error.message || String(error));
-    }
-  }
-
-  // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
-  // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
-  if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
-    try {
-      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
-      var workerConfig = Object.assign({}, config, {
-        renderMode: workerMode
-      });
-      var _renderer = new WorkerRenderer(workerConfig, {
-        requestedMode: mode,
-        isFallback: false,
-        reason: '',
-        onFatalError: hooks.onWorkerFatalError
-      });
-      _renderer.init(canvas);
-      return _renderer;
-    } catch (error) {
-      errors.push(error.message || String(error));
-
-      // 用户明确要求 Worker 但失败了 → 直接降级到主线程
-      if (mode === 'worker-webgl2' || mode === 'worker-2d') {
-        return createMainFallback(canvas, config, mode, errors.join('; '));
-      }
-    }
-  }
-
-  // 尝试主线程 WebGL2
-  if (mode === 'main-webgl2' || mode === 'auto') {
-    try {
-      var _renderer2 = new MainWebGL2Renderer(config, {
-        requestedMode: mode,
-        isFallback: errors.length > 0,
-        reason: errors.join('; ')
-      });
-      _renderer2.init(canvas);
-      return _renderer2;
-    } catch (error) {
-      errors.push(error.message || String(error));
-    }
-  }
-
-  // 最终兜底：主线程 Canvas2D
-  return createMain2D(canvas, config, errors.length > 0, errors.join('; '));
-};
-
-/**
- * Worker 失败后的主线程降级路径。
- * 先尝试 main-webgl2，再回退到 main-2d。
- *
- * @param {HTMLCanvasElement} canvas
- * @param {Object} config
- * @param {string} requestedMode - 用户请求的模式
- * @param {string} reason - 降级原因
- * @returns {BaseRenderer}
- */
-function createMainFallback(canvas, config, requestedMode, reason) {
-  if (requestedMode !== 'worker-2d') {
-    try {
-      var renderer = new MainWebGL2Renderer(config, {
-        requestedMode: requestedMode,
-        isFallback: true,
-        reason: reason
-      });
-      renderer.init(canvas);
-      return renderer;
-    } catch (error) {}
-  }
-  return createMain2D(canvas, config, true, reason);
-}
-
-/**
- * 创建主线程 Canvas2D 渲染器（最终兜底）。
- *
- * @param {HTMLCanvasElement} canvas
- * @param {Object} config
- * @param {boolean} isFallback - 是否为降级路径
- * @param {string} reason - 降级原因
- * @returns {MainCanvas2DRenderer}
- */
-function createMain2D(canvas, config, isFallback, reason) {
-  var renderer = new MainCanvas2DRenderer(config, {
-    requestedMode: config.renderMode || 'auto',
-    isFallback: Boolean(isFallback),
-    reason: reason || ''
-  });
-  renderer.init(canvas);
-  return renderer;
-}
-
-/**
- * 检测是否应优先使用主线程 WebGL2。
- *
- * Safari 和 WKWebView 的 Worker + WebGL2 支持不稳定，
- * 在这些浏览器上直接走 main-webgl2 避免 Worker 初始化的开销和风险。
- *
- * @returns {boolean} true=应优先使用主线程 WebGL2
- */
-function shouldPreferMainWebGL2() {
-  if (typeof navigator === 'undefined') {
-    return false;
-  }
-  var ua = navigator.userAgent || '';
-  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
-  var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
-  return isSafari || isIOSWebView;
-}
-},{"./MainCanvas2DRenderer":82,"./MainWebGL2Renderer":83,"./WorkerRenderer":85}],85:[function(require,module,exports){
-"use strict";
-
-function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
-function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
-function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
-function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _callSuper(t, o, e) { return o = _getPrototypeOf(o), _possibleConstructorReturn(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], _getPrototypeOf(t).constructor) : o.apply(t, e)); }
-function _possibleConstructorReturn(t, e) { if (e && ("object" == _typeof(e) || "function" == typeof e)) return e; if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined"); return _assertThisInitialized(t); }
-function _assertThisInitialized(e) { if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); return e; }
-function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
-function _superPropGet(t, o, e, r) { var p = _get(_getPrototypeOf(1 & r ? t.prototype : t), o, e); return 2 & r && "function" == typeof p ? function (t) { return p.apply(e, t); } : p; }
-function _get() { return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) { var p = _superPropBase(e, t); if (p) { var n = Object.getOwnPropertyDescriptor(p, t); return n.get ? n.get.call(arguments.length < 3 ? e : r) : n.value; } }, _get.apply(null, arguments); }
-function _superPropBase(t, o) { for (; !{}.hasOwnProperty.call(t, o) && null !== (t = _getPrototypeOf(t));); return t; }
-function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
-function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
-function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-/**
- * WorkerRenderer — Worker 线程渲染器
- *
- * 将渲染工作卸载到 WebWorker，通过 OffscreenCanvas 避免阻塞主线程。
- *
- * 架构说明：
- *   1. 创建 OffscreenCanvas 并 transfer 到 Worker
- *   2. Worker 内根据配置选择 WebGL2 或 Canvas2D 上下文
- *   3. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer 到 Worker
- *   4. Worker 渲染后通过 transferToImageBitmap() 传回 ImageBitmap
- *   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
- *
- * 关键设计决策：不再 transfer 输出 canvas 本身。
- * canvas.captureStream() 始终绑定主线程 canvas，避免部分浏览器
- * 无法捕获 Worker 直接绘制结果而出现黑屏。
- *
- * @module WorkerRenderer
- */
-var BaseRenderer = require('./BaseRenderer');
-var workerScript = require('./workerScript');
-module.exports = /*#__PURE__*/function (_BaseRenderer) {
-  /**
-   * @param {Object} config - 混流配置
-   * @param {string} [config.workerUrl] - 外部 Worker 脚本地址（不传则使用 Blob Worker）
-   * @param {boolean} [config.dropFrameWhenBusy=true] - Worker 忙时是否丢弃新帧
-   * @param {number} [config.maxFrameQueue=1] - 最大帧队列长度
-   * @param {Object} info - 渲染器元信息
-   */
-  function WorkerRenderer(config, info) {
-    var _this;
-    _classCallCheck(this, WorkerRenderer);
-    var rendererInfo = Object.assign({}, info || {});
-    var onFatalError = typeof rendererInfo.onFatalError === 'function' ? rendererInfo.onFatalError : null;
-    delete rendererInfo.onFatalError;
-    _this = _callSuper(this, WorkerRenderer, [config, Object.assign({
-      actualMode: 'worker-init',
-      isWorker: true,
-      isWebGL2: false
-    }, rendererInfo)]);
-    _this._onFatalError = onFatalError;
-
-    /** @type {HTMLCanvasElement|null} 主线程输出 canvas（绑定 captureStream） */
-    _this._canvas = null;
-
-    /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
-    _this._outputContext = null;
-
-    /** @type {Worker|null} WebWorker 实例 */
-    _this._worker = null;
-
-    /** @type {string|null} Worker 脚本的 Blob URL（用于后续 revoke） */
-    _this._workerUrl = null;
-
-    /** @type {boolean} Worker 是否已完成初始化并回复 ready */
-    _this._workerReady = false;
-
-    /** @type {boolean} Worker 正在处理上一帧，不能再发新帧 */
-    _this._workerBusy = false;
-
-    /** @type {boolean} 正在从 video 抽取帧（异步操作进行中） */
-    _this._extractingFrame = false;
-
-    /** @type {Array<Object>} 等待发送到 Worker 的帧队列 */
-    _this._queuedPayloads = [];
-
-    /** @type {boolean} 销毁标记，设置后所有异步操作跳过 */
-    _this._destroyed = false;
-
-    /** @type {boolean} 避免同一个 Worker 故障重复触发主线程降级 */
-    _this._fatalErrorNotified = false;
-
-    /**
-     * @type {'imagebitmap'|'videoframe'|null}
-     * 帧抽取方式。自动探测：优先 createImageBitmap，回退 VideoFrame。
-     * null 表示尚未确定。
-     */
-    _this._frameFactory = null;
-    return _this;
-  }
-
-  /**
-   * 初始化 Worker 渲染器。
-   *
-   * 步骤：
-   *   1. 检查 Worker + OffscreenCanvas 可用性
-   *   2. 创建 Worker 实例（Blob URL 或外部脚本）
-   *   3. 创建 OffscreenCanvas 并 transfer 到 Worker
-   *   4. 等待 Worker 回复 ready 消息
-   *
-   * @param {HTMLCanvasElement} canvas - 主线程输出 canvas
-   * @returns {boolean} true=初始化成功
-   * @throws {Error} Worker 或 OffscreenCanvas 不可用时抛出
-   */
-  _inherits(WorkerRenderer, _BaseRenderer);
-  return _createClass(WorkerRenderer, [{
-    key: "init",
-    value: function init(canvas) {
-      var _this2 = this;
-      if (!this._canUseWorker(canvas)) {
-        throw new Error('Worker OffscreenCanvas is not available');
-      }
-      this._canvas = canvas;
-      this.resize(canvas.width, canvas.height);
-      try {
-        this._worker = this._createWorker();
-        var offscreenCanvas = new OffscreenCanvas(canvas.width || 1, canvas.height || 1);
-        this._worker.onmessage = function (event) {
-          return _this2._handleWorkerMessage(event);
-        };
-        this._worker.onerror = function (error) {
-          var reason = "Worker renderer error: ".concat(error.message || 'unknown');
-          _this2._workerBusy = false;
-          _this2._extractingFrame = false;
-          _this2._updateInfo({
-            actualMode: 'worker-failed',
-            isFallback: true,
-            reason: reason
-          });
-          _this2._notifyFatalError(reason);
-        };
-        this._worker.postMessage({
-          type: 'init',
-          canvas: offscreenCanvas,
-          requestedMode: this._config.renderMode,
-          width: canvas.width,
-          height: canvas.height,
-          backgroundColor: this._config.backgroundColor
-        }, [offscreenCanvas]);
-      } catch (error) {
-        this._destroyWorker();
-        throw error;
-      }
-      return true;
-    }
-
-    /**
-     * 检查当前环境是否支持 Worker 渲染。
-     *
-     * @param {HTMLCanvasElement} canvas - 输出 canvas
-     * @returns {boolean} true=支持 Worker + OffscreenCanvas
-     */
-  }, {
-    key: "_canUseWorker",
-    value: function _canUseWorker(canvas) {
-      return Boolean(typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && canvas && canvas.getContext);
-    }
-
-    /**
-     * 创建 Worker 实例。
-     * 优先使用外部脚本（workerUrl），否则生成 Blob Worker。
-     *
-     * @returns {Worker} Worker 实例
-     */
-  }, {
-    key: "_createWorker",
-    value: function _createWorker() {
-      if (this._config.workerUrl) {
-        return new Worker(this._config.workerUrl);
-      }
-      var blob = new Blob([workerScript.createWorkerScript()], {
-        type: 'application/javascript'
-      });
-      this._workerUrl = URL.createObjectURL(blob);
-      return new Worker(this._workerUrl);
-    }
-
-    /**
-     * 处理 Worker 返回的消息。
-     *
-     * 消息类型：
-     *   - ready: Worker 初始化完成，包含实际使用的渲染模式
-     *   - rendered: Worker 渲染完成，返回 ImageBitmap
-     *   - renderError: Worker 渲染失败
-     *   - failed: Worker 初始化失败
-     *
-     * @param {MessageEvent} event - Worker 消息事件
-     */
-  }, {
-    key: "_handleWorkerMessage",
-    value: function _handleWorkerMessage(event) {
-      var data = event.data || {};
-      if (data.type === 'ready') {
-        if (!this._ensureOutputContext()) {
-          this._workerReady = false;
-          this._updateInfo({
-            actualMode: 'worker-failed',
-            isFallback: true,
-            reason: 'Canvas2D output context is not available'
-          });
-          this._notifyFatalError('Canvas2D output context is not available');
-          return;
-        }
-        this._workerReady = true;
-        this._updateInfo({
-          actualMode: data.actualMode,
-          isWorker: true,
-          isWebGL2: Boolean(data.isWebGL2),
-          reason: data.reason || this._info.reason
-        });
-        this._flushQueuedPayload();
-        return;
-      }
-      if (data.type === 'rendered') {
-        if (data.bitmap && this._outputContext) {
-          // 确保输出 canvas 尺寸与预期一致
-          if (this._canvas.width !== this._info.width) {
-            this._canvas.width = this._info.width;
-          }
-          if (this._canvas.height !== this._info.height) {
-            this._canvas.height = this._info.height;
-          }
-          this._outputContext.drawImage(data.bitmap, 0, 0, this._canvas.width, this._canvas.height);
-          if (data.bitmap.close) {
-            data.bitmap.close();
-          }
-        }
-        this._workerBusy = false;
-        this._info.renderedFrames += 1;
-        this._flushQueuedPayload();
-        return;
-      }
-      if (data.type === 'renderError') {
-        this._workerBusy = false;
-        this._updateInfo({
-          isFallback: true,
-          reason: data.reason || 'Worker render failed'
-        });
-        this._flushQueuedPayload();
-        return;
-      }
-      if (data.type === 'failed') {
-        var reason = data.reason || 'Worker renderer initialization failed';
-        this._workerBusy = false;
-        this._workerReady = false;
-        this._extractingFrame = false;
-        this._updateInfo({
-          actualMode: 'worker-failed',
-          isFallback: true,
-          reason: reason
-        });
-        this._notifyFatalError(reason);
-      }
-    }
-  }, {
-    key: "_notifyFatalError",
-    value: function _notifyFatalError(reason) {
-      if (this._fatalErrorNotified || this._destroyed || !this._onFatalError) {
-        return;
-      }
-      this._fatalErrorNotified = true;
-      this._onFatalError(reason);
-    }
-  }, {
-    key: "_ensureOutputContext",
-    value: function _ensureOutputContext() {
-      if (this._outputContext) {
-        return true;
-      }
-      if (!this._canvas || !this._canvas.getContext) {
-        return false;
-      }
-      this._outputContext = this._canvas.getContext('2d', {
-        alpha: false
-      }) || this._canvas.getContext('2d');
-      if (!this._outputContext) {
-        return false;
-      }
-      this._outputContext.fillStyle = this._config.backgroundColor || '#000';
-      this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
-      this._outputContext.imageSmoothingEnabled = true;
-      return true;
-    }
-
-    /**
-     * 调整输出尺寸（委托到基类，保存宽高信息）。
-     *
-     * @param {number} width - 新宽度
-     * @param {number} height - 新高度
-     */
-  }, {
-    key: "resize",
-    value: function resize(width, height) {
-      _superPropGet(WorkerRenderer, "resize", this, 3)([width, height]);
-    }
-
-    /**
-     * 提交一帧到 Worker 渲染。
-     *
-     * 流程：
-     *   1. Worker 未就绪 → 入队列等待
-     *   2. Worker 正忙且配置了丢帧 → 记录丢帧，替换队列中的最新帧
-     *   3. Worker 正忙且未配置丢帧 → 入队列（超出 maxFrameQueue 截断）
-     *   4. Worker 空闲 → 立即抽取帧并发送
-     *
-     * @param {Object} payload - 布局数据
-     */
-  }, {
-    key: "render",
-    value: function render(payload) {
-      if (this._destroyed) {
-        return;
-      }
-      if (!this._worker) {
-        return;
-      }
-      if (!this._workerReady) {
-        this._queuePayload(payload);
-        return;
-      }
-      if (this._workerBusy || this._extractingFrame) {
-        this._queuePayload(payload);
-        return;
-      }
-      this._renderInWorker(payload);
-    }
-
-    /**
-     * 从 video 元素抽取帧并发送到 Worker。
-     *
-     * 异步执行：先在主线程创建 ImageBitmap/VideoFrame，
-     * 然后通过 postMessage transfer 给 Worker。
-     *
-     * @param {Object} payload - 布局数据
-     */
-  }, {
-    key: "_renderInWorker",
-    value: (function () {
-      var _renderInWorker2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(payload) {
-        var result, _t;
-        return _regenerator().w(function (_context) {
-          while (1) switch (_context.p = _context.n) {
-            case 0:
-              this._extractingFrame = true;
-              result = null;
-              _context.p = 1;
-              _context.n = 2;
-              return this._createWorkerPayload(payload);
-            case 2:
-              result = _context.v;
-              this._extractingFrame = false;
-              if (!this._destroyed) {
-                _context.n = 3;
-                break;
-              }
-              this._closeTransferFrames(result.items);
-              return _context.a(2);
-            case 3:
-              this._workerBusy = true;
-              this._worker.postMessage({
-                type: 'render',
-                payload: {
-                  width: payload.width,
-                  height: payload.height,
-                  backgroundColor: payload.backgroundColor,
-                  items: result.items,
-                  sourceWatermarks: result.sourceWatermarks,
-                  outputWatermarks: result.outputWatermarks
-                }
-              }, result.transfers);
-              _context.n = 5;
-              break;
-            case 4:
-              _context.p = 4;
-              _t = _context.v;
-              if (result && result.items) {
-                this._closeTransferFrames(result.items);
-              }
-              this._extractingFrame = false;
-              this._workerBusy = false;
-              this._info.droppedFrames += 1;
-              this._updateInfo({
-                isFallback: true,
-                reason: "Worker frame extraction failed: ".concat(_t.message || String(_t))
-              });
-            case 5:
-              return _context.a(2);
-          }
-        }, _callee, this, [[1, 4]]);
-      }));
-      function _renderInWorker(_x) {
-        return _renderInWorker2.apply(this, arguments);
-      }
-      return _renderInWorker;
-    }()
-    /**
-     * 将 payload 入队列。
-     *
-     * 根据配置决定行为：
-     *   - dropFrameWhenBusy: 丢弃旧帧，只保留最新一帧
-     *   - 非丢帧模式: 追加到队列尾部，超出 maxFrameQueue 时丢弃最早帧
-     *
-     * @param {Object} payload - 布局数据
-     */
-    )
-  }, {
-    key: "_queuePayload",
-    value: function _queuePayload(payload) {
-      var maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
-      if (maxFrameQueue <= 0) {
-        this._info.droppedFrames += 1;
-        return;
-      }
-      if (this._config.dropFrameWhenBusy) {
-        this._info.droppedFrames += 1;
-        this._queuedPayloads = [payload];
-        return;
-      }
-      this._queuedPayloads.push(payload);
-      while (this._queuedPayloads.length > maxFrameQueue) {
-        this._queuedPayloads.shift();
-        this._info.droppedFrames += 1;
-      }
-    }
-
-    /**
-     * 消费队列中的下一帧（Worker 空闲时调用）。
-     */
-  }, {
-    key: "_flushQueuedPayload",
-    value: function _flushQueuedPayload() {
-      if (!this._queuedPayloads.length || this._destroyed || this._workerBusy || this._extractingFrame) {
-        return;
-      }
-      var payload = this._queuedPayloads.shift();
-      this._renderInWorker(payload);
-    }
-
-    /**
-     * 从 payload 中提取所有 video 帧，生成可 transfer 的 ImageBitmap/VideoFrame。
-     *
-     * @param {Object} payload - 布局数据
-     * @returns {Promise<Object>}
-     *   items: 包含 id、draw 和 frame 的数组
-     *   sourceWatermarks/outputWatermarks: 包含水印 frame 和 draw 的数组
-     *   transfers: 用于 postMessage transfer 的帧对象列表
-     */
-  }, {
-    key: "_createWorkerPayload",
-    value: (function () {
-      var _createWorkerPayload2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2(payload) {
-        var items, sourceWatermarks, outputWatermarks, transfers, idx, item, frame, _t2;
-        return _regenerator().w(function (_context2) {
-          while (1) switch (_context2.p = _context2.n) {
-            case 0:
-              items = [];
-              sourceWatermarks = [];
-              outputWatermarks = [];
-              transfers = [];
-              _context2.p = 1;
-              idx = 0;
-            case 2:
-              if (!(idx < payload.items.length)) {
-                _context2.n = 6;
-                break;
-              }
-              item = payload.items[idx];
-              if (!(!item.video || item.video.readyState < 2)) {
-                _context2.n = 3;
-                break;
-              }
-              return _context2.a(3, 5);
-            case 3:
-              _context2.n = 4;
-              return this._createFrame(item.video);
-            case 4:
-              frame = _context2.v;
-              items.push({
-                id: item.id,
-                draw: item.draw,
-                frame: frame
-              });
-              transfers.push(frame);
-            case 5:
-              ++idx;
-              _context2.n = 2;
-              break;
-            case 6:
-              _context2.n = 7;
-              return this._appendWorkerWatermarks(payload.sourceWatermarks, sourceWatermarks, transfers);
-            case 7:
-              _context2.n = 8;
-              return this._appendWorkerWatermarks(payload.outputWatermarks, outputWatermarks, transfers);
-            case 8:
-              _context2.n = 10;
-              break;
-            case 9:
-              _context2.p = 9;
-              _t2 = _context2.v;
-              this._closeTransferFrames(items);
-              this._closeTransferFrames(sourceWatermarks);
-              this._closeTransferFrames(outputWatermarks);
-              throw _t2;
-            case 10:
-              return _context2.a(2, {
-                items: items,
-                sourceWatermarks: sourceWatermarks,
-                outputWatermarks: outputWatermarks,
-                transfers: transfers
-              });
-          }
-        }, _callee2, this, [[1, 9]]);
-      }));
-      function _createWorkerPayload(_x2) {
-        return _createWorkerPayload2.apply(this, arguments);
-      }
-      return _createWorkerPayload;
-    }()
-    /**
-     * 将主线程水印图面转成可 transfer 的 frame。
-     *
-     * @param {Array<Object>} watermarks - 水印绘制项
-     * @param {Array<Object>} target - Worker payload 目标列表
-     * @param {Array<*>} transfers - transfer 列表
-     */
-    )
-  }, {
-    key: "_appendWorkerWatermarks",
-    value: (function () {
-      var _appendWorkerWatermarks2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(watermarks, target, transfers) {
-        var idx, watermark, frame;
-        return _regenerator().w(function (_context3) {
-          while (1) switch (_context3.n) {
-            case 0:
-              idx = 0;
-            case 1:
-              if (!(idx < (watermarks || []).length)) {
-                _context3.n = 5;
-                break;
-              }
-              watermark = watermarks[idx];
-              if (!(!watermark.image || !watermark.draw)) {
-                _context3.n = 2;
-                break;
-              }
-              return _context3.a(3, 4);
-            case 2:
-              _context3.n = 3;
-              return this._createWatermarkFrame(watermark.image);
-            case 3:
-              frame = _context3.v;
-              target.push({
-                id: watermark.id,
-                draw: watermark.draw,
-                opacity: watermark.opacity,
-                frame: frame
-              });
-              transfers.push(frame);
-            case 4:
-              ++idx;
-              _context3.n = 1;
-              break;
-            case 5:
-              return _context3.a(2);
-          }
-        }, _callee3, this);
-      }));
-      function _appendWorkerWatermarks(_x3, _x4, _x5) {
-        return _appendWorkerWatermarks2.apply(this, arguments);
-      }
-      return _appendWorkerWatermarks;
-    }()
-    /**
-     * 从 HTMLVideoElement 抽取一帧，自动选择最优 API。
-     *
-     * 探测顺序：
-     *   1. createImageBitmap(video) — 广泛支持，优先使用
-     *   2. new VideoFrame(video) — VideoFrame API，部分浏览器支持
-     *
-     * WebGL2 Worker 路径：ImageBitmap 上传到 WebGL 时浏览器可能不再处理
-     * UNPACK_FLIP_Y_WEBGL，因此在抽帧阶段传入 { imageOrientation: 'flipY' }
-     * 来补偿翻转。
-     *
-     * @param {HTMLVideoElement} video - 输入 video 元素
-     * @returns {Promise<ImageBitmap|VideoFrame>} 抽取的帧
-     */
-    )
-  }, {
-    key: "_createFrame",
-    value: (function () {
-      var _createFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(video) {
-        var VideoFrameConstructor, bitmapOptions, bitmap, frame, _t3, _t4, _t5;
-        return _regenerator().w(function (_context4) {
-          while (1) switch (_context4.p = _context4.n) {
-            case 0:
-              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
-              if (!(this._frameFactory === 'imagebitmap' || this._frameFactory === null && typeof createImageBitmap !== 'undefined')) {
-                _context4.n = 7;
-                break;
-              }
-              _context4.p = 1;
-              bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
-                imageOrientation: 'flipY'
-              } : undefined;
-              if (!bitmapOptions) {
-                _context4.n = 3;
-                break;
-              }
-              _context4.n = 2;
-              return createImageBitmap(video, bitmapOptions);
-            case 2:
-              _t3 = _context4.v;
-              _context4.n = 5;
-              break;
-            case 3:
-              _context4.n = 4;
-              return createImageBitmap(video);
-            case 4:
-              _t3 = _context4.v;
-            case 5:
-              bitmap = _t3;
-              this._frameFactory = 'imagebitmap';
-              return _context4.a(2, bitmap);
-            case 6:
-              _context4.p = 6;
-              _t4 = _context4.v;
-              if (!(this._frameFactory === 'imagebitmap')) {
-                _context4.n = 7;
-                break;
-              }
-              throw _t4;
-            case 7:
-              if (!(this._frameFactory === 'videoframe' || this._frameFactory === null && VideoFrameConstructor)) {
-                _context4.n = 10;
-                break;
-              }
-              _context4.p = 8;
-              frame = new VideoFrameConstructor(video);
-              this._frameFactory = 'videoframe';
-              return _context4.a(2, frame);
-            case 9:
-              _context4.p = 9;
-              _t5 = _context4.v;
-              if (!(this._frameFactory === 'videoframe')) {
-                _context4.n = 10;
-                break;
-              }
-              throw _t5;
-            case 10:
-              throw new Error('VideoFrame and createImageBitmap are unavailable');
-            case 11:
-              return _context4.a(2);
-          }
-        }, _callee4, this, [[8, 9], [1, 6]]);
-      }));
-      function _createFrame(_x6) {
-        return _createFrame2.apply(this, arguments);
-      }
-      return _createFrame;
-    }()
-    /**
-     * 从水印图面创建可 transfer 的 ImageBitmap/VideoFrame。
-     *
-     * @param {*} image - Canvas/Image/ImageBitmap
-     * @returns {Promise<ImageBitmap|VideoFrame>} 可 transfer 的帧
-     */
-    )
-  }, {
-    key: "_createWatermarkFrame",
-    value: (function () {
-      var _createWatermarkFrame2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(image) {
-        var VideoFrameConstructor;
-        return _regenerator().w(function (_context5) {
-          while (1) switch (_context5.n) {
-            case 0:
-              if (!(typeof createImageBitmap !== 'undefined')) {
-                _context5.n = 1;
-                break;
-              }
-              return _context5.a(2, createImageBitmap(image, {
-                imageOrientation: 'flipY'
-              }));
-            case 1:
-              VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
-              if (!VideoFrameConstructor) {
-                _context5.n = 2;
-                break;
-              }
-              return _context5.a(2, new VideoFrameConstructor(image));
-            case 2:
-              throw new Error('Watermark frame extraction is unavailable');
-            case 3:
-              return _context5.a(2);
-          }
-        }, _callee5);
-      }));
-      function _createWatermarkFrame(_x7) {
-        return _createWatermarkFrame2.apply(this, arguments);
-      }
-      return _createWatermarkFrame;
-    }()
-    /**
-     * 释放未发送到 Worker 的帧资源（防止内存泄漏）。
-     *
-     * @param {Array<Object>} items - 包含 frame 的项列表
-     */
-    )
-  }, {
-    key: "_closeTransferFrames",
-    value: function _closeTransferFrames(items) {
-      (items || []).forEach(function (item) {
-        if (item.frame && item.frame.close) {
-          item.frame.close();
-        }
-      });
-    }
-
-    /**
-     * 通知 Worker 移除一路源的纹理缓存。
-     *
-     * @param {string} id - 源 ID
-     */
-  }, {
-    key: "removeSource",
-    value: function removeSource(id) {
-      if (this._worker) {
-        this._worker.postMessage({
-          type: 'removeSource',
-          id: id
-        });
-      }
-    }
-
-    /**
-     * 销毁 Worker 渲染器。
-     *
-     * 清理步骤：
-     *   1. 设置销毁标记，阻止后续异步操作
-     *   2. 清空待处理帧队列
-     *   3. 释放输出上下文引用
-     *   4. 终止 Worker 线程 + revoke Blob URL
-     */
-  }, {
-    key: "destroy",
-    value: function destroy() {
-      this._destroyed = true;
-      this._workerReady = false;
-      this._extractingFrame = false;
-      this._workerBusy = false;
-      this._queuedPayloads = [];
-      this._outputContext = null;
-      this._destroyWorker();
-    }
-
-    /**
-     * 终止 Worker 线程并释放相关资源。
-     * 先发送 destroy 消息通知 Worker 清理 GPU 资源，再 terminate。
-     */
-  }, {
-    key: "_destroyWorker",
-    value: function _destroyWorker() {
-      if (this._worker) {
-        try {
-          this._worker.postMessage({
-            type: 'destroy'
-          });
-        } catch (error) {}
-        this._worker.terminate();
-        this._worker = null;
-      }
-      if (this._workerUrl) {
-        URL.revokeObjectURL(this._workerUrl);
-        this._workerUrl = null;
-      }
-    }
-  }]);
-}(BaseRenderer);
-},{"./BaseRenderer":81,"./workerScript":88}],86:[function(require,module,exports){
-"use strict";
-
-/**
- * color — CSS 颜色解析工具
- *
- * 将常见 CSS 颜色字符串解析为 WebGL clearColor 可用的 RGBA 数组。
- * 只做渲染兜底需要的轻量解析，不处理复杂 CSS 颜色值（如 hsl、named colors）。
- *
- * 支持格式：
- *   - #rgb（如 #fff → [1, 1, 1, 1]）
- *   - #rrggbb（如 #ff0000 → [1, 0, 0, 1]）
- *   - rgb(r, g, b)（如 rgb(255, 0, 0) → [1, 0, 0, 1]）
- *   - rgba(r, g, b, a)（如 rgba(0, 0, 0, 0.5) → [0, 0, 0, 0.5]）
- *
- * 不支持的格式回退到纯黑 [0, 0, 0, 1]。
- * Canvas2D 路径无需此工具（原生支持 CSS 颜色），仅 WebGL 路径使用。
- *
- * @module colorHelper
- */
-
-/**
- * 将 CSS 颜色字符串解析为归一化的 RGBA 数组。
- *
- * @param {string} color - CSS 颜色字符串
- * @returns {Array<number>} [r, g, b, a]，每个通道范围 0-1
- */
-exports.parseColor = function (color) {
-  if (!color || typeof color !== 'string') {
-    return [0, 0, 0, 1];
-  }
-  var value = color.trim();
-  if (value[0] === '#') {
-    return parseHexColor(value);
-  }
-  if (value.indexOf('rgb') === 0) {
-    return parseRgbColor(value);
-  }
-  return [0, 0, 0, 1];
-};
-
-/**
- * 解析十六进制颜色。
- *
- * @param {string} value - #rgb 或 #rrggbb 格式
- * @returns {Array<number>} [r, g, b, a]
- */
-function parseHexColor(value) {
-  var hex = value.slice(1);
-
-  // 展开简写 #RGB → #RRGGBB
-  if (hex.length === 3) {
-    hex = hex.split('').map(function (item) {
-      return item + item;
-    }).join('');
-  }
-  if (hex.length !== 6) {
-    return [0, 0, 0, 1];
-  }
-  var numberValue = parseInt(hex, 16);
-  if (!Number.isFinite(numberValue)) {
-    return [0, 0, 0, 1];
-  }
-  return [(numberValue >> 16 & 255) / 255, (numberValue >> 8 & 255) / 255, (numberValue & 255) / 255, 1];
-}
-
-/**
- * 解析 rgb/rgba 颜色。
- *
- * @param {string} value - rgb(r,g,b) 或 rgba(r,g,b,a) 格式
- * @returns {Array<number>} [r, g, b, a]
- */
-function parseRgbColor(value) {
-  var matches = value.match(/rgba?\(([^)]+)\)/i);
-  if (!matches) {
-    return [0, 0, 0, 1];
-  }
-  var parts = matches[1].split(',').map(function (item) {
-    return Number(item.trim());
-  });
-  if (parts.length < 3 || parts.some(function (item) {
-    return !Number.isFinite(item);
-  })) {
-    return [0, 0, 0, 1];
-  }
-  return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
-}
-
-/**
- * 将数值限制在指定范围内。
- *
- * @param {number} value - 待限制的值
- * @param {number} min - 最小值
- * @param {number} max - 最大值
- * @returns {number} 限制后的值
- */
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-},{}],87:[function(require,module,exports){
-"use strict";
-
-/**
- * gl — WebGL 工具函数
- *
- * 提供 WebGL shader 编译、program 链接、纹理创建等公共操作。
- * 被 MainWebGL2Renderer 和 Worker 内联脚本共同使用。
- *
- * @module glHelpers
- */
-
-/**
- * 编译 WebGL shader。
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @param {number} shaderType - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
- * @param {string} shaderSource - GLSL 源码
- * @returns {WebGLShader} 编译后的 shader
- * @throws {Error} 编译失败时抛出，包含 shader 编译日志
- */
-exports.compileShader = function (gl, shaderType, shaderSource) {
-  var shader = gl.createShader(shaderType);
-  gl.shaderSource(shader, shaderSource);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    var message = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error("Could not compile shader: ".concat(message));
-  }
-  return shader;
-};
-
-/**
- * 链接 WebGL program。
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @param {WebGLShader} vertexShader - 顶点 shader
- * @param {WebGLShader} fragmentShader - 片元 shader
- * @returns {WebGLProgram} 链接后的 program
- * @throws {Error} 链接失败时抛出，包含链接日志
- */
-exports.createProgram = function (gl, vertexShader, fragmentShader) {
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    var message = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error("Could not link WebGL program: ".concat(message));
-  }
-  return program;
-};
-
-/**
- * 创建用于上传视频帧的 2D 纹理。
- *
- * 纹理参数：
- *   - WRAP: CLAMP_TO_EDGE（避免边缘采样溢出）
- *   - FILTER: LINEAR（双线性插值，保证缩放质量）
- *
- * @param {WebGL2RenderingContext} gl - WebGL2 上下文
- * @returns {WebGLTexture} 初始化后的纹理对象
- */
-exports.createVideoTexture = function (gl) {
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.bindTexture(gl.TEXTURE_2D, null);
-  return texture;
-};
-},{}],88:[function(require,module,exports){
-"use strict";
-
-/**
- * workerScript — Worker 内联脚本生成器
- *
- * 生成一个自包含的 WebWorker 渲染脚本源码字符串。
- * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker，
- * 无需额外部署 Worker 脚本文件。
- *
- * Worker 内部支持两种渲染模式：
- *   - worker-webgl2: WebGL2 + OffscreenCanvas，GPU 加速
- *   - worker-2d: Canvas2D + OffscreenCanvas，兼容兜底
- *
- * 消息协议：
- *   - init(type, canvas, requestedMode, ...) → ready/failed
- *   - render(type, payload) → rendered/renderError
- *   - removeSource(type, id) → 无回复
- *   - destroy(type) → 无回复
- *
- * @module workerScript
- */
-exports.createWorkerScript = function () {
-  // eslint-disable-next-line quotes
-  return "var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode=\"unknown\",requestedMode=\"auto\",width=0,height=0,backgroundColor=\"#000\",VERTEX_SHADER=\"#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n\",FRAGMENT_SHADER=\"#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nout vec4 outColor;\\nvoid main() {\\n  outColor = texture(u_texture, v_texCoord);\\n}\\n\";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||\"auto\",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||\"#000\",canvas.width=width,canvas.height=height;if(\"worker-webgl2\"===requestedMode||\"auto\"===requestedMode)try{return initWebGL2(),actualMode=\"worker-webgl2\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!0,reason:\"\"})}catch(r){return destroyWebGL2(),void postMessage({type:\"failed\",reason:r.message||String(r)})}if(\"worker-2d\"===requestedMode)try{return initCanvas2D(),actualMode=\"worker-2d\",void postMessage({type:\"ready\",actualMode:actualMode,isWebGL2:!1,reason:\"\"})}catch(e){return void postMessage({type:\"failed\",reason:e.message||String(e)})}postMessage({type:\"failed\",reason:\"Unsupported worker render mode: \"+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext(\"webgl2\",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:\"high-performance\"})))throw new Error(\"Worker WebGL2 context is not available\");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute(\"a_position\",positionBuffer),enableAttribute(\"a_texCoord\",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,\"u_texture\"),0)}function initCanvas2D(){if(!(ctx=canvas.getContext(\"2d\",{alpha:!1})||canvas.getContext(\"2d\")))throw new Error(\"Worker Canvas2D context is not available\")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),\"worker-webgl2\"===actualMode?renderWebGL2(e):\"worker-2d\"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:\"rendered\",bitmap:r},[r]),r=null):postMessage({type:\"renderError\",reason:\"OffscreenCanvas.transferToImageBitmap is not available\"})}catch(e){r&&r.close&&r.close(),postMessage({type:\"renderError\",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||\"#000\"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!1),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||\"#000\",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha=\"number\"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error(\"Could not compile shader: \"+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error(\"Could not link WebGL program: \"+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension(\"WEBGL_lose_context\");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null}}function parseColor(e){if(!e||\"string\"!=typeof e)return[0,0,0,1];var r=e.trim();return\"#\"===r[0]?parseHexColor(r):0===r.indexOf(\"rgb\")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split(\"\").map(function(e){return e+e}).join(\"\")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(\",\").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};\"init\"===r.type?init(r):\"render\"===r.type?render(r.payload||{}):\"removeSource\"===r.type?removeSource(r.id):\"destroy\"===r.type&&destroy()};";
-};
-},{}],89:[function(require,module,exports){
+},{"./Grammar":37,"./Logger":39}],89:[function(require,module,exports){
 "use strict";
 
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -40018,7 +40018,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":53,"./Utils":61}],90:[function(require,module,exports){
+},{"./Constants":32,"./Logger":39,"./SIPMessage":70,"./Utils":78}],90:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
