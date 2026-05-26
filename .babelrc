@@ -4,7 +4,17 @@
   ],
   "presets": [
     [
-      "@babel/env"
+      "@babel/env",
+      {
+        "targets": {
+          "browsers": [
+            "defaults",
+            "not ie 11"
+          ]
+        },
+        "bugfixes": true,
+        "loose": true
+      }
     ]
   ]
 }

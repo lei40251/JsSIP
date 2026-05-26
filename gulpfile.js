@@ -63,56 +63,6 @@ function getLocalTimestamp()
       .padStart(2, '0');
 }
 
-function collectPrivateMethodNames(dir)
-{
-  const names = new Set([ '_process', '_invoke', '__await' ]);
-  const walk = function(currentDir)
-  {
-    fs.readdirSync(currentDir).forEach(function(fileName)
-    {
-      const filePath = path.join(currentDir, fileName);
-      const stat = fs.statSync(filePath);
-
-      if (stat.isDirectory())
-      {
-        walk(filePath);
-
-        return;
-      }
-
-      if (!/\.js$/.test(fileName))
-      {
-        return;
-      }
-
-      const content = fs.readFileSync(filePath, 'utf8');
-      let match;
-      const classMethodPattern = /^\s+(?:async\s+)?(_[A-Za-z0-9_]+)\s*\(/gm;
-      const prototypeMethodPattern = /\.prototype\.(_[A-Za-z0-9_]+)\s*=/g;
-      const getterPattern = /get\s+(_[A-Za-z0-9_]+)\s*\(/gm;
-
-      while ((match = classMethodPattern.exec(content)))
-      {
-        names.add(match[1]);
-      }
-
-      while ((match = prototypeMethodPattern.exec(content)))
-      {
-        names.add(match[1]);
-      }
-
-      while ((match = getterPattern.exec(content)))
-      {
-        names.add(match[1]);
-      }
-    });
-  };
-
-  walk(dir);
-
-  return Array.from(names).sort();
-}
-
 // 1. 复制文件
 function copyFiles()
 {
@@ -203,8 +153,7 @@ gulp.task('uglify', function()
         // 保留必要的名称
         properties : {
           regex       : /^_/,
-          keep_quoted : true,
-          reserved    : collectPrivateMethodNames(path.resolve('lib'))
+          keep_quoted : true
         },
         reserved : [
           'CommonHeader',
@@ -231,19 +180,23 @@ gulp.task('uglify', function()
       },
       compress : {
         // 增加压缩轮次
-        passes      : 5,
-        unsafe      : true,
-        unsafe_math : true,
-        reduce_vars : true,
-        // pure_funcs  : [ 'logger.debug', 'this._logger.debug' ],
-        global_defs : {
+        passes       : 5,
+        toplevel     : true,
+        pure_getters : true,
+        hoist_props  : true,
+        unsafe       : true,
+        unsafe_math  : true,
+        reduce_vars  : true,
+        pure_funcs   : [ 'logger.debug', 'this._logger.debug' ],
+        global_defs  : {
           __DEBUG__ : false // 全局常量替换
         }
       },
       output : { // 添加这一段配置
-        comments : false, // 禁用所有注释
-        beautify : false, // 禁用美化格式
-        preamble : 'var _0x1234=0;' // 添加混淆前缀
+        comments     : false, // 禁用所有注释
+        beautify     : false, // 禁用美化格式
+        max_line_len : false, // 禁止自动换行，尽量单行输出
+        preamble     : 'var _0x1234=0;' // 添加混淆前缀
         // ascii_only : true // 防止 Unicode 转义
       }
     }))
