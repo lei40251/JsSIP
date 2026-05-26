@@ -1019,6 +1019,32 @@ async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
   assert.strictEqual(MockAudioContext.instances[1].closed, true);
 }
 
+async function testReleaseIsolatedSubmixAudioStreamClosesContext()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  for (let slot = 0; slot < 3; slot++)
+  {
+    mixer.appendStream(createStream({ video: false, audio: true }), slot);
+  }
+
+  const output = await mixer.getAudioStream({ slots: [ 0, 1 ], isolated: true });
+
+  assert.ok(output);
+  assert.strictEqual(MockAudioContext.instances.length, 1);
+  assert.strictEqual(MockAudioContext.instances[0].closed, false);
+
+  const released = mixer.releaseSubmixAudioStream({ slots: [ 1, 0 ], isolated: true });
+
+  assert.strictEqual(released, true);
+  assert.strictEqual(MockAudioContext.instances[0].closed, true);
+  assert.strictEqual(mixer.releaseSubmixAudioStream({ slots: [ 0, 1 ], isolated: true }), false);
+
+  mixer.stop();
+}
+
 async function testWatermarkConfigAndFiltering()
 {
   resetMockState();
@@ -1413,6 +1439,7 @@ async function run()
     await testDestinationTrackHealthRecreatesSilentBusDestination();
     await testDestinationTrackHealthRecreatesEndedBusDestination();
     await testIsolatedSlotAudioStreamsCreateIndependentContexts();
+    await testReleaseIsolatedSubmixAudioStreamClosesContext();
     await testWatermarkConfigAndFiltering();
     await testCanvas2DWatermarkDrawOrder();
     await testEmptyInitialRenderDoesNotCreateRenderer();

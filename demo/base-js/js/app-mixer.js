@@ -306,18 +306,17 @@ Object.assign(window.app, {
     const submix = this.ensureSubmixItem(key, normalizedSlots);
     const silent = Boolean(options.silent);
     const shouldPlay = !silent && options.play !== false;
+    const useWebAudioPlayback = this.shouldUseSubmixWebAudioPlayback();
+    // Android + Chrome 场景优先使用非 isolated 子混音，避免多 AudioContext 切换导致无声
+    const useIsolatedSubmix = !useWebAudioPlayback;
 
     try
     {
       // 显示准备中状态
       submix.label.innerText = `槽位 ${displayKey} 准备中...`;
-      // Android Chrome 需使用 WebAudio 绕过自动播放限制
-      const useWebAudioPlayback = this.shouldUseSubmixWebAudioPlayback();
 
       if (shouldPlay)
       {
-        // 暂停其他子混音（同一 mixer 输出只能由一个 audio 元素播放）
-        this.pauseOtherSubmixes(key);
         if (useWebAudioPlayback)
         {
           // Android Chrome 需要先 resume AudioContext
@@ -327,23 +326,35 @@ Object.assign(window.app, {
             'submix playback context resume timeout'
           );
         }
-        // 重置 audio 元素状态，准备绑定新流
-        submix.audio.pause();
-        submix.audio.removeAttribute('src');
-        submix.audio.srcObject = null;
-        submix.audio.load();
+        // 非 WebAudio 模式下重置 audio 元素状态，准备绑定新流
+        if (!useWebAudioPlayback)
+        {
+          submix.audio.pause();
+          submix.audio.removeAttribute('src');
+          submix.audio.srcObject = null;
+          submix.audio.load();
+        }
       }
 
       // 从 Mixer 获取独立的子混音音频流
-      const stream = await this.mixer.getAudioStream({ slots: normalizedSlots, isolated: true });
+      const stream = await this.mixer.getAudioStream({ slots: normalizedSlots, isolated: useIsolatedSubmix });
+      const playbackStream = this.createAudioPlaybackStream(stream);
       const trackCount = stream ? stream.getAudioTracks().length : 0;
 
-      if (!stream)
+      if (!playbackStream)
       {
         // 所选槽位无可用的音频轨道
-        submix.audio.pause();
-        submix.audio.srcObject = null;
-        submix.audio.load();
+        if (!useWebAudioPlayback)
+        {
+          submix.audio.pause();
+          submix.audio.srcObject = null;
+          submix.audio.load();
+        }
+        else
+        {
+          submix.audio.srcObject = null;
+          this.stopSubmixWebAudioPlayback(submix);
+        }
         submix.label.innerText = `槽位 ${displayKey} 无可用音频`;
         this.updateStats();
 
@@ -354,9 +365,11 @@ Object.assign(window.app, {
       const wasPaused = submix.audio.paused;
 
       // 将音频流绑定到 UI 元素
-      submix.audio.srcObject = stream;
+      submix.audio.srcObject = playbackStream;
       // WebAudio 模式下 audio 元素静音，由 AudioContext 输出
       submix.audio.muted = useWebAudioPlayback;
+      // WebAudio 模式不依赖 audio 元素播放，避免 Android 多媒体焦点互斥导致互相 pause
+      submix.audio.autoplay = !useWebAudioPlayback;
       if (useWebAudioPlayback)
       {
         // 等待一帧确保 srcObject 已绑定
@@ -369,12 +382,10 @@ Object.assign(window.app, {
         {
           // WebAudio 模式：连接 AudioContext 播放
           await this.withTimeout(
-            this.startSubmixWebAudioPlayback(submix, stream),
+            this.startSubmixWebAudioPlayback(submix, playbackStream),
             800,
             'submix webaudio playback timeout'
           );
-          // audio.play() 在 muted 模式下无声音，但用于保持 audio 状态同步
-          submix.audio.play().catch(() => { });
         }
         else
         {

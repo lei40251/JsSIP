@@ -804,6 +804,37 @@ const app = {
     });
   },
 
+  releaseSubmixAudioRequest(slots, isolated)
+  {
+    if (!this.mixer || !this.mixer.releaseSubmixAudioStream) return false;
+    const normalizedSlots = this.normalizeSubmixSlots(slots);
+
+    if (!normalizedSlots.length) return false;
+
+    try
+    {
+      return this.mixer.releaseSubmixAudioStream({
+        slots    : normalizedSlots,
+        isolated : Boolean(isolated)
+      });
+    }
+    catch (e)
+    {
+      return false;
+    }
+  },
+
+  releaseOtherSubmixAudioRequests(activeKey, isolated)
+  {
+    this.activeSubmixes.forEach((item, key) =>
+    {
+      if (key !== activeKey)
+      {
+        this.releaseSubmixAudioRequest(item.slots, isolated);
+      }
+    });
+  },
+
   ensureSubmixPlaybackContext()
   {
     if (!this.submixPlaybackCtx)
@@ -823,18 +854,42 @@ const app = {
   {
     this.stopSubmixWebAudioPlayback(submix);
     const ctx = await this.ensureSubmixPlaybackContext();
-    const streams = fallbackStream ? [ fallbackStream ] : [];
+    const streams = [];
 
-    submix.playbackSources = streams.map((stream) =>
+    if (fallbackStream)
     {
-      const source = ctx.createMediaStreamSource(stream);
+      let playbackStream = fallbackStream;
+      let ownedTracks = [];
+      const tracks = fallbackStream.getAudioTracks ? fallbackStream.getAudioTracks() : [];
+
+      if (tracks.length)
+      {
+        const clonedTracks = tracks.map((track) =>
+        {
+          try { return track.clone ? track.clone() : null; }
+          catch (e) { return null; }
+        }).filter(Boolean);
+
+        if (clonedTracks.length)
+        {
+          playbackStream = new MediaStream(clonedTracks);
+          ownedTracks = clonedTracks;
+        }
+      }
+
+      streams.push({ stream: playbackStream, ownedTracks });
+    }
+
+    submix.playbackSources = streams.map((item) =>
+    {
+      const source = ctx.createMediaStreamSource(item.stream);
       const gain = ctx.createGain();
 
       gain.gain.value = 1;
       source.connect(gain);
       gain.connect(ctx.destination);
 
-      return { source, gain, stream };
+      return { source, gain, stream: item.stream, ownedTracks: item.ownedTracks || [] };
     });
   },
 
@@ -848,6 +903,14 @@ const app = {
       catch (e) { }
       try { item.gain.disconnect(); }
       catch (e) { }
+      if (item.ownedTracks && item.ownedTracks.length)
+      {
+        item.ownedTracks.forEach((track) =>
+        {
+          try { track.stop(); }
+          catch (e) { }
+        });
+      }
     });
     submix.playbackSources = [];
   },
@@ -918,7 +981,13 @@ const app = {
         this.startSubmixWebAudioPlayback(submix, audio.srcObject).catch(() => { });
       }
     };
-    audio.onpause = () => this.stopSubmixWebAudioPlayback(submix);
+    audio.onpause = () =>
+    {
+      // Android WebAudio 子混音模式下，audio 元素可能被系统媒体焦点自动 pause，
+      // 不应把它当作用户停止意图，否则会误断开正在并行播放的子混音。
+      if (this.shouldUseSubmixWebAudioPlayback()) return;
+      this.stopSubmixWebAudioPlayback(submix);
+    };
     this.activeSubmixes.set(key, submix);
     this.updateSubmixStatus();
 
@@ -942,6 +1011,7 @@ const app = {
 
     submix.audio.pause();
     this.stopSubmixWebAudioPlayback(submix);
+    this.releaseSubmixAudioRequest(submix.slots, this.shouldUseSubmixWebAudioPlayback() ? false : true);
     submix.audio.srcObject = null;
     submix.row.remove();
     this.activeSubmixes.delete(key);
@@ -1264,6 +1334,25 @@ const app = {
       .filter((slot) => Number.isInteger(slot) && slot >= 0 && slot < this.maxDemoSources)
       .filter((slot, index, values) => values.indexOf(slot) === index)
       .sort((a, b) => a - b);
+  },
+
+  createAudioPlaybackStream(stream)
+  {
+    if (!stream || !stream.getAudioTracks) return stream;
+
+    const tracks = stream.getAudioTracks().filter((track) => track && track.readyState === 'live');
+
+    if (!tracks.length) return stream;
+
+    const clonedTracks = tracks.map((track) =>
+    {
+      try { return track.clone ? track.clone() : null; }
+      catch (e) { return null; }
+    }).filter(Boolean);
+
+    if (!clonedTracks.length) return stream;
+
+    return new MediaStream(clonedTracks);
   },
 
   calcLayoutFromSources(sources)
