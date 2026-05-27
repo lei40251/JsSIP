@@ -308,6 +308,21 @@ class MockGainNode extends MockAudioNode
   }
 }
 
+class MockDynamicsCompressorNode extends MockAudioNode
+{
+  constructor()
+  {
+    super();
+
+    this.inputs = [];
+    this.threshold = { value: -24 };
+    this.knee = { value: 30 };
+    this.ratio = { value: 12 };
+    this.attack = { value: 0.003 };
+    this.release = { value: 0.25 };
+  }
+}
+
 class MockAudioDestination extends MockAudioNode
 {
   constructor()
@@ -362,6 +377,11 @@ class MockAudioContext
   createGain()
   {
     return new MockGainNode();
+  }
+
+  createDynamicsCompressor()
+  {
+    return new MockDynamicsCompressorNode();
   }
 
   close()
@@ -726,9 +746,12 @@ async function testSlotAudioStreamsCreateIndependentBuses()
   assert.strictEqual(context.destinations.length, 2);
   assert.strictEqual(context.destinations[0].stream, first);
   assert.strictEqual(context.destinations[1].stream, second);
-  assert.strictEqual(context.destinations[0].inputs.length, 3);
-  assert.strictEqual(context.destinations[1].inputs.length, 3);
+  assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[1].inputs.length, 1);
   assert.strictEqual(context.sources.length, 4);
+  assert.strictEqual(context.destinations[0].inputs[0] instanceof MockDynamicsCompressorNode, true);
+  assert.strictEqual(firstBus.connections.size, 3);
+  assert.strictEqual(secondBus.connections.size, 3);
 
   mixer.removeStream(streams[2].id);
   const refreshed = await mixer.getAudioStream({ slots: [ 1, 2, 3 ] });
@@ -736,7 +759,7 @@ async function testSlotAudioStreamsCreateIndependentBuses()
   assert.strictEqual(refreshed, first);
   assert.strictEqual(firstBus.connections.size, 2);
   assert.strictEqual(secondBus.connections.size, 3);
-  assert.strictEqual(context.destinations[1].inputs.length, 3);
+  assert.strictEqual(context.destinations[1].inputs.length, 1);
   assert.strictEqual(await mixer.getAudioStream({ slots: [] }), null);
   assert.strictEqual(await mixer.getAudioStream({ slots: [ -1, 'x' ] }), null);
 
@@ -766,7 +789,8 @@ async function testDefaultAudioStreamStillMixesAllSources()
 
   assert.ok(output);
   assert.strictEqual(context.destinations.length, 1);
-  assert.strictEqual(context.destinations[0].inputs.length, 4);
+  assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[0].inputs[0].inputs.length, 4);
   assert.strictEqual(mixer.getAudioInfo().connectedSources, 4);
 
   mixer.stop();
@@ -794,18 +818,20 @@ async function testDefaultAndSlotAudioShareSourceNodesWithSeparateGains()
   assert.strictEqual(slotOutput.getAudioTracks().length, 1);
   assert.strictEqual(slotOutput.getVideoTracks().length, 0);
   assert.strictEqual(context.destinations.length, 2);
-  assert.strictEqual(context.destinations[0].inputs.length, 3);
-  assert.strictEqual(context.destinations[1].inputs.length, 2);
+  assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[1].inputs.length, 1);
   assert.strictEqual(context.sources.length, 3);
 
-  const defaultGain = context.destinations[0].inputs[0];
-  const slotGain = context.destinations[1].inputs[0];
+  const defaultCompressor = context.destinations[0].inputs[0];
+  const slotCompressor = context.destinations[1].inputs[0];
 
-  assert.notStrictEqual(defaultGain, slotGain);
+  assert.notStrictEqual(defaultCompressor, slotCompressor);
+  assert.strictEqual(defaultCompressor.inputs.length, 3);
+  assert.strictEqual(slotCompressor.inputs.length, 2);
 
   mixer.stop();
-  assert.strictEqual(defaultGain.disconnected, true);
-  assert.strictEqual(slotGain.disconnected, true);
+  assert.strictEqual(defaultCompressor.disconnected, true);
+  assert.strictEqual(slotCompressor.disconnected, true);
 }
 
 async function testSlotAudioStreamIsStableWhenRequestedBeforeSources()
@@ -819,7 +845,8 @@ async function testSlotAudioStreamIsStableWhenRequestedBeforeSources()
   assert.ok(pendingOutput);
   assert.strictEqual(pendingOutput.getAudioTracks().length, 1);
   assert.strictEqual(context.destinations.length, 1);
-  assert.strictEqual(context.destinations[0].inputs.length, 0);
+  assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[0].inputs[0].inputs.length, 0);
 
   mixer.appendStream(createStream({ video: false, audio: true }), 0);
   await flushAsync();
@@ -828,6 +855,7 @@ async function testSlotAudioStreamIsStableWhenRequestedBeforeSources()
 
   assert.strictEqual(activeOutput, pendingOutput);
   assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[0].inputs[0].inputs.length, 1);
 
   mixer.stop();
 }
@@ -850,14 +878,14 @@ async function testAudioSourceFansOutThroughMasterGain()
   assert.strictEqual(source.audioSourceNode.connections.length, 1);
   assert.strictEqual(source.audioSourceNode.connections[0], source.masterGainNode);
   assert.strictEqual(source.masterGainNode.connections.length, 2);
-  assert.strictEqual(source.gainNode.connections[0], mixer._audioDestination);
+  assert.strictEqual(source.gainNode.connections[0], mixer._audioMixer._compressorNode);
 
   const bus = mixer._audioMixer._audioBuses.get('0');
   const busConnection = bus.connections.get(source.id);
 
   assert.ok(busConnection);
   assert.strictEqual(busConnection.masterGainNode, source.masterGainNode);
-  assert.strictEqual(busConnection.gainNode.connections[0], bus.destination);
+  assert.strictEqual(busConnection.gainNode.connections[0], bus.compressor);
 
   mixer.stop();
 }

@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026527953
+ * CRTC v1.13.0.20265271153
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210541906 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210542306 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210541906');
+debug('version %s', '1.13.0.405210542306');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210541906';
+    return '1.13.0.405210542306';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -16712,6 +16712,10 @@ class AudioMixer {
     if (this._logger) {
       this._logger.debug('Stopping AudioMixer');
     }
+    if (this._compressorNode) {
+      this._safeDisconnect(this._compressorNode);
+      this._compressorNode = null;
+    }
     if (this._audioDestination) {
       this._safeDisconnect(this._audioDestination);
       this._audioDestination = null;
@@ -16795,6 +16799,10 @@ class AudioMixer {
       if (options.defaultDestination && !this._audioDestination) {
         this._audioDestination = this._createAudioDestination();
       }
+      if (options.defaultDestination && !this._compressorNode && this._audioDestination) {
+        this._compressorNode = this._createCompressor();
+        this._compressorNode.connect(this._audioDestination);
+      }
       this._updateAudioInfo({
         status: this._audioContext.state === 'suspended' ? 'suspended' : 'ready',
         reason: ''
@@ -16877,6 +16885,28 @@ class AudioMixer {
     var destination = this._audioContext.createMediaStreamDestination();
     return destination;
   }
+
+  /**
+   * 创建 DynamicsCompressorNode，防止多路音频叠加时削波失真。
+   *
+   * 参数针对人声/通话场景调优：
+   *   threshold=-24dB — 音量超过此值开始压缩
+   *   knee=30dB       — 压缩过渡平滑，避免突变
+   *   ratio=12        — 超过 threshold 的部分按 12:1 压缩
+   *   attack=3ms      — 快速响应瞬时峰值
+   *   release=250ms   — 自然释放，避免 pumping 效应
+   *
+   * @returns {DynamicsCompressorNode}
+   */
+  _createCompressor() {
+    var compressor = this._audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.25;
+    return compressor;
+  }
   _isDestinationTrackHealthy(destination) {
     if (!destination || !destination.stream || !destination.stream.getAudioTracks) {
       return false;
@@ -16890,6 +16920,8 @@ class AudioMixer {
     }
     if (!bus.destination) {
       bus.destination = this._createAudioDestination();
+      bus.compressor = this._createCompressor();
+      bus.compressor.connect(bus.destination);
       return bus.destination;
     }
     if (!this._isDestinationTrackHealthy(bus.destination)) {
@@ -16900,8 +16932,11 @@ class AudioMixer {
           this._disposeOutputGain(connection.source || null, connection.gainNode, true);
         });
         bus.connections.clear();
+        this._safeDisconnect(bus.compressor);
         this._safeDisconnect(bus.destination);
         bus.destination = this._createAudioDestination();
+        bus.compressor = this._createCompressor();
+        bus.compressor.connect(bus.destination);
       }
     }
     return bus.destination;
@@ -17043,7 +17078,9 @@ class AudioMixer {
     });
     bus.connections.clear();
     if (bus.destination) {
+      this._safeDisconnect(bus.compressor);
       this._safeDisconnect(bus.destination);
+      bus.compressor = null;
       bus.destination = null;
     }
   }
@@ -17100,6 +17137,13 @@ class AudioMixer {
       }
       if (!submix.destination) {
         submix.destination = submix.audioContext.createMediaStreamDestination();
+        submix.compressor = submix.audioContext.createDynamicsCompressor();
+        submix.compressor.threshold.value = -24;
+        submix.compressor.knee.value = 30;
+        submix.compressor.ratio.value = 12;
+        submix.compressor.attack.value = 0.003;
+        submix.compressor.release.value = 0.25;
+        submix.compressor.connect(submix.destination);
       }
       submix.readyPromise = null;
       return true;
@@ -17152,7 +17196,9 @@ class AudioMixer {
     });
     submix.connections.clear();
     if (submix.destination) {
+      this._safeDisconnect(submix.compressor);
       this._safeDisconnect(submix.destination);
+      submix.compressor = null;
       submix.destination = null;
     }
     if (closeContext && submix.audioContext) {
@@ -17214,7 +17260,7 @@ class AudioMixer {
           var gainNode = submix.audioContext.createGain();
           gainNode.gain.value = source.gain;
           sourceNode.connect(gainNode);
-          gainNode.connect(submix.destination);
+          gainNode.connect(submix.compressor);
           this._registerOutputGain(source, gainNode);
           submix.connections.set(source.id, {
             sourceNode: sourceNode,
@@ -17384,7 +17430,7 @@ class AudioMixer {
       }
       if (bus) {
         masterGainNode.connect(gainNode);
-        gainNode.connect(bus.destination);
+        gainNode.connect(bus.compressor);
         bus.connections.set(source.id, {
           audioSourceNode: audioSourceNode,
           masterGainNode: masterGainNode,
@@ -17400,7 +17446,7 @@ class AudioMixer {
         return false;
       }
       masterGainNode.connect(gainNode);
-      gainNode.connect(this._audioDestination);
+      gainNode.connect(this._compressorNode);
       source.gainNode = gainNode;
       this._audioSources.add(audioSourceNode);
       if (this._onAudioTrackAvailable) {
@@ -17562,6 +17608,16 @@ class LayoutEngine {
     this._resizeRenderer = options.resizeRenderer;
     this._createWatermarkItems = options.createWatermarkItems;
     this._logger = options.logger || null;
+
+    /** @type {Object<string,HTMLCanvasElement>} 纯音频源的占位图画布缓存 */
+    this._audioPlaceholders = {};
+
+    /** @type {number|null} 上次布局的行列数缓存，用于抑制不变时的重复日志 */
+    this._lastLayoutCols = null;
+    this._lastLayoutRows = null;
+
+    /** @type {number|null} 上次 payload 的条目数/尺寸缓存 */
+    this._lastPayloadStats = null;
     if (this._logger) {
       this._logger.debug('LayoutEngine constructed');
     }
@@ -17583,7 +17639,11 @@ class LayoutEngine {
     var cellHeight = this._canvas.height / layout.rows;
     var items = [];
     this._sourceRegistry.sources.forEach(source => {
-      if (!this._sourceRegistry.isRenderable(source)) {
+      var hasVideo = this._sourceRegistry.hasVideoTrack(source);
+      var hasAudio = this._sourceRegistry.hasLiveAudioTrack(source);
+
+      // 无视频也无音频的源完全跳过
+      if (!hasVideo && !hasAudio) {
         return;
       }
       var slot = typeof source.slot === 'number' ? source.slot : 0;
@@ -17591,15 +17651,35 @@ class LayoutEngine {
       var row = Math.floor(slot / layout.cols);
       var targetX = col * cellWidth;
       var targetY = row * cellHeight;
-      var draw = this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
-      if (draw) {
-        items.push({
-          id: source.id,
-          streamId: this._getSourceStreamId(source),
-          slot: slot,
-          video: source.video,
-          draw: draw
-        });
+      if (hasVideo) {
+        // 有视频轨 → 按原有逻辑等比缩放后绘制
+        var draw = this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+        if (draw) {
+          items.push({
+            id: source.id,
+            streamId: this._getSourceStreamId(source),
+            slot: slot,
+            video: source.video,
+            draw: draw
+          });
+        }
+      } else {
+        // 纯音频源 → 生成占位图画布，填满整个格子
+        var placeholder = this._createPlaceholderCanvas(slot, cellWidth, cellHeight);
+        if (placeholder) {
+          items.push({
+            id: source.id,
+            streamId: this._getSourceStreamId(source),
+            slot: slot,
+            video: placeholder,
+            draw: {
+              x: targetX,
+              y: targetY,
+              width: cellWidth,
+              height: cellHeight
+            }
+          });
+        }
       }
     });
     var payload = {
@@ -17616,7 +17696,11 @@ class LayoutEngine {
       payload.outputWatermarks = watermarks.outputWatermarks || [];
     }
     if (this._logger) {
-      this._logger.debug(`Render payload created: size=${payload.width}x${payload.height} items=${items.length} sourceWatermarks=${payload.sourceWatermarks.length} outputWatermarks=${payload.outputWatermarks.length}`);
+      var stats = `size=${payload.width}x${payload.height} items=${items.length} sourceWatermarks=${payload.sourceWatermarks.length} outputWatermarks=${payload.outputWatermarks.length}`;
+      if (stats !== this._lastPayloadStats) {
+        this._logger.debug(`Render payload created: ${stats}`);
+        this._lastPayloadStats = stats;
+      }
     }
     return payload;
   }
@@ -17686,8 +17770,10 @@ class LayoutEngine {
       cols,
       rows
     };
-    if (this._logger) {
+    if (this._logger && (cols !== this._lastLayoutCols || rows !== this._lastLayoutRows)) {
       this._logger.debug(`Layout calculated: count=${count} cols=${cols} rows=${rows} portrait=${isPortrait}`);
+      this._lastLayoutCols = cols;
+      this._lastLayoutRows = rows;
     }
     return layout;
   }
@@ -17751,6 +17837,82 @@ class LayoutEngine {
       offsetY: Math.max(0, (targetHeight - newHeight) / 2)
     };
   }
+
+  /**
+   * 为纯音频源创建占位图画布。
+   *
+   * 占位符显示一个深色背景 + 居中圆形（内含 slot 编号）+ "Audio" 文字，
+   * 让用户在视频混流输出中能直观感知到该路纯音频源的存在。
+   *
+   * 结果按 slot 缓存，仅当格子尺寸变化时重建。
+   *
+   * @param {number} slot - 源所在 slot 编号
+   * @param {number} cellWidth - 格子宽度
+   * @param {number} cellHeight - 格子高度
+   * @returns {HTMLCanvasElement|null} 占位图画布，参数无效时返回 null
+   */
+  _createPlaceholderCanvas(slot, cellWidth, cellHeight) {
+    if (!cellWidth || !cellHeight) {
+      return null;
+    }
+    var key = `audio-${slot}`;
+    var cached = this._audioPlaceholders[key];
+
+    // 缓存命中且尺寸匹配 → 复用
+    if (cached && cached.width === Math.ceil(cellWidth) && cached.height === Math.ceil(cellHeight)) {
+      return cached;
+    }
+    var w = Math.ceil(cellWidth);
+    var h = Math.ceil(cellHeight);
+    var canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+
+    // 深色背景
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, 0, w, h);
+
+    // 居中绘制麦克风图标
+    var cx = w / 2;
+    var cy = h / 2;
+    this._drawMicrophone(ctx, cx, cy, Math.min(w, h) * 0.19);
+    this._audioPlaceholders[key] = canvas;
+    return canvas;
+  }
+
+  /**
+   * 在 canvas 上下文中绘制麦克风图标。
+   *
+   * 基于 Feather 麦克风图标设计，在 24x24 的虚拟坐标空间中绘制：
+   *   - 圆角矩形 pill 作为麦克风头部
+   *   - 圆弧作为麦克风网罩
+   *   - 底部直线为支架
+   *
+   * @param {CanvasRenderingContext2D} ctx - 画布上下文
+   * @param {number} cx - 中心 X 坐标
+   * @param {number} cy - 中心 Y 坐标
+   * @param {number} size - 图标尺寸（直径）
+   */
+  _drawMicrophone(ctx, cx, cy, size) {
+    // SVG path 数据，来自 1024x1024 视图的麦克风图标
+    var pathData = 'M566.215111 899.811556v118.158222h-85.333333v-114.915556C294.4 888.718222 147.342222 735.573333 147.342222 562.688a42.666667 42.666667 0 0 1 85.333334 0c0 134.257778 123.790222 256.113778 276.764444 256.113778s276.707556-121.912889 276.707556-256.113778a42.666667 42.666667 0 1 1 85.333333 0c0 164.067556-132.380444 310.385778-305.265778 337.123556zM510.976 33.336889a170.666667 170.666667 0 0 1 170.666667 170.666667v341.333333a170.666667 170.666667 0 1 1-341.333334 0v-341.333333a170.666667 170.666667 0 0 1 170.666667-170.666667z';
+    var path;
+    try {
+      path = new Path2D(pathData);
+    } catch (_error) {
+      return;
+    }
+    ctx.save();
+    ctx.translate(cx - size / 2, cy - size / 2);
+    ctx.scale(size / 1024, size / 1024);
+    ctx.fillStyle = '#888888';
+    ctx.fill(path);
+    ctx.restore();
+  }
 }
 module.exports = LayoutEngine;
 },{}],44:[function(require,module,exports){
@@ -17767,6 +17929,9 @@ module.exports = LayoutEngine;
 
 var Logger = require('../Logger');
 var logger = new Logger('MixerConfig');
+
+/** 最大参与方数（含视频和纯音频源） */
+var MAX_SOURCES = 9;
 
 /** 合法的渲染后端模式集合 */
 var VALID_RENDER_MODES = {
@@ -17894,6 +18059,13 @@ exports.normalizeGain = function (value, fallback) {
  * @param {number} defaultGain - 未指定 gain 时使用的默认值
  * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined }
  */
+/**
+ * 返回最大参与方数限制。
+ * @returns {number}
+ */
+exports.getMaxSources = function () {
+  return MAX_SOURCES;
+};
 exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   var options = {};
   if (typeof optionsOrSlot === 'number') {
@@ -18049,6 +18221,10 @@ module.exports = class MediaStreamMixer {
 
     /** @type {HTMLCanvasElement} 离屏 canvas，所有视频帧合成到这里 */
     this._canvas = this._domAdapter.createCanvas();
+
+    /** @type {number|null} 上次渲染器 resize 的宽高缓存，仅尺寸变化时打日志 */
+    this._lastRenderWidth = null;
+    this._lastRenderHeight = null;
 
     // -----------------------------------------------------------------------
     // 源注册表（SourceRegistry）—— 统一管理所有视频/音频源的生命周期。
@@ -18249,7 +18425,6 @@ module.exports = class MediaStreamMixer {
    * 设置输出画布尺寸。
    */
   _prepareCanvas() {
-    logger.debug('Preparing mixer canvas');
     this._domAdapter.prepareCanvas(this._canvas);
   }
 
@@ -18274,7 +18449,11 @@ module.exports = class MediaStreamMixer {
    * @param {number} height - 输出高度
    */
   _resizeRenderer(width, height) {
-    logger.debug(`Resizing renderer: ${width}x${height}`);
+    if (this._lastRenderWidth !== width || this._lastRenderHeight !== height) {
+      logger.debug(`Resizing renderer: ${width}x${height}`);
+      this._lastRenderWidth = width;
+      this._lastRenderHeight = height;
+    }
     this._renderLoop.resizeRenderer(width, height);
   }
 
@@ -18469,7 +18648,6 @@ module.exports = class MediaStreamMixer {
    * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
    */
   _syncExternalSourceAudio() {
-    logger.debug('Syncing external source audio');
     this._audioMixer.syncExternalSourceAudio();
   }
 
@@ -18562,6 +18740,19 @@ module.exports = class MediaStreamMixer {
     }
     if (!(videos instanceof Array)) {
       videos = [videos];
+    }
+
+    // ---- 最多 9 路源限制 ----
+    var maxSources = MixerConfig.getMaxSources();
+    var currentCount = this._sources.length;
+    var available = Math.max(0, maxSources - currentCount);
+    if (available <= 0) {
+      logger.warn(`appendStream: max sources (${maxSources}) reached, skipping all`);
+      return false;
+    }
+    if (videos.length > available) {
+      logger.warn(`appendStream: truncating ${videos.length - available} source(s) to enforce ${maxSources}-source limit`);
+      videos = videos.slice(0, available);
     }
     var appended = false;
     videos.forEach((video, index) => {
@@ -18916,10 +19107,15 @@ class MixerDomAdapter {
       var streamId = stream && stream.id ? stream.id : 'unknown';
       this._logger.debug(`Video element created for stream ${streamId}`);
     }
+    var capturedStreamId = video.srcObject && video.srcObject.id || 'unknown';
     video.play().catch(error => {
-      var stream = video.srcObject;
-      var streamId = stream && stream.id ? stream.id : 'unknown';
-      this._logger.error(`video play error for stream ${streamId}: ${error.message || String(error)}`);
+      // 确认 video 是否仍关联着该 stream。如果 stream 已被清理（pause + srcObject = null），
+      // 说明该 video 在被 play() resolve 之前已被上层逻辑主动移除，此为良性竞态，不必报 error。
+      var isOrphaned = !video.srcObject;
+      if (isOrphaned) {
+        return;
+      }
+      this._logger.error(`video play error for stream ${capturedStreamId}: ${error.message || String(error)}`);
     });
     return video;
   }
@@ -19633,7 +19829,10 @@ class SourceRegistry {
     this.sources.push(source);
     this._syncVideos();
     if (this._logger) {
-      this._logger.debug(`Source added: id=${source.id} slot=${source.slot} gain=${source.gain}`);
+      var hasAudio = this.hasLiveAudioTrack(source);
+      var hasVideo = this.hasVideoTrack(source);
+      var trackLabel = hasAudio && hasVideo ? 'audio+video' : hasAudio ? 'audio' : hasVideo ? 'video' : 'none';
+      this._logger.debug(`Source added: id=${source.id} slot=${source.slot} tracks=${trackLabel} gain=${source.gain}`);
     }
     return source;
   }
