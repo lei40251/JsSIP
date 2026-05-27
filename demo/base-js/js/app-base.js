@@ -757,7 +757,6 @@ const app = {
     if (!this.isRunning() || !this.outputVideoStream) return;
 
     const enable = !this.monitorAudio;
-    const fallbackPreviewStream = this.createVideoOnlyPreviewStream(this.outputMixedStream || this.outputVideoStream);
 
     this.ui.btnMonitorAudio.disabled = true;
     if (enable)
@@ -769,17 +768,15 @@ const app = {
 
           this.outputMixedStream = stream;
           this.monitorAudio = true;
-          await this.setPreviewStream(stream, { muted: true });
+          // 监听输出只切换音频链路，不重绑视频预览，避免 video 元素闪烁。
           await this.startOutputWebAudioPlayback(stream);
+          this.startViz(stream);
         })
-        .catch(async(e) =>
+        .catch((e) =>
         {
           this.monitorAudio = false;
           this.stopOutputWebAudioPlayback();
-          await this.setPreviewStream(fallbackPreviewStream, {
-            muted             : true,
-            suppressPlayError : true
-          });
+          this.startViz(this.createVideoOnlyPreviewStream(this.outputVideoStream));
           if (!this.isBenignMediaPlayInterruption(e))
           {
             this.showNotification(`监听输出失败: ${e.message}`);
@@ -793,16 +790,10 @@ const app = {
 
     this.monitorAudio = false;
     this.stopOutputWebAudioPlayback();
-    
-    return this.setPreviewStream(fallbackPreviewStream, {
-      muted             : true,
-      suppressPlayError : true
-    })
-      .catch(() => { })
-      .finally(() =>
-      {
-        this.updateMonitorAudioUI();
-      });
+    this.startViz(this.createVideoOnlyPreviewStream(this.outputVideoStream));
+    this.updateMonitorAudioUI();
+
+    return Promise.resolve();
   },
 
   listenSelectedSlotSubmix()

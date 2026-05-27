@@ -187,7 +187,7 @@ gulp.task('uglify', function()
         unsafe       : true,
         unsafe_math  : true,
         reduce_vars  : true,
-        pure_funcs   : [ 'logger.debug', 'this._logger.debug' ],
+        // pure_funcs   : [ 'logger.debug', 'this._logger.debug' ],
         global_defs  : {
           __DEBUG__ : false // 全局常量替换
         }

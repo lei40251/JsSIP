@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265262317
+ * CRTC v1.13.0.2026527916
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210524634 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210541832 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210524634');
+debug('version %s', '1.13.0.405210541832');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210524634';
+    return '1.13.0.405210541832';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
