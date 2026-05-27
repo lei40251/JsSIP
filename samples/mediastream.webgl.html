@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>WebGL Insertable Streams Demo</title>
+
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    video {
+      width: 720px;
+      margin-top: 20px;
+      border: 2px solid #444;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>WebGL Watermark Demo</h2>
+
+  <video id="video" autoplay playsinline muted></video>
+
+  <script>
+
+    /**
+     * 使用 WebGL2 对视频帧做实时处理（添加水印），
+     * 通过 Insertable Streams API（MediaStreamTrackProcessor / Generator）
+     * 将处理后的帧重新注入媒体流水线。
+     *
+     * API 兼容性（Chrome 94+，需要开启 Experimental Web Platform features）：
+     *   - MediaStreamTrackProcessor
+     *   - MediaStreamTrackGenerator
+     *   - TransformStream
+     *   - OffscreenCanvas + WebGL2
+     *   - VideoFrame
+     */
+
+    // -------------------------------------------------------------------------
+    // 编译 WebGL shader 的辅助函数
+    // -------------------------------------------------------------------------
+
+    /**
+     * 编译单个 shader，编译失败时打印日志并返回 null。
+     * 调用方需自行处理 null 返回值。
+     *
+     * @param {number} type  - gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER
+     * @param {string} source - GLSL 源码
+     * @returns {WebGLShader|null}
+     */
+    function compileShader(gl, type, source) {
+
+      const shader = gl.createShader(type);
+
+      gl.shaderSource(shader, source);
+
+      gl.compileShader(shader);
+
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+
+        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+
+        gl.deleteShader(shader); // 编译失败后及时释放 GPU 资源
+
+        return null;
+      }
+
+      return shader;
+    }
+
+    /**
+     * 构建并链接完整的着色器程序。
+     *
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} vsSource - 顶点着色器源码
+     * @param {string} fsSource - 片元着色器源码
+     * @returns {WebGLProgram|null}
+     */
+    function createProgram(gl, vsSource, fsSource) {
+
+      const vs = compileShader(gl, gl.VERTEX_SHADER, vsSource);
+      const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+      // 任一 shader 编译失败则终止
+      if (!vs || !fs) {
+
+        if (vs) gl.deleteShader(vs);
+        if (fs) gl.deleteShader(fs);
+
+        return null;
+      }
+
+      const program = gl.createProgram();
+
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+
+      gl.linkProgram(program);
+
+      // 链接完成后即可释放 shader 对象，程序仍可使用
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+        console.error('Program link error:', gl.getProgramInfoLog(program));
+
+        gl.deleteProgram(program);
+
+        return null;
+      }
+
+      return program;
+    }
+
+    // -------------------------------------------------------------------------
+    // 核心：创建经过 WebGL2 处理后的视频轨
+    // -------------------------------------------------------------------------
+
+    /**
+     * 接收原始视频轨，返回经过 WebGL2 水印处理后的新视频轨。
+     *
+     * 处理管线：
+     *   getUserMedia Track
+     *     → MediaStreamTrackProcessor (读取原始帧)
+     *     → TransformStream (WebGL2 绘制 + 水印叠加)
+     *     → MediaStreamTrackGenerator (产出处理后的帧)
+     *     → 新 MediaStream → <video> 播放
+     *
+     * @param {MediaStreamTrack} track - 原始视频轨
+     * @returns {Promise<MediaStreamTrack|null>} 处理后的视频轨；API 不支持时返回 null
+     */
+    async function createProcessedTrack(track) {
+
+      // ---- 特性检测：Insertable Streams API --------------------------------
+
+      if (typeof MediaStreamTrackProcessor === 'undefined' ||
+          typeof MediaStreamTrackGenerator === 'undefined') {
+
+        console.warn('MediaStreamTrackProcessor/Generator 不可用，' +
+          '请开启 chrome://flags/#enable-experimental-web-platform-features');
+
+        return null;
+      }
+
+      // ---- 初始化 Processor / Generator -----------------------------------
+
+      const processor = new MediaStreamTrackProcessor({ track });
+
+      const generator = new MediaStreamTrackGenerator({ kind: 'video' });
+
+      // ---- OffscreenCanvas + WebGL2 ---------------------------------------
+      //
+      // 使用 OffscreenCanvas 可避免占用主线程 DOM canvas：
+      //   - transferToImageBitmap() 将绘制结果提取为 ImageBitmap
+      //   - 再用 ImageBitmap 构造新的 VideoFrame
+      //
+      // 注意：canvas 尺寸固定。若输入帧尺寸不一致，WebGL viewport
+      // 与实际帧内容可能存在比例差异。如需自适应，应在每帧读取
+      // frame.displayWidth / displayHeight 并 resize canvas。
+
+      const canvas = new OffscreenCanvas(1280, 720);
+
+      const gl = canvas.getContext('webgl2');
+
+      if (!gl) {
+
+        console.warn('WebGL2 不可用');
+
+        return null;
+      }
+
+      // ---- Vertex Shader --------------------------------------------------
+      //
+      // 绘制一个覆盖整个视口的矩形（两个三角形组成）。
+      // a_position  : 归一化设备坐标 [-1, 1]
+      // a_texCoord  : 纹理坐标，约定 (0,0)=左上, (1,1)=右下
+      //
+      // 注意：WebGL 默认纹理坐标 (0,0) = 左下。为使 (0,0) 对应左上，
+      // 顶点数据将 UV 的 Y 轴反转，配合下方的 UNPACK_FLIP_Y_WEBGL 参数。
+      // （详见 Texture 部分的 pixelStorei 注释）
+
+      const vertexSource = `#version 300 es
+
+    in vec2 a_position;
+    in vec2 a_texCoord;
+
+    out vec2 v_texCoord;
+
+    void main() {
+
+      gl_Position = vec4(a_position, 0.0, 1.0);
+
+      v_texCoord = a_texCoord;
+    }
+  `;
+
+      // ---- Fragment Shader ------------------------------------------------
+      //
+      // 接收纹理采样结果，在右下角叠加一个半透明红色水印方块。
+      // 水印区域由 v_texCoord 判断（x > 0.72 且 y > 0.82）。
+
+      const fragmentSource = `#version 300 es
+
+    precision mediump float;
+
+    uniform sampler2D u_texture;
+
+    in vec2 v_texCoord;
+
+    out vec4 outColor;
+
+    void main() {
+
+      vec4 color = texture(u_texture, v_texCoord);
+
+      // 右下角红色半透明水印
+      if (
+        v_texCoord.x > 0.72 &&
+        v_texCoord.y > 0.82
+      ) {
+
+        color = mix(
+          color,
+          vec4(1.0, 0.0, 0.0, 1.0),
+          0.5
+        );
+      }
+
+      outColor = color;
+    }
+  `;
+
+      // ---- 编译并链接着色器 -----------------------------------------------
+
+      const program = createProgram(gl, vertexSource, fragmentSource);
+
+      if (!program) {
+
+        console.error('Shader program 创建失败');
+
+        return null;
+      }
+
+      gl.useProgram(program);
+
+      // ---- 顶点缓冲区（全屏四边形）----------------------------------------
+      //
+      // 两个三角形，共 6 个顶点。每个顶点 4 个 float：
+      //   [posX, posY, texU, texV]
+      //
+      // UV 坐标映射（(0,0)=左上角，符合直觉）：
+      //   顶点          位置          纹理坐标
+      //   左下 (-1,-1) → (u:0, v:1)
+      //   右下 ( 1,-1) → (u:1, v:1)
+      //   左上 (-1, 1) → (u:0, v:0)
+      //   右上 ( 1, 1) → (u:1, v:0)
+
+      const vertices = new Float32Array([
+
+        // 第一个三角形
+        -1, -1, 0, 1,
+         1, -1, 1, 1,
+        -1,  1, 0, 0,
+
+        // 第二个三角形
+        -1,  1, 0, 0,
+         1, -1, 1, 1,
+         1,  1, 1, 0,
+      ]);
+
+      const buffer = gl.createBuffer();
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      // stride = 16 字节（4 个 float × 4 字节/float）
+      const stride = 16;
+
+      // ---- Attribute: a_position (前 2 个 float) -------------------------
+
+      const posLoc = gl.getAttribLocation(program, 'a_position');
+
+      gl.enableVertexAttribArray(posLoc);
+
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, stride, 0);
+
+      // ---- Attribute: a_texCoord (后 2 个 float, offset = 8 字节) --------
+
+      const texLoc = gl.getAttribLocation(program, 'a_texCoord');
+
+      gl.enableVertexAttribArray(texLoc);
+
+      gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, stride, 8);
+
+      // ---- Texture 初始化 -------------------------------------------------
+
+      const texture = gl.createTexture();
+
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      // 设置纹理缩放时的滤波方式（缩小/放大均使用线性插值）
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+      // 设置纹理坐标环绕模式（超出 [0,1] 范围时 clamp 到边缘）
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      /**
+       * 像素存储参数 — UNPACK_FLIP_Y_WEBGL
+       *
+       * WebGL 默认纹理坐标系原点在左下角 (0,0)，Y 轴向上。
+       * 而视频帧（以及大多数图片格式）的原点在左上角，Y 轴向下。
+       *
+       * 设置 pixelStorei(UNPACK_FLIP_Y_WEBGL, true) 后，
+       * texImage2D 会在上传时自动翻转 Y 轴，使纹理的 (0,0)
+       * 对应到我们直觉中的"左上角"。
+       *
+       * 这样顶点数据中的 UV 坐标就可以用 (0,0)=左上, (1,1)=右下
+       * 来映射，无需额外处理。
+       */
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+      // ---- TransformStream: 逐帧处理 --------------------------------------
+      //
+      // 每一帧的流程：
+      //   1. 设置 viewport 为 canvas 尺寸
+      //   2. 将 VideoFrame 上传到 WebGL 纹理
+      //   3. 绘制全屏四边形 → 片元着色器叠加水印
+      //   4. 从 canvas 提取 ImageBitmap
+      //   5. 用 ImageBitmap 构造新的 VideoFrame（保留原始时间戳）
+      //   6. 关闭旧帧和 bitmap，将新帧推入下游
+
+      const transformer = new TransformStream({
+
+        async transform(frame, controller) {
+
+          try {
+
+            // ① 设置视口
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            // ② 将当前帧上传到纹理
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,               // mipmap 级别
+              gl.RGBA,         // 内部格式
+              gl.RGBA,         // 外部格式
+              gl.UNSIGNED_BYTE,// 数据类型
+              frame            // 源：VideoFrame
+            );
+
+            // ③ 绘制两个三角形（覆盖全屏）
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            // ④ 提取绘制结果
+            //
+            // transferToImageBitmap() 会"转移" canvas 的底层像素，
+            // 调用后 canvas 内容被清空。这是 OffscreenCanvas 的高效用法，
+            // 避免额外的像素拷贝。
+            const bitmap = canvas.transferToImageBitmap();
+
+            // ⑤ 构造新帧
+            //
+            // 保留原始帧的时间戳，保证帧时序正确。
+            // 注意：此处直接传递 bitmap，构造 VideoFrame 后 bitmap 由
+            // VideoFrame 托管，但我们仍然显式 bitmap.close() 以确保
+            // 底层资源及时释放（部分浏览器不自动释放）。
+            const newFrame = new VideoFrame(bitmap, {
+              timestamp: frame.timestamp
+            });
+
+            bitmap.close();
+
+            // ⑥ 关闭输入帧（重要！不忘释放则内存持续增长）
+            frame.close();
+
+            // ⑦ 推入下游
+            controller.enqueue(newFrame);
+
+          } catch (err) {
+
+            console.error('Frame processing error:', err);
+
+            // 确保异常时仍然释放输入帧，防止内存泄漏
+            frame.close();
+          }
+        }
+      });
+
+      // ---- 组装管线 -------------------------------------------------------
+      //
+      // processor.readable  → 原始帧流
+      // transformer.writable→ 接收原始帧，输出处理后帧
+      // generator.writable  → 消费处理后帧，产出新的 MediaStreamTrack
+      //
+      // pipeThrough / pipeTo 自动处理背压（backpressure）。
+
+      processor.readable
+        .pipeThrough(transformer)
+        .pipeTo(generator.writable);
+
+      return generator;
+    }
+
+    // -------------------------------------------------------------------------
+    // 启动：获取摄像头 → WebGL2 处理 → 播放
+    // -------------------------------------------------------------------------
+
+    async function start() {
+
+      // ---- 检查 getUserMedia 支持 -----------------------------------------
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+
+        alert('getUserMedia 不可用，请使用 HTTPS 或 localhost 访问');
+
+        return;
+      }
+
+      let stream;
+
+      try {
+
+        stream = await navigator.mediaDevices.getUserMedia({
+
+          video: {
+            width: 1280,
+            height: 720,
+            frameRate: 24
+          },
+
+          audio: false
+        });
+
+      } catch (err) {
+
+        alert('摄像头访问被拒绝或不可用: ' + err.message);
+
+        return;
+      }
+
+      const [track] = stream.getVideoTracks();
+
+      // ---- 创建处理后的视频轨 ---------------------------------------------
+
+      const processedTrack = await createProcessedTrack(track);
+
+      // createProcessedTrack 在 API 不支持时返回 null
+      if (!processedTrack) {
+
+        alert('WebGL2 或 Insertable Streams API 不支持，' +
+          '请使用 Chrome 94+ 并开启 chrome://flags/#enable-experimental-web-platform-features');
+
+        // 回退：直接显示原始流
+        document.getElementById('video').srcObject = stream;
+
+        return;
+      }
+
+      // ---- 播放处理后的流 -------------------------------------------------
+
+      const processedStream = new MediaStream([processedTrack]);
+
+      document.getElementById('video').srcObject = processedStream;
+    }
+
+    start();
+
+  </script>
+
+</body>
+
+</html>

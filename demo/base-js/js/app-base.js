@@ -9,6 +9,7 @@ const app = {
   monitorAudio      : false,
   outputVideoStream : null,
   outputMixedStream : null,
+  outputRuntimeConfig : null,
   outputPlayback    : null,
   activeSubmixes    : new Map(),
   submixPlaybackCtx : null,
@@ -29,6 +30,9 @@ const app = {
     panelAddSource        : document.getElementById('panel-add-source'),
     panelSubmix           : document.getElementById('panel-submix'),
     panelWatermark        : document.getElementById('panel-watermark'),
+    cfgOutRes             : document.getElementById('cfg-out-res'),
+    cfgFps                : document.getElementById('cfg-fps'),
+    cfgRenderMode         : document.getElementById('cfg-render-mode'),
     submixList            : document.getElementById('submix-list'),
     submixStatus          : document.getElementById('submix-status'),
     panelSources          : document.getElementById('panel-sources'),
@@ -152,7 +156,19 @@ const app = {
 
     if (!frame) return;
 
-    const [ w, h ] = document.getElementById('cfg-out-res').value.split('x').map(Number);
+    let w = 0;
+    let h = 0;
+    const runtimeConfig = this.getOutputRuntimeConfig();
+
+    if (runtimeConfig && Number.isFinite(runtimeConfig.width) && Number.isFinite(runtimeConfig.height))
+    {
+      w = runtimeConfig.width;
+      h = runtimeConfig.height;
+    }
+    else
+    {
+      [ w, h ] = document.getElementById('cfg-out-res').value.split('x').map(Number);
+    }
 
     if (!w || !h) return;
     if (!stage) return;
@@ -247,6 +263,17 @@ const app = {
     this.setPanelEnabled(this.ui.panelAddSource, running);
     this.setPanelEnabled(this.ui.panelSubmix, running);
     this.setPanelEnabled(this.ui.panelWatermark, running);
+    this.setOutputConfigLocked(running);
+  },
+
+  setOutputConfigLocked(locked)
+  {
+    [ this.ui.cfgOutRes, this.ui.cfgFps, this.ui.cfgRenderMode ].forEach((el) =>
+    {
+      if (!el) return;
+      el.disabled = locked;
+      el.title = locked ? '运行中不可修改，停止后可调整' : '';
+    });
   },
 
   showNotification(msg, type = 'error')
@@ -423,7 +450,12 @@ const app = {
     if (!this.ui.btnMonitorAudio) return;
 
     this.ui.btnMonitorAudio.innerText = this.monitorAudio ? '🔇 停止监听' : '🔊 监听输出';
-    this.ui.btnMonitorAudio.disabled = !this.isRunning();
+    const hasAudioSource = this.getSources().some((source) => source && source.hasAudio);
+
+    this.ui.btnMonitorAudio.disabled = !this.isRunning() || !hasAudioSource;
+    this.ui.btnMonitorAudio.title = this.ui.btnMonitorAudio.disabled && this.isRunning() && !hasAudioSource
+      ? '当前没有可混音的音频输入源'
+      : '';
   },
 
   ensureSubmixEmptyState()
@@ -466,10 +498,12 @@ const app = {
 
       return;
     }
-    const [ w, h ] = document.getElementById('cfg-out-res').value.split('x').map(Number);
-    const fps = parseInt(document.getElementById('cfg-fps').value);
+    const outputSettings = this.getOutputRuntimeConfig();
+    const fpsText = outputSettings && Number.isFinite(outputSettings.frameRate) ? outputSettings.frameRate : '-';
 
-    this.ui.statsSize.innerText = `${w}x${h} @ ${fps}fps`;
+    this.ui.statsSize.innerText = outputSettings
+      ? `${outputSettings.width || '-'}x${outputSettings.height || '-'} @ ${fpsText}fps`
+      : '-';
     this.updateStats();
   },
 
@@ -628,6 +662,7 @@ const app = {
   {
     this.outputVideoStream = null;
     this.outputMixedStream = null;
+    this.outputRuntimeConfig = null;
     this.stopOutputWebAudioPlayback();
     this.ui.mixedVideo.muted = true;
     this.stopAllSubmixes();
@@ -638,6 +673,7 @@ const app = {
   {
     this.outputVideoStream = outStream;
     this.outputMixedStream = null;
+    this.outputRuntimeConfig = { width: w, height: h, frameRate: fps };
     this.setPreviewStream(this.createVideoOnlyPreviewStream(outStream), {
       muted             : true,
       suppressPlayError : true
@@ -650,7 +686,7 @@ const app = {
     this.ui.panelSubmix.classList.add('active');
     this.ui.statusBadge.innerText = '运行中';
     this.ui.statusBadge.className = 'badge bg-success align-self-center';
-    this.ui.statsSize.innerText = `${w}x${h} @ ${fps}fps`;
+    this.refreshStats();
     this.syncPreviewFrameRatio();
     this.ui.thumbs.innerHTML = '';
     this.updateRenderInfo();
@@ -678,6 +714,7 @@ const app = {
     this.monitorAudio = false;
     this.outputVideoStream = null;
     this.outputMixedStream = null;
+    this.outputRuntimeConfig = null;
     this.stopOutputWebAudioPlayback();
     this.vizToken++;
     this.stopAllSubmixes();
@@ -767,9 +804,9 @@ const app = {
           if (!stream) return;
 
           this.outputMixedStream = stream;
-          this.monitorAudio = true;
           // 监听输出只切换音频链路，不重绑视频预览，避免 video 元素闪烁。
           await this.startOutputWebAudioPlayback(stream);
+          this.monitorAudio = true;
           this.startViz(stream);
         })
         .catch((e) =>
@@ -777,7 +814,11 @@ const app = {
           this.monitorAudio = false;
           this.stopOutputWebAudioPlayback();
           this.startViz(this.createVideoOnlyPreviewStream(this.outputVideoStream));
-          if (!this.isBenignMediaPlayInterruption(e))
+          if (e && e.code === 'NO_AUDIO_TRACK')
+          {
+            this.showNotification(e.message, 'warning');
+          }
+          else if (!this.isBenignMediaPlayInterruption(e))
           {
             this.showNotification(`监听输出失败: ${e.message}`);
           }
@@ -876,9 +917,19 @@ const app = {
     if (!stream) return;
 
     const ctx = await this.ensureSubmixPlaybackContext();
-    const tracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+    const tracks = stream.getAudioTracks
+      ? stream.getAudioTracks().filter((track) => track && track.readyState === 'live')
+      : [];
     let playbackStream = stream;
     let ownedTracks = [];
+
+    if (!tracks.length)
+    {
+      const error = new Error('当前输出暂无音频轨道，请先添加带音频的输入源');
+
+      error.code = 'NO_AUDIO_TRACK';
+      throw error;
+    }
 
     if (tracks.length)
     {
@@ -950,37 +1001,6 @@ const app = {
     submix.volume = Number.isFinite(normalized) ? normalized : 1;
     this.applySubmixGain(submix);
     this.updateSubmixControlUI(submix);
-  },
-
-  releaseSubmixAudioRequest(slots, isolated)
-  {
-    if (!this.mixer || !this.mixer.releaseSubmixAudioStream) return false;
-    const normalizedSlots = this.normalizeSubmixSlots(slots);
-
-    if (!normalizedSlots.length) return false;
-
-    try
-    {
-      return this.mixer.releaseSubmixAudioStream({
-        slots    : normalizedSlots,
-        isolated : Boolean(isolated)
-      });
-    }
-    catch (e)
-    {
-      return false;
-    }
-  },
-
-  releaseOtherSubmixAudioRequests(activeKey, isolated)
-  {
-    this.activeSubmixes.forEach((item, key) =>
-    {
-      if (key !== activeKey)
-      {
-        this.releaseSubmixAudioRequest(item.slots, isolated);
-      }
-    });
   },
 
   ensureSubmixPlaybackContext()
@@ -1542,8 +1562,21 @@ const app = {
       if (typeof s.slot === 'number' && s.slot > maxSlot) maxSlot = s.slot;
     });
     const count = Math.min(Math.max(maxSlot + 1, sources.length, 1), this.maxDemoSources);
-    const resVal = document.getElementById('cfg-out-res').value;
-    const [ w, h ] = resVal.split('x').map(Number);
+    let w = 0;
+    let h = 0;
+    const runtimeConfig = this.getOutputRuntimeConfig();
+
+    if (runtimeConfig && Number.isFinite(runtimeConfig.width) && Number.isFinite(runtimeConfig.height))
+    {
+      w = runtimeConfig.width;
+      h = runtimeConfig.height;
+    }
+    else
+    {
+      const resVal = document.getElementById('cfg-out-res').value;
+
+      [ w, h ] = resVal.split('x').map(Number);
+    }
     const isPortrait = h > w;
     let cols = 1, rows = 1;
 

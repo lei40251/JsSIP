@@ -193,6 +193,49 @@ Object.assign(window.app, {
     return this.mixer && this.mixer.getRenderInfo ? this.mixer.getRenderInfo() : null;
   },
 
+  /**
+   * 从当前输出视频轨读取运行时参数（宽高/帧率）。
+   *
+   * @returns {Object|null} 可能包含 width/height/frameRate；读取失败返回 null。
+   */
+  getActiveOutputVideoSettings()
+  {
+    if (!this.outputVideoStream || !this.outputVideoStream.getVideoTracks) return null;
+    const track = this.outputVideoStream.getVideoTracks()[0];
+
+    if (!track || !track.getSettings) return null;
+    const settings = track.getSettings();
+    const width = Number(settings.width), height = Number(settings.height), frameRate = Number(settings.frameRate);
+    const next = {};
+
+    if (Number.isFinite(width)) next.width = Math.round(width);
+    if (Number.isFinite(height)) next.height = Math.round(height);
+    if (Number.isFinite(frameRate)) next.frameRate = Math.round(frameRate * 10) / 10;
+    if (!Object.keys(next).length) return null;
+
+    return next;
+  },
+
+  /**
+   * 获取输出运行时参数缓存，并尝试用视频轨实时参数刷新。
+   *
+   * @returns {Object|null} 输出运行时配置对象
+   */
+  getOutputRuntimeConfig()
+  {
+    const liveSettings = this.getActiveOutputVideoSettings();
+
+    if (liveSettings)
+    {
+      this.outputRuntimeConfig = {
+        ...(this.outputRuntimeConfig || {}),
+        ...liveSettings
+      };
+    }
+
+    return this.outputRuntimeConfig;
+  },
+
   // ==========================================================
   // 水印变更 — 通过 Mixer SDK 管理全局与槽位水印
   // ==========================================================
@@ -413,6 +456,51 @@ Object.assign(window.app, {
     }
   },
 
+  /**
+   * 释放指定子混音音频请求。
+   *
+   * @param {number[]} slots - 槽位数组
+   * @param {boolean} isolated - 是否 isolated 请求
+   * @returns {boolean} 是否成功发起释放
+   */
+  releaseSubmixAudioRequest(slots, isolated)
+  {
+    if (!this.mixer || !this.mixer.releaseSubmixAudioStream) return false;
+    const normalizedSlots = this.normalizeSubmixSlots(slots);
+
+    if (!normalizedSlots.length) return false;
+
+    try
+    {
+      return this.mixer.releaseSubmixAudioStream({
+        slots    : normalizedSlots,
+        isolated : Boolean(isolated)
+      });
+    }
+    catch (e)
+    {
+      return false;
+    }
+  },
+
+  /**
+   * 释放除当前激活项外的子混音音频请求。
+   *
+   * @param {string} activeKey - 当前保留的子混音 key
+   * @param {boolean} isolated - 是否 isolated 请求
+   * @returns {void}
+   */
+  releaseOtherSubmixAudioRequests(activeKey, isolated)
+  {
+    this.activeSubmixes.forEach((item, key) =>
+    {
+      if (key !== activeKey)
+      {
+        this.releaseSubmixAudioRequest(item.slots, isolated);
+      }
+    });
+  },
+
   // ==========================================================
   // 源管理 — 输入流的增删、槽位压缩
   // ==========================================================
@@ -507,6 +595,7 @@ Object.assign(window.app, {
     // 添加缩略图到界面
     this.addThumb(stream, label, slot);
     this.updateSlotUI();
+    this.updateMonitorAudioUI();
 
     // 自动选中下一个空槽位
     const occupied = new Set(this.localStreams.map((item) => item.slot));
@@ -567,6 +656,7 @@ Object.assign(window.app, {
       this.ui.thumbs.innerHTML = '<div class="source-strip-empty">(暂无输入源)</div>';
     }
     this.updateSlotUI();
+    this.updateMonitorAudioUI();
     this.updateStats();
     this.refreshActiveSubmix();
     this.refreshWatermarkList();
