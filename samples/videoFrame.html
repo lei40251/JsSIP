@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebGL + VideoFrame + TrackGenerator Demo</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      margin: 20px 0;
+    }
+
+    video {
+      width: 900px;
+      max-width: 95vw;
+      border: 2px solid #333;
+      border-radius: 12px;
+      background: #000;
+    }
+
+    .tips {
+      margin-top: 12px;
+      color: #999;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>WebGL + VideoFrame + TrackGenerator</h2>
+  <video id="preview" autoplay muted playsinline></video>
+  <div class="tips">
+    不使用 canvas.captureStream()，直接 VideoFrame → TrackGenerator
+  </div>
+  <script>
+    /**
+     * ========================================================================
+     *  管线概述
+     * ========================================================================
+     *
+     *  getUserMedia
+     *     ↓ 原始视频轨
+     *  MediaStreamTrackProcessor  →  readable.getReader()
+     *     ↓ 逐帧读取
+     *  手动帧读取循环（仅保留最新帧，丢弃积压帧）
+     *     ↓ 最新帧
+     *  WebGL2 绘制（上传纹理 → 着色器 → 叠加水印）
+     *     ↓ 从 canvas 构造 VideoFrame
+     *  MediaStreamTrackGenerator  →  writable.getWriter()
+     *     ↓ 处理后的视频轨
+     *  MediaStream → <video> 本地预览 / RTCPeerConnection 发送
+     *
+     *  亮点：通过 VideoFrame(canvas) 直接构造帧，绕过 captureStream()，
+     *  且输出帧率可独立控制（此处降为 15fps，减少编码/传输开销）。
+     *
+     *  兼容性要求（Chrome 94+，需启用 Experimental Web Platform features）：
+     *    - MediaStreamTrackProcessor
+     *    - MediaStreamTrackGenerator
+     *    - VideoFrame 构造函数（接受 OffscreenCanvas 参数）
+     *    - WebGL2（OffscreenCanvas 上下文）
+     * ========================================================================
+     */
+    (async () => {
+
+      // ======================================================================
+      // 1. 特性检测
+      // ======================================================================
+
+      if (typeof MediaStreamTrackProcessor === 'undefined' ||
+        typeof MediaStreamTrackGenerator === 'undefined') {
+
+        alert('Insertable Streams API 不可用。\n' +
+          '请使用 Chrome 94+ 并开启 chrome://flags/#enable-experimental-web-platform-features');
+
+        return;
+      }
+
+      // VideoFrame 是否支持从 Canvas 构造
+      if (typeof VideoFrame === 'undefined') {
+        alert('VideoFrame API 不可用');
+
+        return;
+      }
+
+      // ======================================================================
+      // 2. 获取摄像头
+      // ======================================================================
+
+      let stream;
+      try {
+
+        stream = await navigator.mediaDevices.getUserMedia({
+
+          video: {
+            width: 1280,
+            height: 720,
+            frameRate: 30
+          },
+
+          audio: false
+        });
+
+      } catch (err) {
+        alert('摄像头访问被拒绝或不可用: ' + err.message);
+
+        return;
+      }
+
+      const sourceTrack = stream.getVideoTracks()[0];
+
+      // ======================================================================
+      // 3. Processor — 将原始视频轨转为可逐帧读取的 ReadableStream
+      // ======================================================================
+
+      const processor = new MediaStreamTrackProcessor({ track: sourceTrack });
+
+      // ======================================================================
+      // 4. Generator — 消费处理后的帧，产出新的 MediaStreamTrack
+      // ======================================================================
+
+      const generator = new MediaStreamTrackGenerator({ kind: 'video' });
+
+      // ======================================================================
+      // 5. OffscreenCanvas + WebGL2
+      // ======================================================================
+      //
+      // 上下文配置说明：
+      //   antialias: false       — 输出帧将用于 WebRTC 编码，无需抗锯齿
+      //   alpha: false           — 视频不包含 Alpha 通道，避免无用计算
+      //   preserveDrawingBuffer: false — 每帧绘制结果仅通过 VideoFrame 提取，
+      //                                  无需保留上一帧内容
+
+      const width = 1280;
+      const height = 720;
+
+      const canvas = new OffscreenCanvas(width, height);
+
+      const gl = canvas.getContext('webgl2', {
+        antialias: false,
+        alpha: false,
+        preserveDrawingBuffer: false
+      });
+
+      if (!gl) {
+
+        alert('WebGL2 not supported');
+
+        return;
+      }
+
+      // ======================================================================
+      // 6. 着色器（Shader）
+      // ======================================================================
+      //
+      // 顶点着色器：传递位置和纹理坐标，不额外变换。
+      // 片元着色器：采样纹理，在右下角叠加红色半透明水印。
+
+      const vertexShaderSource = `#version 300 es
+
+    in vec2 a_position;
+    in vec2 a_texCoord;
+
+    out vec2 v_texCoord;
+
+    void main() {
+
+      gl_Position = vec4(a_position, 0.0, 1.0);
+
+      v_texCoord = a_texCoord;
+    }
+  `;
+
+      const fragmentShaderSource = `#version 300 es
+
+    precision mediump float;
+
+    uniform sampler2D u_texture;
+
+    in vec2 v_texCoord;
+
+    out vec4 outColor;
+
+    void main() {
+
+      vec4 color = texture(u_texture, v_texCoord);
+
+      // 右下角红色半透明水印
+      if (v_texCoord.x > 0.72 && v_texCoord.y > 0.82) {
+
+        color = mix(color, vec4(1.0, 0.0, 0.0, 1.0), 0.45);
+      }
+
+      outColor = color;
+    }
+  `;
+
+      /**
+       * 编译单个 shader。
+       * 编译失败时抛出 Error，调用方无需处理返回 null 的情况。
+       */
+      function createShader(type, source) {
+
+        const shader = gl.createShader(type);
+
+        gl.shaderSource(shader, source);
+
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+
+          throw new Error('Shader compile error: ' + gl.getShaderInfoLog(shader));
+        }
+
+        return shader;
+      }
+
+      const vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderSource);
+      const fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+      // 链接着色器程序
+      const program = gl.createProgram();
+
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+
+        throw new Error('Program link error: ' + gl.getProgramInfoLog(program));
+      }
+
+      // 链接成功后即可释放 shader 对象（program 内部保留编译后的二进制）
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
+
+      gl.useProgram(program);
+
+      // ======================================================================
+      // 7. 全屏四边形顶点数据
+      // ======================================================================
+      //
+      // 两个三角形，共 6 个顶点。每个顶点 4 个 float（stride = 16）：
+      //   [posX, posY, texU, texV]
+      //
+      // UV 坐标约定：(0,0) = 左上角, (1,1) = 右下角。
+      // 配合下方的 UNPACK_FLIP_Y_WEBGL 使纹理 Y 轴与屏幕 Y 轴方向一致。
+
+      const vertices = new Float32Array([
+
+        // 第一个三角形
+        -1, -1, 0, 1,
+        1, -1, 1, 1,
+        -1, 1, 0, 0,
+
+        // 第二个三角形
+        -1, 1, 0, 0,
+        1, -1, 1, 1,
+        1, 1, 1, 0,
+      ]);
+
+      const buffer = gl.createBuffer();
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      const stride = 16; // 4 floats × 4 bytes
+
+      // ---- a_position (位置: 前 2 个 float) --------------------------------
+
+      const posLoc = gl.getAttribLocation(program, 'a_position');
+
+      gl.enableVertexAttribArray(posLoc);
+
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, stride, 0);
+
+      // ---- a_texCoord (纹理坐标: 后 2 个 float, offset=8 bytes) -----------
+
+      const texLoc = gl.getAttribLocation(program, 'a_texCoord');
+
+      gl.enableVertexAttribArray(texLoc);
+
+      gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, stride, 8);
+
+      // ======================================================================
+      // 8. 纹理初始化
+      // ======================================================================
+      //
+      // 纹理参数：
+      //   MIN_FILTER / MAG_FILTER = LINEAR  — 缩放时线性插值，画质平滑
+      //   WRAP_S / WRAP_T = CLAMP_TO_EDGE  — UV 超出 [0,1] 时 clamp 到边缘
+
+      const texture = gl.createTexture();
+
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      /**
+       * 像素存储参数 — UNPACK_FLIP_Y_WEBGL
+       *
+       * WebGL 默认纹理坐标系原点在左下 (0,0)，Y 轴向上。
+       * 视频帧数据的原点在左上，Y 轴向下。
+       *
+       * 设置此标志后，texImage2D 在 GPU 上传时会自动翻转 Y 轴，
+       * 使纹理坐标的 (0,0) 对应视频帧的左上角。
+       *
+       * 配合顶点数据中 (0,0)=左上角的 UV 约定，画面方向正确。
+       */
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+      // ======================================================================
+      // 9. Reader / Writer
+      // ======================================================================
+      //
+      // 使用手动 Reader 而非 pipeThrough，原因：
+      //   ① 可手动丢帧 — 只保留最新帧，丢弃积压帧
+      //   ② 可独立控制输出帧率 — 不受输入帧率影响
+      //
+      // 代价是需要手动管理 backpressure（writer.write() 返回 promise，
+      // await 等待下游消费完成后才处理下一帧）。
+
+      const reader = processor.readable.getReader();
+      const writer = generator.writable.getWriter();
+
+      // ======================================================================
+      // 10. 输出帧率控制
+      // ======================================================================
+      //
+      // 输入可能是 30fps，我们降为 15fps 输出。
+      // 减少编码/网络传输开销，在带宽受限场景下有用。
+
+      const TARGET_FPS = 15;
+      const FRAME_INTERVAL = 1000 / TARGET_FPS;
+
+      // 最新可用帧的缓存指针，由下面两个协程共享：
+      //   帧读取协程 → 写入 latestFrame（丢弃旧帧）
+      //   渲染协程   → 读取 latestFrame 并处理
+      let latestFrame = null;
+
+      // ======================================================================
+      // 11. 后台协程：持续读取输入帧，只保留最新一帧
+      // ======================================================================
+      //
+      // 该协程独立于渲染协程运行。每读到一个新帧：
+      //   1. 关闭旧的 latestFrame（丢弃）
+      //   2. 将新帧赋值给 latestFrame
+      //
+      // 这样即使渲染协程处理较慢（目标 15fps），也不会导致帧队列积压。
+      // 代价是中间帧被丢弃（对于实时视频通信是可接受的）。
+
+      (async () => {
+
+        while (true) {
+
+          const { value: frame, done } = await reader.read();
+
+          if (done) {
+
+            break;
+          }
+
+          // 关闭上一个未被渲染的帧（主动丢弃）
+          if (latestFrame) {
+
+            latestFrame.close();
+          }
+
+          latestFrame = frame;
+        }
+
+      })();
+
+      // ======================================================================
+      // 12. 定时渲染主循环
+      // ======================================================================
+      //
+      // 每个 FRAME_INTERVAL 执行一次：
+      //   1. 读取 latestFrame（若无可用帧则跳过本次）
+      //   2. 上传到 WebGL 纹理
+      //   3. 执行绘制（全屏四边形 + 水印叠加）
+      //   4. 从 canvas 创建新的 VideoFrame
+      //   5. 关闭输入帧
+      //   6. 写入 Generator（await 等待下游消费）
+
+      async function renderLoop() {
+
+        if (latestFrame) {
+
+          // 取出最新帧并清空缓存，
+          // 避免在异步处理期间被帧读取协程关闭。
+          const frame = latestFrame;
+
+          latestFrame = null;
+
+          try {
+
+            // ---- 设置视口 ----
+            gl.viewport(0, 0, width, height);
+
+            // ---- 上传当前帧到纹理 ----
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,                // mipmap 级别
+              gl.RGBA,          // 内部格式
+              gl.RGBA,          // 外部格式
+              gl.UNSIGNED_BYTE, // 数据类型
+              frame             // 源 VideoFrame
+            );
+
+            // ---- 绘制全屏四边形 ----
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            /**
+             * 从 canvas 构造输出帧。
+             *
+             * VideoFrame(canvas, { timestamp }) 会读取 canvas 当前像素
+             * 并构造一个新的 VideoFrame。不要求 canvas 有 captureStream()。
+             *
+             * 时间戳使用 performance.now() * 1000（微秒），保证帧时序不乱。
+             * 注意：这里没有使用原始帧的时间戳，因为输出帧率已被改变，
+             * 继续使用原始时间戳可能导致下游编码器时间戳跳跃。
+             */
+            const newFrame = new VideoFrame(canvas, {
+              timestamp: performance.now() * 1000
+            });
+
+            // 关闭输入帧（必须！否则帧资源持续增长）
+            frame.close();
+
+            // 将处理后的帧写入 Generator。
+            // await 在此处形成背压：若下游消费慢，写操作会等待，
+            // 间接限制了渲染循环的速度。
+            await writer.write(newFrame);
+
+          } catch (err) {
+
+            console.error('Render error:', err);
+
+            // 异常时确保释放输入帧
+            frame.close();
+          }
+        }
+
+        // 无论是否有帧处理，始终调度下一次渲染
+        setTimeout(renderLoop, FRAME_INTERVAL);
+      }
+
+      renderLoop();
+
+      // ======================================================================
+      // 13. 输出 MediaStream
+      // ======================================================================
+      //
+      // MediaStreamTrackGenerator 本身实现了 MediaStreamTrack 接口，
+      // 可直接传给 MediaStream 构造函数。
+
+      const outputStream = new MediaStream([generator]);
+
+      // ======================================================================
+      // 14. 本地预览
+      // ======================================================================
+
+      document.getElementById('preview').srcObject = outputStream;
+
+      // ======================================================================
+      // 15. 可选的 WebRTC 发送（注释掉的示例）
+      // ======================================================================
+
+      /*
+      const pc = new RTCPeerConnection();
+      pc.addTrack(generator);
+      */
+
+    })();
+  </script>
+
+</body>
+
+</html>
