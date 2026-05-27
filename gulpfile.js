@@ -150,11 +150,11 @@ gulp.task('uglify', function()
       keep_classnames : false, // 混淆类名
       keep_fnames     : false, // 混淆函数名
       mangle          : {
-        // 保留必要的名称
-        properties : {
-          regex       : /^_/,
-          keep_quoted : true
-        },
+        // // 保留必要的名称
+        // properties : {
+        //   regex       : /^_/,
+        //   keep_quoted : true
+        // },
         reserved : [
           'CommonHeader',
           'FloorRequest',
@@ -180,23 +180,18 @@ gulp.task('uglify', function()
       },
       compress : {
         // 增加压缩轮次
-        passes       : 5,
-        toplevel     : true,
-        pure_getters : true,
-        hoist_props  : true,
-        unsafe       : true,
-        unsafe_math  : true,
-        reduce_vars  : true,
-        // pure_funcs   : [ 'logger.debug', 'this._logger.debug' ],
-        global_defs  : {
+        passes      : 5,
+        unsafe      : true,
+        unsafe_math : true,
+        reduce_vars : true,
+        global_defs : {
           __DEBUG__ : false // 全局常量替换
         }
       },
       output : { // 添加这一段配置
-        comments     : false, // 禁用所有注释
-        beautify     : false, // 禁用美化格式
-        max_line_len : false, // 禁止自动换行，尽量单行输出
-        preamble     : 'var _0x1234=0;' // 添加混淆前缀
+        comments : false, // 禁用所有注释
+        beautify : false, // 禁用美化格式
+        preamble : 'var _0x1234=0;' // 添加混淆前缀
         // ascii_only : true // 防止 Unicode 转义
       }
     }))
