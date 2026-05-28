@@ -143,6 +143,15 @@ document.querySelector('#metaHuman').onclick= function()
   start(null, true);
 };
 
+document.querySelector('#closeMetaHuman').onclick= function()
+{
+  if (pc)
+  {
+    pc.close();
+    pc=undefined;
+  }
+};
+
 /**
    * 自定义视频接听
    */
