@@ -341,6 +341,37 @@
                                     <option value="main-2d">主线程 + Canvas2D</option>
                                 </select>
                             </div>
+                            <div class="col-12">
+                                <div class="compact-card">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small mb-1"
+                                                for="cfg-ctor-output-mirror">初始输出镜像</label>
+                                            <select class="form-select" id="cfg-ctor-output-mirror">
+                                                <option value="off" selected>关闭</option>
+                                                <option value="on">开启</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-1"
+                                                for="cfg-ctor-output-watermark-mirror">输出镜像时水印跟随</label>
+                                            <select class="form-select" id="cfg-ctor-output-watermark-mirror">
+                                                <option value="off" selected>关闭</option>
+                                                <option value="on">开启</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12 d-flex align-items-end">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="cfg-ctor-watermarks"
+                                                    checked>
+                                                <label class="form-check-label small" for="cfg-ctor-watermarks">
+                                                    构造时应用当前全局水印（文字 + 图片）
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="output-param-footer">
                             <div id="audio-monitor-row" style="display:none;">

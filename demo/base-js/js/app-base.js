@@ -124,6 +124,8 @@ const app = {
     this.bindDataActions();
     this.updateMonitorAudioUI();
     this.setRunningUI(false);
+    // 水印参数需要支持启动前编辑（用于构造参数验证）。
+    this.setPanelEnabled(this.ui.panelWatermark, true);
   },
 
   bindOutputResolutionControl()
@@ -272,7 +274,6 @@ const app = {
     this.setPanelEnabled(this.ui.panelSources, running);
     this.setPanelEnabled(this.ui.panelAddSource, running);
     this.setPanelEnabled(this.ui.panelSubmix, running);
-    this.setPanelEnabled(this.ui.panelWatermark, running);
     this.setOutputConfigLocked(running);
   },
 
@@ -962,6 +963,8 @@ const app = {
       'cfg-out-res'              : '1280x720',
       'cfg-fps'                  : '15',
       'cfg-render-mode'          : 'auto',
+      'cfg-ctor-output-mirror'   : 'off',
+      'cfg-ctor-output-watermark-mirror' : 'off',
       'cfg-in-res'               : 'auto',
       'cfg-in-fps'               : '15',
       'wm-output-text'           : 'CRTC 直播',
@@ -991,6 +994,9 @@ const app = {
 
       if (el) el.value = val;
     });
+    const ctorWatermarkCheckbox = document.getElementById('cfg-ctor-watermarks');
+
+    if (ctorWatermarkCheckbox) ctorWatermarkCheckbox.checked = true;
     this.syncPreviewFrameRatio();
     this.selectSlot(0);
     this.refreshMirrorDemoUI();
