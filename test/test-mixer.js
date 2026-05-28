@@ -133,6 +133,26 @@ class MockCanvas2DContext
     this.operations.push({ type: 'clearRect', x, y, width, height });
   }
 
+  save()
+  {
+    this.operations.push({ type: 'save' });
+  }
+
+  restore()
+  {
+    this.operations.push({ type: 'restore' });
+  }
+
+  translate(x, y)
+  {
+    this.operations.push({ type: 'translate', x, y });
+  }
+
+  scale(x, y)
+  {
+    this.operations.push({ type: 'scale', x, y });
+  }
+
   drawImage(...args)
   {
     this.operations.push({
@@ -1295,6 +1315,206 @@ async function testCanvas2DWatermarkDrawOrder()
   mixer.stop();
 }
 
+async function testMirrorGlobalAndSlotControls()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    mirrorX    : true
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+
+  let outputContext = mixer._canvas._context2d;
+  let mirroredOps = outputContext.operations.filter((operation) =>
+  {
+    return operation.type === 'scale' && operation.x === -1 && operation.y === 1;
+  });
+
+  assert.strictEqual(mirroredOps.length, 1);
+  assert.strictEqual(mixer.getGlobalMirror(), true);
+
+  mixer.setSlotMirror(0, false);
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+  outputContext = mixer._canvas._context2d;
+  mirroredOps = outputContext.operations.filter((operation) =>
+  {
+    return operation.type === 'scale' && operation.x === -1 && operation.y === 1;
+  });
+  assert.strictEqual(mirroredOps.length, 0);
+
+  mixer.setSlotMirror(0, true);
+  assert.deepStrictEqual(mixer.getSlotMirrors(), { '0': true });
+
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+  outputContext = mixer._canvas._context2d;
+  mirroredOps = outputContext.operations.filter((operation) =>
+  {
+    return operation.type === 'scale' && operation.x === -1 && operation.y === 1;
+  });
+  assert.strictEqual(mirroredOps.length, 1);
+
+  mixer.clearSlotMirror(0);
+  assert.deepStrictEqual(mixer.getSlotMirrors(), {});
+
+  mixer.stop();
+  assert.throws(() => mixer.setGlobalMirror(true), /has been stopped/);
+}
+
+async function testMirrorAutoModeAvoidsWorkerRenderer()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto',
+    mirrorX    : true
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(MockWorker.instances.length, 0);
+  assert.strictEqual(info.isWorker, false);
+  assert.notStrictEqual(info.actualMode, 'worker-init');
+
+  mixer.stop();
+}
+
+async function testEnableMirrorFallsBackFromWorkerToMainThread()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto',
+    mirrorX    : false
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(MockWorker.instances.length, 1);
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+
+  mixer.setGlobalMirror(true);
+
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.actualMode, 'main-2d');
+  assert.strictEqual(info.isWorker, false);
+  assert.strictEqual(mixer.getGlobalMirror(), true);
+
+  mixer.stop();
+}
+
+async function testOutputMirrorFlipsWholeComposedFrame()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+
+  mixer.setOutputMirror(true);
+  assert.strictEqual(mixer.getOutputMirror(), true);
+
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const outputContext = mixer._canvas._context2d;
+  const mirroredOps = outputContext.operations.filter((operation) =>
+  {
+    return operation.type === 'scale' && operation.x === -1 && operation.y === 1;
+  });
+
+  assert.strictEqual(mirroredOps.length, 1);
+
+  mixer.stop();
+  assert.throws(() => mixer.setOutputMirror(true), /has been stopped/);
+}
+
+async function testOutputMirrorCanDisableWatermarkMirroring()
+{
+  resetMockState();
+
+  const mixer = new Mixer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const sourceA = createStream();
+
+  mixer.appendStream(sourceA, 0);
+  await mixer.setWatermarks([
+    {
+      id              : 'slot0',
+      target          : 'source',
+      slot            : 0,
+      text            : 'HOST',
+      opacity         : 0.5,
+      position        : 'bottom-left',
+      backgroundColor : 'rgba(0,0,0,0)'
+    },
+    {
+      id              : 'brand',
+      target          : 'output',
+      text            : 'CRTC',
+      opacity         : 0.75,
+      position        : 'top-right',
+      backgroundColor : 'rgba(0,0,0,0)'
+    }
+  ]);
+
+  mixer.getVideoStream();
+  mixer.setOutputMirror(true);
+  mixer.setMirrorWatermarksWithOutput(false);
+  assert.strictEqual(mixer.getMirrorWatermarksWithOutput(), false);
+
+  mixer._canvas._context2d.operations = [];
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const outputContext = mixer._canvas._context2d;
+  const drawImages = outputContext.operations.filter((operation) => operation.type === 'drawImage');
+  const mirroredDraws = outputContext.operations.filter((operation) =>
+  {
+    return operation.type === 'scale' && operation.x === -1 && operation.y === 1;
+  });
+  const slotWatermarkDraw = drawImages[drawImages.length - 2];
+  const outputWatermarkDraw = drawImages[drawImages.length - 1];
+
+  assert.ok(slotWatermarkDraw);
+  assert.ok(outputWatermarkDraw);
+  assert.strictEqual(mirroredDraws.length, 2);
+
+  mixer.stop();
+}
+
 async function testEmptyInitialRenderDoesNotCreateRenderer()
 {
   resetMockState();
@@ -1573,6 +1793,14 @@ async function testMixerConfigSourceOptions()
     MixerConfig.normalizeSourceOptions({ slot: -2, gain: -1 }, 2, 0.8),
     { slot: 2, gain: 0.8 }
   );
+  assert.deepStrictEqual(
+    MixerConfig.normalizeSourceOptions({ slot: 1, mirrorX: true }, 0, 0.8),
+    { slot: 1, mirrorX: true }
+  );
+  assert.deepStrictEqual(
+    MixerConfig.normalizeSourceOptions({ slot: 1, mirror: false }, 0, 0.8),
+    { slot: 1, mirrorX: false }
+  );
 }
 
 async function testInsertableVideoStreamPreferredWhenSupported()
@@ -1727,6 +1955,11 @@ async function run()
     await testReleaseIsolatedSubmixAudioStreamClosesContext();
     await testWatermarkConfigAndFiltering();
     await testCanvas2DWatermarkDrawOrder();
+    await testMirrorGlobalAndSlotControls();
+    await testMirrorAutoModeAvoidsWorkerRenderer();
+    await testEnableMirrorFallsBackFromWorkerToMainThread();
+    await testOutputMirrorFlipsWholeComposedFrame();
+    await testOutputMirrorCanDisableWatermarkMirroring();
     await testEmptyInitialRenderDoesNotCreateRenderer();
     await testWorkerShaderUsesRuntimeNewlines();
     await testAutoRendererFallbackPrefersMainWebGL2();

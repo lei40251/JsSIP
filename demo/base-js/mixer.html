@@ -32,9 +32,38 @@
                                 <div class="fw-semibold text-dark">操作目标</div>
                                 <div id="selected-slot-source">无源</div>
                                 <div id="selected-slot-watermark">无槽位水印</div>
+                                <div id="selected-slot-mirror">镜像关闭</div>
                             </div>
                         </div>
                         <div class="slot-grid-selector" id="slot-selector"></div>
+                        <div class="compact-card mt-2">
+                            <div class="status-line mt-0 mb-2" id="mirror-status-line">
+                                当前槽位镜像:跟随 · 输出镜像:关 · 水印跟随:开
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button id="btn-slot-mirror" class="btn btn-sm btn-outline-primary w-100"
+                                        data-action="toggleCurrentSlotMirror">切换当前槽位</button>
+                                </div>
+                                <div class="col-6">
+                                    <button id="btn-slot-mirror-clear" class="btn btn-sm btn-outline-secondary w-100"
+                                        data-action="clearCurrentSlotMirror">恢复槽位默认</button>
+                                </div>
+                                <div class="col-5">
+                                    <button id="btn-output-watermark-mirror"
+                                        class="btn btn-sm btn-outline-secondary w-100"
+                                        data-action="toggleOutputWatermarkMirror">切换水印跟随</button>
+                                </div>
+                                <div class="col-7">
+                                    <button id="btn-output-mirror" class="btn btn-sm btn-outline-danger w-100"
+                                        data-action="toggleOutputMirror">切换整体输出镜像</button>
+                                </div>
+                                <!-- <div class="col-12">
+                                    <button id="btn-global-mirror" class="btn btn-sm btn-outline-primary w-100"
+                                        data-action="toggleGlobalMirror">切换全局镜像</button>
+                                </div> -->
+                            </div>
+                        </div>
                     </section>
 
                     <section id="panel-add-source" class="panel-shell panel-disabled p-2">

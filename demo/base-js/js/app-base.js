@@ -2,82 +2,89 @@
 // app — UI 逻辑、工具方法、UI 回调及非 Mixer-SDK 操作
 // ============================================================
 const app = {
-  localStreams      : [],
-  counter           : 0,
-  currentSlot       : 0,
-  maxDemoSources    : 9,
-  monitorAudio      : false,
-  outputVideoStream : null,
-  outputMixedStream : null,
-  outputRuntimeConfig : null,
-  outputPlayback    : null,
-  activeSubmixes    : new Map(),
-  submixPlaybackCtx : null,
-  vizToken          : 0,
+  localStreams            : [],
+  counter                 : 0,
+  currentSlot             : 0,
+  maxDemoSources          : 9,
+  monitorAudio            : false,
+  outputVideoStream       : null,
+  outputMixedStream       : null,
+  outputRuntimeConfig     : null,
+  outputPlayback          : null,
+  activeSubmixes          : new Map(),
+  submixPlaybackCtx       : null,
+  vizToken                : 0,
   lastRenderPathSignature : '',
 
   // ==========================================================
   // DOM 引用
   // ==========================================================
   ui : {
-    slotGrid              : document.getElementById('slot-selector'),
-    mixedVideo            : document.getElementById('mixed-video'),
-    thumbs                : document.getElementById('thumbs-container'),
-    previewStage          : document.querySelector('.preview-stage'),
-    btnStart              : document.getElementById('btn-start'),
-    btnStop               : document.getElementById('btn-stop'),
-    audioMonitorRow       : document.getElementById('audio-monitor-row'),
-    btnMonitorAudio       : document.getElementById('btn-monitor-audio'),
-    panelAddSource        : document.getElementById('panel-add-source'),
-    panelSubmix           : document.getElementById('panel-submix'),
-    panelWatermark        : document.getElementById('panel-watermark'),
-    cfgOutRes             : document.getElementById('cfg-out-res'),
-    cfgFps                : document.getElementById('cfg-fps'),
-    cfgRenderMode         : document.getElementById('cfg-render-mode'),
-    submixList            : document.getElementById('submix-list'),
-    submixStatus          : document.getElementById('submix-status'),
-    panelSources          : document.getElementById('panel-sources'),
-    statusBadge           : document.getElementById('status-badge'),
-    overlay               : document.getElementById('grid-overlay'),
-    previewStageFrame     : document.getElementById('preview-stage-frame'),
-    selectedSlotNumber    : document.getElementById('selected-slot-number'),
-    selectedSlotSource    : document.getElementById('selected-slot-source'),
-    selectedSlotWatermark : document.getElementById('selected-slot-watermark'),
-    wmOutputText          : document.getElementById('wm-output-text'),
-    wmOutputTextPosition  : document.getElementById('wm-output-text-position'),
-    wmOutputTextX         : document.getElementById('wm-output-text-x'),
-    wmOutputTextY         : document.getElementById('wm-output-text-y'),
-    wmOutputTextSize      : document.getElementById('wm-output-text-size'),
-    wmOutputTextColor     : document.getElementById('wm-output-text-color'),
-    wmOutputTextBgColor   : document.getElementById('wm-output-text-bg-color'),
-    wmOutputImage         : document.getElementById('wm-output-image'),
-    wmOutputImagePosition : document.getElementById('wm-output-image-position'),
-    wmOutputImageX        : document.getElementById('wm-output-image-x'),
-    wmOutputImageY        : document.getElementById('wm-output-image-y'),
-    wmSlotSelect          : document.getElementById('wm-slot-select'),
-    wmSelectedSlot        : document.getElementById('wm-selected-slot'),
-    wmSlotSourceState     : document.getElementById('wm-slot-source-state'),
-    wmSlotWatermarkState  : document.getElementById('wm-slot-watermark-state'),
-    wmSlotText            : document.getElementById('wm-slot-text'),
-    wmSlotPosition        : document.getElementById('wm-slot-position'),
-    wmSlotX               : document.getElementById('wm-slot-x'),
-    wmSlotY               : document.getElementById('wm-slot-y'),
-    wmSlotSize            : document.getElementById('wm-slot-size'),
-    wmSlotColor           : document.getElementById('wm-slot-color'),
-    wmSlotBgColor         : document.getElementById('wm-slot-bg-color'),
-    watermarkModeButtons  : document.querySelectorAll('[data-watermark-mode]'),
-    watermarkSections     : document.querySelectorAll('[data-watermark-section]'),
-    watermarkList         : document.getElementById('watermark-list'),
-    statsLayout           : document.getElementById('stat-layout'),
-    statsAudio            : document.getElementById('stat-audio'),
-    statsAudioState       : document.getElementById('stat-audio-state'),
-    statsSize             : document.getElementById('stat-size'),
-    statsSources          : document.getElementById('stat-sources'),
-    statsRenderer         : document.getElementById('stat-renderer'),
-    statsRenderPath       : document.getElementById('stat-render-path'),
-    statsOutputMode       : document.getElementById('stat-output-mode'),
-    statsDropped          : document.getElementById('stat-dropped'),
-    statsRenderReason     : document.getElementById('stat-render-reason')
+    slotGrid                 : document.getElementById('slot-selector'),
+    mixedVideo               : document.getElementById('mixed-video'),
+    thumbs                   : document.getElementById('thumbs-container'),
+    previewStage             : document.querySelector('.preview-stage'),
+    btnStart                 : document.getElementById('btn-start'),
+    btnStop                  : document.getElementById('btn-stop'),
+    audioMonitorRow          : document.getElementById('audio-monitor-row'),
+    btnMonitorAudio          : document.getElementById('btn-monitor-audio'),
+    panelAddSource           : document.getElementById('panel-add-source'),
+    panelSubmix              : document.getElementById('panel-submix'),
+    panelWatermark           : document.getElementById('panel-watermark'),
+    cfgOutRes                : document.getElementById('cfg-out-res'),
+    cfgFps                   : document.getElementById('cfg-fps'),
+    cfgRenderMode            : document.getElementById('cfg-render-mode'),
+    submixList               : document.getElementById('submix-list'),
+    submixStatus             : document.getElementById('submix-status'),
+    panelSources             : document.getElementById('panel-sources'),
+    statusBadge              : document.getElementById('status-badge'),
+    overlay                  : document.getElementById('grid-overlay'),
+    previewStageFrame        : document.getElementById('preview-stage-frame'),
+    selectedSlotNumber       : document.getElementById('selected-slot-number'),
+    selectedSlotSource       : document.getElementById('selected-slot-source'),
+    selectedSlotWatermark    : document.getElementById('selected-slot-watermark'),
+    selectedSlotMirror       : document.getElementById('selected-slot-mirror'),
+    mirrorStatusLine         : document.getElementById('mirror-status-line'),
+    btnGlobalMirror          : document.getElementById('btn-global-mirror'),
+    btnOutputMirror          : document.getElementById('btn-output-mirror'),
+    btnOutputWatermarkMirror : document.getElementById('btn-output-watermark-mirror'),
+    btnSlotMirror            : document.getElementById('btn-slot-mirror'),
+    btnSlotMirrorClear       : document.getElementById('btn-slot-mirror-clear'),
+    wmOutputText             : document.getElementById('wm-output-text'),
+    wmOutputTextPosition     : document.getElementById('wm-output-text-position'),
+    wmOutputTextX            : document.getElementById('wm-output-text-x'),
+    wmOutputTextY            : document.getElementById('wm-output-text-y'),
+    wmOutputTextSize         : document.getElementById('wm-output-text-size'),
+    wmOutputTextColor        : document.getElementById('wm-output-text-color'),
+    wmOutputTextBgColor      : document.getElementById('wm-output-text-bg-color'),
+    wmOutputImage            : document.getElementById('wm-output-image'),
+    wmOutputImagePosition    : document.getElementById('wm-output-image-position'),
+    wmOutputImageX           : document.getElementById('wm-output-image-x'),
+    wmOutputImageY           : document.getElementById('wm-output-image-y'),
+    wmSlotSelect             : document.getElementById('wm-slot-select'),
+    wmSelectedSlot           : document.getElementById('wm-selected-slot'),
+    wmSlotSourceState        : document.getElementById('wm-slot-source-state'),
+    wmSlotWatermarkState     : document.getElementById('wm-slot-watermark-state'),
+    wmSlotText               : document.getElementById('wm-slot-text'),
+    wmSlotPosition           : document.getElementById('wm-slot-position'),
+    wmSlotX                  : document.getElementById('wm-slot-x'),
+    wmSlotY                  : document.getElementById('wm-slot-y'),
+    wmSlotSize               : document.getElementById('wm-slot-size'),
+    wmSlotColor              : document.getElementById('wm-slot-color'),
+    wmSlotBgColor            : document.getElementById('wm-slot-bg-color'),
+    watermarkModeButtons     : document.querySelectorAll('[data-watermark-mode]'),
+    watermarkSections        : document.querySelectorAll('[data-watermark-section]'),
+    watermarkList            : document.getElementById('watermark-list'),
+    statsLayout              : document.getElementById('stat-layout'),
+    statsAudio               : document.getElementById('stat-audio'),
+    statsAudioState          : document.getElementById('stat-audio-state'),
+    statsSize                : document.getElementById('stat-size'),
+    statsSources             : document.getElementById('stat-sources'),
+    statsRenderer            : document.getElementById('stat-renderer'),
+    statsRenderPath          : document.getElementById('stat-render-path'),
+    statsOutputMode          : document.getElementById('stat-output-mode'),
+    statsDropped             : document.getElementById('stat-dropped'),
+    statsRenderReason        : document.getElementById('stat-render-reason')
   },
 
   // ==========================================================
@@ -345,16 +352,149 @@ const app = {
   {
     const source = this.getSelectedSource();
     const hasWatermark = this.hasSlotWatermark(this.currentSlot);
+    const mirrorState = this.getCurrentSlotMirrorState();
     const sourceState = source ? `已占用 · ${source.id}` : '无源';
     const watermarkState = hasWatermark ? '已设置 slot 水印' : '无 slot 水印';
+    const mirrorText = mirrorState.effective ? '镜像开启' : '镜像关闭';
     const slotLabel = this.formatSlotLabel(this.currentSlot);
 
     this.ui.selectedSlotSource.innerText = sourceState;
     this.ui.selectedSlotWatermark.innerText = watermarkState;
+    if (this.ui.selectedSlotMirror)
+    {
+      this.ui.selectedSlotMirror.innerText = mirrorText;
+    }
     this.ui.wmSelectedSlot.innerText = slotLabel;
     this.ui.wmSlotSourceState.innerText = source ? `源 ${source.id}` : '无源';
     this.ui.wmSlotWatermarkState.innerText = watermarkState;
     this.ui.wmSlotSelect.value = String(this.currentSlot);
+    this.refreshMirrorDemoUI();
+  },
+
+  getCurrentSlotMirrorState()
+  {
+    const globalMirror = this.getGlobalMirror();
+    const slotMirrors = this.getSlotMirrors();
+    const source = this.getSelectedSource();
+    const slotKey = String(this.currentSlot);
+    const hasOverride = Object.prototype.hasOwnProperty.call(slotMirrors, slotKey);
+    const slotOverride = hasOverride ? Boolean(slotMirrors[slotKey]) : null;
+    const sourceMirror = source && typeof source.mirrorX === 'boolean' ? source.mirrorX : null;
+    let effective = globalMirror;
+
+    if (slotOverride !== null)
+    {
+      effective = slotOverride;
+    }
+    else if (sourceMirror !== null)
+    {
+      effective = sourceMirror;
+    }
+
+    return {
+      globalMirror,
+      slotOverride,
+      sourceMirror,
+      effective
+    };
+  },
+
+  refreshMirrorDemoUI()
+  {
+    const mirrorState = this.getCurrentSlotMirrorState();
+    const outputMirror = this.getOutputMirror();
+    const watermarkMirror = this.getOutputWatermarkMirror();
+    const slotText = mirrorState.slotOverride === null ?
+      '跟随全局' :
+      (mirrorState.slotOverride ? '覆盖开启' : '覆盖关闭');
+
+    if (this.ui.mirrorStatusLine)
+    {
+      this.ui.mirrorStatusLine.innerText =
+        `当前槽位镜像:${slotText === '跟随全局' ? '跟随' : (slotText === '覆盖开启' ? '开' : '关')} · 输出镜像:${outputMirror ? '开' : '关'} · 水印跟随:${watermarkMirror ? '开' : '关'}`;
+    }
+
+    if (this.ui.btnGlobalMirror)
+    {
+      this.ui.btnGlobalMirror.innerText = mirrorState.globalMirror ? '关闭全局镜像' : '开启全局镜像';
+    }
+
+    if (this.ui.btnOutputMirror)
+    {
+      this.ui.btnOutputMirror.innerText = outputMirror ? '输出镜像: 开' : '输出镜像: 关';
+    }
+
+    if (this.ui.btnOutputWatermarkMirror)
+    {
+      this.ui.btnOutputWatermarkMirror.innerText = watermarkMirror ? '水印跟随: 开' : '水印跟随: 关';
+    }
+
+    if (this.ui.btnSlotMirror)
+    {
+      const slotLabel = this.formatSlotLabel(this.currentSlot);
+
+      this.ui.btnSlotMirror.innerText = `槽位 ${slotLabel} 镜像`;
+    }
+
+    if (this.ui.btnSlotMirrorClear)
+    {
+      this.ui.btnSlotMirrorClear.disabled = mirrorState.slotOverride === null;
+    }
+  },
+
+  toggleGlobalMirror()
+  {
+    if (!this.isRunning()) return;
+
+    const next = !this.getGlobalMirror();
+
+    if (!this.setGlobalMirror(next)) return;
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
+  },
+
+  toggleOutputMirror()
+  {
+    if (!this.isRunning()) return;
+
+    const next = !this.getOutputMirror();
+
+    if (!this.setOutputMirror(next)) return;
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
+  },
+
+  toggleOutputWatermarkMirror()
+  {
+    if (!this.isRunning()) return;
+
+    const next = !this.getOutputWatermarkMirror();
+
+    if (!this.setOutputWatermarkMirror(next)) return;
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
+  },
+
+  toggleCurrentSlotMirror()
+  {
+    if (!this.isRunning()) return;
+
+    const mirrorState = this.getCurrentSlotMirrorState();
+    const next = mirrorState.slotOverride === null ?
+      !mirrorState.effective :
+      !mirrorState.slotOverride;
+
+    if (!this.setSlotMirror(this.currentSlot, next)) return;
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
+  },
+
+  clearCurrentSlotMirror()
+  {
+    if (!this.isRunning()) return;
+    if (!this.clearSlotMirror(this.currentSlot)) return;
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
   },
 
   refreshWatermarkList()
@@ -757,6 +897,7 @@ const app = {
     this.ui.thumbs.innerHTML = '';
     this.updateRenderInfo();
     this.refreshSelectedSlotSummary();
+    this.refreshMirrorDemoUI();
     this.refreshWatermarkList();
     this.startRenderInfoLoop();
   },
@@ -806,6 +947,7 @@ const app = {
     this.updateMonitorAudioUI();
     this.updateSlotUI();
     this.refreshSelectedSlotSummary();
+    this.refreshMirrorDemoUI();
     this.refreshWatermarkList();
     this.resetConfigUI();
   },
@@ -851,6 +993,7 @@ const app = {
     });
     this.syncPreviewFrameRatio();
     this.selectSlot(0);
+    this.refreshMirrorDemoUI();
     this.refreshWatermarkList();
   },
 
@@ -1017,6 +1160,7 @@ const app = {
 
     const source = ctx.createMediaStreamSource(playbackStream);
     const gain = ctx.createGain();
+
     gain.gain.value = 1;
     source.connect(gain);
     gain.connect(ctx.destination);

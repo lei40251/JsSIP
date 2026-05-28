@@ -172,6 +172,125 @@ Object.assign(window.app, {
   },
 
   /**
+   * 获取全局镜像状态。
+   *
+   * @returns {boolean} true 表示全局镜像开启
+   */
+  getGlobalMirror()
+  {
+    if (!this.mixer || !this.mixer.getGlobalMirror) return false;
+
+    return Boolean(this.mixer.getGlobalMirror());
+  },
+
+  /**
+   * 获取槽位镜像覆盖表。
+   *
+   * @returns {Object} 形如 { "0": true, "2": false } 的覆盖快照
+   */
+  getSlotMirrors()
+  {
+    if (!this.mixer || !this.mixer.getSlotMirrors) return {};
+
+    return this.mixer.getSlotMirrors() || {};
+  },
+
+  /**
+   * 获取整体输出镜像状态。
+   *
+   * @returns {boolean} true 表示最终输出整体镜像开启
+   */
+  getOutputMirror()
+  {
+    if (!this.mixer || !this.mixer.getOutputMirror) return false;
+
+    return Boolean(this.mixer.getOutputMirror());
+  },
+
+  /**
+   * 获取整体镜像时水印是否跟随镜像。
+   *
+   * @returns {boolean}
+   */
+  getOutputWatermarkMirror()
+  {
+    if (!this.mixer || !this.mixer.getMirrorWatermarksWithOutput) return true;
+
+    return Boolean(this.mixer.getMirrorWatermarksWithOutput());
+  },
+
+  /**
+   * 设置全局镜像开关。
+   *
+   * @param {boolean} enabled - true 开启，false 关闭
+   * @returns {boolean} 是否执行成功
+   */
+  setGlobalMirror(enabled)
+  {
+    if (!this.mixer || !this.mixer.setGlobalMirror) return false;
+    this.mixer.setGlobalMirror(Boolean(enabled));
+
+    return true;
+  },
+
+  /**
+   * 设置整体输出镜像。
+   *
+   * @param {boolean} enabled - true 开启，false 关闭
+   * @returns {boolean} 是否执行成功
+   */
+  setOutputMirror(enabled)
+  {
+    if (!this.mixer || !this.mixer.setOutputMirror) return false;
+    this.mixer.setOutputMirror(Boolean(enabled));
+
+    return true;
+  },
+
+  /**
+   * 设置整体镜像时水印是否跟随。
+   *
+   * @param {boolean} enabled
+   * @returns {boolean}
+   */
+  setOutputWatermarkMirror(enabled)
+  {
+    if (!this.mixer || !this.mixer.setMirrorWatermarksWithOutput) return false;
+    this.mixer.setMirrorWatermarksWithOutput(Boolean(enabled));
+
+    return true;
+  },
+
+  /**
+   * 设置槽位镜像覆盖。
+   *
+   * @param {number} slot - 槽位编号
+   * @param {boolean} enabled - true 开启，false 关闭
+   * @returns {boolean} 是否执行成功
+   */
+  setSlotMirror(slot, enabled)
+  {
+    if (!this.mixer || !this.mixer.setSlotMirror) return false;
+    this.mixer.setSlotMirror(Number(slot), Boolean(enabled));
+
+    return true;
+  },
+
+  /**
+   * 清除槽位镜像覆盖（恢复跟随全局）。
+   *
+   * @param {number} slot - 槽位编号
+   * @returns {boolean} 是否执行成功
+   */
+  clearSlotMirror(slot)
+  {
+    if (!this.mixer || !this.mixer.clearSlotMirror) return false;
+    this.mixer.clearSlotMirror(Number(slot));
+
+    return true;
+  },
+
+  /**
    * 获取 Mixer 的音频引擎状态信息。
    *
    * @returns {Object|null} 音频信息对象（含 status、connectedSources、liveSourceCount），

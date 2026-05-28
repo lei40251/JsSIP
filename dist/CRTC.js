@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265281159
+ * CRTC v1.13.0.20265281433
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210562318 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210562866 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210562318');
+debug('version %s', '1.13.0.405210562866');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210562318';
+    return '1.13.0.405210562866';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -17598,6 +17598,7 @@ class LayoutEngine {
    * @param {Function} options.prepareCanvas - 设置 canvas 尺寸的方法
    * @param {Function} options.resizeRenderer - 调整渲染器尺寸的方法
    * @param {Function} options.createWatermarkItems - 创建水印绘制项的方法
+   * @param {Function} [options.resolveMirrorX] - 解析 source 是否水平镜像的方法
    */
   constructor(options) {
     options = options || {};
@@ -17607,6 +17608,7 @@ class LayoutEngine {
     this._prepareCanvas = options.prepareCanvas;
     this._resizeRenderer = options.resizeRenderer;
     this._createWatermarkItems = options.createWatermarkItems;
+    this._resolveMirrorX = options.resolveMirrorX;
     this._logger = options.logger || null;
 
     /** @type {Object<string,HTMLCanvasElement>} 纯音频源的占位图画布缓存 */
@@ -17654,12 +17656,14 @@ class LayoutEngine {
       if (hasVideo) {
         // 有视频轨 → 按原有逻辑等比缩放后绘制
         var draw = this._calcDrawRect(source.video, targetX, targetY, cellWidth, cellHeight);
+        var mirrorX = this._resolveMirror(source, slot);
         if (draw) {
           items.push({
             id: source.id,
             streamId: this._getSourceStreamId(source),
             slot: slot,
             video: source.video,
+            mirrorX: mirrorX,
             draw: draw
           });
         }
@@ -17667,11 +17671,13 @@ class LayoutEngine {
         // 纯音频源 → 生成占位图画布，填满整个格子
         var placeholder = this._createPlaceholderCanvas(slot, cellWidth, cellHeight);
         if (placeholder) {
+          var _mirrorX = this._resolveMirror(source, slot);
           items.push({
             id: source.id,
             streamId: this._getSourceStreamId(source),
             slot: slot,
             video: placeholder,
+            mirrorX: _mirrorX,
             draw: {
               x: targetX,
               y: targetY,
@@ -17686,6 +17692,8 @@ class LayoutEngine {
       width: this._canvas.width,
       height: this._canvas.height,
       backgroundColor: this._config.backgroundColor,
+      outputMirrorX: Boolean(this._config.outputMirrorX),
+      mirrorWatermarksWithOutput: this._config.mirrorWatermarksWithOutput !== false,
       items: items,
       sourceWatermarks: [],
       outputWatermarks: []
@@ -17703,6 +17711,12 @@ class LayoutEngine {
       }
     }
     return payload;
+  }
+  _resolveMirror(source, slot) {
+    if (typeof this._resolveMirrorX === 'function') {
+      return Boolean(this._resolveMirrorX(source, slot));
+    }
+    return false;
   }
 
   /**
@@ -17961,6 +17975,9 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
  * @returns {number} returns.maxFrameQueue - 最大帧队列长度
  * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
+ * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
+ * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
+ * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
  */
 exports.create = function (options) {
   options = options || {};
@@ -17975,6 +17992,9 @@ exports.create = function (options) {
     dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
     maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
     preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
+    mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
+    outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
+    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, true),
     watermarks: options.watermarks || []
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -18049,6 +18069,24 @@ exports.normalizeGain = function (value, fallback) {
 };
 
 /**
+ * 归一化水平镜像开关。
+ *
+ * @param {*} primary - 主参数（推荐 mirrorX）
+ * @param {*} legacy - 兼容参数（mirror）
+ * @param {boolean} fallback - 默认值
+ * @returns {boolean}
+ */
+exports.normalizeMirrorX = function (primary, legacy, fallback) {
+  if (typeof primary === 'boolean') {
+    return primary;
+  }
+  if (typeof legacy === 'boolean') {
+    return legacy;
+  }
+  return Boolean(fallback);
+};
+
+/**
  * 统一 appendStream() 第二个参数的格式。
  * 支持两种调用方式：
  *   appendStream(stream, 3)               → 数字作为 slot
@@ -18057,7 +18095,7 @@ exports.normalizeGain = function (value, fallback) {
  * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
  * @param {number} index - 数组索引，批量添加时 slot 递增
  * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined }
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
  */
 /**
  * 返回最大参与方数限制。
@@ -18076,6 +18114,11 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
     }
     if (typeof optionsOrSlot.gain === 'number') {
       options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
+    }
+    if (typeof optionsOrSlot.mirrorX === 'boolean') {
+      options.mirrorX = optionsOrSlot.mirrorX;
+    } else if (typeof optionsOrSlot.mirror === 'boolean') {
+      options.mirrorX = optionsOrSlot.mirror;
     }
   }
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
@@ -18155,6 +18198,8 @@ module.exports = class MediaStreamMixer {
    *   Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。
    * @param {number} [options.maxFrameQueue=1]
    *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
+   * @param {boolean} [options.mirrorX=false]
+   *   是否默认对所有槽位应用水平镜像。兼容别名 options.mirror。
    */
   constructor(videos = [], options = {}) {
     // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
@@ -18208,6 +18253,8 @@ module.exports = class MediaStreamMixer {
      * @property {string}      renderMode      - 渲染后端选择
      */
     this._config = config;
+    this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX || this._config.outputMirrorX);
+    this._slotMirrorXOverrides = Object.create(null);
     this._domAdapter = new MixerDomAdapter({
       config: this._config,
       logger: logger
@@ -18343,7 +18390,8 @@ module.exports = class MediaStreamMixer {
       logger: logger,
       prepareCanvas: this._prepareCanvas.bind(this),
       resizeRenderer: this._resizeRenderer.bind(this),
-      createWatermarkItems: payload => this._createWatermarkItems(payload)
+      createWatermarkItems: payload => this._createWatermarkItems(payload),
+      resolveMirrorX: (source, slot) => this._resolveMirrorX(source, slot)
     });
     this._prepareCanvas();
     this._watermarkManager.setWatermarks(this._config.watermarks).then(() => {
@@ -18413,14 +18461,49 @@ module.exports = class MediaStreamMixer {
    * 统一 appendStream() 第二个参数的格式。
    * 支持两种调用方式：
    *   appendStream(stream, 3)            → 数字作为 slot
-   *   appendStream(stream, { slot, gain }) → 对象解构
+   *   appendStream(stream, { slot, gain, mirrorX }) → 对象解构
    *
    * @param {number|Object} optionsOrSlot - 原始参数
    * @param {number} index - 数组索引，用于批量添加时 slot 递增
-   * @returns {Object} { slot: number|null, gain: number|undefined }
+   * @returns {Object} { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
    */
   _normalizeSourceOptions(optionsOrSlot, index) {
     return MixerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+  }
+  _resolveMirrorX(source, slot) {
+    var key = String(slot);
+    var hasSlotOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorXOverrides, key);
+    if (hasSlotOverride) {
+      return this._slotMirrorXOverrides[key];
+    }
+    if (source && typeof source.mirrorX === 'boolean') {
+      return source.mirrorX;
+    }
+    return Boolean(this._config.mirrorX);
+  }
+  _isOutputMirrorEnabled() {
+    return Boolean(this._config.outputMirrorX);
+  }
+  _isMirrorEnabled() {
+    if (this._config.mirrorX) {
+      return true;
+    }
+    if (Object.keys(this._slotMirrorXOverrides).some(slot => this._slotMirrorXOverrides[slot] === true)) {
+      return true;
+    }
+    return this._sources.some(source => source && source.mirrorX === true);
+  }
+  _refreshRendererPolicyForMirror() {
+    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled();
+    this._config.forceMainThreadRenderer = shouldForceMainThread;
+    if (!shouldForceMainThread || !this._renderer || !this._renderer.getInfo) {
+      return;
+    }
+    var info = this._renderer.getInfo();
+    if (!info.isWorker) {
+      return;
+    }
+    this._fallbackRendererToMain2D('Mirror currently requires a main-thread renderer');
   }
 
   /**
@@ -18724,7 +18807,7 @@ module.exports = class MediaStreamMixer {
    * 支持多种调用方式：
    *   appendStream(stream)          → 自动分配 slot（grid 模式）
    *   appendStream(stream, 3)       → 指定 slot
-   *   appendStream(stream, { slot: 3, gain: 0.5 })
+   *   appendStream(stream, { slot: 3, gain: 0.5, mirrorX: true })
    *   appendStream([streamA, ...])  → 批量添加
    *
    * 同 slot 已有源会被新源覆盖。
@@ -18767,6 +18850,7 @@ module.exports = class MediaStreamMixer {
         this._scheduleAudioRefresh();
       }
     });
+    this._refreshRendererPolicyForMirror();
 
     // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
     this._renderLoop.start();
@@ -18804,12 +18888,69 @@ module.exports = class MediaStreamMixer {
    * 返回新对象数组，外部修改不影响内部状态。
    *
    * @returns {Array<Object>} 源信息列表：
-   *   { id, streamId, slot, gain, hasAudio, hasVideo }
+   *   { id, streamId, slot, gain, mirrorX, hasAudio, hasVideo }
    */
   getSources() {
     this._assertNotDestroyed('getSources()');
     logger.debug(`getSources(): count=${this._sources.length}`);
     return this._sourceRegistry.getSnapshot();
+  }
+  setMirror(enabled) {
+    this.setGlobalMirror(enabled);
+  }
+  setGlobalMirror(enabled) {
+    this._assertNotDestroyed('setGlobalMirror()');
+    this._config.mirrorX = Boolean(enabled);
+    this._refreshRendererPolicyForMirror();
+    this._drawVideosToCanvas(undefined, true);
+  }
+  getGlobalMirror() {
+    this._assertNotDestroyed('getGlobalMirror()');
+    return Boolean(this._config.mirrorX);
+  }
+  setOutputMirror(enabled) {
+    this._assertNotDestroyed('setOutputMirror()');
+    this._config.outputMirrorX = Boolean(enabled);
+    this._refreshRendererPolicyForMirror();
+    this._drawVideosToCanvas(undefined, true);
+  }
+  getOutputMirror() {
+    this._assertNotDestroyed('getOutputMirror()');
+    return Boolean(this._config.outputMirrorX);
+  }
+  setMirrorWatermarksWithOutput(enabled) {
+    this._assertNotDestroyed('setMirrorWatermarksWithOutput()');
+    this._config.mirrorWatermarksWithOutput = Boolean(enabled);
+    this._drawVideosToCanvas(undefined, true);
+  }
+  getMirrorWatermarksWithOutput() {
+    this._assertNotDestroyed('getMirrorWatermarksWithOutput()');
+    return this._config.mirrorWatermarksWithOutput !== false;
+  }
+  setSlotMirror(slot, enabled) {
+    this._assertNotDestroyed('setSlotMirror()');
+    var normalizedSlot = this._normalizeSlot(slot, 0);
+    if (normalizedSlot === null) {
+      throw new TypeError('Invalid slot.');
+    }
+    var key = String(normalizedSlot);
+    if (enabled === undefined || enabled === null) {
+      delete this._slotMirrorXOverrides[key];
+    } else {
+      this._slotMirrorXOverrides[key] = Boolean(enabled);
+    }
+    this._refreshRendererPolicyForMirror();
+    this._drawVideosToCanvas(undefined, true);
+  }
+  clearSlotMirror(slot) {
+    this.setSlotMirror(slot, null);
+  }
+  getSlotMirrors() {
+    this._assertNotDestroyed('getSlotMirrors()');
+    return Object.keys(this._slotMirrorXOverrides).reduce((snapshot, slot) => {
+      snapshot[slot] = this._slotMirrorXOverrides[slot];
+      return snapshot;
+    }, {});
   }
 
   /**
@@ -20243,7 +20384,7 @@ class SourceRegistry {
    * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
-   * @param {Object} [options={}] - 配置选项 { slot, gain }
+   * @param {Object} [options={}] - 配置选项 { slot, gain, mirrorX }
    * @returns {Object} 新建的 source 对象
    */
   add(input, options) {
@@ -20355,7 +20496,7 @@ class SourceRegistry {
    * 返回当前所有源的快照。
    * 返回新数组，外部修改不影响内部状态。
    *
-   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, hasAudio, hasVideo }
+   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, mirrorX, hasAudio, hasVideo }
    */
   getSnapshot() {
     return this.sources.map(source => {
@@ -20365,6 +20506,7 @@ class SourceRegistry {
         streamId: stream ? stream.id : null,
         slot: source.slot,
         gain: source.gain,
+        mirrorX: Boolean(source.mirrorX),
         hasAudio: this.hasLiveAudioTrack(source),
         hasVideo: this.hasVideoTrack(source)
       };
@@ -20452,7 +20594,7 @@ class SourceRegistry {
    * 创建一个内部 source 对象。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
-   * @param {Object} options - 配置 { slot, gain }
+   * @param {Object} options - 配置 { slot, gain, mirrorX }
    * @returns {Object} source 对象
    * @throws {TypeError} 无效的 MediaStream
    */
@@ -20479,6 +20621,7 @@ class SourceRegistry {
       video: video,
       slot: typeof options.slot === 'number' ? options.slot : null,
       gain: this._normalizeGain(options.gain, this._getDefaultGain()),
+      mirrorX: typeof options.mirrorX === 'boolean' ? options.mirrorX : null,
       audioSourceNode: null,
       // WebAudio 源节点（由 AudioMixer 连接时赋值）
       masterGainNode: null,
@@ -21261,10 +21404,12 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
       if (!item.video || item.video.readyState < 2) {
         return;
       }
-      this._context.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
+      this._drawItem(item, payload.outputMirrorX, payload.width);
     });
-    this._drawWatermarks(payload.sourceWatermarks);
-    this._drawWatermarks(payload.outputWatermarks);
+    var sourceWatermarkMirrorX = payload.outputMirrorX;
+    var outputWatermarkMirrorX = payload.mirrorWatermarksWithOutput === false ? false : payload.outputMirrorX;
+    this._drawWatermarks(payload.sourceWatermarks, sourceWatermarkMirrorX, payload.width);
+    this._drawWatermarks(payload.outputWatermarks, outputWatermarkMirrorX, payload.width);
     this._info.renderedFrames += 1;
     this._emitFramePresented({
       canvas: this._canvas,
@@ -21278,7 +21423,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
    *
    * @param {Array<Object>} watermarks - 水印绘制项
    */
-  _drawWatermarks(watermarks) {
+  _drawWatermarks(watermarks, outputMirrorX, canvasWidth) {
     if (!this._context) {
       return;
     }
@@ -21287,10 +21432,47 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
         return;
       }
       var previousAlpha = typeof this._context.globalAlpha === 'number' ? this._context.globalAlpha : 1;
+      var draw = this._resolveDrawRect(watermark.draw, outputMirrorX, canvasWidth);
       this._context.globalAlpha = watermark.opacity;
-      this._context.drawImage(watermark.image, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
+      this._drawSurface(watermark.image, draw, Boolean(outputMirrorX));
       this._context.globalAlpha = previousAlpha;
     });
+  }
+  _drawItem(item, outputMirrorX, canvasWidth) {
+    if (!item || !item.video || !item.draw) {
+      return;
+    }
+    var draw = this._resolveDrawRect(item.draw, outputMirrorX, canvasWidth);
+    var effectiveMirrorX = Boolean(item.mirrorX) !== Boolean(outputMirrorX);
+    this._drawSurface(item.video, draw, effectiveMirrorX);
+  }
+  _drawSurface(surface, draw, mirrorX) {
+    if (!surface || !draw) {
+      return;
+    }
+    if (!mirrorX) {
+      this._context.drawImage(surface, draw.x, draw.y, draw.width, draw.height);
+      return;
+    }
+    this._context.save();
+    this._context.translate(draw.x + draw.width, draw.y);
+    this._context.scale(-1, 1);
+    this._context.drawImage(surface, 0, 0, draw.width, draw.height);
+    this._context.restore();
+  }
+  _resolveDrawRect(draw, outputMirrorX, canvasWidth) {
+    if (!draw) {
+      return null;
+    }
+    if (!outputMirrorX) {
+      return draw;
+    }
+    return {
+      x: canvasWidth - draw.x - draw.width,
+      y: draw.y,
+      width: draw.width,
+      height: draw.height
+    };
   }
 
   /**
@@ -21367,6 +21549,12 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     /** @type {WebGLBuffer|null} 纹理坐标 buffer */
     this._texCoordBuffer = null;
 
+    /** @type {WebGLBuffer|null} 镜像纹理坐标 buffer */
+    this._mirrorTexCoordBuffer = null;
+
+    /** @type {boolean|null} 当前绑定的镜像状态，避免每个 item 重复切 buffer */
+    this._activeMirrorX = null;
+
     /** @type {Object<string, WebGLTexture>} 每个源对应的纹理对象缓存 */
     this._textures = {};
 
@@ -21416,9 +21604,12 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this._texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+    this._mirrorTexCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this._mirrorTexCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1, 0, 0, 0, 1, 1, 0, 1]), gl.STATIC_DRAW);
     gl.useProgram(this._program);
     this._enableAttribute('a_position', this._positionBuffer);
-    this._enableAttribute('a_texCoord', this._texCoordBuffer);
+    this._setMirrorTexCoord(false);
     gl.uniform1i(gl.getUniformLocation(this._program, 'u_texture'), 0);
   }
 
@@ -21488,10 +21679,12 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
-      this._drawItem(item, payload.height);
+      this._drawItem(item, payload.height, payload.outputMirrorX, payload.width);
     });
-    this._drawWatermarks(payload.sourceWatermarks, payload.height);
-    this._drawWatermarks(payload.outputWatermarks, payload.height);
+    var sourceWatermarkMirrorX = payload.outputMirrorX;
+    var outputWatermarkMirrorX = payload.mirrorWatermarksWithOutput === false ? false : payload.outputMirrorX;
+    this._drawWatermarks(payload.sourceWatermarks, payload.height, sourceWatermarkMirrorX, payload.width);
+    this._drawWatermarks(payload.outputWatermarks, payload.height, outputWatermarkMirrorX, payload.width);
     gl.flush();
     this._info.renderedFrames += 1;
     this._emitFramePresented({
@@ -21528,9 +21721,9 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    * @param {number} item.draw.height - 绘制区域高度
    * @param {number} canvasHeight - 画布总高度
    */
-  _drawItem(item, canvasHeight) {
+  _drawItem(item, canvasHeight, outputMirrorX, outputWidth) {
     var gl = this._gl;
-    var draw = item.draw;
+    var draw = this._resolveDrawRect(item.draw, outputMirrorX, outputWidth);
     var viewportX = Math.round(draw.x);
     var viewportY = Math.round(canvasHeight - draw.y - draw.height);
     var viewportWidth = Math.round(draw.width);
@@ -21538,8 +21731,29 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     if (viewportWidth <= 0 || viewportHeight <= 0) {
       return;
     }
+    var effectiveMirrorX = Boolean(item.mirrorX) !== Boolean(outputMirrorX);
+    this._setMirrorTexCoord(effectiveMirrorX);
     gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  _resolveDrawRect(draw, outputMirrorX, outputWidth) {
+    if (!outputMirrorX) {
+      return draw;
+    }
+    return {
+      x: outputWidth - draw.x - draw.width,
+      y: draw.y,
+      width: draw.width,
+      height: draw.height
+    };
+  }
+  _setMirrorTexCoord(mirrorX) {
+    var desired = Boolean(mirrorX);
+    if (this._activeMirrorX === desired) {
+      return;
+    }
+    this._activeMirrorX = desired;
+    this._enableAttribute('a_texCoord', desired ? this._mirrorTexCoordBuffer : this._texCoordBuffer);
   }
 
   /**
@@ -21548,7 +21762,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
    * @param {Array<Object>} watermarks - 水印绘制项
    * @param {number} canvasHeight - 画布总高度
    */
-  _drawWatermarks(watermarks, canvasHeight) {
+  _drawWatermarks(watermarks, canvasHeight, outputMirrorX, outputWidth) {
     if (!this._gl || !(watermarks || []).length) {
       return;
     }
@@ -21566,7 +21780,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.image);
-      this._drawItem(watermark, canvasHeight);
+      this._drawItem(watermark, canvasHeight, outputMirrorX, outputWidth);
     });
     gl.disable(gl.BLEND);
     this._cleanupUnusedWatermarkTextures(activeKeys);
@@ -21641,6 +21855,9 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     if (this._texCoordBuffer) {
       gl.deleteBuffer(this._texCoordBuffer);
     }
+    if (this._mirrorTexCoordBuffer) {
+      gl.deleteBuffer(this._mirrorTexCoordBuffer);
+    }
     if (this._program) {
       gl.deleteProgram(this._program);
     }
@@ -21651,6 +21868,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._gl = null;
     this._program = null;
     this._canvas = null;
+    this._activeMirrorX = null;
   }
 };
 },{"./BaseRenderer":51,"./helpers/color":56,"./helpers/gl":57}],54:[function(require,module,exports){
@@ -21689,10 +21907,14 @@ var WorkerRenderer = require('./WorkerRenderer');
  */
 exports.createRenderer = function (canvas, config, hooks) {
   var mode = config.renderMode || 'auto';
+  var forceMainThread = config.forceMainThreadRenderer === true;
   var errors = [];
   hooks = hooks || {};
   if (mode === 'main-2d') {
     return createMain2D(canvas, config, false, '');
+  }
+  if (forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d')) {
+    return createMainFallback(canvas, config, mode, 'Mirror currently requires a main-thread renderer');
   }
 
   // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
@@ -21712,7 +21934,7 @@ exports.createRenderer = function (canvas, config, hooks) {
 
   // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
   // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
-  if (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto') {
+  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto')) {
     try {
       var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
       var workerConfig = Object.assign({}, config, {
@@ -22223,6 +22445,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         items.push({
           id: item.id,
           draw: item.draw,
+          mirrorX: Boolean(item.mirrorX),
           frame
         });
         transfers.push(frame);
