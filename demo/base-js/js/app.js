@@ -90,6 +90,11 @@ const env = handleGetQuery('env');
 const noremb = handleGetQuery('noremb') || false;
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, password } = env ? envs[`env_${env}`] : envs['env_default'];
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
+const extSet = new Set((exts || []).map((ext) => String(ext).trim() 
+  .toUpperCase()).filter(Boolean));
+const mixReplaceParam = handleGetQuery('mixreplace');
+const useMixReplace = [ '1', 'true', 'yes', 'on' ].indexOf(String(mixReplaceParam || '').trim()
+  .toLowerCase()) !== -1;
 
 exts && exts.forEach((ext) => extraFeatures.push(ext));
 
@@ -122,7 +127,7 @@ let videoConstraints = {
   frameRate  : 15
 };
 
-if (exts && exts.indexOf('BP720P') !== -1) 
+if (extSet.has('BP720P')) 
 {
   videoConstraints = {
     facingMode : 'user',
@@ -684,7 +689,11 @@ ua.on('newRTCSession', function(e)
   {
     videoOnly = false;
     remoteNo = undefined;
-    // mix && mix.stop();
+    if (mix) 
+    {
+      mix.stop();
+      mix = null;
+    }
     setStatus(`通话建立失败: ${d.cause}`);
 
     tmpSession = null;
@@ -747,7 +756,11 @@ ua.on('newRTCSession', function(e)
   {
     videoOnly = false;
     remoteNo = undefined;
-    // mix && mix.stop();
+    if (mix) 
+    {
+      mix.stop();
+      mix = null;
+    }
     setStatus(`通话结束: ${d.cause}`);
 
     if (recorder) 
@@ -783,7 +796,11 @@ ua.on('newRTCSession', function(e)
     cusMediaStream = new MediaStream();
 
     engine && engine.stop();
-    localMediaStream & localMediaStream.getTracks().forEach((track) => track.stop());
+    if (localMediaStream && localMediaStream.getTracks) 
+    {
+      localMediaStream.getTracks().forEach((track) => track.stop());
+      localMediaStream = null;
+    }
   });
 
   /**
@@ -980,6 +997,55 @@ ua.on('newRTCSession', function(e)
     // }
 
     confirmed = true;
+
+    if (useMixReplace) 
+    {
+      try
+      {
+        const localVideoTrack = localStream.videoStream && localStream.videoStream.getVideoTracks ? localStream.videoStream.getVideoTracks()[0] : null;
+        const videoSender = e.session.connection.getSenders().find((sender) => sender.track && sender.track.kind === 'video');
+
+        if (!localVideoTrack) 
+        {
+          setStatus('confirmed: 本地无视频轨，跳过mixer替换');
+        }
+        else if (!videoSender) 
+        {
+          setStatus('confirmed: 未找到视频sender，跳过mixer替换');
+        }
+        else 
+        {
+          if (mix) 
+          {
+            mix.stop();
+            mix = null;
+          }
+
+          const sourceStream = new MediaStream([ localVideoTrack.clone() ]);
+          const settings = localVideoTrack.getSettings ? localVideoTrack.getSettings() : {};
+          const outputWidth = Number(settings.width) || Number(videoConstraints.width) || 640;
+          const outputHeight = Number(settings.height) || Number(videoConstraints.height) || 480;
+          const outputFps = Number(settings.frameRate) || Number(videoConstraints.frameRate) || 15;
+
+          mix = new CRTC.Mixer([ sourceStream ], { width: outputWidth, height: outputHeight, fps: outputFps });
+
+          const mixedVideoStream = mix.getVideoStream();
+          const mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
+
+          if (!mixedVideoTrack) 
+          {
+            throw new Error('mixer output video track is empty');
+          }
+
+          await videoSender.replaceTrack(mixedVideoTrack);
+          setStatus('confirmed: 已切换为mixer处理后视频轨');
+        }
+      }
+      catch (error) 
+      {
+        setStatus(`confirmed: mixer替换失败 ${error.message || error}`);
+      }
+    }
 
     /* 用于验证接通以后替换音频 */
     // if (!mix)
@@ -2203,9 +2269,12 @@ async function checkCameraStatus()
     }
 
     // 尝试访问摄像头
-    await navigator.mediaDevices.getUserMedia({ video: true }).then((mediastream) => { mediastream && mediastream.getTracks().forEach((t) => t.stop()); });
+    await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) => 
+    {
+      mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
+    });
     haveACamera = true;
-
+    
     return '摄像头可以正常使用';
 
   }
@@ -2229,9 +2298,9 @@ async function checkCameraStatus()
 /**
  * 更新摄像头下拉列表
  */
-function updateDevices() 
+async function updateDevices() 
 {
-  CRTC.Utils.getCameras()
+  await CRTC.Utils.getCameras()
     .then((cameras) => 
     {
       let option = '<option selected value="">切换摄像头</option>';
@@ -2247,7 +2316,7 @@ function updateDevices()
   checkCameraStatus();
 
   // 移动端不支持切换麦克风
-  CRTC.Utils.getMicrophones()
+  await CRTC.Utils.getMicrophones()
     .then((microphones) => 
     {
       let menus = '<option selected value="">切换音频输入</option>';
@@ -2270,7 +2339,13 @@ function start()
   setStatus(`${CRTC.version}`);
 
   // 更新摄像头下拉列表
-  updateDevices();
+  // updateDevices();
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(async(mediastream) => 
+  {
+    await updateDevices();
+
+    mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
+  });
 
   // 初始化断网提示相关
   handleStop = false;
