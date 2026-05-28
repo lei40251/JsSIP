@@ -30,9 +30,32 @@ Object.assign(window.app, {
     const [ w, h ] = document.getElementById('cfg-out-res').value.split('x').map(Number);
     const fps = parseInt(document.getElementById('cfg-fps').value);
     const renderMode = document.getElementById('cfg-render-mode').value;
+    const ctorOutputMirror = document.getElementById('cfg-ctor-output-mirror');
+    const ctorOutputWatermarkMirror = document.getElementById('cfg-ctor-output-watermark-mirror');
+    const ctorWatermarks = document.getElementById('cfg-ctor-watermarks');
+    const options = {
+      width                      : w,
+      height                     : h,
+      fps                        : fps,
+      renderMode                 : renderMode,
+      outputMirrorX              : ctorOutputMirror && ctorOutputMirror.value === 'on',
+      mirrorWatermarksWithOutput : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
+      watermarks                 : []
+    };
+
+    if (ctorWatermarks && ctorWatermarks.checked)
+    {
+      options.watermarks.push(this.buildOutputTextWatermark());
+      const outputImageWatermark = this.buildOutputImageWatermark();
+
+      if (outputImageWatermark)
+      {
+        options.watermarks.push(outputImageWatermark);
+      }
+    }
 
     // 创建 Mixer 实例，初始空源列表
-    this.mixer = new CRTC.Mixer([], { width: w, height: h, fps, renderMode });
+    this.mixer = new CRTC.Mixer([], options);
     // 重置监听状态，由 UI 层按需开启
     this.monitorAudio = false;
     // 通知 UI 层进入启动前准备（如停止旧子混音）
