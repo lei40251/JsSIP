@@ -255,7 +255,18 @@ class MockCanvasElement
 
   captureStream(fps)
   {
-    const stream = new MockMediaStream([ new MockMediaStreamTrack('video') ]);
+    const track = new MockMediaStreamTrack('video');
+
+    if (fps === 0 && MockCanvasElement.captureTrackHasRequestFrame)
+    {
+      track.requestFrameCount = 0;
+      track.requestFrame = function()
+      {
+        track.requestFrameCount += 1;
+      };
+    }
+
+    const stream = new MockMediaStream([ track ]);
 
     stream.fps = fps || null;
 
@@ -265,6 +276,7 @@ class MockCanvasElement
 
 MockCanvasElement.instances = [];
 MockCanvasElement.webgl2Supported = false;
+MockCanvasElement.captureTrackHasRequestFrame = false;
 
 class MockAudioNode
 {
@@ -437,18 +449,78 @@ class MockOffscreenCanvas
   }
 }
 
+class MockVideoFrame
+{
+  constructor(source, options)
+  {
+    this.source = source;
+    this.timestamp = options && options.timestamp;
+    this.closed = false;
+  }
+
+  close()
+  {
+    this.closed = true;
+  }
+}
+
+class MockTrackGeneratorWriter
+{
+  constructor()
+  {
+    this.writes = [];
+    this.closed = false;
+  }
+
+  write(frame)
+  {
+    this.writes.push(frame);
+
+    return Promise.resolve();
+  }
+
+  close()
+  {
+    this.closed = true;
+
+    return Promise.resolve();
+  }
+
+  releaseLock()
+  {}
+}
+
+class MockVideoTrackGenerator
+{
+  constructor()
+  {
+    this.track = new MockMediaStreamTrack('video');
+    this._writer = new MockTrackGeneratorWriter();
+    this.writable = {
+      getWriter : () => this._writer
+    };
+    MockVideoTrackGenerator.instances.push(this);
+  }
+}
+
+MockVideoTrackGenerator.instances = [];
+
 function installBrowserMocks()
 {
   const snapshots = {
-    MediaStream      : saveGlobal('MediaStream'),
-    HTMLMediaElement : saveGlobal('HTMLMediaElement'),
-    Worker           : saveGlobal('Worker'),
-    OffscreenCanvas  : saveGlobal('OffscreenCanvas'),
-    URL              : saveGlobal('URL'),
-    Blob             : saveGlobal('Blob'),
-    window           : saveGlobal('window'),
-    document         : saveGlobal('document'),
-    performance      : saveGlobal('performance')
+    MediaStream               : saveGlobal('MediaStream'),
+    HTMLMediaElement          : saveGlobal('HTMLMediaElement'),
+    Worker                    : saveGlobal('Worker'),
+    OffscreenCanvas           : saveGlobal('OffscreenCanvas'),
+    URL                       : saveGlobal('URL'),
+    Blob                      : saveGlobal('Blob'),
+    window                    : saveGlobal('window'),
+    document                  : saveGlobal('document'),
+    performance               : saveGlobal('performance'),
+    VideoFrame                : saveGlobal('VideoFrame'),
+    createImageBitmap         : saveGlobal('createImageBitmap'),
+    VideoTrackGenerator       : saveGlobal('VideoTrackGenerator'),
+    MediaStreamTrackGenerator : saveGlobal('MediaStreamTrackGenerator')
   };
 
   resetMockState();
@@ -510,6 +582,10 @@ function installBrowserMocks()
       return Date.now();
     }
   };
+  delete global.VideoFrame;
+  delete global.createImageBitmap;
+  delete global.VideoTrackGenerator;
+  delete global.MediaStreamTrackGenerator;
 
   return function()
   {
@@ -522,6 +598,10 @@ function installBrowserMocks()
     restoreGlobal('window', snapshots.window);
     restoreGlobal('document', snapshots.document);
     restoreGlobal('performance', snapshots.performance);
+    restoreGlobal('VideoFrame', snapshots.VideoFrame);
+    restoreGlobal('createImageBitmap', snapshots.createImageBitmap);
+    restoreGlobal('VideoTrackGenerator', snapshots.VideoTrackGenerator);
+    restoreGlobal('MediaStreamTrackGenerator', snapshots.MediaStreamTrackGenerator);
     resetMockState();
   };
 }
@@ -555,8 +635,56 @@ function resetMockState()
   MockAudioContext.instances = [];
   MockCanvasElement.instances = [];
   MockCanvasElement.webgl2Supported = false;
+  MockCanvasElement.captureTrackHasRequestFrame = false;
   MockWorker.instances = [];
   MockWorker.scripts = {};
+  MockVideoTrackGenerator.instances = [];
+}
+
+function enableInsertableMocks(options)
+{
+  options = options || {};
+  global.VideoFrame = MockVideoFrame;
+  global.window.VideoFrame = MockVideoFrame;
+  global.createImageBitmap = function(source)
+  {
+    const bitmap = {
+      source : source,
+      closed : false,
+      close  : function()
+      {
+        bitmap.closed = true;
+      }
+    };
+
+    return Promise.resolve(bitmap);
+  };
+  global.window.createImageBitmap = global.createImageBitmap;
+
+  if (options.useLegacyGenerator)
+  {
+    global.MediaStreamTrackGenerator = class MockMediaStreamTrackGenerator
+    {
+      constructor(config)
+      {
+        this.kind = (config && config.kind) || 'video';
+        this.track = new MockMediaStreamTrack('video');
+        this._writer = new MockTrackGeneratorWriter();
+        this.writable = { getWriter: () => this._writer };
+        MockVideoTrackGenerator.instances.push(this);
+      }
+    };
+    delete global.VideoTrackGenerator;
+    delete global.window.VideoTrackGenerator;
+    global.window.MediaStreamTrackGenerator = global.MediaStreamTrackGenerator;
+
+    return;
+  }
+
+  global.VideoTrackGenerator = MockVideoTrackGenerator;
+  global.window.VideoTrackGenerator = MockVideoTrackGenerator;
+  delete global.MediaStreamTrackGenerator;
+  delete global.window.MediaStreamTrackGenerator;
 }
 
 function createStream(options)
@@ -1447,6 +1575,133 @@ async function testMixerConfigSourceOptions()
   );
 }
 
+async function testInsertableVideoStreamPreferredWhenSupported()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const output = mixer.getVideoStream();
+  const generator = MockVideoTrackGenerator.instances[0];
+
+  await flushAsync();
+  const writtenFrames = generator && generator._writer ? generator._writer.writes.length : 0;
+
+  assert.ok(generator);
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 0);
+  assert.ok(writtenFrames >= 1);
+
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.outputMode, 'insertable');
+  assert.strictEqual(info.insertableActive, true);
+  assert.strictEqual(info.insertableSupported, true);
+  assert.strictEqual(info.insertableGeneratorType, 'video-track-generator');
+
+  mixer.stop();
+}
+
+async function testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable()
+{
+  resetMockState();
+  global.VideoFrame = MockVideoFrame;
+  global.createImageBitmap = function(source)
+  {
+    return Promise.resolve({
+      source,
+      close : function() {}
+    });
+  };
+  delete global.VideoTrackGenerator;
+  delete global.MediaStreamTrackGenerator;
+  delete global.window.VideoTrackGenerator;
+  delete global.window.MediaStreamTrackGenerator;
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const output = mixer.getVideoStream();
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 1);
+  assert.strictEqual(info.outputMode, 'capture-stream');
+  assert.strictEqual(info.insertableActive, false);
+  assert.strictEqual(info.insertableSupported, false);
+  assert.strictEqual(info.captureFrameControlMode, 'auto-capture-fps');
+
+  mixer.stop();
+}
+
+async function testCaptureStreamUsesManualRequestFrameWhenSupported()
+{
+  resetMockState();
+  MockCanvasElement.captureTrackHasRequestFrame = true;
+  global.VideoFrame = MockVideoFrame;
+  global.createImageBitmap = function(source)
+  {
+    return Promise.resolve({
+      source,
+      close : function() {}
+    });
+  };
+  delete global.VideoTrackGenerator;
+  delete global.MediaStreamTrackGenerator;
+  delete global.window.VideoTrackGenerator;
+  delete global.window.MediaStreamTrackGenerator;
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const output = mixer.getVideoStream();
+  const capturedTrack = output.getVideoTracks()[0];
+  const before = capturedTrack.requestFrameCount || 0;
+
+  mixer._drawVideosToCanvas(undefined, true);
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const after = capturedTrack.requestFrameCount || 0;
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(info.outputMode, 'capture-stream');
+  assert.strictEqual(info.captureFrameControlMode, 'manual-request-frame');
+  assert.ok(after > before);
+
+  mixer.stop();
+}
+
+async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
+{
+  resetMockState();
+  enableInsertableMocks({ useLegacyGenerator: true });
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const output = mixer.getVideoStream();
+
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 0);
+  assert.ok(MockVideoTrackGenerator.instances.length >= 1);
+
+  mixer.stop();
+}
+
 async function run()
 {
   const restoreBrowserMocks = installBrowserMocks();
@@ -1482,6 +1737,10 @@ async function run()
     await testWorkerRendererKeepsEmptyPayload();
     await testMixerConfigDefaults();
     await testMixerConfigSourceOptions();
+    await testInsertableVideoStreamPreferredWhenSupported();
+    await testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable();
+    await testCaptureStreamUsesManualRequestFrameWhenSupported();
+    await testInsertableCanUseLegacyMediaStreamTrackGenerator();
   }
   finally
   {
@@ -1502,4 +1761,3 @@ if (require.main === module)
     });
   });
 }
-

@@ -227,10 +227,25 @@ Object.assign(window.app, {
 
     if (liveSettings)
     {
-      this.outputRuntimeConfig = {
-        ...(this.outputRuntimeConfig || {}),
-        ...liveSettings
-      };
+      const nextConfig = Object.assign({}, this.outputRuntimeConfig || {});
+
+      // 统计面板里的 FPS 保持启动配置值，不用实时轨道帧率覆盖。
+      if (Number.isFinite(liveSettings.width))
+      {
+        nextConfig.width = liveSettings.width;
+      }
+
+      if (Number.isFinite(liveSettings.height))
+      {
+        nextConfig.height = liveSettings.height;
+      }
+
+      if (!Number.isFinite(nextConfig.frameRate) && Number.isFinite(liveSettings.frameRate))
+      {
+        nextConfig.frameRate = liveSettings.frameRate;
+      }
+
+      this.outputRuntimeConfig = nextConfig;
     }
 
     return this.outputRuntimeConfig;

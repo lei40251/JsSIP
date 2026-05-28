@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265271357
+ * CRTC v1.13.0.20265281159
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210542714 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210562318 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210542714');
+debug('version %s', '1.13.0.405210562318');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210542714';
+    return '1.13.0.405210562318';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -18094,6 +18094,7 @@ var MixerConfig = require('./MixerConfig');
 var MixerDomAdapter = require('./MixerDomAdapter');
 var WatermarkManager = require('./WatermarkManager');
 var logger = new Logger('MediaStreamMixer');
+var lastRenderInfoLogSignature = '';
 
 /**
  * _audioInfo 的默认值，子模块未初始化或不可用时使用。
@@ -18296,7 +18297,8 @@ module.exports = class MediaStreamMixer {
       getSources: () => this._sources,
       createRenderPayload: () => this._createRenderPayload(),
       syncExternalSourceAudio: () => this._syncExternalSourceAudio(),
-      onStateChange: () => {}
+      onStateChange: () => {},
+      onFramePresented: frameCtx => this._outputStreamManager.onFramePresented(frameCtx)
     });
 
     // -----------------------------------------------------------------------
@@ -18820,7 +18822,15 @@ module.exports = class MediaStreamMixer {
    * @returns {Object} 渲染状态快照
    */
   getRenderInfo() {
-    return this._renderLoop.getRenderInfo();
+    var info = this._renderLoop.getRenderInfo();
+    var outputRouteInfo = this._outputStreamManager && this._outputStreamManager.getOutputRouteInfo ? this._outputStreamManager.getOutputRouteInfo() : {};
+    var mergedInfo = Object.assign({}, info, outputRouteInfo);
+    var signature = [mergedInfo.requestedMode, mergedInfo.actualMode, mergedInfo.isWorker ? 1 : 0, mergedInfo.isWebGL2 ? 1 : 0, mergedInfo.isFallback ? 1 : 0, mergedInfo.reason || '', mergedInfo.outputMode || '', mergedInfo.insertableActive ? 1 : 0, mergedInfo.insertableSupported ? 1 : 0, mergedInfo.insertableGeneratorType || '', mergedInfo.insertableSupportReason || ''].join('|');
+    if (signature !== lastRenderInfoLogSignature) {
+      lastRenderInfoLogSignature = signature;
+      logger.debug(`getRenderInfo(): requested=${mergedInfo.requestedMode} actual=${mergedInfo.actualMode} ` + `worker=${mergedInfo.isWorker} webgl2=${mergedInfo.isWebGL2} fallback=${mergedInfo.isFallback} ` + `reason=${mergedInfo.reason || ''} rendered=${mergedInfo.renderedFrames || 0} dropped=${mergedInfo.droppedFrames || 0} ` + `outputMode=${mergedInfo.outputMode || '-'} insertableActive=${Boolean(mergedInfo.insertableActive)} ` + `insertableSupported=${Boolean(mergedInfo.insertableSupported)} generator=${mergedInfo.insertableGeneratorType || '-'} ` + `insertableReason=${mergedInfo.insertableSupportReason || '-'} ` + `captureFrameControl=${mergedInfo.captureFrameControlMode || '-'} ` + `fps=${mergedInfo.fps || 0} size=${mergedInfo.width || 0}x${mergedInfo.height || 0}`);
+    }
+    return mergedInfo;
   }
 
   /**
@@ -19122,13 +19132,15 @@ class MixerDomAdapter {
 }
 module.exports = MixerDomAdapter;
 },{}],47:[function(require,module,exports){
+(function (global){(function (){
 "use strict";
 
 /**
  * OutputStreamManager — 混流器输出流管理
  *
  * 负责混流器输出流的生命周期管理：
- *   - canvas.captureStream() 获取视频流
+ *   - Insertable Streams 输出路径（VideoTrackGenerator/MediaStreamTrackGenerator）
+ *   - canvas.captureStream() 回退路径
  *   - 音频轨注入到已返回的混合流（延迟添加音频场景）
  *   - 停止时清理所有捕获的流轨道
  *
@@ -19158,9 +19170,100 @@ class OutputStreamManager {
 
     /** @type {MediaStream|null} 输出视频流（仅含视频轨） */
     this._videoStream = null;
+
+    /** @type {Object} Insertable 能力探测结果 */
+    this._insertableSupport = OutputStreamManager.detectInsertableStreams();
+
+    /** @type {boolean} 当前是否使用 Insertable 路径 */
+    this._insertableActive = false;
+
+    /** @type {WritableStreamDefaultWriter<VideoFrame>|null} Insertable writer */
+    this._writer = null;
+
+    /** @type {Object|null} VideoTrackGenerator / MediaStreamTrackGenerator 实例 */
+    this._generator = null;
+
+    /** @type {MediaStreamTrack|null} Insertable 输出 track */
+    this._generatorTrack = null;
+
+    /** @type {boolean} Insertable 写入进行中标记 */
+    this._pendingWrite = false;
+
+    /** @type {Object|null} latest-frame-wins 队列里保留的最新帧上下文 */
+    this._latestPendingFrame = null;
+
+    /** @type {number} 上一次输出时间戳（微秒） */
+    this._lastTimestampUs = 0;
+
+    /** @type {number} 连续写帧失败计数 */
+    this._continuousWriteFailures = 0;
+
+    /** @type {number} 连续失败阈值，超过后停止 Insertable 写入 */
+    this._maxContinuousWriteFailures = 5;
+
+    /** @type {CanvasCaptureMediaStreamTrack|null} captureStream 输出 video track */
+    this._capturedVideoTrack = null;
+
+    /** @type {boolean} 是否启用 captureStream(0)+requestFrame 手动出帧模式 */
+    this._manualCaptureFrameControl = false;
     if (this._logger) {
-      this._logger.debug('OutputStreamManager constructed');
+      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
     }
+  }
+  static _getGlobalObject() {
+    if (typeof window !== 'undefined') {
+      return window;
+    }
+    if (typeof global !== 'undefined') {
+      return global;
+    }
+    return {};
+  }
+
+  /**
+   * 探测 Insertable Streams 能力。
+   *
+   * 优先 VideoTrackGenerator（标准命名），
+   * 兼容 MediaStreamTrackGenerator（旧命名/历史实现）。
+   *
+   * @returns {Object}
+   */
+  static detectInsertableStreams() {
+    var runtime = OutputStreamManager._getGlobalObject();
+    var VideoTrackGeneratorConstructor = runtime.VideoTrackGenerator;
+    var MediaStreamTrackGeneratorConstructor = runtime.MediaStreamTrackGenerator;
+    var VideoFrameConstructor = runtime.VideoFrame;
+    var GeneratorConstructor = VideoTrackGeneratorConstructor || MediaStreamTrackGeneratorConstructor;
+    if (!GeneratorConstructor) {
+      return {
+        supported: false,
+        reason: 'TrackGenerator is unavailable',
+        optimizations: [],
+        generatorType: ''
+      };
+    }
+    if (!VideoFrameConstructor) {
+      return {
+        supported: false,
+        reason: 'VideoFrame is unavailable',
+        optimizations: [],
+        generatorType: ''
+      };
+    }
+    var generatorType = 'media-stream-track-generator';
+    if (VideoTrackGeneratorConstructor) {
+      generatorType = 'video-track-generator';
+    }
+    var optimizations = [];
+    if (typeof runtime.createImageBitmap === 'function') {
+      optimizations.push('createImageBitmap');
+    }
+    return {
+      supported: true,
+      reason: '',
+      optimizations: optimizations,
+      generatorType: generatorType
+    };
   }
 
   /**
@@ -19189,8 +19292,29 @@ class OutputStreamManager {
       return this._videoStream;
     }
     drawFirstFrame();
+    var insertableStream = this._createInsertableVideoStream();
+    if (insertableStream) {
+      this._videoStream = insertableStream;
+      this._capturedStream = null;
+      this._canvas.stream = null;
+      this._insertableActive = true;
+
+      // 首帧触发：在已渲染过 drawFirstFrame 后立刻尝试写入当前画面。
+      this.onFramePresented({
+        canvas: this._canvas,
+        timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(),
+        source: 'bootstrap'
+      });
+      if (this._logger) {
+        this._logger.debug(`Created insertable video stream: tracks=${insertableStream.getVideoTracks().length}`);
+      }
+      return this._videoStream;
+    }
+    return this._createCaptureStreamVideo();
+  }
+  _createCaptureStreamVideo() {
     var videoStream = new MediaStream();
-    var capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+    var capturedStream = this._createPreferredCaptureStream();
     capturedStream.getVideoTracks().forEach(track => {
       if (this._logger) {
         this._logger.debug('track: ', track.id, track.enabled, track.readyState);
@@ -19201,10 +19325,229 @@ class OutputStreamManager {
     this._capturedStream = capturedStream;
     this._videoStream = videoStream;
     this._capturedStreams.push(capturedStream);
+    this._insertableActive = false;
+    this._configureCaptureFrameControl(capturedStream);
+    if (this._manualCaptureFrameControl) {
+      this._requestCaptureFrame();
+    }
     if (this._logger) {
-      this._logger.debug(`Created new video stream: tracks=${videoStream.getVideoTracks().length}`);
+      this._logger.debug(`Created captureStream video stream: tracks=${videoStream.getVideoTracks().length} ` + `manualFrameControl=${this._manualCaptureFrameControl}`);
     }
     return this._videoStream;
+  }
+  _createPreferredCaptureStream() {
+    var capturedStream = null;
+    try {
+      capturedStream = this._canvas.captureStream(0);
+      if (!this._hasRequestFrame(capturedStream)) {
+        capturedStream.getTracks().forEach(track => {
+          if (track && track.stop) {
+            track.stop();
+          }
+        });
+        capturedStream = null;
+      }
+    } catch (error) {
+      capturedStream = null;
+    }
+    if (capturedStream) {
+      return capturedStream;
+    }
+    return this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+  }
+  _hasRequestFrame(capturedStream) {
+    if (!capturedStream || !capturedStream.getVideoTracks) {
+      return false;
+    }
+    var videoTrack = capturedStream.getVideoTracks()[0];
+    return Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
+  }
+  _configureCaptureFrameControl(capturedStream) {
+    this._capturedVideoTrack = null;
+    this._manualCaptureFrameControl = false;
+    if (!capturedStream || !capturedStream.getVideoTracks) {
+      return;
+    }
+    var videoTrack = capturedStream.getVideoTracks()[0];
+    this._capturedVideoTrack = videoTrack || null;
+    this._manualCaptureFrameControl = Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
+  }
+  _requestCaptureFrame() {
+    if (!this._manualCaptureFrameControl || !this._capturedVideoTrack || !this._capturedVideoTrack.requestFrame) {
+      return;
+    }
+    if (this._capturedVideoTrack.readyState && this._capturedVideoTrack.readyState !== 'live') {
+      return;
+    }
+    try {
+      this._capturedVideoTrack.requestFrame();
+    } catch (error) {
+      this._manualCaptureFrameControl = false;
+      if (this._logger) {
+        this._logger.warn(`captureStream requestFrame failed, fallback to auto capture timing: ${error.message || String(error)}`);
+      }
+    }
+  }
+  _createInsertableVideoStream() {
+    if (!this._insertableSupport.supported) {
+      return null;
+    }
+    try {
+      var generator = this._createTrackGenerator();
+      var track = this._resolveGeneratorTrack(generator);
+      if (!track) {
+        throw new Error('generator track is unavailable');
+      }
+      if (!generator.writable || !generator.writable.getWriter) {
+        throw new Error('generator writable is unavailable');
+      }
+      var writer = generator.writable.getWriter();
+      this._generator = generator;
+      this._generatorTrack = track;
+      this._writer = writer;
+      this._pendingWrite = false;
+      this._latestPendingFrame = null;
+      this._lastTimestampUs = 0;
+      this._continuousWriteFailures = 0;
+      return new MediaStream([track]);
+    } catch (error) {
+      if (this._logger) {
+        this._logger.warn(`Insertable output init failed, fallback to captureStream: ${error.message || String(error)}`);
+      }
+      this._teardownInsertableState(false);
+      return null;
+    }
+  }
+  _createTrackGenerator() {
+    var runtime = OutputStreamManager._getGlobalObject();
+    var GeneratorConstructor = runtime.VideoTrackGenerator || runtime.MediaStreamTrackGenerator;
+    if (!GeneratorConstructor) {
+      throw new Error('TrackGenerator constructor is unavailable');
+    }
+    if (runtime.VideoTrackGenerator) {
+      return new GeneratorConstructor();
+    }
+    return new GeneratorConstructor({
+      kind: 'video'
+    });
+  }
+  _resolveGeneratorTrack(generator) {
+    if (!generator) {
+      return null;
+    }
+    if (generator.track) {
+      return generator.track;
+    }
+    if (typeof generator.kind === 'string' && generator.kind === 'video') {
+      return generator;
+    }
+    return null;
+  }
+
+  /**
+   * 渲染帧已真正输出到主画布后的回调。
+   *
+   * @param {Object} frameCtx - { canvas, timestamp, source }
+   */
+  onFramePresented(frameCtx) {
+    if (this._manualCaptureFrameControl) {
+      this._requestCaptureFrame();
+    }
+    if (!this._insertableActive || !this._writer || !this._generatorTrack) {
+      return;
+    }
+    if (this._generatorTrack.readyState && this._generatorTrack.readyState !== 'live') {
+      return;
+    }
+    if (this._pendingWrite) {
+      var replacedFrame = this._latestPendingFrame;
+      this._latestPendingFrame = frameCtx;
+      if (replacedFrame && replacedFrame.frame && replacedFrame.frame.close) {
+        replacedFrame.frame.close();
+      }
+      return;
+    }
+    this._pendingWrite = true;
+    this._writePresentedFrame(frameCtx).then(() => {
+      this._pendingWrite = false;
+      this._flushLatestPendingFrame();
+    }).catch(error => {
+      this._pendingWrite = false;
+      this._handleInsertableWriteError(error);
+      this._flushLatestPendingFrame();
+    });
+  }
+  _flushLatestPendingFrame() {
+    if (!this._insertableActive || !this._latestPendingFrame) {
+      return;
+    }
+    var nextFrame = this._latestPendingFrame;
+    this._latestPendingFrame = null;
+    this.onFramePresented(nextFrame);
+  }
+  _normalizeTimestampUs(timestamp) {
+    var nextTimestampUs = Math.round((timestamp || 0) * 1000);
+    if (!nextTimestampUs || !Number.isFinite(nextTimestampUs)) {
+      nextTimestampUs = this._lastTimestampUs + 1;
+    }
+    if (nextTimestampUs <= this._lastTimestampUs) {
+      nextTimestampUs = this._lastTimestampUs + 1;
+    }
+    this._lastTimestampUs = nextTimestampUs;
+    return nextTimestampUs;
+  }
+  async _writePresentedFrame(frameCtx) {
+    if (!frameCtx || !frameCtx.canvas || !this._writer) {
+      return;
+    }
+    var videoFrame = await this._createVideoFrameFromCanvas(frameCtx.canvas, frameCtx.timestamp);
+    if (!videoFrame) {
+      return;
+    }
+    try {
+      await this._writer.write(videoFrame);
+      this._continuousWriteFailures = 0;
+    } finally {
+      if (videoFrame.close) {
+        videoFrame.close();
+      }
+    }
+  }
+  async _createVideoFrameFromCanvas(canvas, timestamp) {
+    var runtime = OutputStreamManager._getGlobalObject();
+    var VideoFrameConstructor = runtime.VideoFrame;
+    if (!VideoFrameConstructor) {
+      throw new Error('VideoFrame constructor is unavailable');
+    }
+    var timestampUs = this._normalizeTimestampUs(timestamp);
+    if (typeof runtime.createImageBitmap === 'function') {
+      var bitmap = null;
+      try {
+        bitmap = await runtime.createImageBitmap(canvas);
+        return new VideoFrameConstructor(bitmap, {
+          timestamp: timestampUs
+        });
+      } finally {
+        if (bitmap && bitmap.close) {
+          bitmap.close();
+        }
+      }
+    }
+    return new VideoFrameConstructor(canvas, {
+      timestamp: timestampUs
+    });
+  }
+  _handleInsertableWriteError(error) {
+    this._continuousWriteFailures += 1;
+    if (this._logger) {
+      this._logger.warn(`Insertable frame write failed: count=${this._continuousWriteFailures} ` + `reason=${error && error.message ? error.message : String(error)}`);
+    }
+    if (this._continuousWriteFailures >= this._maxContinuousWriteFailures) {
+      this._insertableActive = false;
+      if (this._logger) {
+        this._logger.warn('Insertable frame writing disabled due to repeated failures');
+      }
+    }
   }
 
   /**
@@ -19277,6 +19620,9 @@ class OutputStreamManager {
     this._mixedStream = null;
     this._videoStream = null;
     this._capturedStream = null;
+    this._capturedVideoTrack = null;
+    this._manualCaptureFrameControl = false;
+    this._insertableActive = false;
     this._capturedStreams.forEach(stream => {
       stream.getTracks().forEach(track => {
         track.stop();
@@ -19284,9 +19630,55 @@ class OutputStreamManager {
     });
     this._capturedStreams = [];
     this._canvas.stream = null;
+    this._teardownInsertableState(true);
     if (this._logger) {
       this._logger.debug('Output streams stopped');
     }
+  }
+  _teardownInsertableState(stopTrack) {
+    var pendingFrame = this._latestPendingFrame;
+    this._latestPendingFrame = null;
+    this._pendingWrite = false;
+    this._lastTimestampUs = 0;
+    this._continuousWriteFailures = 0;
+    if (pendingFrame && pendingFrame.frame && pendingFrame.frame.close) {
+      pendingFrame.frame.close();
+    }
+    if (this._writer) {
+      try {
+        this._writer.close().catch(() => {});
+      } catch (error) {}
+      try {
+        this._writer.releaseLock();
+      } catch (error) {}
+    }
+    if (stopTrack && this._generatorTrack && this._generatorTrack.stop) {
+      try {
+        this._generatorTrack.stop();
+      } catch (error) {}
+    }
+    this._writer = null;
+    this._generator = null;
+    this._generatorTrack = null;
+  }
+
+  /**
+   * 获取输出流路径信息（Insertable / captureStream）。
+   *
+   * @returns {Object} 输出路径状态快照
+   */
+  getOutputRouteInfo() {
+    return {
+      outputMode: this._insertableActive ? 'insertable' : 'capture-stream',
+      captureFrameControlMode: this._manualCaptureFrameControl ? 'manual-request-frame' : 'auto-capture-fps',
+      insertableActive: Boolean(this._insertableActive),
+      insertableSupported: Boolean(this._insertableSupport && this._insertableSupport.supported),
+      insertableGeneratorType: this._insertableSupport && this._insertableSupport.generatorType || '',
+      insertableSupportReason: this._insertableSupport && this._insertableSupport.reason || '',
+      insertableWriteFailures: this._continuousWriteFailures || 0,
+      insertableHasGeneratorTrack: Boolean(this._generatorTrack),
+      outputHasCapturedStream: Boolean(this._capturedStream)
+    };
   }
   get mixedStream() {
     return this._mixedStream;
@@ -19302,6 +19694,7 @@ class OutputStreamManager {
   }
 }
 module.exports = OutputStreamManager;
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],48:[function(require,module,exports){
 "use strict";
 
@@ -19331,6 +19724,7 @@ class RenderLoop {
    * @param {Function} options.createRenderPayload - 创建渲染 payload 的函数
    * @param {Function} options.syncExternalSourceAudio - 同步外部源音频的函数
    * @param {Function} options.onStateChange - 状态变化回调（已弃用，保留为空函数）
+   * @param {Function} [options.onFramePresented] - 帧真正输出到主画布后的回调
    */
   constructor(options) {
     options = options || {};
@@ -19341,6 +19735,7 @@ class RenderLoop {
     this._createRenderPayload = options.createRenderPayload;
     this._syncExternalSourceAudio = options.syncExternalSourceAudio;
     this._onStateChange = options.onStateChange;
+    this._onFramePresented = options.onFramePresented;
 
     /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
     this._renderer = null;
@@ -19362,6 +19757,9 @@ class RenderLoop {
 
     /** @type {boolean} 停止标记；设为 true 时 rAF 回调直接返回 */
     this._stopped = false;
+
+    /** @type {string} 最近一次已输出的渲染路径签名，避免重复刷日志 */
+    this._lastRenderPathSignature = '';
 
     // bind 一次避免每帧创建新函数
     this._boundRenderFrame = this.renderFrame.bind(this);
@@ -19435,6 +19833,8 @@ class RenderLoop {
           this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
         }
       });
+      this._bindRendererFrameCallback(this._renderer);
+      this._logRenderPath(this._renderer.getInfo(), 'create');
     }
     return this._renderer;
   }
@@ -19609,6 +20009,8 @@ class RenderLoop {
     });
     renderer.init(this._canvas);
     this._renderer = renderer;
+    this._bindRendererFrameCallback(this._renderer);
+    this._logRenderPath(this._renderer.getInfo(), 'fallback-main-2d');
     this._rendererErrorCount = 0;
     return true;
   }
@@ -19626,6 +20028,8 @@ class RenderLoop {
       });
       renderer.init(this._canvas);
       this._renderer = renderer;
+      this._bindRendererFrameCallback(this._renderer);
+      this._logRenderPath(this._renderer.getInfo(), 'fallback-main-webgl2');
       this._rendererErrorCount = 0;
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: main-webgl2 reason=${reason}`);
@@ -19658,6 +20062,8 @@ class RenderLoop {
       });
       renderer.init(this._canvas);
       this._renderer = renderer;
+      this._bindRendererFrameCallback(this._renderer);
+      this._logRenderPath(this._renderer.getInfo(), 'fallback-worker-2d');
       this._rendererErrorCount = 0;
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: worker-2d reason=${reason}`);
@@ -19693,6 +20099,7 @@ class RenderLoop {
       return;
     }
     var info = renderer.getInfo();
+    this._logRenderPath(info, 'runtime');
     if (info.actualMode === 'worker-failed' || info.isWorker && info.isFallback && info.reason) {
       this._rendererErrorCount += 1;
       if (this._rendererErrorCount >= 2) {
@@ -19737,6 +20144,32 @@ class RenderLoop {
     if (this._renderErrorCount >= 2) {
       this.fallbackRenderer(reason);
     }
+  }
+  _bindRendererFrameCallback(renderer) {
+    if (!renderer || !renderer.setFramePresentedCallback) {
+      return;
+    }
+    renderer.setFramePresentedCallback(frameCtx => {
+      if (typeof this._onFramePresented === 'function') {
+        this._onFramePresented(frameCtx || {});
+      }
+    });
+  }
+  _logRenderPath(info, trigger) {
+    if (!info || !this._logger) {
+      return;
+    }
+    var signature = [info.requestedMode, info.actualMode, info.isWorker, info.isWebGL2, info.isFallback, info.reason || ''].join('|');
+    if (signature === this._lastRenderPathSignature) {
+      return;
+    }
+    this._lastRenderPathSignature = signature;
+    var message = `Render path [${trigger}]: requested=${info.requestedMode} actual=${info.actualMode} ` + `worker=${info.isWorker} webgl2=${info.isWebGL2} fallback=${info.isFallback} ` + `reason=${info.reason || ''} rendered=${info.renderedFrames || 0} dropped=${info.droppedFrames || 0}`;
+    if (info.isFallback) {
+      this._logger.warn(message);
+      return;
+    }
+    this._logger.debug(message);
   }
   get renderer() {
     return this._renderer;
@@ -20639,6 +21072,9 @@ module.exports = class BaseRenderer {
       width: this._config.width || null,
       height: this._config.height || null
     }, info || {});
+
+    /** @type {Function|null} 帧真正输出到主画布后的回调 */
+    this._onFramePresented = null;
   }
 
   /**
@@ -20704,6 +21140,27 @@ module.exports = class BaseRenderer {
    */
   _updateInfo(info) {
     Object.assign(this._info, info || {});
+  }
+
+  /**
+   * 设置帧输出回调。
+   *
+   * @param {Function|null} callback - 回调函数
+   */
+  setFramePresentedCallback(callback) {
+    this._onFramePresented = typeof callback === 'function' ? callback : null;
+  }
+
+  /**
+   * 触发“帧已输出到主画布”事件。
+   *
+   * @param {Object} meta - 帧信息
+   */
+  _emitFramePresented(meta) {
+    if (!this._onFramePresented) {
+      return;
+    }
+    this._onFramePresented(meta || {});
   }
 };
 },{}],52:[function(require,module,exports){
@@ -20809,6 +21266,11 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._drawWatermarks(payload.sourceWatermarks);
     this._drawWatermarks(payload.outputWatermarks);
     this._info.renderedFrames += 1;
+    this._emitFramePresented({
+      canvas: this._canvas,
+      timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(),
+      source: 'main-2d'
+    });
   }
 
   /**
@@ -21032,6 +21494,11 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._drawWatermarks(payload.outputWatermarks, payload.height);
     gl.flush();
     this._info.renderedFrames += 1;
+    this._emitFramePresented({
+      canvas: this._canvas,
+      timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(),
+      source: 'main-webgl2'
+    });
   }
 
   /**
@@ -21555,6 +22022,11 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       }
       this._workerBusy = false;
       this._info.renderedFrames += 1;
+      this._emitFramePresented({
+        canvas: this._canvas,
+        timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(),
+        source: this._info.actualMode || 'worker'
+      });
       this._flushQueuedPayload();
       return;
     }

@@ -4,13 +4,13 @@
 
 混流器目前通过 `canvas.captureStream(fps)` 获取输出视频流。该方式依赖浏览器内部定时采样 canvas，帧率控制不精确。
 
-参照 `samples/mediastream.webgl.html` 中 `MediaStreamTrackGenerator` + `transferToImageBitmap()` + `VideoFrame(bitmap, ...)` 方案，增加 Insertable Streams API 输出路径。当 API 不可用时回退 `canvas.captureStream()`。
+参照 `samples/mediastream.webgl.html` 中 `TrackGenerator` + `VideoFrame(...)` 方案，增加 Insertable Streams API 输出路径。当 API 不可用时回退 `canvas.captureStream()`。
 
 关键参考代码（`mediastream.webgl.html`）：
 ```
-canvas.transferToImageBitmap()        → 零拷贝提取帧
+createImageBitmap(canvas)              → 提取帧位图
 new VideoFrame(bitmap, { timestamp })  → 构造输出帧
-generator.writable 写出的帧              → 输出 track
+generator.writable 写出的帧            → 输出 track
 ```
 
 ## 目标与范围
@@ -25,9 +25,9 @@ generator.writable 写出的帧              → 输出 track
 
 ### 1. OutputStreamManager.js — 核心改造
 
-**新增 `_detectInsertableStreams()` 静态方法（分层检测）**：
-- **核心必需能力**：`MediaStreamTrackGenerator`、`VideoFrame`、`WritableStream writer`
-- **可选优化能力**：`OffscreenCanvas`、`transferToImageBitmap`、`createImageBitmap`
+**新增 `detectInsertableStreams()` 静态方法（分层检测）**：
+- **核心必需能力**：`VideoTrackGenerator`（优先）或 `MediaStreamTrackGenerator`（兼容）、`VideoFrame`、`WritableStream writer`
+- **可选优化能力**：`createImageBitmap`
 - 结论字段建议：
   - `supported`（是否可走 Insertable）
   - `reason`（不支持原因，便于日志）
@@ -35,20 +35,19 @@ generator.writable 写出的帧              → 输出 track
 
 **`getVideoStream(drawFirstFrame)` 分支**：
 - Insertable Streams 路径：
-  - 创建 `MediaStreamTrackGenerator({ kind: 'video' })`
+  - 创建 `VideoTrackGenerator()`（若不可用则回退 `MediaStreamTrackGenerator({ kind: 'video' })`）
   - 创建 writer（`generator.writable.getWriter()`）
-  - 先执行 `drawFirstFrame()` 并尝试写入首帧（预热/预检）
-  - 首帧成功后返回 `new MediaStream([generator])`，**不调用 `captureStream()`**
+  - 先执行 `drawFirstFrame()`，随后通过帧回调写入首帧（预热/预检）
+  - 返回 `new MediaStream([track])`（`track` 来自 `generator.track`），**不调用 `captureStream()`**
   - 若任一步骤失败，立即释放临时资源并回退 `captureStream()`
 - captureStream 路径：现有逻辑不变
 
-**新增 `onFrameRendered(frameCtx)`** — RenderLoop 每次成功渲染后调用：
+**新增 `onFramePresented(frameCtx)`** — 在“帧已真正输出到主线程 canvas 后”调用：
 - Insertable Streams 模式下提取帧并写入 generator
-- `frameCtx` 建议结构：`{ canvas, timestamp, source, bitmap? }`
+- `frameCtx` 结构：`{ canvas, timestamp, source }`
 - **Phase 1 抽帧策略（统一主线程）**：
   - 优先 `createImageBitmap(canvas)`（兼容好）
-  - 如可用且收益明确，可走 `OffscreenCanvas + transferToImageBitmap` 优化
-  - `OffscreenCanvas` 不可用时直接使用 `canvas` 路径，不降级到 `captureStream`
+  - 不依赖 `OffscreenCanvas/transferToImageBitmap`，缺失时直接使用 `canvas` 路径，不降级到 `captureStream`
 - 背压策略：`latest-frame wins`
   - 写入中（`_pendingWrite=true`）时不排队多帧，仅保存最新一帧覆盖旧帧
   - 写入完成后若存在 `_latestPendingFrame`，立即冲刷一次
@@ -62,25 +61,28 @@ generator.writable 写出的帧              → 输出 track
 
 ### 2. RenderLoop.js — 添加回调
 
-构造函数新增 `onFrameRendered` 可选回调。
+构造函数新增 `onFramePresented` 可选回调。
 
-`renderFrame()` 中 `renderer.render(payload)` 成功后末尾调用：
+回调在不同 Renderer 的“实际出帧”时机触发：
+- `main-2d`：`drawImage` 和水印绘制后
+- `main-webgl2`：`gl.flush()` 后
+- `worker-*`：主线程收到 `rendered` 并 `drawImage(bitmap)` 后
+
+RenderLoop 中仅做连线，不在 `renderer.render(payload)` 调用点直接触发：
 ```js
-if (typeof this._onFrameRendered === 'function') {
-    this._onFrameRendered({
-        canvas: this._canvas,
-        timestamp: now,
-        source: this._rendererType
-    });
-}
+renderer.setFramePresentedCallback((frameCtx) => {
+    if (typeof this._onFramePresented === 'function') {
+        this._onFramePresented(frameCtx || {});
+    }
+});
 ```
 
 ### 3. MixerController.js — 连线
 
-RenderLoop 构造时传入 `onFrameRendered`：
+RenderLoop 构造时传入 `onFramePresented`：
 ```js
-onFrameRendered: (frameCtx) => {
-    this._outputStreamManager.onFrameRendered(frameCtx);
+onFramePresented: (frameCtx) => {
+    this._outputStreamManager.onFramePresented(frameCtx);
 }
 ```
 

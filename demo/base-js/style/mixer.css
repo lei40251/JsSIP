@@ -791,7 +791,7 @@ canvas#viz-canvas {
 
 .stat-cell {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0.5rem;
     padding: 4px 7px;
@@ -800,15 +800,18 @@ canvas#viz-canvas {
     border-radius: 0.35rem;
     min-width: 0;
     overflow-wrap: anywhere;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .stat-cell span {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 72%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
     text-align: right;
 }
 

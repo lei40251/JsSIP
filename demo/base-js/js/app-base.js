@@ -14,6 +14,7 @@ const app = {
   activeSubmixes    : new Map(),
   submixPlaybackCtx : null,
   vizToken          : 0,
+  lastRenderPathSignature : '',
 
   // ==========================================================
   // DOM 引用
@@ -73,6 +74,8 @@ const app = {
     statsSize             : document.getElementById('stat-size'),
     statsSources          : document.getElementById('stat-sources'),
     statsRenderer         : document.getElementById('stat-renderer'),
+    statsRenderPath       : document.getElementById('stat-render-path'),
+    statsOutputMode       : document.getElementById('stat-output-mode'),
     statsDropped          : document.getElementById('stat-dropped'),
     statsRenderReason     : document.getElementById('stat-render-reason')
   },
@@ -493,6 +496,8 @@ const app = {
       this.ui.statsAudio.innerText = '0';
       this.ui.statsAudioState.innerText = '-';
       this.ui.statsRenderer.innerText = '-';
+      this.ui.statsRenderPath.innerText = '-';
+      this.ui.statsOutputMode.innerText = '-';
       this.ui.statsDropped.innerText = '0';
       this.ui.statsRenderReason.innerText = '-';
 
@@ -528,8 +533,69 @@ const app = {
     if (!info) return;
 
     this.ui.statsRenderer.innerText = `${info.actualMode} (${info.requestedMode})`;
+    this.ui.statsRenderPath.innerText = this.formatRenderPathText(info);
+    this.ui.statsOutputMode.innerText = this.formatOutputModeText(info);
     this.ui.statsDropped.innerText = info.droppedFrames || 0;
     this.ui.statsRenderReason.innerText = info.reason || '-';
+    this.logRenderPathIfChanged(info);
+  },
+
+  formatRenderPathText(info)
+  {
+    if (!info) return '-';
+
+    const backend = info.actualMode || '-';
+    const worker = info.isWorker ? 'worker' : 'main';
+    const renderer = info.isWebGL2 ? 'webgl2' : '2d';
+    const fallback = info.isFallback ? 'fallback' : 'normal';
+
+    return `${backend} | ${worker} | ${renderer} | ${fallback}`;
+  },
+
+  logRenderPathIfChanged(info)
+  {
+    if (!info) return;
+
+    const signature = [
+      info.requestedMode || '',
+      info.actualMode || '',
+      info.isWorker ? 1 : 0,
+      info.isWebGL2 ? 1 : 0,
+      info.isFallback ? 1 : 0,
+      info.reason || ''
+    ].join('|');
+
+    if (signature === this.lastRenderPathSignature) return;
+
+    this.lastRenderPathSignature = signature;
+
+    console.info(
+      `[MixerDemo][RenderPath] requested=${info.requestedMode || '-'} actual=${info.actualMode || '-'} ` +
+      `worker=${Boolean(info.isWorker)} webgl2=${Boolean(info.isWebGL2)} fallback=${Boolean(info.isFallback)} ` +
+      `dropped=${info.droppedFrames || 0} rendered=${info.renderedFrames || 0} reason=${info.reason || '-'} ` +
+      `outputMode=${info.outputMode || '-'} insertableActive=${Boolean(info.insertableActive)} ` +
+      `insertableSupported=${Boolean(info.insertableSupported)} generator=${info.insertableGeneratorType || '-'} ` +
+      `supportReason=${info.insertableSupportReason || '-'} writeFailures=${info.insertableWriteFailures || 0} ` +
+      `captureFrameControl=${info.captureFrameControlMode || '-'}`
+    );
+  },
+
+  formatOutputModeText(info)
+  {
+    if (!info) return '-';
+
+    const mode = info.outputMode || '-';
+    const active = info.insertableActive ? 'active' : 'inactive';
+    const supported = info.insertableSupported ? 'supported' : 'unsupported';
+    const generator = info.insertableGeneratorType || '-';
+    const reason = info.insertableSupportReason || '-';
+
+    if (mode === 'insertable')
+    {
+      return `${mode} | ${active} | ${generator}`;
+    }
+
+    return `${mode} | ${info.captureFrameControlMode || '-'} | ${supported} | ${reason}`;
   },
 
   startRenderInfoLoop()
@@ -732,8 +798,11 @@ const app = {
     this.ui.overlay.innerHTML = '';
     this.ui.statsAudioState.innerText = '-';
     this.ui.statsRenderer.innerText = '-';
+    this.ui.statsRenderPath.innerText = '-';
+    this.ui.statsOutputMode.innerText = '-';
     this.ui.statsDropped.innerText = '0';
     this.ui.statsRenderReason.innerText = '-';
+    this.lastRenderPathSignature = '';
     this.updateMonitorAudioUI();
     this.updateSlotUI();
     this.refreshSelectedSlotSummary();
