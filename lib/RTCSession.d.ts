@@ -31,6 +31,32 @@ export interface MediaConstraints {
   video?: boolean;
 }
 
+export interface MixerWatermarkOptions {
+  target?: string;
+  [key: string]: any;
+}
+
+export interface MixerOptions {
+  width?: number;
+  height?: number;
+  fps?: number;
+  backgroundColor?: string;
+  audioGain?: number;
+  renderMode?: string;
+  workerUrl?: string;
+  dropFrameWhenBusy?: boolean;
+  maxFrameQueue?: number;
+  preserveDrawingBuffer?: boolean;
+  mirror?: boolean;
+  mirrorX?: boolean;
+  outputMirror?: boolean;
+  outputMirrorX?: boolean;
+  mirrorWatermarksWithOutput?: boolean;
+  outputMirrorWatermarks?: boolean;
+  watermarks?: MixerWatermarkOptions[] | MixerWatermarkOptions | null;
+  [key: string]: any;
+}
+
 export interface ExtraHeaders {
   extraHeaders?: string[];
 }
@@ -38,6 +64,7 @@ export interface ExtraHeaders {
 export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
+  mixer?: MixerOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
   rtcAnswerConstraints?: RTCOfferOptions;
@@ -48,6 +75,15 @@ export interface AnswerOptions extends ExtraHeaders {
 export interface RejectOptions extends ExtraHeaders {
   status_code?: number;
   reason_phrase?: string;
+}
+
+export interface UpgradeToVideoOptions extends ExtraHeaders {
+  videoConstraints?: any;
+  videoStream?: MediaStream;
+  sendOnly?: boolean;
+  recvOnly?: boolean;
+  useUpdate?: boolean;
+  mixer?: MixerOptions;
 }
 
 export interface TerminateOptions extends RejectOptions {
@@ -279,6 +315,8 @@ export class RTCSession extends EventEmitter {
 
   get status(): SessionStatus;
 
+  getMixer(): any | null;
+
   isInProgress(): boolean;
 
   isEstablished(): boolean;
@@ -289,7 +327,7 @@ export class RTCSession extends EventEmitter {
 
   answer(options?: AnswerOptions): void;
 
-  upgradeToVideo(): any;
+  upgradeToVideo(options?: UpgradeToVideoOptions, done?: VoidFunction): any;
 
   demoteToAudio(options?: any, done?: VoidFunction): any;
 

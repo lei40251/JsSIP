@@ -18,6 +18,7 @@ export interface CallOptions extends AnswerOptions {
   anonymous?: boolean;
   fromUserName?: string;
   fromDisplayName?: string;
+  mixer?: import('./RTCSession').MixerOptions;
 }
 
 export interface UAConfiguration {

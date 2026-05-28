@@ -1842,6 +1842,103 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
+function buildCallMixerOptions()
+{
+  const outputMirrorEl = document.getElementById('callMixerOutputMirror');
+  const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
+  const watermarks = [];
+  const text = String((document.getElementById('callMixerTextWatermarkText') || {}).value || '').trim();
+
+  if (text)
+  {
+    const textPos = String((document.getElementById('callMixerTextWatermarkPosition') || {}).value || 'bottom-right');
+    const textX = (document.getElementById('callMixerTextWatermarkX') || {}).value;
+    const textY = (document.getElementById('callMixerTextWatermarkY') || {}).value;
+    const textSize = (document.getElementById('callMixerTextWatermarkSize') || {}).value;
+    const textColor = String((document.getElementById('callMixerTextWatermarkColor') || {}).value || '').trim();
+    const textOpacity = (document.getElementById('callMixerTextWatermarkOpacity') || {}).value;
+    const textWatermark = {
+      id       : 'call-output-text-watermark',
+      target   : 'output',
+      type     : 'text',
+      text     : text,
+      position : textPos === 'custom' ? { x: textX, y: textY } : textPos
+    };
+
+    if (String(textSize).trim())
+    {
+      textWatermark.fontSize = Number(textSize);
+    }
+
+    if (textColor)
+    {
+      textWatermark.color = textColor;
+    }
+
+    if (String(textOpacity).trim())
+    {
+      textWatermark.opacity = Number(textOpacity);
+    }
+
+    watermarks.push(textWatermark);
+  }
+
+  const imageUrl = String((document.getElementById('callMixerImageWatermarkUrl') || {}).value || '').trim();
+
+  if (imageUrl)
+  {
+    const imagePos = String((document.getElementById('callMixerImageWatermarkPosition') || {}).value || 'bottom-right');
+    const imageX = (document.getElementById('callMixerImageWatermarkX') || {}).value;
+    const imageY = (document.getElementById('callMixerImageWatermarkY') || {}).value;
+    const imageWidth = (document.getElementById('callMixerImageWatermarkWidth') || {}).value;
+    const imageHeight = (document.getElementById('callMixerImageWatermarkHeight') || {}).value;
+    const imageOpacity = (document.getElementById('callMixerImageWatermarkOpacity') || {}).value;
+    const imageWatermark = {
+      id       : 'call-output-image-watermark',
+      target   : 'output',
+      type     : 'image',
+      image    : imageUrl,
+      position : imagePos === 'custom' ? { x: imageX, y: imageY } : imagePos
+    };
+
+    if (String(imageWidth).trim())
+    {
+      imageWatermark.width = Number(imageWidth);
+    }
+
+    if (String(imageHeight).trim())
+    {
+      imageWatermark.height = Number(imageHeight);
+    }
+
+    if (String(imageOpacity).trim())
+    {
+      imageWatermark.opacity = Number(imageOpacity);
+    }
+
+    watermarks.push(imageWatermark);
+  }
+
+  if (!outputMirror && !watermarks.length)
+  {
+    return null;
+  }
+
+  const mixerOptions = {};
+
+  if (outputMirror)
+  {
+    mixerOptions.outputMirror = true;
+  }
+
+  if (watermarks.length)
+  {
+    mixerOptions.watermarks = watermarks;
+  }
+
+  return mixerOptions;
+}
+
 /**
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
@@ -1868,6 +1965,13 @@ async function call(type, direction, mediaStream)
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
+
+  const mixerOptions = buildCallMixerOptions();
+
+  if (mixerOptions)
+  {
+    options.mixer = mixerOptions;
+  }
 
   // options = {
   //   'extraHeaders'  : [ 'X-Data: dGVzdCB4LWRhdGE=', 'X-UA: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' ],

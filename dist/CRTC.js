@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20265281433
+ * CRTC v1.13.0.20265282245
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210562866 (Web)',
+  USER_AGENT: 'UA/1.13.0.405210564490 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210562866');
+debug('version %s', '1.13.0.405210564490');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210562866';
+    return '1.13.0.405210564490';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -17994,7 +17994,7 @@ exports.create = function (options) {
     preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
     mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
     outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
-    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, true),
+    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
     watermarks: options.watermarks || []
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -18210,7 +18210,7 @@ module.exports = class MediaStreamMixer {
     if (!(videos instanceof Array)) {
       videos = [videos];
     }
-    logger.debug(`constructor: ${videos.length}`);
+    logger.debug(`constructor: ${videos.length} ${JSON.stringify(options)}`);
 
     // -----------------------------------------------------------------------
     // 源管理
@@ -23394,6 +23394,7 @@ var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
+var Mixer = require('./Mixer');
 var logger = new Logger('RTCSession');
 var BFCPUser = BFCPLib.User;
 var Primitive = BFCPLib.Primitive;
@@ -23488,6 +23489,8 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
+    this._mixer = null;
+    this._sessionMixerOptions = null;
 
     // 用于华为安卓记录后摄
     this._environment = null;
@@ -23668,6 +23671,9 @@ module.exports = class RTCSession extends EventEmitter {
   get status() {
     return this._status;
   }
+  getMixer() {
+    return this._mixer;
+  }
   isInProgress() {
     switch (this._status) {
       case C.STATUS_NULL:
@@ -23720,6 +23726,80 @@ module.exports = class RTCSession extends EventEmitter {
       return _stream;
     }
   }
+  _buildMixerCtorOptions(stream, mixerOptions) {
+    var options = Object.assign({}, mixerOptions || {});
+    var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+    var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
+    var width = Number(settings.width);
+    var height = Number(settings.height);
+    var frameRate = Number(settings.frameRate);
+    if (options.width === undefined && Number.isFinite(width) && width > 0) {
+      options.width = Math.floor(width);
+    }
+    if (options.height === undefined && Number.isFinite(height) && height > 0) {
+      options.height = Math.floor(height);
+    }
+    if (options.fps === undefined && Number.isFinite(frameRate) && frameRate > 0) {
+      options.fps = Math.floor(frameRate);
+    }
+    return options;
+  }
+  _stopSessionMixer() {
+    if (!this._mixer) {
+      this._mixer = null;
+      return;
+    }
+    this._safeStopMixer(this._mixer, 'stop mixer failed');
+    this._mixer = null;
+  }
+  _safeStopMixer(mixer, message) {
+    if (!mixer) {
+      return;
+    }
+    try {
+      if (typeof mixer.stop === 'function') {
+        mixer.stop();
+      }
+    } catch (error) {
+      logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
+    }
+  }
+  async _applyMixerOnSdkGumStream(stream, mixerOptions) {
+    if (!stream || !mixerOptions || !(stream instanceof MediaStream)) {
+      return stream;
+    }
+    if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
+      return stream;
+    }
+    var mixerCtorOptions = this._buildMixerCtorOptions(stream, mixerOptions);
+    var mixer = null;
+    try {
+      this._stopSessionMixer();
+      mixer = new Mixer([stream], mixerCtorOptions);
+      var mixedVideoStream = mixer.getVideoStream();
+      var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
+      if (!mixedVideoTrack) {
+        throw new Error('mixer output has no video track');
+      }
+      var mixedStream = new MediaStream();
+      stream.getAudioTracks && stream.getAudioTracks().forEach(track => {
+        mixedStream.addTrack(track, mixedStream);
+      });
+      mixedStream.addTrack(mixedVideoTrack, mixedStream);
+      this._mixer = mixer;
+      return mixedStream;
+    } catch (error) {
+      logger.warn(`${this._id} apply mixer failed:`, error);
+      this._safeStopMixer(mixer, 'mixer stop after apply failure failed');
+      this._mixer = null;
+      return stream;
+    }
+  }
+  async _getUserMediaWithSessionPipeline(constraints, mixerOptions) {
+    var stream = await navigator.mediaDevices.getUserMedia(constraints);
+    var processed = await this._processMediaStream(stream);
+    return await this._applyMixerOnSdkGumStream(processed, mixerOptions);
+  }
   isOnHold() {
     return {
       local: this._localHold,
@@ -23738,6 +23818,8 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = options.rtcOfferConstraints || null;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
+    var mixerOptions = options.mixer || null;
+    this._sessionMixerOptions = mixerOptions;
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
@@ -23902,9 +23984,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
         logger.debug(`${this._id} currMediaConstraints: `, JSON.stringify(currMediaConstraints));
         if (currMediaConstraints.audio || currMediaConstraints.video) {
-          var tStream = await navigator.mediaDevices.getUserMedia(currMediaConstraints).then(async stream => {
-            return await this._processMediaStream(stream);
-          }).catch(error => {
+          var tStream = await this._getUserMediaWithSessionPipeline(currMediaConstraints, mixerOptions).catch(error => {
             if (this._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -24124,6 +24204,8 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
+    var mixerOptions = options.mixer || null;
+    this._sessionMixerOptions = mixerOptions;
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
@@ -24280,9 +24362,7 @@ module.exports = class RTCSession extends EventEmitter {
         if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
           this._localToAudio = true;
         }
-        var mStream = await navigator.mediaDevices.getUserMedia(mediaConstraints).then(async stream => {
-          return await this._processMediaStream(stream);
-        }).catch(error => {
+        var mStream = await this._getUserMediaWithSessionPipeline(mediaConstraints, mixerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -24442,6 +24522,9 @@ module.exports = class RTCSession extends EventEmitter {
     if (!done) {
       done = () => {};
     }
+    if (Object.prototype.hasOwnProperty.call(options, 'mixer')) {
+      this._sessionMixerOptions = options.mixer || null;
+    }
 
     // 优化处理切换到视频模式的视频约束条件
     var videoConstraints = {
@@ -24471,6 +24554,8 @@ module.exports = class RTCSession extends EventEmitter {
     this._localToAudio = false;
     this._localToVideo = true;
     return Promise.resolve().then(async () => {
+      var mixerOptions = this._sessionMixerOptions;
+
       // 兼容重复调用，或者由单向视频切换双向视频，或者双向视频切换单向视频的情况
       if (this._localMediaStream.getVideoTracks().length > 0) {
         this._connection.getTransceivers().forEach(t => {
@@ -24501,11 +24586,9 @@ module.exports = class RTCSession extends EventEmitter {
         stream = videoStream;
         this._customMediaStream = true;
       } else {
-        stream = await navigator.mediaDevices.getUserMedia({
+        stream = await this._getUserMediaWithSessionPipeline({
           video: videoConstraints
-        }).then(async mediastream => {
-          return await this._processMediaStream(mediastream);
-        }).catch(error => {
+        }, mixerOptions).catch(error => {
           throw error;
         });
         if (stream) {
@@ -24654,6 +24737,7 @@ module.exports = class RTCSession extends EventEmitter {
 
     // TODO 需要判断当前是否是视频通话
     if (type === 'camera') {
+      var mixerOptions = this._sessionMixerOptions;
       if (this._localCameras.length === 0) {
         var cameras = await Utils.getCameras();
         cameras.forEach(cam => {
@@ -24772,9 +24856,7 @@ module.exports = class RTCSession extends EventEmitter {
 
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
-        var stream = await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
-          return await this._processMediaStream(mediastream);
-        }).catch(error => {
+        var stream = await this._getUserMediaWithSessionPipeline(videoConstraints, mixerOptions).catch(error => {
           this._logEventError('error', 'getusermediafailed', error);
           this.emit('getusermediafailed', error);
           throw new Error('getUserMedia() failed');
@@ -25895,6 +25977,8 @@ module.exports = class RTCSession extends EventEmitter {
       logger.debug(`${this._id} close() | closing local bfcp MediaStream`);
       Utils.closeMediaStream(this._bfcpStream);
     }
+    this._stopSessionMixer();
+    this._sessionMixerOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
     }
@@ -26933,9 +27017,7 @@ module.exports = class RTCSession extends EventEmitter {
           Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS);
         }
         logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-        return navigator.mediaDevices.getUserMedia(videoConstraints).then(async stream => {
-          return await this._processMediaStream(stream);
-        }).catch(error => {
+        return this._getUserMediaWithSessionPipeline(videoConstraints, this._sessionMixerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -28595,10 +28677,10 @@ module.exports = class RTCSession extends EventEmitter {
    */
   _replaceCanvasToVideo() {
     // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
-    navigator.mediaDevices.getUserMedia({
+    this._getUserMediaWithSessionPipeline({
       audio: false,
       video: this._inviteMediaConstraints.video || true
-    }).then(stream => {
+    }, this._sessionMixerOptions).then(stream => {
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'video') {
           // 停止绘制并清空画布
@@ -29136,7 +29218,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":92,"events":91,"sdp-transform":100}],64:[function(require,module,exports){
+},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./Mixer":41,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":92,"events":91,"sdp-transform":100}],64:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
