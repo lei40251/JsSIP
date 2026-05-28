@@ -1,9 +1,5 @@
 /*
-<<<<<<< HEAD
- * CRTC v1.13.0.20265282245
-=======
- * CRTC v1.13.0.20265282019
->>>>>>> 6169f76748816302edd9c009e2ea1af2b3a9c279
+ * CRTC v1.13.0.20265282256
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2791,11 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-<<<<<<< HEAD
-  USER_AGENT: 'UA/1.13.0.405210564490 (Web)',
-=======
-  USER_AGENT: 'UA/1.13.0.405210564038 (Web)',
->>>>>>> 6169f76748816302edd9c009e2ea1af2b3a9c279
+  USER_AGENT: 'UA/1.13.0.405210564512 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16004,11 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-<<<<<<< HEAD
-debug('version %s', '1.13.0.405210564490');
-=======
-debug('version %s', '1.13.0.405210564038');
->>>>>>> 6169f76748816302edd9c009e2ea1af2b3a9c279
+debug('version %s', '1.13.0.405210564512');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16047,11 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-<<<<<<< HEAD
-    return '1.13.0.405210564490';
-=======
-    return '1.13.0.405210564038';
->>>>>>> 6169f76748816302edd9c009e2ea1af2b3a9c279
+    return '1.13.0.405210564512';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
