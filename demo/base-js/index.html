@@ -9,111 +9,120 @@
   <link href="./bootstrap-5.1.3-dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="./bootstrap-icons-1.8.1/bootstrap-icons.css">
   <link rel="stylesheet" href="./style/style.css">
-  <link rel="preload" href="./virtual-background/tflite/tflite-simd.wasm" as="fetch" crossorigin="anonymous">
-  <link rel="preload" href="./virtual-background/models/slv.tflite" as="fetch" crossorigin="anonymous">
   <title>CRTC 实时音视频 Demo</title>
 </head>
 
-<body style="margin: 0">
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">
-        <img src="./imgs/logo.svg" alt="" width="26" class="d-inline-block align-text-top">
-        CRTC 实时音视频 Demo
-      </a>
-    </div>
-  </nav>
-  <div style="height: 310px;" class="bg-light row row-cols-2 m-2 text-center" id="video_area">
-    <div class="position-relative h-100">
-      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light"
-        style="z-index: 10;">本端视频</p>
-      <div class="position-absolute bottom-0 opacity-50 start-0 text-start bg-light p-2"
-        style="font-size: 11px;z-index: 10;">
-        <!-- 上行速率: <span id="upS"></span><br> -->
-        延迟: <span id="RTT"></span><br>
-        <!-- 上行丢包率: <span id="upL"></span><br> -->
-        <!-- 下行丢包率: <span id="downL"></span><br> -->
-        上行统计: <br /><span id="upF"></span>
-        下行统计: <br /><span id="downF"></span>
-        NetworkQualities: <span id="NQ"></span>
+<body>
+  <div class="demo-shell">
+    <nav class="navbar navbar-dark top-nav">
+      <div class="container-fluid px-3">
+        <a class="navbar-brand" href="#">
+          <img src="./imgs/logo.svg" alt="" width="26" class="d-inline-block align-text-top">
+          CRTC 实时音视频 Demo
+        </a>
       </div>
-      <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
-        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-          class="mh-100 mw-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="localVideo"></video>
-        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-          class="mh-100 mw-100 hide" style="object-fit: contain; flex: 1 1 auto;min-width: 0;" id="screen"></video>
-      </div>
-    </div>
-    <div class="position-relative h-100">
-      <p class="text-secondary p-1 position-absolute top-0 start-0 w-100 bg-dark opacity-25 text-light align-content-center"
-        style="z-index: 10;">
-        远端视频</p>
-      <div class="position-relative d-flex h-100 justify-content-center w-100 overflow-hidden">
-        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-          class="mh-100 mw-100 w-100" style="object-fit: contain; flex:1 1 auto;min-width: 0;" id="remoteVideo"></video>
-        <video playsinline muted x5-video-player-fullscreen="true" autoplay x5-video-player-type="h5"
-          class="mh-100 mw-100 hide w-100" style="object-fit: contain; flex: 1 1 auto;min-width: 0;"
-          id="remoteVideo2"></video>
-      </div>
-      <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
-    </div>
-  </div>
-  <div class="bg-light p-2 m-2" id="ele">
-    <div class="row">
-      <div class="col col-9">
-        <div class="col col-12 row">
-          <div class="col col-3">
-            <select id="cameras" class="form-select"></select>
+    </nav>
+
+    <main class="demo-main container-fluid px-2 px-md-3">
+      <section class="video-stage" id="video_area">
+        <article class="video-card panel-card">
+          <header class="video-card-header d-flex justify-content-between align-items-center">
+            <span>本端</span>
+          </header>
+          <div class="video-card-body">
+            <video playsinline muted autoplay x5-video-player-type="h5" class="media-video" id="localVideo"></video>
+            <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide" id="screen"></video>
+            <div class="video-stats-overlay">
+              <div><span>延迟:</span> <span id="RTT"></span></div>
+              <div><span>上行统计:</span> <span id="upF"></span></div>
+              <div><span>下行统计:</span> <span id="downF"></span></div>
+              <div><span>NetworkQualities:</span> <span id="NQ"></span></div>
+            </div>
           </div>
-          <div class="col col-3">
-            <select id="mics" class="form-select"></select>
+        </article>
+
+        <article class="video-card panel-card">
+          <header class="video-card-header d-flex justify-content-between align-items-center">
+            <span>远端</span>
+            <div class="video-header-actions d-flex gap-2">
+              <button class="btn btn-success btn-video-action" id="capture">截图</button>
+              <button class="btn btn-outline-primary btn-video-action resume">恢复播放</button>
+            </div>
+          </header>
+          <div class="video-card-body remote-wrap">
+            <video playsinline muted autoplay x5-video-player-type="h5" class="media-video w-100"
+              id="remoteVideo"></video>
+            <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide w-100"
+              id="remoteVideo2"></video>
           </div>
-          <div class="col col-2">
-            <select id="useupdate" class="form-select">
-              <option value="update">useUpdate</option>
-              <option value="invite">useReInvite</option>
-            </select>
-          </div>
-          <div class="col col-2">
-            <select id="videoHint" class="form-select">
-              <option value=""></option>
-              <option value="detail">保清晰</option>
-              <option value="motion">保流畅</option>
-              <option value="text">文本</option>
-            </select>
-          </div>
-          <div class="col col-2">
-            <select id="virtualBackground" class="form-select">
-              <option value=''>不开启虚拟背景</option>
-              <option value="none">无图片</option>
-              <option value="img1">图片1</option>
-              <option value="img2">图片2</option>
-              <option value="blur">背景模糊</option>
-            </select>
-          </div>
-        </div>
-        <div class="col col-12 row mt-3">
-          <div class="col col-12">
-            <details class="border rounded p-2">
-              <summary class="fw-semibold">呼叫时 Mixer 参数（展开配置）</summary>
-              <div class="pt-2">
-                <div class="row g-2 align-items-center">
-                  <div class="col-auto">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="callMixerOutputMirror">
-                      <label class="form-check-label" for="callMixerOutputMirror">初始输出镜像</label>
-                    </div>
-                  </div>
+          <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
+        </article>
+      </section>
+
+      <section class="control-stage row g-2" id="ele">
+        <div class="col-12 col-xxl-9">
+          <div class="control-groups">
+            <section class="panel-card control-card">
+              <div class="card-title">呼叫与接听</div>
+              <div class="call-config-grid">
+                <div class="call-field">
+                  <div class="call-field-label">呼叫号码</div>
+                  <input class="form-control" type="text" value="7301" placeholder="请输入要呼叫的号码" id="callee" />
                 </div>
-                <div class="row g-2 mt-1">
-                  <div class="col-12 col-xl-6">
-                    <div class="border rounded p-2 h-100">
-                      <div class="fw-semibold mb-2">文字水印</div>
-                      <div class="row g-2">
-                        <div class="col-12">
-                          <input class="form-control" id="callMixerTextWatermarkText" placeholder="文字内容（留空则不启用）" />
-                        </div>
-                        <div class="col-4">
+                <div class="call-field">
+                  <div class="call-field-label">摄像头（通话前可预选）</div>
+                  <select id="cameras" class="form-select"></select>
+                </div>
+                <div class="call-field">
+                  <div class="call-field-label">麦克风（通话前可预选）</div>
+                  <select id="mics" class="form-select"></select>
+                </div>
+                <div class="call-field">
+                  <div class="call-field-label">更新方式</div>
+                  <select id="useupdate" class="form-select">
+                    <option value="update">useUpdate</option>
+                    <option value="invite">useReInvite</option>
+                  </select>
+                </div>
+                <div class="call-field">
+                  <div class="call-field-label">画质偏好（通话中可切换）</div>
+                  <select id="videoHint" class="form-select">
+                    <option value="" selected>默认策略</option>
+                    <option value="detail">保清晰</option>
+                    <option value="motion">保流畅</option>
+                    <option value="text">文本</option>
+                  </select>
+                </div>
+                <div class="call-field">
+                  <div class="call-field-label">虚拟背景（通话前需开启）</div>
+                  <select id="virtualBackground" class="form-select">
+                    <option value=''>不开启虚拟背景</option>
+                    <option value="none">无图片</option>
+                    <option value="img1">图片1</option>
+                    <option value="img2">图片2</option>
+                    <option value="blur">背景模糊</option>
+                  </select>
+                </div>
+
+
+                <details class="mixer-detail mt-2">
+                  <summary>呼叫时 Mixer 参数（紧凑配置）</summary>
+                  <div class="pt-2 compact-mixer">
+                    <div class="row g-2 align-items-center mb-2">
+                      <div class="col-auto">
+                        <div class="form-check"><input class="form-check-input" type="checkbox"
+                            id="callMixerOutputMirror"><label class="form-check-label"
+                            for="callMixerOutputMirror">初始输出镜像</label></div>
+                      </div>
+                    </div>
+                    <div class="compact-mixer-grid">
+                      <div class="sub-panel compact-panel">
+                        <div class="fw-semibold mb-2">文字水印</div>
+                        <div class="param-group-title">启用内容</div>
+                        <input class="form-control mixer-row" id="callMixerTextWatermarkText"
+                          placeholder="文字内容（留空不启用）" />
+                        <div class="param-group-title">位置坐标</div>
+                        <div class="mixer-inline-row mixer-row">
                           <select class="form-select" id="callMixerTextWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
@@ -124,36 +133,26 @@
                             <option value="bottom-right" selected>右下</option>
                             <option value="custom">自定义坐标</option>
                           </select>
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerTextWatermarkX" type="number" placeholder="X" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerTextWatermarkY" type="number" placeholder="Y" />
                         </div>
-                        <div class="col-4">
+                        <div class="param-group-title">样式</div>
+                        <div class="mixer-inline-row mixer-row">
                           <input class="form-control" id="callMixerTextWatermarkSize" type="number" min="8"
                             placeholder="字号" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control form-control-color" id="callMixerTextWatermarkColor" type="color"
                             value="#ffffff" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerTextWatermarkOpacity" type="number" min="0" max="1"
                             step="0.1" placeholder="透明度" />
                         </div>
                       </div>
-                    </div>
-                  </div>
-                  <div class="col-12 col-xl-6">
-                    <div class="border rounded p-2 h-100">
-                      <div class="fw-semibold mb-2">图片水印</div>
-                      <div class="row g-2">
-                        <div class="col-12">
-                          <input class="form-control" id="callMixerImageWatermarkUrl" placeholder="图片 URL（留空则不启用）" />
-                        </div>
-                        <div class="col-4">
+                      <div class="sub-panel compact-panel">
+                        <div class="fw-semibold mb-2">图片水印</div>
+                        <div class="param-group-title">启用地址</div>
+                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl"
+                          placeholder="图片 URL（留空不启用）" />
+                        <div class="param-group-title">位置坐标</div>
+                        <div class="mixer-inline-row mixer-row">
                           <select class="form-select" id="callMixerImageWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
@@ -164,233 +163,200 @@
                             <option value="bottom-right" selected>右下</option>
                             <option value="custom">自定义坐标</option>
                           </select>
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerImageWatermarkX" type="number" placeholder="X" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerImageWatermarkY" type="number" placeholder="Y" />
                         </div>
-                        <div class="col-4">
+                        <div class="param-group-title">尺寸透明度</div>
+                        <div class="mixer-inline-row mixer-row">
                           <input class="form-control" id="callMixerImageWatermarkWidth" type="number" min="1"
                             placeholder="宽度" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerImageWatermarkHeight" type="number" min="1"
                             placeholder="高度" />
-                        </div>
-                        <div class="col-4">
                           <input class="form-control" id="callMixerImageWatermarkOpacity" type="number" min="0" max="1"
                             step="0.1" placeholder="透明度" />
                         </div>
                       </div>
                     </div>
                   </div>
+                </details>
+              </div>
+              <div class="sub-group-title mt-2">呼叫模式</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" id="callVideo"><i class="bi-telephone-outbound me-1"></i>音视频外呼</button>
+                <button class="btn btn-warning" id="call"><i class="bi-soundwave me-1"></i>语音外呼</button>
+                <button class="btn btn-success" id="callVideoSendonly"><i class="bi-camera-video me-1"></i>视频外呼</button>
+                <button class="btn btn-warning" id="callScreen"><i class="bi-display me-1"></i>共享桌面外呼</button>
+                <button class="btn btn-primary" id="b2bCallVideoOnly"><i class="bi-diagram-3 me-1"></i>B2B视频外呼</button>
+                <button class="btn btn-success" id="b2bCallVideoSendonly"><i
+                    class="bi-diagram-3 me-1"></i>B2B单向视频外呼</button>
+              </div>
+
+              <div class="sub-group-title mt-2">接听模式</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" id="answerVideo"><i class="bi-telephone-inbound me-1"></i>音视频接听</button>
+                <button class="btn btn-warning" id="answer"><i class="bi-soundwave me-1"></i>语音接听</button>
+                <button class="btn btn-success" id="answerAudio"><i class="bi-mic-mute me-1"></i>空音频接听</button>
+                <button class="btn btn-warning" id="onlyVideoAudio">无音频接听</button>
+                <button class="btn btn-secondary" id="onlyCommVideo">无音频自定义视频接听</button>
+                <button class="btn btn-primary" id="audioCommVideo">音频自定义视频接听</button>
+              </div>
+
+              <div class="sub-group-title mt-2">特殊外呼</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-secondary" id="callNull"><i class="bi-slash-circle me-1"></i>无设备外呼</button>
+                <button class="btn btn-warning" id="callNullAudio"><i class="bi-mic-mute me-1"></i>无麦克风外呼</button>
+                <button class="btn btn-success" id="callNullVideo"><i
+                    class="bi-camera-video-off me-1"></i>无摄像头外呼</button>
+                <button class="btn btn-warning hide" id="callVB"><i
+                    class="bi-person-bounding-box me-1"></i>虚拟背景外呼</button>
+                <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
+              </div>
+            </section>
+
+            <section class="panel-card control-card">
+              <div class="card-title">通话中控制</div>
+              <div class="sub-group-title">模式切换</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" id="toAudio"><i class="bi-soundwave me-1"></i>切换音频模式</button>
+                <button class="btn btn-primary" id="toVideo"><i class="bi-camera-video me-1"></i>切换视频模式</button>
+                <button class="btn btn-warning" id="toVideoSendonly">切换单向视频</button>
+                <button class="btn btn-success" id="toCommonVideo">自定义流视频模式</button>
+                <button class="btn btn-primary" id="toCommonVideoSendonly">自定义流单向视频模式</button>
+                <button class="btn btn-success" id="switchVideo">替换自定义流</button>
+              </div>
+              <div class="sub-group-title mt-2">采集与保持</div>
+              <div class="d-flex flex-wrap gap-2 align-items-center same-row-actions">
+                <div class="btn-group"><button class="btn btn-warning" id="muteMic">麦克风关</button><button
+                    class="btn btn-success" id="unmuteMic">麦克风开</button></div>
+                <div class="btn-group"><button class="btn btn-warning" id="muteCam">摄像头关</button><button
+                    class="btn btn-success" id="unmuteCam">摄像头开</button></div>
+                <button class="btn btn-success" id="switchDevice"><i class="bi-arrow-repeat me-1"></i>切换摄像头（兼容）</button>
+                <button class="btn btn-warning" id="hold"><i class="bi-pause-circle me-1"></i>保持/取消保持</button>
+              </div>
+            </section>
+
+            <section class="panel-card control-card">
+              <details class="mixer-detail">
+                <summary>共享与推流</summary>
+                <div class="pt-2">
+                  <div class="sub-group-title">常规分享与控制</div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-secondary" id="screenShare"><i class="bi-display me-1"></i>分享屏幕</button>
+                    <button class="btn btn-secondary" id="formShare"><i
+                        class="bi-layout-text-window-reverse me-1"></i>分享页面元素</button>
+                    <button class="btn btn-secondary" id="picShare"><i class="bi-image me-1"></i>分享图片</button>
+                    <button class="btn btn-secondary" id="videoShare"><i class="bi-play-circle me-1"></i>分享视频</button>
+                    <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle me-1"></i>停止分享</button>
+                  </div>
+                  <div class="sub-group-title mt-2">双流模式（需双方支持）</div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-info" id="screenShareD">分享屏幕(D)</button>
+                    <button class="btn btn-warning" id="screenShareD_iOS">Safari 分享(D)</button>
+                    <button class="btn btn-info" id="formShareD">分享页面元素(D)</button>
+                    <button class="btn btn-info" id="picShareD">分享图片(D)</button>
+                    <button class="btn btn-info" id="videoShareD">分享视频(D)</button>
+                  </div>
+                </div>
+              </details>
+            </section>
+          </div>
+        </div>
+
+        <aside class="col-12 col-xxl-3">
+          <div class="panel-card log-card">
+            <div class="card-title">会话日志</div>
+            <pre id="status" class="mb-0"></pre>
+          </div>
+
+          <section class="panel-card control-card mt-2">
+            <details class="mixer-detail">
+              <summary>辅助功能</summary>
+              <div class="pt-2">
+                <div class="tool-stack">
+                  <div class="tool-row">
+                    <div class="sub-group-title">呼转</div>
+                    <div class="input-group">
+                      <input class="form-control" type="text" placeholder="请输入呼转到的号码" value="" id="refer">
+                      <button class="btn btn-primary" id="referBtn"><i class="bi-telephone-outbound"></i> 呼转</button>
+                      <button class="btn btn-danger" id="cancelReferBtn">取消</button>
+                    </div>
+                  </div>
+
+                  <div class="tool-row">
+                    <div class="sub-group-title">推送消息</div>
+                    <div class="input-group">
+                      <input type="text" class="form-control" value='' placeholder="请输入要推送的内容" id="info" />
+                      <button class="btn btn-primary" id="sendInfo">发送</button>
+                    </div>
+                  </div>
+
+                  <div class="tool-row">
+                    <div class="sub-group-title">DTMF</div>
+                    <div class="dial-pad dial-pad-two-rows" id="dtmf">
+                      <button class="btn btn-success">0</button><button class="btn btn-success">1</button><button
+                        class="btn btn-success">2</button>
+                      <button class="btn btn-success">3</button><button class="btn btn-success">4</button><button
+                        class="btn btn-success">5</button>
+                      <button class="btn btn-success">6</button><button class="btn btn-success">7</button><button
+                        class="btn btn-success">8</button>
+                      <button class="btn btn-success">9</button><button class="btn btn-success">*</button><button
+                        class="btn btn-success">#</button>
+                      <button class="btn btn-primary hide" id="testBtn">测试值</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="btn-group hide mt-2">
+                  <button class="btn btn-primary" id="addAudio">添加音频</button>
+                  <button class="btn btn-success" id="addVideo">添加视频</button>
                 </div>
               </div>
             </details>
-          </div>
-        </div>
-        <div class="col col-12 row mt-3">
-          <div class="col col-auto row">
-            <div class="col col-auto">
-              <div class="input-group">
-                <input class="form-control" type="text" value="7301" placeholder="请输入要呼叫的号码" id="callee" />
+          </section>
 
-                <div class="btn-group ms-2">
-                  <button class="btn btn-warning" id="callScreen"><!-- <i class="bi-arrows-fullscreen"></i> -->
-                    共享桌面外呼</button>
-                  <button class="btn btn-primary" id="callVideo"><!-- <i class="bi-camera-video"></i> --> 音视频外呼</button>
-                </div>
-                <div class="btn-group ms-2">
-                  <button class="btn btn-warning" id="call"><i class="bi-mic"></i> 语音外呼</button>
-                  <button class="btn btn-success" id="callVideoSendonly"><i class="bi-camera-video"></i> 视频外呼</button>
-                </div>
-                <div class="btn-group ms-2">
-                  <button class="btn btn-primary" id="b2bCallVideoOnly"> B2B视频外呼</button>
-                  <button class="btn btn-success" id="b2bCallVideoSendonly"> B2B单向视频外呼</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col col-12 mt-3">
-          <div class="btn-group">
-            <button class="btn btn-secondary" id="callNull"> 无设备外呼</button>
-            <button class="btn btn-warning" id="callNullAudio"> 无麦克风外呼</button>
-            <button class="btn btn-success" id="callNullVideo"> 无摄像头外呼</button>
-            <button class="btn btn-warning hide" id="callVB"> 虚拟背景外呼</button>
-            <!-- <button class="btn btn-warning" id="callVideoSendonly"><i class="bi-camera-video"></i> 单向视频外呼</button> -->
-            <button class="btn btn-danger" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
-          </div>
-        </div>
-
-        <div class="col col-12 row">
-          <div class="col col-auto mt-3">
-            <button class="btn btn-warning" id="answer"><i class="bi-mic"></i> 语音接听</button>
-            <button class="btn btn-success" id="answerAudio"><i class="bi-mic-mute"></i> 空音频接听</button>
-            <button class="btn btn-primary" id="answerVideo"><i class="bi-camera-video"></i> 音视频接听</button>
-            <button class="btn btn-warning" id="onlyVideoAudio"> 无音频接听</button>
-            <button class="btn btn-secondary" id="onlyCommVideo"> 无音频自定义视频接听</button>
-            <button class="btn btn-primary" id="audioCommVideo"> 音频自定义视频接听</button>
-          </div>
-          <div class="col col-auto mt-3">
-            <button class="btn btn-success" id="toAudio"><i class="bi-mic"></i> 切换音频模式</button>
-            <button class="btn btn-primary" id="toVideo"><i class="bi-camera-video"></i> 切换视频模式</button>
-            <button class="btn btn-warning" id="toVideoSendonly"><i class="bi-camera-video"></i> 切换单向视频</button>
-            <!-- <button class="btn btn-success" id="b2bToAudio"><i class="bi-mic"></i> B2B切换音频</button>
-            <button class="btn btn-primary" id="b2bToVideo"><i class="bi-camera-video"></i> B2B切换视频</button> -->
-          </div>
-
-          <div class="col col-auto mt-3">
-            <button class="btn btn-success" id="toCommonVideo"><i class="bi-camera-video-off"></i> 自定义流视频模式</button>
-            <button class="btn btn-primary" id="toCommonVideoSendonly"><i class="bi-camera-video-off"></i>
-              自定义流单向视频模式</button>
-
-            <button class="btn btn-success" id="switchVideo"><i class="bi-camera-video-off"></i> 替换自定义流</button>
-          </div>
-        </div>
-        <div class="col col-12 row">
-          <div class="col col-auto mt-3">
-            <div class="btn-group">
-              <button class="btn btn-warning" id="muteMic"><i class="bi-mic-mute"></i> 关闭</button>
-              <button class="btn btn-success" id="unmuteMic"><i class="bi-mic"></i> 开启</button>
-            </div>
-            <div class="btn-group">
-              <button class="btn btn-warning" id="muteCam"><i class="bi-camera-video-off"></i> 关闭</button>
-              <button class="btn btn-success" id="unmuteCam"><i class="bi-camera-video"></i> 开启</button>
-            </div>
-          </div>
-          <div class="col col-auto mt-3">
-            <button class="btn btn-success" id="switchDevice">切换摄像头（兼容）</button>
-            <button class="btn btn-success" id="capture"><i class="bi-pip"></i> 对远端视频截图</button>
-            <button class="btn btn-outline-primary resume"><i class="bi-bootstrap-reboot"></i></button>
-          </div>
-        </div>
-        <div class="col col-12 row">
-          <div class="col col-auto mt-3">
-            <button class="btn btn-secondary" id="screenShare"><i class="bi-tv"></i> 分享屏幕</button>
-            <button class="btn btn-secondary" id="formShare"><i class="bi-table"></i> 分享页面元素</button>
-            <button class="btn btn-secondary" id="picShare"><i class="bi-image"></i> 分享图片</button>
-            <button class="btn btn-secondary" id="videoShare"><i class="bi-play"></i> 分享视频</button>
-            <button class="btn btn-danger" id="stopShare"><i class="bi-stop-circle"></i> 停止分享</button>
-          </div>
-          <div class="col col-auto mt-3">
-            <button class="btn btn-info" id="screenShareD"><i class="bi-tv"></i> 分享屏幕(D)</button>
-            <button class="btn btn-warning" id="screenShareD_iOS"><i class="bi-tv"></i> Safari 分享(D)</button>
-            <button class="btn btn-info" id="formShareD"><i class="bi-table"></i> 分享页面元素(D)</button>
-            <button class="btn btn-info" id="picShareD"><i class="bi-image"></i> 分享图片(D)</button>
-            <button class="btn btn-info" id="videoShareD"><i class="bi-play"></i> 分享视频(D)</button>
-            <button class="btn btn-warning" id="hold">保持/取消保持</button>
-          </div>
-        </div>
-        <div class="col col-12 row">
-          <div class="col col-auto mt-3">
-            <div class="input-group">
-              <input class="form-control" type="text" placeholder="请输入呼转到的号码" value="" id="refer">
-              <button class="btn btn-primary" id="referBtn"><i class="bi-telephone-outbound"></i> 呼转</button>
-              <button class="btn btn-danger" id="cancelReferBtn"> 取消呼转</button>
-            </div>
-          </div>
-          <div class="col col-auto mt-3">
-            <div class="input-group">
-              <input type="text" class="form-control" value='' placeholder="请输入要推送的内容" id="info" />
-              <button class="btn btn-primary" id="sendInfo">推送消息</button>
-            </div>
-          </div>
-        </div>
-        <div class="col col-12 row">
-          <div class="col col-auto mt-3" id="dtmf">
-            <button class="btn btn-success">0</button>
-            <button class="btn btn-success">1</button>
-            <button class="btn btn-success">2</button>
-            <button class="btn btn-success">3</button>
-            <button class="btn btn-success">4</button>
-            <button class="btn btn-success">5</button>
-            <button class="btn btn-success">6</button>
-            <button class="btn btn-success">7</button>
-            <button class="btn btn-success">8</button>
-            <button class="btn btn-success">9</button>
-            <button class="btn btn-success">*</button>
-            <button class="btn btn-success">#</button>
-            <button class="btn btn-primary hide" id="testBtn">测试值</button>
-          </div>
-
-          <div class="btn-group hide">
-            <button class="btn btn-primary" id="addAudio"><i class="bi-mic"></i> 添加音频</button>
-            <button class="btn btn-success" id="addVideo"><i class="bi-camera-video"></i> 添加视频</button>
-          </div>
-
-
-        </div>
-      </div>
-      <div class="col col-3 align-items-stretch">
-        <div class="bg-light border-1 p-2 rounded border border-1 overflow-auto" style="max-height: 230px;">
-          <pre id="status" class="w-100 overflow-hidden h-auto mb-0"
-            style="font-size: 11px;line-height: 1.2; color: #666; font-family: 'Microsoft YaHei', Arial, Helvetica, sans-serif;"></pre>
-        </div>
-      </div>
-    </div>
+          <section class="panel-card control-card mt-2" id="capture-preview-panel">
+            <div class="card-title">截图预览</div>
+            <div class="capture-empty" id="capture-empty">点击“截图”后在这里显示预览</div>
+            <canvas id="captureView" class="capture-preview hide"></canvas>
+          </section>
+        </aside>
+      </section>
+    </main>
   </div>
-  <canvas id="captureView" style="width: 240px;"></canvas>
+
   <div class="hide">
     <img id="pic_s" style="height: 100%;" src="https://pro.vsbc.com/rtc/dev/crtc/pic.png" alt="" />
     <video playsinline x5-video-player-fullscreen=" true" x5-video-player-type="h5" id="video_s"
       src="https://pro.vsbc.com/rtc/uat/crtc/1280.mp4" loop muted style="height: 100%"></video>
   </div>
-  <!--
-  <script>
-    // TogetherJS configuration would go here, but we'll talk about that
-    // later
-    TogetherJSConfig_hubBase = "https://togetherjs-hub.glitch.me/"
-  </script>
-  <script src="https://togetherjs.com/togetherjs-min.js"></script>
-  <script>
-    TogetherJS(this)
-  </script> -->
+
   <script src="./js/eruda.js"></script>
   <script>eruda.init();</script>
   <script src="./js/jquery-3.3.1.min.js"></script>
   <script src="./js/html2canvas.min.js"></script>
   <script src="./js/b2b.js"></script>
-  <!-- <script src="./js/EBML.min.js"></script> -->
   <script src="./js/MediaStreamRecorder.min.js"></script>
   <script src="./js/adapter-latest.js"></script>
-  <!-- <script>
-    /* 对日志的处理 */
-    window.CLog = console;
-    let consoleHolder = window.CLog;
-
-    function debug(bool) {
-      if (!bool) {
-        consoleHolder = window.CLog;
-        window.CLog = {};
-        Object.keys(consoleHolder).forEach(function (key) {
-          window.CLog[key] = function () {
-            // 这里可以写自己方法上传到服务器等
-            // eslint-disable-next-line prefer-rest-params
-            console.log(...arguments);
-          };
-        });
-      }
-      else {
-        window.CLog = consoleHolder;
-      }
-    }
-
-    debug(false);
-    // 结束
-  </script> -->
   <script src="../../dist/CRTC.min.js"></script>
   <script src="./virtual-background/tflite/tflite-simd.js"></script>
-
-  <!-- <script type="module">
-    import createTFLiteSIMDModule from './virtual-background/tflite/tflite-simd.module.js'
-    window['createTFLiteSIMDModule'] = createTFLiteSIMDModule
-  </script> -->
   <script src="../config.js"></script>
   <script src="./js/app.js"></script>
+  <script>
+    (function () {
+      var captureBtn = document.getElementById('capture');
+      var captureCanvas = document.getElementById('captureView');
+      var captureEmpty = document.getElementById('capture-empty');
+      var capturePanel = document.getElementById('capture-preview-panel');
+      if (!captureBtn || !captureCanvas) return;
+      captureBtn.addEventListener('click', function () {
+        setTimeout(function () {
+          captureCanvas.classList.remove('hide');
+          if (captureEmpty) captureEmpty.classList.add('hide');
+          if (capturePanel) capturePanel.classList.add('has-capture');
+        }, 180);
+      });
+    })();
+  </script>
 </body>
 
 </html>

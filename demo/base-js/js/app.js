@@ -1789,16 +1789,19 @@ ua.on('newRTCSession', function(e)
   {
     const canvas = document.getElementById('captureView');
     const ctx = canvas.getContext('2d');
+    const videoEl = $('#remoteVideo')[0];
+    const frameW = videoEl.videoWidth || videoEl.clientWidth || 640;
+    const frameH = videoEl.videoHeight || videoEl.clientHeight || 360;
 
-    canvas.width = $('#remoteVideo')[0].videoWidth;
-    canvas.height = $('#remoteVideo')[0].videoHeight;
+    canvas.width = frameW;
+    canvas.height = frameH;
 
     ctx.drawImage(
-      $('#remoteVideo')[0],
+      videoEl,
       0,
       0,
-      $('#remoteVideo')[0].videoWidth,
-      $('#remoteVideo')[0].videoHeight
+      frameW,
+      frameH
     );
   };
 });
@@ -2356,6 +2359,7 @@ function setStatus(text)
   const statusDom = document.querySelector('#status');
 
   statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
+  statusDom.scrollTop = statusDom.scrollHeight;
 }
 
 // 检查摄像头状态
