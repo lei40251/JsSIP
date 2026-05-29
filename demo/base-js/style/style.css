@@ -16,15 +16,15 @@ html, body { margin: 0; padding: 0; overflow-x: hidden; background: radial-gradi
 :root {
   --video-stage-height: 420px;
 }
-.video-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.65rem; height: var(--video-stage-height); }
+.video-stage { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; margin-bottom: 0.65rem; height: var(--video-stage-height); }
 .video-card { display: flex; flex-direction: column; height: var(--video-stage-height); min-height: var(--video-stage-height); max-height: var(--video-stage-height); overflow: hidden; }
 .video-card-header { padding: 0.45rem 0.75rem; min-height: 50px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #f9fbff, #f2f7fc); color: #334155; font-size: 0.86rem; font-weight: 700; }
 .video-header-actions { align-items: center; }
 .btn-video-action { font-size: 0.77rem; line-height: 1.1; padding: 0.3rem 0.56rem; min-height: 1.9rem; }
 .video-card-body { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at top, rgba(110, 167, 255, 0.22), rgba(7, 15, 30, 0) 45%), linear-gradient(180deg, #2a3240, #1f2734); }
 .media-video { width: 100%; height: 100%; object-fit: contain; min-width: 0; flex: 1 1 auto; }
-.video-stats-overlay { position: absolute; left: 0.45rem; bottom: 0.45rem; max-width: calc(100% - 0.9rem); background: rgba(9, 15, 24, 0.6); border: 1px solid rgba(176, 198, 226, 0.26); color: #e8f1ff; padding: 0.38rem 0.5rem; border-radius: 8px; font-size: 11px; line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-.video-stats-overlay div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.video-stats-overlay { position: absolute; left: 0.45rem; bottom: 0.45rem; z-index: 6; pointer-events: none; display: inline-block; width: max-content; max-width: calc(100% - 0.9rem); background: rgba(9, 15, 24, 0.66); border: 1px solid rgba(176, 198, 226, 0.3); color: #e8f1ff; padding: 0.38rem 0.5rem; border-radius: 8px; font-size: 11px; line-height: 1.5; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.video-stats-overlay div { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 .control-groups { display: flex; flex-direction: column; gap: 0.65rem; }
 .control-card { padding: 0.72rem; }
 .card-title { font-size: 0.9rem; font-weight: 800; color: #243447; margin-bottom: 0.55rem; }

@@ -2149,7 +2149,14 @@ async function call(type, direction, mediaStream)
 
     if (selectMic && options.mediaConstraints && options.mediaConstraints.audio) 
     {
-      options.mediaConstraints.video.deviceId = { exact: selectMic };
+      if (typeof options.mediaConstraints.audio === 'object')
+      {
+        options.mediaConstraints.audio.deviceId = { exact: selectMic };
+      }
+      else
+      {
+        options.mediaConstraints.audio = { deviceId: { exact: selectMic } };
+      }
     }
 
     if (virtualBackgroundType)
@@ -2448,12 +2455,25 @@ function start()
 
   // 更新摄像头下拉列表
   // updateDevices();
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(async(mediastream) => 
-  {
-    await updateDevices();
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(async(mediastream) => 
+    {
+      await updateDevices();
 
-    mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
-  });
+      mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
+    })
+    .catch(async(error) =>
+    {
+      setStatus(`初始化媒体权限失败: ${error.name || 'unknown'}`);
+      try
+      {
+        await updateDevices();
+      }
+      catch (e)
+      {
+        setStatus(`设备列表加载失败: ${e.name || e.message || 'unknown'}`);
+      }
+    });
 
   // 初始化断网提示相关
   handleStop = false;

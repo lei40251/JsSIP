@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8" />
@@ -32,12 +32,6 @@
           <div class="video-card-body">
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video" id="localVideo"></video>
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide" id="screen"></video>
-            <div class="video-stats-overlay">
-              <div><span>延迟:</span> <span id="RTT"></span></div>
-              <div><span>上行统计:</span> <span id="upF"></span></div>
-              <div><span>下行统计:</span> <span id="downF"></span></div>
-              <div><span>NetworkQualities:</span> <span id="NQ"></span></div>
-            </div>
           </div>
         </article>
 
@@ -55,8 +49,14 @@
             <video playsinline muted autoplay x5-video-player-type="h5" class="media-video hide w-100"
               id="remoteVideo2"></video>
           </div>
-          <audio id="remoteAudio" autoplay class="hide" onpause="this.play();"></audio>
+          <audio id="remoteAudio" autoplay class="hide"></audio>
         </article>
+        <div class="video-stats-overlay">
+          <div><span>延迟:</span> <span id="RTT"></span></div>
+          <div><span>上行统计:</span> <span id="upF"></span></div>
+          <div><span>下行统计:</span> <span id="downF"></span></div>
+          <div><span>NetworkQualities:</span> <span id="NQ"></span></div>
+        </div>
       </section>
 
       <section class="control-stage row g-2" id="ele">
