@@ -59,6 +59,8 @@ let cloneStream = null;
 let isRefer = false;
 
 let recorder;
+let incomingCallNotification = null;
+let notificationUnsupportedLogged = false;
 
 // 虚拟背景相关
 let virtualBackgroundType;
@@ -337,6 +339,7 @@ ua.on('newRTCSession', function(e)
 
     // 远端呼入通过 request.mode 判断呼叫是音频还是视频
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
+    showIncomingCallNotification(e.request.mode, remoteNo);
     // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
     // setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
   }
@@ -687,6 +690,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('failed', function(d) 
   {
+    closeIncomingCallNotification();
     videoOnly = false;
     remoteNo = undefined;
     if (mix) 
@@ -754,6 +758,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('ended', function(d) 
   {
+    closeIncomingCallNotification();
     videoOnly = false;
     remoteNo = undefined;
     if (mix) 
@@ -948,6 +953,7 @@ ua.on('newRTCSession', function(e)
 
   e.session.on('accepted', (d) => 
   {    
+    closeIncomingCallNotification();
     console.warn('dOS: ', detectRemoteOS(d.response));
   });
 
@@ -961,6 +967,7 @@ ua.on('newRTCSession', function(e)
     */
   e.session.on('confirmed', async function() 
   {
+    closeIncomingCallNotification();
     if (e.session.connection.iceConnectionState === 'new') 
     {
       // 根据业务需求进行网络连接异常提示，或者可以延迟2秒再判断一次做为确认
@@ -1489,6 +1496,7 @@ ua.on('newRTCSession', function(e)
    */
   document.querySelector('#cancel').onclick = function() 
   {
+    closeIncomingCallNotification();
     blackVideo && blackVideo.cleanup();
 
     try 
@@ -2193,6 +2201,7 @@ async function call(type, direction, mediaStream)
     // 外呼未触发newRTCSession前取消呼叫
     document.querySelector('#cancel').onclick = function() 
     {
+      closeIncomingCallNotification();
       try 
       {
         session.terminate();
@@ -2367,6 +2376,75 @@ function setStatus(text)
 
   statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
   statusDom.scrollTop = statusDom.scrollHeight;
+}
+
+function closeIncomingCallNotification()
+{
+  if (incomingCallNotification) 
+  {
+    incomingCallNotification.close();
+    incomingCallNotification = null;
+  }
+}
+
+async function showIncomingCallNotification(mode, fromNo)
+{
+  if (typeof window === 'undefined' || !('Notification' in window)) 
+  {
+    if (!notificationUnsupportedLogged) 
+    {
+      notificationUnsupportedLogged = true;
+      setStatus('当前浏览器不支持系统通知');
+    }
+    return;
+  }
+
+  const title = `收到${mode === 'video' ? '视频' : '音频'}呼叫`;
+  const body = fromNo ? `来自 ${fromNo}，点击返回页面处理` : '点击返回页面处理';
+  const show = () => 
+  {
+    try 
+    {
+      closeIncomingCallNotification();
+      incomingCallNotification = new Notification(title, {
+        body,
+        tag                : 'crtc-incoming-call',
+        renotify           : true,
+        requireInteraction : true,
+        icon               : './imgs/logo.svg'
+      });
+
+      incomingCallNotification.onclick = function()
+      {
+        window.focus();
+        closeIncomingCallNotification();
+      };
+    }
+    catch (error) 
+    {
+      setStatus(`系统通知失败: ${error.message || error}`);
+    }
+  };
+
+  if (Notification.permission === 'granted') 
+  {
+    show();
+    return;
+  }
+
+  if (Notification.permission === 'default') 
+  {
+    try 
+    {
+      const permission = await Notification.requestPermission();
+
+      permission === 'granted' && show();
+    }
+    catch (error) 
+    {
+      setStatus(`系统通知授权失败: ${error.message || error}`);
+    }
+  }
 }
 
 // 检查摄像头状态
@@ -2649,6 +2727,7 @@ document.addEventListener('visibilitychange', function()
   }
   else 
   {
+    closeIncomingCallNotification();
     // document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
     console.warn('页面回到前台');
   }
