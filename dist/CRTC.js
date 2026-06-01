@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026611231
+ * CRTC v1.13.0.2026611449
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212022462 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212022898 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212022462');
+debug('version %s', '1.13.0.405212022898');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212022462';
+    return '1.13.0.405212022898';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -23490,6 +23490,7 @@ module.exports = class RTCSession extends EventEmitter {
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
     this._mixer = null;
+    this._mixerInputStream = null;
     this._sessionMixerOptions = null;
 
     // 用于华为安卓记录后摄
@@ -23758,10 +23759,12 @@ module.exports = class RTCSession extends EventEmitter {
   _stopSessionMixer() {
     if (!this._mixer) {
       this._mixer = null;
+      this._mixerInputStream = null;
       return;
     }
     this._safeStopMixer(this._mixer, 'stop mixer failed');
     this._mixer = null;
+    this._mixerInputStream = null;
   }
   _safeStopMixer(mixer, message) {
     if (!mixer) {
@@ -23798,11 +23801,13 @@ module.exports = class RTCSession extends EventEmitter {
       });
       mixedStream.addTrack(mixedVideoTrack, mixedStream);
       this._mixer = mixer;
+      this._mixerInputStream = stream;
       return mixedStream;
     } catch (error) {
       logger.warn(`${this._id} apply mixer failed:`, error);
       this._safeStopMixer(mixer, 'mixer stop after apply failure failed');
       this._mixer = null;
+      this._mixerInputStream = null;
       return stream;
     }
   }
@@ -24763,6 +24768,7 @@ module.exports = class RTCSession extends EventEmitter {
         video: true
       };
       return Promise.resolve().then(() => {
+        var useMixerBranch = Boolean(mixerOptions && this._mixer && this._mixerInputStream);
         var videoConstraints;
 
         // 如果传参包含deviceId则使用deviceId
@@ -24830,13 +24836,15 @@ module.exports = class RTCSession extends EventEmitter {
         this._connection.getSenders().find(s => {
           logger.debug(`${this._id} kind: ${s.track && s.track.kind}`);
           if (s.track && s.track.kind == 'video') {
+            next = true;
             if (this._enableBFCP) {
               // 启用了BFCP，区分一下BFCP控制的视频轨道
               // eslint-disable-next-line max-len
-              s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]) && s.track.stop();
+              if (!useMixerBranch && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0])) {
+                s.track.stop();
+              }
             } else {
-              next = true;
-              s.track.stop();
+              !useMixerBranch && s.track.stop();
             }
           }
         });
@@ -24850,53 +24858,104 @@ module.exports = class RTCSession extends EventEmitter {
         this._inviteMediaConstraints.video = this._inviteMediaConstraints.video || {};
         constraints.video = videoConstraints;
         constraints.video = Object.assign(this._inviteMediaConstraints.video, constraints.video);
-        return constraints;
-      }).then(async videoConstraints => {
+        return {
+          constraints,
+          useMixerBranch
+        };
+      }).then(async ({
+        constraints: videoConstraints,
+        useMixerBranch
+      }) => {
         logger.debug(`${this._id} videoConstraints`, JSON.stringify(videoConstraints));
         var sender = this._connection.getSenders().find(s => {
           if (this._enableBFCP) {
             // 启用了BFCP，区分一下BFCP控制的视频轨道
-            return s.track.kind == 'video' && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]);
+            return s.track && s.track.kind == 'video' && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0]);
           } else {
-            return s.track.kind == 'video';
+            return s.track && s.track.kind == 'video';
           }
         });
 
-        // 先释放原来的设备再获取新的
-        sender && sender.track && sender.track.stop();
-
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
-        var stream = await this._getUserMediaWithSessionPipeline(videoConstraints, mixerOptions).catch(error => {
-          this._logEventError('error', 'getusermediafailed', error);
-          this.emit('getusermediafailed', error);
-          throw new Error('getUserMedia() failed');
-        });
-        try {
-          var track = stream.getVideoTracks()[0];
-          logger.debug(`${this._id} stream: `, track.kind, track.label, track.readyState);
-        } catch (error) {
-          logger.error(`${this._id} stream error: `, error.message);
-        }
+        var getProcessedStream = async () => {
+          return await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
+            return await this._processMediaStream(mediastream);
+          }).catch(error => {
+            this._logEventError('error', 'getusermediafailed', error);
+            this.emit('getusermediafailed', error);
+            throw new Error('getUserMedia() failed');
+          });
+        };
+        var normalizeStream = stream => {
+          try {
+            var track = stream.getVideoTracks()[0];
+            logger.debug(`${this._id} stream: `, track.kind, track.label, track.readyState);
+          } catch (error) {
+            logger.error(`${this._id} stream error: `, error.message);
+          }
 
-        // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
-        var ua;
-        navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
-        if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
-          stream = Utils.getStreamThroughCanvas(stream);
+          // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
+          var ua;
+          navigator.userAgent && (ua = navigator.userAgent.toLowerCase().match(/cpu iphone os (.*?) like mac os/));
+          if (ua && ua[1] && (ua[1].includes('15_1') || ua[1].includes('15_2'))) {
+            stream = Utils.getStreamThroughCanvas(stream);
+          }
+          return stream;
+        };
+        var applyTrack = (nextTrack, streamForEvent) => {
+          try {
+            this._localMediaStream.removeTrack(this._localMediaStream.getVideoTracks()[0]);
+          } catch (error) {
+            logger.error(this._id + error.message);
+          }
+          this._localMediaStream.addTrack(nextTrack);
+          sender.replaceTrack(nextTrack);
+          this.emit('cameraChanged', {
+            videoStream: streamForEvent
+          });
+        };
+        if (!useMixerBranch) {
+          // 先释放原来的设备再获取新的
+          sender && sender.track && sender.track.stop();
+          var stream = normalizeStream(await getProcessedStream());
+          var videoTrack = stream.getVideoTracks()[0];
+          applyTrack(videoTrack, stream);
+          return stream;
         }
         try {
-          this._localMediaStream.removeTrack(this._localMediaStream.getVideoTracks()[0]);
+          var currentMixer = this._mixer;
+          var oldInputStream = this._mixerInputStream;
+          var oldInputVideoTrack = oldInputStream && oldInputStream.getVideoTracks && oldInputStream.getVideoTracks()[0];
+          oldInputVideoTrack && oldInputVideoTrack.stop();
+          var _stream2 = normalizeStream(await getProcessedStream());
+          var newVideoTrack = _stream2.getVideoTracks && _stream2.getVideoTracks()[0];
+          if (!newVideoTrack) {
+            throw new Error('switchDevice mixer branch has no video track');
+          }
+          var newInputStream = new MediaStream();
+          _stream2.getAudioTracks && _stream2.getAudioTracks().forEach(track => {
+            newInputStream.addTrack(track, newInputStream);
+          });
+          newInputStream.addTrack(newVideoTrack, newInputStream);
+          currentMixer.removeStream(oldInputStream);
+          currentMixer.appendStream(newInputStream);
+          this._mixerInputStream = newInputStream;
+          var mixedVideoStream = currentMixer.getVideoStream();
+          var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks && mixedVideoStream.getVideoTracks()[0];
+          if (!mixedVideoTrack) {
+            throw new Error('switchDevice mixer output has no video track');
+          }
+          applyTrack(mixedVideoTrack, mixedVideoStream);
+          return mixedVideoStream;
         } catch (error) {
-          logger.error(this._id + error.message);
+          logger.warn(`${this._id} switchDevice mixer branch failed, fallback to default flow:`, error);
+          sender && sender.track && sender.track.stop();
+          var fallbackStream = normalizeStream(await getProcessedStream());
+          var fallbackTrack = fallbackStream.getVideoTracks()[0];
+          applyTrack(fallbackTrack, fallbackStream);
+          return fallbackStream;
         }
-        var videoTrack = stream.getVideoTracks()[0];
-        this._localMediaStream.addTrack(videoTrack);
-        sender.replaceTrack(videoTrack);
-        this.emit('cameraChanged', {
-          videoStream: stream
-        });
-        return stream;
       });
     } else if (type === 'audio' && deviceId) {
       var _constraints = {
