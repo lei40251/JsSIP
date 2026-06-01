@@ -882,6 +882,53 @@ canvas#viz-canvas {
     line-height: 1.45;
 }
 
+#panel-stress {
+    position: fixed;
+    top: 4.25rem;
+    right: 0.9rem;
+    width: min(460px, calc(100vw - 1.8rem));
+    max-height: calc(100vh - 5.2rem);
+    overflow: auto;
+    z-index: 9000;
+    border: 1px solid rgba(148, 163, 184, 0.4) !important;
+}
+
+#panel-stress.stress-hidden {
+    display: none;
+}
+
+.stress-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: move;
+    user-select: none;
+}
+
+#stress-launcher {
+    position: fixed;
+    right: 0.9rem;
+    top: 4.25rem;
+    z-index: 8900;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+}
+
+@media (max-width: 820px) {
+    #panel-stress {
+        top: 0.75rem;
+        left: 0.75rem;
+        right: 0.75rem;
+        width: auto;
+        max-height: calc(100vh - 1.5rem);
+    }
+
+    #stress-launcher {
+        top: 0.75rem;
+        right: 0.75rem;
+    }
+}
+
 @media (max-height: 980px) {
     :root {
         --space-md: 0.625rem;

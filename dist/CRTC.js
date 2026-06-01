@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026528231
+ * CRTC v1.13.0.202661115
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405210564602 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212022210 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405210564602');
+debug('version %s', '1.13.0.405212022210');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405210564602';
+    return '1.13.0.405212022210';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -28364,6 +28364,10 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 主动发送关键帧，兼容部分手机接听时黑屏问题
     Utils.sendKeyFrames(this._connection, 0.5, 2);
+    if (this.getMixer()) {
+      // 主动发送关键帧，兼容部分手机接听时黑屏问题
+      Utils.sendKeyFrames(this._connection, 1);
+    }
     this.emit('confirmed', {
       originator,
       ack: ack || null
@@ -34815,63 +34819,130 @@ exports.ensureVideoSdpAttrs = sdp => {
 };
 
 // 主动发送关键帧
+/**
+ * 强制 RTCPeerConnection 的视频发送者周期性产生关键帧（Key Frame）。
+ *
+ * WebRTC 规范中，关键帧请求可以通过 RTCRtpSender.generateKeyFrame() 完成，
+ * 但该 API 在部分浏览器（如 Safari、部分移动端 WebView）中尚未实现或存在兼容性问题。
+ *
+ * 此函数使用一种兼容性更好的 hack 方式：
+ * 通过反复切换 video encoding 的 scaleResolutionDownBy 参数（2 ↔ 1），
+ * 触发浏览器内部的编码器重新配置，间接迫使编码器生成一个新的关键帧。
+ * 由于编码参数变更会导致 SDP 协商或编码器重置，浏览器通常会在下一次编码时输出关键帧。
+ *
+ * @param {RTCPeerConnection} pc           - WebRTC 对等连接实例
+ * @param {number}            [interval]   - 关键帧发送间隔（单位：秒）。
+ *                                           若提供，函数会按此间隔周期发送关键帧。
+ *                                           若未提供，则仅发送一次。
+ * @param {number}            [frequency]  - 最大发送次数上限。
+ *                                           若同时提供了 interval，发送达到此次数后自动停止。
+ *                                           若未提供（且 interval 已提供），则返回 stop 函数供外部手动停止。
+ * @returns {Function|undefined}            - 若 interval 已提供且 frequency 未提供，返回一个 stop 函数，
+ *                                           调用后可停止定时发送；否则返回 undefined。
+ */
 exports.sendKeyFrames = (pc, interval, frequency) => {
   if (!pc) {
     return;
   }
+
+  // 用于 toggle scaleResolutionDownBy 的开关状态
   var scaleResolutionDownBy = false;
   var timer;
+
+  /**
+   * 启动关键帧发送（内部函数）
+   * @param {number} [num] - 如果传入了 num，则最多发送 num 次后自动停止。
+   *                         主要用于"只发送一次"的场景（num=1）。
+   */
   var start = num => {
     var executed = 0;
     timer = setInterval(() => {
       try {
+        // 遍历所有 RTCRtpSender，只处理 video track
         pc.getSenders().forEach(sender => {
           if (sender.track.kind === 'video') {
             var parameters = sender.getParameters();
+
+            /**
+             * Hack: 通过 toggle scaleResolutionDownBy 来强制触发关键帧。
+             *
+             * 原理说明：
+             * - 当 scaleResolutionDownBy 从 1（原始分辨率）切换到 2（1/2 分辨率）时，
+             *   浏览器检测到编码参数变更，会重置编码器并输出一个新的关键帧。
+             * - 反之，从 2 切回 1 时也会触发同样的效果。
+             * - 每次执行时取反，实现 2 ↔ 1 交替切换。
+             *
+             * 副作用：
+             * - 会导致接收端短暂看到分辨率抖动（2 ↔ 1 切换）。
+             * - 更适合仅在需要关键帧的瞬间快速切换一次，避免持续抖动。
+             */
             parameters.encodings[0].scaleResolutionDownBy = !scaleResolutionDownBy ? 2 : 1;
             scaleResolutionDownBy = !scaleResolutionDownBy;
             sender.setParameters(parameters);
           }
         });
 
-        // for (const sender of pc.getSenders())
-        // {
-        //   if (sender.track && sender.track.kind === 'video')
-        //   {
-        //     // 更通用：replaceTrack 同一条 track
-        //     await sender.replaceTrack(sender.track);
-
-        //     // 如果实现支持（Chrome 等）：直接请求关键帧
-        //     if (typeof sender.generateKeyFrame === 'function')
-        //     {
-        //       await sender.generateKeyFrame();
-        //     }
-        //   }
-        // }
+        /**
+         * 更规范的方式（已注释，留作参考）：
+         *
+         * 规范的 WebRTC NV（Negotiated Video）扩展中，
+         * RTCRtpSender.generateKeyFrame() 可以直接请求关键帧，
+         * 无需修改编码参数，因此不会产生分辨率抖动副作用。
+         *
+         * 但 generateKeyFrame 在移动端浏览器或部分 WebView 中不可用，
+         * 因此使用上述 scaleResolutionDownBy hack 作为兼容性方案。
+         *
+         * 参考代码：
+         *
+         * for (const sender of pc.getSenders())
+         * {
+         *   if (sender.track && sender.track.kind === 'video')
+         *   {
+         *     // 通过 replaceTrack 同一 track 触发编码器刷新（部分浏览器有效）
+         *     await sender.replaceTrack(sender.track);
+         *
+         *     // 直接请求关键帧（Chrome 等支持，Safari 不支持）
+         *     if (typeof sender.generateKeyFrame === 'function')
+         *     {
+         *       await sender.generateKeyFrame();
+         *     }
+         *   }
+         * }
+         */
       } catch (error) {
+        // 发生异常时立即停止定时器并输出警告
         clearInterval(timer);
-        console.warn(error.toString);
+        console.warn('[sendKeyFrames] 强制关键帧失败:', error.toString());
       }
       executed++;
+
+      // 达到发送次数上限时自动停止
       if (frequency && executed >= frequency || num && executed >= num) {
         clearInterval(timer);
       }
     }, interval * 1000);
   };
 
-  // 停止发送关键帧
+  /**
+   * 停止发送关键帧
+   * 清除定时器，终止后续的周期性关键帧请求。
+   */
   var stop = () => {
     timer && clearInterval(timer);
   };
 
-  // 定时发送
+  // ---- 根据参数决定发送策略 ----
+
   if (interval) {
+    // 有 interval：周期性发送
     start();
     if (!frequency) {
+      // 没有指定发送次数上限 → 返回 stop 函数，让调用方自行控制何时停止
       return stop;
     }
+    // 有 frequency → 达到上限后自动停止，不返回 stop
   } else {
-    // 只发送一次
+    // 没有 interval：只发送一次关键帧
     start(1);
   }
 };

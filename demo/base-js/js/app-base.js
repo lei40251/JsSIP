@@ -15,6 +15,12 @@ const app = {
   submixPlaybackCtx       : null,
   vizToken                : 0,
   lastRenderPathSignature : '',
+  stressRun               : null,
+  stressResults           : [],
+  stressSamples           : [],
+  stressAuxMixers         : [],
+  stressSourceFactory     : null,
+  stressDragState         : null,
 
   // ==========================================================
   // DOM 引用
@@ -84,7 +90,22 @@ const app = {
     statsRenderPath          : document.getElementById('stat-render-path'),
     statsOutputMode          : document.getElementById('stat-output-mode'),
     statsDropped             : document.getElementById('stat-dropped'),
-    statsRenderReason        : document.getElementById('stat-render-reason')
+    statsRenderReason        : document.getElementById('stat-render-reason'),
+    stressCaseSeconds        : document.getElementById('stress-case-seconds'),
+    stressSampleMs           : document.getElementById('stress-sample-ms'),
+    stressSettleSeconds      : document.getElementById('stress-settle-seconds'),
+    stressSourceKind         : document.getElementById('stress-source-kind'),
+    stressSourceCounts       : document.getElementById('stress-source-counts'),
+    stressInstanceCounts     : document.getElementById('stress-instance-counts'),
+    stressOutputResolutions  : document.getElementById('stress-output-resolutions'),
+    stressOutputFps          : document.getElementById('stress-output-fps'),
+    stressRenderModes        : document.getElementById('stress-render-modes'),
+    stressStatus             : document.getElementById('stress-status'),
+    stressSummary            : document.getElementById('stress-summary'),
+    stressPanel              : document.getElementById('panel-stress'),
+    stressLauncher           : document.getElementById('stress-launcher'),
+    stressCloseBtn           : document.getElementById('stress-close-btn'),
+    stressDragHandle         : document.getElementById('stress-drag-handle')
   },
 
   // ==========================================================
@@ -122,6 +143,7 @@ const app = {
     this.bindOutputResolutionControl();
     window.addEventListener('resize', () => this.syncPreviewFrameRatio());
     this.bindDataActions();
+    this.bindStressPanel();
     this.updateMonitorAudioUI();
     this.setRunningUI(false);
     // 水印参数需要支持启动前编辑（用于构造参数验证）。
@@ -1600,6 +1622,787 @@ const app = {
 
     next.push(this.buildSlotWatermark(this.currentSlot, text));
     await this.applyWatermarks(next);
+  },
+
+  // ==========================================================
+  // 压测工具 — 场景矩阵、采样、结果导出
+  // ==========================================================
+
+  bindStressPanel()
+  {
+    this.hideStressPanel();
+    if (this.ui.stressLauncher)
+    {
+      this.ui.stressLauncher.addEventListener('click', () => this.toggleStressPanel());
+    }
+    if (this.ui.stressCloseBtn)
+    {
+      this.ui.stressCloseBtn.addEventListener('click', () => this.hideStressPanel());
+    }
+    this.bindStressDrag();
+    this.updateStressStatus('未开始');
+    this.refreshStressSummary();
+  },
+
+  showStressPanel()
+  {
+    if (!this.ui.stressPanel) return;
+    this.ui.stressPanel.classList.remove('stress-hidden');
+    if (this.ui.stressLauncher)
+    {
+      this.ui.stressLauncher.style.display = 'none';
+    }
+  },
+
+  hideStressPanel()
+  {
+    if (!this.ui.stressPanel) return;
+    this.ui.stressPanel.classList.add('stress-hidden');
+    if (this.ui.stressLauncher)
+    {
+      this.ui.stressLauncher.style.display = '';
+    }
+  },
+
+  toggleStressPanel()
+  {
+    if (!this.ui.stressPanel) return;
+    if (this.ui.stressPanel.classList.contains('stress-hidden'))
+    {
+      this.showStressPanel();
+    }
+    else
+    {
+      this.hideStressPanel();
+    }
+  },
+
+  bindStressDrag()
+  {
+    const panel = this.ui.stressPanel;
+    const handle = this.ui.stressDragHandle;
+
+    if (!panel || !handle) return;
+
+    handle.addEventListener('mousedown', (event) =>
+    {
+      if (event.button !== 0) return;
+
+      const rect = panel.getBoundingClientRect();
+
+      this.stressDragState = {
+        offsetX : event.clientX - rect.left,
+        offsetY : event.clientY - rect.top
+      };
+      panel.style.right = 'auto';
+      panel.style.left = `${rect.left}px`;
+      panel.style.top = `${rect.top}px`;
+      event.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (event) =>
+    {
+      if (!this.stressDragState || !panel || panel.classList.contains('stress-hidden')) return;
+
+      const maxLeft = Math.max(0, window.innerWidth - panel.offsetWidth);
+      const maxTop = Math.max(0, window.innerHeight - panel.offsetHeight);
+      const nextLeft = Math.min(maxLeft, Math.max(0, event.clientX - this.stressDragState.offsetX));
+      const nextTop = Math.min(maxTop, Math.max(0, event.clientY - this.stressDragState.offsetY));
+
+      panel.style.left = `${Math.round(nextLeft)}px`;
+      panel.style.top = `${Math.round(nextTop)}px`;
+    });
+
+    document.addEventListener('mouseup', () =>
+    {
+      this.stressDragState = null;
+    });
+  },
+
+  updateStressStatus(text)
+  {
+    if (!this.ui.stressStatus) return;
+    this.ui.stressStatus.innerText = text || '-';
+  },
+
+  clearStressResults()
+  {
+    this.stressResults = [];
+    this.stressSamples = [];
+    this.updateStressStatus('结果已清空');
+    this.refreshStressSummary();
+  },
+
+  _parseCommaList(raw)
+  {
+    return String(raw || '')
+      .split(/[\s,，]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  },
+
+  _getAllowedRenderModes()
+  {
+    const select = this.ui.cfgRenderMode;
+
+    if (!select || !select.options) return [];
+
+    return Array.from(select.options).map((item) => item.value);
+  },
+
+  _buildStressScenarios()
+  {
+    const sourceKind = (this.ui.stressSourceKind && this.ui.stressSourceKind.value) || 'av';
+    const sourceLimit = this.maxDemoSources;
+    const instanceLimit = this.maxDemoSources;
+    const sourceRaw = this._parseCommaList(this.ui.stressSourceCounts && this.ui.stressSourceCounts.value)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+    const sourceCounts = Array.from(new Set(
+      sourceRaw
+        .map((value) => Math.floor(value))
+        .filter((value) => value > 0)
+        .map((value) => Math.min(value, sourceLimit))
+    ));
+    const instanceCountsRaw = this._parseCommaList(this.ui.stressInstanceCounts && this.ui.stressInstanceCounts.value)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+    const instanceCountsNormalized = Array.from(new Set(
+      instanceCountsRaw
+        .map((value) => Math.floor(value))
+        .filter((value) => value > 0)
+        .map((value) => Math.min(value, instanceLimit))
+    ));
+    const resolutions = this._parseCommaList(this.ui.stressOutputResolutions && this.ui.stressOutputResolutions.value)
+      .filter((value) => /^\d+x\d+$/i.test(value));
+    const fpsList = this._parseCommaList(this.ui.stressOutputFps && this.ui.stressOutputFps.value)
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
+    const allowedModes = new Set(this._getAllowedRenderModes());
+    const renderModes = this._parseCommaList(this.ui.stressRenderModes && this.ui.stressRenderModes.value)
+      .filter((value) => allowedModes.has(value));
+    const scenarios = [];
+
+    renderModes.forEach((renderMode) =>
+    {
+      resolutions.forEach((resolution) =>
+      {
+        fpsList.forEach((fps) =>
+        {
+          sourceCounts.forEach((sources) =>
+          {
+            const instanceCounts = instanceCountsNormalized.length ? instanceCountsNormalized : [ sources ];
+
+            instanceCounts.forEach((instances) =>
+            {
+              scenarios.push({
+                renderMode,
+                resolution,
+                fps,
+                sources,
+                instances
+              });
+            });
+          });
+        });
+      });
+    });
+
+    const sourceOverflow = sourceRaw.some((value) => value > sourceLimit);
+    const instanceOverflow = instanceCountsRaw.some((value) => value > instanceLimit);
+
+    this._stressInputNormalizeNote = (sourceOverflow || instanceOverflow)
+      ? `输入值过大已自动收敛（源<=${sourceLimit}，实例<=${instanceLimit}）`
+      : '';
+
+    return scenarios;
+  },
+
+  async startStressTest()
+  {
+    if (this.stressRun && !this.stressRun.done)
+    {
+      this.showNotification('压测正在运行中', 'warning');
+
+      return;
+    }
+
+    const scenarios = this._buildStressScenarios();
+
+    if (this._stressInputNormalizeNote)
+    {
+      this.showNotification(this._stressInputNormalizeNote, 'warning');
+    }
+
+    if (!scenarios.length)
+    {
+      const sourceKind = (this.ui.stressSourceKind && this.ui.stressSourceKind.value) || 'av';
+      const sourceLimit = this.maxDemoSources;
+      const sourceHint = `当前模式源路数最大 ${sourceLimit}`;
+
+      this.showNotification(`压测矩阵为空，请检查输入。${sourceHint}`, 'warning');
+
+      return;
+    }
+
+    const durationSeconds = this.readPositiveNumber(this.ui.stressCaseSeconds, 45);
+    const settleSeconds = this.readPositiveNumber(this.ui.stressSettleSeconds, 3);
+    const sampleIntervalMs = Math.max(200, this.readPositiveNumber(this.ui.stressSampleMs, 1000));
+    const sourceKind = (this.ui.stressSourceKind && this.ui.stressSourceKind.value) || 'av';
+    const runId = Date.now();
+    const runState = {
+      id               : runId,
+      done             : false,
+      stopRequested    : false,
+      startedAt        : Date.now(),
+      durationMs       : durationSeconds * 1000,
+      settleMs         : settleSeconds * 1000,
+      sampleIntervalMs : sampleIntervalMs,
+      sourceKind       : sourceKind,
+      totalCases       : scenarios.length
+    };
+
+    this.stressRun = runState;
+    this.stressResults = [];
+    this.stressSamples = [];
+    this.refreshStressSummary();
+    this.updateStressStatus(`压测开始: 0/${runState.totalCases}`);
+
+    try
+    {
+      for (let index = 0; index < scenarios.length; index++)
+      {
+        if (runState.stopRequested) break;
+
+        const scenario = scenarios[index];
+
+        this.updateStressStatus(
+          `执行中 ${index + 1}/${runState.totalCases}: ${scenario.renderMode} ${scenario.resolution} ${scenario.fps}fps ${scenario.sources}路源/${scenario.instances}实例`
+        );
+
+        const result = await this._runStressCase(runState, scenario, index + 1, runState.totalCases);
+
+        this.stressResults.push(result);
+        this.stressSamples = this.stressSamples.concat(result.samples);
+        this.refreshStressSummary();
+      }
+    }
+    catch (error)
+    {
+      this.showNotification(`压测中断: ${error.message || String(error)}`, 'error');
+    }
+    finally
+    {
+      this._teardownStressAuxMixers();
+      this._teardownStressSourceFactory();
+      runState.done = true;
+      const summary = `${this.stressResults.length}/${runState.totalCases}`;
+
+      this.updateStressStatus(runState.stopRequested ? `已停止: ${summary}` : `已完成: ${summary}`);
+      this.refreshStressSummary();
+    }
+  },
+
+  stopStressTest()
+  {
+    if (!this.stressRun || this.stressRun.done)
+    {
+      this.updateStressStatus('当前没有运行中的压测');
+
+      return;
+    }
+
+    this.stressRun.stopRequested = true;
+    this.updateStressStatus('停止中...');
+    this._teardownStressAuxMixers();
+    this._teardownStressSourceFactory();
+    this.stop();
+  },
+
+  async _waitWithStop(ms, runState)
+  {
+    const step = 200;
+    let remaining = Math.max(0, Number(ms) || 0);
+
+    while (remaining > 0)
+    {
+      if (runState.stopRequested)
+      {
+        throw new Error('压测已被停止');
+      }
+
+      const waitMs = Math.min(step, remaining);
+
+      await new Promise((resolve) => window.setTimeout(resolve, waitMs));
+      remaining -= waitMs;
+    }
+  },
+
+  async _runStressCase(runState, scenario, caseIndex, totalCases)
+  {
+    this.ui.cfgOutRes.value = scenario.resolution;
+    this.ui.cfgFps.value = String(scenario.fps);
+    this.ui.cfgRenderMode.value = scenario.renderMode;
+
+    this._teardownStressAuxMixers();
+    this._teardownStressSourceFactory();
+    await this.stop();
+    await this.start();
+
+    if (!this.isRunning())
+    {
+      throw new Error(`启动失败: ${scenario.renderMode} ${scenario.resolution} ${scenario.fps}fps ${scenario.sources}路/${scenario.instances}实例`);
+    }
+
+    this.clearAll();
+    this.selectSlot(0);
+    this.stressSourceFactory = await this._createStressSourceFactory(scenario, runState.sourceKind);
+    await this._populateStressSourcesForTest(scenario.sources);
+    await this._createAuxStressMixers(scenario);
+    this.updateStats();
+
+    await this._waitWithStop(runState.settleMs, runState);
+
+    const startedAt = Date.now();
+    const samples = [];
+
+    while (Date.now() - startedAt < runState.durationMs)
+    {
+      if (runState.stopRequested)
+      {
+        throw new Error('压测已被停止');
+      }
+
+      samples.push(this._takeStressSample(runState, scenario, caseIndex, Date.now() - startedAt));
+      await this._waitWithStop(runState.sampleIntervalMs, runState);
+    }
+
+    return this._createStressCaseResult(scenario, caseIndex, totalCases, samples, startedAt, Date.now());
+  },
+
+  _parseResolution(resolution)
+  {
+    const parts = String(resolution || '').split('x').map((item) => Number(item));
+
+    if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]))
+    {
+      return { width: 1280, height: 720 };
+    }
+
+    return {
+      width  : Math.max(1, Math.round(parts[0])),
+      height : Math.max(1, Math.round(parts[1]))
+    };
+  },
+
+  _createStressVirtualStream(kind, width, height, fps, labelPrefix)
+  {
+    this.counter += 1;
+    const seq = this.counter;
+    const options = {
+      video : kind !== 'audio',
+      audio : kind !== 'video',
+      label : `${labelPrefix}-${seq}`
+    };
+
+    if (kind === 'video')
+    {
+      options.videoText = 'VIDEO ONLY';
+    }
+
+    return VirtualGen.create(width, height, fps, options.label, seq, options);
+  },
+
+  async _createStressSourceFactory(scenario, sourceKind)
+  {
+    const size = this._parseResolution(scenario.resolution);
+    const fps = Number(scenario.fps) || 15;
+    const kind = sourceKind || 'av';
+
+    if (kind === 'camera')
+    {
+      const baseStream = await navigator.mediaDevices.getUserMedia({
+        video : {
+          width     : { ideal: size.width },
+          height    : { ideal: size.height },
+          frameRate : { ideal: fps }
+        },
+        audio : true
+      });
+
+      return {
+        kind,
+        create : async () =>
+        {
+          const tracks = [];
+          const baseVideo = baseStream.getVideoTracks()[0];
+          const baseAudio = baseStream.getAudioTracks()[0];
+
+          if (baseVideo && baseVideo.readyState === 'live')
+          {
+            tracks.push(baseVideo.clone());
+          }
+          if (baseAudio && baseAudio.readyState === 'live')
+          {
+            tracks.push(baseAudio.clone());
+          }
+
+          return new MediaStream(tracks);
+        },
+        dispose : () =>
+        {
+          baseStream.getTracks().forEach((track) => track.stop());
+        }
+      };
+    }
+
+    return {
+      kind,
+      create : async (labelPrefix) => this._createStressVirtualStream(kind, size.width, size.height, fps, labelPrefix),
+      dispose : () => {}
+    };
+  },
+
+  async _createAuxStressMixers(scenario)
+  {
+    const instances = Math.max(1, Number(scenario.instances || 1));
+    const auxCount = Math.max(0, instances - 1);
+
+    if (auxCount === 0)
+    {
+      this.stressAuxMixers = [];
+
+      return;
+    }
+
+    const size = this._parseResolution(scenario.resolution);
+    const auxList = [];
+
+    for (let i = 0; i < auxCount; i++)
+    {
+      const mixer = new CRTC.Mixer([], {
+        width      : size.width,
+        height     : size.height,
+        fps        : scenario.fps,
+        renderMode : scenario.renderMode
+      });
+      const streams = [];
+
+      for (let slot = 0; slot < scenario.sources; slot++)
+      {
+        const stream = await this.stressSourceFactory.create(`AUX${i + 1}-SRC${slot + 1}`, slot, i + 1);
+
+        mixer.appendStream(stream, slot);
+        streams.push(stream);
+      }
+
+      const outputStream = mixer.getVideoStream();
+
+      auxList.push({ mixer, streams, outputStream });
+    }
+
+    this.stressAuxMixers = auxList;
+  },
+
+  _teardownStressSourceFactory()
+  {
+    if (!this.stressSourceFactory) return;
+
+    if (typeof this.stressSourceFactory.dispose === 'function')
+    {
+      try { this.stressSourceFactory.dispose(); }
+      catch (e) {}
+    }
+
+    this.stressSourceFactory = null;
+  },
+
+  _teardownStressAuxMixers()
+  {
+    if (!this.stressAuxMixers || !this.stressAuxMixers.length)
+    {
+      this.stressAuxMixers = [];
+
+      return;
+    }
+
+    this.stressAuxMixers.forEach((item) =>
+    {
+      if (!item) return;
+
+      if (item.mixer && item.mixer.stop)
+      {
+        try { item.mixer.stop(); }
+        catch (e) {}
+      }
+
+      (item.streams || []).forEach((stream) =>
+      {
+        if (!stream) return;
+        stream.getTracks().forEach((track) => track.stop());
+        if (stream.stopInternal) stream.stopInternal();
+      });
+
+      if (item.outputStream && item.outputStream.getTracks)
+      {
+        item.outputStream.getTracks().forEach((track) => track.stop());
+      }
+    });
+
+    this.stressAuxMixers = [];
+  },
+
+  async _populateStressSourcesForTest(count)
+  {
+    for (let i = 0; i < count; i++)
+    {
+      const stream = await this.stressSourceFactory.create(`MAIN-SRC${i + 1}`, i, 0);
+
+      this._handleStreamAdd(stream, `压测源 ${i + 1}`);
+    }
+  },
+
+  _takeStressSample(runState, scenario, caseIndex, elapsedMs)
+  {
+    const infos = [];
+    const mainInfo = this.getRenderInfo();
+
+    if (mainInfo) infos.push(mainInfo);
+    (this.stressAuxMixers || []).forEach((item) =>
+    {
+      if (!item || !item.mixer || !item.mixer.getRenderInfo) return;
+      const auxInfo = item.mixer.getRenderInfo();
+
+      if (auxInfo) infos.push(auxInfo);
+    });
+
+    const droppedFrames = infos.reduce((sum, info) => sum + Number(info.droppedFrames || 0), 0);
+    const renderedFrames = infos.reduce((sum, info) => sum + Number(info.renderedFrames || 0), 0);
+    const fallbackFlags = infos.map((info) => Boolean(info.isFallback));
+    const reasons = infos
+      .map((info, idx) => (info.reason ? `i${idx}:${info.reason}` : ''))
+      .filter(Boolean);
+    const requestedModes = infos.map((info) => info.requestedMode || '').filter(Boolean);
+    const actualModes = infos.map((info, idx) => `i${idx}:${info.actualMode || '-'}`);
+
+    return {
+      runId         : runState.id,
+      caseIndex     : caseIndex,
+      totalCases    : runState.totalCases,
+      elapsedMs     : elapsedMs,
+      ts            : Date.now(),
+      renderMode    : scenario.renderMode,
+      resolution    : scenario.resolution,
+      fps           : scenario.fps,
+      sources       : scenario.sources,
+      instances     : scenario.instances,
+      requestedMode : requestedModes[0] || '',
+      actualMode    : actualModes.join(','),
+      isWorker      : infos.some((info) => Boolean(info.isWorker)),
+      isWebGL2      : infos.some((info) => Boolean(info.isWebGL2)),
+      isFallback    : fallbackFlags.some(Boolean),
+      droppedFrames : droppedFrames,
+      renderedFrames: renderedFrames,
+      reason        : reasons.join(' | '),
+      perInstance   : infos.map((info, idx) => ({
+        index         : idx,
+        requestedMode : info.requestedMode || '',
+        actualMode    : info.actualMode || '',
+        droppedFrames : Number(info.droppedFrames || 0),
+        renderedFrames: Number(info.renderedFrames || 0),
+        isFallback    : Boolean(info.isFallback),
+        reason        : info.reason || ''
+      }))
+    };
+  },
+
+  _createStressCaseResult(scenario, caseIndex, totalCases, samples, startedAt, endedAt)
+  {
+    const first = samples[0] || {};
+    const last = samples[samples.length - 1] || {};
+    const deltaDropped = Math.max(0, (last.droppedFrames || 0) - (first.droppedFrames || 0));
+    const deltaRendered = Math.max(0, (last.renderedFrames || 0) - (first.renderedFrames || 0));
+    const totalFrames = deltaDropped + deltaRendered;
+    const dropRate = totalFrames > 0 ? deltaDropped / totalFrames : 0;
+    const fallbackSeen = samples.some((sample) => sample.isFallback);
+    const reasons = Array.from(new Set(samples.map((sample) => sample.reason).filter(Boolean)));
+
+    return {
+      caseIndex,
+      totalCases,
+      renderMode    : scenario.renderMode,
+      resolution    : scenario.resolution,
+      fps           : scenario.fps,
+      sources       : scenario.sources,
+      instances     : scenario.instances,
+      sampleCount   : samples.length,
+      startedAt,
+      endedAt,
+      durationMs    : Math.max(0, endedAt - startedAt),
+      requestedMode : last.requestedMode || scenario.renderMode,
+      actualMode    : last.actualMode || '',
+      fallbackSeen,
+      deltaDropped,
+      deltaRendered,
+      dropRate,
+      reasons,
+      samples
+    };
+  },
+
+  refreshStressSummary()
+  {
+    if (!this.ui.stressSummary) return;
+
+    if (!this.stressResults.length)
+    {
+      this.ui.stressSummary.innerText = '无结果';
+
+      return;
+    }
+
+    const passThreshold = 0.02;
+    const passCount = this.stressResults.filter((item) =>
+      !item.fallbackSeen &&
+      item.dropRate < passThreshold &&
+      (!item.reasons || item.reasons.length === 0)
+    ).length;
+    const failCount = this.stressResults.length - passCount;
+    const topFailures = this.stressResults
+      .slice()
+      .sort((a, b) => b.dropRate - a.dropRate)
+      .slice(0, 5)
+      .map((item) =>
+      {
+        const drop = (item.dropRate * 100).toFixed(2);
+
+        return `${item.caseIndex}. ${item.renderMode} ${item.resolution} ${item.fps}fps ${item.sources}路/${item.instances}实例 | drop=${drop}% fallback=${item.fallbackSeen ? 'Y' : 'N'} reason=${item.reasons && item.reasons.length ? item.reasons.join(' / ') : '-'}`;
+      });
+
+    this.ui.stressSummary.innerText =
+      `总用例: ${this.stressResults.length}\n` +
+      `通过(丢帧<2%且无fallback/无reason): ${passCount}\n` +
+      `未通过: ${failCount}\n` +
+      `\n高风险用例(前5):\n${topFailures.join('\n')}`;
+  },
+
+  exportStressJson()
+  {
+    if (!this.stressResults.length)
+    {
+      this.showNotification('暂无压测结果可导出', 'warning');
+
+      return;
+    }
+
+    const payload = {
+      exportedAt : new Date().toISOString(),
+      run        : this.stressRun ? {
+        id               : this.stressRun.id,
+        startedAt        : this.stressRun.startedAt,
+        totalCases       : this.stressRun.totalCases,
+        durationMs       : this.stressRun.durationMs,
+        settleMs         : this.stressRun.settleMs,
+        sampleIntervalMs : this.stressRun.sampleIntervalMs,
+        sourceKind       : this.stressRun.sourceKind
+      } : null,
+      results : this.stressResults,
+      samples : this.stressSamples
+    };
+
+    this._downloadTextFile(
+      `mixer-stress-${this._formatTimestampForFile()}.json`,
+      JSON.stringify(payload, null, 2),
+      'application/json'
+    );
+  },
+
+  exportStressCsv()
+  {
+    if (!this.stressResults.length)
+    {
+      this.showNotification('暂无压测结果可导出', 'warning');
+
+      return;
+    }
+
+    const header = [
+      'caseIndex',
+      'renderMode',
+      'resolution',
+      'fps',
+      'sources',
+      'instances',
+      'requestedMode',
+      'actualMode',
+      'fallbackSeen',
+      'deltaDropped',
+      'deltaRendered',
+      'dropRatePercent',
+      'sampleCount',
+      'durationMs',
+      'reasons'
+    ];
+    const rows = this.stressResults.map((item) =>
+    {
+      const values = [
+        item.caseIndex,
+        item.renderMode,
+        item.resolution,
+        item.fps,
+        item.sources,
+        item.instances,
+        item.requestedMode,
+        item.actualMode,
+        item.fallbackSeen ? '1' : '0',
+        item.deltaDropped,
+        item.deltaRendered,
+        (item.dropRate * 100).toFixed(4),
+        item.sampleCount,
+        item.durationMs,
+        item.reasons && item.reasons.length ? item.reasons.join(' | ') : ''
+      ];
+
+      return values.map((value) => this._escapeCsv(value)).join(',');
+    });
+    const content = [ header.join(','), ...rows ].join('\n');
+
+    this._downloadTextFile(
+      `mixer-stress-${this._formatTimestampForFile()}.csv`,
+      content,
+      'text/csv;charset=utf-8'
+    );
+  },
+
+  _escapeCsv(value)
+  {
+    const text = String(value === null || value === undefined ? '' : value);
+
+    if (!/[",\n]/.test(text)) return text;
+
+    return `"${text.replace(/"/g, '""')}"`;
+  },
+
+  _downloadTextFile(fileName, text, mimeType)
+  {
+    const blob = new Blob([ text ], { type: mimeType || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  _formatTimestampForFile()
+  {
+    const now = new Date();
+    const pad = (value) => String(value).padStart(2, '0');
+
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   },
 
   // ==========================================================

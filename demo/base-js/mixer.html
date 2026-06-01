@@ -428,11 +428,76 @@
                             <div class="stat-cell">Reason <span id="stat-render-reason">-</span></div>
                         </div>
                     </section>
+
+                    <section class="panel-shell p-2 stress-hidden" id="panel-stress">
+                        <div class="stress-panel-head mb-2" id="stress-drag-handle">
+                            <h2 class="h6 mb-0">压测</h2>
+                            <button class="btn btn-sm btn-outline-secondary" id="stress-close-btn"
+                                type="button">收起</button>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-case-seconds">单用例时长(秒)</label>
+                                <input id="stress-case-seconds" class="form-control" type="number" min="5" value="45">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-sample-ms">采样间隔(ms)</label>
+                                <input id="stress-sample-ms" class="form-control" type="number" min="200" value="1000">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-settle-seconds">预热等待(秒)</label>
+                                <input id="stress-settle-seconds" class="form-control" type="number" min="0" value="3">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-source-kind">输入源类型</label>
+                                <select id="stress-source-kind" class="form-select">
+                                    <option value="av" selected>音视频</option>
+                                    <option value="video">仅视频</option>
+                                    <option value="audio">仅音频</option>
+                                    <option value="camera">摄像头+麦克风</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-1" for="stress-source-counts">源路数(逗号分隔)</label>
+                                <input id="stress-source-counts" class="form-control" value="2,3">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-1" for="stress-instance-counts">实例数(逗号分隔，留空=跟随源路数)</label>
+                                <input id="stress-instance-counts" class="form-control" value="">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-1" for="stress-output-resolutions">输出分辨率(逗号分隔)</label>
+                                <input id="stress-output-resolutions" class="form-control" value="1280x720">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-output-fps">输出帧率(逗号分隔)</label>
+                                <input id="stress-output-fps" class="form-control" value="15">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-1" for="stress-render-modes">渲染后端(逗号分隔)</label>
+                                <input id="stress-render-modes" class="form-control"
+                                    value="auto,worker-webgl2,main-webgl2,worker-2d,main-2d">
+                            </div>
+                            <div class="col-12 d-flex flex-wrap gap-2">
+                                <button class="btn btn-primary" data-action="startStressTest">开始压测</button>
+                                <button class="btn btn-outline-danger" data-action="stopStressTest">停止压测</button>
+                                <button class="btn btn-outline-secondary" data-action="exportStressJson">导出 JSON</button>
+                                <button class="btn btn-outline-secondary" data-action="exportStressCsv">导出 CSV</button>
+                                <button class="btn btn-outline-secondary" data-action="clearStressResults">清空结果</button>
+                            </div>
+                            <div class="col-12">
+                                <div class="status-line mt-1 mb-1" id="stress-status">未开始</div>
+                                <pre id="stress-summary"
+                                    style="max-height:180px; overflow:auto; margin:0; white-space:pre-wrap; word-break:break-word;">无结果</pre>
+                            </div>
+                        </div>
+                    </section>
                 </aside>
             </div>
         </div>
     </div>
 
+    <button id="stress-launcher" type="button" class="btn btn-primary">压测</button>
     <div id="toast-container" class="toast-container"></div>
 
     <script src="../../dist/CRTC.min.js"></script>
