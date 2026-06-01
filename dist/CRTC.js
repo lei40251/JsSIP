@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026611449
+ * CRTC v1.13.0.202661223
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212022898 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212024406 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212022898');
+debug('version %s', '1.13.0.405212024406');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212022898';
+    return '1.13.0.405212024406';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -23490,6 +23490,8 @@ module.exports = class RTCSession extends EventEmitter {
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
     this._mixer = null;
+    // 记录当前送入 mixer 的“原始输入流”（非 mixer 输出流）。
+    // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的 mixer 输出轨。
     this._mixerInputStream = null;
     this._sessionMixerOptions = null;
 
@@ -23759,11 +23761,13 @@ module.exports = class RTCSession extends EventEmitter {
   _stopSessionMixer() {
     if (!this._mixer) {
       this._mixer = null;
+      // mixer 不存在时也同步清空输入流引用，避免后续误判“可走 mixer 分支”。
       this._mixerInputStream = null;
       return;
     }
     this._safeStopMixer(this._mixer, 'stop mixer failed');
     this._mixer = null;
+    // mixer 已销毁，输入流引用必须同步释放，防止悬挂引用。
     this._mixerInputStream = null;
   }
   _safeStopMixer(mixer, message) {
@@ -23801,12 +23805,14 @@ module.exports = class RTCSession extends EventEmitter {
       });
       mixedStream.addTrack(mixedVideoTrack, mixedStream);
       this._mixer = mixer;
+      // 记录本次送入 mixer 的输入源，供 switchDevice(camera) 在 mixer 场景下做“输入替换”。
       this._mixerInputStream = stream;
       return mixedStream;
     } catch (error) {
       logger.warn(`${this._id} apply mixer failed:`, error);
       this._safeStopMixer(mixer, 'mixer stop after apply failure failed');
       this._mixer = null;
+      // 创建失败时清空输入流引用，避免后续分支判断使用到无效状态。
       this._mixerInputStream = null;
       return stream;
     }
@@ -24768,6 +24774,10 @@ module.exports = class RTCSession extends EventEmitter {
         video: true
       };
       return Promise.resolve().then(() => {
+        // mixer 专用分支开启条件：
+        // 1) 当前会话声明了 mixer 配置；
+        // 2) mixer 实例已存在（说明通话已在用 mixer）；
+        // 3) 已记录有效的 mixer 输入流（用于 stop old input + remove/append）。
         var useMixerBranch = Boolean(mixerOptions && this._mixer && this._mixerInputStream);
         var videoConstraints;
 
@@ -24836,6 +24846,8 @@ module.exports = class RTCSession extends EventEmitter {
         this._connection.getSenders().find(s => {
           logger.debug(`${this._id} kind: ${s.track && s.track.kind}`);
           if (s.track && s.track.kind == 'video') {
+            // 只要检测到“会话中存在视频 sender”即可继续流程。
+            // 注意：在 mixer 分支里 sender.track 可能是 mixer 输出轨，不能提前 stop。
             next = true;
             if (this._enableBFCP) {
               // 启用了BFCP，区分一下BFCP控制的视频轨道
@@ -24878,6 +24890,9 @@ module.exports = class RTCSession extends EventEmitter {
 
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
+
+        // 统一媒体获取 + 预处理入口（虚拟背景等），默认流和 mixer 流共用。
+        // 这里显式不走 _getUserMediaWithSessionPipeline，避免默认路径隐式重建 mixer。
         var getProcessedStream = async () => {
           return await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
             return await this._processMediaStream(mediastream);
@@ -24887,6 +24902,10 @@ module.exports = class RTCSession extends EventEmitter {
             throw new Error('getUserMedia() failed');
           });
         };
+
+        // 对新流做统一后处理：
+        // 1) 打点输出 track 状态，便于定位端侧设备/轨道异常；
+        // 2) 保留原有 iOS 15.1/15.2 canvas 绕过逻辑，避免回归历史 crash。
         var normalizeStream = stream => {
           try {
             var track = stream.getVideoTracks()[0];
@@ -24903,6 +24922,11 @@ module.exports = class RTCSession extends EventEmitter {
           }
           return stream;
         };
+
+        // 统一“把某个 videoTrack 应用到会话”的收口：
+        // - 替换本地 _localMediaStream 的视频轨；
+        // - replaceTrack 到 sender；
+        // - 触发 cameraChanged 事件（保持既有对外行为）。
         var applyTrack = (nextTrack, streamForEvent) => {
           try {
             this._localMediaStream.removeTrack(this._localMediaStream.getVideoTracks()[0]);
@@ -24916,6 +24940,8 @@ module.exports = class RTCSession extends EventEmitter {
           });
         };
         if (!useMixerBranch) {
+          // 默认分支（无 mixer 或 mixer 状态不完整）：
+          // 与你当前逻辑一致：先停 sender 旧轨，再取新流并直接替换 sender。
           // 先释放原来的设备再获取新的
           sender && sender.track && sender.track.stop();
           var stream = normalizeStream(await getProcessedStream());
@@ -24927,6 +24953,8 @@ module.exports = class RTCSession extends EventEmitter {
           var currentMixer = this._mixer;
           var oldInputStream = this._mixerInputStream;
           var oldInputVideoTrack = oldInputStream && oldInputStream.getVideoTracks && oldInputStream.getVideoTracks()[0];
+
+          // mixer 分支关键点：先停“旧输入 videoTrack”，而不是 sender 上的 mixer 输出轨。
           oldInputVideoTrack && oldInputVideoTrack.stop();
           var _stream2 = normalizeStream(await getProcessedStream());
           var newVideoTrack = _stream2.getVideoTracks && _stream2.getVideoTracks()[0];
@@ -24938,8 +24966,11 @@ module.exports = class RTCSession extends EventEmitter {
             newInputStream.addTrack(track, newInputStream);
           });
           newInputStream.addTrack(newVideoTrack, newInputStream);
+
+          // 在同一个 mixer 内完成输入替换，避免重建 mixer 带来的状态抖动。
           currentMixer.removeStream(oldInputStream);
           currentMixer.appendStream(newInputStream);
+          // 记录最新输入流，供下次 switchDevice 继续替换。
           this._mixerInputStream = newInputStream;
           var mixedVideoStream = currentMixer.getVideoStream();
           var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks && mixedVideoStream.getVideoTracks()[0];
@@ -24949,6 +24980,8 @@ module.exports = class RTCSession extends EventEmitter {
           applyTrack(mixedVideoTrack, mixedVideoStream);
           return mixedVideoStream;
         } catch (error) {
+          // mixer 分支任一步失败（remove/append/output 取轨等），回退到默认路径，
+          // 目标是优先保障“能切成功”，同时保留 warn 方便后续排查 mixer 分支失败原因。
           logger.warn(`${this._id} switchDevice mixer branch failed, fallback to default flow:`, error);
           sender && sender.track && sender.track.stop();
           var fallbackStream = normalizeStream(await getProcessedStream());

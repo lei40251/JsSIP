@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const assert = require('assert');
 let trackSeed = 0;
 
@@ -365,7 +366,7 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   session._sessionMixerOptions = { outputMirror: true };
 
   const mixedOutputTrack = new MockMediaStreamTrack('video', { width: 960, height: 540, frameRate: 20 });
-  const mixer = {
+  const mixer = { 
     removeStream : function(stream)
     {
       this.removed = stream;
@@ -381,10 +382,12 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
       return new MockMediaStream([ mixedOutputTrack ]);
     }
   };
+
   session._mixer = mixer;
   session._mixerInputStream = oldInputStream;
 
   const newVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
+
   global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ newVideoTrack ]));
 
@@ -427,8 +430,8 @@ async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
   session._inviteMediaConstraints = { video: {} };
   session._sessionMixerOptions = { outputMirror: true };
   session._mixer = {
-    removeStream : function() {},
-    appendStream : function() {},
+    removeStream   : function() {},
+    appendStream   : function() {},
     getVideoStream : function()
     {
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
@@ -438,6 +441,7 @@ async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
 
   let stoppedBeforeGum = false;
   const newVideoTrack = new MockMediaStreamTrack('video');
+
   global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
   global.navigator.mediaDevices.getUserMedia = () =>
   {
@@ -483,7 +487,7 @@ async function testSwitchDeviceCameraMixerBranchFallbackToDefault()
     {
       throw new Error('remove fail');
     },
-    appendStream : function() {},
+    appendStream   : function() {},
     getVideoStream : function()
     {
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
@@ -492,6 +496,7 @@ async function testSwitchDeviceCameraMixerBranchFallbackToDefault()
   session._mixerInputStream = oldInputStream;
 
   const fallbackTrack = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
+
   global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ fallbackTrack ]));
 
@@ -549,6 +554,21 @@ async function run()
 {
   const restoreGlobals = installGlobals();
   const restoreModules = loadRTCSessionWithMockMixer();
+  let passed = 0;
+  let failed = 0;
+  const failures = [];
+
+  const TESTS = [
+    { name: 'testApplyMixerOnSdkGumStreamUsesCtorOptions', fn: testApplyMixerOnSdkGumStreamUsesCtorOptions },
+    { name: 'testApplyMixerSkipsWhenNoVideoOrNoOptions', fn: testApplyMixerSkipsWhenNoVideoOrNoOptions },
+    { name: 'testCloseStopsAndClearsMixer', fn: testCloseStopsAndClearsMixer },
+    { name: 'testUpgradeToVideoAppliesSessionMixerToSdkGum', fn: testUpgradeToVideoAppliesSessionMixerToSdkGum },
+    { name: 'testSwitchDeviceCameraDefaultPathDoesNotApplyMixer', fn: testSwitchDeviceCameraDefaultPathDoesNotApplyMixer },
+    { name: 'testSwitchDeviceCameraWithActiveMixerReusesMixer', fn: testSwitchDeviceCameraWithActiveMixerReusesMixer },
+    { name: 'testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum', fn: testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum },
+    { name: 'testSwitchDeviceCameraMixerBranchFallbackToDefault', fn: testSwitchDeviceCameraMixerBranchFallbackToDefault },
+    { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum }
+  ];
 
   try
   {
@@ -558,45 +578,48 @@ async function run()
     MockMixer.appendCalls = [];
     MockMixer.throwOnRemove = false;
     MockMixer.throwOnAppend = false;
-    await testApplyMixerOnSdkGumStreamUsesCtorOptions();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testApplyMixerSkipsWhenNoVideoOrNoOptions();
-    MockMixer.instances = [];
-    MockMixer.stopCalls = 0;
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testCloseStopsAndClearsMixer();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testUpgradeToVideoAppliesSessionMixerToSdkGum();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testSwitchDeviceCameraDefaultPathDoesNotApplyMixer();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testSwitchDeviceCameraWithActiveMixerReusesMixer();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testSwitchDeviceCameraMixerBranchFallbackToDefault();
-    MockMixer.instances = [];
-    MockMixer.removeCalls = [];
-    MockMixer.appendCalls = [];
-    await testReplaceCanvasToVideoAppliesSessionMixerToSdkGum();
+
+    for (const t of TESTS)
+    {
+      MockMixer.instances = [];
+      MockMixer.removeCalls = [];
+      MockMixer.appendCalls = [];
+      if (t.fn === testCloseStopsAndClearsMixer)
+      {
+        MockMixer.stopCalls = 0;
+      }
+      try
+      {
+        await t.fn();
+        passed++;
+      }
+      catch (e)
+      {
+        failed++;
+        failures.push({ name: t.name, error: e });
+      }
+    }
   }
   finally
   {
     restoreModules();
     restoreGlobals();
+  }
+
+  if (failures.length > 0)
+  {
+    console.log(`\n  RTCSession-Mixer Failures (${failed}):`);
+    for (const f of failures)
+    {
+      console.log(`    ✗ ${f.name}`);
+      console.log(`      ${f.error.message}`);
+    }
+  }
+  console.log(`  RTCSession-Mixer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
+
+  if (failed > 0)
+  {
+    throw new Error(`${failed} RTCSession-Mixer test(s) failed`);
   }
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 const assert = require('assert');
 const Mixer = require('../lib/Mixer');
 const MixerConfig = require('../lib/MixerCore/MixerConfig');
@@ -1933,51 +1934,86 @@ async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
 async function run()
 {
   const restoreBrowserMocks = installBrowserMocks();
+  let passed = 0;
+  let failed = 0;
+  const failures = [];
+
+  const TESTS = [
+    { name: 'testNoAudioDoesNotCreateAudioContext', fn: testNoAudioDoesNotCreateAudioContext },
+    { name: 'testAppendAudioSourceInjectsAudioTrack', fn: testAppendAudioSourceInjectsAudioTrack },
+    { name: 'testRepeatedOutputCallsReuseLiveStream', fn: testRepeatedOutputCallsReuseLiveStream },
+    { name: 'testStopRejectsPublicReuse', fn: testStopRejectsPublicReuse },
+    { name: 'testExternalVideoSrcObjectReconnectsAudio', fn: testExternalVideoSrcObjectReconnectsAudio },
+    { name: 'testSlotAudioStreamsCreateIndependentBuses', fn: testSlotAudioStreamsCreateIndependentBuses },
+    { name: 'testDefaultAudioStreamStillMixesAllSources', fn: testDefaultAudioStreamStillMixesAllSources },
+    { name: 'testDefaultAndSlotAudioShareSourceNodesWithSeparateGains', fn: testDefaultAndSlotAudioShareSourceNodesWithSeparateGains },
+    { name: 'testSlotAudioStreamIsStableWhenRequestedBeforeSources', fn: testSlotAudioStreamIsStableWhenRequestedBeforeSources },
+    { name: 'testAudioSourceFansOutThroughMasterGain', fn: testAudioSourceFansOutThroughMasterGain },
+    { name: 'testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame', fn: testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame },
+    { name: 'testBusRefreshMutesRemovedGainWithoutDisconnectingMaster', fn: testBusRefreshMutesRemovedGainWithoutDisconnectingMaster },
+    { name: 'testAudioRefreshIsBatchedIntoSingleMicrotask', fn: testAudioRefreshIsBatchedIntoSingleMicrotask },
+    { name: 'testDestinationTrackHealthRecreatesSilentBusDestination', fn: testDestinationTrackHealthRecreatesSilentBusDestination },
+    { name: 'testDestinationTrackHealthRecreatesEndedBusDestination', fn: testDestinationTrackHealthRecreatesEndedBusDestination },
+    { name: 'testIsolatedSlotAudioStreamsCreateIndependentContexts', fn: testIsolatedSlotAudioStreamsCreateIndependentContexts },
+    { name: 'testReleaseIsolatedSubmixAudioStreamClosesContext', fn: testReleaseIsolatedSubmixAudioStreamClosesContext },
+    { name: 'testWatermarkConfigAndFiltering', fn: testWatermarkConfigAndFiltering },
+    { name: 'testCanvas2DWatermarkDrawOrder', fn: testCanvas2DWatermarkDrawOrder },
+    { name: 'testMirrorGlobalAndSlotControls', fn: testMirrorGlobalAndSlotControls },
+    { name: 'testMirrorAutoModeAvoidsWorkerRenderer', fn: testMirrorAutoModeAvoidsWorkerRenderer },
+    { name: 'testEnableMirrorFallsBackFromWorkerToMainThread', fn: testEnableMirrorFallsBackFromWorkerToMainThread },
+    { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
+    { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
+    { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
+    { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },
+    { name: 'testAutoRendererFallbackPrefersMainWebGL2', fn: testAutoRendererFallbackPrefersMainWebGL2 },
+    { name: 'testAutoRendererFallbackTriesWorker2DBeforeMain2D', fn: testAutoRendererFallbackTriesWorker2DBeforeMain2D },
+    { name: 'testAutoRendererFallbackEndsAtMain2D', fn: testAutoRendererFallbackEndsAtMain2D },
+    { name: 'testWatermarkPresetAndCoordinatePositions', fn: testWatermarkPresetAndCoordinatePositions },
+    { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
+    { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
+    { name: 'testMixerConfigDefaults', fn: testMixerConfigDefaults },
+    { name: 'testMixerConfigSourceOptions', fn: testMixerConfigSourceOptions },
+    { name: 'testInsertableVideoStreamPreferredWhenSupported', fn: testInsertableVideoStreamPreferredWhenSupported },
+    { name: 'testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable', fn: testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable },
+    { name: 'testCaptureStreamUsesManualRequestFrameWhenSupported', fn: testCaptureStreamUsesManualRequestFrameWhenSupported },
+    { name: 'testInsertableCanUseLegacyMediaStreamTrackGenerator', fn: testInsertableCanUseLegacyMediaStreamTrackGenerator }
+  ];
 
   try
   {
-    await testNoAudioDoesNotCreateAudioContext();
-    await testAppendAudioSourceInjectsAudioTrack();
-    await testRepeatedOutputCallsReuseLiveStream();
-    await testStopRejectsPublicReuse();
-    await testExternalVideoSrcObjectReconnectsAudio();
-    await testSlotAudioStreamsCreateIndependentBuses();
-    await testDefaultAudioStreamStillMixesAllSources();
-    await testDefaultAndSlotAudioShareSourceNodesWithSeparateGains();
-    await testSlotAudioStreamIsStableWhenRequestedBeforeSources();
-    await testAudioSourceFansOutThroughMasterGain();
-    await testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame();
-    await testBusRefreshMutesRemovedGainWithoutDisconnectingMaster();
-    await testAudioRefreshIsBatchedIntoSingleMicrotask();
-    await testDestinationTrackHealthRecreatesSilentBusDestination();
-    await testDestinationTrackHealthRecreatesEndedBusDestination();
-    await testIsolatedSlotAudioStreamsCreateIndependentContexts();
-    await testReleaseIsolatedSubmixAudioStreamClosesContext();
-    await testWatermarkConfigAndFiltering();
-    await testCanvas2DWatermarkDrawOrder();
-    await testMirrorGlobalAndSlotControls();
-    await testMirrorAutoModeAvoidsWorkerRenderer();
-    await testEnableMirrorFallsBackFromWorkerToMainThread();
-    await testOutputMirrorFlipsWholeComposedFrame();
-    await testOutputMirrorCanDisableWatermarkMirroring();
-    await testEmptyInitialRenderDoesNotCreateRenderer();
-    await testWorkerShaderUsesRuntimeNewlines();
-    await testAutoRendererFallbackPrefersMainWebGL2();
-    await testAutoRendererFallbackTriesWorker2DBeforeMain2D();
-    await testAutoRendererFallbackEndsAtMain2D();
-    await testWatermarkPresetAndCoordinatePositions();
-    await testWorkerRendererCarriesWatermarkPayload();
-    await testWorkerRendererKeepsEmptyPayload();
-    await testMixerConfigDefaults();
-    await testMixerConfigSourceOptions();
-    await testInsertableVideoStreamPreferredWhenSupported();
-    await testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable();
-    await testCaptureStreamUsesManualRequestFrameWhenSupported();
-    await testInsertableCanUseLegacyMediaStreamTrackGenerator();
+    for (const t of TESTS)
+    {
+      try
+      {
+        await t.fn();
+        passed++;
+      }
+      catch (e)
+      {
+        failed++;
+        failures.push({ name: t.name, error: e });
+      }
+    }
   }
   finally
   {
     restoreBrowserMocks();
+  }
+
+  if (failures.length > 0)
+  {
+    console.log(`\n  Mixer Failures (${failed}):`);
+    for (const f of failures)
+    {
+      console.log(`    ✗ ${f.name}`);
+      console.log(`      ${f.error.message}`);
+    }
+  }
+  console.log(`  Mixer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
+
+  if (failed > 0)
+  {
+    throw new Error(`${failed} Mixer test(s) failed`);
   }
 }
 

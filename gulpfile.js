@@ -233,7 +233,8 @@ gulp.task('test-files', function()
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
     'test/test-mixer.js',
-    'test/test-rtcsession-mixer.js'
+    'test/test-rtcsession-mixer.js',
+    'test/test-bfcp.js'
   ];
 
   return gulp.src(src)
@@ -254,7 +255,47 @@ gulp.task('mixer-test', function(done)
     .catch(done);
 });
 
-gulp.task('test', gulp.series('test-files', 'mixer-test'));
+gulp.task('bfcp-test', function(done)
+{
+  require('./test/test-bfcp').run()
+    .then(function()
+    {
+      done();
+    })
+    .catch(done);
+});
+
+gulp.task('sdk-test', function(done)
+{
+  const runner = require('./test/include/runner');
+
+  require('./test/include/common');
+
+  runner.run('SDK Classes', require('./test/test-classes'))
+    .then(function()
+    {
+      return runner.run('SDK Parser', require('./test/test-parser'));
+    })
+    .then(function()
+    {
+      return runner.run('SDK normalizeTarget', require('./test/test-normalizeTarget'));
+    })
+    .then(function()
+    {
+      return runner.run('SDK Properties', require('./test/test-properties'));
+    })
+    .then(function()
+    {
+      return runner.run('SDK Digest Auth', require('./test/test-digestAuthentication'));
+    })
+    .then(function()
+    {
+      done();
+    })
+    .catch(done);
+});
+
+gulp.task('test', gulp.series('test-files', 'sdk-test', 'mixer-test', 'bfcp-test'));
 
 gulp.task('grammar', function(cb)
 {
@@ -338,6 +379,11 @@ gulp.task('tmp-del', function(done)
   del.sync('./dist/b', done());
 });
 
+gulp.task('lib-es5-del', function(done)
+{
+  del.sync('./lib-es5/', done());
+});
+
 gulp.task('dist-del', function(done)
 {
   del.sync('./dist/', done());
@@ -345,7 +391,7 @@ gulp.task('dist-del', function(done)
 
 gulp.task('devel', gulp.series('grammar'));
 
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del'));
+gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del', 'lib-es5-del'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 

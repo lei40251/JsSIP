@@ -1,5 +1,5 @@
 require('./include/common');
-const CRTC = require('../lib-es5/JsSIP.js');
+const CRTC = require('../lib/JsSIP.js');
 
 
 module.exports = {

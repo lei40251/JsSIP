@@ -2,7 +2,7 @@
 
 require('./include/common');
 const testUA = require('./include/testUA');
-const CRTC = require('../lib-es5/JsSIP.js');
+const CRTC = require('../lib/JsSIP.js');
 
 
 module.exports = {
