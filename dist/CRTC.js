@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.202661115
+ * CRTC v1.13.0.2026611231
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212022210 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212022462 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212022210');
+debug('version %s', '1.13.0.405212022462');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212022210';
+    return '1.13.0.405212022462';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -23730,14 +23730,25 @@ module.exports = class RTCSession extends EventEmitter {
     var options = Object.assign({}, mixerOptions || {});
     var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
     var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
-    var width = Number(settings.width);
-    var height = Number(settings.height);
+    var widthFromSettings = Number(settings.width);
+    var heightFromSettings = Number(settings.height);
+    var widthFromOptions = Number(options.width);
+    var heightFromOptions = Number(options.height);
     var frameRate = Number(settings.frameRate);
-    if (options.width === undefined && Number.isFinite(width) && width > 0) {
-      options.width = Math.floor(width);
+    var ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    var isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    var forceNoSwapWH = Boolean(options.forceNoSwapWH);
+    delete options.forceNoSwapWH;
+    var normalizedWidth = Number.isFinite(widthFromOptions) && widthFromOptions > 0 ? widthFromOptions : widthFromSettings;
+    var normalizedHeight = Number.isFinite(heightFromOptions) && heightFromOptions > 0 ? heightFromOptions : heightFromSettings;
+    if (isMobileDevice && !forceNoSwapWH && Number.isFinite(normalizedWidth) && Number.isFinite(normalizedHeight) && normalizedWidth > 0 && normalizedHeight > 0) {
+      [normalizedWidth, normalizedHeight] = [normalizedHeight, normalizedWidth];
     }
-    if (options.height === undefined && Number.isFinite(height) && height > 0) {
-      options.height = Math.floor(height);
+    if (Number.isFinite(normalizedWidth) && normalizedWidth > 0) {
+      options.width = Math.floor(normalizedWidth);
+    }
+    if (Number.isFinite(normalizedHeight) && normalizedHeight > 0) {
+      options.height = Math.floor(normalizedHeight);
     }
     if (options.fps === undefined && Number.isFinite(frameRate) && frameRate > 0) {
       options.fps = Math.floor(frameRate);
@@ -24662,7 +24673,7 @@ module.exports = class RTCSession extends EventEmitter {
         done();
         if (options.sendOnly) {
           // 单向视频，每分钟发送一次关键帧
-          Utils.sendKeyFrames(this._connection, 1);
+          Utils.sendKeyFrames(this._connection, 0.5);
         }
       });
     });
