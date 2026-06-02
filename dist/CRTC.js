@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026621631
+ * CRTC v1.13.0.202662177
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212043262 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212043414 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212043262');
+debug('version %s', '1.13.0.405212043414');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212043262';
+    return '1.13.0.405212043414';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -17978,6 +17978,7 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
  * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
  * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
+ * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
  */
 exports.create = function (options) {
   options = options || {};
@@ -17995,6 +17996,7 @@ exports.create = function (options) {
     mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
     outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
     mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
+    enableInsertable: options.enableInsertable === true,
     watermarks: options.watermarks || []
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -18320,6 +18322,7 @@ module.exports = class MediaStreamMixer {
     this._outputStreamManager = new OutputStreamManager({
       canvas: this._canvas,
       config: this._config,
+      domAdapter: this._domAdapter,
       logger: logger
     });
 
@@ -19270,6 +19273,46 @@ class MixerDomAdapter {
     });
     return video;
   }
+
+  /**
+   * 为 captureStream 输出创建隐藏的消费 video。
+   * 用于规避部分 Chromium 在未被本地 UI 消费时对 captureStream 降质/丢帧。
+   *
+   * @param {MediaStream} mediaStream - 要持续播放的 captureStream 输出
+   * @returns {HTMLVideoElement} 隐藏的消费 video 元素
+   */
+  createOutputSinkVideoElement(mediaStream) {
+    var video = this.createVideoElement(mediaStream);
+    if (this._logger) {
+      var streamId = mediaStream && mediaStream.id ? mediaStream.id : 'unknown';
+      this._logger.debug(`Output sink video created for captureStream ${streamId}`);
+    }
+    return video;
+  }
+
+  /**
+   * 清理隐藏的 video 元素。
+   *
+   * @param {HTMLVideoElement|null} video - 要清理的隐藏 video
+   */
+  disposeVideoElement(video) {
+    if (!video) {
+      return;
+    }
+    try {
+      if (typeof video.pause === 'function') {
+        video.pause();
+      }
+    } catch (error) {}
+    try {
+      video.srcObject = null;
+    } catch (error) {}
+    try {
+      if (typeof video.remove === 'function') {
+        video.remove();
+      }
+    } catch (error) {}
+  }
 }
 module.exports = MixerDomAdapter;
 },{}],47:[function(require,module,exports){
@@ -19292,12 +19335,14 @@ class OutputStreamManager {
    * @param {Object} options
    * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
    * @param {Object} options.config - 混流配置
+   * @param {Object} options.domAdapter - DOM 适配器
    * @param {Object} options.logger - 日志记录器
    */
   constructor(options) {
     options = options || {};
     this._canvas = options.canvas;
     this._config = options.config;
+    this._domAdapter = options.domAdapter;
     this._logger = options.logger;
 
     /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
@@ -19314,6 +19359,7 @@ class OutputStreamManager {
 
     /** @type {Object} Insertable 能力探测结果 */
     this._insertableSupport = OutputStreamManager.detectInsertableStreams();
+    this._insertableEnabledByConfig = Boolean(this._config && this._config.enableInsertable);
 
     /** @type {boolean} 当前是否使用 Insertable 路径 */
     this._insertableActive = false;
@@ -19347,8 +19393,11 @@ class OutputStreamManager {
 
     /** @type {boolean} 是否启用 captureStream(0)+requestFrame 手动出帧模式 */
     this._manualCaptureFrameControl = false;
+
+    /** @type {HTMLVideoElement|null} captureStream 输出保活 sink */
+    this._activeCaptureSinkVideo = null;
     if (this._logger) {
-      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
+      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableEnabledByConfig} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
     }
   }
   static _getGlobalObject() {
@@ -19468,6 +19517,7 @@ class OutputStreamManager {
     this._capturedStreams.push(capturedStream);
     this._insertableActive = false;
     this._configureCaptureFrameControl(capturedStream);
+    this._ensureActiveCaptureSink(capturedStream);
     if (this._manualCaptureFrameControl) {
       this._requestCaptureFrame();
     }
@@ -19513,6 +19563,26 @@ class OutputStreamManager {
     this._capturedVideoTrack = videoTrack || null;
     this._manualCaptureFrameControl = Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
   }
+  _ensureActiveCaptureSink(capturedStream) {
+    this._teardownActiveCaptureSink();
+    if (!capturedStream || !this._domAdapter || !this._domAdapter.createOutputSinkVideoElement) {
+      return;
+    }
+    this._activeCaptureSinkVideo = this._domAdapter.createOutputSinkVideoElement(capturedStream);
+    if (this._logger) {
+      var streamId = capturedStream.id || 'unknown';
+      this._logger.debug(`Active capture sink attached: stream=${streamId}`);
+    }
+  }
+  _teardownActiveCaptureSink() {
+    if (!this._activeCaptureSinkVideo) {
+      return;
+    }
+    if (this._domAdapter && this._domAdapter.disposeVideoElement) {
+      this._domAdapter.disposeVideoElement(this._activeCaptureSinkVideo);
+    }
+    this._activeCaptureSinkVideo = null;
+  }
   _requestCaptureFrame() {
     if (!this._manualCaptureFrameControl || !this._capturedVideoTrack || !this._capturedVideoTrack.requestFrame) {
       return;
@@ -19530,6 +19600,12 @@ class OutputStreamManager {
     }
   }
   _createInsertableVideoStream() {
+    if (!this._insertableEnabledByConfig) {
+      if (this._logger) {
+        this._logger.debug('Insertable output not enabled by config, fallback to captureStream');
+      }
+      return null;
+    }
     if (!this._insertableSupport.supported) {
       return null;
     }
@@ -19764,6 +19840,7 @@ class OutputStreamManager {
     this._capturedVideoTrack = null;
     this._manualCaptureFrameControl = false;
     this._insertableActive = false;
+    this._teardownActiveCaptureSink();
     this._capturedStreams.forEach(stream => {
       stream.getTracks().forEach(track => {
         track.stop();
@@ -19813,12 +19890,14 @@ class OutputStreamManager {
       outputMode: this._insertableActive ? 'insertable' : 'capture-stream',
       captureFrameControlMode: this._manualCaptureFrameControl ? 'manual-request-frame' : 'auto-capture-fps',
       insertableActive: Boolean(this._insertableActive),
+      insertableEnabledByConfig: Boolean(this._insertableEnabledByConfig),
       insertableSupported: Boolean(this._insertableSupport && this._insertableSupport.supported),
       insertableGeneratorType: this._insertableSupport && this._insertableSupport.generatorType || '',
       insertableSupportReason: this._insertableSupport && this._insertableSupport.reason || '',
       insertableWriteFailures: this._continuousWriteFailures || 0,
       insertableHasGeneratorTrack: Boolean(this._generatorTrack),
-      outputHasCapturedStream: Boolean(this._capturedStream)
+      outputHasCapturedStream: Boolean(this._capturedStream),
+      activeCaptureSinkAttached: Boolean(this._activeCaptureSinkVideo)
     };
   }
   get mixedStream() {

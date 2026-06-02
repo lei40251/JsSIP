@@ -1899,10 +1899,11 @@ async function testInsertableVideoStreamPreferredWhenSupported()
   enableInsertableMocks();
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d'
+    width            : 320,
+    height           : 180,
+    fps              : 15,
+    renderMode       : 'main-2d',
+    enableInsertable : true
   });
   const output = mixer.getVideoStream();
   const generator = MockVideoTrackGenerator.instances[0];
@@ -1919,6 +1920,7 @@ async function testInsertableVideoStreamPreferredWhenSupported()
 
   assert.strictEqual(info.outputMode, 'insertable');
   assert.strictEqual(info.insertableActive, true);
+  assert.strictEqual(info.insertableEnabledByConfig, true);
   assert.strictEqual(info.insertableSupported, true);
   assert.strictEqual(info.insertableGeneratorType, 'video-track-generator');
 
@@ -2006,10 +2008,11 @@ async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
   enableInsertableMocks({ useLegacyGenerator: true });
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d'
+    width            : 320,
+    height           : 180,
+    fps              : 15,
+    renderMode       : 'main-2d',
+    enableInsertable : true
   });
   const output = mixer.getVideoStream();
 
@@ -2018,6 +2021,83 @@ async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
   assert.ok(MockVideoTrackGenerator.instances.length >= 1);
 
   mixer.stop();
+}
+
+async function testDisableInsertableForcesCaptureStreamEvenWhenSupported()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width            : 320, 
+    height           : 180,
+    fps              : 15,
+    renderMode       : 'main-2d',
+    enableInsertable : false
+  });
+  const output = mixer.getVideoStream();
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 1);
+  assert.strictEqual(info.outputMode, 'capture-stream');
+  assert.strictEqual(info.insertableActive, false);
+  assert.strictEqual(info.insertableEnabledByConfig, false);
+  assert.strictEqual(info.insertableSupported, true);
+
+  mixer.stop();
+}
+
+async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+  const output = mixer.getVideoStream();
+  const info = mixer.getRenderInfo();
+
+  assert.strictEqual(output.getVideoTracks().length, 1);
+  assert.strictEqual(mixer._capturedStreams.length, 1);
+  assert.strictEqual(info.outputMode, 'capture-stream');
+  assert.strictEqual(info.insertableActive, false);
+  assert.strictEqual(info.insertableEnabledByConfig, false);
+  assert.strictEqual(info.insertableSupported, true);
+  assert.strictEqual(info.activeCaptureSinkAttached, true);
+  assert.ok(mixer._outputStreamManager._activeCaptureSinkVideo);
+  assert.strictEqual(mixer._outputStreamManager._activeCaptureSinkVideo.srcObject, mixer._capturedStreams[0]);
+
+  mixer.stop();
+}
+
+async function testCaptureStreamActiveSinkIsDisposedOnStop()
+{
+  resetMockState();
+  enableInsertableMocks();
+
+  const mixer = new Mixer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+
+  mixer.getVideoStream();
+  const sinkVideo = mixer._outputStreamManager._activeCaptureSinkVideo;
+
+  assert.ok(sinkVideo);
+
+  mixer.stop();
+
+  assert.strictEqual(sinkVideo._paused, true);
+  assert.strictEqual(sinkVideo._removed, true);
+  assert.strictEqual(sinkVideo.srcObject, null);
+  assert.strictEqual(mixer._outputStreamManager._activeCaptureSinkVideo, null);
 }
 
 async function run()
@@ -2064,10 +2144,13 @@ async function run()
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
     { name: 'testMixerConfigDefaults', fn: testMixerConfigDefaults },
     { name: 'testMixerConfigSourceOptions', fn: testMixerConfigSourceOptions },
+    { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
+    { name: 'testCaptureStreamActiveSinkIsDisposedOnStop', fn: testCaptureStreamActiveSinkIsDisposedOnStop },
     { name: 'testInsertableVideoStreamPreferredWhenSupported', fn: testInsertableVideoStreamPreferredWhenSupported },
     { name: 'testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable', fn: testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable },
     { name: 'testCaptureStreamUsesManualRequestFrameWhenSupported', fn: testCaptureStreamUsesManualRequestFrameWhenSupported },
-    { name: 'testInsertableCanUseLegacyMediaStreamTrackGenerator', fn: testInsertableCanUseLegacyMediaStreamTrackGenerator }
+    { name: 'testInsertableCanUseLegacyMediaStreamTrackGenerator', fn: testInsertableCanUseLegacyMediaStreamTrackGenerator },
+    { name: 'testDisableInsertableForcesCaptureStreamEvenWhenSupported', fn: testDisableInsertableForcesCaptureStreamEvenWhenSupported }
   ];
 
   try
