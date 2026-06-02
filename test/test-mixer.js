@@ -201,6 +201,7 @@ class MockWebGL2Context
     this.UNSIGNED_BYTE = 0x1401;
     this.TRIANGLE_STRIP = 0x0005;
     this.FLOAT = 0x1406;
+    this.uniform1fCalls = [];
   }
 
   createShader(type) { return { type }; }
@@ -222,8 +223,15 @@ class MockWebGL2Context
   getAttribLocation() { return 0; }
   enableVertexAttribArray() {}
   vertexAttribPointer() {}
-  getUniformLocation() { return {}; }
+  getUniformLocation(program, name) { return { program, name }; }
   uniform1i() {}
+  uniform1f(location, value)
+  {
+    this.uniform1fCalls.push({
+      location : location && location.name ? location.name : location,
+      value    : value
+    });
+  }
   createTexture() { return {}; }
   bindTexture() {}
   texParameteri() {}
@@ -667,13 +675,15 @@ function enableInsertableMocks(options)
   options = options || {};
   global.VideoFrame = MockVideoFrame;
   global.window.VideoFrame = MockVideoFrame;
-  global.createImageBitmap = function(source)
+  // eslint-disable-next-line no-shadow
+  global.createImageBitmap = function(source, options)
   {
     const bitmap = {
-      source : source,
-      closed : false,
-      close  : function()
-      {
+      source  : source,
+      options : options,
+      closed  : false,
+      close   : function()
+      { 
         bitmap.closed = true;
       }
     };
@@ -1316,6 +1326,50 @@ async function testCanvas2DWatermarkDrawOrder()
   mixer.stop();
 }
 
+async function testMainWebGL2WatermarkOpacity()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new Mixer([], { width: 320, height: 180, fps: 15, renderMode: 'main-webgl2' });
+  const sourceA = createStream();
+
+  mixer.appendStream(sourceA, 0);
+  await mixer.setWatermarks([
+    {
+      id              : 'slot0',
+      target          : 'source',
+      slot            : 0,
+      text            : 'Host',
+      opacity         : 0.5,
+      position        : 'bottom-left',
+      backgroundColor : 'rgba(0,0,0,0)'
+    },
+    {
+      id              : 'brand',
+      target          : 'output',
+      text            : 'CRTC',
+      opacity         : 0.75,
+      position        : 'top-right',
+      backgroundColor : 'rgba(0,0,0,0)'
+    }
+  ]);
+
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  const gl = mixer._canvas._contextWebGL2;
+  const opacityCalls = gl.uniform1fCalls
+    .filter((call) => call.location === 'u_opacity')
+    .map((call) => call.value);
+
+  assert(opacityCalls.includes(1));
+  assert(opacityCalls.includes(0.5));
+  assert(opacityCalls.includes(0.75));
+
+  mixer.stop();
+}
+
 async function testMirrorGlobalAndSlotControls()
 {
   resetMockState();
@@ -1547,6 +1601,8 @@ async function testWorkerShaderUsesRuntimeNewlines()
 
   assert(vertexShader.includes('#version 300 es\nin vec2 a_position'));
   assert(fragmentShader.includes('#version 300 es\nprecision highp float'));
+  assert(fragmentShader.includes('uniform float u_opacity;'));
+  assert(fragmentShader.includes('color.a * u_opacity'));
   assert(!vertexShader.includes('\\\\n'));
   assert(!fragmentShader.includes('\\\\n'));
 
@@ -1734,6 +1790,39 @@ async function testWorkerRendererCarriesWatermarkPayload()
   renderer._closeTransferFrames(messages[0].message.payload.items);
   renderer._closeTransferFrames(messages[0].message.payload.sourceWatermarks);
   assert.deepStrictEqual(closed, [ 'source', 'watermark' ]);
+}
+
+async function testWorkerWatermarkFrameFlipYOnlyForWebGL2()
+{
+  resetMockState();
+  const calls = [];
+
+  global.createImageBitmap = function(source, options)
+  {
+    calls.push({ source, options });
+
+    return Promise.resolve({
+      source,
+      options,
+      close : function() {}
+    });
+  };
+  global.window.createImageBitmap = global.createImageBitmap;
+
+  const worker2dRenderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {
+    actualMode : 'worker-2d'
+  });
+  const workerWebglRenderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {
+    actualMode : 'worker-webgl2'
+  });
+  const image = { width: 10, height: 10 };
+
+  await worker2dRenderer._createWatermarkFrame(image);
+  await workerWebglRenderer._createWatermarkFrame(image);
+
+  assert.strictEqual(calls.length, 2);
+  assert.strictEqual(calls[0].options, undefined);
+  assert.deepStrictEqual(calls[1].options, { imageOrientation: 'flipY' });
 }
 
 async function testWorkerRendererKeepsEmptyPayload()
@@ -1958,6 +2047,7 @@ async function run()
     { name: 'testReleaseIsolatedSubmixAudioStreamClosesContext', fn: testReleaseIsolatedSubmixAudioStreamClosesContext },
     { name: 'testWatermarkConfigAndFiltering', fn: testWatermarkConfigAndFiltering },
     { name: 'testCanvas2DWatermarkDrawOrder', fn: testCanvas2DWatermarkDrawOrder },
+    { name: 'testMainWebGL2WatermarkOpacity', fn: testMainWebGL2WatermarkOpacity },
     { name: 'testMirrorGlobalAndSlotControls', fn: testMirrorGlobalAndSlotControls },
     { name: 'testMirrorAutoModeAvoidsWorkerRenderer', fn: testMirrorAutoModeAvoidsWorkerRenderer },
     { name: 'testEnableMirrorFallsBackFromWorkerToMainThread', fn: testEnableMirrorFallsBackFromWorkerToMainThread },
@@ -1970,6 +2060,7 @@ async function run()
     { name: 'testAutoRendererFallbackEndsAtMain2D', fn: testAutoRendererFallbackEndsAtMain2D },
     { name: 'testWatermarkPresetAndCoordinatePositions', fn: testWatermarkPresetAndCoordinatePositions },
     { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
+    { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
     { name: 'testMixerConfigDefaults', fn: testMixerConfigDefaults },
     { name: 'testMixerConfigSourceOptions', fn: testMixerConfigSourceOptions },

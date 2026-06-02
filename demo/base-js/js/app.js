@@ -94,9 +94,6 @@ const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, pass
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
 const extSet = new Set((exts || []).map((ext) => String(ext).trim() 
   .toUpperCase()).filter(Boolean));
-const mixReplaceParam = handleGetQuery('mixreplace');
-const useMixReplace = [ '1', 'true', 'yes', 'on' ].indexOf(String(mixReplaceParam || '').trim()
-  .toLowerCase()) !== -1;
 
 exts && exts.forEach((ext) => extraFeatures.push(ext));
 
@@ -1005,55 +1002,6 @@ ua.on('newRTCSession', function(e)
 
     confirmed = true;
 
-    if (useMixReplace) 
-    {
-      try
-      {
-        const localVideoTrack = localStream.videoStream && localStream.videoStream.getVideoTracks ? localStream.videoStream.getVideoTracks()[0] : null;
-        const videoSender = e.session.connection.getSenders().find((sender) => sender.track && sender.track.kind === 'video');
-
-        if (!localVideoTrack) 
-        {
-          setStatus('confirmed: 本地无视频轨，跳过mixer替换');
-        }
-        else if (!videoSender) 
-        {
-          setStatus('confirmed: 未找到视频sender，跳过mixer替换');
-        }
-        else 
-        {
-          if (mix) 
-          {
-            mix.stop();
-            mix = null;
-          }
-
-          const sourceStream = new MediaStream([ localVideoTrack.clone() ]);
-          const settings = localVideoTrack.getSettings ? localVideoTrack.getSettings() : {};
-          const outputWidth = Number(settings.width) || Number(videoConstraints.width) || 640;
-          const outputHeight = Number(settings.height) || Number(videoConstraints.height) || 480;
-          const outputFps = Number(settings.frameRate) || Number(videoConstraints.frameRate) || 15;
-
-          mix = new CRTC.Mixer([ sourceStream ], { width: outputWidth, height: outputHeight, fps: outputFps });
-
-          const mixedVideoStream = mix.getVideoStream();
-          const mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
-
-          if (!mixedVideoTrack) 
-          {
-            throw new Error('mixer output video track is empty');
-          }
-
-          await videoSender.replaceTrack(mixedVideoTrack);
-          setStatus('confirmed: 已切换为mixer处理后视频轨');
-        }
-      }
-      catch (error) 
-      {
-        setStatus(`confirmed: mixer替换失败 ${error.message || error}`);
-      }
-    }
-
     /* 用于验证接通以后替换音频 */
     // if (!mix)
     // {
@@ -1169,11 +1117,24 @@ ua.on('newRTCSession', function(e)
         {
           const parameters = sender.getParameters();
 
+          console.warn(JSON.stringify(parameters));
+
+          // 强制保持分辨率，即使网络不好也只会掉帧，不会变糊
+          parameters.degradationPreference = 'maintain-resolution';
+          parameters.encodings[0].scaleResolutionDownBy = 1;
           parameters.encodings[0].maxBitrate = mbit * 1000;
 
-          sender.setParameters(parameters);
+          sender.setParameters(parameters).then(() => 
+          {
+            console.warn('成功设置 degradationPreference 为 maintain-resolution');
+          })
+            .catch((err) => 
+            {
+              console.error('设置 RTCRtpSender 参数失败:', err);
+            });
 
           sender.track.contentHint = 'detail';
+          setStatus(`setParamter: ${mbit } detail`);
         }
       });
     }
@@ -1856,7 +1817,7 @@ document.querySelector('#useupdate').onchange = function()
 function buildCallMixerOptions()
 {
   const outputMirrorEl = document.getElementById('callMixerOutputMirror');
-  const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
+  const outputMirrorX = Boolean(outputMirrorEl && outputMirrorEl.checked);
   const watermarks = [];
   const text = String((document.getElementById('callMixerTextWatermarkText') || {}).value || '').trim();
 
@@ -1867,7 +1828,7 @@ function buildCallMixerOptions()
     const textY = (document.getElementById('callMixerTextWatermarkY') || {}).value;
     const textSize = (document.getElementById('callMixerTextWatermarkSize') || {}).value;
     const textColor = String((document.getElementById('callMixerTextWatermarkColor') || {}).value || '').trim();
-    const textOpacity = (document.getElementById('callMixerTextWatermarkOpacity') || {}).value;
+    const textOpacity = readCallMixerOpacity(document.getElementById('callMixerTextWatermarkOpacity'));
     const textWatermark = {
       id       : 'call-output-text-watermark',
       target   : 'output',
@@ -1886,9 +1847,9 @@ function buildCallMixerOptions()
       textWatermark.color = textColor;
     }
 
-    if (String(textOpacity).trim())
+    if (textOpacity !== undefined)
     {
-      textWatermark.opacity = Number(textOpacity);
+      textWatermark.opacity = textOpacity;
     }
 
     watermarks.push(textWatermark);
@@ -1903,7 +1864,7 @@ function buildCallMixerOptions()
     const imageY = (document.getElementById('callMixerImageWatermarkY') || {}).value;
     const imageWidth = (document.getElementById('callMixerImageWatermarkWidth') || {}).value;
     const imageHeight = (document.getElementById('callMixerImageWatermarkHeight') || {}).value;
-    const imageOpacity = (document.getElementById('callMixerImageWatermarkOpacity') || {}).value;
+    const imageOpacity = readCallMixerOpacity(document.getElementById('callMixerImageWatermarkOpacity'));
     const imageWatermark = {
       id       : 'call-output-image-watermark',
       target   : 'output',
@@ -1922,24 +1883,24 @@ function buildCallMixerOptions()
       imageWatermark.height = Number(imageHeight);
     }
 
-    if (String(imageOpacity).trim())
+    if (imageOpacity !== undefined)
     {
-      imageWatermark.opacity = Number(imageOpacity);
+      imageWatermark.opacity = imageOpacity;
     }
 
     watermarks.push(imageWatermark);
   }
 
-  if (!outputMirror && !watermarks.length)
+  if (!outputMirrorX && !watermarks.length)
   {
     return null;
   }
 
   const mixerOptions = {};
 
-  if (outputMirror)
+  if (outputMirrorX)
   {
-    mixerOptions.outputMirror = true;
+    mixerOptions.outputMirrorX = true;
   }
 
   if (watermarks.length)
@@ -1948,6 +1909,28 @@ function buildCallMixerOptions()
   }
 
   return mixerOptions;
+}
+
+function readCallMixerOpacity(inputEl)
+{
+  const raw = String((inputEl || {}).value || '').trim();
+
+  if (!raw)
+  {
+    return undefined;
+  }
+
+  const normalized = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
+  const parsed = Number(normalized.replace(',', '.'));
+
+  if (!Number.isFinite(parsed))
+  {
+    return undefined;
+  }
+
+  const opacity = parsed > 1 ? (parsed / 100) : parsed;
+
+  return Math.min(1, Math.max(0, opacity));
 }
 
 /**
@@ -1981,6 +1964,8 @@ async function call(type, direction, mediaStream)
 
   if (mixerOptions)
   {
+    // mixerOptions.width=2560;
+    // mixerOptions.height=1440;
     options.mixer = mixerOptions;
   }
 
@@ -2396,6 +2381,7 @@ async function showIncomingCallNotification(mode, fromNo)
       notificationUnsupportedLogged = true;
       setStatus('当前浏览器不支持系统通知');
     }
+    
     return;
   }
 
@@ -2429,6 +2415,7 @@ async function showIncomingCallNotification(mode, fromNo)
   if (Notification.permission === 'granted') 
   {
     show();
+    
     return;
   }
 

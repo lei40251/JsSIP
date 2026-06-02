@@ -22,10 +22,6 @@
             <div class="col-12 mixer-col-left d-flex min-h-0">
                 <div class="controls-stack d-flex flex-column flex-fill min-h-0">
                     <section id="panel-sources" class="panel-shell panel-disabled p-2">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">目标槽位</h2>
-                            <span class="badge bg-light text-dark border">槽位</span>
-                        </div>
                         <div class="selected-slot-card mb-2">
                             <div class="selected-slot-number" id="selected-slot-number">1</div>
                             <div class="selected-slot-meta">
@@ -67,10 +63,6 @@
                     </section>
 
                     <section id="panel-add-source" class="panel-shell panel-disabled p-2">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <h2 class="h6 mb-0">添加输入源</h2>
-                            <span class="badge bg-light text-dark border">输入</span>
-                        </div>
                         <div class="row g-1 mb-2">
                             <div class="col-7">
                                 <label class="form-label small mb-1" for="cfg-in-res">输入分辨率</label>
@@ -128,84 +120,117 @@
                             </div>
                             <section class="compact-card" data-watermark-section="output">
                                 <h2 class="visually-hidden">输出水印</h2>
-                                <div class="row g-2">
-                                    <div class="col-5">
-                                        <label class="form-label mb-1" for="wm-output-text">全局文字</label>
-                                        <input class="form-control" id="wm-output-text" value="CRTC 直播">
+                                <div class="watermark-section-block">
+                                    <div class="watermark-grid watermark-main-row">
+                                        <label class="watermark-field watermark-field-wide" for="wm-output-text">
+                                            <span class="watermark-field-label">全局文字</span>
+                                            <input class="form-control" id="wm-output-text" value="CRTC 直播">
+                                        </label>
+                                        <label class="watermark-field watermark-field-mid"
+                                            for="wm-output-text-position">
+                                            <span class="watermark-field-label">位置</span>
+                                            <select class="form-select" id="wm-output-text-position">
+                                                <option value="top-left">左上</option>
+                                                <option value="top-center">上中</option>
+                                                <option value="top-right">右上</option>
+                                                <option value="center">居中</option>
+                                                <option value="bottom-left">左下</option>
+                                                <option value="bottom-center">下中</option>
+                                                <option value="bottom-right" selected>右下</option>
+                                                <option value="custom">坐标</option>
+                                            </select>
+                                        </label>
+                                        <div class="watermark-field watermark-field-action">
+                                            <button class="btn btn-outline-primary w-100"
+                                                data-action="applyOutputTextWatermark">应用</button>
+                                        </div>
                                     </div>
-                                    <div class="col-4">
-                                        <label class="form-label mb-1" for="wm-output-text-position">位置</label>
-                                        <select class="form-select" id="wm-output-text-position">
-                                            <option value="top-left">左上</option>
-                                            <option value="top-center">上中</option>
-                                            <option value="top-right">右上</option>
-                                            <option value="center">居中</option>
-                                            <option value="bottom-left">左下</option>
-                                            <option value="bottom-center">下中</option>
-                                            <option value="bottom-right" selected>右下</option>
-                                            <option value="custom">坐标</option>
-                                        </select>
+                                    <div
+                                        class="watermark-grid watermark-coordinate-row watermark-coordinate-field wm-output-text-coordinate d-none">
+                                        <label class="watermark-field" for="wm-output-text-x">
+                                            <span class="watermark-field-label">文字 X</span>
+                                            <input class="form-control" id="wm-output-text-x" type="number" value="16">
+                                        </label>
+                                        <label class="watermark-field" for="wm-output-text-y">
+                                            <span class="watermark-field-label">文字 Y</span>
+                                            <input class="form-control" id="wm-output-text-y" type="number" value="16">
+                                        </label>
                                     </div>
-                                    <div class="col-3 d-flex align-items-end">
-                                        <button class="btn btn-outline-primary w-100"
-                                            data-action="applyOutputTextWatermark">应用</button>
+                                    <div class="watermark-grid watermark-style-row">
+                                        <label class="watermark-field watermark-field-wide"
+                                            for="wm-output-text-bg-color">
+                                            <span class="watermark-field-label">背景颜色</span>
+                                            <input class="form-control" id="wm-output-text-bg-color"
+                                                value="rgba(0,0,0,0.45)">
+                                        </label>
+                                        <label class="watermark-field watermark-field-compact"
+                                            for="wm-output-text-size">
+                                            <span class="watermark-field-label">字号</span>
+                                            <input class="form-control watermark-narrow-control"
+                                                id="wm-output-text-size" type="number" min="10" value="28">
+                                        </label>
+                                        <label class="watermark-field watermark-field-compact"
+                                            for="wm-output-text-opacity">
+                                            <span class="watermark-field-label">透明度</span>
+                                            <input class="form-control" id="wm-output-text-opacity" type="number"
+                                                min="0" max="1" step="0.05" value="1">
+                                        </label>
+                                        <label class="watermark-field watermark-field-color" for="wm-output-text-color">
+                                            <span class="watermark-field-label">字色</span>
+                                            <input class="form-control form-control-color watermark-narrow-control"
+                                                id="wm-output-text-color" type="color" value="#ffffff">
+                                        </label>
                                     </div>
-                                    <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
-                                        <label class="form-label mb-1" for="wm-output-text-x">文字 X</label>
-                                        <input class="form-control" id="wm-output-text-x" type="number" value="16">
+                                </div>
+                                <hr class="my-2">
+                                <div class="watermark-section-block">
+                                    <div class="watermark-grid watermark-main-row">
+                                        <label class="watermark-field watermark-field-wide" for="wm-output-image">
+                                            <span class="watermark-field-label">图片地址</span>
+                                            <input class="form-control" id="wm-output-image"
+                                                placeholder="https://example.com/logo.png">
+                                        </label>
+                                        <label class="watermark-field watermark-field-mid"
+                                            for="wm-output-image-position">
+                                            <span class="watermark-field-label">位置</span>
+                                            <select class="form-select" id="wm-output-image-position">
+                                                <option value="top-left">左上</option>
+                                                <option value="top-center">上中</option>
+                                                <option value="top-right" selected>右上</option>
+                                                <option value="center">居中</option>
+                                                <option value="bottom-left">左下</option>
+                                                <option value="bottom-center">下中</option>
+                                                <option value="bottom-right">右下</option>
+                                                <option value="custom">坐标</option>
+                                            </select>
+                                        </label>
+                                        <div class="watermark-field watermark-field-action">
+                                            <button class="btn btn-outline-primary w-100"
+                                                data-action="applyOutputImageWatermark">应用</button>
+                                        </div>
                                     </div>
-                                    <div class="col-6 watermark-coordinate-field wm-output-text-coordinate d-none">
-                                        <label class="form-label mb-1" for="wm-output-text-y">文字 Y</label>
-                                        <input class="form-control" id="wm-output-text-y" type="number" value="16">
+                                    <div
+                                        class="watermark-grid watermark-coordinate-row watermark-coordinate-field wm-output-image-coordinate d-none">
+                                        <label class="watermark-field" for="wm-output-image-x">
+                                            <span class="watermark-field-label">图片 X</span>
+                                            <input class="form-control" id="wm-output-image-x" type="number" value="16">
+                                        </label>
+                                        <label class="watermark-field" for="wm-output-image-y">
+                                            <span class="watermark-field-label">图片 Y</span>
+                                            <input class="form-control" id="wm-output-image-y" type="number" value="16">
+                                        </label>
                                     </div>
-                                    <div class="col-3">
-                                        <label class="form-label mb-1" for="wm-output-text-size">字号</label>
-                                        <input class="form-control watermark-narrow-control" id="wm-output-text-size"
-                                            type="number" min="10" value="28">
-                                    </div>
-                                    <div class="col-3">
-                                        <label class="form-label mb-1" for="wm-output-text-color">文字颜色</label>
-                                        <input class="form-control form-control-color watermark-narrow-control"
-                                            id="wm-output-text-color" type="color" value="#ffffff">
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label mb-1" for="wm-output-text-bg-color">背景颜色</label>
-                                        <input class="form-control" id="wm-output-text-bg-color"
-                                            value="rgba(0,0,0,0.45)">
-                                    </div>
-                                    <div class="col-5">
-                                        <label class="form-label mb-1" for="wm-output-image">图片地址</label>
-                                        <input class="form-control" id="wm-output-image"
-                                            placeholder="https://example.com/logo.png">
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label mb-1" for="wm-output-image-position">位置</label>
-                                        <select class="form-select" id="wm-output-image-position">
-                                            <option value="top-left">左上</option>
-                                            <option value="top-center">上中</option>
-                                            <option value="top-right" selected>右上</option>
-                                            <option value="center">居中</option>
-                                            <option value="bottom-left">左下</option>
-                                            <option value="bottom-center">下中</option>
-                                            <option value="bottom-right">右下</option>
-                                            <option value="custom">坐标</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-3 d-flex align-items-end">
-                                        <button class="btn btn-outline-primary w-100"
-                                            data-action="applyOutputImageWatermark">应用</button>
-                                    </div>
-                                    <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
-                                        <label class="form-label mb-1" for="wm-output-image-x">图片 X</label>
-                                        <input class="form-control " id="wm-output-image-x" type="number" value="16">
-                                    </div>
-                                    <div class="col-6 watermark-coordinate-field wm-output-image-coordinate d-none">
-                                        <label class="form-label mb-1" for="wm-output-image-y">图片 Y</label>
-                                        <input class="form-control " id="wm-output-image-y" type="number" value="16">
-                                    </div>
-                                    <div class="col-12">
-                                        <button class="btn btn-outline-danger w-100"
-                                            data-action="clearOutputWatermarks">清除全局水印</button>
+                                    <div class="watermark-grid watermark-image-footer">
+                                        <label class="watermark-field watermark-field-compact"
+                                            for="wm-output-image-opacity">
+                                            <span class="watermark-field-label">透明度</span>
+                                            <input class="form-control" id="wm-output-image-opacity" type="number"
+                                                min="0" max="1" step="0.05" value="1">
+                                        </label>
+                                        <div class="watermark-field watermark-clear-action">
+                                            <button class="btn btn-outline-danger"
+                                                data-action="clearOutputWatermarks">清除全局水印</button>
+                                        </div>
                                     </div>
                                 </div>
                             </section>
@@ -242,19 +267,30 @@
                                         <label class="form-label mb-1" for="wm-slot-y">名牌 Y</label>
                                         <input class="form-control " id="wm-slot-y" type="number" value="12">
                                     </div>
-                                    <div class="col-3">
-                                        <label class="form-label mb-1" for="wm-slot-size">字号</label>
-                                        <input class="form-control watermark-narrow-control" id="wm-slot-size"
-                                            type="number" min="10" value="28">
-                                    </div>
-                                    <div class="col-3">
-                                        <label class="form-label mb-1" for="wm-slot-color">文字颜色</label>
-                                        <input class="form-control form-control-color watermark-narrow-control"
-                                            id="wm-slot-color" type="color" value="#ffffff">
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label mb-1" for="wm-slot-bg-color">背景颜色</label>
-                                        <input class="form-control" id="wm-slot-bg-color" value="rgba(0,0,0,0.45)">
+                                    <div class="col-12">
+                                        <div class="watermark-grid watermark-style-row">
+                                            <label class="watermark-field watermark-field-wide" for="wm-slot-bg-color">
+                                                <span class="watermark-field-label">背景颜色</span>
+                                                <input class="form-control" id="wm-slot-bg-color"
+                                                    value="rgba(0,0,0,0.45)">
+                                            </label>
+                                            <label class="watermark-field watermark-field-compact" for="wm-slot-size">
+                                                <span class="watermark-field-label">字号</span>
+                                                <input class="form-control watermark-narrow-control" id="wm-slot-size"
+                                                    type="number" min="10" value="28">
+                                            </label>
+                                            <label class="watermark-field watermark-field-compact"
+                                                for="wm-slot-opacity">
+                                                <span class="watermark-field-label">透明度</span>
+                                                <input class="form-control" id="wm-slot-opacity" type="number" min="0"
+                                                    max="1" step="0.05" value="1">
+                                            </label>
+                                            <label class="watermark-field watermark-field-color" for="wm-slot-color">
+                                                <span class="watermark-field-label">字色</span>
+                                                <input class="form-control form-control-color watermark-narrow-control"
+                                                    id="wm-slot-color" type="color" value="#ffffff">
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="status-line">
@@ -279,11 +315,28 @@
             <div class="col-12 mixer-col-main d-flex min-h-0">
                 <section class="preview-shell panel-shell flex-fill overflow-hidden">
                     <div class="preview-topbar">
-                        <div>
-                            <div class="fw-semibold">输出预览</div>
+                        <div class="preview-heading">
+                            <div class="preview-heading-main">
+                                <div class="fw-semibold">输出预览</div>
+                                <div id="status-badge" class="badge bg-secondary">就绪</div>
+                            </div>
                             <div class="text-secondary small">网格叠加 · 音频表 · 源缩略图</div>
                         </div>
-                        <div id="status-badge" class="badge bg-secondary align-self-center">就绪</div>
+                        <div class="preview-toolbar-actions">
+                            <div id="audio-monitor-row" class="preview-toolbar-audio" style="display:none;">
+                                <button id="btn-monitor-audio" class="btn btn-outline-secondary">
+                                    🔊监听
+                                </button>
+                            </div>
+                            <div class="preview-toolbar-run">
+                                <button id="btn-start" class="btn btn-primary preview-run-btn">
+                                    ▶启动
+                                </button>
+                                <button id="btn-stop" class="btn btn-danger preview-run-btn" style="display:none;">
+                                    ⏹停止
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="preview-stage">
                         <div class="preview-stage-frame" id="preview-stage-frame">
@@ -342,7 +395,7 @@
                                 </select>
                             </div>
                             <div class="col-12">
-                                <div class="compact-card">
+                                <div class="compact-card" id="output-init-config">
                                     <div class="row g-2">
                                         <div class="col-6">
                                             <label class="form-label small mb-1"
@@ -362,8 +415,8 @@
                                         </div>
                                         <div class="col-12 d-flex align-items-end">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="cfg-ctor-watermarks"
-                                                    checked>
+                                                <input class="form-check-input" type="checkbox"
+                                                    id="cfg-ctor-watermarks">
                                                 <label class="form-check-label small" for="cfg-ctor-watermarks">
                                                     构造时应用当前全局水印（文字 + 图片）
                                                 </label>
@@ -372,19 +425,6 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="output-param-footer">
-                            <div id="audio-monitor-row" style="display:none;">
-                                <button id="btn-monitor-audio" class="btn btn-outline-secondary">
-                                    🔊监听
-                                </button>
-                            </div>
-                            <button id="btn-start" class="btn btn-primary">
-                                ▶启动
-                            </button>
-                            <button id="btn-stop" class="btn btn-danger" style="display:none;">
-                                ⏹停止
-                            </button>
                         </div>
                     </section>
 
@@ -462,7 +502,8 @@
                                 <input id="stress-source-counts" class="form-control" value="2,3">
                             </div>
                             <div class="col-12">
-                                <label class="form-label small mb-1" for="stress-instance-counts">实例数(逗号分隔，留空=跟随源路数)</label>
+                                <label class="form-label small mb-1"
+                                    for="stress-instance-counts">实例数(逗号分隔，留空=跟随源路数)</label>
                                 <input id="stress-instance-counts" class="form-control" value="">
                             </div>
                             <div class="col-12">
@@ -481,7 +522,8 @@
                             <div class="col-12 d-flex flex-wrap gap-2">
                                 <button class="btn btn-primary" data-action="startStressTest">开始压测</button>
                                 <button class="btn btn-outline-danger" data-action="stopStressTest">停止压测</button>
-                                <button class="btn btn-outline-secondary" data-action="exportStressJson">导出 JSON</button>
+                                <button class="btn btn-outline-secondary" data-action="exportStressJson">导出
+                                    JSON</button>
                                 <button class="btn btn-outline-secondary" data-action="exportStressCsv">导出 CSV</button>
                                 <button class="btn btn-outline-secondary" data-action="clearStressResults">清空结果</button>
                             </div>
@@ -497,10 +539,10 @@
         </div>
     </div>
 
-    <button id="stress-launcher" type="button" class="btn btn-primary">压测</button>
+    <button id="stress-launcher" type="button" class="btn btn-primary btn-sm">压测</button>
     <div id="toast-container" class="toast-container"></div>
 
-    <script src="../../dist/CRTC.min.js"></script>
+    <script src="../../dist/CRTC.js"></script>
     <script src="./js/virtual-gen.js"></script>
     <script src="./js/app-base.js"></script>
     <script src="./js/app-mixer.js"></script>

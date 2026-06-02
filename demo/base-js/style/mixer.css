@@ -159,11 +159,61 @@ body {
 
 .preview-toolbar-actions {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.75rem;
     align-items: center;
-    justify-content: flex-end;
-    min-width: 0;
+    justify-content: space-between;
     flex-wrap: wrap;
+}
+
+.preview-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.preview-heading-main {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.preview-toolbar-audio {
+    display: inline-flex;
+    align-items: center;
+    margin-right: auto;
+}
+
+.preview-toolbar-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+}
+
+.preview-run-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 5.25rem;
+    padding: 0.375rem 0.8rem;
+    font-weight: 600;
+    border-width: 1px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.preview-run-btn:hover,
+.preview-run-btn:focus,
+.preview-run-btn:active {
+    transform: none !important;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16) !important;
+}
+
+.preview-run-btn.btn-primary:hover,
+.preview-run-btn.btn-danger:hover {
+    filter: brightness(0.96);
 }
 
 .preview-toolbar-actions .btn {
@@ -179,18 +229,25 @@ body {
     margin-bottom: var(--space-sm);
 }
 
+.output-param-actions,
 .output-param-footer {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.output-param-footer {
     margin-top: var(--space-sm);
 }
 
+.output-param-actions .btn,
 .output-param-footer .btn {
     min-width: 4.2rem;
 }
 
+.output-param-actions #audio-monitor-row,
 .output-param-footer #audio-monitor-row {
     display: inline-flex;
     align-items: center;
@@ -400,6 +457,80 @@ body {
 .watermark-narrow-control {
     width: 100% !important;
     max-width: 100%;
+}
+
+.watermark-section-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.watermark-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.02em;
+}
+
+.watermark-grid {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.watermark-main-row {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.95fr) 4.5rem;
+    align-items: end;
+}
+
+.watermark-coordinate-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+}
+
+.watermark-style-row {
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr) minmax(0, 1fr) 2.5rem;
+    align-items: end;
+}
+
+.watermark-image-footer {
+    grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr);
+    align-items: end;
+}
+
+.watermark-field {
+    min-width: 0;
+}
+
+.watermark-field-label {
+    display: inline-block;
+    margin-bottom: 0.25rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.watermark-field-action {
+    display: flex;
+    align-items: flex-end;
+}
+
+.watermark-field-color .form-control-color {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: calc(2.25rem + 2px);
+    padding: 0.25rem;
+}
+
+.watermark-clear-action {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.watermark-clear-action .btn {
+    width: auto;
+    min-width: 8.5rem;
 }
 
 .submix-empty {
@@ -826,6 +957,10 @@ canvas#viz-canvas {
     padding: var(--space-md);
 }
 
+.compact-card-locked {
+    opacity: 0.74;
+}
+
 .compact-card h2 {
     font-size: 0.85rem;
     margin-bottom: 0.45rem;
@@ -951,6 +1086,31 @@ canvas#viz-canvas {
     .preview-topbar {
         padding: var(--space-sm) var(--space-md);
     }
+
+    .preview-toolbar-actions {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .output-param-header {
+        align-items: flex-start;
+    }
+
+    .output-param-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    /* .watermark-main-row,
+    .watermark-style-row,
+    .watermark-image-footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .watermark-main-row .watermark-field-action,
+    .watermark-clear-action {
+        grid-column: 1 / -1;
+    } */
 
     .preview-stage {
         padding: var(--space-sm);

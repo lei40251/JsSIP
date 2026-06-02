@@ -49,10 +49,8 @@ export interface MixerOptions {
   preserveDrawingBuffer?: boolean;
   mirror?: boolean;
   mirrorX?: boolean;
-  outputMirror?: boolean;
   outputMirrorX?: boolean;
   mirrorWatermarksWithOutput?: boolean;
-  outputMirrorWatermarks?: boolean;
   watermarks?: MixerWatermarkOptions[] | MixerWatermarkOptions | null;
   [key: string]: any;
 }

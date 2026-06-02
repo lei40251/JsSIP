@@ -40,6 +40,7 @@ const app = {
     cfgOutRes                : document.getElementById('cfg-out-res'),
     cfgFps                   : document.getElementById('cfg-fps'),
     cfgRenderMode            : document.getElementById('cfg-render-mode'),
+    outputInitConfig         : document.getElementById('output-init-config'),
     submixList               : document.getElementById('submix-list'),
     submixStatus             : document.getElementById('submix-status'),
     panelSources             : document.getElementById('panel-sources'),
@@ -62,11 +63,13 @@ const app = {
     wmOutputTextY            : document.getElementById('wm-output-text-y'),
     wmOutputTextSize         : document.getElementById('wm-output-text-size'),
     wmOutputTextColor        : document.getElementById('wm-output-text-color'),
+    wmOutputTextOpacity      : document.getElementById('wm-output-text-opacity'),
     wmOutputTextBgColor      : document.getElementById('wm-output-text-bg-color'),
     wmOutputImage            : document.getElementById('wm-output-image'),
     wmOutputImagePosition    : document.getElementById('wm-output-image-position'),
     wmOutputImageX           : document.getElementById('wm-output-image-x'),
     wmOutputImageY           : document.getElementById('wm-output-image-y'),
+    wmOutputImageOpacity     : document.getElementById('wm-output-image-opacity'),
     wmSlotSelect             : document.getElementById('wm-slot-select'),
     wmSelectedSlot           : document.getElementById('wm-selected-slot'),
     wmSlotSourceState        : document.getElementById('wm-slot-source-state'),
@@ -77,6 +80,7 @@ const app = {
     wmSlotY                  : document.getElementById('wm-slot-y'),
     wmSlotSize               : document.getElementById('wm-slot-size'),
     wmSlotColor              : document.getElementById('wm-slot-color'),
+    wmSlotOpacity            : document.getElementById('wm-slot-opacity'),
     wmSlotBgColor            : document.getElementById('wm-slot-bg-color'),
     watermarkModeButtons     : document.querySelectorAll('[data-watermark-mode]'),
     watermarkSections        : document.querySelectorAll('[data-watermark-section]'),
@@ -304,6 +308,18 @@ const app = {
     [ this.ui.cfgOutRes, this.ui.cfgFps, this.ui.cfgRenderMode ].forEach((el) =>
     {
       if (!el) return;
+      el.disabled = locked;
+      el.title = locked ? '运行中不可修改，停止后可调整' : '';
+    });
+
+    const initConfigPanel = this.ui.outputInitConfig;
+
+    if (!initConfigPanel) return;
+
+    initConfigPanel.classList.toggle('compact-card-locked', locked);
+    initConfigPanel.title = locked ? '运行中不可修改，停止后可调整' : '';
+    initConfigPanel.querySelectorAll('input, select').forEach((el) =>
+    {
       el.disabled = locked;
       el.title = locked ? '运行中不可修改，停止后可调整' : '';
     });
@@ -1018,7 +1034,7 @@ const app = {
     });
     const ctorWatermarkCheckbox = document.getElementById('cfg-ctor-watermarks');
 
-    if (ctorWatermarkCheckbox) ctorWatermarkCheckbox.checked = true;
+    if (ctorWatermarkCheckbox) ctorWatermarkCheckbox.checked = false;
     this.syncPreviewFrameRatio();
     this.selectSlot(0);
     this.refreshMirrorDemoUI();
@@ -2455,6 +2471,13 @@ const app = {
     return Number.isFinite(value) && value > 0 ? value : fallback;
   },
 
+  readOpacity(inputEl, fallback)
+  {
+    const value = Number(inputEl && inputEl.value);
+
+    return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
+  },
+
   buildOutputTextWatermark()
   {
     return {
@@ -2464,6 +2487,7 @@ const app = {
       text             : this.ui.wmOutputText.value || 'CRTC Live',
       fontSize         : this.readPositiveNumber(this.ui.wmOutputTextSize, 28),
       color            : (this.ui.wmOutputTextColor && this.ui.wmOutputTextColor.value) || '#ffffff',
+      opacity          : this.readOpacity(this.ui.wmOutputTextOpacity, 1),
       backgroundColor  : (this.ui.wmOutputTextBgColor && this.ui.wmOutputTextBgColor.value) || 'rgba(0,0,0,0.45)',
       padding          : 3,
       backgroundRadius : 3,
@@ -2487,6 +2511,7 @@ const app = {
       target   : 'output',
       type     : 'image',
       image    : image,
+      opacity  : this.readOpacity(this.ui.wmOutputImageOpacity, 1),
       width    : 160,
       position : this.readWatermarkPosition(
         this.ui.wmOutputImagePosition,
@@ -2507,6 +2532,7 @@ const app = {
       text             : text,
       fontSize         : this.readPositiveNumber(this.ui.wmSlotSize, 28),
       color            : (this.ui.wmSlotColor && this.ui.wmSlotColor.value) || '#ffffff',
+      opacity          : this.readOpacity(this.ui.wmSlotOpacity, 1),
       backgroundColor  : (this.ui.wmSlotBgColor && this.ui.wmSlotBgColor.value) || 'rgba(0,0,0,0.45)',
       padding          : 3,
       backgroundRadius : 3,
