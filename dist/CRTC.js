@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026621631
+ * CRTC v1.13.0.2026622017
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212043262 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212044034 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212043262');
+debug('version %s', '1.13.0.405212044034');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212043262';
+    return '1.13.0.405212044034';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -17978,6 +17978,8 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
  * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
  * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
+ * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
+ * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
  */
 exports.create = function (options) {
   options = options || {};
@@ -17995,6 +17997,8 @@ exports.create = function (options) {
     mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
     outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
     mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
+    enableInsertable: options.enableInsertable === true,
+    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
     watermarks: options.watermarks || []
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -18320,6 +18324,7 @@ module.exports = class MediaStreamMixer {
     this._outputStreamManager = new OutputStreamManager({
       canvas: this._canvas,
       config: this._config,
+      domAdapter: this._domAdapter,
       logger: logger
     });
 
@@ -19270,6 +19275,46 @@ class MixerDomAdapter {
     });
     return video;
   }
+
+  /**
+   * 为 captureStream 输出创建隐藏的消费 video。
+   * 用于规避部分 Chromium 在未被本地 UI 消费时对 captureStream 降质/丢帧。
+   *
+   * @param {MediaStream} mediaStream - 要持续播放的 captureStream 输出
+   * @returns {HTMLVideoElement} 隐藏的消费 video 元素
+   */
+  createOutputSinkVideoElement(mediaStream) {
+    var video = this.createVideoElement(mediaStream);
+    if (this._logger) {
+      var streamId = mediaStream && mediaStream.id ? mediaStream.id : 'unknown';
+      this._logger.debug(`Output sink video created for captureStream ${streamId}`);
+    }
+    return video;
+  }
+
+  /**
+   * 清理隐藏的 video 元素。
+   *
+   * @param {HTMLVideoElement|null} video - 要清理的隐藏 video
+   */
+  disposeVideoElement(video) {
+    if (!video) {
+      return;
+    }
+    try {
+      if (typeof video.pause === 'function') {
+        video.pause();
+      }
+    } catch (error) {}
+    try {
+      video.srcObject = null;
+    } catch (error) {}
+    try {
+      if (typeof video.remove === 'function') {
+        video.remove();
+      }
+    } catch (error) {}
+  }
 }
 module.exports = MixerDomAdapter;
 },{}],47:[function(require,module,exports){
@@ -19292,12 +19337,14 @@ class OutputStreamManager {
    * @param {Object} options
    * @param {HTMLCanvasElement} options.canvas - 输出 canvas 元素
    * @param {Object} options.config - 混流配置
+   * @param {Object} options.domAdapter - DOM 适配器
    * @param {Object} options.logger - 日志记录器
    */
   constructor(options) {
     options = options || {};
     this._canvas = options.canvas;
     this._config = options.config;
+    this._domAdapter = options.domAdapter;
     this._logger = options.logger;
 
     /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
@@ -19314,6 +19361,7 @@ class OutputStreamManager {
 
     /** @type {Object} Insertable 能力探测结果 */
     this._insertableSupport = OutputStreamManager.detectInsertableStreams();
+    this._insertableEnabledByConfig = Boolean(this._config && this._config.enableInsertable);
 
     /** @type {boolean} 当前是否使用 Insertable 路径 */
     this._insertableActive = false;
@@ -19347,8 +19395,11 @@ class OutputStreamManager {
 
     /** @type {boolean} 是否启用 captureStream(0)+requestFrame 手动出帧模式 */
     this._manualCaptureFrameControl = false;
+
+    /** @type {HTMLVideoElement|null} captureStream 输出保活 sink */
+    this._activeCaptureSinkVideo = null;
     if (this._logger) {
-      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
+      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableEnabledByConfig} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
     }
   }
   static _getGlobalObject() {
@@ -19468,6 +19519,7 @@ class OutputStreamManager {
     this._capturedStreams.push(capturedStream);
     this._insertableActive = false;
     this._configureCaptureFrameControl(capturedStream);
+    this._ensureActiveCaptureSink(capturedStream);
     if (this._manualCaptureFrameControl) {
       this._requestCaptureFrame();
     }
@@ -19477,24 +19529,35 @@ class OutputStreamManager {
     return this._videoStream;
   }
   _createPreferredCaptureStream() {
+    if (this._config.manualCaptureFrameControl !== false) {
+      var manualStream = null;
+      try {
+        manualStream = this._canvas.captureStream(0);
+        if (!this._hasRequestFrame(manualStream)) {
+          manualStream.getTracks().forEach(track => {
+            if (track && track.stop) {
+              track.stop();
+            }
+          });
+          manualStream = null;
+        }
+      } catch (error) {
+        manualStream = null;
+      }
+      if (manualStream) {
+        return manualStream;
+      }
+    }
     var capturedStream = null;
     try {
-      capturedStream = this._canvas.captureStream(0);
-      if (!this._hasRequestFrame(capturedStream)) {
-        capturedStream.getTracks().forEach(track => {
-          if (track && track.stop) {
-            track.stop();
-          }
-        });
-        capturedStream = null;
-      }
+      capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
     } catch (error) {
       capturedStream = null;
     }
     if (capturedStream) {
       return capturedStream;
     }
-    return this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+    return this._canvas.captureStream();
   }
   _hasRequestFrame(capturedStream) {
     if (!capturedStream || !capturedStream.getVideoTracks) {
@@ -19511,7 +19574,27 @@ class OutputStreamManager {
     }
     var videoTrack = capturedStream.getVideoTracks()[0];
     this._capturedVideoTrack = videoTrack || null;
-    this._manualCaptureFrameControl = Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
+    this._manualCaptureFrameControl = Boolean(this._config.manualCaptureFrameControl !== false && videoTrack && typeof videoTrack.requestFrame === 'function');
+  }
+  _ensureActiveCaptureSink(capturedStream) {
+    this._teardownActiveCaptureSink();
+    if (!capturedStream || !this._domAdapter || !this._domAdapter.createOutputSinkVideoElement) {
+      return;
+    }
+    this._activeCaptureSinkVideo = this._domAdapter.createOutputSinkVideoElement(capturedStream);
+    if (this._logger) {
+      var streamId = capturedStream.id || 'unknown';
+      this._logger.debug(`Active capture sink attached: stream=${streamId}`);
+    }
+  }
+  _teardownActiveCaptureSink() {
+    if (!this._activeCaptureSinkVideo) {
+      return;
+    }
+    if (this._domAdapter && this._domAdapter.disposeVideoElement) {
+      this._domAdapter.disposeVideoElement(this._activeCaptureSinkVideo);
+    }
+    this._activeCaptureSinkVideo = null;
   }
   _requestCaptureFrame() {
     if (!this._manualCaptureFrameControl || !this._capturedVideoTrack || !this._capturedVideoTrack.requestFrame) {
@@ -19530,6 +19613,12 @@ class OutputStreamManager {
     }
   }
   _createInsertableVideoStream() {
+    if (!this._insertableEnabledByConfig) {
+      if (this._logger) {
+        this._logger.debug('Insertable output not enabled by config, fallback to captureStream');
+      }
+      return null;
+    }
     if (!this._insertableSupport.supported) {
       return null;
     }
@@ -19764,6 +19853,7 @@ class OutputStreamManager {
     this._capturedVideoTrack = null;
     this._manualCaptureFrameControl = false;
     this._insertableActive = false;
+    this._teardownActiveCaptureSink();
     this._capturedStreams.forEach(stream => {
       stream.getTracks().forEach(track => {
         track.stop();
@@ -19813,12 +19903,14 @@ class OutputStreamManager {
       outputMode: this._insertableActive ? 'insertable' : 'capture-stream',
       captureFrameControlMode: this._manualCaptureFrameControl ? 'manual-request-frame' : 'auto-capture-fps',
       insertableActive: Boolean(this._insertableActive),
+      insertableEnabledByConfig: Boolean(this._insertableEnabledByConfig),
       insertableSupported: Boolean(this._insertableSupport && this._insertableSupport.supported),
       insertableGeneratorType: this._insertableSupport && this._insertableSupport.generatorType || '',
       insertableSupportReason: this._insertableSupport && this._insertableSupport.reason || '',
       insertableWriteFailures: this._continuousWriteFailures || 0,
       insertableHasGeneratorTrack: Boolean(this._generatorTrack),
-      outputHasCapturedStream: Boolean(this._capturedStream)
+      outputHasCapturedStream: Boolean(this._capturedStream),
+      activeCaptureSinkAttached: Boolean(this._activeCaptureSinkVideo)
     };
   }
   get mixedStream() {
@@ -25595,6 +25687,20 @@ module.exports = class RTCSession extends EventEmitter {
         tracks = this._localMediaStream.getVideoTracks();
       }
       tracks.forEach(track => {
+        this.connection.getSenders().forEach(sender => {
+          if (sender.track && sender.track.kind === 'video') {
+            var parameters = sender.getParameters();
+            var degradationPreference = hint === 'detail' ? 'maintain-resolution' : 'balanced';
+
+            // 强制保持分辨率，可以不降分辨率只降帧
+            parameters.degradationPreference = degradationPreference;
+            sender.setParameters(parameters).then(() => {
+              logger.debug(`setParameters success ${degradationPreference}`);
+            }).catch(err => {
+              logger.error(`setParameters error: ${err.message}`);
+            });
+          }
+        });
         if ('contentHint' in track) {
           track.contentHint = hint;
         } else {
@@ -28480,10 +28586,19 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 主动发送关键帧，兼容部分手机接听时黑屏问题
     Utils.sendKeyFrames(this._connection, 0.5, 2);
-    if (this.getMixer()) {
-      // 主动发送关键帧，兼容部分手机接听时黑屏问题
-      Utils.sendKeyFrames(this._connection, 1);
-    }
+    this.connection.getSenders().forEach(sender => {
+      if (sender.track && sender.track.kind === 'video') {
+        var parameters = sender.getParameters();
+
+        // 默认强制保持分辨率
+        parameters.degradationPreference = 'maintain-resolution';
+        sender.setParameters(parameters).then(() => {
+          logger.debug('setParameters success maintain-resolution');
+        }).catch(err => {
+          logger.error(`setParameters error: ${err.message}`);
+        });
+      }
+    });
     this.emit('confirmed', {
       originator,
       ack: ack || null
@@ -30967,7 +31082,7 @@ module.exports = class getStats extends EventEmitter {
               tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : 0;
               tmpObject['frameHeight'] = report['frameHeight'] || sender.track && sender.track.getSettings()['height'] || 0;
               tmpObject['frameWidth'] = report['frameWidth'] || sender.track && sender.track.getSettings()['width'] || 0;
-              report.qualityLimitationReason && logger.warn(`qualityLimitationReason: ${report.qualityLimitationReason}`);
+              report.qualityLimitationReason !== 'none' && logger.warn(`qualityLimitationReason: ${report.qualityLimitationReason}`);
             }
             break;
           }
@@ -34935,132 +35050,251 @@ exports.ensureVideoSdpAttrs = sdp => {
   }
 };
 
-// 主动发送关键帧
 /**
- * 强制 RTCPeerConnection 的视频发送者周期性产生关键帧（Key Frame）。
+ * 强制 WebRTC 视频发送端产生关键帧（Key Frame）
  *
- * WebRTC 规范中，关键帧请求可以通过 RTCRtpSender.generateKeyFrame() 完成，
- * 但该 API 在部分浏览器（如 Safari、部分移动端 WebView）中尚未实现或存在兼容性问题。
+ * ----------------------------------------------------------------------------
+ * 设计目标
+ * ----------------------------------------------------------------------------
  *
- * 此函数使用一种兼容性更好的 hack 方式：
- * 通过反复切换 video encoding 的 scaleResolutionDownBy 参数（2 ↔ 1），
- * 触发浏览器内部的编码器重新配置，间接迫使编码器生成一个新的关键帧。
- * 由于编码参数变更会导致 SDP 协商或编码器重置，浏览器通常会在下一次编码时输出关键帧。
+ * 浏览器标准方式：
  *
- * @param {RTCPeerConnection} pc           - WebRTC 对等连接实例
- * @param {number}            [interval]   - 关键帧发送间隔（单位：秒）。
- *                                           若提供，函数会按此间隔周期发送关键帧。
- *                                           若未提供，则仅发送一次。
- * @param {number}            [frequency]  - 最大发送次数上限。
- *                                           若同时提供了 interval，发送达到此次数后自动停止。
- *                                           若未提供（且 interval 已提供），则返回 stop 函数供外部手动停止。
- * @returns {Function|undefined}            - 若 interval 已提供且 frequency 未提供，返回一个 stop 函数，
- *                                           调用后可停止定时发送；否则返回 undefined。
+ *   RTCRtpSender.generateKeyFrame()
+ *
+ * 是目前最规范、副作用最小的关键帧请求方式。
+ *
+ * 但现实中：
+ *
+ * - Safari
+ * - iOS WKWebView
+ * - 部分 Android WebView
+ * - 某些旧 Chromium 内核
+ *
+ * 对 generateKeyFrame 支持不完整，甚至不存在。
+ *
+ * 因此这里实现一个“分级 fallback”的兼容方案：
+ *
+ *   generateKeyFrame()
+ *        ↓
+ *   scaleResolutionDownBy hack（最后保底）
+ *
+ * ----------------------------------------------------------------------------
+ * 为什么不直接只用 scaleResolutionDownBy？
+ * ----------------------------------------------------------------------------
+ *
+ * 因为：
+ *
+ *   scaleResolutionDownBy: 1 ↔ 2
+ *
+ * 会真正改变编码分辨率。
+ *
+ * 浏览器通常会：
+ *
+ * - encoder reconfigure
+ * - encoder reset
+ * - bitrate controller reset
+ * - reference frame reset
+ *
+ * 接收端可能出现：
+ *
+ * - 分辨率抖动
+ * - 短暂模糊
+ * - renderer resize
+ * - 短暂卡顿
+ *
+ * 所以这里只把它作为最后 fallback。
+ *
+ * ----------------------------------------------------------------------------
+ * 使用方式
+ * ----------------------------------------------------------------------------
+ *
+ * 1. 单次发送关键帧：
+ *
+ *    sendKeyFrames(pc);
+ *
+ * 2. 周期性发送：
+ *
+ *    const stop = sendKeyFrames(pc, 2);
+ *
+ *    // 每 2 秒请求一次关键帧
+ *
+ * 3. 指定次数：
+ *
+ *    sendKeyFrames(pc, 2, 5);
+ *
+ *    // 每 2 秒发送一次，共发送 5 次
+ *
+ * ----------------------------------------------------------------------------
+ * 注意事项
+ * ----------------------------------------------------------------------------
+ *
+ * 1. 此方案本质仍属于“浏览器兼容 hack”
+ *
+ * WebRTC 标准设计中：
+ *
+ *   关键帧应该由接收端通过 RTCP PLI/FIR 请求。
+ *
+ * 如果你控制 SFU：
+ *
+ *   mediasoup
+ *   Janus
+ *   LiveKit
+ *   ion-sfu
+ *   Pion
+ *
+ * 更推荐服务端发送：
+ *
+ *   RTCP PLI / FIR
+ *
+ * 这是最标准、副作用最小的方案。
+ *
+ * 2. simulcast / SVC 注意事项
+ *
+ * params.encodings 可能包含：
+ *
+ *   low / mid / high
+ *
+ * 因此必须遍历所有 encoding。
+ *
+ * ----------------------------------------------------------------------------
  */
+
 exports.sendKeyFrames = (pc, interval, frequency) => {
   if (!pc) {
     return;
   }
-
-  // 用于 toggle scaleResolutionDownBy 的开关状态
-  var scaleResolutionDownBy = false;
-  var timer;
+  var timer = null;
 
   /**
-   * 启动关键帧发送（内部函数）
-   * @param {number} [num] - 如果传入了 num，则最多发送 num 次后自动停止。
-   *                         主要用于"只发送一次"的场景（num=1）。
+   * 请求单个 sender 产生关键帧
    */
-  var start = num => {
-    var executed = 0;
-    timer = setInterval(() => {
+  var requestKeyFrame = async sender => {
+    if (!sender) {
+      return;
+    }
+    if (!sender.track || sender.track.kind !== 'video') {
+      return;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * 1. 标准 API（最佳方案）
+     * ------------------------------------------------------------------------
+     */
+    if (typeof sender.generateKeyFrame === 'function') {
       try {
-        // 遍历所有 RTCRtpSender，只处理 video track
-        pc.getSenders().forEach(sender => {
-          if (sender.track.kind === 'video') {
-            var parameters = sender.getParameters();
-
-            /**
-             * Hack: 通过 toggle scaleResolutionDownBy 来强制触发关键帧。
-             *
-             * 原理说明：
-             * - 当 scaleResolutionDownBy 从 1（原始分辨率）切换到 2（1/2 分辨率）时，
-             *   浏览器检测到编码参数变更，会重置编码器并输出一个新的关键帧。
-             * - 反之，从 2 切回 1 时也会触发同样的效果。
-             * - 每次执行时取反，实现 2 ↔ 1 交替切换。
-             *
-             * 副作用：
-             * - 会导致接收端短暂看到分辨率抖动（2 ↔ 1 切换）。
-             * - 更适合仅在需要关键帧的瞬间快速切换一次，避免持续抖动。
-             */
-            parameters.encodings[0].scaleResolutionDownBy = !scaleResolutionDownBy ? 2 : 1;
-            scaleResolutionDownBy = !scaleResolutionDownBy;
-            sender.setParameters(parameters);
-          }
-        });
-
-        /**
-         * 更规范的方式（已注释，留作参考）：
-         *
-         * 规范的 WebRTC NV（Negotiated Video）扩展中，
-         * RTCRtpSender.generateKeyFrame() 可以直接请求关键帧，
-         * 无需修改编码参数，因此不会产生分辨率抖动副作用。
-         *
-         * 但 generateKeyFrame 在移动端浏览器或部分 WebView 中不可用，
-         * 因此使用上述 scaleResolutionDownBy hack 作为兼容性方案。
-         *
-         * 参考代码：
-         *
-         * for (const sender of pc.getSenders())
-         * {
-         *   if (sender.track && sender.track.kind === 'video')
-         *   {
-         *     // 通过 replaceTrack 同一 track 触发编码器刷新（部分浏览器有效）
-         *     await sender.replaceTrack(sender.track);
-         *
-         *     // 直接请求关键帧（Chrome 等支持，Safari 不支持）
-         *     if (typeof sender.generateKeyFrame === 'function')
-         *     {
-         *       await sender.generateKeyFrame();
-         *     }
-         *   }
-         * }
-         */
+        await sender.generateKeyFrame();
+        return;
       } catch (error) {
-        // 发生异常时立即停止定时器并输出警告
-        clearInterval(timer);
-        console.warn('[sendKeyFrames] 强制关键帧失败:', error.toString());
+        console.warn('[sendKeyFrames] generateKeyFrame failed:', error.toString());
       }
-      executed++;
+    }
 
-      // 达到发送次数上限时自动停止
-      if (frequency && executed >= frequency || num && executed >= num) {
-        clearInterval(timer);
+    /**
+     * ------------------------------------------------------------------------
+     * 2. scaleResolutionDownBy hack（最后保底）
+     * ------------------------------------------------------------------------
+     *
+     * 这是副作用最大的方案。
+     *
+     * 通过：
+     *
+     *   1 ↔ 2
+     *
+     * 强制 encoder reset。
+     *
+     * 可能导致：
+     *
+     * - 分辨率抖动
+     * - 短暂模糊
+     * - renderer resize
+     *
+     * 仅用于：
+     *
+     * - Safari
+     * - WebView
+     * - 极端兼容性场景
+     */
+    try {
+      var params = sender.getParameters();
+      if (!params.encodings || !params.encodings.length) {
+        return;
       }
-    }, interval * 1000);
+      var rollback = [];
+      for (var encoding of params.encodings) {
+        var oldScale = encoding.scaleResolutionDownBy || 1;
+        rollback.push({
+          encoding,
+          oldScale
+        });
+        encoding.scaleResolutionDownBy = oldScale === 1 ? 2 : 1;
+      }
+      await sender.setParameters(params);
+      setTimeout(async () => {
+        try {
+          for (var item of rollback) {
+            item.encoding.scaleResolutionDownBy = item.oldScale;
+          }
+          await sender.setParameters(params);
+        } catch (e) {
+          // ignore
+        }
+      }, 200);
+    } catch (error) {
+      console.warn('[sendKeyFrames] scaleResolutionDownBy fallback failed:', error.toString());
+    }
   };
 
   /**
-   * 停止发送关键帧
-   * 清除定时器，终止后续的周期性关键帧请求。
+   * 执行一次关键帧请求
+   */
+  var execute = async () => {
+    try {
+      var senders = pc.getSenders();
+      for (var sender of senders) {
+        await requestKeyFrame(sender);
+      }
+    } catch (error) {
+      console.warn('[sendKeyFrames] execute failed:', error.toString());
+    }
+  };
+
+  /**
+   * 停止周期性发送
    */
   var stop = () => {
-    timer && clearInterval(timer);
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
   };
 
-  // ---- 根据参数决定发送策略 ----
+  /**
+   * 单次发送
+   */
+  if (!interval) {
+    execute();
+    return;
+  }
 
-  if (interval) {
-    // 有 interval：周期性发送
-    start();
-    if (!frequency) {
-      // 没有指定发送次数上限 → 返回 stop 函数，让调用方自行控制何时停止
-      return stop;
+  /**
+   * 周期性发送
+   */
+  var executed = 0;
+  timer = setInterval(async () => {
+    await execute();
+    executed++;
+    if (frequency && executed >= frequency) {
+      stop();
     }
-    // 有 frequency → 达到上限后自动停止，不返回 stop
-  } else {
-    // 没有 interval：只发送一次关键帧
-    start(1);
+  }, interval * 1000);
+
+  /**
+   * 未指定 frequency 时，
+   * 返回 stop 供调用方手动停止。
+   */
+  if (!frequency) {
+    return stop;
   }
 };
 
