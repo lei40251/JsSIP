@@ -1944,10 +1944,11 @@ async function testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable()
   delete global.window.MediaStreamTrackGenerator;
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d'
+    width                     : 320,
+    height                    : 180,
+    fps                       : 15,
+    renderMode                : 'main-2d',
+    manualCaptureFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();
@@ -1980,10 +1981,11 @@ async function testCaptureStreamUsesManualRequestFrameWhenSupported()
   delete global.window.MediaStreamTrackGenerator;
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d'
+    width                     : 320,
+    height                    : 180,
+    fps                       : 15,
+    renderMode                : 'main-2d',
+    manualCaptureFrameControl : true
   });
   const output = mixer.getVideoStream();
   const capturedTrack = output.getVideoTracks()[0];
@@ -2029,11 +2031,12 @@ async function testDisableInsertableForcesCaptureStreamEvenWhenSupported()
   enableInsertableMocks();
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width            : 320, 
-    height           : 180,
-    fps              : 15,
-    renderMode       : 'main-2d',
-    enableInsertable : false
+    width                     : 320, 
+    height                    : 180,
+    fps                       : 15,
+    renderMode                : 'main-2d',
+    enableInsertable          : false,
+    manualCaptureFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();
@@ -2054,10 +2057,11 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
   enableInsertableMocks();
 
   const mixer = new Mixer([ createStream({ audio: true }) ], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d'
+    width                     : 320,
+    height                    : 180,
+    fps                       : 15,
+    renderMode                : 'main-2d',
+    manualCaptureFrameControl : false
   });
   const output = mixer.getVideoStream();
   const info = mixer.getRenderInfo();

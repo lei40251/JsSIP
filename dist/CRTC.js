@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.202662177
+ * CRTC v1.13.0.202662184
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212043414 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212043608 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212043414');
+debug('version %s', '1.13.0.405212043608');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212043414';
+    return '1.13.0.405212043608';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -17979,6 +17979,7 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
  * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
  * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
+ * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
  */
 exports.create = function (options) {
   options = options || {};
@@ -17997,6 +17998,7 @@ exports.create = function (options) {
     outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
     mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
     enableInsertable: options.enableInsertable === true,
+    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
     watermarks: options.watermarks || []
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
@@ -19527,24 +19529,35 @@ class OutputStreamManager {
     return this._videoStream;
   }
   _createPreferredCaptureStream() {
+    if (this._config.manualCaptureFrameControl !== false) {
+      var manualStream = null;
+      try {
+        manualStream = this._canvas.captureStream(0);
+        if (!this._hasRequestFrame(manualStream)) {
+          manualStream.getTracks().forEach(track => {
+            if (track && track.stop) {
+              track.stop();
+            }
+          });
+          manualStream = null;
+        }
+      } catch (error) {
+        manualStream = null;
+      }
+      if (manualStream) {
+        return manualStream;
+      }
+    }
     var capturedStream = null;
     try {
-      capturedStream = this._canvas.captureStream(0);
-      if (!this._hasRequestFrame(capturedStream)) {
-        capturedStream.getTracks().forEach(track => {
-          if (track && track.stop) {
-            track.stop();
-          }
-        });
-        capturedStream = null;
-      }
+      capturedStream = this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
     } catch (error) {
       capturedStream = null;
     }
     if (capturedStream) {
       return capturedStream;
     }
-    return this._config.fps ? this._canvas.captureStream(this._config.fps) : this._canvas.captureStream();
+    return this._canvas.captureStream();
   }
   _hasRequestFrame(capturedStream) {
     if (!capturedStream || !capturedStream.getVideoTracks) {
@@ -19561,7 +19574,7 @@ class OutputStreamManager {
     }
     var videoTrack = capturedStream.getVideoTracks()[0];
     this._capturedVideoTrack = videoTrack || null;
-    this._manualCaptureFrameControl = Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
+    this._manualCaptureFrameControl = Boolean(this._config.manualCaptureFrameControl !== false && videoTrack && typeof videoTrack.requestFrame === 'function');
   }
   _ensureActiveCaptureSink(capturedStream) {
     this._teardownActiveCaptureSink();
@@ -25674,6 +25687,20 @@ module.exports = class RTCSession extends EventEmitter {
         tracks = this._localMediaStream.getVideoTracks();
       }
       tracks.forEach(track => {
+        this.connection.getSenders().forEach(sender => {
+          if (sender.track && sender.track.kind === 'video') {
+            var parameters = sender.getParameters();
+            var degradationPreference = hint === 'detail' ? 'maintain-resolution' : 'balanced';
+
+            // 强制保持分辨率，可以不降分辨率只降帧
+            parameters.degradationPreference = degradationPreference;
+            sender.setParameters(parameters).then(() => {
+              logger.debug(`setParameters success ${degradationPreference}`);
+            }).catch(err => {
+              logger.error(`setParameters error: ${err.message}`);
+            });
+          }
+        });
         if ('contentHint' in track) {
           track.contentHint = hint;
         } else {
@@ -28560,9 +28587,24 @@ module.exports = class RTCSession extends EventEmitter {
     // 主动发送关键帧，兼容部分手机接听时黑屏问题
     Utils.sendKeyFrames(this._connection, 0.5, 2);
     if (this.getMixer()) {
-      // 主动发送关键帧，兼容部分手机接听时黑屏问题
-      Utils.sendKeyFrames(this._connection, 1);
+      // mixer 输出轨需要额外补一小段关键帧请求，但必须限制次数。
+      // sendKeyFrames() 内部通过 2 ↔ 1 切换 scaleResolutionDownBy 触发关键帧；
+      // 次数必须为偶数，确保最终停在 1，避免长期维持 1/2 分辨率。
+      Utils.sendKeyFrames(this._connection, 1, 2);
     }
+    this.connection.getSenders().forEach(sender => {
+      if (sender.track && sender.track.kind === 'video') {
+        var parameters = sender.getParameters();
+
+        // 默认强制保持分辨率
+        parameters.degradationPreference = 'maintain-resolution';
+        sender.setParameters(parameters).then(() => {
+          logger.debug('setParameters success maintain-resolution');
+        }).catch(err => {
+          logger.error(`setParameters error: ${err.message}`);
+        });
+      }
+    });
     this.emit('confirmed', {
       originator,
       ack: ack || null
@@ -31046,7 +31088,7 @@ module.exports = class getStats extends EventEmitter {
               tmpObject['framesPerSecond'] = report['framerateMean'] ? Math.ceil(report['framerateMean']) : report['framesPerSecond'] ? report['framesPerSecond'] : 0;
               tmpObject['frameHeight'] = report['frameHeight'] || sender.track && sender.track.getSettings()['height'] || 0;
               tmpObject['frameWidth'] = report['frameWidth'] || sender.track && sender.track.getSettings()['width'] || 0;
-              report.qualityLimitationReason && logger.warn(`qualityLimitationReason: ${report.qualityLimitationReason}`);
+              report.qualityLimitationReason !== 'none' && logger.warn(`qualityLimitationReason: ${report.qualityLimitationReason}`);
             }
             break;
           }
@@ -35131,7 +35173,7 @@ exports.sendKeyFrames = (pc, interval, frequency) => {
 
   if (interval) {
     // 有 interval：周期性发送
-    start();
+    start(frequency);
     if (!frequency) {
       // 没有指定发送次数上限 → 返回 stop 函数，让调用方自行控制何时停止
       return stop;

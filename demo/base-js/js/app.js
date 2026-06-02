@@ -1120,8 +1120,7 @@ ua.on('newRTCSession', function(e)
           console.warn(JSON.stringify(parameters));
 
           // 强制保持分辨率，即使网络不好也只会掉帧，不会变糊
-          parameters.degradationPreference = 'maintain-resolution';
-          parameters.encodings[0].scaleResolutionDownBy = 1;
+          // parameters.degradationPreference = 'maintain-resolution';
           parameters.encodings[0].maxBitrate = mbit * 1000;
 
           sender.setParameters(parameters).then(() => 
@@ -1132,8 +1131,8 @@ ua.on('newRTCSession', function(e)
             {
               console.error('设置 RTCRtpSender 参数失败:', err);
             });
-
-          sender.track.contentHint = 'detail';
+          // 设置保清晰
+          // sender.track.contentHint = 'detail';
           setStatus(`setParamter: ${mbit } detail`);
         }
       });
