@@ -1002,30 +1002,6 @@ ua.on('newRTCSession', function(e)
 
     confirmed = true;
 
-    /* 用于验证接通以后替换音频 */
-    // if (!mix)
-    // {
-    //   const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
-    //   const mediastream = new MediaStream([ rs.audioStream.getTracks()[0].clone() ]);
-
-    //   mix = new CRTC.Mixer([ mediastream ]);
-    //   mix.getAudioStream().then((m) =>
-    //   {
-    //     const sender = e.session.connection.getSenders().filter((s) =>
-    //     {
-    //       if (s.track && s.track.kind == 'audio')
-    //       {
-    //         return s;
-    //       }
-    //     });
-
-    //     if (sender.length>0)
-    //     {
-    //       sender[0].replaceTrack(m.getAudioTracks()[0], m);
-    //     }
-    //   });
-    // }
-
     /* 结尾 */
 
     // 获取统计信息
@@ -1117,23 +1093,16 @@ ua.on('newRTCSession', function(e)
         {
           const parameters = sender.getParameters();
 
-          console.warn(JSON.stringify(parameters));
-
-          // 强制保持分辨率，即使网络不好也只会掉帧，不会变糊
-          // parameters.degradationPreference = 'maintain-resolution';
           parameters.encodings[0].maxBitrate = mbit * 1000;
 
           sender.setParameters(parameters).then(() => 
           {
-            console.warn('成功设置 degradationPreference 为 maintain-resolution');
+            console.warn('成功设置 maxBitrate');
           })
             .catch((err) => 
             {
               console.error('设置 RTCRtpSender 参数失败:', err);
-            });
-          // 设置保清晰
-          // sender.track.contentHint = 'detail';
-          setStatus(`setParamter: ${mbit } detail`);
+            });            
         }
       });
     }
@@ -1963,8 +1932,6 @@ async function call(type, direction, mediaStream)
 
   if (mixerOptions)
   {
-    // mixerOptions.width=2560;
-    // mixerOptions.height=1440;
     options.mixer = mixerOptions;
   }
 

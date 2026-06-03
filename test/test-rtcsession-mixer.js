@@ -244,8 +244,11 @@ async function testApplyMixerSkipsWhenNoVideoOrNoOptions()
 async function testCloseStopsAndClearsMixer()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceAudioTrack = new MockMediaStreamTrack('audio');
+  const sourceVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 15 });
   const sourceStream = new MockMediaStream([
-    new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 15 })
+    sourceAudioTrack,
+    sourceVideoTrack
   ]);
 
   await session._applyMixerOnSdkGumStream(sourceStream, { mirror: true });
@@ -255,6 +258,8 @@ async function testCloseStopsAndClearsMixer()
 
   assert.strictEqual(MockMixer.stopCalls >= 1, true);
   assert.strictEqual(session.getMixer(), null);
+  assert.strictEqual(sourceAudioTrack.readyState, 'ended');
+  assert.strictEqual(sourceVideoTrack.readyState, 'ended');
 }
 
 async function testUpgradeToVideoAppliesSessionMixerToSdkGum()

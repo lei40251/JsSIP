@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026622017
+ * CRTC v1.13.0.202663935
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -2787,7 +2787,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212044034 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212061870 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -15996,7 +15996,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212044034');
+debug('version %s', '1.13.0.405212061870');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16035,7 +16035,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212044034';
+    return '1.13.0.405212061870';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
@@ -23861,13 +23861,19 @@ module.exports = class RTCSession extends EventEmitter {
     return options;
   }
   _stopSessionMixer() {
+    var mixerInputStream = this._mixerInputStream;
     if (!this._mixer) {
       this._mixer = null;
-      // mixer 不存在时也同步清空输入流引用，避免后续误判“可走 mixer 分支”。
+      // 即使 mixer 实例已不在，也要尝试释放之前送入 mixer 的原始输入流，
+      // 避免设备采集流悬挂，导致挂断后仍占用摄像头/麦克风。
+      this._safeCloseMediaStream(mixerInputStream, 'close mixer input stream failed');
       this._mixerInputStream = null;
       return;
     }
     this._safeStopMixer(this._mixer, 'stop mixer failed');
+    // Mixer.stop() 只负责释放 mixer 内部资源，不会主动 stop 外部传入的源流。
+    // RTCSession 在结束通话时需要显式释放这路输入流，避免设备无法彻底关闭。
+    this._safeCloseMediaStream(mixerInputStream, 'close mixer input stream failed');
     this._mixer = null;
     // mixer 已销毁，输入流引用必须同步释放，防止悬挂引用。
     this._mixerInputStream = null;
@@ -23880,6 +23886,16 @@ module.exports = class RTCSession extends EventEmitter {
       if (typeof mixer.stop === 'function') {
         mixer.stop();
       }
+    } catch (error) {
+      logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
+    }
+  }
+  _safeCloseMediaStream(stream, message) {
+    if (!stream) {
+      return;
+    }
+    try {
+      Utils.closeMediaStream(stream);
     } catch (error) {
       logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
     }
