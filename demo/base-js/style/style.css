@@ -226,12 +226,8 @@ body {
   max-width: 378px;
 }
 
-#callMixerTextWatermarkX,
-#callMixerTextWatermarkY,
 #callMixerTextWatermarkSize,
 #callMixerTextWatermarkOpacity,
-#callMixerImageWatermarkX,
-#callMixerImageWatermarkY,
 #callMixerImageWatermarkWidth,
 #callMixerImageWatermarkHeight,
 #callMixerImageWatermarkOpacity {
@@ -240,11 +236,11 @@ body {
 
 #callMixerTextWatermarkPosition,
 #callMixerImageWatermarkPosition {
-  max-width: 144px;
+  max-width: 118px;
 }
 
 #callMixerTextWatermarkColor {
-  max-width: 65px;
+  max-width: 54px;
 }
 
 .mixer-detail {
@@ -317,12 +313,22 @@ body {
 .mixer-inline-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.35rem;
   align-items: center;
 }
 
 .mixer-inline-row>* {
   min-width: 0;
+}
+
+.watermark-inline-row {
+  grid-template-columns: minmax(86px, 0.95fr) repeat(3, minmax(0, 0.72fr));
+}
+
+@media (max-width: 1500px) {
+  .watermark-inline-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .mixer-detail .form-control,
@@ -335,7 +341,8 @@ body {
 .mixer-detail .form-control-color {
   width: 100%;
   min-width: 0;
-  padding: 0.18rem;
+  height: calc(1.5em + 0.75rem + 2px);
+  padding: 0.375rem;
 }
 
 .compact-panel>.mixer-row:first-of-type {
@@ -518,12 +525,6 @@ body {
   }
 }
 
-@media (max-width: 1500px) {
-  .compact-mixer-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 1399px) {
   .call-config-grid {
     grid-template-columns: repeat(3, minmax(150px, 1fr));
@@ -606,12 +607,8 @@ body {
   #virtualBackground,
   #callMixerTextWatermarkText,
   #callMixerImageWatermarkUrl,
-  #callMixerTextWatermarkX,
-  #callMixerTextWatermarkY,
   #callMixerTextWatermarkSize,
   #callMixerTextWatermarkOpacity,
-  #callMixerImageWatermarkX,
-  #callMixerImageWatermarkY,
   #callMixerImageWatermarkWidth,
   #callMixerImageWatermarkHeight,
   #callMixerImageWatermarkOpacity,
@@ -620,5 +617,9 @@ body {
   #callMixerTextWatermarkColor {
     max-width: 100%;
     width: 100%;
+  }
+
+  .watermark-inline-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

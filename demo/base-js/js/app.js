@@ -1792,8 +1792,6 @@ function buildCallMixerOptions()
   if (text)
   {
     const textPos = String((document.getElementById('callMixerTextWatermarkPosition') || {}).value || 'bottom-right');
-    const textX = (document.getElementById('callMixerTextWatermarkX') || {}).value;
-    const textY = (document.getElementById('callMixerTextWatermarkY') || {}).value;
     const textSize = (document.getElementById('callMixerTextWatermarkSize') || {}).value;
     const textColor = String((document.getElementById('callMixerTextWatermarkColor') || {}).value || '').trim();
     const textOpacity = readCallMixerOpacity(document.getElementById('callMixerTextWatermarkOpacity'));
@@ -1802,7 +1800,7 @@ function buildCallMixerOptions()
       target   : 'output',
       type     : 'text',
       text     : text,
-      position : textPos === 'custom' ? { x: textX, y: textY } : textPos
+      position : textPos
     };
 
     if (String(textSize).trim())
@@ -1828,8 +1826,6 @@ function buildCallMixerOptions()
   if (imageUrl)
   {
     const imagePos = String((document.getElementById('callMixerImageWatermarkPosition') || {}).value || 'bottom-right');
-    const imageX = (document.getElementById('callMixerImageWatermarkX') || {}).value;
-    const imageY = (document.getElementById('callMixerImageWatermarkY') || {}).value;
     const imageWidth = (document.getElementById('callMixerImageWatermarkWidth') || {}).value;
     const imageHeight = (document.getElementById('callMixerImageWatermarkHeight') || {}).value;
     const imageOpacity = readCallMixerOpacity(document.getElementById('callMixerImageWatermarkOpacity'));
@@ -1838,7 +1834,7 @@ function buildCallMixerOptions()
       target   : 'output',
       type     : 'image',
       image    : imageUrl,
-      position : imagePos === 'custom' ? { x: imageX, y: imageY } : imagePos
+      position : imagePos
     };
 
     if (String(imageWidth).trim())

@@ -119,11 +119,8 @@
                     <div class="compact-mixer-grid">
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">文字水印</div>
-                        <div class="param-group-title">启用内容</div>
-                        <input class="form-control mixer-row" id="callMixerTextWatermarkText"
-                          placeholder="文字内容（留空不启用）" />
-                        <div class="param-group-title">位置坐标</div>
-                        <div class="mixer-inline-row mixer-row">
+                        <input class="form-control mixer-row" id="callMixerTextWatermarkText" placeholder="文字内容（留空不启用）" />
+                        <div class="mixer-inline-row watermark-inline-row mixer-row">
                           <select class="form-select" id="callMixerTextWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
@@ -132,28 +129,19 @@
                             <option value="bottom-left">左下</option>
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
-                            <option value="custom">自定义坐标</option>
                           </select>
-                          <input class="form-control" id="callMixerTextWatermarkX" type="number" placeholder="X" />
-                          <input class="form-control" id="callMixerTextWatermarkY" type="number" placeholder="Y" />
-                        </div>
-                        <div class="param-group-title">样式</div>
-                        <div class="mixer-inline-row mixer-row">
                           <input class="form-control" id="callMixerTextWatermarkSize" type="number" min="8"
                             placeholder="字号" />
                           <input class="form-control form-control-color" id="callMixerTextWatermarkColor" type="color"
                             value="#ffffff" />
-                          <input class="form-control" id="callMixerTextWatermarkOpacity" type="text"
-                            inputmode="decimal" placeholder="透明度(0~1/0~100)" />
+                          <input class="form-control" id="callMixerTextWatermarkOpacity" type="text" inputmode="decimal"
+                            placeholder="透明度(0~1)" />
                         </div>
                       </div>
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">图片水印</div>
-                        <div class="param-group-title">启用地址</div>
-                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl"
-                          placeholder="图片 URL（留空不启用）" />
-                        <div class="param-group-title">位置坐标</div>
-                        <div class="mixer-inline-row mixer-row">
+                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl" placeholder="图片 URL（留空不启用）" />
+                        <div class="mixer-inline-row watermark-inline-row mixer-row">
                           <select class="form-select" id="callMixerImageWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
@@ -162,19 +150,13 @@
                             <option value="bottom-left">左下</option>
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
-                            <option value="custom">自定义坐标</option>
                           </select>
-                          <input class="form-control" id="callMixerImageWatermarkX" type="number" placeholder="X" />
-                          <input class="form-control" id="callMixerImageWatermarkY" type="number" placeholder="Y" />
-                        </div>
-                        <div class="param-group-title">尺寸透明度</div>
-                        <div class="mixer-inline-row mixer-row">
                           <input class="form-control" id="callMixerImageWatermarkWidth" type="number" min="1"
                             placeholder="宽度" />
                           <input class="form-control" id="callMixerImageWatermarkHeight" type="number" min="1"
                             placeholder="高度" />
                           <input class="form-control" id="callMixerImageWatermarkOpacity" type="text"
-                            inputmode="decimal" placeholder="透明度(0~1/0~100)" />
+                            inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
                       </div>
                     </div>
