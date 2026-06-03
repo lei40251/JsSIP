@@ -2,6 +2,7 @@ CHANGELOG
 =========
 ### 1.13.1
 
+* remoteSupportsVideo 改为延迟 emit，避免过早触发事件
 
 ### 1.13.0
 
