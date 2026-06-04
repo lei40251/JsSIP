@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.1.2026632039
+ * CRTC v1.13.1.2026641024
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.1.405212064078 (Web)',
+  USER_AGENT: 'UA/1.13.1.405212082048 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.1.405212064078');
+debug('version %s', '1.13.1.405212082048');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.1.405212064078';
+    return '1.13.1.405212082048';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -18259,6 +18259,7 @@ module.exports = pk;
 "use strict";
 
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(_typeof(e) + " is not iterable"); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -18920,7 +18921,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               }
               _context3.n = 2;
-              return Utils.getHuaweiAndroidEnvironment();
+              return Utils.getEnvironmentId();
             case 2:
               _this2._environment = _context3.v;
               logger.debug("".concat(_this2._id, " environment id: "), _this2._environment);
@@ -19423,7 +19424,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 break;
               }
               _context5.n = 2;
-              return Utils.getHuaweiAndroidEnvironment();
+              return Utils.getEnvironmentId();
             case 2:
               _this4._environment = _context5.v;
               logger.debug("".concat(_this4._id, " environment id: "), _this4._environment);
@@ -19739,7 +19740,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 break;
               }
               _context7.n = 5;
-              return Utils.getHuaweiAndroidEnvironment();
+              return Utils.getEnvironmentId();
             case 5:
               _this5._environment = _context7.v;
               logger.debug("".concat(_this5._id, " environment id: "), _this5._environment);
@@ -20751,33 +20752,263 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
-     * 设置视频内容提示，主要用于提升在不同场景下的视频编码质量
+     * 设置视频内容类型
+     *
+     * hint:
+     *  - motion  -> 动态视频优先（保帧率）
+     *  - detail  -> 细节优先（保分辨率）
+     *  - text    -> 文本共享优化
+     *  - ''      -> 恢复默认策略
+     *
+     * shared:
+     *  - true  屏幕共享
+     *  - false 摄像头
      */
   }, {
     key: "setVideoContentHint",
-    value: function setVideoContentHint(hint, shared) {
-      logger.debug("".concat(this._id, " setVideoContentHint()"), hint);
-      var hints = ['detail', 'text', 'motion'];
-      if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
-        return false;
+    value: (function () {
+      var _setVideoContentHint = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
+        var _this1 = this;
+        var hint,
+          shared,
+          validHints,
+          stream,
+          tracks,
+          _loop,
+          _iterator5,
+          _step5,
+          track,
+          _args11 = arguments,
+          _t3;
+        return _regenerator().w(function (_context11) {
+          while (1) switch (_context11.p = _context11.n) {
+            case 0:
+              hint = _args11.length > 0 && _args11[0] !== undefined ? _args11[0] : '';
+              shared = _args11.length > 1 && _args11[1] !== undefined ? _args11[1] : false;
+              logger.debug("".concat(this._id, " setVideoContentHint()"), hint, shared);
+              validHints = ['detail', 'text', 'motion', ''];
+              if (validHints.includes(hint)) {
+                _context11.n = 1;
+                break;
+              }
+              logger.warn("invalid contentHint: ".concat(hint));
+              return _context11.a(2, false);
+            case 1:
+              if (!(this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED)) {
+                _context11.n = 2;
+                break;
+              }
+              logger.warn('invalid session status');
+              return _context11.a(2, false);
+            case 2:
+              if (this._isReadyToReOffer()) {
+                _context11.n = 3;
+                break;
+              }
+              logger.warn('peerconnection not ready');
+              return _context11.a(2, false);
+            case 3:
+              stream = shared ? this._localShareStream : this._localMediaStream;
+              if (stream) {
+                _context11.n = 4;
+                break;
+              }
+              logger.warn('stream not found');
+              return _context11.a(2, false);
+            case 4:
+              tracks = stream.getVideoTracks();
+              if (tracks.length) {
+                _context11.n = 5;
+                break;
+              }
+              logger.warn('video track not found');
+              return _context11.a(2, false);
+            case 5:
+              _loop = /*#__PURE__*/_regenerator().m(function _loop(track) {
+                var sender;
+                return _regenerator().w(function (_context10) {
+                  while (1) switch (_context10.n) {
+                    case 0:
+                      // 设置 contentHint
+                      if ('contentHint' in track) {
+                        try {
+                          track.contentHint = hint;
+                          logger.debug("track.contentHint = ".concat(hint));
+                        } catch (err) {
+                          logger.warn("set contentHint failed: ".concat(err.message));
+                        }
+                      }
+
+                      // 找到对应 sender
+                      sender = _this1.connection.getSenders().find(function (s) {
+                        return s.track === track;
+                      });
+                      if (sender) {
+                        _context10.n = 1;
+                        break;
+                      }
+                      logger.warn('RTCRtpSender not found');
+                      return _context10.a(2, 1);
+                    case 1:
+                      _context10.n = 2;
+                      return _this1._setSenderDegradationPreference(sender, hint, shared);
+                    case 2:
+                      return _context10.a(2);
+                  }
+                }, _loop);
+              });
+              _iterator5 = _createForOfIteratorHelper(tracks);
+              _context11.p = 6;
+              _iterator5.s();
+            case 7:
+              if ((_step5 = _iterator5.n()).done) {
+                _context11.n = 10;
+                break;
+              }
+              track = _step5.value;
+              return _context11.d(_regeneratorValues(_loop(track)), 8);
+            case 8:
+              if (!_context11.v) {
+                _context11.n = 9;
+                break;
+              }
+              return _context11.a(3, 9);
+            case 9:
+              _context11.n = 7;
+              break;
+            case 10:
+              _context11.n = 12;
+              break;
+            case 11:
+              _context11.p = 11;
+              _t3 = _context11.v;
+              _iterator5.e(_t3);
+            case 12:
+              _context11.p = 12;
+              _iterator5.f();
+              return _context11.f(12);
+            case 13:
+              return _context11.a(2, true);
+          }
+        }, _callee10, this, [[6, 11, 12, 13]]);
+      }));
+      function setVideoContentHint() {
+        return _setVideoContentHint.apply(this, arguments);
       }
-      if (!this._isReadyToReOffer()) {
-        return false;
+      return setVideoContentHint;
+    }()
+    /**
+     * 设置编码降级策略
+     *
+     * motion:
+     *   maintain-framerate
+     *
+     * detail/text:
+     *   maintain-resolution
+     *
+     * fallback:
+     *   balanced
+     */
+    )
+  }, {
+    key: "_setSenderDegradationPreference",
+    value: (function () {
+      var _setSenderDegradationPreference2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(sender, hint) {
+        var degradationPreference, parameters, _t4, _t5;
+        return _regenerator().w(function (_context12) {
+          while (1) switch (_context12.p = _context12.n) {
+            case 0:
+              if (this._isDegradationPreferenceSupported()) {
+                _context12.n = 1;
+                break;
+              }
+              logger.debug('degradationPreference unsupported');
+              return _context12.a(2);
+            case 1:
+              degradationPreference = 'balanced';
+              _t4 = hint;
+              _context12.n = _t4 === 'motion' ? 2 : _t4 === 'detail' ? 3 : _t4 === 'text' ? 3 : _t4 === '' ? 4 : 4;
+              break;
+            case 2:
+              // 保帧率
+              degradationPreference = 'maintain-framerate';
+              return _context12.a(3, 5);
+            case 3:
+              // 保清晰度
+              degradationPreference = 'maintain-resolution';
+              return _context12.a(3, 5);
+            case 4:
+              degradationPreference = 'balanced';
+              return _context12.a(3, 5);
+            case 5:
+              _context12.p = 5;
+              parameters = sender.getParameters();
+              if (parameters) {
+                _context12.n = 6;
+                break;
+              }
+              logger.warn('sender.getParameters() empty');
+              return _context12.a(2);
+            case 6:
+              if (!(parameters.degradationPreference === degradationPreference)) {
+                _context12.n = 7;
+                break;
+              }
+              logger.debug("degradationPreference already ".concat(degradationPreference));
+              return _context12.a(2);
+            case 7:
+              parameters.degradationPreference = degradationPreference;
+              _context12.n = 8;
+              return sender.setParameters(parameters);
+            case 8:
+              logger.debug("set degradationPreference success: ".concat(degradationPreference));
+              _context12.n = 10;
+              break;
+            case 9:
+              _context12.p = 9;
+              _t5 = _context12.v;
+              logger.error("set degradationPreference failed: ".concat(_t5.message));
+            case 10:
+              return _context12.a(2);
+          }
+        }, _callee11, this, [[5, 9]]);
+      }));
+      function _setSenderDegradationPreference(_x12, _x13) {
+        return _setSenderDegradationPreference2.apply(this, arguments);
       }
-      if (hints[hint] !== -1) {
-        var tracks;
-        if (shared) {
-          tracks = this._localShareStream.getVideoTracks();
-        } else {
-          tracks = this._localMediaStream.getVideoTracks();
-        }
-        tracks.forEach(function (track) {
-          if ('contentHint' in track) {
-            track.contentHint = hint;
-          } else {
+      return _setSenderDegradationPreference;
+    }()
+    /**
+    * 浏览器是否支持 degradationPreference
+    */
+    )
+  }, {
+    key: "_isDegradationPreferenceSupported",
+    value: function _isDegradationPreferenceSupported() {
+      try {
+        var ua = navigator.userAgent;
+
+        // Safari
+        var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+        if (isSafari) {
+          var safariMatch = ua.match(/Version\/(\d+)/);
+          var version = safariMatch && safariMatch[1];
+          if (version && Number(version) < 12) {
             return false;
           }
-        });
+        }
+
+        // Firefox
+        var firefoxMatch = ua.match(/Firefox\/(\d+)/);
+        if (firefoxMatch) {
+          var firefoxVersion = Number(firefoxMatch[1]);
+          if (firefoxVersion < 138) {
+            return false;
+          }
+        }
+        return true;
+      } catch (err) {
+        return false;
       }
     }
 
@@ -20787,7 +21018,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "hold",
     value: function hold() {
-      var _this1 = this;
+      var _this10 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug("".concat(this._id, " hold()"));
@@ -20809,7 +21040,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this1.terminate({
+          _this10.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Hold Failed'
@@ -20833,7 +21064,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "unhold",
     value: function unhold() {
-      var _this10 = this;
+      var _this11 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug("".concat(this._id, " unhold()"));
@@ -20855,7 +21086,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this10.terminate({
+          _this11.terminate({
             cause: CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Unhold Failed'
@@ -20879,7 +21110,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "renegotiate",
     value: function renegotiate() {
-      var _this11 = this;
+      var _this12 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       var done = arguments.length > 1 ? arguments[1] : undefined;
       logger.debug("".concat(this._id, " renegotiate()"));
@@ -20903,7 +21134,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         },
         failed: function failed() {
-          _this11.terminate({
+          _this12.terminate({
             cause: options.failed ? options.failed : CRTC_C.causes.WEBRTC_ERROR,
             status_code: 500,
             reason_phrase: 'Media Renegotiation Failed'
@@ -20935,7 +21166,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "refer",
     value: function refer(target, options) {
-      var _this12 = this;
+      var _this13 = this;
       logger.debug("".concat(this._id, " refer()"));
       var originalTarget = target;
       if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
@@ -20956,13 +21187,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // Listen for ending events so we can remove it from the map.
       referSubscriber.on('requestFailed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this13._referSubscribers[id];
       });
       referSubscriber.on('accepted', function () {
-        delete _this12._referSubscribers[id];
+        delete _this13._referSubscribers[id];
       });
       referSubscriber.on('failed', function () {
-        delete _this12._referSubscribers[id];
+        delete _this13._referSubscribers[id];
       });
       return referSubscriber;
     }
@@ -21070,7 +21301,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "receiveRequest",
     value: function receiveRequest(request) {
-      var _this13 = this;
+      var _this14 = this;
       logger.debug("".concat(this._id, " receiveRequest()"));
       if (request.method === CRTC_C.CANCEL) {
         /* RFC3261 15 States that a UAS may have accepted an invitation while a CANCEL
@@ -21122,19 +21353,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 sdp: e.sdp
               });
               this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-                return _this13._connection.setRemoteDescription(answer);
+                return _this14._connection.setRemoteDescription(answer);
               }).then(function () {
-                if (!_this13._is_confirmed) {
-                  _this13._confirmed('remote', request);
+                if (!_this14._is_confirmed) {
+                  _this14._confirmed('remote', request);
                 }
               })["catch"](function (error) {
-                _this13.terminate({
+                _this14.terminate({
                   cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                   status_code: 488
                 });
-                logger.warn("".concat(_this13._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this13._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this13.emit('peerconnection:setremotedescriptionfailed', error);
+                logger.warn("".concat(_this14._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+                logger.warn("".concat(_this14._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+                _this14.emit('peerconnection:setremotedescriptionfailed', error);
               });
             } else if (!this._is_confirmed) {
               this._confirmed('remote', request);
@@ -21308,7 +21539,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_close",
     value: function _close() {
-      var _this14 = this;
+      var _this15 = this;
       logger.debug("".concat(this._id, " close()"));
       // Close local MediaStream if it was not given by the user.
       if (this._localMediaStream && this._localMediaStreamLocallyGenerated) {
@@ -21319,7 +21550,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // 销毁BFCP相关媒体
       this._distoryBfcpAudioTrack();
       this._bfcpMediastreams.length > 0 && this._bfcpMediastreams.forEach(function (mediaStream) {
-        logger.debug("".concat(_this14._id, " close() | closing local bfcp MediaStream"));
+        logger.debug("".concat(_this15._id, " close() | closing local bfcp MediaStream"));
         Utils.closeMediaStream(mediaStream);
       });
       if (this._localShareStream) {
@@ -21417,20 +21648,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setACKTimer",
     value: function _setACKTimer() {
-      var _this15 = this;
+      var _this16 = this;
       this._timers.ackTimer = setTimeout(function () {
-        if (_this15._status === C.STATUS_WAITING_FOR_ACK) {
-          logger.debug("".concat(_this15._id, " no ACK received, terminating the session"));
-          clearTimeout(_this15._timers.invite2xxTimer);
-          _this15.sendRequest(CRTC_C.BYE);
-          _this15._ended('remote', null, CRTC_C.causes.NO_ACK);
+        if (_this16._status === C.STATUS_WAITING_FOR_ACK) {
+          logger.debug("".concat(_this16._id, " no ACK received, terminating the session"));
+          clearTimeout(_this16._timers.invite2xxTimer);
+          _this16.sendRequest(CRTC_C.BYE);
+          _this16._ended('remote', null, CRTC_C.causes.NO_ACK);
         }
       }, Timers.TIMER_H);
     }
   }, {
     key: "_createRTCConnection",
     value: function _createRTCConnection(pcConfig, rtcConstraints) {
-      var _this16 = this;
+      var _this17 = this;
       var self = this;
       self._canSend = false;
 
@@ -21438,13 +21669,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var successfullyConnected = false;
       this._connection = new RTCPeerConnection(pcConfig, rtcConstraints);
       this._connection.onconnectionstatechange = function () {
-        switch (_this16._connection.connectionState) {
+        switch (_this17._connection.connectionState) {
           case 'connecting':
             // 如果是第一次连接，并且5秒后依然是connecting状态则重新协商
             if (!successfullyConnected) {
               setTimeout(function () {
                 if (self._connection.connectionState === 'connecting') {
-                  logger.warn("".concat(_this16._id, " start iceConnectionState ").concat(self._connection.connectionState));
+                  logger.warn("".concat(_this17._id, " start iceConnectionState ").concat(self._connection.connectionState));
                   self.renegotiate({
                     rtcOfferConstraints: {
                       iceRestart: true
@@ -21477,27 +21708,27 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       };
       this._connection.addEventListener('iceconnectionstatechange', function () {
-        var state = _this16._connection.iceConnectionState;
-        _this16.emit('peerconnection:iceConnectionState', state);
-        logger.warn("".concat(_this16._id, " emit \"peerconnection:iceConnectionState\" ").concat(state));
+        var state = _this17._connection.iceConnectionState;
+        _this17.emit('peerconnection:iceConnectionState', state);
+        logger.warn("".concat(_this17._id, " emit \"peerconnection:iceConnectionState\" ").concat(state));
 
         // 成功连接过
         if (state === 'connected') {
-          logger.debug("".concat(_this16._id, " ").concat(state));
+          logger.debug("".concat(_this17._id, " ").concat(state));
           successfullyConnected = true;
         }
         var reConnect = function reConnect() {
-          logger.warn("".concat(_this16._id, " reConnect(). "));
+          logger.warn("".concat(_this17._id, " reConnect(). "));
           if (!successfullyConnected) {
             self.terminate({
               cause: CRTC_C.causes.RTP_TIMEOUT,
               status_code: 408,
               reason_phrase: CRTC_C.causes.RTP_TIMEOUT
             });
-          } else if (!_this16._canSend) {
-            logger.warn("".concat(_this16._id, " iceConnectionState ").concat(state));
+          } else if (!_this17._canSend) {
+            logger.warn("".concat(_this17._id, " iceConnectionState ").concat(state));
             // RTCPeerConnection failed断开后启动重新协商
-            if (_this16._enableBFCP) {
+            if (_this17._enableBFCP) {
               self.renegotiate();
             } else {
               self.renegotiate({
@@ -21529,7 +21760,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_createLocalDescription",
     value: function _createLocalDescription(type, constraints) {
-      var _this17 = this;
+      var _this18 = this;
       logger.debug("".concat(this._id, " createLocalDescription() ").concat(type, " ").concat(JSON.stringify(constraints)));
       if (type !== 'offer' && type !== 'answer') throw new Error("createLocalDescription() | invalid type \"".concat(type, "\""));
       var connection = this._connection;
@@ -21539,16 +21770,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       .then(function () {
         if (type === 'offer') {
           return connection.createOffer(constraints)["catch"](function (error) {
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createofferfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createofferfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this17.emit('peerconnection:createofferfailed', error);
+            logger.warn("".concat(_this18._id, " emit \"peerconnection:createofferfailed\" [error:%o]"), error);
+            logger.warn("".concat(_this18._id, " emit \"peerconnection:createofferfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+            _this18.emit('peerconnection:createofferfailed', error);
             return Promise.reject(error);
           });
         } else {
           return connection.createAnswer(constraints)["catch"](function (error) {
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createanswerfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this17._id, " emit \"peerconnection:createanswerfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this17.emit('peerconnection:createanswerfailed', error);
+            logger.warn("".concat(_this18._id, " emit \"peerconnection:createanswerfailed\" [error:%o]"), error);
+            logger.warn("".concat(_this18._id, " emit \"peerconnection:createanswerfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+            _this18.emit('peerconnection:createanswerfailed', error);
             return Promise.reject(error);
           });
         }
@@ -21582,7 +21813,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // packetization-mode 规则：
                 // 1) paphone    => 保留 0，删除 1
                 // 2) 否则       => 保留 1，删除 0
-                var keepZero = _this17._customizedMode === 'paphone';
+                var keepZero = _this18._customizedMode === 'paphone';
                 var shouldDelete = keepZero ? fmtp.config.includes('packetization-mode=1') : fmtp.config.includes('packetization-mode=0');
                 if (shouldDelete) {
                   delH264Payload.push(fmtp.payload);
@@ -21600,7 +21831,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               });
 
               // paphone H264 payload 为124，去掉其他payload为124的媒体
-              if (media.rtp && _this17._customizedMode === 'paphone') {
+              if (media.rtp && _this18._customizedMode === 'paphone') {
                 media.rtp.forEach(function (item) {
                   item.payload === 124 && String(item.codec).toLowerCase() !== 'h264' && delH264Payload.push(124);
                 });
@@ -21622,7 +21853,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 });
 
                 // paphone H264 payload 为124，去掉其他payload为124的媒体
-                _this17._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
+                _this18._customizedMode === 'paphone' && hasOther124 && delH264Payload.push(124);
                 media.rtp = media.rtp.filter(function (r) {
                   return delH264Payload.indexOf(r.payload) == -1;
                 });
@@ -21638,7 +21869,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
              * 处理5G外呼sdp过大问题,
              * SDK只对H264过滤保留两个,以兼容其他通用端,SBC对外呼手机的呼叫做媒体过滤
              */
-            if (_this17._ua.sk[7] >= 3) {
+            if (_this18._ua.sk[7] >= 3) {
               // 删除 extmap 仅保留 urn:3gpp:video-orientation
               if (media.ext) {
                 media.ext = media.ext.filter(function (ext) {
@@ -21663,10 +21894,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 兼容chrome<71版本  https://github.com/webrtcHacks/adapter/issues/919
         desc.sdp = desc.sdp.replace(/a=extmap-allow-mixed.*\r\n/g, '');
-        _this17._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
+        _this18._customizedMode === 'paphone' && (desc.sdp = Utils.compatiblePayload(desc.sdp));
 
         // 非BFCP修改为根据配置参数设置 profile-level-id
-        _this17._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this17._sdpResolution].LEVELID)));
+        _this18._enableBFCP || (desc.sdp = desc.sdp.replace(/profile-level-id=[\w\d]+/g, "profile-level-id=".concat(CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].LEVELID)));
 
         // 兼容 Firefox 去掉 bundle
         if (Utils.isFirefox() && type === 'offer') {
@@ -21674,10 +21905,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           desc.sdp = desc.sdp.replace(/m=video 0 /g, 'm=video 9 ');
         }
         return connection.setLocalDescription(desc)["catch"](function (error) {
-          _this17._rtcReady = true;
-          logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this17._id, " emit \"peerconnection:setlocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this17.emit('peerconnection:setlocaldescriptionfailed', error);
+          _this18._rtcReady = true;
+          logger.warn("".concat(_this18._id, " emit \"peerconnection:setlocaldescriptionfailed\" [error:%o]"), error);
+          logger.warn("".concat(_this18._id, " emit \"peerconnection:setlocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+          _this18.emit('peerconnection:setlocaldescriptionfailed', error);
           return Promise.reject(error);
         });
       }).then(function () {
@@ -21688,17 +21919,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          * - 'connection.iceGatheringState' is 'gathering' and 'iceReady' is true.
          */
         var iceRestart = constraints && constraints.iceRestart;
-        if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this17._iceReady) {
-          _this17._rtcReady = true;
+        if (connection.iceGatheringState === 'complete' && !iceRestart || connection.iceGatheringState === 'gathering' && _this18._iceReady) {
+          _this18._rtcReady = true;
           var e = {
             originator: 'local',
             type: type,
             sdp: connection.localDescription.sdp
           };
-          _this17._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
 
           // logger.debug(`${this._id} complete emit "sdp"${ e.sdp}`);
-          _this17.emit('sdp', e);
+          _this18.emit('sdp', e);
           return Promise.resolve(e.sdp);
         }
 
@@ -21707,28 +21938,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           var finished = false;
           var iceCandidateListener;
           var iceGatheringStateListener;
-          _this17._iceReady = false;
+          _this18._iceReady = false;
           var ready = function ready() {
             connection.removeEventListener('icecandidate', iceCandidateListener);
             connection.removeEventListener('icegatheringstatechange', iceGatheringStateListener);
             finished = true;
-            _this17._rtcReady = true;
+            _this18._rtcReady = true;
 
             // connection.iceGatheringState will still indicate 'gathering' and thus be blocking.
-            _this17._iceReady = true;
+            _this18._iceReady = true;
             var e = {
               originator: 'local',
               type: type,
               sdp: connection.localDescription.sdp
             };
-            _this17._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-            logger.debug("".concat(_this17._id, " ready emit \"sdp\""));
-            _this17.emit('sdp', e);
+            _this18._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+            logger.debug("".concat(_this18._id, " ready emit \"sdp\""));
+            _this18.emit('sdp', e);
             resolve(e.sdp);
           };
           connection.addEventListener('icecandidate', iceCandidateListener = function iceCandidateListener(event) {
             var candidate = event.candidate;
-            logger.debug("".concat(_this17._id, " ").concat(new Date().toISOString(), " icecandidate: ").concat(JSON.stringify(candidate)));
+            logger.debug("".concat(_this18._id, " ").concat(new Date().toISOString(), " icecandidate: ").concat(JSON.stringify(candidate)));
             if (candidate) {
               // 两秒后如果没有收集结束，则强制结束
               setTimeout(function () {
@@ -21736,7 +21967,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   ready();
                 }
               }, 2000);
-              _this17.emit('icecandidate', {
+              _this18.emit('icecandidate', {
                 candidate: candidate,
                 ready: ready
               });
@@ -21745,7 +21976,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           });
           connection.addEventListener('icegatheringstatechange', iceGatheringStateListener = function iceGatheringStateListener() {
-            logger.debug("".concat(_this17._id, " ").concat(new Date().toISOString(), " icegatheringstatechange: ").concat(connection.iceGatheringState, " ").concat(finished));
+            logger.debug("".concat(_this18._id, " ").concat(new Date().toISOString(), " icegatheringstatechange: ").concat(connection.iceGatheringState, " ").concat(finished));
             if (connection.iceGatheringState === 'complete' && !finished) {
               ready();
             }
@@ -21764,17 +21995,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // logger.debug(`${this._id} sdp: ${sdp}`);
         var sdp_desc = sdp_transform.parse(sdp);
         if (type === 'offer') {
-          _this17._localToAudio === '' && (_this17._localToAudio = true);
-          _this17._localToVideo === '' && (_this17._localToVideo = false);
-          var _iterator5 = _createForOfIteratorHelper(sdp_desc.media),
-            _step5;
+          _this18._localToAudio === '' && (_this18._localToAudio = true);
+          _this18._localToVideo === '' && (_this18._localToVideo = false);
+          var _iterator6 = _createForOfIteratorHelper(sdp_desc.media),
+            _step6;
           try {
-            for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-              var m = _step5.value;
+            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+              var m = _step6.value;
               if (m.type === 'audio') {
                 continue;
               }
-              if (_this17._localToAudio || m.direction == 'inactive') {
+              if (_this18._localToAudio || m.direction == 'inactive') {
                 m.port = 0;
                 try {
                   delete m.connection;
@@ -21785,45 +22016,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 // };
               }
               if (m.port !== 0) {
-                if (_this17._mode === '') {
-                  _this17._mode = 'video';
+                if (_this18._mode === '') {
+                  _this18._mode = 'video';
                 } else {
-                  _this17._ontogglemode('video');
+                  _this18._ontogglemode('video');
                 }
-                _this17._localToAudio = false;
-                _this17._localToVideo = true;
+                _this18._localToAudio = false;
+                _this18._localToVideo = true;
               } else {
                 m.direction = 'sendrecv';
               }
             }
           } catch (err) {
-            _iterator5.e(err);
+            _iterator6.e(err);
           } finally {
-            _iterator5.f();
+            _iterator6.f();
           }
-          _this17._mode === '' && (_this17._mode = 'audio');
+          _this18._mode === '' && (_this18._mode = 'audio');
         } else {
           /**
            * 本地音频接听后设置 video 的 port=0
            * @author: lei
            */
-          var _iterator6 = _createForOfIteratorHelper(sdp_desc.media),
-            _step6;
+          var _iterator7 = _createForOfIteratorHelper(sdp_desc.media),
+            _step7;
           try {
-            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-              var _m = _step6.value;
+            for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+              var _m = _step7.value;
               if (_m.type !== 'video') {
                 continue;
               }
               var port = _m.port;
-              if (_this17._localToAudio || _m.direction === 'inactive') {
+              if (_this18._localToAudio || _m.direction === 'inactive') {
                 _m.port = 0;
-                if (_this17._remoteHold) {
+                if (_this18._remoteHold) {
                   _m.port = port;
                 }
-                _this17._ontogglemode('audio');
-              } else if (!_this17._remoteToAudio) {
-                _this17._ontogglemode('video');
+                _this18._ontogglemode('audio');
+              } else if (!_this18._remoteToAudio) {
+                _this18._ontogglemode('video');
               }
               if (_m.port === 0) {
                 delete _m.connection;
@@ -21831,9 +22062,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }
           } catch (err) {
-            _iterator6.e(err);
+            _iterator7.e(err);
           } finally {
-            _iterator6.f();
+            _iterator7.f();
           }
         }
         var _bandAS = 0;
@@ -21849,13 +22080,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             /**
              * 处理5G和非5G的SDP
              */
-            if (_this17._ua.sk[7] >= 3) {
-              _bandAS += CRTC_C.SDP_LEVELID_AS[_this17._sdpResolution].AS;
+            if (_this18._ua.sk[7] >= 3) {
+              _bandAS += CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS;
               _bandRR += 6000;
               _bandRS += 8000;
               media.bandwidth = [{
                 type: 'AS',
-                limit: CRTC_C.SDP_LEVELID_AS[_this17._sdpResolution].AS
+                limit: CRTC_C.SDP_LEVELID_AS[_this18._sdpResolution].AS
               }, {
                 type: 'RR',
                 limit: 6000
@@ -21881,7 +22112,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             /**
              * 处理5G和非5G的SDP
              */
-            if (_this17._ua.sk[7] >= 3) {
+            if (_this18._ua.sk[7] >= 3) {
               _bandAS += 90;
               _bandRR += 600;
               _bandRS += 2000;
@@ -21902,7 +22133,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         /**
          * 处理5G和非5G的SDP
          */
-        if (_this17._ua.sk[7] >= 3) {
+        if (_this18._ua.sk[7] >= 3) {
           sdp_desc.bandwidth = [{
             type: 'AS',
             limit: _bandAS
@@ -21916,7 +22147,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
         return sdp_transform.write(sdp_desc);
       })["catch"](function (e) {
-        logger.warn("".concat(_this17._id, " ").concat(e.message));
+        logger.warn("".concat(_this18._id, " ").concat(e.message));
       });
     }
 
@@ -21982,7 +22213,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReinvite",
     value: function _receiveReinvite(request) {
-      var _this18 = this;
+      var _this19 = this;
       logger.debug("".concat(this._id, " receiveReinvite()"));
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -22022,9 +22253,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           this._onunhold('remote');
         }
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this18._createLocalDescription('offer', _this18._rtcOfferConstraints);
+          return _this19._createLocalDescription('offer', _this19._rtcOfferConstraints);
         }).then(function (sdp) {
-          sendAnswer.call(_this18, sdp);
+          sendAnswer.call(_this19, sdp);
         })["catch"](function (e) {
           logger.warn("this._id ".concat(e.message, " ").concat(JSON.stringify(e)));
           request.reply(500);
@@ -22039,12 +22270,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         return;
       }
       function nextS() {
-        var _this19 = this;
+        var _this20 = this;
         // 适配100rel调整 reinvite 的 hold 判断
         this._notHold = true;
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           if (track.readyState !== 'ended') {
-            _this19._notHold = false;
+            _this20._notHold = false;
           }
         });
         this._processInDialogSdpOffer(request)
@@ -22064,18 +22295,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            *
            * 有特殊场景update不带tcap，暂时改为全部响应带xfb
            */
-          if (_this19._ua.sk[7] >= 3 && desc) {
+          if (_this20._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
-          if (_this19._enableBFCP && _this19._floorctrl == 's-only') {
-            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this19._floorctrl, "\r\na=floorid:").concat(_this19._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
+          if (_this20._enableBFCP && _this20._floorctrl == 's-only') {
+            desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this20._floorctrl, "\r\na=floorid:").concat(_this20._floorId, " mstrm:12\r\na=confid:123\r\na=userid:456\r\n"));
           }
-          if (_this19._status === C.STATUS_TERMINATED) {
+          if (_this20._status === C.STATUS_TERMINATED) {
             return;
           }
-          sendAnswer.call(_this19, desc);
+          sendAnswer.call(_this20, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
@@ -22104,11 +22335,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         this._remoteToAudio = true;
         this._remoteToVideo = false;
-        var _iterator7 = _createForOfIteratorHelper(sdp_request.media),
-          _step7;
+        var _iterator8 = _createForOfIteratorHelper(sdp_request.media),
+          _step8;
         try {
-          for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-            var m = _step7.value;
+          for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+            var m = _step8.value;
             if (m.type == 'audio') {
               continue;
             }
@@ -22130,15 +22361,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('upgradeToVideo', {
                   request: request,
                   accept: function accept(videoConstraints) {
-                    videoConstraints && (_this18._inviteMediaConstraints.video = videoConstraints);
-                    console.warn('tin: ', _this18._inviteMediaConstraints);
-                    _this18._localToAudio = false;
-                    nextS.call(_this18);
+                    videoConstraints && (_this19._inviteMediaConstraints.video = videoConstraints);
+                    console.warn('tin: ', _this19._inviteMediaConstraints);
+                    _this19._localToAudio = false;
+                    nextS.call(_this19);
                   },
                   reject: function reject() {
-                    _this18._localToAudio = true;
+                    _this19._localToAudio = true;
                     request.body = Utils.disableVideoInSdp(request.body);
-                    nextS.call(_this18);
+                    nextS.call(_this19);
                   }
                 });
               }
@@ -22151,9 +22382,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             // }
           }
         } catch (err) {
-          _iterator7.e(err);
+          _iterator8.e(err);
         } finally {
-          _iterator7.f();
+          _iterator8.f();
         }
         if (!waiting) {
           if (sdp_request.media.length < 3) {
@@ -22168,7 +22399,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }
       function sendAnswer(desc) {
-        var _this20 = this;
+        var _this21 = this;
         var extraHeaders = ["Contact: ".concat(this._contact)];
 
         // 5G Headers
@@ -22188,9 +22419,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           logger.debug("".concat(this._id, " NEW Answer SDP: "), desc);
         }
         request.reply(200, null, extraHeaders, desc, function () {
-          _this20._status = C.STATUS_WAITING_FOR_ACK;
-          _this20._setInvite2xxTimer(request, desc);
-          _this20._setACKTimer();
+          _this21._status = C.STATUS_WAITING_FOR_ACK;
+          _this21._setInvite2xxTimer(request, desc);
+          _this21._setACKTimer();
         });
 
         // If callback is given execute it.
@@ -22206,7 +22437,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveUpdate",
     value: function _receiveUpdate(request) {
-      var _this22 = this;
+      var _this23 = this;
       logger.debug("".concat(this._id, " receiveUpdate()"));
       var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
@@ -22247,7 +22478,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 适配 100rel 调整update带sdp的处理
       function nextS() {
-        var _this21 = this;
+        var _this22 = this;
         this._notHold = true;
         this._processInDialogSdpOffer(request)
         // Send answer.
@@ -22266,15 +22497,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            *
            * 有特殊场景update不带tcap，暂时改为全部响应带xfb
            */
-          if (_this21._ua.sk[7] >= 3 && desc) {
+          if (_this22._ua.sk[7] >= 3 && desc) {
             desc = desc.replace(/(m=video.*)\r\n/, '$1\r\na=cc-xfb\r\n');
             desc = desc.replace(/a=pcfg:1 t=1\r\n/, '');
             desc = desc.replace(/a=tcap.*AVPF\r\n/, '');
           }
-          if (_this21._status === C.STATUS_TERMINATED) {
+          if (_this22._status === C.STATUS_TERMINATED) {
             return;
           }
-          sendAnswer.call(_this21, desc);
+          sendAnswer.call(_this22, desc);
         })["catch"](function (error) {
           logger.warn(error);
         });
@@ -22295,11 +22526,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var sdp_request = sdp_transform.parse(request.body);
         this._remoteToAudio = true;
         this._remoteToVideo = false;
-        var _iterator8 = _createForOfIteratorHelper(sdp_request.media),
-          _step8;
+        var _iterator9 = _createForOfIteratorHelper(sdp_request.media),
+          _step9;
         try {
-          for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-            var m = _step8.value;
+          for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+            var m = _step9.value;
             if (m.type == 'audio') {
               continue;
             }
@@ -22320,21 +22551,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 this.emit('upgradeToVideo', {
                   request: request,
                   accept: function accept() {
-                    _this22._localToAudio = false;
-                    nextS.call(_this22);
+                    _this23._localToAudio = false;
+                    nextS.call(_this23);
                   },
                   reject: function reject() {
-                    _this22._localToAudio = true;
-                    nextS.call(_this22);
+                    _this23._localToAudio = true;
+                    nextS.call(_this23);
                   }
                 });
               }
             }
           }
         } catch (err) {
-          _iterator8.e(err);
+          _iterator9.e(err);
         } finally {
-          _iterator8.f();
+          _iterator9.f();
         }
         if (!waiting) {
           logger.debug("".concat(this._id, " !waiting."));
@@ -22363,15 +22594,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_processInDialogSdpOffer",
     value: function _processInDialogSdpOffer(request) {
-      var _this23 = this;
+      var _this24 = this;
       logger.debug("".concat(this._id, " _processInDialogSdpOffer()"));
       var sdp = request.parseSDP();
       var hold = false;
-      var _iterator9 = _createForOfIteratorHelper(sdp.media),
-        _step9;
+      var _iterator0 = _createForOfIteratorHelper(sdp.media),
+        _step0;
       try {
-        for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-          var m = _step9.value;
+        for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
+          var m = _step0.value;
           if (holdMediaTypes.indexOf(m.type) === -1) {
             continue;
           }
@@ -22386,9 +22617,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       } catch (err) {
-        _iterator9.e(err);
+        _iterator0.e(err);
       } finally {
-        _iterator9.f();
+        _iterator0.f();
       }
       var newSdp = this._sdpAddMid(request.body);
       if (this._dtmf_payload) {
@@ -22409,31 +22640,31 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._connectionPromiseQueue = this._connectionPromiseQueue
       // Set remote description.
       .then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        return _this23._connection.setRemoteDescription(offer)["catch"](function (error) {
+        return _this24._connection.setRemoteDescription(offer)["catch"](function (error) {
           request.reply(488);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this23.emit('peerconnection:setremotedescriptionfailed', error);
+          logger.warn("".concat(_this24._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+          logger.warn("".concat(_this24._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+          _this24.emit('peerconnection:setremotedescriptionfailed', error);
           throw error;
         });
       }).then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        if (_this23._remoteHold === true && hold === false) {
-          _this23._remoteHold = false;
-          _this23._onunhold('remote');
-        } else if (_this23._remoteHold === false && hold === true) {
-          _this23._remoteHold = true;
-          _this23._onhold('remote');
+        if (_this24._remoteHold === true && hold === false) {
+          _this24._remoteHold = false;
+          _this24._onunhold('remote');
+        } else if (_this24._remoteHold === false && hold === true) {
+          _this24._remoteHold = true;
+          _this24._onhold('remote');
         }
       }).then(function () {
         // 新增判断是否已经存在一个视频
         var hasVideo = false;
-        _this23._connection.getSenders().forEach(function (sender) {
+        _this24._connection.getSenders().forEach(function (sender) {
           try {
             logger.debug('sender: ', sender.track.kind, sender.track.readyState);
           } catch (error) {}
@@ -22441,54 +22672,54 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             hasVideo = true;
           }
         });
-        logger.debug("".concat(_this23._id, " stats: "), _this23._remoteToVideo, _this23._localToAudio, _this23._notHold, hasVideo, _this23._customMediaStream);
+        logger.debug("".concat(_this24._id, " stats: "), _this24._remoteToVideo, _this24._localToAudio, _this24._notHold, hasVideo, _this24._customMediaStream);
 
         // 适配 100rel 调整 hold 的判断
-        if (_this23._remoteToVideo && !_this23._localToAudio && _this23._notHold && !hasVideo && _this23._customMediaStream === false) {
-          if (!_this23._localMediaStreamLocallyGenerated) {
+        if (_this24._remoteToVideo && !_this24._localToAudio && _this24._notHold && !hasVideo && _this24._customMediaStream === false) {
+          if (!_this24._localMediaStreamLocallyGenerated) {
             return false;
           }
-          var videoConstraints = _this23._inviteMediaConstraints ? {
-            video: _this23._inviteMediaConstraints.video || true
+          var videoConstraints = _this24._inviteMediaConstraints ? {
+            video: _this24._inviteMediaConstraints.video || true
           } : {
             video: true
           };
-          if (CRTC_C.SDP_LEVELID_AS[_this23._sdpResolution].VIDEOCONSTRAINTS) {
-            Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[_this23._sdpResolution].VIDEOCONSTRAINTS);
+          if (CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS) {
+            Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[_this24._sdpResolution].VIDEOCONSTRAINTS);
           }
           logger.debug('video constraints: ', JSON.stringify(videoConstraints));
           return navigator.mediaDevices.getUserMedia(videoConstraints).then(/*#__PURE__*/function () {
-            var _ref0 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(stream) {
-              return _regenerator().w(function (_context10) {
-                while (1) switch (_context10.n) {
+            var _ref0 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12(stream) {
+              return _regenerator().w(function (_context13) {
+                while (1) switch (_context13.n) {
                   case 0:
-                    _context10.n = 1;
-                    return _this23._processMediaStream(stream);
+                    _context13.n = 1;
+                    return _this24._processMediaStream(stream);
                   case 1:
-                    return _context10.a(2, _context10.v);
+                    return _context13.a(2, _context13.v);
                 }
-              }, _callee10);
+              }, _callee12);
             }));
-            return function (_x12) {
+            return function (_x14) {
               return _ref0.apply(this, arguments);
             };
           }())["catch"](function (error) {
-            if (_this23._status === C.STATUS_TERMINATED) {
+            if (_this24._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
 
             // this._failed('local', null, CRTC_C.causes.USER_DENIED_MEDIA_ACCESS);
 
-            logger.warn("".concat(_this23._id, " emit \"getusermediafailed\" [error:%o]"), error);
-            logger.warn("".concat(_this23._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this23.emit('getusermediafailed', error);
+            logger.warn("".concat(_this24._id, " emit \"getusermediafailed\" [error:%o]"), error);
+            logger.warn("".concat(_this24._id, " emit \"getusermediafailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+            _this24.emit('getusermediafailed', error);
             return false;
             // throw error;
           });
         }
       }).then(function (stream) {
         if (stream) {
-          logger.debug("".concat(_this23._id, " has stream."));
+          logger.debug("".concat(_this24._id, " has stream."));
 
           // 适配 iOS 15.1/15.2 crach 的 bug，webkit Bug https://bugs.webkit.org/show_bug.cgi?id=232006
           var ua;
@@ -22498,65 +22729,65 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
           stream.getVideoTracks().forEach(function (track) {
             try {
-              _this23._localMediaStream.addTrack(track);
+              _this24._localMediaStream.addTrack(track);
             } catch (error) {
-              logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed local stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
+              logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed local stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
             }
 
             // 兼容低版本浏览器不支持addTrack的情况
             if (RTCPeerConnection.prototype.addTrack) {
               try {
-                _this23._connection.addTrack(track, stream);
+                _this24._connection.addTrack(track, stream);
               } catch (error) {
-                logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
+                logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(track.kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
               }
             } else {
-              _this23._connection.addStream(stream);
+              _this24._connection.addStream(stream);
             }
           });
-          _this23._iceReady = false;
+          _this24._iceReady = false;
         } else {
-          logger.debug("".concat(_this23._id, " no stream."));
+          logger.debug("".concat(_this24._id, " no stream."));
 
           // 兼容低版本浏览器不支持addTrack的情况
           // eslint-disable-next-line no-lonely-if
           if (RTCPeerConnection.prototype.addTrack) {
-            if (_this23._localMediaStream.getVideoTracks()[0]) {
-              var videoTrack = _this23._localMediaStream.getVideoTracks()[0];
-              var senders = _this23._connection.getSenders();
+            if (_this24._localMediaStream.getVideoTracks()[0]) {
+              var videoTrack = _this24._localMediaStream.getVideoTracks()[0];
+              var senders = _this24._connection.getSenders();
               var trackAlreadyAdded = senders.some(function (sender) {
                 return sender.track === videoTrack;
               });
               if (!trackAlreadyAdded) {
                 try {
-                  _this23._connection.addTrack(_this23._localMediaStream.getVideoTracks()[0], _this23._localMediaStream);
+                  _this24._connection.addTrack(_this24._localMediaStream.getVideoTracks()[0], _this24._localMediaStream);
                 } catch (error) {
-                  logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(_this23._localMediaStream.getVideoTracks()[0].kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
+                  logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed no stream ").concat(error.name, " ").concat(_this24._localMediaStream.getVideoTracks()[0].kind, " ").concat(error.message, " ").concat(JSON.stringify(error)));
                 }
               } else {
-                logger.warn("".concat(_this23._id, " Track is already added to the peer connection."));
+                logger.warn("".concat(_this24._id, " Track is already added to the peer connection."));
               }
             }
           } else {
-            _this23._connection.addStream(_this23._localMediaStream);
+            _this24._connection.addStream(_this24._localMediaStream);
           }
-          _this23._iceReady = true;
+          _this24._iceReady = true;
         }
       })
       // Create local description.
       .then(function () {
-        if (_this23._status === C.STATUS_TERMINATED) {
+        if (_this24._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
-        return _this23._createLocalDescription('answer', _this23._rtcAnswerConstraints)["catch"](function (error) {
+        return _this24._createLocalDescription('answer', _this24._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this23._id, " emit \"peerconnection:createtelocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+          logger.warn("".concat(_this24._id, " emit \"peerconnection:createtelocaldescriptionfailed\" [error:%o]"), error);
+          logger.warn("".concat(_this24._id, " emit \"peerconnection:createtelocaldescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
           throw error;
         });
       })["catch"](function (error) {
-        logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed [error: %o]"), error);
-        logger.warn("".concat(_this23._id, " _processInDialogSdpOffer() failed ").concat(error.message, " ").concat(JSON.stringify(error)));
+        logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed [error: %o]"), error);
+        logger.warn("".concat(_this24._id, " _processInDialogSdpOffer() failed ").concat(error.message, " ").concat(JSON.stringify(error)));
       });
       return this._connectionPromiseQueue;
     }
@@ -22567,7 +22798,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveRefer",
     value: function _receiveRefer(request) {
-      var _this24 = this;
+      var _this25 = this;
       logger.debug("".concat(this._id, " receiveRefer()"));
       if (!request.refer_to) {
         logger.debug("".concat(this._id, " no Refer-To header field present in REFER"));
@@ -22589,14 +22820,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('refer', {
         request: request,
         accept: function accept(initCallback, options) {
-          _accept.call(_this24, initCallback, options);
+          _accept.call(_this25, initCallback, options);
         },
         reject: function reject() {
-          _reject.call(_this24);
+          _reject.call(_this25);
         }
       });
       function _accept(initCallback) {
-        var _this25 = this;
+        var _this26 = this;
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
         initCallback = typeof initCallback === 'function' ? initCallback : null;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
@@ -22609,22 +22840,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         var session = new RTCSession(this._ua);
         session.on('progress', function (_ref1) {
           var response = _ref1.response;
-          _this25._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
         });
         session.on('accepted', function (_ref10) {
           var response = _ref10.response;
-          _this25._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
+          _this26._enableBFCP || notifier.notify(response.status_code, response.reason_phrase);
 
           // 华为MCU需要挂断
-          _this25._enableBFCP && _this25.terminate();
+          _this26._enableBFCP && _this26.terminate();
         });
         session.on('_failed', function (_ref11) {
           var message = _ref11.message,
             cause = _ref11.cause;
           if (message) {
-            _this25._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
+            _this26._enableBFCP || notifier.notify(message.status_code, message.reason_phrase);
           } else {
-            _this25._enableBFCP || notifier.notify(487, cause);
+            _this26._enableBFCP || notifier.notify(487, cause);
           }
         });
 
@@ -22699,10 +22930,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveReplaces",
     value: function _receiveReplaces(request) {
-      var _this27 = this;
+      var _this28 = this;
       logger.debug("".concat(this._id, " receiveReplaces()"));
       function _accept2(initCallback) {
-        var _this26 = this;
+        var _this27 = this;
         if (this._status !== C.STATUS_WAITING_FOR_ACK && this._status !== C.STATUS_CONFIRMED) {
           return false;
         }
@@ -22710,7 +22941,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // Terminate the current session when the new one is confirmed.
         session.on('confirmed', function () {
-          _this26.terminate();
+          _this27.terminate();
         });
         session.init_incoming(request, initCallback);
       }
@@ -22723,10 +22954,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this.emit('replaces', {
         request: request,
         accept: function accept(initCallback) {
-          _accept2.call(_this27, initCallback);
+          _accept2.call(_this28, initCallback);
         },
         reject: function reject() {
-          _reject2.call(_this27);
+          _reject2.call(_this28);
         }
       });
     }
@@ -22737,120 +22968,120 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendInitialRequest",
     value: function _sendInitialRequest(rtcOfferConstraints, mediaStream) {
-      var _this28 = this;
+      var _this29 = this;
       var request_sender = new RequestSender(this._ua, this._request, {
         onRequestTimeout: function onRequestTimeout() {
-          _this28.onRequestTimeout();
+          _this29.onRequestTimeout();
         },
         onTransportError: function onTransportError() {
-          _this28.onTransportError();
+          _this29.onTransportError();
         },
         // Update the request on authentication.
         onAuthenticated: function onAuthenticated(request) {
-          _this28._request = request;
+          _this29._request = request;
         },
         onReceiveResponse: function onReceiveResponse(response) {
-          _this28._receiveInviteResponse(response);
+          _this29._receiveInviteResponse(response);
         }
       });
 
       // This Promise is resolved within the next iteration, so the app has now
       // a chance to set events such as 'peerconnection' and 'connecting'.
-      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11() {
+      Promise.resolve().then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee13() {
         var stream, _Utils$generateAnEmpt2, videoTrack;
-        return _regenerator().w(function (_context11) {
-          while (1) switch (_context11.n) {
+        return _regenerator().w(function (_context14) {
+          while (1) switch (_context14.n) {
             case 0:
-              if (!(_this28._status === C.STATUS_TERMINATED)) {
-                _context11.n = 1;
+              if (!(_this29._status === C.STATUS_TERMINATED)) {
+                _context14.n = 1;
                 break;
               }
               throw new Error('terminated');
             case 1:
               // 兼容BFCP需要做音频混音
-              if (_this28._enableBFCP) {
-                stream = new MediaStream([_this28._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
-                _this28._bfcpMediastreams.push(mediaStream);
-                _this28._localMediaStream = stream;
+              if (_this29._enableBFCP) {
+                stream = new MediaStream([_this29._createBfcpAudioTrack(mediaStream), mediaStream.getVideoTracks()[0]]);
+                _this29._bfcpMediastreams.push(mediaStream);
+                _this29._localMediaStream = stream;
               } else {
-                _this28._localMediaStream = mediaStream;
+                _this29._localMediaStream = mediaStream;
               }
-              if (_this28._localMediaStream) {
+              if (_this29._localMediaStream) {
                 // 兼容低版本浏览器不支持addTrack的情况
                 if (RTCPeerConnection.prototype.addTrack) {
-                  _this28._localMediaStream.getAudioTracks().forEach(function (track) {
-                    _this28._connection.addTrack(track, _this28._localMediaStream);
+                  _this29._localMediaStream.getAudioTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
-                  _this28._localMediaStream.getVideoTracks().forEach(function (track) {
-                    _this28._connection.addTrack(track, _this28._localMediaStream);
+                  _this29._localMediaStream.getVideoTracks().forEach(function (track) {
+                    _this29._connection.addTrack(track, _this29._localMediaStream);
                   });
                 } else {
-                  _this28._connection.addStream(_this28._localMediaStream);
+                  _this29._connection.addStream(_this29._localMediaStream);
                 }
               }
 
               /**
                * 是否启用 DataChannel
                **/
-              if (_this28._enableBFCP) {
+              if (_this29._enableBFCP) {
                 _Utils$generateAnEmpt2 = Utils.generateAnEmptyVideoTrack(), videoTrack = _Utils$generateAnEmpt2.videoTrack;
-                _this28._bfcpVideoTrack = videoTrack;
-                _this28._connection.addTrack(_this28._bfcpVideoTrack, _this28._localMediaStream);
-                _this28._initDataChannel();
+                _this29._bfcpVideoTrack = videoTrack;
+                _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
+                _this29._initDataChannel();
               }
 
               // TODO: should this be triggered here?
-              _this28._connecting(_this28._request);
-              return _context11.a(2, _this28._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
-                _this28._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
+              _this29._connecting(_this29._request);
+              return _context14.a(2, _this29._createLocalDescription('offer', rtcOfferConstraints)["catch"](function (error) {
+                _this29._failed('local', null, CRTC_C.causes.WEBRTC_ERROR);
                 throw error;
               }));
           }
-        }, _callee11);
+        }, _callee13);
       }))).then(function (desc) {
-        if (_this28._is_canceled || _this28._status === C.STATUS_TERMINATED) {
+        if (_this29._is_canceled || _this29._status === C.STATUS_TERMINATED) {
           throw new Error('terminated');
         }
 
         // 添加BFCP所需属性
-        if (_this28._enableBFCP) {
+        if (_this29._enableBFCP) {
           // 根据 MediaStreamTrackGenerator 是否支持判断是否存在第二个视频流
           var supportedMSTC = false;
           if ('MediaStreamTrackGenerator' in window) {
             supportedMSTC = true;
           }
-          _this28._connection.getTransceivers().forEach(function (transceiver) {
+          _this29._connection.getTransceivers().forEach(function (transceiver) {
             var track = transceiver.sender.track;
             if (!track) {
               return;
             }
             if (supportedMSTC) {
               // eslint-disable-next-line no-undef
-              if (track instanceof MediaStreamTrackGenerator || _this28._isCanvasTrack(track)) {
-                _this28._mStream = transceiver.mid;
+              if (track instanceof MediaStreamTrackGenerator || _this29._isCanvasTrack(track)) {
+                _this29._mStream = transceiver.mid;
                 sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
               }
-            } else if (_this28._isCanvasTrack(track)) {
-              _this28._mStream = transceiver.mid;
+            } else if (_this29._isCanvasTrack(track)) {
+              _this29._mStream = transceiver.mid;
               sessionStorage.setItem(CRTC_C.BFCP_SHARED_STREAM_INDEX, transceiver.mid);
             }
           });
-          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this28._floorctrl ? _this28._floorctrl : 'c-s', "\r\n"));
+          desc = desc.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this29._floorctrl ? _this29._floorctrl : 'c-s', "\r\n"));
 
           // 添加主辅流标志
-          desc = _this28._addMediastreamFlag(desc, _this28._mStream);
+          desc = _this29._addMediastreamFlag(desc, _this29._mStream);
         }
-        _this28._request.body = desc;
-        _this28._status = C.STATUS_INVITE_SENT;
+        _this29._request.body = desc;
+        _this29._status = C.STATUS_INVITE_SENT;
 
         // 获取DTMF的payload
-        if (desc && !_this28._dtmf_payload) {
-          _this28._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc);
+        if (desc && !_this29._dtmf_payload) {
+          _this29._dtmf_payload = Utils.getDtmfPayloadAndClockRate(desc);
         }
-        logger.debug("".concat(_this28._id, " dtmf payload ").concat(JSON.stringify(_this28._dtmf_payload)));
-        logger.debug("".concat(_this28._id, " emit \"sending\" [request:%o] "), _this28._request);
+        logger.debug("".concat(_this29._id, " dtmf payload ").concat(JSON.stringify(_this29._dtmf_payload)));
+        logger.debug("".concat(_this29._id, " emit \"sending\" [request:%o] "), _this29._request);
         var cache = [];
-        logger.debug("".concat(_this28._id, " emit \"sending\" [request:%o] ").concat(JSON.stringify(_this28._request, function (key, value) {
+        logger.debug("".concat(_this29._id, " emit \"sending\" [request:%o] ").concat(JSON.stringify(_this29._request, function (key, value) {
           if (_typeof(value) === 'object' && value !== null) {
             if (cache.indexOf(value) !== -1) {
               // 移除
@@ -22863,12 +23094,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         })));
 
         // Emit 'sending' so the app can mangle the body before the request is sent.
-        _this28.emit('sending', {
-          request: _this28._request
+        _this29.emit('sending', {
+          request: _this29._request
         });
         request_sender.send();
       })["catch"](function (error) {
-        if (_this28._status === C.STATUS_TERMINATED) {
+        if (_this29._status === C.STATUS_TERMINATED) {
           return;
         }
         logger.warn(error);
@@ -22897,7 +23128,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_receiveInviteResponse",
     value: function _receiveInviteResponse(response) {
-      var _this29 = this;
+      var _this30 = this;
       logger.debug("".concat(this._id, " receiveInviteResponse()"));
 
       // Handle 2XX retransmissions and responses from forked requests.
@@ -22960,12 +23191,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (!response.body) {
               Promise.resolve().then(function () {
                 if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                  _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                  _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                     RSeq: response.getHeader('rseq')
                   });
                 }
               }).then(function () {
-                _this29._progress('remote', response);
+                _this30._progress('remote', response);
               });
               break;
             }
@@ -22986,28 +23217,28 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // 兼容部分场景180多次返回SDP问题
-              if (_this29._connection.signalingState !== 'stable') {
-                return _this29._connection.setRemoteDescription(answer);
+              if (_this30._connection.signalingState !== 'stable') {
+                return _this30._connection.setRemoteDescription(answer);
               } else {
-                logger.warn("".concat(_this29._id, " Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote answer sdp: Called in wrong state: stable"));
+                logger.warn("".concat(_this30._id, " Failed to execute 'setRemoteDescription' on 'RTCPeerConnection': Failed to set remote answer sdp: Called in wrong state: stable"));
               }
             })
             // 发送 RFC3262 183 PRACK
             .then(function () {
               if (e.sdp.indexOf('m=video 0 ') !== -1) {
-                _this29._ealyAudio = true;
+                _this30._ealyAudio = true;
               }
               if (response.getHeader('require') && response.getHeader('require').indexOf('100rel') !== -1 && Boolean(response.getHeader('rseq'))) {
-                _this29._earlyDialogs[Object.keys(_this29._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
+                _this30._earlyDialogs[Object.keys(_this30._earlyDialogs)[0]].sendRequest(CRTC_C.PRACK, {
                   RSeq: response.getHeader('rseq')
                 });
               }
             }).then(function () {
-              return _this29._progress('remote', response);
+              return _this30._progress('remote', response);
             })["catch"](function (error) {
-              logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-              logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-              _this29.emit('peerconnection:setremotedescriptionfailed', error);
+              logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+              logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+              _this30.emit('peerconnection:setremotedescriptionfailed', error);
             });
             break;
           }
@@ -23033,14 +23264,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
                 }).then(function (stream) {
-                  var sender = _this29._connection.getSenders().find(function (s) {
+                  var sender = _this30._connection.getSenders().find(function (s) {
                     return s.track.kind == 'audio';
                   });
                   sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
                     logger.debug("WeChat replactTrack ".concat(stream.getAudioTracks()[0].id, " success."));
                     // 适配 100rel 调整 ack 的 cseq
-                    _this29.sendRequest(CRTC_C.ACK);
-                    _this29._confirmed('local', null);
+                    _this30.sendRequest(CRTC_C.ACK);
+                    _this30._confirmed('local', null);
                   });
                 });
               } else {
@@ -23059,11 +23290,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             var sdp = sdp_transform.parse(response.body);
             this._remoteToAudio = true;
             this._remoteToVideo = false;
-            var _iterator0 = _createForOfIteratorHelper(sdp.media),
-              _step0;
+            var _iterator1 = _createForOfIteratorHelper(sdp.media),
+              _step1;
             try {
-              for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
-                var m = _step0.value;
+              for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
+                var m = _step1.value;
                 if (m.type === 'audio') {
                   continue;
                 }
@@ -23073,9 +23304,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 }
               }
             } catch (err) {
-              _iterator0.e(err);
+              _iterator1.e(err);
             } finally {
-              _iterator0.f();
+              _iterator1.f();
             }
             if (this._remoteToAudio) {
               this._ontogglemode('audio');
@@ -23109,75 +23340,75 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               // Be ready for 200 with SDP after a 180/183 with SDP.
               // We created a SDP 'answer' for it, so check the current signaling state.
-              if (_this29._connection.signalingState === 'stable') {
-                return _this29._connection.createOffer(_this29._rtcOfferConstraints).then(function (offer) {
-                  return _this29._connection.setLocalDescription(offer);
+              if (_this30._connection.signalingState === 'stable') {
+                return _this30._connection.createOffer(_this30._rtcOfferConstraints).then(function (offer) {
+                  return _this30._connection.setLocalDescription(offer);
                 })["catch"](function (error) {
-                  _this29._acceptAndTerminate(response, 500, error.toString());
-                  _this29._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
+                  _this30._acceptAndTerminate(response, 500, error.toString());
+                  _this30._failed('local', response, CRTC_C.causes.WEBRTC_ERROR);
                 });
               }
             }).then(function () {
-              _this29._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee12() {
+              _this30._connection.setRemoteDescription(_answer).then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee14() {
                 var mics, sender;
-                return _regenerator().w(function (_context12) {
-                  while (1) switch (_context12.n) {
+                return _regenerator().w(function (_context15) {
+                  while (1) switch (_context15.n) {
                     case 0:
                       // Handle Session Timers.
-                      _this29._handleSessionTimersInIncomingResponse(response);
-                      _this29._accepted('remote', response);
-                      _this29.sendRequest(CRTC_C.ACK);
+                      _this30._handleSessionTimersInIncomingResponse(response);
+                      _this30._accepted('remote', response);
+                      _this30.sendRequest(CRTC_C.ACK);
 
                       // 兼容安卓微信Bug及iOS蓝牙问题
-                      _context12.n = 1;
+                      _context15.n = 1;
                       return Utils.getMicrophones();
                     case 1:
-                      mics = _context12.v;
-                      if (_this29._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
+                      mics = _context15.v;
+                      if (_this30._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
                         navigator.mediaDevices.getUserMedia({
-                          audio: _this29._inviteMediaConstraints.audio || true,
+                          audio: _this30._inviteMediaConstraints.audio || true,
                           video: false
                         }).then(function (stream) {
-                          var sender = _this29._connection.getSenders().find(function (s) {
+                          var sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           if (sender) {
                             sender.replaceTrack(stream.getAudioTracks()[0]).then(function () {
-                              _this29._confirmed('local', null);
+                              _this30._confirmed('local', null);
                             });
                           } else {
-                            _this29._confirmed('local', null);
+                            _this30._confirmed('local', null);
                           }
                         });
-                      } else if (_this29._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
-                        if (_this29._localMediaStream) {
-                          sender = _this29._connection.getSenders().find(function (s) {
+                      } else if (_this30._receiveInviteResponse && navigator.userAgent.indexOf('iPhone') != -1 && mics.length > 1) {
+                        if (_this30._localMediaStream) {
+                          sender = _this30._connection.getSenders().find(function (s) {
                             return s.track.kind == 'audio';
                           });
                           if (sender) {
-                            sender.replaceTrack(_this29._localMediaStream.getAudioTracks()[0]).then(function () {
-                              _this29._confirmed('local', null);
+                            sender.replaceTrack(_this30._localMediaStream.getAudioTracks()[0]).then(function () {
+                              _this30._confirmed('local', null);
                             });
                           } else {
-                            _this29._confirmed('local', null);
+                            _this30._confirmed('local', null);
                           }
                         }
                       } else {
-                        _this29._confirmed('local', null);
+                        _this30._confirmed('local', null);
                       }
 
                       // 开启 BFCP，自动发送reInvite
-                      _this29._enableBFCP && _this29.renegotiate();
+                      _this30._enableBFCP && _this30.renegotiate();
                     case 2:
-                      return _context12.a(2);
+                      return _context15.a(2);
                   }
-                }, _callee12);
+                }, _callee14);
               })))["catch"](function (error) {
-                _this29._acceptAndTerminate(response, 488, 'Not Acceptable Here');
-                _this29._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
-                logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-                logger.warn("".concat(_this29._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-                _this29.emit('peerconnection:setremotedescriptionfailed', error);
+                _this30._acceptAndTerminate(response, 488, 'Not Acceptable Here');
+                _this30._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
+                logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+                logger.warn("".concat(_this30._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+                _this30.emit('peerconnection:setremotedescriptionfailed', error);
               });
             });
             break;
@@ -23196,7 +23427,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendReinvite",
     value: function _sendReinvite() {
-      var _this30 = this;
+      var _this31 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug("".concat(this._id, " sendReinvite()"));
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -23218,45 +23449,45 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         extraHeaders.push("Session-Expires: ".concat(this._sessionTimers.currentExpires, ";refresher=").concat(this._sessionTimers.refresher ? 'uac' : 'uas'));
       }
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-        return _this30._createLocalDescription('offer', rtcOfferConstraints);
+        return _this31._createLocalDescription('offer', rtcOfferConstraints);
       }).then(function (sdp) {
-        sdp = _this30._mangleOffer(sdp);
+        sdp = _this31._mangleOffer(sdp);
 
         // 添加BFCP所需属性
-        _this30._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this30._floorctrl, "\r\na=floorid:").concat(_this30._floorId, " m-stream:").concat(_this30._mStream, "\r\n")));
+        _this31._enableBFCP && (sdp = sdp.replace(/^(m=application .*\r\n)/mg, "$1a=floorctrl:".concat(_this31._floorctrl, "\r\na=floorid:").concat(_this31._floorId, " m-stream:").concat(_this31._mStream, "\r\n")));
         // 添加主辅流标志
-        sdp = _this30._addMediastreamFlag(sdp, _this30._mStream);
+        sdp = _this31._addMediastreamFlag(sdp, _this31._mStream);
         var e = {
           originator: 'local',
           type: 'offer',
           sdp: sdp
         };
-        _this30._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-        logger.debug("".concat(_this30._id, " emit \"sdp\""));
-        _this30.emit('sdp', e);
+        _this31._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+        logger.debug("".concat(_this31._id, " emit \"sdp\""));
+        _this31.emit('sdp', e);
 
         // 新增reinvite时更新via_host
-        options.changeViaHost && _this30._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
-        extraHeaders.push("Contact: ".concat(_this30._ua.contact.toString()));
-        _this30.sendRequest(CRTC_C.INVITE, {
+        options.changeViaHost && _this31._ua.set('via_host', "".concat(Utils.createRandomToken(12), ".invalid"));
+        extraHeaders.push("Contact: ".concat(_this31._ua.contact.toString()));
+        _this31.sendRequest(CRTC_C.INVITE, {
           extraHeaders: extraHeaders,
           body: sdp,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this30, response);
+              onSucceeded.call(_this31, response);
               succeeded = true;
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this30, response);
+              onFailed.call(_this31, response);
             },
             onTransportError: function onTransportError() {
-              _this30.onTransportError(); // Do nothing because session ends.
+              _this31.onTransportError(); // Do nothing because session ends.
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this30.onRequestTimeout(); // Do nothing because session ends.
+              _this31.onRequestTimeout(); // Do nothing because session ends.
             },
             onDialogError: function onDialogError() {
-              _this30.onDialogError(); // Do nothing because session ends.
+              _this31.onDialogError(); // Do nothing because session ends.
             }
           }
         });
@@ -23264,7 +23495,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         onFailed();
       });
       function onSucceeded(response) {
-        var _this31 = this;
+        var _this32 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -23306,11 +23537,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
          */
         var sdp_body = sdp_transform.parse(response.body);
         var mediaIndex = 0;
-        var _iterator1 = _createForOfIteratorHelper(sdp_body.media),
-          _step1;
+        var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
+          _step10;
         try {
-          for (_iterator1.s(); !(_step1 = _iterator1.n()).done;) {
-            var m = _step1.value;
+          for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
+            var m = _step10.value;
             if (m.type == 'audio') {
               continue;
             }
@@ -23326,9 +23557,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator1.e(err);
+          _iterator10.e(err);
         } finally {
-          _iterator1.f();
+          _iterator10.f();
         }
         var newSdp = this._sdpAddMid(response.body);
         var e = {
@@ -23343,16 +23574,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           sdp: e.sdp
         });
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this31._connection.setRemoteDescription(answer);
+          return _this32._connection.setRemoteDescription(answer);
         }).then(function () {
           if (eventHandlers.succeeded) {
             eventHandlers.succeeded(response);
           }
         })["catch"](function (error) {
-          onFailed.call(_this31);
-          logger.warn("".concat(_this31._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-          logger.warn("".concat(_this31._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-          _this31.emit('peerconnection:setremotedescriptionfailed', error);
+          onFailed.call(_this32);
+          logger.warn("".concat(_this32._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+          logger.warn("".concat(_this32._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+          _this32.emit('peerconnection:setremotedescriptionfailed', error);
         });
       }
       function onFailed(response) {
@@ -23368,7 +23599,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_sendUpdate",
     value: function _sendUpdate() {
-      var _this32 = this;
+      var _this33 = this;
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       logger.debug("".concat(this._id, " sendUpdate()"));
       var extraHeaders = Utils.cloneArray(options.extraHeaders);
@@ -23391,41 +23622,41 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (sdpOffer) {
         extraHeaders.push('Content-Type: application/sdp');
         this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-          return _this32._createLocalDescription('offer', rtcOfferConstraints);
+          return _this33._createLocalDescription('offer', rtcOfferConstraints);
         }).then(function (sdp) {
-          sdp = _this32._mangleOffer(sdp);
+          sdp = _this33._mangleOffer(sdp);
           var e = {
             originator: 'local',
             type: 'offer',
             sdp: sdp
           };
-          _this32._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
-          logger.debug("".concat(_this32._id, " emit \"sdp\""));
-          _this32.emit('sdp', e);
-          _this32.sendRequest(CRTC_C.UPDATE, {
+          _this33._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          logger.debug("".concat(_this33._id, " emit \"sdp\""));
+          _this33.emit('sdp', e);
+          _this33.sendRequest(CRTC_C.UPDATE, {
             extraHeaders: extraHeaders,
             body: sdp,
             eventHandlers: {
               onSuccessResponse: function onSuccessResponse(response) {
-                onSucceeded.call(_this32, response);
+                onSucceeded.call(_this33, response);
                 succeeded = true;
               },
               onErrorResponse: function onErrorResponse(response) {
-                onFailed.call(_this32, response);
+                onFailed.call(_this33, response);
               },
               onTransportError: function onTransportError() {
-                _this32.onTransportError(); // Do nothing because session ends.
+                _this33.onTransportError(); // Do nothing because session ends.
               },
               onRequestTimeout: function onRequestTimeout() {
-                _this32.onRequestTimeout(); // Do nothing because session ends.
+                _this33.onRequestTimeout(); // Do nothing because session ends.
               },
               onDialogError: function onDialogError() {
-                _this32.onDialogError(); // Do nothing because session ends.
+                _this33.onDialogError(); // Do nothing because session ends.
               }
             }
           });
         })["catch"](function () {
-          onFailed.call(_this32);
+          onFailed.call(_this33);
         });
       }
       // No SDP.
@@ -23434,25 +23665,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           extraHeaders: extraHeaders,
           eventHandlers: {
             onSuccessResponse: function onSuccessResponse(response) {
-              onSucceeded.call(_this32, response);
+              onSucceeded.call(_this33, response);
             },
             onErrorResponse: function onErrorResponse(response) {
-              onFailed.call(_this32, response);
+              onFailed.call(_this33, response);
             },
             onTransportError: function onTransportError() {
-              _this32.onTransportError(); // Do nothing because session ends.
+              _this33.onTransportError(); // Do nothing because session ends.
             },
             onRequestTimeout: function onRequestTimeout() {
-              _this32.onRequestTimeout(); // Do nothing because session ends.
+              _this33.onRequestTimeout(); // Do nothing because session ends.
             },
             onDialogError: function onDialogError() {
-              _this32.onDialogError(); // Do nothing because session ends.
+              _this33.onDialogError(); // Do nothing because session ends.
             }
           }
         });
       }
       function onSucceeded(response) {
-        var _this33 = this;
+        var _this34 = this;
         if (this._status === C.STATUS_TERMINATED) {
           return;
         }
@@ -23495,11 +23726,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
            * @author: lei
            */
           var sdp_body = sdp_transform.parse(sdp);
-          var _iterator10 = _createForOfIteratorHelper(sdp_body.media),
-            _step10;
+          var _iterator11 = _createForOfIteratorHelper(sdp_body.media),
+            _step11;
           try {
-            for (_iterator10.s(); !(_step10 = _iterator10.n()).done;) {
-              var m = _step10.value;
+            for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
+              var m = _step11.value;
               if (m.type == 'audio') {
                 continue;
               }
@@ -23514,9 +23745,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               }
             }
           } catch (err) {
-            _iterator10.e(err);
+            _iterator11.e(err);
           } finally {
-            _iterator10.f();
+            _iterator11.f();
           }
           var newSdp = this._sdpAddMid(sdp);
           var e = {
@@ -23531,16 +23762,16 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             sdp: e.sdp
           });
           this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
-            return _this33._connection.setRemoteDescription(answer);
+            return _this34._connection.setRemoteDescription(answer);
           }).then(function () {
             if (eventHandlers.succeeded) {
               eventHandlers.succeeded(response);
             }
           })["catch"](function (error) {
-            onFailed.call(_this33);
-            logger.warn("".concat(_this33._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
-            logger.warn("".concat(_this33._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
-            _this33.emit('peerconnection:setremotedescriptionfailed', error);
+            onFailed.call(_this34);
+            logger.warn("".concat(_this34._id, " emit \"peerconnection:setremotedescriptionfailed\" [error:%o]"), error);
+            logger.warn("".concat(_this34._id, " emit \"peerconnection:setremotedescriptionfailed\" ").concat(error.message, " ").concat(JSON.stringify(error)));
+            _this34.emit('peerconnection:setremotedescriptionfailed', error);
           });
         }
         // No SDP answer.
@@ -23590,11 +23821,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // Local hold.
       if (this._localHold && !this._remoteHold) {
         logger.debug("".concat(this._id, " mangleOffer() | me on hold, mangling offer"));
-        var _iterator11 = _createForOfIteratorHelper(sdp.media),
-          _step11;
+        var _iterator12 = _createForOfIteratorHelper(sdp.media),
+          _step12;
         try {
-          for (_iterator11.s(); !(_step11 = _iterator11.n()).done;) {
-            var m = _step11.value;
+          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
+            var m = _step12.value;
             if (holdMediaTypes.indexOf(m.type) === -1) {
               continue;
             }
@@ -23607,38 +23838,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator11.e(err);
+          _iterator12.e(err);
         } finally {
-          _iterator11.f();
+          _iterator12.f();
         }
       }
       // Local and remote hold.
       else if (this._localHold && this._remoteHold) {
         logger.debug("".concat(this._id, " mangleOffer() | both on hold, mangling offer"));
-        var _iterator12 = _createForOfIteratorHelper(sdp.media),
-          _step12;
+        var _iterator13 = _createForOfIteratorHelper(sdp.media),
+          _step13;
         try {
-          for (_iterator12.s(); !(_step12 = _iterator12.n()).done;) {
-            var _m2 = _step12.value;
+          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
+            var _m2 = _step13.value;
             if (holdMediaTypes.indexOf(_m2.type) === -1) {
               continue;
             }
             _m2.direction = 'inactive';
           }
         } catch (err) {
-          _iterator12.e(err);
+          _iterator13.e(err);
         } finally {
-          _iterator12.f();
+          _iterator13.f();
         }
       }
       // Remote hold.
       else if (this._remoteHold) {
         logger.debug("".concat(this._id, " mangleOffer() | remote on hold, mangling offer"));
-        var _iterator13 = _createForOfIteratorHelper(sdp.media),
-          _step13;
+        var _iterator14 = _createForOfIteratorHelper(sdp.media),
+          _step14;
         try {
-          for (_iterator13.s(); !(_step13 = _iterator13.n()).done;) {
-            var _m3 = _step13.value;
+          for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
+            var _m3 = _step14.value;
             if (holdMediaTypes.indexOf(_m3.type) === -1) {
               continue;
             }
@@ -23651,9 +23882,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             }
           }
         } catch (err) {
-          _iterator13.e(err);
+          _iterator14.e(err);
         } finally {
-          _iterator13.f();
+          _iterator14.f();
         }
       }
       return sdp_transform.write(sdp);
@@ -23696,12 +23927,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_setLocalMedia",
     value: function _setLocalMedia(mode) {
-      var _this34 = this;
+      var _this35 = this;
       logger.debug("".concat(this._id, " setLocalMedia() ").concat(mode));
       if (mode === 'audio' && this._customMediaStream === false) {
         this._localMediaStream.getVideoTracks().forEach(function (track) {
           track.stop();
-          _this34._localMediaStream.removeTrack(track);
+          _this35._localMediaStream.removeTrack(track);
         });
         this._localShareStream && this._localShareStream.getVideoTracks().forEach(function (track) {
           track.stop();
@@ -23711,40 +23942,40 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_streamInactiveHandle",
     value: function _streamInactiveHandle(dual) {
-      var _this35 = this;
+      var _this36 = this;
       var ended = false;
       var mediaStreamTrackEndedHandler = function mediaStreamTrackEndedHandler() {
-        if (_this35._localShareStream && _this35._localShareStreamLocallyGenerated) {
+        if (_this36._localShareStream && _this36._localShareStreamLocallyGenerated) {
           if (dual) {
-            _this35._connection.getTransceivers().forEach(function (transeiver) {
+            _this36._connection.getTransceivers().forEach(function (transeiver) {
               if (transeiver.sender.track && transeiver.sender.track.kind === 'video') {
-                if (transeiver.sender.track.id === _this35._localShareStream.getVideoTracks()[0].id) {
-                  _this35._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this35._bfcpVideoTrack);
+                if (transeiver.sender.track.id === _this36._localShareStream.getVideoTracks()[0].id) {
+                  _this36._connection.connectionState === 'connected' && transeiver.sender.replaceTrack(_this36._bfcpVideoTrack);
                 }
               }
             });
-            _this35._localShareStream = null;
-            _this35._localShareStreamLocallyGenerated = false;
+            _this36._localShareStream = null;
+            _this36._localShareStreamLocallyGenerated = false;
 
             // BFCP 释放资源，当被取消权限以后不再用发送release
-            _this35._bfcpRequestStatus !== RequestStatusValue.Revoked && _this35._sendFloorRelease();
+            _this36._bfcpRequestStatus !== RequestStatusValue.Revoked && _this36._sendFloorRelease();
           } else {
-            _this35._localMediaStream.getVideoTracks().forEach(function (track) {
-              var sender = _this35._connection.getSenders().find(function (s) {
+            _this36._localMediaStream.getVideoTracks().forEach(function (track) {
+              var sender = _this36._connection.getSenders().find(function (s) {
                 return s.track.kind == 'video' && (s.track.label.indexOf('window') === -1 || s.track.label.indexOf('web-') === -1 || s.track.label.indexOf('screen') === -1);
               });
-              track.readyState === 'live' && _this35._connection.connectionState === 'connected' && sender.replaceTrack(track);
+              track.readyState === 'live' && _this36._connection.connectionState === 'connected' && sender.replaceTrack(track);
             });
-            _this35._localShareStreamLocallyGenerated = false;
+            _this36._localShareStreamLocallyGenerated = false;
           }
-          _this35._localShareStream = null;
-          _this35._localShareStreamLocallyGenerated = false;
+          _this36._localShareStream = null;
+          _this36._localShareStreamLocallyGenerated = false;
         }
       };
 
       // safari 等场景ended 或者 inactive 事件不会触发
       var timer = setInterval(function () {
-        if (_this35._localShareStream && _this35._localShareStream.getVideoTracks() && _this35._localShareStream.getVideoTracks()[0].readyState === 'ended') {
+        if (_this36._localShareStream && _this36._localShareStream.getVideoTracks() && _this36._localShareStream.getVideoTracks()[0].readyState === 'ended') {
           clearInterval(timer);
           ended || mediaStreamTrackEndedHandler();
           ended = true;
@@ -23810,7 +24041,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_runSessionTimer",
     value: function _runSessionTimer() {
-      var _this36 = this;
+      var _this37 = this;
       var expires = this._sessionTimers.currentExpires;
       this._sessionTimers.running = true;
       clearTimeout(this._sessionTimers.timer);
@@ -23818,17 +24049,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm the refresher.
       if (this._sessionTimers.refresher) {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this36._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
-          if (!_this36._isReadyToReOffer()) {
+          if (!_this37._isReadyToReOffer()) {
             return;
           }
-          logger.debug("".concat(_this36._id, " runSessionTimer() | sending session refresh request"));
-          if (_this36._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
-            _this36._sendUpdate();
+          logger.debug("".concat(_this37._id, " runSessionTimer() | sending session refresh request"));
+          if (_this37._sessionTimers.refreshMethod === CRTC_C.UPDATE) {
+            _this37._sendUpdate();
           } else {
-            _this36._sendReinvite();
+            _this37._sendReinvite();
           }
         }, expires * 500); // Half the given interval (as the RFC states).
       }
@@ -23836,11 +24067,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       // I'm not the refresher.
       else {
         this._sessionTimers.timer = setTimeout(function () {
-          if (_this36._status === C.STATUS_TERMINATED) {
+          if (_this37._status === C.STATUS_TERMINATED) {
             return;
           }
-          logger.warn("".concat(_this36._id, " runSessionTimer() | timer expired, terminating the session"));
-          _this36.terminate({
+          logger.warn("".concat(_this37._id, " runSessionTimer() | timer expired, terminating the session"));
+          _this37.terminate({
             cause: CRTC_C.causes.REQUEST_TIMEOUT,
             status_code: 408,
             reason_phrase: 'Session Timer Expired'
@@ -23854,25 +24085,25 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var senders = this._connection.getSenders().filter(function (sender) {
         return sender.track && sender.track.kind === 'audio';
       });
-      var _iterator14 = _createForOfIteratorHelper(senders),
-        _step14;
+      var _iterator15 = _createForOfIteratorHelper(senders),
+        _step15;
       try {
-        for (_iterator14.s(); !(_step14 = _iterator14.n()).done;) {
-          var sender = _step14.value;
+        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
+          var sender = _step15.value;
           sender.track.enabled = !mute;
         }
       } catch (err) {
-        _iterator14.e(err);
+        _iterator15.e(err);
       } finally {
-        _iterator14.f();
+        _iterator15.f();
       }
     }
   }, {
     key: "_toggleMuteVideo",
     value: function _toggleMuteVideo(mute) {
-      var _this37 = this;
+      var _this38 = this;
       var senders = this._connection.getSenders().filter(function (sender) {
-        if (_this37._enableBFCP) {
+        if (_this38._enableBFCP) {
           // 检查是否存在视频轨道
           if (!sender.track || sender.track.kind !== 'video') {
             return false;
@@ -23880,20 +24111,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           // 获取本地共享流的视频轨道ID
           var localShareTrackId = null;
-          if (_this37._localShareStream && _this37._localShareStream.getVideoTracks() && _this37._localShareStream.getVideoTracks()[0]) {
-            localShareTrackId = _this37._localShareStream.getVideoTracks()[0].id;
+          if (_this38._localShareStream && _this38._localShareStream.getVideoTracks() && _this38._localShareStream.getVideoTracks()[0]) {
+            localShareTrackId = _this38._localShareStream.getVideoTracks()[0].id;
           }
 
           // 验证视频轨道条件
-          return !_this37._isCanvasTrack(sender.track) && sender.track !== _this37._bfcpVideoTrack && sender.track.id !== localShareTrackId;
+          return !_this38._isCanvasTrack(sender.track) && sender.track !== _this38._bfcpVideoTrack && sender.track.id !== localShareTrackId;
         }
         return sender.track && sender.track.kind === 'video';
       });
-      var _iterator15 = _createForOfIteratorHelper(senders),
-        _step15;
+      var _iterator16 = _createForOfIteratorHelper(senders),
+        _step16;
       try {
-        for (_iterator15.s(); !(_step15 = _iterator15.n()).done;) {
-          var sender = _step15.value;
+        for (_iterator16.s(); !(_step16 = _iterator16.n()).done;) {
+          var sender = _step16.value;
           if (this._videoOnlyMute) {
             if (this._isCurrentlyMuted === mute) return;
             this._isCurrentlyMuted = mute;
@@ -23912,8 +24143,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               sender.replaceTrack(this._onMutedVideoTrack);
               this._replaceMutedCanvasTrack.cleanup();
               setTimeout(function () {
-                _this37._onMutedVideoTrack = null;
-                _this37._replaceMutedCanvasTrack = null;
+                _this38._onMutedVideoTrack = null;
+                _this38._replaceMutedCanvasTrack = null;
               }, 0);
             }
           } else {
@@ -23922,9 +24153,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           }
         }
       } catch (err) {
-        _iterator15.e(err);
+        _iterator16.e(err);
       } finally {
-        _iterator15.f();
+        _iterator16.f();
       }
     }
   }, {
@@ -24165,7 +24396,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_generateAnEmptyAudioTrack",
     value: function _generateAnEmptyAudioTrack() {
-      var _this38 = this;
+      var _this39 = this;
       // 增加安卓微信呼叫的语音提醒
       // const audio = new Audio('./sound/waiting.mp3');
       var audio = new Audio();
@@ -24175,7 +24406,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       audio.loop = true;
       audio.crossOrigin = 'anonymous';
       audio.play()["catch"](function (error) {
-        logger.error("".concat(_this38._id, " new Audio() error: ").concat(error.message, " ").concat(JSON.stringify(error)));
+        logger.error("".concat(_this39._id, " new Audio() error: ").concat(error.message, " ").concat(JSON.stringify(error)));
       });
       source.connect(destination);
       return destination.stream.getAudioTracks()[0];
@@ -24187,36 +24418,36 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceAudioToMic",
     value: function _replaceAudioToMic() {
-      var _this39 = this;
+      var _this40 = this;
       // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: this._inviteMediaConstraints.audio || true,
         video: false
       }).then(function (stream) {
-        _this39._connection.getSenders().forEach(function (sender) {
+        _this40._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'audio') {
             // 保持媒体的muted状态
-            stream.getAudioTracks()[0].enabled = _this39.isMuted().audio;
+            stream.getAudioTracks()[0].enabled = _this40.isMuted().audio;
 
             // 替换音频轨道
             sender.replaceTrack(stream.getAudioTracks()[0]);
 
             // 本地播放本地音频轨道
-            _this39._localMediaStream.removeTrack(_this39._localMediaStream.getAudioTracks()[0]);
-            _this39._localMediaStream.addTrack(stream.getAudioTracks()[0]);
+            _this40._localMediaStream.removeTrack(_this40._localMediaStream.getAudioTracks()[0]);
+            _this40._localMediaStream.addTrack(stream.getAudioTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this39.emit('localMediastreamUpdate', _this39._localMediaStream);
+            _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
 
             // 继续监听mute和ended事件
-            stream.getAudioTracks()[0].addEventListener('mute', _this39._boundReplaceMicToAudios);
-            stream.getAudioTracks()[0].addEventListener('ended', _this39._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('mute', _this40._boundReplaceMicToAudios);
+            stream.getAudioTracks()[0].addEventListener('ended', _this40._boundReplaceMicToAudios);
           }
         });
       })["catch"](function (error) {
         // 获取麦克风失败，重新获取
-        logger.error("".concat(_this39._id, " replaceAudioToMic error: ").concat(error.message, " ").concat(JSON.stringify(error)));
-        _this39._replaceAudioToMic();
+        logger.error("".concat(_this40._id, " replaceAudioToMic error: ").concat(error.message, " ").concat(JSON.stringify(error)));
+        _this40._replaceAudioToMic();
       });
     }
 
@@ -24226,7 +24457,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceMicToAudio",
     value: function _replaceMicToAudio() {
-      var _this40 = this;
+      var _this41 = this;
       // 判断是否在通话中
       if (!this.isEstablished()) {
         return;
@@ -24235,24 +24466,24 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'audio') {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this40._boundReplaceMicToAudios);
-          sender.track.removeEventListener('ended', _this40._boundReplaceMicToAudios);
+          sender.track.removeEventListener('mute', _this41._boundReplaceMicToAudios);
+          sender.track.removeEventListener('ended', _this41._boundReplaceMicToAudios);
 
           // 释放麦克风
           sender.track.stop();
 
           // 替换音频轨道
-          sender.replaceTrack(_this40._generateAnEmptyAudioTrack());
+          sender.replaceTrack(_this41._generateAnEmptyAudioTrack());
 
           // 本地播放本地音频轨道
-          _this40._localMediaStream.removeTrack(_this40._localMediaStream.getVideoTracks()[0]);
-          _this40._localMediaStream.addTrack(_this40._generateAnEmptyAudioTrack());
+          _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
+          _this41._localMediaStream.addTrack(_this41._generateAnEmptyAudioTrack());
 
           // 触发本地媒体更新事件
-          _this40.emit('localMediastreamUpdate', _this40._localMediaStream);
+          _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
 
           // 开始尝试获取麦克风体并恢复
-          _this40._replaceAudioToMic();
+          _this41._replaceAudioToMic();
         }
       });
     }
@@ -24263,38 +24494,38 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceCanvasToVideo",
     value: function _replaceCanvasToVideo() {
-      var _this41 = this;
+      var _this42 = this;
       // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
       navigator.mediaDevices.getUserMedia({
         audio: false,
         video: this._inviteMediaConstraints.video || true
       }).then(function (stream) {
-        _this41._connection.getSenders().forEach(function (sender) {
+        _this42._connection.getSenders().forEach(function (sender) {
           if (sender.track && sender.track.kind == 'video') {
             // 停止绘制并清空画布
-            window.cancelAnimationFrame(_this41._restoreCameraTrackDraw);
-            _this41._restoreCameraTrackCtx.clearRect(0, 0, _this41._inviteMediaConstraints.width || 640, _this41._inviteMediaConstraints.height || 480);
+            window.cancelAnimationFrame(_this42._restoreCameraTrackDraw);
+            _this42._restoreCameraTrackCtx.clearRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
             // 保持媒体的muted状态
-            stream.getVideoTracks()[0].enabled = _this41.isMuted().video;
+            stream.getVideoTracks()[0].enabled = _this42.isMuted().video;
             // 替换视频轨道
             sender.replaceTrack(stream.getVideoTracks()[0]);
 
             // 本地播放本地视频轨道
-            _this41._localMediaStream.removeTrack(_this41._localMediaStream.getVideoTracks()[0]);
-            _this41._localMediaStream.addTrack(stream.getVideoTracks()[0]);
+            _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
+            _this42._localMediaStream.addTrack(stream.getVideoTracks()[0]);
 
             // 触发本地媒体更新事件
-            _this41.emit('localMediastreamUpdate', _this41._localMediaStream);
+            _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
 
             // 继续监听mute和ended事件
-            sender.track.addEventListener('mute', _this41._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this41._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this42._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this42._boundReplaceVideoToCanvas);
           }
         });
       })["catch"](function (error) {
         // 获取摄像头失败，重新获取
-        logger.error("".concat(_this41._id, " replaceCanvasToVideo error: ").concat(error.message, " ").concat(JSON.stringify(error)));
-        _this41._replaceCanvasToVideo();
+        logger.error("".concat(_this42._id, " replaceCanvasToVideo error: ").concat(error.message, " ").concat(JSON.stringify(error)));
+        _this42._replaceCanvasToVideo();
       });
     }
 
@@ -24304,7 +24535,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_replaceVideoToCanvas",
     value: function _replaceVideoToCanvas() {
-      var _this42 = this;
+      var _this43 = this;
       logger.debug("".concat(this._id, " _replaceVideoToCanvas()"));
 
       // 判断是否在通话中
@@ -24319,11 +24550,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 开始绘制纯色
       var _drawToCanvas = function drawToCanvas() {
-        _this42._restoreCameraTrackCanvas.width = _this42._inviteMediaConstraints.width || 640;
-        _this42._restoreCameraTrackCanvas.height = _this42._inviteMediaConstraints.height || 480;
-        _this42._restoreCameraTrackCtx.fillStyle = 'blue';
-        _this42._restoreCameraTrackCtx.fillRect(0, 0, _this42._inviteMediaConstraints.width || 640, _this42._inviteMediaConstraints.height || 480);
-        _this42._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
+        _this43._restoreCameraTrackCanvas.width = _this43._inviteMediaConstraints.width || 640;
+        _this43._restoreCameraTrackCanvas.height = _this43._inviteMediaConstraints.height || 480;
+        _this43._restoreCameraTrackCtx.fillStyle = 'blue';
+        _this43._restoreCameraTrackCtx.fillRect(0, 0, _this43._inviteMediaConstraints.width || 640, _this43._inviteMediaConstraints.height || 480);
+        _this43._restoreCameraTrackDraw = window.requestAnimationFrame(_drawToCanvas);
       };
       _drawToCanvas();
 
@@ -24334,20 +24565,20 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (sender.track && sender.track.kind == 'video' && (sender.track.readyState === 'ended' || sender.track.muted === true) && !(sender.track instanceof MediaStreamTrackGenerator)) {
           // TODO: 可能多次触发事件
           // 清除事件绑定
-          sender.track.removeEventListener('mute', _this42._boundReplaceVideoToCanvas);
-          sender.track.removeEventListener('ended', _this42._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('mute', _this43._boundReplaceVideoToCanvas);
+          sender.track.removeEventListener('ended', _this43._boundReplaceVideoToCanvas);
 
           // 释放摄像头
           sender.track.stop();
           // 替换视频轨道
           sender.replaceTrack(newStream.getVideoTracks()[0]);
           // 本地播放本地视频轨道
-          _this42._localMediaStream.removeTrack(_this42._localMediaStream.getVideoTracks()[0]);
-          _this42._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
+          _this43._localMediaStream.removeTrack(_this43._localMediaStream.getVideoTracks()[0]);
+          _this43._localMediaStream.addTrack(newStream.getVideoTracks()[0]);
           // 触发本地媒体更新事件
-          _this42.emit('localMediastreamUpdate', _this42._localMediaStream);
+          _this43.emit('localMediastreamUpdate', _this43._localMediaStream);
           // 开始尝试获取摄像头媒体并恢复
-          _this42._replaceCanvasToVideo();
+          _this43._replaceCanvasToVideo();
         }
       });
     }
@@ -24358,7 +24589,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_checkMediaStreamStatus",
     value: function _checkMediaStreamStatus() {
-      var _this43 = this;
+      var _this44 = this;
       var timer = null;
 
       // 监听系统音视频设备变化替换媒体轨道，如：蓝牙耳机、外接摄像头等
@@ -24370,14 +24601,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           timer = null;
 
           // 如果设备变化则替换轨道流
-          _this43._connection.getSenders().forEach(function (sender) {
+          _this44._connection.getSenders().forEach(function (sender) {
             // 视频轨道
             if (sender.track && sender.track.kind === 'video') {
-              _this43._replaceVideoToCanvas();
+              _this44._replaceVideoToCanvas();
             }
             // 音频轨道
             else if (sender.track && sender.track.kind === 'audio') {
-              _this43._replaceMicToAudio();
+              _this44._replaceMicToAudio();
             }
           });
         }, 300);
@@ -24388,22 +24619,22 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // 视频轨道
         if (sender.track && sender.track.kind === 'video' && sender.track instanceof MediaStreamTrack) {
           if (sender.track && sender.track.muted) {
-            _this43._replaceVideoToCanvas();
+            _this44._replaceVideoToCanvas();
           } else if (sender.track instanceof MediaStreamTrack) {
             // iOS Safari 按 HOME 切后台，会触发两次 mute 和 unmute
             // mute 事件触发替换视频流为临时视频，并释放摄像头
-            sender.track.addEventListener('mute', _this43._boundReplaceVideoToCanvas);
-            sender.track.addEventListener('ended', _this43._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('mute', _this44._boundReplaceVideoToCanvas);
+            sender.track.addEventListener('ended', _this44._boundReplaceVideoToCanvas);
           }
         }
         // 音频轨道
         else if (sender.track && sender.track.kind === 'audio') {
           if (sender.track && sender.track.muted) {
-            _this43._replaceMicToAudio();
+            _this44._replaceMicToAudio();
           } else {
             // mute 事件触发替换视频流为临时空音频，并释放麦克风
-            sender.track.addEventListener('mute', _this43._boundReplaceMicToAudios);
-            sender.track.addEventListener('ended', _this43._boundReplaceMicToAudios);
+            sender.track.addEventListener('mute', _this44._boundReplaceMicToAudios);
+            sender.track.addEventListener('ended', _this44._boundReplaceMicToAudios);
           }
         }
       });
@@ -24479,7 +24710,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handleFloorRequestMessage",
     value: function _handleFloorRequestMessage(message) {
-      var _this44 = this;
+      var _this45 = this;
       var wantedFloorId = message.getAttribute(AttributeName.FloorId).content;
       if (this.listeners('floorRequest').length === 0 || (message.commonHeader.primitive = Primitive.FloorRelease)) {
         // 自动接受请求
@@ -24490,12 +24721,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         this.emit('floorRequest', {
           message: message,
           accept: function accept() {
-            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
-            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this45._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Granted);
+            _this45._sendDataChannelMessage(response, message.commonHeader.transactionId);
           },
           reject: function reject() {
-            var response = _this44._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
-            _this44._sendDataChannelMessage(response, message.commonHeader.transactionId);
+            var response = _this45._bfcpUser.floorRequestStatusMessage(message, wantedFloorId, RequestStatusValue.Denied);
+            _this45._sendDataChannelMessage(response, message.commonHeader.transactionId);
           }
         });
       }
@@ -24591,21 +24822,21 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_onChannelClose",
     value: function _onChannelClose() {
-      var _this45 = this;
+      var _this46 = this;
       logger.debug("".concat(this._id, " datachannel closed."));
       setTimeout(function () {
         // 判断dc如果断开1秒后ice状态正常则重连dc
-        if (_this45.connection.iceConnectionState === 'connected') {
-          _this45.renegotiate();
+        if (_this46.connection.iceConnectionState === 'connected') {
+          _this46.renegotiate();
         } else {
           // DC 状态设置为未准备好
-          _this45._dataChannelReady = false;
+          _this46._dataChannelReady = false;
           // 停止发送心跳
-          clearInterval(_this45._bfcpHeatbeatTimer);
-          _this45._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
+          clearInterval(_this46._bfcpHeatbeatTimer);
+          _this46._bfcpHeatbeatTimer = null; // 避免潜在的内存泄漏
 
           // 停止检测close状态
-          clearInterval(_this45._closingInterval);
+          clearInterval(_this46._closingInterval);
         }
       }, 1000);
     }
@@ -24619,19 +24850,19 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_dataChannelSend",
     value: function _dataChannelSend(message, transactionId) {
-      var _this46 = this;
+      var _this47 = this;
       logger.debug("".concat(this._id, " dataChannelSend() ").concat(transactionId));
       return new Promise(function (resolve, reject) {
         // DataChannel 未准备好
-        if (!_this46._dataChannelReady) {
+        if (!_this47._dataChannelReady) {
           reject("[DataChannel] Not ready for transactionId: ".concat(transactionId));
-          logger.error("".concat(_this46._id, " [DataChannel] Not ready for transactionId: ").concat(transactionId));
+          logger.error("".concat(_this47._id, " [DataChannel] Not ready for transactionId: ").concat(transactionId));
           return;
         }
 
         // 保存发送的处理中的 DC 消息，收到响应后删除
-        if (!_this46._dataChannelMsgs[transactionId]) {
-          _this46._dataChannelMsgs[transactionId] = {
+        if (!_this47._dataChannelMsgs[transactionId]) {
+          _this47._dataChannelMsgs[transactionId] = {
             retries: 0,
             sendAt: Date.now(),
             message: message,
@@ -24640,18 +24871,18 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             reject: reject
           };
         }
-        var messageState = _this46._dataChannelMsgs[transactionId];
+        var messageState = _this47._dataChannelMsgs[transactionId];
 
         // 如果已经超出最大重试次数，则报告错误
         if (messageState.retries !== 0 && messageState.retries > CRTC_C.MAX_RETRY_ATTEMPTS) {
-          logger.warn("".concat(_this46._id, " [DataChannel] Max retry attempts (").concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
+          logger.warn("".concat(_this47._id, " [DataChannel] Max retry attempts (").concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           messageState.reject("[DataChannel] Max retry attempts (".concat(CRTC_C.MAX_RETRY_ATTEMPTS, ") reached for transactionId: ").concat(transactionId));
           return;
         }
 
         // 输出日志：发送消息次数及tid，时间戳
-        logger.debug("".concat(_this46._id, " BFCP send: ").concat(JSON.stringify(_this46._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
-        var sendMessage = _this46._bfcpUser.receiveMessage(messageState.message);
+        logger.debug("".concat(_this47._id, " BFCP send: ").concat(JSON.stringify(_this47._bfcpUser.receiveMessage(messageState.message)), " ").concat(JSON.stringify(Utils.uint8ArrayToBase64(messageState.message)), " ").concat(messageState.retries + 1, ", ").concat(transactionId, " ").concat(Date.now()));
+        var sendMessage = _this47._bfcpUser.receiveMessage(messageState.message);
 
         // DC 消息超时重试, FloorRelease消息不重发
         if (CRTC_C.MAX_RETRY_ATTEMPTS > 0 && sendMessage.commonHeader.primitive != Primitive.FloorRelease) {
@@ -24660,11 +24891,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             if (messageState && !messageState.received) {
               messageState.retries++;
               // 增加重试的间隔
-              _this46._dataChannelSend(messageState.message, transactionId);
+              _this47._dataChannelSend(messageState.message, transactionId);
             }
           }, Math.pow(2, messageState.retries) * 500);
         }
-        _this46._dataChannel && _this46._dataChannel.send(messageState.message);
+        _this47._dataChannel && _this47._dataChannel.send(messageState.message);
       });
     }
 
@@ -24686,7 +24917,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initDataChannel",
     value: function _initDataChannel(event) {
-      var _this47 = this;
+      var _this48 = this;
       logger.debug("".concat(this._id, " initDataChannel() ").concat(JSON.stringify(event)));
 
       // 内部变量
@@ -24718,34 +24949,34 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        */
       datachannel.onmessage = function (ev) {
         // 收到数据
-        _this47._onChannelMessage(ev);
+        _this48._onChannelMessage(ev);
       };
 
       // 端口状态处于 established 的时候会触发
       datachannel.onopen = function () {
-        logger.warn("".concat(_this47._id, " datachannel opened."));
-        _this47._dataChannelReady = true;
+        logger.warn("".concat(_this48._id, " datachannel opened."));
+        _this48._dataChannelReady = true;
         // 开始发送心跳消息
-        _this47._sendHello();
-        _this47._bfcpHeatbeatTimer = setInterval(function () {
-          _this47._sendHello();
+        _this48._sendHello();
+        _this48._bfcpHeatbeatTimer = setInterval(function () {
+          _this48._sendHello();
         }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
-        _this47._onChannelClose();
+        _this48._onChannelClose();
       };
 
       // 遇到错误的时候会触发
       datachannel.onerror = function (ev) {
-        logger.error("".concat(_this47._id, " datachannel error."));
+        logger.error("".concat(_this48._id, " datachannel error."));
         var err = ev.error instanceof Error ? ev.error : new Error("Datachannel error: ".concat(ev.message, " ").concat(ev.filename, ":").concat(ev.lineno, ":").concat(ev.colno));
-        _this47._dataChannelReady = false;
-        logger.warn("".concat(_this47._id, " data err: "), err);
+        _this48._dataChannelReady = false;
+        logger.warn("".concat(_this48._id, " data err: "), err);
 
         // 异常重连
-        if (_this47.connection.iceConnectionState === 'connected') {
-          _this47.renegotiate();
+        if (_this48.connection.iceConnectionState === 'connected') {
+          _this48.renegotiate();
         }
       };
 
@@ -24756,7 +24987,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         // No "onclosing" event
         if (datachannel && datachannel.readyState === 'closing') {
           // closing timed out: equivalent to onclose firing
-          if (isClosing) _this47._onChannelClose();
+          if (isClosing) _this48._onChannelClose();
           isClosing = true;
         } else {
           isClosing = false;
@@ -24771,17 +25002,17 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_initVisibilityChangeHandler",
     value: function _initVisibilityChangeHandler() {
-      var _this48 = this;
+      var _this49 = this;
       this._visibilitychangeVideoTrack = null;
       this._blackVideoTrack = null;
       this._trackMutedTimer = null;
       var handleVisibilityChange = function handleVisibilityChange() {
-        var conn = _this48._connection;
-        if (!conn || conn.connectionState !== 'connected' || !_this48._is_confirmed || _this48._enableBFCP) return;
+        var conn = _this49._connection;
+        if (!conn || conn.connectionState !== 'connected' || !_this49._is_confirmed || _this49._enableBFCP) return;
         if (document.hidden) {
-          _this48._handlePageHidden(conn);
+          _this49._handlePageHidden(conn);
         } else {
-          _this48._handlePageVisible(conn);
+          _this49._handlePageVisible(conn);
         }
       };
       document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -24793,7 +25024,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
   }, {
     key: "_handlePageHidden",
     value: function _handlePageHidden(conn) {
-      var _this49 = this;
+      var _this50 = this;
       var videoSender = conn.getSenders().find(function (s) {
         return s.track.kind === 'video';
       });
@@ -24804,14 +25035,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._trackMutedTimer = setInterval(function () {
         var track = videoSender.track;
         if (track.muted) {
-          _this49._clearTrackMutedTimer();
-          _this49._visibilitychangeVideoTrack = track;
-          _this49._blackVideoTrack = Utils.generateAnBlackVideoTrack({
+          _this50._clearTrackMutedTimer();
+          _this50._visibilitychangeVideoTrack = track;
+          _this50._blackVideoTrack = Utils.generateAnBlackVideoTrack({
             hidden: true,
             width: track.getSettings().width || 640,
             height: track.getSettings().height || 480
           });
-          videoSender.replaceTrack(_this49._blackVideoTrack.videoTrack);
+          videoSender.replaceTrack(_this50._blackVideoTrack.videoTrack);
         }
       }, 100);
     }
@@ -31443,7 +31674,7 @@ exports.sendKeyFrames = function (pc, interval, frequency) {
 };
 
 // 获取华为Android手机后摄列表最后一个
-exports.getHuaweiAndroidEnvironment = function () {
+exports.getEnvironmentId = function () {
   function isHuaweiAndroid(ua) {
     return /huawei/i.test(ua) && /android/i.test(ua) && !/OpenHarmony/i.test(ua);
   }
@@ -31459,6 +31690,8 @@ exports.getHuaweiAndroidEnvironment = function () {
       });
       return environments[environments.length - 1];
     });
+  } else {
+    return undefined;
   }
 };
 

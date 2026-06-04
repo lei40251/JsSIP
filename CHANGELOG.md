@@ -1,8 +1,13 @@
 CHANGELOG
 =========
+### 1.13.2
+
+* 修改特定获取特定手机后摄ID的方法名为 getEnvironmentId()
+
 ### 1.13.1
 
 * remoteSupportsVideo 改为延迟 emit，避免过早触发事件
+* 优化保清晰、保流畅方法
 
 ### 1.13.0
 

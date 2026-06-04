@@ -2523,3 +2523,25 @@ async function mediaStreamProcessor(mediastream)
   
   return processedStream;
 }
+
+
+// const videoConstraints = {
+//   facingMode : 'environment'
+//   // ...
+// };
+
+// navigator.getUserMedia({ audio: false, video: true })
+//   .then((stream) => 
+//   {    
+//     const environmentId = CRTC.Utils.getEnvironmentId();
+
+//     if (environmentId)
+//     {
+//       videoConstraints = {
+//         facingMode : { deviceId: environmentId }
+//         // ...
+//       };
+//     }
+
+//     stream.getTracks((track) => track.stop());
+//   });
