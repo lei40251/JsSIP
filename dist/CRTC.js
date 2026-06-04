@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.2.2026641027
+ * CRTC v1.13.3.2026641129
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.2.405212082054 (Web)',
+  USER_AGENT: 'UA/1.13.3.405212082258 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.2.405212082054');
+debug('version %s', '1.13.3.405212082258');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.2.405212082054';
+    return '1.13.3.405212082258';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -31673,26 +31673,92 @@ exports.sendKeyFrames = function (pc, interval, frequency) {
   }
 };
 
-// 获取华为Android手机后摄列表最后一个
-exports.getEnvironmentId = function () {
+/**
+ * 获取后置摄像头 deviceId（Huawei Android 特殊兼容逻辑）。
+ *
+ * 背景：
+ * 部分 Huawei Android 设备会扩展 InputDeviceInfo.getCapabilities()，
+ * 可通过 facingMode 判断摄像头方向。
+ *
+ * 注意：
+ * - 必须在 getUserMedia() 成功获取权限后调用。
+ * - 仅 Huawei Android 生效。
+ * - OpenHarmony 不走该逻辑。
+ *
+ * @param {Array<MediaDeviceInfo|InputDeviceInfo>} [devices]
+ * 可选的设备列表。
+ * 如果外部已执行 enumerateDevices()，可直接传入避免重复调用。
+ *
+ * @returns {Promise<string|undefined>}
+ * 返回后置摄像头 deviceId；
+ * 未找到时返回 undefined。
+ */
+exports.getEnvironmentId = function (devices) {
+  /**
+   * 判断是否 Huawei Android（非 OpenHarmony）。
+   *
+   * @param {string} ua
+   * @returns {boolean}
+   */
   function isHuaweiAndroid(ua) {
     return /huawei/i.test(ua) && /android/i.test(ua) && !/OpenHarmony/i.test(ua);
   }
-  if (isHuaweiAndroid(navigator.userAgent)) {
-    var environments = [];
-    return navigator.mediaDevices.enumerateDevices().then(function (devices) {
-      devices.forEach(function (device) {
-        if (typeof device.getCapabilities === 'function') {
-          if (device.getCapabilities().facingMode && device.getCapabilities().facingMode.indexOf('environment') !== -1) {
-            environments.push(device.deviceId);
-          }
-        }
-      });
-      return environments[environments.length - 1];
-    });
-  } else {
-    return undefined;
+
+  // 非 Huawei Android 不处理
+  if (!isHuaweiAndroid(navigator.userAgent)) {
+    return Promise.resolve(undefined);
   }
+
+  /**
+   * 从设备列表中提取后置摄像头 deviceId。
+   *
+   * @param {Array<MediaDeviceInfo|InputDeviceInfo>} deviceList
+   * @returns {string|undefined}
+   */
+  var getEnvironmentIdFromDevices = function getEnvironmentIdFromDevices(deviceList) {
+    var environments = [];
+    var _iterator9 = _createForOfIteratorHelper(deviceList),
+      _step9;
+    try {
+      for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+        var device = _step9.value;
+        // 仅处理视频输入设备
+        if (device.kind !== 'videoinput') {
+          continue;
+        }
+
+        // Huawei 扩展接口兼容判断
+        if (typeof device.getCapabilities !== 'function') {
+          continue;
+        }
+        var capabilities = device.getCapabilities();
+        var facingMode = capabilities.facingMode;
+
+        // 兼容：
+        // facingMode: ['environment']
+        // facingMode: 'environment'
+        var isEnvironment = Array.isArray(facingMode) ? facingMode.includes('environment') : facingMode === 'environment';
+        if (isEnvironment) {
+          environments.push(device.deviceId);
+        }
+      }
+
+      // Huawei 某些机型后摄通常位于最后一个 environment
+    } catch (err) {
+      _iterator9.e(err);
+    } finally {
+      _iterator9.f();
+    }
+    return environments.length > 0 ? environments[environments.length - 1] : undefined;
+  };
+
+  // 外部已传 devices，直接使用
+  if (Array.isArray(devices)) {
+    return Promise.resolve(getEnvironmentIdFromDevices(devices));
+  }
+
+  // 否则内部获取设备列表
+  return navigator.mediaDevices.enumerateDevices().then(getEnvironmentIdFromDevices);
 };
 
 // 视频轨道分辨率是否异常
