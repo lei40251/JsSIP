@@ -2530,18 +2530,18 @@ async function mediaStreamProcessor(mediastream)
 //   // ...
 // };
 
-// navigator.getUserMedia({ audio: false, video: true })
-//   .then((stream) => 
-//   {    
-//     const environmentId = CRTC.Utils.getEnvironmentId();
+// if (avideoConstraints.facingMode === 'environment')
+// {
+//   navigator.getUserMedia({ audio: false, video: true })
+//     .then((stream) => 
+//     {    
+//       const environmentId = CRTC.Utils.getEnvironmentId();
 
-//     if (environmentId)
-//     {
-//       videoConstraints = {
-//         facingMode : { deviceId: environmentId }
-//         // ...
-//       };
-//     }
+//       if (environmentId)
+//       {
+//         videoConstraints.facingMode = { deviceId: environmentId };
+//       }
 
-//     stream.getTracks((track) => track.stop());
-//   });
+//       stream.getTracks((track) => track.stop());
+//     });
+// }
