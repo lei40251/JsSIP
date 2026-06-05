@@ -1,0 +1,4116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chrome Web API Evolution Complete Demo</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --bg-strong: #e8dcc8;
+      --panel: rgba(255, 252, 247, 0.86);
+      --panel-strong: #fffaf2;
+      --ink: #1f2a2e;
+      --muted: #5b676d;
+      --line: rgba(31, 42, 46, 0.12);
+      --brand: #b24c2a;
+      --brand-2: #1f6a72;
+      --ok: #17613f;
+      --warn: #916408;
+      --bad: #8c2f39;
+      --shadow: 0 20px 50px rgba(57, 43, 24, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    html,
+    body {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(178, 76, 42, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(31, 106, 114, 0.18), transparent 26%),
+        linear-gradient(180deg, #fbf7ef 0%, #f5efe4 38%, #efe3cf 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page-shell {
+      width: 100%;
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 28px 10px 48px;
+      min-width: 0;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(255, 250, 242, 0.95), rgba(242, 230, 212, 0.92));
+      border: 1px solid rgba(178, 76, 42, 0.14);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+      padding: 34px;
+      margin-bottom: 20px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -120px;
+      top: -80px;
+      width: 340px;
+      height: 340px;
+      background:
+        radial-gradient(circle, rgba(31, 106, 114, 0.24), transparent 55%),
+        radial-gradient(circle at 40% 60%, rgba(178, 76, 42, 0.32), transparent 58%);
+      transform: rotate(12deg);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+      gap: 28px;
+      align-items: start;
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(31, 106, 114, 0.1);
+      color: var(--brand-2);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 18px 0 14px;
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 880px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .button,
+    button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 700;
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+
+    .button:hover,
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(31, 42, 46, 0.12);
+    }
+
+    .button-primary {
+      background: var(--brand);
+      color: #fff8f2;
+    }
+
+    .button-secondary {
+      background: rgba(31, 106, 114, 0.1);
+      color: var(--brand-2);
+    }
+
+    .button-ghost {
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      border: 1px solid rgba(31, 42, 46, 0.1);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card,
+    .panel,
+    .demo-card,
+    .catalog-card,
+    .console-card,
+    .code-card {
+      background: var(--panel);
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 30px rgba(57, 43, 24, 0.06);
+      backdrop-filter: blur(10px);
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .stat-card {
+      padding: 18px;
+      min-height: 110px;
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 34px;
+      line-height: 1;
+      margin-bottom: 8px;
+      letter-spacing: -0.04em;
+    }
+
+    .stat-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .sticky-toolbar {
+      position: sticky;
+      top: 12px;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      background: rgba(255, 250, 242, 0.8);
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 22px;
+      padding: 12px;
+      margin-bottom: 20px;
+      width: 100%;
+      margin-inline: auto;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 24px rgba(57, 43, 24, 0.08);
+    }
+
+    .toolbar-input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(31, 42, 46, 0.12);
+      background: rgba(255, 255, 255, 0.84);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      color: var(--ink);
+    }
+
+    .toolbar-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      border-radius: 999px;
+      padding: 10px 12px;
+      border: 1px solid rgba(31, 42, 46, 0.1);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chip.active {
+      background: rgba(178, 76, 42, 0.14);
+      color: var(--brand);
+      border-color: rgba(178, 76, 42, 0.28);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 7fr) minmax(460px, 13fr);
+      gap: 20px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .left-stack,
+    .right-stack {
+      display: grid;
+      gap: 20px;
+      align-content: start;
+      min-width: 0;
+    }
+
+    .panel {
+      padding: 22px;
+      min-width: 0;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+      min-width: 0;
+    }
+
+    .section-title h2,
+    .section-title h3 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .catalog-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .catalog-card {
+      padding: 18px;
+      background: var(--panel-strong);
+      min-width: 0;
+    }
+
+    .catalog-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .catalog-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .catalog-meta span,
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(31, 42, 46, 0.06);
+      color: var(--muted);
+    }
+
+    .pill.ok {
+      background: rgba(23, 97, 63, 0.12);
+      color: var(--ok);
+    }
+
+    .pill.warn {
+      background: rgba(145, 100, 8, 0.14);
+      color: var(--warn);
+    }
+
+    .pill.bad {
+      background: rgba(140, 47, 57, 0.12);
+      color: var(--bad);
+    }
+
+    .catalog-card ul,
+    .info-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .catalog-card li,
+    .info-list li {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 9px 0;
+      border-bottom: 1px dashed rgba(31, 42, 46, 0.08);
+      font-size: 14px;
+    }
+
+    .catalog-card li:last-child,
+    .info-list li:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .mono {
+      font-family: var(--mono);
+      font-size: 12.5px;
+    }
+
+    .demo-grid {
+      column-count: 2;
+      column-gap: 20px;
+    }
+
+    .demo-card {
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 243, 233, 0.95));
+      display: inline-block;
+      width: 100%;
+      margin: 0 0 20px;
+      vertical-align: top;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+      min-width: 0;
+      border-radius: 22px;
+      box-shadow: 0 18px 40px rgba(57, 43, 24, 0.08);
+    }
+
+    .demo-card.full-span {
+      display: block;
+      width: 100%;
+      column-span: all;
+      -webkit-column-span: all;
+    }
+
+    .demo-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(170px, 280px);
+      gap: 14px;
+      align-items: start;
+      padding: 20px 20px 14px;
+      min-width: 0;
+      border-bottom: 1px solid rgba(31, 42, 46, 0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.36));
+    }
+
+    .demo-head > div {
+      min-width: 0;
+    }
+
+    .demo-head > div:first-child {
+      flex: 1 1 auto;
+    }
+
+    .demo-head h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .demo-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 58ch;
+    }
+
+    .demo-body {
+      padding: 18px 20px 20px;
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .demo-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 2px 0 0;
+      align-items: center;
+    }
+
+    .demo-output,
+    .preview-box,
+    textarea,
+    pre {
+      border-radius: 14px;
+      border: 1px solid rgba(31, 42, 46, 0.1);
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .demo-output {
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--ink);
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      max-height: 320px;
+      overflow-y: auto;
+      overflow-x: auto;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .preview-box {
+      padding: 12px;
+      min-width: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(252,248,241,0.88));
+    }
+
+    .preview-stage {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      align-items: start;
+    }
+
+    video,
+    canvas {
+      width: 100%;
+      border-radius: 14px;
+      background: #151515;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      padding: 12px;
+      font: inherit;
+      line-height: 1.6;
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .two-up,
+    .three-up {
+      display: grid;
+      gap: 12px;
+    }
+
+    .two-up {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-up {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .mini-card {
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.74);
+      padding: 12px;
+    }
+
+    .mini-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric {
+      font-size: 24px;
+      letter-spacing: -0.03em;
+      font-weight: 800;
+    }
+
+    .console-card,
+    .code-card {
+      padding: 18px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      max-height: 360px;
+      max-width: 100%;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #14343a;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    #consoleOutput {
+      max-height: 420px;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+
+    .demo-output::-webkit-scrollbar,
+    pre::-webkit-scrollbar,
+    textarea::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .demo-output::-webkit-scrollbar-thumb,
+    pre::-webkit-scrollbar-thumb,
+    textarea::-webkit-scrollbar-thumb {
+      background: rgba(31, 42, 46, 0.22);
+      border-radius: 999px;
+    }
+
+    .demo-output::-webkit-scrollbar-track,
+    pre::-webkit-scrollbar-track,
+    textarea::-webkit-scrollbar-track {
+      background: rgba(31, 42, 46, 0.05);
+      border-radius: 999px;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+      margin-top: 18px;
+    }
+
+    .swatch {
+      width: 100%;
+      min-height: 160px;
+      border-radius: 18px;
+      background:
+        linear-gradient(130deg, rgba(178, 76, 42, 0.9), rgba(244, 176, 109, 0.92)),
+        radial-gradient(circle at 70% 40%, rgba(255, 255, 255, 0.45), transparent 28%);
+      transition: border-radius 280ms ease, filter 280ms ease, transform 280ms ease, background 280ms ease;
+    }
+
+    .swatch.alt {
+      border-radius: 54px;
+      transform: scale(0.98) rotate(-1deg);
+      filter: saturate(1.08);
+      background:
+        linear-gradient(130deg, rgba(31, 106, 114, 0.95), rgba(62, 165, 180, 0.9)),
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 24%);
+    }
+
+    .status-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      justify-self: end;
+      align-self: flex-start;
+      width: 100%;
+      min-width: 0;
+      max-width: 280px;
+    }
+
+    .status-line span {
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(31, 42, 46, 0.07);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .version-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(31, 106, 114, 0.08);
+      color: var(--brand-2);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .helper {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field small,
+    .check-row small {
+      display: none;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid rgba(31, 42, 46, 0.12);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      color: var(--ink);
+      max-width: 100%;
+    }
+
+    .check-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      row-gap: 10px;
+    }
+
+    .check-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .explain-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .explain-card {
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .explain-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+
+    .snippet-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    details.snippet-box {
+      border: 1px solid rgba(31, 42, 46, 0.1);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      overflow: hidden;
+    }
+
+    details.snippet-box summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 14px 16px;
+      font-weight: 700;
+      color: var(--ink);
+      background: rgba(31, 106, 114, 0.05);
+    }
+
+    details.snippet-box summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .snippet-box .helper {
+      padding: 0 16px 10px;
+    }
+
+    .snippet-box pre {
+      border: 0;
+      border-top: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 0;
+      background: rgba(250, 247, 241, 0.95);
+    }
+
+    .scroll-x {
+      overflow-x: auto;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .demo-zone-shell {
+      display: grid;
+      gap: 14px;
+    }
+
+    .demo-zone-banner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 12px 14px;
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at right top, rgba(31,106,114,0.05), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,0.82), rgba(250,245,236,0.86));
+    }
+
+    .demo-zone-banner h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .demo-zone-banner p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.55;
+      max-width: 72ch;
+    }
+
+    .demo-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .demo-legend span {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(31,42,46,0.08);
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .demo-section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(178, 76, 42, 0.1);
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .demo-card .helper-inline {
+      margin-top: -6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    details.explain-toggle {
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.66);
+      overflow: hidden;
+    }
+
+    details.explain-toggle summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink);
+      background: rgba(31,42,46,0.03);
+    }
+
+    details.explain-toggle summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.explain-toggle .explain-grid {
+      padding: 12px;
+    }
+
+    details.explain-toggle.compact summary {
+      padding: 10px 12px;
+      font-size: 12.5px;
+    }
+
+    .source-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(31, 42, 46, 0.08);
+      background: rgba(255,255,255,0.76);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .source-panel {
+      border-radius: 16px;
+      border: 1px solid rgba(31, 42, 46, 0.1);
+      background: rgba(252,248,241,0.92);
+      overflow: hidden;
+    }
+
+    .source-panel pre {
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      max-height: 280px;
+    }
+
+    @media (max-width: 1100px) {
+      .hero-grid,
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .left-stack {
+        order: 2;
+      }
+
+      .right-stack {
+        order: 1;
+      }
+
+      .demo-grid {
+        column-count: 2;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .demo-grid {
+        column-count: 1;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page-shell {
+        width: 100%;
+        padding-top: 14px;
+        padding-left: 6px;
+        padding-right: 6px;
+      }
+
+      .hero,
+      .panel,
+      .console-card,
+      .code-card {
+        padding: 18px;
+      }
+
+      .sticky-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-zone-banner {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-head {
+        grid-template-columns: 1fr;
+      }
+
+      .status-line {
+        justify-content: flex-start;
+        justify-self: start;
+        max-width: 100%;
+      }
+
+      .demo-grid {
+        column-count: 1;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-stage {
+        grid-template-columns: 1fr;
+      }
+
+      .demo-actions {
+        gap: 8px;
+      }
+
+      .demo-actions .button,
+      .demo-actions button,
+      .source-toggle {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .check-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .check-row label {
+        width: 100%;
+      }
+
+      .catalog-card li,
+      .info-list li {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-tags,
+      .hero-actions {
+        justify-content: flex-start;
+      }
+
+      .two-up,
+      .three-up {
+        grid-template-columns: 1fr;
+      }
+
+      .explain-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Chrome 72 → 现代 Chromium Web API</div>
+          <h1>把报告里的接口、方法、属性和能力，收拢进一个能直接试的完整单页</h1>
+          <p>
+            这个页面把报告中提到的 WebRTC、Media、Screen Capture、AI、Platform API 按能力分组整理出来。
+            你可以一边检索接口清单，一边点击运行本地 demo；对受权限、实验标志或浏览器环境限制的能力，也会给出能力检测、版本提示和示例代码入口。
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#demo-zone">直接看可运行示例</a>
+            <a class="button button-secondary" href="#catalog-zone">查看接口总览</a>
+            <button class="button button-ghost" id="runSupportScan">全量能力检测</button>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-card">
+            <strong id="catalogCount">0</strong>
+            <span>接口/方法/属性分组条目，来自报告里的重点能力整理。</span>
+          </div>
+          <div class="stat-card">
+            <strong id="demoCount">0</strong>
+            <span>页面内可直接点运行的示例模块，优先覆盖本地可演示能力。</span>
+          </div>
+          <div class="stat-card">
+            <strong id="supportCount">0</strong>
+            <span>已完成运行时能力检测的接口数。点击“全量能力检测”更新。</span>
+          </div>
+          <div class="stat-card">
+            <strong>本地页</strong>
+            <span>单文件 HTML，无外部依赖，适合继续扩成内部知识页或演示页。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sticky-toolbar">
+      <input id="searchInput" class="toolbar-input" type="search" placeholder="搜索接口、方法、属性、版本，例如 RTCRtpSender、getDisplayMedia、AbortSignal、WebGPU" />
+      <div id="categoryFilters" class="toolbar-tags"></div>
+    </section>
+
+    <section class="main-grid">
+      <div class="left-stack">
+        <section id="catalog-zone" class="panel">
+          <div class="section-title">
+            <h2>接口总览</h2>
+            <p>按能力分组展示接口、构造器、方法、属性、字段和事件。</p>
+          </div>
+          <div id="catalogGrid" class="catalog-grid"></div>
+        </section>
+      </div>
+
+      <div class="right-stack">
+        <section id="demo-zone" class="panel">
+          <div class="section-title">
+            <h2>可运行示例</h2>
+            <p>能跑的直接跑，受限能力做能力检测和示例代码说明。</p>
+          </div>
+          <div class="demo-zone-shell">
+            <div class="demo-zone-banner">
+              <div>
+                <h3>先看说明，再调参数，再运行测试</h3>
+                <p>示例区已经按“说明、参数、操作、结果”收拢到统一结构里。上半部分优先是可直接运行的实验卡片，底部的大图谱卡片更适合查参数意义、接口调用方式和受限能力的完整示例。</p>
+              </div>
+              <div class="demo-legend">
+                <span>可运行实验</span>
+                <span>参数解释</span>
+                <span>结果输出</span>
+                <span>完整代码图谱</span>
+              </div>
+            </div>
+            <div id="demoGrid" class="demo-grid"></div>
+          </div>
+        </section>
+
+        <section class="console-card">
+          <div class="section-title">
+            <h3>统一控制台</h3>
+            <p>所有 demo 的运行结果和异常都会汇总到这里。</p>
+          </div>
+          <pre id="consoleOutput">等待操作...</pre>
+        </section>
+
+        <section class="code-card">
+          <div class="section-title">
+            <h3>环境说明</h3>
+            <p>这些限制不是页面问题，而是浏览器安全模型或实验状态要求。</p>
+          </div>
+          <ul class="info-list">
+            <li><span>`getUserMedia()` / `getDisplayMedia()` / `selectAudioOutput()` 需要用户授权。</span><span class="pill warn">权限</span></li>
+            <li><span>`getDisplayMedia()`、Region Capture、Element Capture 可能要求 HTTPS 或特定浏览器版本。</span><span class="pill warn">安全上下文</span></li>
+            <li><span>`Translator` / `LanguageDetector` / `Summarizer` / `Writer` / `Rewriter` 属于实验性 AI API。</span><span class="pill bad">实验性</span></li>
+            <li><span>`RTCRtpScriptTransform`、`WebTransport` 等高级能力通常需要特定服务端或实验标志。</span><span class="pill bad">依赖环境</span></li>
+            <li><span>`ViewTransition`、`Navigation`、`Sanitizer`、`CompressionStream`、`WebGPU` 可通过能力检测快速确认可用性。</span><span class="pill ok">适合本地验收</span></li>
+          </ul>
+          <p class="footer-note">
+            页面重点是“把报告里的接口集中到一个入口里，并给出一套完整示例骨架”。如果你后面想继续扩成公司内部知识库，我也可以再帮你拆成多页、补版本过滤、补 MDN 链接或自动生成目录。
+          </p>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <template id="catalogCardTemplate">
+    <article class="catalog-card">
+      <h3></h3>
+      <div class="catalog-meta"></div>
+      <ul></ul>
+    </article>
+  </template>
+
+  <template id="demoCardTemplate">
+    <article class="demo-card">
+      <div class="demo-head">
+        <div>
+          <h3></h3>
+          <p></p>
+        </div>
+        <div class="status-line"></div>
+      </div>
+      <div class="demo-body"></div>
+    </article>
+  </template>
+
+  <script>
+    const API_GROUPS = [
+      {
+        id: "webrtc-core",
+        category: "WebRTC",
+        title: "WebRTC Core",
+        summary: "PeerConnection、Sender、Receiver、Transceiver、编码参数与本地协商。",
+        version: "Chrome 72+ / 部分更高",
+        status: "stable",
+        items: [
+          { name: "RTCPeerConnection()", type: "Constructor", version: "pre-72", note: "基础构造器" },
+          { name: "addTrack()", type: "Method", version: "pre-72", note: "替代 addStream()" },
+          { name: "addTransceiver()", type: "Method", version: "pre-72", note: "添加收发器" },
+          { name: "restartIce()", type: "Method", version: "77", note: "ICE 重启" },
+          { name: "getConfiguration()", type: "Method", version: "72", note: "读取 RTCConfiguration" },
+          { name: "connectionState", type: "Property", version: "72", note: "连接状态" },
+          { name: "connectionstatechange", type: "Event", version: "72", note: "连接状态变化" },
+          { name: "icecandidateerror", type: "Event", version: "77", note: "ICE 候选错误" },
+          { name: "sctp", type: "Property", version: "76", note: "SCTP transport 访问" },
+          { name: "RTCRtpEncodingParameters.scaleResolutionDownBy", type: "Field", version: "72", note: "下采样倍数" },
+          { name: "RTCRtpEncodingParameters.maxBitrate", type: "Field", version: "72", note: "最大码率" },
+          { name: "RTCRtpEncodingParameters.maxFramerate", type: "Field", version: "72", note: "最大帧率" },
+          { name: "RTCRtpEncodingParameters.degradationPreference", type: "Field", version: "72+", note: "降级偏好" },
+          { name: "RTCRtpEncodingParameters.scalabilityMode", type: "Field", version: "96", note: "SVC 模式" },
+          { name: "RTCRtpSender.getCapabilities()", type: "Static Method", version: "73", note: "获取编码能力" },
+          { name: "RTCRtpReceiver.getCapabilities()", type: "Static Method", version: "73", note: "获取解码能力" },
+          { name: "RTCRtpReceiver.jitterBufferTarget", type: "Property", version: "88", note: "抖动缓冲目标值" },
+          { name: "RTCRtpTransceiver.setCodecPreferences()", type: "Method", version: "76", note: "设置编解码偏好" }
+        ]
+      },
+      {
+        id: "webrtc-transform",
+        category: "WebRTC",
+        title: "Encoded Transform Timeline",
+        summary: "旧版 Insertable Streams 到 RTCRtpScriptTransform 的演进。",
+        version: "Chrome 86+ / 141+ 精确稳定",
+        status: "mixed",
+        items: [
+          { name: "RTCEncodedVideoFrame", type: "Interface", version: "86", note: "编码视频帧" },
+          { name: "RTCEncodedAudioFrame", type: "Interface", version: "86", note: "编码音频帧" },
+          { name: "RTCEncodedVideoFrame.getMetadata()", type: "Method", version: "86", note: "元数据读取" },
+          { name: "RTCEncodedAudioFrame.getMetadata()", type: "Method", version: "86", note: "音频元数据" },
+          { name: "RTCRtpSender.createEncodedStreams()", type: "Method", version: "87-91", note: "旧版 API，已被替代" },
+          { name: "RTCRtpReceiver.createEncodedStreams()", type: "Method", version: "87-91", note: "旧版 API，已被替代" },
+          { name: "RTCRtpScriptTransform()", type: "Constructor", version: "141", note: "稳定的新入口" },
+          { name: "RTCRtpSender.transform", type: "Property", version: "141", note: "发送端 transform" },
+          { name: "RTCRtpReceiver.transform", type: "Property", version: "141", note: "接收端 transform" },
+          { name: "rtctransform", type: "Event", version: "94+", note: "Worker 侧事件" }
+        ]
+      },
+      {
+        id: "media-devices",
+        category: "Media",
+        title: "MediaDevices & Track",
+        summary: "采集、屏幕共享、设备变化、输出路由、Track 设置与帧处理。",
+        version: "Chrome 72+ / 部分 121+",
+        status: "stable",
+        items: [
+          { name: "navigator.mediaDevices.getUserMedia()", type: "Method", version: "pre-72", note: "音视频采集" },
+          { name: "navigator.mediaDevices.getDisplayMedia()", type: "Method", version: "72", note: "屏幕捕获" },
+          { name: "MediaDevices.selectAudioOutput()", type: "Method", version: "121", note: "选择输出设备" },
+          { name: "devicechange", type: "Event", version: "73+", note: "设备变更事件" },
+          { name: "MediaStreamTrack.contentHint", type: "Property", version: "76", note: "内容提示" },
+          { name: "applyConstraints({ resizeMode })", type: "Constraint", version: "72", note: "调整大小模式" },
+          { name: "applyConstraints({ backgroundBlur })", type: "Constraint", version: "93", note: "背景模糊" },
+          { name: "getSettings().displaySurface", type: "Return Value", version: "72", note: "共享表面类型" },
+          { name: "getSettings().logicalSurface", type: "Return Value", version: "72", note: "逻辑表面" },
+          { name: "getSettings().cursor", type: "Return Value", version: "72", note: "光标模式" },
+          { name: "getSettings().suppressLocalAudioPlayback", type: "Return Value", version: "109", note: "本地回放抑制" },
+          { name: "MediaStreamTrackProcessor", type: "Interface", version: "94", note: "读取帧流" },
+          { name: "MediaStreamTrackGenerator", type: "Interface", version: "94", note: "生成帧流" },
+          { name: "VideoTrackGenerator", type: "Interface", version: "94", note: "视频轨道生成器" }
+        ]
+      },
+      {
+        id: "media-recorder-codecs",
+        category: "Media",
+        title: "MediaRecorder / WebCodecs / MediaCapabilities",
+        summary: "录制、编解码、能力探测和 HDR 相关查询。",
+        version: "Chrome 72+ / WebCodecs 94+",
+        status: "stable",
+        items: [
+          { name: "MediaRecorder()", type: "Constructor", version: "pre-72", note: "媒体录制器" },
+          { name: "MediaRecorder({ audioBitrateMode })", type: "Parameter", version: "89", note: "constant / variable" },
+          { name: "MediaRecorder({ videoKeyFrameIntervalDuration })", type: "Parameter", version: "96", note: "关键帧间隔" },
+          { name: "MediaRecorder({ hardwareAcceleration })", type: "Parameter", version: "117", note: "硬件加速偏好" },
+          { name: "VideoEncoder", type: "Interface", version: "94", note: "视频编码器" },
+          { name: "VideoDecoder", type: "Interface", version: "94", note: "视频解码器" },
+          { name: "AudioEncoder", type: "Interface", version: "94", note: "音频编码器" },
+          { name: "AudioDecoder", type: "Interface", version: "94", note: "音频解码器" },
+          { name: "VideoFrame()", type: "Constructor", version: "94", note: "原始视频帧" },
+          { name: "VideoFrame.clone()", type: "Method", version: "94", note: "帧复制" },
+          { name: "VideoFrame.copyTo()", type: "Method", version: "94", note: "读出像素" },
+          { name: "VideoFrame.flip", type: "Property", version: "138", note: "实验性翻转元数据" },
+          { name: "VideoFrame.rotation", type: "Property", version: "138", note: "实验性旋转元数据" },
+          { name: "mediaCapabilities.encodingInfo()", type: "Method", version: "101", note: "编码能力" },
+          { name: "mediaCapabilities.decodingInfo()", type: "Method", version: "72+", note: "解码能力" },
+          { name: "hdrMetadataType / colorGamut / transferFunction", type: "Query Fields", version: "117", note: "HDR 能力查询" }
+        ]
+      },
+      {
+        id: "screen-capture",
+        category: "Screen Capture",
+        title: "Screen Capture & Captured Surface Control",
+        summary: "getDisplayMedia 参数演进、CaptureController、Region Capture、Element Capture。",
+        version: "Chrome 72+ / 多项实验性",
+        status: "mixed",
+        items: [
+          { name: "getDisplayMedia({ preferCurrentTab })", type: "Parameter", version: "94", note: "偏好当前标签" },
+          { name: "getDisplayMedia({ systemAudio })", type: "Parameter", version: "105", note: "系统音频" },
+          { name: "getDisplayMedia({ selfBrowserSurface })", type: "Parameter", version: "107/121", note: "自浏览器表面控制" },
+          { name: "getDisplayMedia({ surfaceSwitching })", type: "Parameter", version: "107/104", note: "动态切换共享" },
+          { name: "getDisplayMedia({ controller })", type: "Parameter", version: "109", note: "绑定 CaptureController" },
+          { name: "getDisplayMedia({ monitorTypeSurfaces })", type: "Parameter", version: "119", note: "显示器表面控制" },
+          { name: "getDisplayMedia({ windowAudio })", type: "Parameter", version: "126/141", note: "窗口音频共享" },
+          { name: "CaptureController()", type: "Constructor", version: "109", note: "捕获控制器" },
+          { name: "CaptureController.setFocusBehavior()", type: "Method", version: "109", note: "焦点行为控制" },
+          { name: "CaptureController.forwardWheel()", type: "Method", version: "136", note: "转发滚轮" },
+          { name: "CaptureController.getSupportedZoomLevels()", type: "Method", version: "136", note: "查询缩放级别" },
+          { name: "CaptureController.zoomLevel", type: "Property", version: "136", note: "当前缩放级别" },
+          { name: "BrowserCaptureMediaStreamTrack.cropTo()", type: "Method", version: "104", note: "Region Capture" },
+          { name: "BrowserCaptureMediaStreamTrack.restrictTo()", type: "Method", version: "132", note: "Element Capture" },
+          { name: "CropTarget.fromElement()", type: "Method", version: "104", note: "创建裁剪目标" },
+          { name: "RestrictionTarget.fromElement()", type: "Method", version: "132", note: "创建限制目标" }
+        ]
+      },
+      {
+        id: "window-management",
+        category: "Platform",
+        title: "Window Management / Multi-Screen",
+        summary: "多屏信息、目标屏幕全屏、ScreenDetails 事件。",
+        version: "Chrome 100+",
+        status: "mixed",
+        items: [
+          { name: "window.getScreenDetails()", type: "Method", version: "100", note: "获取多屏详情" },
+          { name: "ScreenDetails", type: "Interface", version: "100", note: "屏幕详情集合" },
+          { name: "ScreenDetailed", type: "Interface", version: "100", note: "单屏信息" },
+          { name: "screen.isExtended", type: "Property", version: "100", note: "是否扩展屏" },
+          { name: "screenchange", type: "Event", version: "100", note: "屏幕属性变化" },
+          { name: "currentscreenchange", type: "Event", version: "100", note: "当前屏幕变化" },
+          { name: "screenschange", type: "Event", version: "100", note: "屏幕接入变化" },
+          { name: "Element.requestFullscreen({ screen })", type: "Method", version: "100", note: "指定屏幕全屏" }
+        ]
+      },
+      {
+        id: "ai-apis",
+        category: "AI",
+        title: "Built-in AI APIs",
+        summary: "浏览器内置 AI 接口，主要处于 Experimental / Origin Trial 状态。",
+        version: "Chrome 132+ / 138+",
+        status: "experimental",
+        items: [
+          { name: "Translator", type: "Interface", version: "138", note: "翻译能力" },
+          { name: "Translator.create()", type: "Method", version: "138", note: "创建翻译器" },
+          { name: "Translator.translate()", type: "Method", version: "138", note: "执行翻译" },
+          { name: "Translator.translateStreaming()", type: "Method", version: "138", note: "流式翻译" },
+          { name: "LanguageDetector", type: "Interface", version: "132", note: "语言识别" },
+          { name: "Summarizer", type: "Interface", version: "138", note: "摘要生成" },
+          { name: "Summarizer.create()", type: "Method", version: "138", note: "创建摘要器" },
+          { name: "Summarizer.summarize()", type: "Method", version: "138", note: "执行摘要" },
+          { name: "Summarizer.summarizeStreaming()", type: "Method", version: "138", note: "流式摘要" },
+          { name: "Writer", type: "Interface", version: "134+", note: "写作辅助" },
+          { name: "Rewriter", type: "Interface", version: "134+", note: "改写能力" },
+          { name: "AITextSession", type: "Interface", version: "136+", note: "Prompt API 预览" }
+        ]
+      },
+      {
+        id: "platform-modern",
+        category: "Platform",
+        title: "Modern Platform APIs",
+        summary: "AbortSignal、Navigation、View Transition、Sanitizer、Compression、URLPattern、UA-CH。",
+        version: "Chrome 72+ / 大量 100+",
+        status: "stable",
+        items: [
+          { name: "AbortSignal.abort()", type: "Static Method", version: "93", note: "立即中止" },
+          { name: "AbortSignal.reason", type: "Property", version: "98", note: "中止原因" },
+          { name: "AbortSignal.throwIfAborted()", type: "Method", version: "100", note: "抛出已中止错误" },
+          { name: "AbortSignal.timeout()", type: "Static Method", version: "103/124", note: "超时中止" },
+          { name: "AbortSignal.any()", type: "Static Method", version: "116", note: "组合多个 signal" },
+          { name: "Navigation", type: "Interface", version: "102", note: "现代导航模型" },
+          { name: "navigation.navigate()", type: "Method", version: "102", note: "发起导航" },
+          { name: "navigation.currentEntry", type: "Property", version: "102", note: "当前条目" },
+          { name: "navigate", type: "Event", version: "102", note: "导航事件" },
+          { name: "Document.startViewTransition()", type: "Method", version: "111", note: "视图转场" },
+          { name: "ViewTransition.waitUntil()", type: "Method", version: "144", note: "实验性等待" },
+          { name: "Sanitizer()", type: "Constructor", version: "146", note: "规范版 Sanitizer" },
+          { name: "CompressionStream", type: "Interface", version: "80", note: "压缩流" },
+          { name: "DecompressionStream", type: "Interface", version: "80", note: "解压流" },
+          { name: "URLPattern", type: "Interface", version: "95", note: "URL 模式匹配" },
+          { name: "NavigatorUAData", type: "Interface", version: "90", note: "User-Agent Client Hints" }
+        ]
+      },
+      {
+        id: "hardware-storage",
+        category: "Platform",
+        title: "File / GPU / Pressure / Storage / FedCM",
+        summary: "文件系统访问、WebGPU、压力观测、StorageAccessHandle、IdentityCredential。",
+        version: "Chrome 86+ / 113+ / 125+",
+        status: "mixed",
+        items: [
+          { name: "showOpenFilePicker()", type: "Method", version: "86+", note: "文件打开选择器" },
+          { name: "showSaveFilePicker()", type: "Method", version: "86+", note: "文件保存选择器" },
+          { name: "FileSystemFileHandle.createWritable()", type: "Method", version: "86", note: "创建可写流" },
+          { name: "FileSystemFileHandle.createSyncAccessHandle()", type: "Method", version: "102", note: "同步访问句柄" },
+          { name: "navigator.gpu", type: "Property", version: "113", note: "WebGPU 入口" },
+          { name: "GPU.requestAdapter()", type: "Method", version: "113", note: "请求适配器" },
+          { name: "GPU.getPreferredCanvasFormat()", type: "Method", version: "113", note: "Canvas 格式" },
+          { name: "PressureObserver", type: "Interface", version: "125", note: "压力观测" },
+          { name: "StorageAccessHandle", type: "Interface", version: "125", note: "非 Cookie 存储访问" },
+          { name: "IdentityCredential", type: "Interface", version: "108", note: "FedCM 登录凭证" },
+          { name: "IdentityCredential.disconnect()", type: "Method", version: "122", note: "断开身份" },
+          { name: "IdentityCredential.configURL", type: "Property", version: "136", note: "配置地址" }
+        ]
+      }
+    ];
+
+    const DEMOS = [
+      { id: "support-scan", title: "运行时能力扫描", group: "Platform", version: "72+", status: ["检测", "全局"], description: "快速检查当前浏览器对报告中核心接口的支持情况。" },
+      { id: "abort-demo", title: "AbortSignal.timeout() / any()", group: "Platform", version: "103/116/124", status: ["可运行", "稳定"], description: "演示超时中止、组合 signal 和中止原因。" },
+      { id: "transition-demo", title: "View Transition", group: "Platform", version: "111", status: ["可运行", "视觉"], description: "切换卡片视觉状态，演示 `document.startViewTransition()`。" },
+      { id: "ua-demo", title: "NavigatorUAData / Client Hints", group: "Platform", version: "90/93", status: ["可运行", "信息"], description: "读取 `navigator.userAgentData` 和高熵字段。" },
+      { id: "media-capabilities-demo", title: "MediaCapabilities", group: "Media", version: "101", status: ["可运行", "能力查询"], description: "查询编码与解码支持、功耗和流畅度倾向。" },
+      { id: "screen-demo", title: "getDisplayMedia + CaptureController", group: "Screen Capture", version: "72/109", status: ["需授权", "核心"], description: "打开屏幕共享并显示 Track 设置与控制器支持情况。" },
+      { id: "capture-controller-demo", title: "CaptureController 操作台", group: "Screen Capture", version: "109/136", status: ["实验性", "控制"], description: "如果浏览器支持，会尝试操作焦点行为和缩放相关方法，不再只是读取支持情况。" },
+      { id: "media-demo", title: "getUserMedia + MediaRecorder + Track", group: "Media", version: "72/89/117", status: ["需授权", "核心"], description: "打开摄像头，尝试录制片段，并展示 Track/Recorder 能力。" },
+      { id: "processor-demo", title: "MediaStreamTrackProcessor + VideoFrame", group: "Media", version: "94", status: ["可运行", "帧级"], description: "从本地 canvas 生成视频轨，读取一帧并展示 VideoFrame 信息。" },
+      { id: "webcodecs-demo", title: "WebCodecs / VideoFrame 工坊", group: "Media", version: "94", status: ["可运行", "编解码"], description: "生成 VideoFrame，检查编码器支持，并演示最小编码链路的关键步骤。" },
+      { id: "rtc-demo", title: "RTCPeerConnection 本地回环", group: "WebRTC", version: "72/77", status: ["可运行", "核心"], description: "本地双 PeerConnection 协商 DataChannel，展示 connectionState 和配置。" },
+      { id: "file-demo", title: "File System Access", group: "Platform", version: "86/102", status: ["需授权", "文件"], description: "打开文件、读取文本、保存编辑结果。" },
+      { id: "opfs-demo", title: "OPFS / Sync Access Handle", group: "Platform", version: "102", status: ["可运行", "存储"], description: "尝试进入 Origin Private File System，并在支持时演示同步访问句柄或回退到普通写入。" },
+      { id: "gpu-demo", title: "WebGPU", group: "Platform", version: "113", status: ["可运行", "硬件"], description: "检查 `navigator.gpu` 并请求适配器。" },
+      { id: "navigation-demo", title: "Navigation API Snapshot", group: "Platform", version: "102", status: ["可运行", "导航"], description: "读取 `navigation.currentEntry`、entries 和同文档导航状态。" },
+      { id: "screen-details-demo", title: "Window Management / ScreenDetails", group: "Platform", version: "100", status: ["可运行", "多屏"], description: "检查 `getScreenDetails()` 或回退读取基础 screen 指标。" },
+      { id: "region-capture-demo", title: "Region Capture / Element Capture", group: "Screen Capture", version: "104/132", status: ["实验性", "目标创建"], description: "创建 CropTarget / RestrictionTarget，并在可用时尝试作用到当前共享轨道。" },
+      { id: "audio-output-demo", title: "selectAudioOutput() / setSinkId()", group: "Media", version: "121", status: ["需授权", "输出设备"], description: "列出输出设备并在支持时尝试切换音频输出。" },
+      { id: "pressure-demo", title: "PressureObserver", group: "Platform", version: "125", status: ["实验性", "硬件"], description: "读取 knownSources，并在支持时短暂订阅 CPU 压力。" },
+      { id: "advanced-probe-demo", title: "Advanced APIs Workshop", group: "WebRTC", version: "94/97/141", status: ["实验性", "高级"], description: "把 WebTransport、Encoded Transform、RTCEncoded*Frame 这些高级接口从单纯探测改成可运行或可生成的完整示例工坊。" },
+      { id: "sanitizer-demo", title: "Sanitizer / HTML 清洗", group: "Platform", version: "146", status: ["可运行", "安全"], description: "尝试使用规范版 Sanitizer，回退到简单文本渲染。" },
+      { id: "compression-demo", title: "CompressionStream / URLPattern", group: "Platform", version: "80/95", status: ["可运行", "工具"], description: "压缩文本，再用 URLPattern 匹配一段地址。" },
+      { id: "ai-demo", title: "Built-in AI API 能力入口", group: "AI", version: "138+", status: ["实验性", "入口"], description: "检测 Translator、LanguageDetector、Summarizer 等接口并提供调用入口。" },
+      { id: "api-recipes-demo", title: "完整参数与接口示例图谱", group: "All", version: "72+", status: ["完整", "代码图谱"], description: "把报告里提到的主要接口和不同参数组合集中成可展开的完整示例代码。", fullSpan: true }
+    ];
+
+    const DEMO_SOURCE_SNIPPETS = {
+      "support-scan": `function getCoreSupportMatrix() {\n  return [\n    [\"RTCPeerConnection\", \"RTCPeerConnection\" in window],\n    [\"navigator.mediaDevices.getDisplayMedia\", typeof navigator.mediaDevices?.getDisplayMedia === \"function\"],\n    [\"navigator.gpu\", \"gpu\" in navigator],\n    [\"navigation\", \"navigation\" in window]\n  ];\n}\n\nasync function runSupportScan() {\n  const lines = getCoreSupportMatrix().map(([name, ok]) => \`\${ok ? \"✓\" : \"·\"} \${name}\`);\n  output.textContent = lines.join(\"\\\\n\");\n}`,
+      "abort-demo": `const timeoutSignal = AbortSignal.timeout(120);\nconst manualController = new AbortController();\nconst merged = AbortSignal.any([timeoutSignal, manualController.signal]);\n\nmerged.addEventListener(\"abort\", () => {\n  console.log(merged.reason);\n});\n\nawait new Promise(resolve => setTimeout(resolve, 180));\nmerged.throwIfAborted?.();`,
+      "transition-demo": `const toggle = () => swatch.classList.toggle(\"alt\");\n\nif (document.startViewTransition) {\n  document.startViewTransition(toggle);\n} else {\n  toggle();\n}`,
+      "ua-demo": `const data = navigator.userAgentData;\nconst high = await data.getHighEntropyValues([\n  \"architecture\",\n  \"platformVersion\",\n  \"fullVersionList\",\n  \"bitness\",\n  \"model\"\n]);\nconsole.log({ brands: data.brands, mobile: data.mobile, platform: data.platform, ...high });`,
+      "media-capabilities-demo": `const decodingInfo = await navigator.mediaCapabilities.decodingInfo({\n  type: \"file\",\n  video: { contentType: codec, width, height, bitrate, framerate }\n});\n\nconst encodingInfo = await navigator.mediaCapabilities.encodingInfo({\n  type: \"record\",\n  video: { contentType: codec, width, height, bitrate, framerate }\n});`,
+      "screen-demo": `const controller = \"CaptureController\" in window ? new CaptureController() : null;\nconst stream = await navigator.mediaDevices.getDisplayMedia({\n  video: { displaySurface, cursor },\n  audio: audioEnabled ? { suppressLocalAudioPlayback: true } : false,\n  preferCurrentTab: true,\n  surfaceSwitching: \"include\",\n  selfBrowserSurface: \"exclude\",\n  systemAudio: \"include\",\n  controller\n});`,
+      "capture-controller-demo": `const controller = new CaptureController();\ncontroller.setFocusBehavior?.(\"focus-captured-surface\");\nconsole.log(await controller.getSupportedZoomLevels?.());\nawait controller.increaseZoomLevel?.();\nawait controller.decreaseZoomLevel?.();\nawait controller.resetZoomLevel?.();`,
+      "media-demo": `const stream = await navigator.mediaDevices.getUserMedia({\n  video: {\n    width: { ideal: width },\n    height: { ideal: height },\n    frameRate: { ideal: frameRate },\n    resizeMode,\n    backgroundBlur: true\n  },\n  audio: audioEnabled\n});\n\nvideoTrack.contentHint = contentHint;`,
+      "processor-demo": `const stream = sourceCanvas.captureStream(15);\nconst [track] = stream.getVideoTracks();\nconst processor = new MediaStreamTrackProcessor({ track });\nconst reader = processor.readable.getReader();\nconst { value: frame } = await reader.read();\nconsole.log(frame.codedWidth, frame.codedHeight);`,
+      "webcodecs-demo": `const bitmap = await createImageBitmap(canvas);\nconst frame = new VideoFrame(bitmap, { timestamp: 0 });\nconst support = await VideoEncoder.isConfigSupported({\n  codec: \"vp8\",\n  width: frame.displayWidth,\n  height: frame.displayHeight,\n  bitrate: 500000,\n  framerate: 30\n});\nconsole.log(support);`,
+      "rtc-demo": `const pc1 = new RTCPeerConnection();\nconst pc2 = new RTCPeerConnection();\npc1.addTransceiver(\"video\", { direction: \"recvonly\" });\n\nconst channel = pc1.createDataChannel(\"demo\");\nconst offer = await pc1.createOffer();\nawait pc1.setLocalDescription(offer);\nawait pc2.setRemoteDescription(offer);\nconst answer = await pc2.createAnswer();\nawait pc2.setLocalDescription(answer);\nawait pc1.setRemoteDescription(answer);`,
+      "file-demo": `const [handle] = await showOpenFilePicker();\nconst file = await handle.getFile();\neditor.value = await file.text();\n\nconst saveHandle = await showSaveFilePicker();\nconst writable = await saveHandle.createWritable();\nawait writable.write(editor.value);\nawait writable.close();`,
+      "opfs-demo": `const root = await navigator.storage.getDirectory();\nconst fileHandle = await root.getFileHandle(\"demo.txt\", { create: true });\nif (fileHandle.createSyncAccessHandle) {\n  const sync = await fileHandle.createSyncAccessHandle();\n  sync.write(new TextEncoder().encode(\"hello opfs\"), { at: 0 });\n  sync.flush();\n  sync.close();\n}`,
+      "gpu-demo": `const adapter = await navigator.gpu.requestAdapter();\nconst info = {\n  hasAdapter: Boolean(adapter),\n  preferredCanvasFormat: navigator.gpu.getPreferredCanvasFormat(),\n  features: adapter ? [...adapter.features] : []\n};`,
+      "navigation-demo": `const entries = navigation.entries().map(entry => ({\n  key: entry.key,\n  url: entry.url,\n  index: entry.index\n}));\nconsole.log(navigation.currentEntry, entries);`,
+      "screen-details-demo": `if (window.getScreenDetails) {\n  const details = await window.getScreenDetails();\n  console.log(details.currentScreen, details.screens);\n} else {\n  console.log(screen.width, screen.height, screen.isExtended);\n}`,
+      "region-capture-demo": `const cropTarget = await CropTarget.fromElement(box);\nawait track.cropTo?.(cropTarget);\n\nconst restrictionTarget = await RestrictionTarget.fromElement(box);\nawait track.restrictTo?.(restrictionTarget);`,
+      "audio-output-demo": `const devices = await navigator.mediaDevices.enumerateDevices();\nconst outputs = devices.filter(device => device.kind === \"audiooutput\");\nconst chosen = await navigator.mediaDevices.selectAudioOutput();\nawait audio.setSinkId?.(chosen.deviceId);`,
+      "pressure-demo": `const observer = new PressureObserver(records => {\n  for (const record of records) {\n    console.log(record.source, record.state, record.cpuUtilization);\n  }\n});\nawait observer.observe(\"cpu\", { sampleInterval: 1000 });`,
+      "advanced-probe-demo": `const payload = {\n  WebTransport: \"WebTransport\" in window,\n  RTCRtpScriptTransform: \"RTCRtpScriptTransform\" in window,\n  RTCEncodedVideoFrame: \"RTCEncodedVideoFrame\" in window,\n  RTCRtpSender_createEncodedStreams: typeof RTCRtpSender?.prototype?.createEncodedStreams === \"function\"\n};`,
+      "sanitizer-demo": `const sanitizer = new Sanitizer();\nconst fragment = sanitizer.sanitizeFor(\"div\", input);\nconst html = fragment.innerHTML;\nresult.innerHTML = html;`,
+      "compression-demo": `const compressed = await new Response(\n  new Blob([raw]).stream().pipeThrough(new CompressionStream(\"gzip\"))\n).arrayBuffer();\n\nconst pattern = new URLPattern({ pathname: \"/docs/:section/:name\" });\nconsole.log(pattern.exec(\"https://example.com/docs/Web/API\"));`,
+      "ai-demo": `const translator = await Translator.create({ sourceLanguage: \"en\", targetLanguage: \"zh\" });\nconst translated = await translator.translate(input);\n\nconst summarizer = await Summarizer.create();\nconst summary = await summarizer.summarize(input);`
+    };
+
+    const API_RECIPES = [
+      {
+        title: "Screen Capture: getDisplayMedia 全参数组合",
+        note: "覆盖 displaySurface、cursor、audio、preferCurrentTab、surfaceSwitching、selfBrowserSurface、systemAudio、monitorTypeSurfaces、windowAudio、controller、suppressLocalAudioPlayback。",
+        code: `const controller = "CaptureController" in window ? new CaptureController() : undefined;
+const stream = await navigator.mediaDevices.getDisplayMedia({
+  video: {
+    displaySurface: "browser",
+    cursor: "always"
+  },
+  audio: {
+    suppressLocalAudioPlayback: true
+  },
+  preferCurrentTab: true,
+  surfaceSwitching: "include",
+  selfBrowserSurface: "exclude",
+  systemAudio: "include",
+  monitorTypeSurfaces: "include",
+  windowAudio: "system",
+  controller
+});
+
+const track = stream.getVideoTracks()[0];
+console.log(track.getSettings());
+controller?.setFocusBehavior?.("focus-captured-surface");`
+      },
+      {
+        title: "Media Capture: getUserMedia + applyConstraints + contentHint",
+        note: "覆盖 width、height、frameRate、resizeMode、backgroundBlur、contentHint。",
+        code: `const stream = await navigator.mediaDevices.getUserMedia({
+  video: {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30 },
+    resizeMode: "crop-and-scale",
+    backgroundBlur: true
+  },
+  audio: true
+});
+
+const videoTrack = stream.getVideoTracks()[0];
+videoTrack.contentHint = "motion";
+await videoTrack.applyConstraints({
+  width: 640,
+  height: 360,
+  frameRate: 24
+});
+console.log(videoTrack.getSettings(), videoTrack.getCapabilities?.());`
+      },
+      {
+        title: "MediaRecorder: 音频比特率模式 / 关键帧 / 硬件加速",
+        note: "覆盖 audioBitrateMode、videoKeyFrameIntervalDuration、hardwareAcceleration。",
+        code: `const recorder = new MediaRecorder(stream, {
+  mimeType: "video/webm;codecs=vp8,opus",
+  audioBitrateMode: "constant",
+  videoKeyFrameIntervalDuration: 2000,
+  hardwareAcceleration: "prefer-hardware"
+});
+
+const chunks = [];
+recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+recorder.start();
+setTimeout(() => recorder.stop(), 3000);`
+      },
+      {
+        title: "MediaCapabilities: decodingInfo / encodingInfo",
+        note: "覆盖 file / record 类型、video codec、分辨率、码率、帧率。",
+        code: `const decoding = await navigator.mediaCapabilities.decodingInfo({
+  type: "file",
+  video: {
+    contentType: "video/webm; codecs=vp9",
+    width: 1920,
+    height: 1080,
+    bitrate: 2500000,
+    framerate: 30
+  }
+});
+
+const encoding = await navigator.mediaCapabilities.encodingInfo({
+  type: "record",
+  video: {
+    contentType: "video/webm; codecs=vp8",
+    width: 1280,
+    height: 720,
+    bitrate: 1000000,
+    framerate: 30
+  }
+});`
+      },
+      {
+        title: "WebRTC: RTCPeerConnection / Sender 参数调优",
+        note: "覆盖 addTransceiver、restartIce、connectionState、getConfiguration、sender encodings。",
+        code: `const pc = new RTCPeerConnection({
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+});
+
+pc.addTransceiver("video", { direction: "sendrecv" });
+pc.addEventListener("connectionstatechange", () => console.log(pc.connectionState));
+
+const sender = pc.addTrack(localVideoTrack, localStream);
+const params = sender.getParameters();
+params.encodings = [{
+  active: true,
+  scaleResolutionDownBy: 1,
+  maxBitrate: 800000,
+  maxFramerate: 30,
+  priority: "high",
+  networkPriority: "high"
+}];
+params.degradationPreference = "balanced";
+await sender.setParameters(params);
+
+console.log(pc.getConfiguration());
+pc.restartIce();`
+      },
+      {
+        title: "Encoded Transform: RTCRtpScriptTransform",
+        note: "覆盖 sender.transform / receiver.transform、worker 处理流。",
+        code: `// main thread
+const worker = new Worker("rtctransform-worker.js", { type: "module" });
+sender.transform = new RTCRtpScriptTransform(worker, { kind: "video" });
+receiver.transform = new RTCRtpScriptTransform(worker, { kind: "video" });
+
+// worker
+self.onrtctransform = event => {
+  const transformer = event.transformer;
+  const pipe = new TransformStream({
+    transform(frame, controller) {
+      // 修改 frame.data 或读取 metadata
+      controller.enqueue(frame);
+    }
+  });
+  transformer.readable.pipeThrough(pipe).pipeTo(transformer.writable);
+};`
+      },
+      {
+        title: "Track Processor / Generator / VideoFrame",
+        note: "覆盖 MediaStreamTrackProcessor、MediaStreamTrackGenerator、VideoFrame。",
+        code: `const processor = new MediaStreamTrackProcessor({ track: inputTrack });
+const generator = new MediaStreamTrackGenerator({ kind: "video" });
+const transformer = new TransformStream({
+  async transform(frame, controller) {
+    // 可以用 WebCodecs / Canvas / WebGL 处理
+    controller.enqueue(frame);
+  }
+});
+
+processor.readable
+  .pipeThrough(transformer)
+  .pipeTo(generator.writable);
+
+const outTrack = generator;`
+      },
+      {
+        title: "Region Capture / Element Capture",
+        note: "覆盖 CropTarget.fromElement、RestrictionTarget.fromElement、cropTo、restrictTo。",
+        code: `const displayTrack = displayStream.getVideoTracks()[0];
+const cropTarget = await CropTarget.fromElement(document.querySelector("#crop-area"));
+await displayTrack.cropTo(cropTarget);
+
+if ("RestrictionTarget" in window && typeof displayTrack.restrictTo === "function") {
+  const restrictionTarget = await RestrictionTarget.fromElement(document.querySelector("#crop-area"));
+  await displayTrack.restrictTo(restrictionTarget);
+}`
+      },
+      {
+        title: "Window Management / ScreenDetails",
+        note: "覆盖 getScreenDetails、事件监听、指定屏幕全屏。",
+        code: `const details = await window.getScreenDetails();
+console.log(details.currentScreen, details.screens);
+
+details.addEventListener("screenschange", () => console.log("screens changed"));
+details.addEventListener("currentscreenchange", () => console.log("current screen changed"));
+
+await document.documentElement.requestFullscreen({
+  screen: details.screens[0]
+});`
+      },
+      {
+        title: "Navigation API",
+        note: "覆盖 navigate、reload、back、forward、traverseTo、currentEntry、events。",
+        code: `navigation.addEventListener("navigate", event => {
+  console.log("navigate", event.destination?.url);
+});
+
+console.log(navigation.currentEntry);
+await navigation.navigate("/docs/Web/API");
+await navigation.reload();
+await navigation.back();
+await navigation.forward();`
+      },
+      {
+        title: "File System Access",
+        note: "覆盖 showOpenFilePicker、showSaveFilePicker、createWritable、createSyncAccessHandle。",
+        code: `const [fileHandle] = await showOpenFilePicker();
+const file = await fileHandle.getFile();
+console.log(await file.text());
+
+const saveHandle = await showSaveFilePicker({
+  suggestedName: "output.txt"
+});
+const writable = await saveHandle.createWritable();
+await writable.write("hello");
+await writable.close();
+
+// OPFS / sync access handle 常见写法
+// const root = await navigator.storage.getDirectory();
+// const opfsFile = await root.getFileHandle("data.bin", { create: true });
+// const syncHandle = await opfsFile.createSyncAccessHandle();`
+      },
+      {
+        title: "WebGPU",
+        note: "覆盖 requestAdapter、requestDevice、getPreferredCanvasFormat。",
+        code: `const adapter = await navigator.gpu.requestAdapter();
+const device = await adapter.requestDevice();
+const format = navigator.gpu.getPreferredCanvasFormat();
+
+const context = canvas.getContext("webgpu");
+context.configure({
+  device,
+  format,
+  alphaMode: "opaque"
+});`
+      },
+      {
+        title: "CompressionStream / URLPattern / Sanitizer",
+        note: "覆盖压缩流、URLPattern、HTML Sanitizer。",
+        code: `const compressed = await new Response(
+  new Blob([new TextEncoder().encode("hello")]).stream()
+    .pipeThrough(new CompressionStream("gzip"))
+).arrayBuffer();
+
+const pattern = new URLPattern({ pathname: "/docs/:section/:name" });
+console.log(pattern.exec("https://example.com/docs/Web/API"));
+
+const sanitizer = new Sanitizer();
+const safe = sanitizer.sanitizeFor("div", "<img src=x onerror=alert(1)>");
+console.log(safe.innerHTML);`
+      },
+      {
+        title: "Built-in AI APIs",
+        note: "覆盖 Translator、LanguageDetector、Summarizer 的典型入口。",
+        code: `if ("Translator" in window) {
+  const translator = await Translator.create({
+    sourceLanguage: "en",
+    targetLanguage: "zh"
+  });
+  console.log(await translator.translate("Hello world"));
+}
+
+if ("LanguageDetector" in window) {
+  const detector = await LanguageDetector.create();
+  console.log(await detector.detect("Bonjour tout le monde"));
+}
+
+if ("Summarizer" in window) {
+  const summarizer = await Summarizer.create();
+  console.log(await summarizer.summarize(longText));
+}`
+      },
+      {
+        title: "CaptureController",
+        note: "参数解释：setFocusBehavior 控制共享启动后的焦点转移；zoomLevel 相关方法用于被捕获表面的缩放控制；forwardWheel 用于转发滚轮输入。",
+        code: `const controller = new CaptureController();
+
+controller.setFocusBehavior?.("focus-captured-surface");
+
+const stream = await navigator.mediaDevices.getDisplayMedia({
+  video: true,
+  controller
+});
+
+console.log(controller.zoomLevel);
+console.log(await controller.getSupportedZoomLevels?.());
+await controller.increaseZoomLevel?.();
+await controller.decreaseZoomLevel?.();
+await controller.resetZoomLevel?.();`
+      },
+      {
+        title: "RTCRtpEncodingParameters 字段说明",
+        note: "参数解释：active 是否启用该编码层；maxBitrate 限码率；maxFramerate 限帧率；scaleResolutionDownBy 降分辨率；priority / networkPriority 调度优先级；scalabilityMode 用于 SVC。",
+        code: `const params = sender.getParameters();
+params.encodings = [{
+  active: true,
+  maxBitrate: 800000,
+  maxFramerate: 30,
+  scaleResolutionDownBy: 1,
+  priority: "high",
+  networkPriority: "high",
+  scalabilityMode: "L1T3"
+}];
+params.degradationPreference = "balanced";
+await sender.setParameters(params);`
+      },
+      {
+        title: "selectAudioOutput / setSinkId",
+        note: "参数解释：selectAudioOutput 让用户选择输出设备；HTMLMediaElement.setSinkId 把媒体元素声音路由到指定输出设备。",
+        code: `const devices = await navigator.mediaDevices.enumerateDevices();
+const outputs = devices.filter(d => d.kind === "audiooutput");
+console.log(outputs);
+
+const chosen = await navigator.mediaDevices.selectAudioOutput();
+await audioElement.setSinkId(chosen.deviceId);`
+      },
+      {
+        title: "PressureObserver",
+        note: "参数解释：observe(source, { sampleInterval }) 中 source 常见是 cpu；sampleInterval 是采样间隔毫秒数。",
+        code: `if ("PressureObserver" in window) {
+  const observer = new PressureObserver(records => {
+    for (const record of records) {
+      console.log(record.source, record.state, record.cpuUtilization);
+    }
+  });
+
+  await observer.observe("cpu", { sampleInterval: 1000 });
+  // observer.disconnect();
+}`
+      },
+      {
+        title: "NavigatorUAData / High Entropy Values",
+        note: "参数解释：getHighEntropyValues 接受需要的高熵字段数组，例如 architecture、bitness、platformVersion、model、fullVersionList。",
+        code: `if ("userAgentData" in navigator) {
+  const data = navigator.userAgentData;
+  console.log(data.brands, data.mobile, data.platform);
+
+  const high = await data.getHighEntropyValues([
+    "architecture",
+    "bitness",
+    "model",
+    "platformVersion",
+    "fullVersionList"
+  ]);
+  console.log(high);
+}`
+      },
+      {
+        title: "AbortSignal 全家桶",
+        note: "参数解释：AbortSignal.abort(reason) 直接构造已中止 signal；timeout(ms) 到时自动中止；any(signals) 合并多个 signal；throwIfAborted() 主动抛错。",
+        code: `const manual = AbortSignal.abort("manual-stop");
+const timeout = AbortSignal.timeout(5000);
+const controller = new AbortController();
+const merged = AbortSignal.any([timeout, controller.signal]);
+
+merged.addEventListener("abort", () => {
+  console.log(merged.reason);
+});
+
+merged.throwIfAborted?.();`
+      },
+      {
+        title: "View Transition API",
+        note: "参数解释：startViewTransition(updateCallback) 在 DOM 变更前后插入转场；ready / finished / updateCallbackDone 是不同阶段的 Promise。",
+        code: `if (document.startViewTransition) {
+  const transition = document.startViewTransition(() => {
+    document.body.classList.toggle("alt-layout");
+  });
+
+  await transition.ready;
+  await transition.updateCallbackDone;
+  await transition.finished;
+}`
+      },
+      {
+        title: "WebTransport",
+        note: "参数解释：构造器传入 URL；ready/closed 是连接生命周期 Promise；datagrams 用于无连接报文；createBidirectionalStream 用于双向流。",
+        code: `const transport = new WebTransport("https://example.com:4433/webtransport");
+await transport.ready;
+
+const bidi = await transport.createBidirectionalStream();
+const writer = bidi.writable.getWriter();
+await writer.write(new TextEncoder().encode("hello"));
+writer.releaseLock();
+
+await transport.closed;`
+      },
+      {
+        title: "CaptureController 完整控制流",
+        note: "参数解释：controller 需要在 getDisplayMedia() 时传入；focusBehavior 控制焦点去向；getSupportedZoomLevels() / increaseZoomLevel() / resetZoomLevel() 用于验证 Captured Surface Control 行为。",
+        code: `const controller = new CaptureController();
+const stream = await navigator.mediaDevices.getDisplayMedia({
+  video: { displaySurface: "browser", cursor: "always" },
+  audio: false,
+  controller
+});
+
+controller.setFocusBehavior?.("focus-captured-surface");
+const zoomLevels = await controller.getSupportedZoomLevels?.();
+await controller.increaseZoomLevel?.();
+await controller.resetZoomLevel?.();
+console.log(stream.getVideoTracks()[0].getSettings(), zoomLevels);`
+      },
+      {
+        title: "WebCodecs 编码 / 解码最小链路",
+        note: "参数解释：VideoEncoder.isConfigSupported() 先验证 config；encode(frame, { keyFrame }) 触发输出；VideoDecoder 在支持时可把 EncodedVideoChunk 再解回 VideoFrame。",
+        code: `const bitmap = await createImageBitmap(canvas);
+const frame = new VideoFrame(bitmap, { timestamp: 0, duration: 33333 });
+const config = { codec: "vp8", width: 640, height: 360, bitrate: 500000, framerate: 30 };
+const support = await VideoEncoder.isConfigSupported(config);
+
+const chunks = [];
+const encoder = new VideoEncoder({
+  output(chunk) { chunks.push(chunk); },
+  error(error) { console.error(error); }
+});
+encoder.configure(support.config);
+encoder.encode(frame, { keyFrame: true });
+await encoder.flush();
+
+if ("VideoDecoder" in window && chunks[0]) {
+  const decoder = new VideoDecoder({
+    output(decoded) { console.log(decoded.displayWidth, decoded.displayHeight); decoded.close(); },
+    error(error) { console.error(error); }
+  });
+  decoder.configure({ codec: config.codec, codedWidth: config.width, codedHeight: config.height });
+  decoder.decode(chunks[0]);
+}`
+      },
+      {
+        title: "OPFS / Sync Access Handle",
+        note: "参数解释：getDirectory() 返回私有目录；getFileHandle(name, { create }) 读取或创建文件；createSyncAccessHandle() 适合同步读写；removeEntry() 删除私有文件。",
+        code: `const root = await navigator.storage.getDirectory();
+const fileHandle = await root.getFileHandle("demo.txt", { create: true });
+
+if (fileHandle.createSyncAccessHandle) {
+  const sync = await fileHandle.createSyncAccessHandle();
+  sync.truncate(0);
+  sync.write(new TextEncoder().encode("hello opfs"), { at: 0 });
+  sync.flush();
+  sync.close();
+} else {
+  const writable = await fileHandle.createWritable();
+  await writable.write("hello opfs");
+  await writable.close();
+}
+
+const text = await (await fileHandle.getFile()).text();
+console.log(text);
+await root.removeEntry("demo.txt");`
+      }
+    ];
+
+    const state = {
+      activeCategory: "All",
+      supportHits: 0,
+      cameraStream: null,
+      displayStream: null,
+      captureControllerStream: null,
+      captureController: null,
+      mediaRecorder: null,
+      recordedChunks: [],
+      pcResources: [],
+      navPushCount: 0,
+      audioTestContext: null
+    };
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+    function log(title, value) {
+      const stamp = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      const block = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      const output = `[${stamp}] ${title}\n${block}\n\n`;
+      const el = $("#consoleOutput");
+      el.textContent = output + (el.textContent === "等待操作..." ? "" : el.textContent);
+    }
+
+    function supportBadge(status) {
+      if (status === "stable") return ["Stable", "ok"];
+      if (status === "experimental") return ["Experimental", "bad"];
+      return ["Mixed", "warn"];
+    }
+
+    function renderFilters() {
+      const categories = ["All", ...new Set(API_GROUPS.map(group => group.category))];
+      const container = $("#categoryFilters");
+      container.innerHTML = "";
+      for (const name of categories) {
+        const button = document.createElement("button");
+        button.className = `chip ${name === state.activeCategory ? "active" : ""}`;
+        button.textContent = name;
+        button.addEventListener("click", () => {
+          state.activeCategory = name;
+          renderFilters();
+          renderCatalog();
+        });
+        container.appendChild(button);
+      }
+    }
+
+    function renderCatalog() {
+      const search = $("#searchInput").value.trim().toLowerCase();
+      const grid = $("#catalogGrid");
+      const tpl = $("#catalogCardTemplate");
+      grid.innerHTML = "";
+
+      const filteredGroups = API_GROUPS.filter(group => {
+        const categoryOk = state.activeCategory === "All" || group.category === state.activeCategory;
+        if (!categoryOk) return false;
+        if (!search) return true;
+        const haystack = [
+          group.title,
+          group.summary,
+          group.category,
+          group.version,
+          ...group.items.map(item => `${item.name} ${item.type} ${item.version} ${item.note}`)
+        ].join(" ").toLowerCase();
+        return haystack.includes(search);
+      });
+
+      for (const group of filteredGroups) {
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        $("h3", node).textContent = group.title;
+        const meta = $(".catalog-meta", node);
+        meta.innerHTML = "";
+        const [label, kind] = supportBadge(group.status);
+        const tags = [
+          { text: group.category, className: "" },
+          { text: group.version, className: "" },
+          { text: `${group.items.length} items`, className: "" },
+          { text: label, className: kind }
+        ];
+        for (const tag of tags) {
+          const span = document.createElement("span");
+          span.className = tag.className ? `pill ${tag.className}` : "";
+          span.textContent = tag.text;
+          meta.appendChild(span);
+        }
+
+        const list = $("ul", node);
+        for (const item of group.items) {
+          const li = document.createElement("li");
+          li.innerHTML = `<span><span class="mono">${escapeHtml(item.name)}</span> <span class="helper">(${escapeHtml(item.type)}) ${escapeHtml(item.note)}</span></span><span class="pill">${escapeHtml("Chrome " + item.version)}</span>`;
+          list.appendChild(li);
+        }
+        grid.appendChild(node);
+      }
+
+      $("#catalogCount").textContent = API_GROUPS.reduce((sum, group) => sum + group.items.length, 0);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function renderApiRecipeSnippets() {
+      const container = $("#apiRecipesContainer");
+      if (!container) return;
+      container.innerHTML = "";
+      for (const recipe of API_RECIPES) {
+        const details = document.createElement("details");
+        details.className = "snippet-box";
+        details.innerHTML = `
+          <summary>${escapeHtml(recipe.title)}</summary>
+          <div class="helper">${escapeHtml(recipe.note)}</div>
+          <pre class="scroll-x"><code>${escapeHtml(recipe.code)}</code></pre>
+        `;
+        container.appendChild(details);
+      }
+    }
+
+    function numValue(id, fallback) {
+      const el = document.getElementById(id);
+      if (!el) return fallback;
+      const value = Number(el.value);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function renderDemos() {
+      const grid = $("#demoGrid");
+      const tpl = $("#demoCardTemplate");
+      grid.innerHTML = "";
+      $("#demoCount").textContent = DEMOS.length;
+
+      for (const demo of DEMOS) {
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        if (demo.fullSpan) node.classList.add("full-span");
+        $("h3", node).textContent = demo.title;
+        $(".demo-head p", node).textContent = demo.description;
+        $(".demo-head p", node).insertAdjacentHTML("beforebegin", `<div class="demo-section-tag">${escapeHtml(demo.group)}</div>`);
+        const statusLine = $(".status-line", node);
+        statusLine.innerHTML = `<span class="version-pill">${escapeHtml(demo.version || "")}</span>` + demo.status.map(tag => `<span>${escapeHtml(tag)}</span>`).join("");
+        const body = $(".demo-body", node);
+
+        if (demo.id === "support-scan") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="scan-support">开始扫描</button>
+            </div>
+            <div id="supportOutput" class="demo-output">点击按钮后，会检测页面里重点演示的接口。</div>
+          `;
+        }
+
+        if (demo.id === "abort-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-abort-demo">运行 AbortSignal 示例</button>
+            </div>
+            <div id="abortOutput" class="demo-output">展示 \`timeout()\`、\`any()\`、\`reason\`、\`throwIfAborted()\`。</div>
+          `;
+        }
+
+        if (demo.id === "transition-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="toggle-transition">执行视图转场</button>
+            </div>
+            <div class="preview-box">
+              <div id="transitionSwatch" class="swatch"></div>
+            </div>
+            <div id="transitionOutput" class="demo-output">等待切换。</div>
+          `;
+        }
+
+        if (demo.id === "ua-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="read-ua-data">读取 UA Client Hints</button>
+            </div>
+            <div id="uaOutput" class="demo-output">点击后读取 \`navigator.userAgentData\`，若支持则继续请求高熵字段。</div>
+          `;
+        }
+
+        if (demo.id === "media-capabilities-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="mcCodecSelect">codec</label>
+                <select id="mcCodecSelect">
+                  <option value="video/webm; codecs=vp9">video/webm; codecs=vp9</option>
+                  <option value="video/webm; codecs=vp8">video/webm; codecs=vp8</option>
+                  <option value="video/mp4; codecs=avc1.42E01E">video/mp4; codecs=avc1.42E01E</option>
+                  <option value="video/mp4; codecs=av01.0.08M.08">video/mp4; codecs=av01.0.08M.08</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="mcWidthInput">width</label>
+                <input id="mcWidthInput" type="number" value="1280" min="160" step="1" />
+              </div>
+              <div class="field">
+                <label for="mcHeightInput">height</label>
+                <input id="mcHeightInput" type="number" value="720" min="120" step="1" />
+              </div>
+              <div class="field">
+                <label for="mcBitrateInput">bitrate</label>
+                <input id="mcBitrateInput" type="number" value="1500000" min="10000" step="1000" />
+              </div>
+              <div class="field">
+                <label for="mcFpsInput">framerate</label>
+                <input id="mcFpsInput" type="number" value="30" min="1" step="1" />
+              </div>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>codec</strong><span class="helper">要查询的编解码 MIME 类型，直接影响浏览器是否认为该组合可流畅解码或编码。</span></div>
+                <div class="explain-card"><strong>width</strong><span class="helper">视频目标宽度，和 height 一起决定能力查询的分辨率档位。</span></div>
+                <div class="explain-card"><strong>height</strong><span class="helper">视频目标高度，越高通常对硬件解码和功耗要求越高。</span></div>
+                <div class="explain-card"><strong>bitrate</strong><span class="helper">目标码率，单位 bps，会影响是否被认为 powerEfficient / smooth。</span></div>
+                <div class="explain-card"><strong>framerate</strong><span class="helper">目标帧率，常见值 24 / 30 / 60，对流畅度判断影响明显。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-media-capabilities">查询编码/解码能力</button>
+            </div>
+            <div id="mediaCapabilitiesOutput" class="demo-output">会调用 \`navigator.mediaCapabilities.decodingInfo()\` 和 \`encodingInfo()\`。</div>
+          `;
+        }
+
+        if (demo.id === "screen-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="displaySurfaceSelect">displaySurface</label>
+                <select id="displaySurfaceSelect">
+                  <option value="browser">browser</option>
+                  <option value="window">window</option>
+                  <option value="monitor">monitor</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cursorSelect">cursor</label>
+                <select id="cursorSelect">
+                  <option value="always">always</option>
+                  <option value="motion">motion</option>
+                  <option value="never">never</option>
+                </select>
+              </div>
+            </div>
+            <div class="check-row">
+              <label><input id="displayAudioEnabled" type="checkbox" checked /> audio</label>
+              <label><input id="preferCurrentTabEnabled" type="checkbox" checked /> preferCurrentTab</label>
+              <label><input id="surfaceSwitchingEnabled" type="checkbox" checked /> surfaceSwitching=include</label>
+              <label><input id="selfBrowserSurfaceEnabled" type="checkbox" checked /> selfBrowserSurface=exclude</label>
+              <label><input id="systemAudioEnabled" type="checkbox" checked /> systemAudio=include</label>
+              <label><input id="monitorTypeSurfacesEnabled" type="checkbox" /> monitorTypeSurfaces=include</label>
+              <label><input id="suppressLocalPlaybackEnabled" type="checkbox" /> suppressLocalAudioPlayback</label>
+            </div>
+            <details class="explain-toggle">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>audio</strong><span class="helper">是否请求共享系统或标签页音频。</span></div>
+                <div class="explain-card"><strong>preferCurrentTab</strong><span class="helper">提示浏览器优先把当前标签页作为共享候选。</span></div>
+                <div class="explain-card"><strong>surfaceSwitching</strong><span class="helper">是否允许共享过程中切换到其他标签页或表面。</span></div>
+                <div class="explain-card"><strong>selfBrowserSurface</strong><span class="helper">是否允许捕获当前发起共享的页面本身。</span></div>
+                <div class="explain-card"><strong>systemAudio</strong><span class="helper">是否包含系统音频轨，通常只在部分场景支持。</span></div>
+                <div class="explain-card"><strong>monitorTypeSurfaces</strong><span class="helper">是否把“显示器整屏”作为候选共享类型。</span></div>
+                <div class="explain-card"><strong>suppressLocalAudioPlayback</strong><span class="helper">请求浏览器抑制本地回放，避免自己听到共享音频回声。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="start-display">开始共享屏幕</button>
+              <button class="button button-ghost" data-action="stop-display">停止共享</button>
+            </div>
+            <div class="preview-stage">
+              <div class="preview-box">
+                <video id="displayVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="preview-box">
+                <div id="displayInfo" class="demo-output">等待共享。</div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (demo.id === "capture-controller-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="controllerDisplaySurfaceSelect">displaySurface</label>
+                <select id="controllerDisplaySurfaceSelect">
+                  <option value="browser">browser</option>
+                  <option value="window">window</option>
+                  <option value="monitor">monitor</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="controllerCursorSelect">cursor</label>
+                <select id="controllerCursorSelect">
+                  <option value="always">always</option>
+                  <option value="motion">motion</option>
+                  <option value="never">never</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="focusBehaviorSelect">focusBehavior</label>
+                <select id="focusBehaviorSelect">
+                  <option value="focus-captured-surface">focus-captured-surface</option>
+                  <option value="focus-capturing-application">focus-capturing-application</option>
+                  <option value="no-focus-change">no-focus-change</option>
+                </select>
+              </div>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>controller</strong><span class="helper">把 <code>CaptureController</code> 传给 <code>getDisplayMedia()</code>，后续才能控制焦点和缩放。</span></div>
+                <div class="explain-card"><strong>setFocusBehavior()</strong><span class="helper">控制共享开始后焦点是留在当前页面，还是切到被捕获页面。</span></div>
+                <div class="explain-card"><strong>getSupportedZoomLevels()</strong><span class="helper">读取捕获表面支持的缩放档位，便于判断当前环境是否真的实现了缩放控制。</span></div>
+                <div class="explain-card"><strong>increaseZoomLevel() / decreaseZoomLevel() / resetZoomLevel()</strong><span class="helper">依次演示放大、缩小和恢复默认缩放。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="start-controller-capture">开启受控共享</button>
+              <button class="button button-secondary" data-action="apply-controller-focus">应用焦点策略</button>
+              <button class="button button-secondary" data-action="read-controller-zoom">读取缩放档位</button>
+              <button class="button button-ghost" data-action="controller-zoom-in">放大</button>
+              <button class="button button-ghost" data-action="controller-zoom-out">缩小</button>
+              <button class="button button-ghost" data-action="controller-zoom-reset">重置缩放</button>
+              <button class="button button-ghost" data-action="stop-controller-capture">停止受控共享</button>
+            </div>
+            <div class="preview-stage">
+              <div class="preview-box">
+                <video id="controllerDisplayVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="preview-box">
+                <div id="captureControllerInfo" class="demo-output">先开启一个绑定了 <code>CaptureController</code> 的共享会话，再测试焦点和缩放方法。</div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (demo.id === "media-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="cameraWidthInput">video width</label>
+                <input id="cameraWidthInput" type="number" value="1280" min="160" step="1" />
+              </div>
+              <div class="field">
+                <label for="cameraHeightInput">video height</label>
+                <input id="cameraHeightInput" type="number" value="720" min="120" step="1" />
+              </div>
+              <div class="field">
+                <label for="cameraFpsInput">frameRate</label>
+                <input id="cameraFpsInput" type="number" value="30" min="1" step="1" />
+              </div>
+              <div class="field">
+                <label for="cameraResizeModeSelect">resizeMode</label>
+                <select id="cameraResizeModeSelect">
+                  <option value="">(none)</option>
+                  <option value="crop-and-scale">crop-and-scale</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cameraContentHintSelect">contentHint</label>
+                <select id="cameraContentHintSelect">
+                  <option value="motion">motion</option>
+                  <option value="detail">detail</option>
+                  <option value="text">text</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="audioBitrateModeSelect">audioBitrateMode</label>
+                <select id="audioBitrateModeSelect">
+                  <option value="">default</option>
+                  <option value="constant">constant</option>
+                  <option value="variable">variable</option>
+                </select>
+              </div>
+            </div>
+            <div class="check-row">
+              <label><input id="cameraAudioEnabled" type="checkbox" checked /> audio</label>
+              <label><input id="backgroundBlurEnabled" type="checkbox" /> backgroundBlur</label>
+            </div>
+            <details class="explain-toggle">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>audio</strong><span class="helper">是否同时采集麦克风音频轨。</span></div>
+                <div class="explain-card"><strong>backgroundBlur</strong><span class="helper">实验性背景模糊约束，部分浏览器或设备可能忽略。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="start-camera">打开摄像头</button>
+              <button class="button button-secondary" data-action="start-record">录制 3 秒</button>
+              <button class="button button-ghost" data-action="stop-camera">关闭摄像头</button>
+            </div>
+            <div class="preview-stage">
+              <div class="preview-box">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+              </div>
+              <div class="preview-box">
+                <video id="recordedVideo" controls playsinline></video>
+              </div>
+            </div>
+            <div id="mediaInfo" class="demo-output">等待授权。</div>
+          `;
+        }
+
+        if (demo.id === "processor-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-processor-demo">读取一帧</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>canvas.captureStream(15)</strong><span class="helper">这里的 15 表示用 canvas 每秒生成约 15 帧视频轨。</span></div>
+                <div class="explain-card"><strong>MediaStreamTrackProcessor</strong><span class="helper">把视频轨转成可逐帧读取的流，方便读取或处理每一帧。</span></div>
+                <div class="explain-card"><strong>VideoFrame</strong><span class="helper">表示原始视频帧，可读出 codedWidth、displayWidth、timestamp 等信息。</span></div>
+              </div>
+            </details>
+            <div class="preview-stage">
+              <div class="preview-box">
+                <canvas id="processorSourceCanvas" width="640" height="360"></canvas>
+              </div>
+              <div class="preview-box">
+                <canvas id="processorPreviewCanvas" width="640" height="360"></canvas>
+              </div>
+            </div>
+            <div id="processorInfo" class="demo-output">这个示例会从本地 canvas.captureStream() 生成轨道，再用 \`MediaStreamTrackProcessor\` 读出第一帧。</div>
+          `;
+        }
+
+        if (demo.id === "webcodecs-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="webcodecsCodecSelect">codec</label>
+                <select id="webcodecsCodecSelect">
+                  <option value="vp8">vp8</option>
+                  <option value="vp09.00.10.08">vp09.00.10.08</option>
+                  <option value="av01.0.08M.08">av01.0.08M.08</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="webcodecsBitrateInput">bitrate</label>
+                <input id="webcodecsBitrateInput" type="number" value="500000" min="10000" step="10000" />
+              </div>
+              <div class="field">
+                <label for="webcodecsFramerateInput">framerate</label>
+                <input id="webcodecsFramerateInput" type="number" value="30" min="1" step="1" />
+              </div>
+              <div class="field">
+                <label for="webcodecsFrameCountInput">frameCount</label>
+                <input id="webcodecsFrameCountInput" type="number" value="2" min="1" max="6" step="1" />
+              </div>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>VideoFrame(bitmap, { timestamp, duration })</strong><span class="helper">把图像位图包装成原始视频帧，时间戳单位通常是微秒。</span></div>
+                <div class="explain-card"><strong>VideoEncoder.isConfigSupported(config)</strong><span class="helper">先验证 codec、分辨率、码率、帧率组合是否可编码。</span></div>
+                <div class="explain-card"><strong>encode(frame, { keyFrame })</strong><span class="helper">把帧送进编码器；首帧通常指定为关键帧。</span></div>
+                <div class="explain-card"><strong>VideoDecoder.decode(chunk)</strong><span class="helper">在支持的环境里把编码结果再解回 <code>VideoFrame</code>，方便演示完整链路。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-webcodecs-demo">运行编码链路</button>
+            </div>
+            <div class="preview-stage">
+              <div class="preview-box">
+                <canvas id="webcodecsSourceCanvas" width="640" height="360"></canvas>
+              </div>
+              <div class="preview-box">
+                <canvas id="webcodecsPreviewCanvas" width="640" height="360"></canvas>
+              </div>
+            </div>
+            <div id="webcodecsInfo" class="demo-output">会绘制本地画布，创建 <code>VideoFrame</code>，执行 <code>VideoEncoder</code> 编码，并在支持时尝试用 <code>VideoDecoder</code> 回显第一帧。</div>
+          `;
+        }
+
+        if (demo.id === "rtc-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="rtcScaleDownInput">scaleResolutionDownBy</label>
+                <input id="rtcScaleDownInput" type="number" value="1" min="1" step="0.5" />
+              </div>
+              <div class="field">
+                <label for="rtcBitrateInput">maxBitrate</label>
+                <input id="rtcBitrateInput" type="number" value="500000" min="10000" step="10000" />
+              </div>
+              <div class="field">
+                <label for="rtcFramerateInput">maxFramerate</label>
+                <input id="rtcFramerateInput" type="number" value="30" min="1" step="1" />
+              </div>
+              <div class="field">
+                <label for="rtcPrioritySelect">priority</label>
+                <select id="rtcPrioritySelect">
+                  <option value="high">high</option>
+                  <option value="medium">medium</option>
+                  <option value="low">low</option>
+                  <option value="very-low">very-low</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="rtcDegradationSelect">degradationPreference</label>
+                <select id="rtcDegradationSelect">
+                  <option value="balanced">balanced</option>
+                  <option value="maintain-framerate">maintain-framerate</option>
+                  <option value="maintain-resolution">maintain-resolution</option>
+                </select>
+              </div>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>scaleResolutionDownBy</strong><span class="helper">发送端缩放倍数，\`2\` 表示宽高各减半，常用于降低上行负载。</span></div>
+                <div class="explain-card"><strong>maxBitrate</strong><span class="helper">发送编码允许的最高码率，单位 bps。</span></div>
+                <div class="explain-card"><strong>maxFramerate</strong><span class="helper">发送编码允许的最高帧率，用于限制带宽和 CPU 开销。</span></div>
+                <div class="explain-card"><strong>priority</strong><span class="helper">编码流优先级，影响浏览器在资源竞争下如何调度此轨道。</span></div>
+                <div class="explain-card"><strong>degradationPreference</strong><span class="helper">资源不足时优先保帧率、保分辨率，还是折中处理。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-rtc-loopback">建立本地回环连接</button>
+              <button class="button button-ghost" data-action="clear-rtc">清理连接</button>
+            </div>
+            <div id="rtcInfo" class="demo-output">示例会创建两个本地 PeerConnection，用 DataChannel 完成回环协商。</div>
+          `;
+        }
+
+        if (demo.id === "file-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="open-file">打开文本文件</button>
+              <button class="button button-secondary" data-action="save-file">另存为文件</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>showOpenFilePicker()</strong><span class="helper">弹出本地文件选择器，返回 <code>FileSystemFileHandle</code>。</span></div>
+                <div class="explain-card"><strong>getFile().text()</strong><span class="helper">读取选中文件的文本内容。</span></div>
+                <div class="explain-card"><strong>createWritable()</strong><span class="helper">创建可写流，把编辑内容落到新文件中。</span></div>
+              </div>
+            </details>
+            <textarea id="fileEditor" placeholder="这里会显示打开的文本内容，或者你可以直接在这里输入内容再另存。"></textarea>
+            <div id="fileInfo" class="demo-output">支持 File System Access 的浏览器里可以直接读写本地文件。</div>
+          `;
+        }
+
+        if (demo.id === "opfs-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="opfsFileNameInput">fileName</label>
+                <input id="opfsFileNameInput" type="text" value="chrome-web-api-demo.txt" />
+              </div>
+            </div>
+            <textarea id="opfsContentInput">Hello OPFS.
+这段内容会写入 Origin Private File System，再尝试原样读回。</textarea>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>navigator.storage.getDirectory()</strong><span class="helper">获取当前源的私有文件系统根目录，是 OPFS 的入口。</span></div>
+                <div class="explain-card"><strong>getFileHandle(name, { create })</strong><span class="helper">读取或创建私有文件句柄，<code>create: true</code> 表示不存在时自动创建。</span></div>
+                <div class="explain-card"><strong>createSyncAccessHandle()</strong><span class="helper">在支持时提供同步读写能力，适合高频文件写入或 Worker 场景。</span></div>
+                <div class="explain-card"><strong>createWritable() / removeEntry()</strong><span class="helper">不支持同步句柄时可回退到标准可写流；删除文件则用根目录的 <code>removeEntry()</code>。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="opfs-write">写入文件</button>
+              <button class="button button-secondary" data-action="opfs-read">读取文件</button>
+              <button class="button button-secondary" data-action="opfs-list">列出目录</button>
+              <button class="button button-ghost" data-action="opfs-delete">删除文件</button>
+            </div>
+            <div id="opfsInfo" class="demo-output">这里会优先尝试 <code>createSyncAccessHandle()</code>，不支持时自动回退到 <code>createWritable()</code>。</div>
+          `;
+        }
+
+        if (demo.id === "gpu-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-gpu">检查 WebGPU</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>navigator.gpu</strong><span class="helper">WebGPU 总入口，没有它就无法继续请求适配器和设备。</span></div>
+                <div class="explain-card"><strong>requestAdapter()</strong><span class="helper">读取浏览器可用的 GPU 适配器对象。</span></div>
+                <div class="explain-card"><strong>getPreferredCanvasFormat()</strong><span class="helper">为后续 WebGPU 画布配置返回推荐像素格式。</span></div>
+              </div>
+            </details>
+            <div id="gpuInfo" class="demo-output">点击检测 \`navigator.gpu\`、适配器、推荐画布格式等信息。</div>
+          `;
+        }
+
+        if (demo.id === "navigation-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="snapshot-navigation">读取 Navigation 快照</button>
+              <button class="button button-secondary" data-action="push-navigation-state">追加一个同文档历史项</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>navigation.currentEntry</strong><span class="helper">当前历史条目对象，能看到 key、index、url 等信息。</span></div>
+                <div class="explain-card"><strong>navigation.entries()</strong><span class="helper">当前 session 历史栈条目列表。</span></div>
+                <div class="explain-card"><strong>pushState</strong><span class="helper">这里用它模拟同文档导航，方便看 Navigation 快照变化。</span></div>
+              </div>
+            </details>
+            <div id="navigationInfo" class="demo-output">读取 \`navigation\`、\`currentEntry\`、\`entries()\` 和当前 URL。</div>
+          `;
+        }
+
+        if (demo.id === "screen-details-demo") {
+          body.innerHTML = `
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-screen-details">读取屏幕信息</button>
+              <button class="button button-secondary" data-action="request-screen-fullscreen">尝试当前屏幕全屏</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>getScreenDetails()</strong><span class="helper">返回多屏信息集合，包含当前屏幕和所有已连接屏幕。</span></div>
+                <div class="explain-card"><strong>screen.isExtended</strong><span class="helper">表示当前是否处于扩展显示模式。</span></div>
+                <div class="explain-card"><strong>ScreenDetailed</strong><span class="helper">单个屏幕对象，通常包含 width、height、left、top、isPrimary 等。</span></div>
+                <div class="explain-card"><strong>requestFullscreen({ screen })</strong><span class="helper">在支持时把当前页面全屏到指定或当前屏幕，方便验证多屏全屏参数。</span></div>
+              </div>
+            </details>
+            <div id="screenDetailsInfo" class="demo-output">优先调用 \`window.getScreenDetails()\`，不支持时回退到基础 \`screen\` 指标。</div>
+          `;
+        }
+
+        if (demo.id === "region-capture-demo") {
+          body.innerHTML = `
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>CropTarget.fromElement(element)</strong><span class="helper">从页面元素创建裁剪目标，后续传给 <code>cropTo()</code>。</span></div>
+                <div class="explain-card"><strong>RestrictionTarget.fromElement(element)</strong><span class="helper">创建限制目标，后续传给 <code>restrictTo()</code>。</span></div>
+                <div class="explain-card"><strong>cropTo() / restrictTo()</strong><span class="helper">都依赖一个真实共享轨道，所以通常需要和屏幕共享示例联动测试。</span></div>
+              </div>
+            </details>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-region-capture">创建 Capture Target</button>
+              <button class="button button-secondary" data-action="apply-region-capture">尝试作用到当前共享轨道</button>
+            </div>
+            <div class="preview-box">
+              <div id="captureTargetBox" class="swatch" style="min-height:120px;"></div>
+            </div>
+            <div id="regionCaptureInfo" class="demo-output">这个示例会尝试创建 \`CropTarget\` / \`RestrictionTarget\`，并在你已开启屏幕共享时尝试调用对应方法。</div>
+          `;
+        }
+
+        if (demo.id === "audio-output-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="audioOutputDeviceSelect">deviceId</label>
+                <select id="audioOutputDeviceSelect">
+                  <option value="">先读取设备列表</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="audioToneFrequencyInput">toneHz</label>
+                <input id="audioToneFrequencyInput" type="number" value="440" min="110" step="10" />
+              </div>
+            </div>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-audio-output">列出输出设备</button>
+              <button class="button button-secondary" data-action="apply-audio-output">尝试切换输出</button>
+              <button class="button button-ghost" data-action="play-audio-tone">播放测试音</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>enumerateDevices()</strong><span class="helper">列出当前可见的媒体设备，这里重点筛选 kind 为 audiooutput 的设备。</span></div>
+                <div class="explain-card"><strong>selectAudioOutput()</strong><span class="helper">让用户显式选择一个音频输出设备。</span></div>
+                <div class="explain-card"><strong>setSinkId()</strong><span class="helper">把某个音频或视频元素的声音路由到指定输出设备。</span></div>
+                <div class="explain-card"><strong>toneHz</strong><span class="helper">测试音频率，默认 440Hz，方便确认输出切换是否真的生效。</span></div>
+              </div>
+            </details>
+            <audio id="outputProbeAudio" controls preload="none"></audio>
+            <div id="audioOutputInfo" class="demo-output">会先读取 audiooutput 设备列表，再尝试 <code>selectAudioOutput()</code> 或 <code>setSinkId()</code>，最后可以播放测试音做验证。</div>
+          `;
+        }
+
+        if (demo.id === "pressure-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="pressureSampleIntervalInput">sampleInterval</label>
+                <input id="pressureSampleIntervalInput" type="number" value="1000" min="250" step="250" />
+              </div>
+              <div class="field">
+                <label for="pressureDurationInput">durationMs</label>
+                <input id="pressureDurationInput" type="number" value="1800" min="500" step="100" />
+              </div>
+            </div>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-pressure">开始压力采样</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>knownSources()</strong><span class="helper">返回浏览器当前支持观察的压力源，例如 cpu。</span></div>
+                <div class="explain-card"><strong>observe(\"cpu\", { sampleInterval })</strong><span class="helper">开始观察 CPU 压力，sampleInterval 是采样间隔毫秒数。</span></div>
+                <div class="explain-card"><strong>record.state</strong><span class="helper">表示当前压力状态，通常会随着负载变化而变化。</span></div>
+                <div class="explain-card"><strong>record.cpuUtilization</strong><span class="helper">部分实现会额外返回 CPU 利用率，可用来判断压力等级和采样值变化。</span></div>
+              </div>
+            </details>
+            <div id="pressureInfo" class="demo-output">会检查 <code>PressureObserver.knownSources()</code>，并按你设置的采样间隔和持续时间收集 CPU 压力记录。</div>
+          `;
+        }
+
+        if (demo.id === "advanced-probe-demo") {
+          body.innerHTML = `
+            <div class="form-grid">
+              <div class="field">
+                <label for="advancedModeSelect">mode</label>
+                <select id="advancedModeSelect">
+                  <option value="encoded-frame">RTCEncodedVideoFrame constructor</option>
+                  <option value="transform-worker">RTCRtpScriptTransform worker script</option>
+                  <option value="webtransport-template">WebTransport client template</option>
+                  <option value="legacy-encoded-streams">createEncodedStreams legacy template</option>
+                </select>
+              </div>
+            </div>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-advanced-apis">生成完整示例</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>WebTransport</strong><span class="helper">现代低延迟传输接口，支持 datagrams 和 bidirectional streams。</span></div>
+                <div class="explain-card"><strong>RTCRtpScriptTransform</strong><span class="helper">新一代 Encoded Transform 入口，用于在 worker 中处理编码帧。</span></div>
+                <div class="explain-card"><strong>createEncodedStreams()</strong><span class="helper">旧版 Insertable Streams API，已被 transform 形态替代。</span></div>
+                <div class="explain-card"><strong>RTCEncodedVideoFrame / RTCEncodedAudioFrame</strong><span class="helper">编码后帧对象，常用字段是 <code>type</code>、<code>timestamp</code>、<code>data</code> 和 <code>getMetadata()</code>。</span></div>
+              </div>
+            </details>
+            <div id="advancedProbeInfo" class="demo-output">这里不再只显示支持情况，而是根据你选的模式生成一段可直接参考或复制的完整高级接口示例。</div>
+          `;
+        }
+
+        if (demo.id === "sanitizer-demo") {
+          body.innerHTML = `
+            <textarea id="sanitizeInput">&lt;div&gt;Hello &lt;strong&gt;Chrome&lt;/strong&gt; &lt;img src=x onerror=alert(1)&gt; &lt;script&gt;alert('xss')&lt;/script&gt;&lt;/div&gt;</textarea>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-sanitizer">执行清洗</button>
+            </div>
+            <div class="two-up">
+              <div class="preview-box">
+                <strong>输出 HTML</strong>
+                <pre id="sanitizeCode"></pre>
+              </div>
+              <div class="preview-box">
+                <strong>渲染结果</strong>
+                <div id="sanitizeResult" class="demo-output"></div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (demo.id === "compression-demo") {
+          body.innerHTML = `
+            <textarea id="compressionInput">Chrome Web Platform APIs changed a lot after Chrome 72, especially in WebRTC, Media, Screen Capture, AI, View Transition, Navigation, WebGPU and File System Access.</textarea>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="run-compression">压缩并解压</button>
+            </div>
+            <div class="three-up">
+              <div class="mini-card"><strong>原始字节</strong><div id="rawSize" class="metric">0</div></div>
+              <div class="mini-card"><strong>压缩后字节</strong><div id="compressedSize" class="metric">0</div></div>
+              <div class="mini-card"><strong>URLPattern</strong><div id="patternMatch" class="metric">-</div></div>
+            </div>
+            <div id="compressionInfo" class="demo-output">演示 \`CompressionStream\`、\`DecompressionStream\`、\`URLPattern\`。</div>
+          `;
+        }
+
+        if (demo.id === "ai-demo") {
+          body.innerHTML = `
+            <textarea id="aiInput">Chrome built-in AI APIs can help with translation, language detection, and summarization when the browser exposes those experimental capabilities.</textarea>
+            <div class="demo-actions">
+              <button class="button button-primary" data-action="probe-ai">检测 AI 接口</button>
+              <button class="button button-secondary" data-action="run-summarizer">尝试 Summarizer</button>
+              <button class="button button-ghost" data-action="run-translator">尝试 Translator</button>
+            </div>
+            <details class="explain-toggle compact">
+              <summary>查看参数解释</summary>
+              <div class="explain-grid">
+                <div class="explain-card"><strong>Translator.create()</strong><span class="helper">通常接受 sourceLanguage、targetLanguage 等参数，创建浏览器内置翻译器。</span></div>
+                <div class="explain-card"><strong>Summarizer.create()</strong><span class="helper">创建摘要器实例，后续可调用 summarize 或 summarizeStreaming。</span></div>
+                <div class="explain-card"><strong>LanguageDetector</strong><span class="helper">用于检测文本语言，通常也需要先 create 再 detect。</span></div>
+              </div>
+            </details>
+            <div id="aiInfo" class="demo-output">默认先做接口探测；真正调用时如果浏览器未开启相关实验能力，会返回清晰错误。</div>
+          `;
+        }
+
+        if (demo.id === "api-recipes-demo") {
+          body.innerHTML = `
+            <div class="demo-output">这里汇总报告里主要接口和参数组合的完整示例代码。上面的实验卡片负责真实运行，这里负责把不同调用形态、字典参数、方法入口和典型写法系统化展示出来。</div>
+            <div id="apiRecipesContainer" class="snippet-stack"></div>
+          `;
+        }
+
+        if (demo.id !== "api-recipes-demo" && DEMO_SOURCE_SNIPPETS[demo.id]) {
+          body.insertAdjacentHTML("beforeend", `
+            <details class="source-panel">
+              <summary class="source-toggle">查看当前示例源码</summary>
+              <pre><code>${escapeHtml(DEMO_SOURCE_SNIPPETS[demo.id])}</code></pre>
+            </details>
+          `);
+        }
+
+        grid.appendChild(node);
+      }
+
+      renderApiRecipeSnippets();
+    }
+
+    function getCoreSupportMatrix() {
+      return [
+        ["RTCPeerConnection", "RTCPeerConnection" in window],
+        ["RTCRtpSender.getCapabilities", typeof window.RTCRtpSender?.getCapabilities === "function"],
+        ["AbortSignal.timeout", typeof AbortSignal?.timeout === "function"],
+        ["AbortSignal.any", typeof AbortSignal?.any === "function"],
+        ["document.startViewTransition", typeof document.startViewTransition === "function"],
+        ["navigator.userAgentData", "userAgentData" in navigator],
+        ["navigator.mediaDevices.getUserMedia", typeof navigator.mediaDevices?.getUserMedia === "function"],
+        ["navigator.mediaDevices.getDisplayMedia", typeof navigator.mediaDevices?.getDisplayMedia === "function"],
+        ["navigator.mediaDevices.selectAudioOutput", typeof navigator.mediaDevices?.selectAudioOutput === "function"],
+        ["MediaRecorder", "MediaRecorder" in window],
+        ["navigator.mediaCapabilities", "mediaCapabilities" in navigator],
+        ["MediaStreamTrackProcessor", "MediaStreamTrackProcessor" in window],
+        ["VideoFrame", "VideoFrame" in window],
+        ["showOpenFilePicker", typeof window.showOpenFilePicker === "function"],
+        ["navigator.gpu", "gpu" in navigator],
+        ["Sanitizer", "Sanitizer" in window],
+        ["CompressionStream", "CompressionStream" in window],
+        ["URLPattern", "URLPattern" in window],
+        ["window.getScreenDetails", typeof window.getScreenDetails === "function"],
+        ["CaptureController", "CaptureController" in window],
+        ["CropTarget.fromElement", typeof window.CropTarget?.fromElement === "function"],
+        ["RestrictionTarget.fromElement", typeof window.RestrictionTarget?.fromElement === "function"],
+        ["PressureObserver", "PressureObserver" in window],
+        ["WebTransport", "WebTransport" in window],
+        ["RTCRtpScriptTransform", "RTCRtpScriptTransform" in window],
+        ["RTCEncodedVideoFrame", "RTCEncodedVideoFrame" in window],
+        ["Translator", "Translator" in window],
+        ["LanguageDetector", "LanguageDetector" in window],
+        ["Summarizer", "Summarizer" in window],
+        ["navigation", "navigation" in window]
+      ];
+    }
+
+    async function runSupportScan() {
+      const lines = getCoreSupportMatrix().map(([name, ok]) => `${ok ? "✓" : "·"} ${name}`);
+      state.supportHits = getCoreSupportMatrix().filter(([, ok]) => ok).length;
+      $("#supportCount").textContent = String(state.supportHits);
+      $("#supportOutput").textContent = lines.join("\n");
+      log("Support scan", lines.join("\n"));
+    }
+
+    async function runAbortDemo() {
+      const output = $("#abortOutput");
+      try {
+        const timeoutSignal = AbortSignal.timeout(120);
+        const manualController = new AbortController();
+        const merged = AbortSignal.any([timeoutSignal, manualController.signal]);
+        const result = [];
+
+        merged.addEventListener("abort", () => {
+          result.push(`merged aborted: ${merged.reason?.name || merged.reason || "unknown"}`);
+        }, { once: true });
+
+        await new Promise(resolve => setTimeout(resolve, 180));
+        try {
+          merged.throwIfAborted();
+        } catch (error) {
+          result.push(`throwIfAborted(): ${error.name}`);
+        }
+
+        const instant = AbortSignal.abort("manual-stop");
+        result.push(`abort(reason): ${String(instant.reason)}`);
+
+        output.textContent = result.join("\n");
+        log("Abort demo", result.join("\n"));
+      } catch (error) {
+        output.textContent = `AbortSignal demo failed: ${error.message}`;
+        log("Abort demo failed", { message: error.message, stack: error.stack });
+      }
+    }
+
+    function runTransitionDemo() {
+      const swatch = $("#transitionSwatch");
+      const output = $("#transitionOutput");
+      const toggle = () => {
+        swatch.classList.toggle("alt");
+        output.textContent = `卡片状态已切换。支持 View Transition: ${typeof document.startViewTransition === "function"}`;
+      };
+
+      if (typeof document.startViewTransition === "function") {
+        document.startViewTransition(toggle);
+      } else {
+        toggle();
+      }
+      log("View Transition", output.textContent);
+    }
+
+    async function readUAData() {
+      const output = $("#uaOutput");
+      if (!("userAgentData" in navigator)) {
+        output.textContent = "当前浏览器不支持 navigator.userAgentData。";
+        log("UAData", output.textContent);
+        return;
+      }
+
+      try {
+        const data = navigator.userAgentData;
+        const high = typeof data.getHighEntropyValues === "function"
+          ? await data.getHighEntropyValues(["architecture", "platformVersion", "fullVersionList", "bitness", "model"])
+          : {};
+        const payload = { brands: data.brands, mobile: data.mobile, platform: data.platform, ...high };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("UAData", payload);
+      } catch (error) {
+        output.textContent = `读取失败: ${error.message}`;
+        log("UAData failed", { message: error.message });
+      }
+    }
+
+    async function probeMediaCapabilities() {
+      const output = $("#mediaCapabilitiesOutput");
+      if (!("mediaCapabilities" in navigator)) {
+        output.textContent = "当前浏览器不支持 navigator.mediaCapabilities。";
+        log("MediaCapabilities", "not supported");
+        return;
+      }
+
+      try {
+        const codec = $("#mcCodecSelect")?.value || "video/webm; codecs=vp9";
+        const width = numValue("mcWidthInput", 1280);
+        const height = numValue("mcHeightInput", 720);
+        const bitrate = numValue("mcBitrateInput", 1500000);
+        const framerate = numValue("mcFpsInput", 30);
+        const decodingConfig = {
+          type: "file",
+          video: {
+            contentType: codec,
+            width,
+            height,
+            bitrate,
+            framerate
+          }
+        };
+        const encodingConfig = {
+          type: "record",
+          video: {
+            contentType: codec.includes("avc1") || codec.includes("av01") ? codec : "video/webm; codecs=vp8",
+            width,
+            height,
+            bitrate,
+            framerate
+          }
+        };
+        const [decodingInfo, encodingInfo] = await Promise.all([
+          navigator.mediaCapabilities.decodingInfo(decodingConfig),
+          navigator.mediaCapabilities.encodingInfo(encodingConfig)
+        ]);
+        const payload = { decodingInfo, encodingInfo };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("MediaCapabilities", payload);
+      } catch (error) {
+        output.textContent = `查询失败: ${error.message}`;
+        log("MediaCapabilities failed", { message: error.message });
+      }
+    }
+
+    function stopStream(stream) {
+      if (!stream) return;
+      for (const track of stream.getTracks()) track.stop();
+    }
+
+    function getControllerOutput() {
+      return $("#captureControllerInfo");
+    }
+
+    function stopControllerCapture() {
+      stopStream(state.captureControllerStream);
+      state.captureControllerStream = null;
+      state.captureController = null;
+      const video = $("#controllerDisplayVideo");
+      const output = getControllerOutput();
+      if (video) video.srcObject = null;
+      if (output) output.textContent = "已停止受控共享。";
+      log("CaptureController", "stopped");
+    }
+
+    async function startDisplayCapture() {
+      const output = $("#displayInfo");
+      const video = $("#displayVideo");
+      stopStream(state.displayStream);
+      state.displayStream = null;
+
+      try {
+        const supportsController = "CaptureController" in window;
+        const controller = supportsController ? new CaptureController() : null;
+        const displaySurface = $("#displaySurfaceSelect")?.value || "browser";
+        const cursor = $("#cursorSelect")?.value || "always";
+        const audioEnabled = $("#displayAudioEnabled")?.checked ?? true;
+        const options = {
+          video: {
+            displaySurface,
+            cursor
+          },
+          audio: audioEnabled ? {} : false
+        };
+        if (controller) options.controller = controller;
+        if ($("#preferCurrentTabEnabled")?.checked) options.preferCurrentTab = true;
+        if ($("#surfaceSwitchingEnabled")?.checked) options.surfaceSwitching = "include";
+        if ($("#selfBrowserSurfaceEnabled")?.checked) options.selfBrowserSurface = "exclude";
+        if ($("#systemAudioEnabled")?.checked) options.systemAudio = "include";
+        if ($("#monitorTypeSurfacesEnabled")?.checked) options.monitorTypeSurfaces = "include";
+        if ($("#suppressLocalPlaybackEnabled")?.checked && audioEnabled) {
+          options.audio.suppressLocalAudioPlayback = true;
+        }
+        state.displayStream = await navigator.mediaDevices.getDisplayMedia(options);
+        video.srcObject = state.displayStream;
+        const [videoTrack] = state.displayStream.getVideoTracks();
+        const settings = videoTrack?.getSettings?.() || {};
+        const details = {
+          trackLabel: videoTrack?.label || "",
+          contentHint: videoTrack?.contentHint || "",
+          requestedOptions: options,
+          settings,
+          hasCaptureController: supportsController,
+          zoomMethods: controller ? {
+            increaseZoomLevel: typeof controller.increaseZoomLevel === "function",
+            decreaseZoomLevel: typeof controller.decreaseZoomLevel === "function",
+            resetZoomLevel: typeof controller.resetZoomLevel === "function",
+            getSupportedZoomLevels: typeof controller.getSupportedZoomLevels === "function"
+          } : null
+        };
+        output.textContent = JSON.stringify(details, null, 2);
+        log("Display capture", details);
+      } catch (error) {
+        output.textContent = `共享失败: ${error.message}`;
+        log("Display capture failed", { message: error.message, name: error.name });
+      }
+    }
+
+    function stopDisplayCapture() {
+      stopStream(state.displayStream);
+      state.displayStream = null;
+      $("#displayVideo").srcObject = null;
+      $("#displayInfo").textContent = "已停止共享。";
+      log("Display capture", "stopped");
+    }
+
+    async function startControllerCapture() {
+      const output = getControllerOutput();
+      const video = $("#controllerDisplayVideo");
+      stopControllerCapture();
+
+      try {
+        if (!("CaptureController" in window)) throw new Error("当前浏览器不支持 CaptureController");
+        const controller = new CaptureController();
+        const options = {
+          video: {
+            displaySurface: $("#controllerDisplaySurfaceSelect")?.value || "browser",
+            cursor: $("#controllerCursorSelect")?.value || "always"
+          },
+          audio: false,
+          controller
+        };
+        state.captureControllerStream = await navigator.mediaDevices.getDisplayMedia(options);
+        state.captureController = controller;
+        if (video) video.srcObject = state.captureControllerStream;
+        const track = state.captureControllerStream.getVideoTracks()[0];
+        const payload = {
+          requested: options,
+          settings: track?.getSettings?.() || {},
+          focusMethods: {
+            setFocusBehavior: typeof controller.setFocusBehavior === "function",
+            forwardWheel: typeof controller.forwardWheel === "function"
+          },
+          zoomMethods: {
+            getSupportedZoomLevels: typeof controller.getSupportedZoomLevels === "function",
+            increaseZoomLevel: typeof controller.increaseZoomLevel === "function",
+            decreaseZoomLevel: typeof controller.decreaseZoomLevel === "function",
+            resetZoomLevel: typeof controller.resetZoomLevel === "function",
+            zoomLevel: "zoomLevel" in controller
+          }
+        };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("CaptureController start", payload);
+      } catch (error) {
+        output.textContent = `启动失败: ${error.message}`;
+        log("CaptureController start failed", { message: error.message, name: error.name });
+      }
+    }
+
+    async function applyControllerFocus() {
+      const output = getControllerOutput();
+      try {
+        if (!state.captureController) throw new Error("请先开启受控共享");
+        if (typeof state.captureController.setFocusBehavior !== "function") throw new Error("当前浏览器没有实现 setFocusBehavior()");
+        const focusBehavior = $("#focusBehaviorSelect")?.value || "focus-captured-surface";
+        state.captureController.setFocusBehavior(focusBehavior);
+        const payload = { focusBehavior, applied: true };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("CaptureController focus", payload);
+      } catch (error) {
+        output.textContent = `焦点策略失败: ${error.message}`;
+        log("CaptureController focus failed", { message: error.message });
+      }
+    }
+
+    async function readControllerZoom() {
+      const output = getControllerOutput();
+      try {
+        if (!state.captureController) throw new Error("请先开启受控共享");
+        const controller = state.captureController;
+        const payload = {
+          zoomLevel: "zoomLevel" in controller ? controller.zoomLevel : "unsupported",
+          supportedZoomLevels: typeof controller.getSupportedZoomLevels === "function"
+            ? await controller.getSupportedZoomLevels()
+            : "unsupported"
+        };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("CaptureController zoom read", payload);
+      } catch (error) {
+        output.textContent = `读取缩放失败: ${error.message}`;
+        log("CaptureController zoom read failed", { message: error.message });
+      }
+    }
+
+    async function changeControllerZoom(action) {
+      const output = getControllerOutput();
+      try {
+        if (!state.captureController) throw new Error("请先开启受控共享");
+        const controller = state.captureController;
+        const methodMap = {
+          in: "increaseZoomLevel",
+          out: "decreaseZoomLevel",
+          reset: "resetZoomLevel"
+        };
+        const method = methodMap[action];
+        if (typeof controller[method] !== "function") throw new Error(`当前浏览器没有实现 ${method}()`);
+        await controller[method]();
+        await readControllerZoom();
+      } catch (error) {
+        output.textContent = `缩放操作失败: ${error.message}`;
+        log("CaptureController zoom failed", { action, message: error.message });
+      }
+    }
+
+    async function startCamera() {
+      const output = $("#mediaInfo");
+      const video = $("#cameraVideo");
+      stopStream(state.cameraStream);
+      state.cameraStream = null;
+
+      try {
+        const width = numValue("cameraWidthInput", 1280);
+        const height = numValue("cameraHeightInput", 720);
+        const frameRate = numValue("cameraFpsInput", 30);
+        const resizeMode = $("#cameraResizeModeSelect")?.value || "";
+        const audioEnabled = $("#cameraAudioEnabled")?.checked ?? true;
+        const backgroundBlur = $("#backgroundBlurEnabled")?.checked ?? false;
+        state.cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: width },
+            height: { ideal: height },
+            frameRate: { ideal: frameRate },
+            ...(resizeMode ? { resizeMode } : {}),
+            ...(backgroundBlur ? { backgroundBlur: true } : {})
+          },
+          audio: audioEnabled
+        });
+        video.srcObject = state.cameraStream;
+        const [videoTrack] = state.cameraStream.getVideoTracks();
+        const [audioTrack] = state.cameraStream.getAudioTracks();
+        if (videoTrack) videoTrack.contentHint = $("#cameraContentHintSelect")?.value || "motion";
+        const info = {
+          videoTrack: videoTrack?.label || "",
+          audioTrack: audioTrack?.label || "",
+          contentHint: videoTrack?.contentHint || "",
+          requested: { width, height, frameRate, resizeMode, backgroundBlur, audioEnabled },
+          settings: videoTrack?.getSettings?.() || {},
+          capabilities: typeof videoTrack?.getCapabilities === "function" ? videoTrack.getCapabilities() : {}
+        };
+        output.textContent = JSON.stringify(info, null, 2);
+        log("Camera stream", info);
+      } catch (error) {
+        output.textContent = `打开失败: ${error.message}`;
+        log("Camera failed", { message: error.message, name: error.name });
+      }
+    }
+
+    function stopCamera() {
+      stopStream(state.cameraStream);
+      state.cameraStream = null;
+      $("#cameraVideo").srcObject = null;
+      $("#recordedVideo").src = "";
+      $("#mediaInfo").textContent = "已关闭摄像头。";
+      log("Camera", "stopped");
+    }
+
+    async function startRecording() {
+      const output = $("#mediaInfo");
+      const recordedVideo = $("#recordedVideo");
+
+      if (!state.cameraStream) {
+        output.textContent = "请先打开摄像头。";
+        return;
+      }
+      if (!("MediaRecorder" in window)) {
+        output.textContent = "当前浏览器不支持 MediaRecorder。";
+        return;
+      }
+
+      try {
+        state.recordedChunks = [];
+        const audioBitrateMode = $("#audioBitrateModeSelect")?.value || "";
+        const mimeType = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm"
+        ].find(type => MediaRecorder.isTypeSupported(type)) || "";
+        const recorderOptions = mimeType ? { mimeType } : {};
+        if (audioBitrateMode) recorderOptions.audioBitrateMode = audioBitrateMode;
+        state.mediaRecorder = new MediaRecorder(state.cameraStream, recorderOptions);
+        state.mediaRecorder.ondataavailable = event => {
+          if (event.data.size) state.recordedChunks.push(event.data);
+        };
+        state.mediaRecorder.start();
+        output.textContent = `录制中，mimeType=${state.mediaRecorder.mimeType || "default"}。`;
+        log("MediaRecorder start", { mimeType: state.mediaRecorder.mimeType || "default", recorderOptions });
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => {
+          state.mediaRecorder.onstop = resolve;
+          state.mediaRecorder.stop();
+        });
+
+        const blob = new Blob(state.recordedChunks, { type: state.mediaRecorder.mimeType || "video/webm" });
+        recordedVideo.src = URL.createObjectURL(blob);
+        output.textContent = `录制完成，片段大小 ${(blob.size / 1024).toFixed(1)} KB。`;
+        log("MediaRecorder done", { size: blob.size, type: blob.type });
+      } catch (error) {
+        output.textContent = `录制失败: ${error.message}`;
+        log("MediaRecorder failed", { message: error.message, name: error.name });
+      }
+    }
+
+    async function runProcessorDemo() {
+      const output = $("#processorInfo");
+      const sourceCanvas = $("#processorSourceCanvas");
+      const previewCanvas = $("#processorPreviewCanvas");
+      const sourceCtx = sourceCanvas.getContext("2d");
+      const previewCtx = previewCanvas.getContext("2d");
+
+      try {
+        sourceCtx.fillStyle = "#14343a";
+        sourceCtx.fillRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+        sourceCtx.fillStyle = "#f7c67d";
+        sourceCtx.fillRect(30, 30, sourceCanvas.width - 60, sourceCanvas.height - 60);
+        sourceCtx.fillStyle = "#1f2a2e";
+        sourceCtx.font = "700 34px Segoe UI";
+        sourceCtx.fillText("VideoFrame Demo", 42, 90);
+        sourceCtx.font = "500 20px Segoe UI";
+        sourceCtx.fillText(new Date().toLocaleTimeString("zh-CN", { hour12: false }), 42, 128);
+
+        const stream = sourceCanvas.captureStream(15);
+        const [track] = stream.getVideoTracks();
+        if (!track) throw new Error("canvas.captureStream() 未生成视频轨");
+
+        if ("MediaStreamTrackProcessor" in window) {
+          const processor = new MediaStreamTrackProcessor({ track });
+          const reader = processor.readable.getReader();
+          const { value: frame } = await reader.read();
+          if (!frame) throw new Error("未能读取到 VideoFrame");
+
+          previewCtx.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+          const details = {
+            codedWidth: frame.codedWidth,
+            codedHeight: frame.codedHeight,
+            displayWidth: frame.displayWidth,
+            displayHeight: frame.displayHeight,
+            timestamp: frame.timestamp,
+            duration: frame.duration,
+            format: frame.format ?? "n/a",
+            hasClone: typeof frame.clone === "function",
+            hasCopyTo: typeof frame.copyTo === "function",
+            hasMetadata: "metadata" in frame
+          };
+          output.textContent = JSON.stringify(details, null, 2);
+          log("TrackProcessor / VideoFrame", details);
+          frame.close?.();
+          reader.releaseLock();
+        } else if ("VideoFrame" in window) {
+          const bitmap = await createImageBitmap(sourceCanvas);
+          const frame = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
+          previewCtx.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+          const details = {
+            codedWidth: frame.codedWidth,
+            codedHeight: frame.codedHeight,
+            displayWidth: frame.displayWidth,
+            displayHeight: frame.displayHeight,
+            timestamp: frame.timestamp,
+            hasClone: typeof frame.clone === "function",
+            hasCopyTo: typeof frame.copyTo === "function"
+          };
+          output.textContent = JSON.stringify(details, null, 2);
+          log("VideoFrame fallback", details);
+          frame.close();
+          bitmap.close?.();
+        } else {
+          throw new Error("MediaStreamTrackProcessor / VideoFrame 均不可用");
+        }
+
+        track.stop();
+      } catch (error) {
+        output.textContent = `运行失败: ${error.message}`;
+        log("Processor demo failed", { message: error.message });
+      }
+    }
+
+    async function runWebCodecsDemo() {
+      const output = $("#webcodecsInfo");
+      const sourceCanvas = $("#webcodecsSourceCanvas");
+      const previewCanvas = $("#webcodecsPreviewCanvas");
+      const sourceCtx = sourceCanvas?.getContext("2d");
+      const previewCtx = previewCanvas?.getContext("2d");
+      try {
+        if (!sourceCanvas || !previewCanvas || !sourceCtx || !previewCtx) throw new Error("WebCodecs 画布未准备好");
+        if (!("VideoFrame" in window) || !("VideoEncoder" in window)) throw new Error("当前浏览器不支持 VideoFrame / VideoEncoder");
+
+        sourceCtx.fillStyle = "#103338";
+        sourceCtx.fillRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+        sourceCtx.fillStyle = "#f0c785";
+        sourceCtx.fillRect(26, 26, sourceCanvas.width - 52, sourceCanvas.height - 52);
+        sourceCtx.fillStyle = "#16343a";
+        sourceCtx.font = "700 30px Segoe UI";
+        sourceCtx.fillText("WebCodecs Demo", 42, 94);
+        sourceCtx.font = "500 18px Segoe UI";
+        sourceCtx.fillText(new Date().toLocaleTimeString("zh-CN", { hour12: false }), 42, 132);
+
+        const codec = $("#webcodecsCodecSelect")?.value || "vp8";
+        const bitrate = numValue("webcodecsBitrateInput", 500000);
+        const framerate = numValue("webcodecsFramerateInput", 30);
+        const frameCount = Math.max(1, Math.min(6, numValue("webcodecsFrameCountInput", 2)));
+        const config = {
+          codec,
+          width: sourceCanvas.width,
+          height: sourceCanvas.height,
+          bitrate,
+          framerate
+        };
+        const support = await VideoEncoder.isConfigSupported(config);
+        const chunks = [];
+        const frames = [];
+        const encoder = new VideoEncoder({
+          output(chunk) {
+            chunks.push({
+              type: chunk.type,
+              timestamp: chunk.timestamp,
+              duration: chunk.duration,
+              byteLength: chunk.byteLength
+            });
+            frames.push(chunk);
+          },
+          error(error) {
+            throw error;
+          }
+        });
+        encoder.configure(support.config);
+
+        for (let index = 0; index < frameCount; index += 1) {
+          sourceCtx.fillStyle = index % 2 ? "#b24c2a" : "#1f6a72";
+          sourceCtx.fillRect(42 + index * 14, 174, 160, 56);
+          sourceCtx.fillStyle = "#fffaf2";
+          sourceCtx.fillText(`frame-${index + 1}`, 56, 210);
+          const bitmap = await createImageBitmap(sourceCanvas);
+          const frame = new VideoFrame(bitmap, { timestamp: index * 33333, duration: 33333 });
+          encoder.encode(frame, { keyFrame: index === 0 });
+          frame.close();
+          bitmap.close?.();
+        }
+        await encoder.flush();
+        encoder.close();
+
+        previewCtx.drawImage(sourceCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+        const payload = {
+          support: {
+            supported: support.supported,
+            config: support.config
+          },
+          encodedChunkCount: chunks.length,
+          chunks
+        };
+
+        if ("VideoDecoder" in window && frames[0]) {
+          const decodedFrames = [];
+          const decoder = new VideoDecoder({
+            output(frame) {
+              decodedFrames.push({
+                codedWidth: frame.codedWidth,
+                codedHeight: frame.codedHeight,
+                displayWidth: frame.displayWidth,
+                displayHeight: frame.displayHeight,
+                timestamp: frame.timestamp
+              });
+              try {
+                previewCtx.drawImage(frame, 0, 0, previewCanvas.width, previewCanvas.height);
+              } catch {}
+              frame.close();
+            },
+            error(error) {
+              throw error;
+            }
+          });
+          decoder.configure({
+            codec: support.config.codec,
+            codedWidth: support.config.width,
+            codedHeight: support.config.height
+          });
+          decoder.decode(frames[0]);
+          await decoder.flush();
+          decoder.close();
+          payload.decodedFrames = decodedFrames;
+        }
+
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("WebCodecs demo", payload);
+      } catch (error) {
+        output.textContent = `运行失败: ${error.message}`;
+        log("WebCodecs demo failed", { message: error.message, stack: error.stack });
+      }
+    }
+
+    async function runRtcLoopback() {
+      const output = $("#rtcInfo");
+      clearRtcResources();
+
+      try {
+        const pc1 = new RTCPeerConnection();
+        const pc2 = new RTCPeerConnection();
+        state.pcResources = [pc1, pc2];
+        const events = [];
+
+        pc1.addEventListener("connectionstatechange", () => {
+          events.push(`pc1=${pc1.connectionState}`);
+          output.textContent = events.join("\n");
+        });
+        pc2.addEventListener("connectionstatechange", () => {
+          events.push(`pc2=${pc2.connectionState}`);
+          output.textContent = events.join("\n");
+        });
+
+        pc1.onicecandidate = event => event.candidate && pc2.addIceCandidate(event.candidate);
+        pc2.onicecandidate = event => event.candidate && pc1.addIceCandidate(event.candidate);
+
+        pc1.addTransceiver("video", { direction: "recvonly" });
+        const scaleResolutionDownBy = numValue("rtcScaleDownInput", 1);
+        const maxBitrate = numValue("rtcBitrateInput", 500000);
+        const maxFramerate = numValue("rtcFramerateInput", 30);
+        const priority = $("#rtcPrioritySelect")?.value || "high";
+        const degradationPreference = $("#rtcDegradationSelect")?.value || "balanced";
+
+        const channel = pc1.createDataChannel("demo");
+        channel.onopen = () => {
+          channel.send("hello-from-pc1");
+          events.push("dataChannel open");
+          output.textContent = events.join("\n");
+        };
+
+        pc2.ondatachannel = event => {
+          event.channel.onmessage = message => {
+            events.push(`message=${message.data}`);
+            output.textContent = events.join("\n");
+          };
+        };
+
+        const offer = await pc1.createOffer();
+        await pc1.setLocalDescription(offer);
+        await pc2.setRemoteDescription(offer);
+        const answer = await pc2.createAnswer();
+        await pc2.setLocalDescription(answer);
+        await pc1.setRemoteDescription(answer);
+
+        const senderCaps = typeof RTCRtpSender?.getCapabilities === "function" ? RTCRtpSender.getCapabilities("video") : null;
+        const receiverCaps = typeof RTCRtpReceiver?.getCapabilities === "function" ? RTCRtpReceiver.getCapabilities("video") : null;
+        const summary = {
+          pc1ConnectionState: pc1.connectionState,
+          pc2ConnectionState: pc2.connectionState,
+          requestedEncodingExample: {
+            scaleResolutionDownBy,
+            maxBitrate,
+            maxFramerate,
+            priority,
+            degradationPreference
+          },
+          configuration: pc1.getConfiguration(),
+          senderCodecs: senderCaps?.codecs?.slice(0, 4).map(codec => codec.mimeType) || [],
+          receiverCodecs: receiverCaps?.codecs?.slice(0, 4).map(codec => codec.mimeType) || []
+        };
+        if (channel.readyState === "open") {
+          channel.send(JSON.stringify(summary.requestedEncodingExample));
+        }
+        log("RTCPeerConnection loopback", summary);
+      } catch (error) {
+        output.textContent = `本地回环失败: ${error.message}`;
+        log("RTC loopback failed", { message: error.message, stack: error.stack });
+      }
+    }
+
+    function clearRtcResources() {
+      for (const pc of state.pcResources) {
+        try { pc.close(); } catch {}
+      }
+      state.pcResources = [];
+      $("#rtcInfo").textContent = "连接已清理。";
+      log("RTC cleanup", "done");
+    }
+
+    async function openFile() {
+      const output = $("#fileInfo");
+      const editor = $("#fileEditor");
+      if (typeof window.showOpenFilePicker !== "function") {
+        output.textContent = "当前浏览器不支持 File System Access 选择器。";
+        return;
+      }
+
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          multiple: false,
+          types: [{ description: "Text", accept: { "text/plain": [".txt", ".md", ".json", ".log"] } }]
+        });
+        const file = await handle.getFile();
+        editor.value = await file.text();
+        output.textContent = `已打开 ${file.name}，大小 ${file.size} 字节。`;
+        log("Open file", { name: file.name, size: file.size, type: file.type });
+      } catch (error) {
+        output.textContent = `打开取消或失败: ${error.message}`;
+        log("Open file failed", { message: error.message, name: error.name });
+      }
+    }
+
+    async function saveFile() {
+      const output = $("#fileInfo");
+      const editor = $("#fileEditor");
+      if (typeof window.showSaveFilePicker !== "function") {
+        output.textContent = "当前浏览器不支持 showSaveFilePicker。";
+        return;
+      }
+
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "chrome-web-api-demo-output.txt",
+          types: [{ description: "Text", accept: { "text/plain": [".txt"] } }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(editor.value);
+        await writable.close();
+        output.textContent = "保存完成。";
+        log("Save file", { length: editor.value.length });
+      } catch (error) {
+        output.textContent = `保存取消或失败: ${error.message}`;
+        log("Save file failed", { message: error.message, name: error.name });
+      }
+    }
+
+    async function getOpfsRoot() {
+      if (!navigator.storage?.getDirectory) {
+        throw new Error("当前浏览器不支持 navigator.storage.getDirectory()");
+      }
+      return navigator.storage.getDirectory();
+    }
+
+    async function opfsWrite() {
+      const output = $("#opfsInfo");
+      try {
+        const root = await getOpfsRoot();
+        const fileName = ($("#opfsFileNameInput")?.value || "chrome-web-api-demo.txt").trim() || "chrome-web-api-demo.txt";
+        const content = $("#opfsContentInput")?.value || "";
+        const fileHandle = await root.getFileHandle(fileName, { create: true });
+        const encoded = new TextEncoder().encode(content);
+        const payload = { fileName, bytes: encoded.byteLength };
+
+        if (typeof fileHandle.createSyncAccessHandle === "function") {
+          const sync = await fileHandle.createSyncAccessHandle();
+          sync.truncate(0);
+          sync.write(encoded, { at: 0 });
+          sync.flush();
+          sync.close();
+          payload.writeMode = "sync-access-handle";
+        } else {
+          const writable = await fileHandle.createWritable();
+          await writable.write(content);
+          await writable.close();
+          payload.writeMode = "writable-stream";
+        }
+
+        const text = await (await fileHandle.getFile()).text();
+        payload.readBackMatches = text === content;
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("OPFS write", payload);
+      } catch (error) {
+        output.textContent = `写入失败: ${error.message}`;
+        log("OPFS write failed", { message: error.message });
+      }
+    }
+
+    async function opfsRead() {
+      const output = $("#opfsInfo");
+      try {
+        const root = await getOpfsRoot();
+        const fileName = ($("#opfsFileNameInput")?.value || "chrome-web-api-demo.txt").trim() || "chrome-web-api-demo.txt";
+        const fileHandle = await root.getFileHandle(fileName, { create: false });
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const payload = { fileName, size: file.size, lastModified: file.lastModified, text };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("OPFS read", payload);
+      } catch (error) {
+        output.textContent = `读取失败: ${error.message}`;
+        log("OPFS read failed", { message: error.message });
+      }
+    }
+
+    async function opfsList() {
+      const output = $("#opfsInfo");
+      try {
+        const root = await getOpfsRoot();
+        const entries = [];
+        for await (const [name, handle] of root.entries()) {
+          entries.push({ name, kind: handle.kind });
+        }
+        output.textContent = JSON.stringify({ entryCount: entries.length, entries }, null, 2);
+        log("OPFS list", entries);
+      } catch (error) {
+        output.textContent = `列出失败: ${error.message}`;
+        log("OPFS list failed", { message: error.message });
+      }
+    }
+
+    async function opfsDelete() {
+      const output = $("#opfsInfo");
+      try {
+        const root = await getOpfsRoot();
+        const fileName = ($("#opfsFileNameInput")?.value || "chrome-web-api-demo.txt").trim() || "chrome-web-api-demo.txt";
+        await root.removeEntry(fileName);
+        output.textContent = JSON.stringify({ fileName, deleted: true }, null, 2);
+        log("OPFS delete", { fileName, deleted: true });
+      } catch (error) {
+        output.textContent = `删除失败: ${error.message}`;
+        log("OPFS delete failed", { message: error.message });
+      }
+    }
+
+    async function probeGPU() {
+      const output = $("#gpuInfo");
+      if (!("gpu" in navigator)) {
+        output.textContent = "当前浏览器不支持 WebGPU。";
+        log("WebGPU", "not supported");
+        return;
+      }
+
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        const info = {
+          hasAdapter: Boolean(adapter),
+          preferredCanvasFormat: typeof navigator.gpu.getPreferredCanvasFormat === "function"
+            ? navigator.gpu.getPreferredCanvasFormat()
+            : "n/a",
+          features: adapter ? [...adapter.features] : [],
+          limitsPreview: adapter ? {
+            maxTextureDimension2D: adapter.limits.maxTextureDimension2D,
+            maxBindGroups: adapter.limits.maxBindGroups
+          } : null
+        };
+        output.textContent = JSON.stringify(info, null, 2);
+        log("WebGPU", info);
+      } catch (error) {
+        output.textContent = `WebGPU 检查失败: ${error.message}`;
+        log("WebGPU failed", { message: error.message });
+      }
+    }
+
+    async function snapshotNavigation() {
+      const output = $("#navigationInfo");
+      try {
+        if (!("navigation" in window)) {
+          output.textContent = `当前页面不支持 Navigation API。URL=${location.href}`;
+          log("Navigation API", "not supported");
+          return;
+        }
+
+        const entries = typeof navigation.entries === "function"
+          ? navigation.entries().map(entry => ({
+              key: entry.key,
+              id: entry.id,
+              index: entry.index,
+              sameDocument: entry.sameDocument,
+              url: entry.url
+            }))
+          : [];
+        const payload = {
+          canGoBack: navigation.canGoBack,
+          canGoForward: navigation.canGoForward,
+          currentEntry: navigation.currentEntry ? {
+            key: navigation.currentEntry.key,
+            id: navigation.currentEntry.id,
+            index: navigation.currentEntry.index,
+            sameDocument: navigation.currentEntry.sameDocument,
+            url: navigation.currentEntry.url
+          } : null,
+          entryCount: entries.length,
+          entries,
+          location: location.href
+        };
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("Navigation snapshot", payload);
+      } catch (error) {
+        output.textContent = `读取失败: ${error.message}`;
+        log("Navigation snapshot failed", { message: error.message });
+      }
+    }
+
+    async function requestScreenFullscreen() {
+      const output = $("#screenDetailsInfo");
+      try {
+        if (!document.documentElement.requestFullscreen) throw new Error("当前浏览器不支持 requestFullscreen()");
+        if (typeof window.getScreenDetails === "function") {
+          const details = await window.getScreenDetails();
+          const screenTarget = details.currentScreen || details.screens?.[0];
+          await document.documentElement.requestFullscreen(screenTarget ? { screen: screenTarget } : undefined);
+          output.textContent = JSON.stringify({
+            requested: true,
+            usedScreenDetails: Boolean(screenTarget),
+            target: screenTarget ? {
+              label: screenTarget.label,
+              width: screenTarget.width,
+              height: screenTarget.height,
+              isPrimary: screenTarget.isPrimary
+            } : null
+          }, null, 2);
+        } else {
+          await document.documentElement.requestFullscreen();
+          output.textContent = JSON.stringify({ requested: true, usedScreenDetails: false }, null, 2);
+        }
+        log("Screen fullscreen", output.textContent);
+      } catch (error) {
+        output.textContent = `全屏失败: ${error.message}`;
+        log("Screen fullscreen failed", { message: error.message });
+      }
+    }
+
+    async function pushNavigationState() {
+      const output = $("#navigationInfo");
+      try {
+        state.navPushCount += 1;
+        const url = new URL(location.href);
+        url.hash = `nav-demo-${state.navPushCount}`;
+        history.pushState({ demo: state.navPushCount }, "", url);
+        output.textContent = `已追加同文档历史项: ${url.href}`;
+        log("Navigation pushState", { href: url.href, count: state.navPushCount });
+      } catch (error) {
+        output.textContent = `追加失败: ${error.message}`;
+        log("Navigation pushState failed", { message: error.message });
+      }
+    }
+
+    async function probeScreenDetails() {
+      const output = $("#screenDetailsInfo");
+      try {
+        if (typeof window.getScreenDetails === "function") {
+          const details = await window.getScreenDetails();
+          const payload = {
+            isExtended: screen.isExtended,
+            currentScreen: details.currentScreen ? {
+              label: details.currentScreen.label,
+              left: details.currentScreen.left,
+              top: details.currentScreen.top,
+              width: details.currentScreen.width,
+              height: details.currentScreen.height,
+              isPrimary: details.currentScreen.isPrimary
+            } : null,
+            screens: details.screens.map(item => ({
+              label: item.label,
+              left: item.left,
+              top: item.top,
+              width: item.width,
+              height: item.height,
+              isPrimary: item.isPrimary
+            }))
+          };
+          output.textContent = JSON.stringify(payload, null, 2);
+          log("ScreenDetails", payload);
+          return;
+        }
+
+        const fallback = {
+          isExtended: screen.isExtended ?? false,
+          width: screen.width,
+          height: screen.height,
+          availWidth: screen.availWidth,
+          availHeight: screen.availHeight,
+          pixelDepth: screen.pixelDepth
+        };
+        output.textContent = JSON.stringify(fallback, null, 2);
+        log("Screen fallback", fallback);
+      } catch (error) {
+        output.textContent = `读取失败: ${error.message}`;
+        log("ScreenDetails failed", { message: error.message });
+      }
+    }
+
+    async function probeRegionCapture() {
+      const output = $("#regionCaptureInfo");
+      const box = $("#captureTargetBox");
+      try {
+        box.classList.toggle("alt");
+        const result = {
+          cropTargetSupported: typeof window.CropTarget?.fromElement === "function",
+          restrictionTargetSupported: typeof window.RestrictionTarget?.fromElement === "function"
+        };
+        if (result.cropTargetSupported) {
+          const cropTarget = await CropTarget.fromElement(box);
+          result.cropTargetCreated = Boolean(cropTarget);
+        }
+        if (result.restrictionTargetSupported) {
+          const restrictionTarget = await RestrictionTarget.fromElement(box);
+          result.restrictionTargetCreated = Boolean(restrictionTarget);
+        }
+        output.textContent = JSON.stringify(result, null, 2);
+        log("Region Capture target probe", result);
+      } catch (error) {
+        output.textContent = `创建失败: ${error.message}`;
+        log("Region Capture target probe failed", { message: error.message });
+      }
+    }
+
+    async function applyRegionCapture() {
+      const output = $("#regionCaptureInfo");
+      try {
+        const track = state.displayStream?.getVideoTracks?.()[0];
+        if (!track) throw new Error("请先开启屏幕共享，才能对共享轨道尝试 cropTo/restrictTo");
+        const box = $("#captureTargetBox");
+        const result = {
+          hasCropTo: typeof track.cropTo === "function",
+          hasRestrictTo: typeof track.restrictTo === "function"
+        };
+        if (result.hasCropTo && typeof CropTarget?.fromElement === "function") {
+          const cropTarget = await CropTarget.fromElement(box);
+          await track.cropTo(cropTarget);
+          result.cropApplied = true;
+        }
+        if (result.hasRestrictTo && typeof RestrictionTarget?.fromElement === "function") {
+          const restrictionTarget = await RestrictionTarget.fromElement(box);
+          await track.restrictTo(restrictionTarget);
+          result.restrictApplied = true;
+        }
+        output.textContent = JSON.stringify(result, null, 2);
+        log("Region Capture apply", result);
+      } catch (error) {
+        output.textContent = `应用失败: ${error.message}`;
+        log("Region Capture apply failed", { message: error.message });
+      }
+    }
+
+    async function probeAudioOutput() {
+      const output = $("#audioOutputInfo");
+      const audio = $("#outputProbeAudio");
+      const select = $("#audioOutputDeviceSelect");
+      try {
+        const hasSelectAudioOutput = typeof navigator.mediaDevices?.selectAudioOutput === "function";
+        const devices = typeof navigator.mediaDevices?.enumerateDevices === "function"
+          ? (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === "audiooutput")
+          : [];
+        const result = {
+          hasSelectAudioOutput,
+          hasSetSinkId: typeof audio.setSinkId === "function",
+          devices: devices.map(device => ({ deviceId: device.deviceId, label: device.label || "(hidden until permission)" }))
+        };
+
+        if (select) {
+          select.innerHTML = devices.length
+            ? devices.map(device => `<option value="${escapeHtml(device.deviceId)}">${escapeHtml(device.label || device.deviceId || "(hidden until permission)")}</option>`).join("")
+            : `<option value="">没有可见的 audiooutput 设备</option>`;
+        }
+
+        output.textContent = JSON.stringify(result, null, 2);
+        log("Audio output probe", result);
+      } catch (error) {
+        output.textContent = `读取失败: ${error.message}`;
+        log("Audio output probe failed", { message: error.message });
+      }
+    }
+
+    async function applyAudioOutput() {
+      const output = $("#audioOutputInfo");
+      const audio = $("#outputProbeAudio");
+      try {
+        const deviceId = $("#audioOutputDeviceSelect")?.value || "";
+        const result = {
+          selectedFromList: deviceId || null,
+          hasSelectAudioOutput: typeof navigator.mediaDevices?.selectAudioOutput === "function",
+          hasSetSinkId: typeof audio.setSinkId === "function"
+        };
+
+        if (result.hasSelectAudioOutput && !deviceId) {
+          const chosen = await navigator.mediaDevices.selectAudioOutput();
+          result.selected = { deviceId: chosen.deviceId, label: chosen.label };
+          if (typeof audio.setSinkId === "function") {
+            await audio.setSinkId(chosen.deviceId);
+            result.sinkApplied = true;
+          }
+        } else if (deviceId && typeof audio.setSinkId === "function") {
+          await audio.setSinkId(deviceId);
+          result.sinkApplied = true;
+        } else if (!deviceId) {
+          throw new Error("请先读取设备列表并选择一个输出设备，或使用浏览器的 selectAudioOutput()");
+        } else {
+          throw new Error("当前浏览器不支持 setSinkId()");
+        }
+
+        output.textContent = JSON.stringify(result, null, 2);
+        log("Audio output apply", result);
+      } catch (error) {
+        output.textContent = `切换失败: ${error.message}`;
+        log("Audio output apply failed", { message: error.message });
+      }
+    }
+
+    async function playAudioTone() {
+      const output = $("#audioOutputInfo");
+      try {
+        const frequency = numValue("audioToneFrequencyInput", 440);
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) throw new Error("当前浏览器不支持 AudioContext");
+        state.audioTestContext?.close?.().catch?.(() => {});
+        const context = new AudioContextCtor();
+        state.audioTestContext = context;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+        gain.gain.value = 0.05;
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.8);
+        oscillator.onended = () => context.close().catch(() => {});
+        output.textContent = JSON.stringify({ tonePlayed: true, frequency }, null, 2);
+        log("Audio tone", { frequency });
+      } catch (error) {
+        output.textContent = `播放失败: ${error.message}`;
+        log("Audio tone failed", { message: error.message });
+      }
+    }
+
+    async function probePressure() {
+      const output = $("#pressureInfo");
+      try {
+        if (!("PressureObserver" in window)) {
+          output.textContent = "当前浏览器不支持 PressureObserver。";
+          log("PressureObserver", "not supported");
+          return;
+        }
+
+        const knownSources = typeof PressureObserver.knownSources === "function"
+          ? PressureObserver.knownSources()
+          : [];
+        const payload = { knownSources };
+
+        if (knownSources.includes("cpu")) {
+          const records = [];
+          const sampleInterval = numValue("pressureSampleIntervalInput", 1000);
+          const durationMs = numValue("pressureDurationInput", 1800);
+          const observer = new PressureObserver(items => {
+            for (const item of items) {
+              records.push({
+                source: item.source,
+                state: item.state,
+                cpuUtilization: item.cpuUtilization
+              });
+            }
+          });
+          try {
+            await observer.observe("cpu", { sampleInterval });
+            await new Promise(resolve => setTimeout(resolve, durationMs));
+          } finally {
+            observer.disconnect();
+          }
+          payload.sampleInterval = sampleInterval;
+          payload.durationMs = durationMs;
+          payload.samples = records;
+        }
+
+        output.textContent = JSON.stringify(payload, null, 2);
+        log("PressureObserver", payload);
+      } catch (error) {
+        output.textContent = `检测失败: ${error.message}`;
+        log("PressureObserver failed", { message: error.message });
+      }
+    }
+
+    async function probeAdvancedApis() {
+      const output = $("#advancedProbeInfo");
+      try {
+        const mode = $("#advancedModeSelect")?.value || "encoded-frame";
+        const support = {
+          WebTransport: "WebTransport" in window,
+          RTCRtpScriptTransform: "RTCRtpScriptTransform" in window,
+          RTCEncodedVideoFrame: "RTCEncodedVideoFrame" in window,
+          RTCEncodedAudioFrame: "RTCEncodedAudioFrame" in window,
+          RTCRtpSender_transform: "transform" in (window.RTCRtpSender?.prototype || {}),
+          RTCRtpReceiver_transform: "transform" in (window.RTCRtpReceiver?.prototype || {})
+        };
+
+        let example = "";
+        if (mode === "encoded-frame") {
+          example = `// RTCEncodedVideoFrame constructor demo\nconst frame = new RTCEncodedVideoFrame({\n  type: \"key\",\n  timestamp: 0,\n  data: new Uint8Array([1, 2, 3, 4]).buffer\n});\n\nconsole.log(frame.getMetadata?.());`;
+        }
+        if (mode === "transform-worker") {
+          example = `// main thread\nconst worker = new Worker(\"transform-worker.js\", { type: \"module\" });\nsender.transform = new RTCRtpScriptTransform(worker, { name: \"demo-video-transform\" });\n\n// transform-worker.js\nself.onrtctransform = event => {\n  const transformer = event.transformer;\n  const pipe = new TransformStream({\n    transform(frame, controller) {\n      // 可以在这里读 metadata、改 data、加标记\n      controller.enqueue(frame);\n    }\n  });\n  transformer.readable.pipeThrough(pipe).pipeTo(transformer.writable);\n};`;
+        }
+        if (mode === "webtransport-template") {
+          example = `const transport = new WebTransport(\"https://example.com:4433/webtransport\");\nawait transport.ready;\n\nconst stream = await transport.createBidirectionalStream();\nconst writer = stream.writable.getWriter();\nawait writer.write(new TextEncoder().encode(\"hello\"));\nwriter.releaseLock();\n\nconst reader = stream.readable.getReader();\nconst { value } = await reader.read();\nconsole.log(new TextDecoder().decode(value));`;
+        }
+        if (mode === "legacy-encoded-streams") {
+          example = `const senderStreams = sender.createEncodedStreams();\nconst receiverStreams = receiver.createEncodedStreams();\n\nsenderStreams.readable\n  .pipeThrough(new TransformStream({\n    transform(frame, controller) {\n      console.log(frame.getMetadata?.());\n      controller.enqueue(frame);\n    }\n  }))\n  .pipeTo(senderStreams.writable);\n\nreceiverStreams.readable.pipeTo(receiverStreams.writable);`;
+        }
+
+        output.textContent = `Support:\n${JSON.stringify(support, null, 2)}\n\nExample:\n${example}`;
+        log("Advanced API workshop", { mode, support, example });
+      } catch (error) {
+        output.textContent = `检测失败: ${error.message}`;
+        log("Advanced API probe failed", { message: error.message });
+      }
+    }
+
+    function runSanitizerDemo() {
+      const input = $("#sanitizeInput").value;
+      const code = $("#sanitizeCode");
+      const result = $("#sanitizeResult");
+
+      try {
+        if ("Sanitizer" in window) {
+          const sanitizer = new Sanitizer();
+          const fragment = sanitizer.sanitizeFor("div", input);
+          const html = fragment.innerHTML;
+          code.textContent = html;
+          result.innerHTML = html;
+          log("Sanitizer", { supported: true, html });
+        } else {
+          const div = document.createElement("div");
+          div.textContent = input;
+          code.textContent = div.innerHTML;
+          result.textContent = input;
+          log("Sanitizer fallback", { supported: false });
+        }
+      } catch (error) {
+        code.textContent = `Sanitize failed: ${error.message}`;
+        result.textContent = code.textContent;
+        log("Sanitizer failed", { message: error.message });
+      }
+    }
+
+    async function runCompressionDemo() {
+      const text = $("#compressionInput").value;
+      const compressionInfo = $("#compressionInfo");
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      const raw = encoder.encode(text);
+      $("#rawSize").textContent = String(raw.byteLength);
+
+      try {
+        if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+          throw new Error("CompressionStream / DecompressionStream not supported");
+        }
+
+        const compressedBuffer = await new Response(
+          new Blob([raw]).stream().pipeThrough(new CompressionStream("gzip"))
+        ).arrayBuffer();
+
+        const decompressedBuffer = await new Response(
+          new Blob([compressedBuffer]).stream().pipeThrough(new DecompressionStream("gzip"))
+        ).arrayBuffer();
+
+        const inflated = decoder.decode(decompressedBuffer);
+        $("#compressedSize").textContent = String(compressedBuffer.byteLength);
+
+        let patternText = "URLPattern unsupported";
+        if ("URLPattern" in window) {
+          const pattern = new URLPattern({ pathname: "/docs/:section/:name" });
+          const matched = pattern.exec("https://example.com/docs/Web/API");
+          patternText = matched ? matched.pathname.groups.section + "/" + matched.pathname.groups.name : "no match";
+        }
+        $("#patternMatch").textContent = patternText;
+        compressionInfo.textContent = `解压结果一致: ${inflated === text}\nURLPattern: ${patternText}`;
+        log("Compression demo", {
+          raw: raw.byteLength,
+          compressed: compressedBuffer.byteLength,
+          restored: inflated === text,
+          pattern: patternText
+        });
+      } catch (error) {
+        compressionInfo.textContent = `运行失败: ${error.message}`;
+        log("Compression failed", { message: error.message });
+      }
+    }
+
+    async function probeAI() {
+      const output = $("#aiInfo");
+      const info = {
+        Translator: "Translator" in window,
+        LanguageDetector: "LanguageDetector" in window,
+        Summarizer: "Summarizer" in window,
+        Writer: "Writer" in window,
+        Rewriter: "Rewriter" in window,
+        AITextSession: "AITextSession" in window
+      };
+      output.textContent = JSON.stringify(info, null, 2);
+      log("AI probe", info);
+    }
+
+    async function runSummarizer() {
+      const output = $("#aiInfo");
+      const input = $("#aiInput").value;
+      try {
+        if (!("Summarizer" in window) || typeof Summarizer.create !== "function") {
+          throw new Error("Summarizer.create() 不可用");
+        }
+        const summarizer = await Summarizer.create();
+        const summary = await summarizer.summarize(input);
+        output.textContent = String(summary);
+        log("Summarizer", summary);
+      } catch (error) {
+        output.textContent = `Summarizer 失败: ${error.message}`;
+        log("Summarizer failed", { message: error.message });
+      }
+    }
+
+    async function runTranslator() {
+      const output = $("#aiInfo");
+      const input = $("#aiInput").value;
+      try {
+        if (!("Translator" in window) || typeof Translator.create !== "function") {
+          throw new Error("Translator.create() 不可用");
+        }
+        const translator = await Translator.create({ sourceLanguage: "en", targetLanguage: "zh" });
+        const translated = await translator.translate(input);
+        output.textContent = String(translated);
+        log("Translator", translated);
+      } catch (error) {
+        output.textContent = `Translator 失败: ${error.message}`;
+        log("Translator failed", { message: error.message });
+      }
+    }
+
+    function attachEvents() {
+      $("#searchInput").addEventListener("input", renderCatalog);
+      $("#runSupportScan").addEventListener("click", () => {
+        if (location.hash !== "#demo-zone") history.replaceState(null, "", "#demo-zone");
+        document.getElementById("demo-zone")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        runSupportScan();
+      });
+
+      document.body.addEventListener("click", event => {
+        const action = event.target.closest("[data-action]")?.dataset.action;
+        if (!action) return;
+
+        if (action === "scan-support") runSupportScan();
+        if (action === "run-abort-demo") runAbortDemo();
+        if (action === "toggle-transition") runTransitionDemo();
+        if (action === "read-ua-data") readUAData();
+        if (action === "probe-media-capabilities") probeMediaCapabilities();
+        if (action === "start-display") startDisplayCapture();
+        if (action === "stop-display") stopDisplayCapture();
+        if (action === "start-controller-capture") startControllerCapture();
+        if (action === "apply-controller-focus") applyControllerFocus();
+        if (action === "read-controller-zoom") readControllerZoom();
+        if (action === "controller-zoom-in") changeControllerZoom("in");
+        if (action === "controller-zoom-out") changeControllerZoom("out");
+        if (action === "controller-zoom-reset") changeControllerZoom("reset");
+        if (action === "stop-controller-capture") stopControllerCapture();
+        if (action === "start-camera") startCamera();
+        if (action === "stop-camera") stopCamera();
+        if (action === "start-record") startRecording();
+        if (action === "run-processor-demo") runProcessorDemo();
+        if (action === "run-webcodecs-demo") runWebCodecsDemo();
+        if (action === "run-rtc-loopback") runRtcLoopback();
+        if (action === "clear-rtc") clearRtcResources();
+        if (action === "open-file") openFile();
+        if (action === "save-file") saveFile();
+        if (action === "opfs-write") opfsWrite();
+        if (action === "opfs-read") opfsRead();
+        if (action === "opfs-list") opfsList();
+        if (action === "opfs-delete") opfsDelete();
+        if (action === "probe-gpu") probeGPU();
+        if (action === "snapshot-navigation") snapshotNavigation();
+        if (action === "push-navigation-state") pushNavigationState();
+        if (action === "probe-screen-details") probeScreenDetails();
+        if (action === "request-screen-fullscreen") requestScreenFullscreen();
+        if (action === "probe-region-capture") probeRegionCapture();
+        if (action === "apply-region-capture") applyRegionCapture();
+        if (action === "probe-audio-output") probeAudioOutput();
+        if (action === "apply-audio-output") applyAudioOutput();
+        if (action === "play-audio-tone") playAudioTone();
+        if (action === "probe-pressure") probePressure();
+        if (action === "probe-advanced-apis") probeAdvancedApis();
+        if (action === "run-sanitizer") runSanitizerDemo();
+        if (action === "run-compression") runCompressionDemo();
+        if (action === "probe-ai") probeAI();
+        if (action === "run-summarizer") runSummarizer();
+        if (action === "run-translator") runTranslator();
+      });
+
+      window.addEventListener("beforeunload", () => {
+        stopDisplayCapture();
+        stopControllerCapture();
+        stopCamera();
+        clearRtcResources();
+      });
+    }
+
+    function init() {
+      renderFilters();
+      renderCatalog();
+      renderDemos();
+      attachEvents();
+      runSupportScan();
+    }
+
+    init();
+  </script>
+</body>
+</html>
