@@ -189,7 +189,7 @@ async function applyAiNsMonitorState(forceStatus = false)
   {
     if (!aiNsMonitorProcessor)
     {
-      aiNsMonitorProcessor = new CRTC.AINoiseSuppression({
+      aiNsMonitorProcessor = new CRTC.AiNSEngine({
         enabled             : true,
         preserveOtherTracks : true,
         noiseReductionLevel : level,
@@ -2205,7 +2205,7 @@ async function call(type, direction, mediaStream)
 
   if (type === 'callVB') 
   {
-    const engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+    const engine = new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -2899,7 +2899,7 @@ document.querySelector('#virtualBackground').addEventListener('change', function
 /**
  * 切换 AI 降噪模式。
  *
- * AINoiseSuppression 的配置会在下一次外呼或接听建链时生效。
+ * AiNSEngine 的配置会在下一次外呼或接听建链时生效。
  */
 document.querySelector('#aiNoiseSuppression').addEventListener('change', function()
 {
@@ -2999,7 +2999,7 @@ function buildCallMediaStreamProcessor()
   {
     destroyCurrentAiNsProcessor();
 
-    const processor = new CRTC.AINoiseSuppression({
+    const processor = new CRTC.AiNSEngine({
       enabled             : true,
       preserveOtherTracks : true,
       noiseReductionLevel,
@@ -3030,7 +3030,7 @@ async function mediaStreamProcessor(mediastream)
   // 先取出音频
   const audioTrack = mediastream.getAudioTracks()[0];
 
-  engine = new CRTC.VirtualBackground({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+  engine = new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
  
   await engine.init({
     inputStream : mediastream,
