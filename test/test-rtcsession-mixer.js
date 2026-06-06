@@ -115,6 +115,53 @@ MockMixer.appendCalls = [];
 MockMixer.throwOnRemove = false;
 MockMixer.throwOnAppend = false;
 
+class MockAiNSEngine
+{
+  constructor(options)
+  {
+    this.options = options;
+    this.processCalls = [];
+    this.replaceAudioTrackCalls = [];
+    this.destroyed = false;
+    MockAiNSEngine.instances.push(this);
+  }
+
+  async process(stream)
+  {
+    this.processCalls.push(stream);
+
+    if (MockAiNSEngine.transform)
+    {
+      return MockAiNSEngine.transform(stream, this);
+    }
+
+    return stream;
+  }
+
+  async replaceAudioTrack(stream)
+  {
+    this.replaceAudioTrackCalls.push(stream);
+
+    if (MockAiNSEngine.replaceAudioTrackTransform)
+    {
+      return MockAiNSEngine.replaceAudioTrackTransform(stream, this);
+    }
+
+    return stream;
+  }
+
+  async destroy()
+  {
+    this.destroyed = true;
+    MockAiNSEngine.destroyCalls += 1;
+  }
+}
+
+MockAiNSEngine.instances = [];
+MockAiNSEngine.destroyCalls = 0;
+MockAiNSEngine.transform = null;
+MockAiNSEngine.replaceAudioTrackTransform = null;
+
 function createMockUA()
 {
   return {
@@ -161,8 +208,10 @@ function installGlobals()
 function loadRTCSessionWithMockMixer()
 {
   const mixerPath = require.resolve('../lib/Mixer');
+  const aiNSPath = require.resolve('../lib/AINoiseSuppression/index.js');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
+  const aiNSCache = require.cache[aiNSPath];
   const rtcCache = require.cache[rtcSessionPath];
 
   require.cache[mixerPath] = {
@@ -170,6 +219,12 @@ function loadRTCSessionWithMockMixer()
     filename : mixerPath,
     loaded   : true,
     exports  : MockMixer
+  };
+  require.cache[aiNSPath] = {
+    id       : aiNSPath,
+    filename : aiNSPath,
+    loaded   : true,
+    exports  : MockAiNSEngine
   };
   delete require.cache[rtcSessionPath];
 
@@ -182,6 +237,15 @@ function loadRTCSessionWithMockMixer()
     else
     {
       delete require.cache[mixerPath];
+    }
+
+    if (aiNSCache)
+    {
+      require.cache[aiNSPath] = aiNSCache;
+    }
+    else
+    {
+      delete require.cache[aiNSPath];
     }
 
     if (rtcCache)
@@ -555,6 +619,133 @@ async function testReplaceCanvasToVideoAppliesSessionMixerToSdkGum()
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
 }
 
+async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const audioTrack = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ audioTrack ]);
+  const processedAudioTrack = new MockMediaStreamTrack('audio');
+  const processedStream = new MockMediaStream([ processedAudioTrack ]);
+
+  session._sessionAiNSOptions = {
+    enabled             : true,
+    noiseReductionLevel : 92
+  };
+
+  MockAiNSEngine.transform = () => processedStream;
+  global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(sourceStream);
+
+  const stream = await session._getUserMediaWithSessionPipeline({ audio: true, video: false }, null);
+
+  assert.strictEqual(stream, processedStream);
+  assert.strictEqual(MockAiNSEngine.instances.length, 1);
+  assert.strictEqual(MockAiNSEngine.instances[0].options.noiseReductionLevel, 92);
+  assert.strictEqual(MockAiNSEngine.instances[0].processCalls[0], sourceStream);
+}
+
+async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+
+  session._sessionAiNSOptions = true;
+
+  const constraints = session._getGumConstraintsWithProcessorFlags({
+    audio : { deviceId: { exact: 'mic-1' } },
+    video : false
+  }, session._sessionAiNSOptions);
+
+  assert.strictEqual(constraints.audio.noiseSuppression, false);
+  assert.deepStrictEqual(constraints.audio.deviceId, { exact: 'mic-1' });
+}
+
+async function testApplyAiNoiseSuppressionSkipsDisabledOptions()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+
+  const stream = await session._applyAiNoiseSuppressionOnSdkGumStream(sourceStream, { enabled: false });
+
+  assert.strictEqual(stream, sourceStream);
+  assert.strictEqual(MockAiNSEngine.instances.length, 0);
+}
+
+async function testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const oldAudioTrack = new MockMediaStreamTrack('audio');
+  const oldInputAudioTrack = new MockMediaStreamTrack('audio');
+  const nextInputAudioTrack = new MockMediaStreamTrack('audio');
+  const replacementAudioTrack = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ nextInputAudioTrack ]);
+  const processedStream = new MockMediaStream([ replacementAudioTrack ]);
+  const sender = {
+    track        : oldAudioTrack,
+    replaceTrack : function(track)
+    {
+      this.replaced = track;
+      this.track = track;
+    }
+  };
+
+  session._status = session.C.STATUS_CONFIRMED;
+  session._connection = {
+    getSenders : () => [ sender ]
+  };
+  session._localMediaStream = new MockMediaStream([ oldAudioTrack ]);
+  session._sessionAiNSOptions = {
+    enabled             : true,
+    noiseReductionLevel : 75
+  };
+  session._sessionAiNSEngine = new MockAiNSEngine(session._sessionAiNSOptions);
+  session._aiNSInputStream = new MockMediaStream([ oldInputAudioTrack ]);
+
+  MockAiNSEngine.replaceAudioTrackTransform = () => processedStream;
+  global.navigator.mediaDevices.getUserMedia = () =>
+  {
+    assert.strictEqual(oldInputAudioTrack.readyState, 'ended');
+
+    return Promise.resolve(sourceStream);
+  };
+
+  const stream = await session.switchDevice('audio', 'mic-2');
+
+  assert.strictEqual(stream, processedStream);
+  assert.strictEqual(sender.replaced, replacementAudioTrack);
+  assert.strictEqual(session._localMediaStream.getAudioTracks()[0], replacementAudioTrack);
+  assert.strictEqual(session._sessionAiNSEngine.replaceAudioTrackCalls.length, 1);
+  assert.strictEqual(session._sessionAiNSEngine.replaceAudioTrackCalls[0], sourceStream);
+  assert.strictEqual(session._sessionAiNSEngine.processCalls.length, 0);
+  assert.strictEqual(session._aiNSInputStream, sourceStream);
+}
+
+async function testCloseDestroysSessionAiNoiseSuppression()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+
+  await session._applyAiNoiseSuppressionOnSdkGumStream(sourceStream, true);
+
+  session._close();
+  await Promise.resolve();
+
+  assert.strictEqual(MockAiNSEngine.destroyCalls, 1);
+  assert.strictEqual(session._sessionAiNSEngine, null);
+}
+
+async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+
+  session._sessionAiNSOptions = true;
+  MockAiNSEngine.transform = () => new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+
+  const result = await session._processMediaStream(sourceStream);
+
+  assert.strictEqual(result, sourceStream);
+  assert.strictEqual(MockAiNSEngine.instances.length, 0);
+}
+
 async function run()
 {
   const restoreGlobals = installGlobals();
@@ -572,7 +763,13 @@ async function run()
     { name: 'testSwitchDeviceCameraWithActiveMixerReusesMixer', fn: testSwitchDeviceCameraWithActiveMixerReusesMixer },
     { name: 'testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum', fn: testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum },
     { name: 'testSwitchDeviceCameraMixerBranchFallbackToDefault', fn: testSwitchDeviceCameraMixerBranchFallbackToDefault },
-    { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum }
+    { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum },
+    { name: 'testGetUserMediaPipelineAppliesSessionAiNoiseSuppression', fn: testGetUserMediaPipelineAppliesSessionAiNoiseSuppression },
+    { name: 'testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression', fn: testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression },
+    { name: 'testApplyAiNoiseSuppressionSkipsDisabledOptions', fn: testApplyAiNoiseSuppressionSkipsDisabledOptions },
+    { name: 'testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine', fn: testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine },
+    { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
+    { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 
   try
@@ -583,12 +780,20 @@ async function run()
     MockMixer.appendCalls = [];
     MockMixer.throwOnRemove = false;
     MockMixer.throwOnAppend = false;
+    MockAiNSEngine.instances = [];
+    MockAiNSEngine.destroyCalls = 0;
+    MockAiNSEngine.transform = null;
+    MockAiNSEngine.replaceAudioTrackTransform = null;
 
     for (const t of TESTS)
     {
       MockMixer.instances = [];
       MockMixer.removeCalls = [];
       MockMixer.appendCalls = [];
+      MockAiNSEngine.instances = [];
+      MockAiNSEngine.destroyCalls = 0;
+      MockAiNSEngine.transform = null;
+      MockAiNSEngine.replaceAudioTrackTransform = null;
       if (t.fn === testCloseStopsAndClearsMixer)
       {
         MockMixer.stopCalls = 0;

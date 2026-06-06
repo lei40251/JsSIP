@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026662035
+ * CRTC v1.13.0.2026662222
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -282,6 +282,30 @@ module.exports = class AiNSMediaStreamProcessor {
   }
 
   /**
+   * 用新的音频轨替换当前输入流中的音频轨。
+   *
+   * 若当前处理器已经绑定了一路包含视频的原始流，则会保留原来的非音频轨道，
+   * 只替换音频输入，方便 RTC 场景下切换麦克风或重新补音频轨。
+   *
+   * @param {MediaStream|MediaStreamTrack} input
+   * @returns {Promise<MediaStream>}
+   */
+  async replaceAudioTrack(input) {
+    var nextAudioTrack = this._resolveInputAudioTrack(input);
+    if (!nextAudioTrack) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor: replacement input has no audio track');
+    }
+    var nextStream = this._buildStreamWithReplacedAudioTrack(nextAudioTrack);
+    this.originalTrack = nextAudioTrack;
+    this.originalStream = nextStream;
+    await this.ensureGraph();
+    if (!this.processedStream) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor.replaceAudioTrack: failed to create processed MediaStream');
+    }
+    return this.processedStream;
+  }
+
+  /**
    * 运行时开关 AI 降噪，不销毁图。
    *
    * @param {boolean} enable
@@ -339,7 +363,7 @@ module.exports = class AiNSMediaStreamProcessor {
    */
   setInput(input) {
     if (input instanceof MediaStream) {
-      var audioTrack = input.getAudioTracks()[0];
+      var audioTrack = this._resolveInputAudioTrack(input);
       if (!audioTrack) {
         throw new Error('AINoiseSuppressionMediaStreamProcessor: input stream has no audio track');
       }
@@ -352,6 +376,27 @@ module.exports = class AiNSMediaStreamProcessor {
     }
     this.originalTrack = input;
     this.originalStream = new MediaStream([input]);
+  }
+  _resolveInputAudioTrack(input) {
+    if (input instanceof MediaStream) {
+      return input.getAudioTracks()[0] || null;
+    }
+    if (input && input.kind === 'audio') {
+      return input;
+    }
+    return null;
+  }
+  _buildStreamWithReplacedAudioTrack(audioTrack) {
+    if (!this.originalStream) {
+      return new MediaStream([audioTrack]);
+    }
+    var outputTracks = [audioTrack];
+    this.originalStream.getTracks().forEach(track => {
+      if (track.kind !== 'audio') {
+        outputTracks.push(track);
+      }
+    });
+    return new MediaStream(outputTracks);
   }
 
   /**
@@ -1034,6 +1079,18 @@ class AiNSEngine {
     return this.init({
       inputStream
     });
+  }
+
+  /**
+   * 用新的音频输入替换当前处理链中的音频轨，并返回最新输出流。
+   *
+   * @param {MediaStream|MediaStreamTrack} input
+   * @returns {Promise<MediaStream>}
+   */
+  async replaceAudioTrack(input) {
+    this.outputStream = await this.processor.replaceAudioTrack(input);
+    this.inputStream = this.processor.originalStream;
+    return this.outputStream;
   }
 
   /**
@@ -3864,7 +3921,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212124070 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212124444 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17074,7 +17131,7 @@ var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '1.13.0.405212124070');
+debug('version %s', '1.13.0.405212124444');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17116,7 +17173,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212124070';
+    return '1.13.0.405212124444';
   }
 };
 },{"./AINoiseSuppression/index.js":4,"./BFCP":5,"./Constants":36,"./Exceptions":40,"./Grammar":41,"./Mixer":45,"./NameAddrHeader":63,"./Stats":76,"./UA":80,"./URI":81,"./Utils":82,"./VirtualBackground/index.js":84,"./WebSocketInterface":92,"debug":97}],43:[function(require,module,exports){
@@ -24578,6 +24635,7 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
 var Mixer = require('./Mixer');
+var AiNSEngine = require('./AINoiseSuppression/index.js');
 var logger = new Logger('RTCSession');
 var BFCPUser = BFCPLib.User;
 var Primitive = BFCPLib.Primitive;
@@ -24672,6 +24730,9 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
+    this._sessionAiNSEngine = null;
+    this._sessionAiNSOptions = null;
+    this._aiNSInputStream = null;
     this._mixer = null;
     // 记录当前送入 mixer 的“原始输入流”（非 mixer 输出流）。
     // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的 mixer 输出轨。
@@ -24912,15 +24973,83 @@ module.exports = class RTCSession extends EventEmitter {
       return _stream;
     }
   }
+  _normalizeSessionAiNSOptions(aiNSOptions) {
+    if (aiNSOptions === undefined || aiNSOptions === null || aiNSOptions === false) {
+      return null;
+    }
+    if (aiNSOptions === true) {
+      return {};
+    }
+    if (typeof aiNSOptions === 'object' && aiNSOptions.enabled !== false) {
+      return Object.assign({}, aiNSOptions);
+    }
+    return null;
+  }
+  _stopSessionAiNoiseSuppression() {
+    var engine = this._sessionAiNSEngine;
+    var aiNSInputStream = this._aiNSInputStream;
+    this._sessionAiNSEngine = null;
+    this._aiNSInputStream = null;
+    if (!engine || typeof engine.destroy !== 'function') {
+      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+      return;
+    }
+    Promise.resolve(engine.destroy()).then(() => {
+      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+    }).catch(error => {
+      logger.warn(`${this._id} destroy session ai noise suppression failed:`, error);
+      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+    });
+  }
+  async _applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) {
+    logger.debug(`applyAiNoiseSuppressionOnSdkGumStream: ${JSON.stringify(aiNSOptions)}`);
+    if (!stream || !(stream instanceof MediaStream)) {
+      return stream;
+    }
+    var normalizedOptions = this._normalizeSessionAiNSOptions(aiNSOptions);
+    if (!normalizedOptions || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
+      return stream;
+    }
+    try {
+      this._stopSessionAiNoiseSuppression();
+      this._sessionAiNSEngine = new AiNSEngine(normalizedOptions);
+      var processedStream = await this._sessionAiNSEngine.process(stream);
+      this._aiNSInputStream = stream;
+      return processedStream instanceof MediaStream ? processedStream : stream;
+    } catch (error) {
+      logger.warn(`${this._id} apply ai noise suppression failed:`, error);
+      this._stopSessionAiNoiseSuppression();
+      return stream;
+    }
+  }
+  async _replaceAudioTrackWithSessionAiNoiseSuppression(stream, aiNSOptions = this._sessionAiNSOptions) {
+    var normalizedOptions = this._normalizeSessionAiNSOptions(aiNSOptions);
+    if (!normalizedOptions || !stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
+      return stream;
+    }
+    try {
+      if (!this._sessionAiNSEngine) {
+        return await this._applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
+      }
+      var processedStream = await this._sessionAiNSEngine.replaceAudioTrack(stream);
+      this._safeCloseMediaStream(this._aiNSInputStream, 'close previous ai noise suppression input stream failed');
+      this._aiNSInputStream = stream;
+      return processedStream instanceof MediaStream ? processedStream : stream;
+    } catch (error) {
+      logger.warn(`${this._id} replace audio track with ai noise suppression failed:`, error);
+      this._stopSessionAiNoiseSuppression();
+      return await this._applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
+    }
+  }
 
   /**
    * 根据上层注入的处理器标记，微调 getUserMedia 约束。
    * 例如 AI 降噪场景下，先关闭浏览器原生降噪，再交给自定义处理器。
    */
-  _getGumConstraintsWithProcessorFlags(constraints) {
+  _getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = null) {
     var nextConstraints = Utils.cloneObject(constraints);
-    if (!nextConstraints || !this._mediaStreamProcessor) return nextConstraints;
-    if (this._mediaStreamProcessor.disableNativeNoiseSuppression && nextConstraints.audio !== false && nextConstraints.audio !== undefined) {
+    if (!nextConstraints) return nextConstraints;
+    if ((this._normalizeSessionAiNSOptions(aiNSOptions) || this._mediaStreamProcessor && this._mediaStreamProcessor.disableNativeNoiseSuppression) && nextConstraints.audio !== false && nextConstraints.audio !== undefined) {
       nextConstraints.audio = nextConstraints.audio === true ? {
         noiseSuppression: false
       } : Object.assign({}, nextConstraints.audio, {
@@ -25037,12 +25166,13 @@ module.exports = class RTCSession extends EventEmitter {
       return stream;
     }
   }
-  async _getUserMediaWithSessionPipeline(constraints, mixerOptions) {
+  async _getUserMediaWithSessionPipeline(constraints, mixerOptions, aiNSOptions = this._sessionAiNSOptions) {
     // 统一在取流前应用处理器声明的约束修正，避免上层各处重复拼装 mediaConstraints。
-    var gumConstraints = this._getGumConstraintsWithProcessorFlags(constraints);
+    var gumConstraints = this._getGumConstraintsWithProcessorFlags(constraints, aiNSOptions);
     var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
-    var processed = await this._processMediaStream(stream);
-    return await this._applyMixerOnSdkGumStream(processed, mixerOptions);
+    var processedStream = await this._processMediaStream(stream);
+    var aiNoiseSuppressedStream = await this._applyAiNoiseSuppressionOnSdkGumStream(processedStream, aiNSOptions);
+    return await this._applyMixerOnSdkGumStream(aiNoiseSuppressedStream, mixerOptions);
   }
   isOnHold() {
     return {
@@ -25063,10 +25193,11 @@ module.exports = class RTCSession extends EventEmitter {
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
     var mixerOptions = options.mixer || null;
+    var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMixerOptions = mixerOptions;
-
-    // 预处理媒体流，如虚拟背景等
+    this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
+    this._stopSessionAiNoiseSuppression();
     this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
       audio: false,
       video: false
@@ -25449,9 +25580,9 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
     var mixerOptions = options.mixer || null;
+    var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMixerOptions = mixerOptions;
-
-    // 预处理媒体流，如虚拟背景等
+    this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
 
     // 是否启用BFCP
@@ -26224,16 +26355,20 @@ module.exports = class RTCSession extends EventEmitter {
             exact: deviceId
           }
         };
+        var oldAiNSInputTrack = this._aiNSInputStream && this._aiNSInputStream.getAudioTracks && this._aiNSInputStream.getAudioTracks()[0];
         this._connection.getSenders().find(s => {
           logger.debug(`${this._id} kind: ${s.track.kind}`);
           if (s.track.kind == 'audio') {
             next = true;
-            s.track.stop();
+            if (!this._sessionAiNSEngine) {
+              s.track.stop();
+            }
           }
         });
         if (!next) {
           return Promise.reject('switchDevice Failed. There is no audio track for the current session.');
         }
+        oldAiNSInputTrack && oldAiNSInputTrack.stop();
         this._localMediaStreamLocallyGenerated = true;
         _constraints.audio = audioConstraints;
         return navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags(_constraints)).catch(error => {
@@ -26241,7 +26376,8 @@ module.exports = class RTCSession extends EventEmitter {
           this.emit('getusermediafailed', error);
           throw new Error('getUserMedia() failed');
         });
-      }).then(stream => {
+      }).then(async stream => {
+        stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
         try {
           this._localMediaStream.removeTrack(this._localMediaStream.getAudioTracks()[0]);
         } catch (error) {
@@ -27317,7 +27453,9 @@ module.exports = class RTCSession extends EventEmitter {
       Utils.closeMediaStream(this._bfcpStream);
     }
     this._stopSessionMixer();
+    this._stopSessionAiNoiseSuppression();
     this._sessionMixerOptions = null;
+    this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
     }
@@ -28886,7 +29024,8 @@ module.exports = class RTCSession extends EventEmitter {
               navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
                 audio: this._inviteMediaConstraints.audio || true,
                 video: false
-              })).then(stream => {
+              })).then(async stream => {
+                stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
                 var sender = this._connection.getSenders().find(s => {
                   return s.track.kind == 'audio';
                 });
@@ -28973,7 +29112,8 @@ module.exports = class RTCSession extends EventEmitter {
                 navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
-                })).then(stream => {
+                })).then(async stream => {
+                  stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
                   var sender = this._connection.getSenders().find(s => {
                     return s.track.kind == 'audio';
                   });
@@ -29965,7 +30105,8 @@ module.exports = class RTCSession extends EventEmitter {
     navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
       audio: this._inviteMediaConstraints.audio || true,
       video: false
-    })).then(stream => {
+    })).then(async stream => {
+      stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'audio') {
           // 保持媒体的muted状态
@@ -30573,7 +30714,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":5,"./Constants":36,"./Dialog":37,"./Exceptions":40,"./Logger":43,"./Mixer":45,"./RTCSession/DTMF":68,"./RTCSession/Info":69,"./RTCSession/ReferNotifier":70,"./RTCSession/ReferSubscriber":71,"./RequestSender":73,"./SIPMessage":74,"./Timers":77,"./Transactions":78,"./URI":81,"./Utils":82,"buffer":96,"events":95,"sdp-transform":104}],68:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":4,"./BFCP/index":5,"./Constants":36,"./Dialog":37,"./Exceptions":40,"./Logger":43,"./Mixer":45,"./RTCSession/DTMF":68,"./RTCSession/Info":69,"./RTCSession/ReferNotifier":70,"./RTCSession/ReferSubscriber":71,"./RequestSender":73,"./SIPMessage":74,"./Timers":77,"./Transactions":78,"./URI":81,"./Utils":82,"buffer":96,"events":95,"sdp-transform":104}],68:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
