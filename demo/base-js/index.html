@@ -51,6 +51,7 @@
               id="remoteVideo2"></video>
           </div>
           <audio id="remoteAudio" autoplay class="hide"></audio>
+          <audio id="aiNoiseMonitorAudio" autoplay class="hide"></audio>
         </article>
         <div class="video-stats-overlay">
           <div><span>延迟:</span> <span id="RTT"></span></div>
@@ -65,48 +66,70 @@
           <div class="control-groups">
             <section class="panel-card control-card">
               <div class="card-title">呼叫与接听</div>
-              <div class="call-config-grid">
-                <div class="call-field">
-                  <div class="call-field-label">呼叫号码</div>
-                  <input class="form-control" type="text" value="7301" placeholder="请输入要呼叫的号码" id="callee" />
-                </div>
-                <div class="call-field">
-                  <div class="call-field-label">摄像头（通话前可预选）</div>
-                  <select id="cameras" class="form-select"></select>
-                </div>
-                <div class="call-field">
-                  <div class="call-field-label">麦克风（通话前可预选）</div>
-                  <select id="mics" class="form-select"></select>
-                </div>
-                <div class="call-field">
-                  <div class="call-field-label">更新方式</div>
-                  <select id="useupdate" class="form-select">
-                    <option value="update">useUpdate</option>
-                    <option value="invite">useReInvite</option>
-                  </select>
-                </div>
-                <div class="call-field">
-                  <div class="call-field-label">画质偏好（通话中可切换）</div>
-                  <select id="videoHint" class="form-select">
-                    <option value="" selected>默认策略</option>
-                    <option value="detail">保清晰</option>
-                    <option value="motion">保流畅</option>
-                    <option value="text">文本</option>
-                  </select>
-                </div>
-                <div class="call-field">
-                  <div class="call-field-label">虚拟背景（通话前需开启）</div>
-                  <select id="virtualBackground" class="form-select">
-                    <option value=''>不开启虚拟背景</option>
-                    <option value="none">无图片</option>
-                    <option value="img1">图片1</option>
-                    <option value="img2">图片2</option>
-                    <option value="blur">背景模糊</option>
-                  </select>
+              <div class="call-config-layout">
+                <div class="call-config-row">
+                  <div class="call-config-group call-config-group-main">
+                    <div class="call-config-grid call-config-grid-main">
+                      <div class="call-field">
+                        <div class="call-field-label">呼叫号码</div>
+                        <input class="form-control" type="text" value="7301" placeholder="请输入要呼叫的号码" id="callee" />
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">摄像头</div>
+                        <select id="cameras" class="form-select"></select>
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">麦克风</div>
+                        <select id="mics" class="form-select"></select>
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">更新方式</div>
+                        <select id="useupdate" class="form-select">
+                          <option value="update">useUpdate</option>
+                          <option value="invite">useReInvite</option>
+                        </select>
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">画质偏好</div>
+                        <select id="videoHint" class="form-select">
+                          <option value="" selected>默认策略</option>
+                          <option value="detail">保清晰</option>
+                          <option value="motion">保流畅</option>
+                          <option value="text">文本</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="call-config-group call-config-group-ai">
+                    <div class="call-config-grid call-config-grid-ai">
+                      <div class="call-field">
+                        <div class="call-field-label">虚拟背景</div>
+                        <select id="virtualBackground" class="form-select">
+                          <option value=''>不开启虚拟背景</option>
+                          <option value="none">无图片</option>
+                          <option value="img1">office</option>
+                          <option value="img2">sky</option>
+                          <option value="blur">背景模糊</option>
+                        </select>
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">降噪模式</div>
+                        <select id="aiNoiseSuppression" class="form-select">
+                          <option value="">不开启 AI 降噪</option>
+                          <option value="AiNS">AINoiseSuppression</option>
+                        </select>
+                      </div>
+                      <div class="call-field">
+                        <div class="call-field-label">强度（0-100）</div>
+                        <input class="form-control" id="aiNoiseReductionLevel" type="number" min="0" max="100" step="1"
+                          value="60" placeholder="60" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-
-                <details class="mixer-detail mt-2">
+                <details class="mixer-detail call-config-mixer">
                   <summary>呼叫时 Mixer 参数（紧凑配置）</summary>
                   <div class="pt-2 compact-mixer">
                     <div class="row g-2 align-items-center mb-2">
@@ -119,7 +142,8 @@
                     <div class="compact-mixer-grid">
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">文字水印</div>
-                        <input class="form-control mixer-row" id="callMixerTextWatermarkText" placeholder="文字内容（留空不启用）" />
+                        <input class="form-control mixer-row" id="callMixerTextWatermarkText"
+                          placeholder="文字内容（留空不启用）" />
                         <div class="mixer-inline-row watermark-inline-row mixer-row">
                           <select class="form-select" id="callMixerTextWatermarkPosition">
                             <option value="top-left">左上</option>
@@ -140,7 +164,8 @@
                       </div>
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">图片水印</div>
-                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl" placeholder="图片 URL（留空不启用）" />
+                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl"
+                          placeholder="图片 URL（留空不启用）" />
                         <div class="mixer-inline-row watermark-inline-row mixer-row">
                           <select class="form-select" id="callMixerImageWatermarkPosition">
                             <option value="top-left">左上</option>
@@ -270,6 +295,15 @@
                     <div class="input-group">
                       <input type="text" class="form-control" value='' placeholder="请输入要推送的内容" id="info" />
                       <button class="btn btn-primary" id="sendInfo">发送</button>
+                    </div>
+                  </div>
+
+                  <div class="tool-row">
+                    <div class="sub-group-title">AI 降噪验证</div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <button class="btn btn-outline-warning" id="toggleAiNsMonitor"><i
+                          class="bi-soundwave me-1"></i>开始降噪验证</button>
+                      <div class="small text-muted">抓本地麦克风回放，建议佩戴耳机避免啸叫</div>
                     </div>
                   </div>
 

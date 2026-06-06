@@ -71,6 +71,161 @@ const virtualBackgroundImgs = {
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
 
+// AI 降噪相关
+let aiNsType = '';
+let currentAiNsProcessor = null;
+const AI_NOISE_ASSET_ROOT = './assets/';
+let aiNsMonitorStream = null;
+let aiNsMonitorProcessedStream = null;
+let aiNsMonitorProcessor = null;
+let aiNsMonitorActive = false;
+
+// 统一收敛 UI 输入的强度值，避免把非法值直接送进处理器。
+function normalizeAiNsReductionLevel(value)
+{
+  const parsedLevel = parseInt(value, 10);
+
+  return Number.isNaN(parsedLevel) ? 80 : Math.max(0, Math.min(100, parsedLevel));
+}
+
+function destroyCurrentAiNsProcessor()
+{
+  const processor = currentAiNsProcessor;
+
+  currentAiNsProcessor = null;
+
+  if (!processor || typeof processor.destroy !== 'function')
+  {
+    return;
+  }
+
+  Promise.resolve(processor.destroy()).catch((error) =>
+  {
+    console.warn('destroyCurrentAiNsProcessor error', error);
+  });
+}
+
+// 呼叫/接听建链前，从页面读取当前选择的 AiNS 强度。
+function getCurrentAiNsLevel()
+{
+  const levelInput = document.querySelector('#aiNoiseReductionLevel');
+
+  return levelInput ? normalizeAiNsReductionLevel(levelInput.value) : 80;
+}
+
+function updateAiNsMonitorButton()
+{
+  const button = document.querySelector('#toggleAiNsMonitor');
+
+  if (!button)
+  {
+    return;
+  }
+
+  button.innerHTML = aiNsMonitorActive ?
+    '<i class="bi-stop-circle me-1"></i>停止降噪验证' :
+    '<i class="bi-soundwave me-1"></i>开始降噪验证';
+  button.className = aiNsMonitorActive ? 'btn btn-warning' : 'btn btn-outline-warning';
+}
+
+function getAiNsMonitorAudio()
+{
+  return document.querySelector('#aiNoiseMonitorAudio');
+}
+
+// 本地验证链路与正式通话链路分开管理，避免相互影响。
+async function stopAiNsMonitor()
+{
+  const monitorAudio = getAiNsMonitorAudio();
+
+  aiNsMonitorActive = false;
+  updateAiNsMonitorButton();
+
+  if (monitorAudio)
+  {
+    monitorAudio.pause();
+    monitorAudio.srcObject = null;
+  }
+
+  if (aiNsMonitorProcessor && typeof aiNsMonitorProcessor.destroy === 'function')
+  {
+    try
+    {
+      await aiNsMonitorProcessor.destroy();
+    }
+    catch (error)
+    {
+      console.warn('stopAiNsMonitor destroy error', error);
+    }
+  }
+
+  if (aiNsMonitorStream)
+  {
+    aiNsMonitorStream.getTracks().forEach((track) => track.stop());
+  }
+
+  aiNsMonitorStream = null;
+  aiNsMonitorProcessedStream = null;
+  aiNsMonitorProcessor = null;
+}
+
+// 仅用于 demo 本地回放验证，便于快速对比 AiNS 前后的主观效果。
+async function applyAiNsMonitorState(forceStatus = false)
+{
+  if (!aiNsMonitorActive || !aiNsMonitorStream)
+  {
+    return;
+  }
+
+  const monitorAudio = getAiNsMonitorAudio();
+  const level = getCurrentAiNsLevel();
+
+  if (!monitorAudio)
+  {
+    return;
+  }
+
+  if (aiNsType === 'AiNS')
+  {
+    if (!aiNsMonitorProcessor)
+    {
+      aiNsMonitorProcessor = new CRTC.AINoiseSuppression({
+        enabled             : true,
+        preserveOtherTracks : true,
+        noiseReductionLevel : level,
+        assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+      });
+      aiNsMonitorProcessedStream = await aiNsMonitorProcessor.process(aiNsMonitorStream);
+      monitorAudio.srcObject = aiNsMonitorProcessedStream;
+      await monitorAudio.play();
+    }
+    else
+    {
+      await aiNsMonitorProcessor.setEnabled(true);
+      aiNsMonitorProcessor.setSuppressionLevel(level);
+    }
+
+    setStatus(`本地降噪验证中，当前强度 ${level}`);
+
+    return;
+  }
+
+  if (aiNsMonitorProcessor)
+  {
+    await aiNsMonitorProcessor.destroy();
+    aiNsMonitorProcessor = null;
+    aiNsMonitorProcessedStream = null;
+  }
+
+  monitorAudio.srcObject = aiNsMonitorStream;
+  await monitorAudio.play();
+
+  if (forceStatus)
+  {
+    setStatus('本地麦克风原声验证中（未开启 AI 降噪）');
+  }
+}
+
 const extraFeatures = [];
 
 // let payload;
@@ -81,6 +236,8 @@ const extraFeatures = [];
 const localVideo = document.querySelector('#localVideo');
 const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
+
+updateAiNsMonitorButton();
 
 let cusMediaStream = new MediaStream();
 let blackVideo = null;
@@ -725,6 +882,11 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
 
     cusMediaStream = new MediaStream();
+    destroyCurrentAiNsProcessor();
+    stopAiNsMonitor().catch((error) =>
+    {
+      console.warn('failed stopAiNsMonitor on failed', error);
+    });
   });
 
   /**
@@ -803,6 +965,12 @@ ua.on('newRTCSession', function(e)
       localMediaStream.getTracks().forEach((track) => track.stop());
       localMediaStream = null;
     }
+
+    destroyCurrentAiNsProcessor();
+    stopAiNsMonitor().catch((error) =>
+    {
+      console.warn('failed stopAiNsMonitor on ended', error);
+    });
   });
 
   /**
@@ -1131,11 +1299,12 @@ ua.on('newRTCSession', function(e)
         },
         video : false
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true },
-      extraFeatures       : extraFeatures
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints  : { offerToReceiveAudio: true },
+      extraFeatures        : extraFeatures,
+      mediaStreamProcessor : buildCallMediaStreamProcessor() 
     });
 
     setStatus('audio answer');
@@ -1156,7 +1325,7 @@ ua.on('newRTCSession', function(e)
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures        : extraFeatures,
-      mediaStreamProcessor : virtualBackgroundType ? mediaStreamProcessor : null
+      mediaStreamProcessor : buildCallMediaStreamProcessor()
     });
 
     setStatus('video answer');
@@ -2114,10 +2283,7 @@ async function call(type, direction, mediaStream)
       }
     }
 
-    if (virtualBackgroundType)
-    {
-      options.mediaStreamProcessor = mediaStreamProcessor;
-    }
+    options.mediaStreamProcessor = buildCallMediaStreamProcessor();
 
     remoteNo = number;
     const session = await ua.call(`${number}@${sipDomain}`, options);
@@ -2729,6 +2895,127 @@ document.querySelector('#virtualBackground').addEventListener('change', function
     engine.setBackgroundImage(virtualBackgroundImgs[virtualBackgroundType]);
   }
 });
+
+/**
+ * 切换 AI 降噪模式。
+ *
+ * AINoiseSuppression 的配置会在下一次外呼或接听建链时生效。
+ */
+document.querySelector('#aiNoiseSuppression').addEventListener('change', function()
+{
+  aiNsType = this.value;
+
+  setStatus(aiNsType === 'AiNS' ?
+    `AI 降噪强度已设为 ${getCurrentAiNsLevel()}，将在下一次呼叫/接听时生效` :
+    'AI 降噪已关闭');
+
+  applyAiNsMonitorState(true);
+});
+
+// 通话中若当前 AiNS processor 已存在，则直接热更新强度；否则保留下次建链生效。
+document.querySelector('#aiNoiseReductionLevel').addEventListener('change', function()
+{
+  this.value = normalizeAiNsReductionLevel(this.value);
+
+  if (aiNsType === 'AiNS')
+  {
+    if (currentAiNsProcessor && typeof currentAiNsProcessor.setSuppressionLevel === 'function')
+    {
+      currentAiNsProcessor.setSuppressionLevel(Number(this.value));
+      setStatus(`AI 降噪强度已设为 ${this.value}，当前通话已生效`);
+    }
+    else
+    {
+      setStatus(`AI 降噪强度已设为 ${this.value}，将在下一次呼叫/接听时生效`);
+    }
+  }
+
+  applyAiNsMonitorState(false);
+});
+
+document.querySelector('#toggleAiNsMonitor').onclick = async function()
+{
+  if (aiNsMonitorActive)
+  {
+    await stopAiNsMonitor();
+    setStatus('已停止本地降噪验证');
+
+    return;
+  }
+
+  try
+  {
+    aiNsMonitorStream = await navigator.mediaDevices.getUserMedia({
+      audio : {
+        echoCancellation : false,
+        autoGainControl  : false,
+        noiseSuppression : false
+      },
+      video : false
+    });
+    aiNsMonitorActive = true;
+    updateAiNsMonitorButton();
+    await applyAiNsMonitorState(true);
+  }
+  catch (error)
+  {
+    aiNsMonitorActive = false;
+    updateAiNsMonitorButton();
+    console.warn('toggleAiNsMonitor error', error);
+    setStatus(`降噪验证启动失败：${error && error.message ? error.message : error}`);
+  }
+};
+
+/**
+ * 根据当前 UI 选择构建通话前 MediaStream 处理器。
+ *
+ * 当前 demo 保持一个简单优先级：
+ * - 若开启虚拟背景，则沿用现有视频处理器；
+ * - 若未开启虚拟背景但开启 AI 降噪，则使用 AiNS 音频处理器；
+ * - 两者都未开启，则不注入 mediaStreamProcessor。
+ *
+ * 这样可以把 AI 降噪真实接入通话流程，同时不破坏现有虚拟背景示例。
+ *
+ * @returns {Function|null}
+ */
+function buildCallMediaStreamProcessor()
+{
+  if (virtualBackgroundType)
+  {
+    return mediaStreamProcessor;
+  }
+
+  if (aiNsType !== 'AiNS')
+  {
+    destroyCurrentAiNsProcessor();
+
+    return null;
+  }
+
+  const noiseReductionLevel = getCurrentAiNsLevel();
+
+  // 将 AiNS 适配为 RTCSession 约定的函数式 mediaStreamProcessor。
+  const processorWrapper = async function(stream)
+  {
+    destroyCurrentAiNsProcessor();
+
+    const processor = new CRTC.AINoiseSuppression({
+      enabled             : true,
+      preserveOtherTracks : true,
+      noiseReductionLevel,
+      assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
+    });
+
+    currentAiNsProcessor = processor;
+
+    return await processor.process(stream);
+  };
+
+  // 提示 RTCSession 取麦克风时关闭浏览器原生降噪，避免与 AiNS 叠加。
+  processorWrapper.disableNativeNoiseSuppression = true;
+
+  return processorWrapper;
+}
 
 // 处理视频轨道
 async function mediaStreamProcessor(mediastream)

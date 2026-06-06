@@ -1,10 +1,1181 @@
 /*
- * CRTC v1.13.0.2026631422
+ * CRTC v1.13.0.2026662014
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
 
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+"use strict";
+
+var {
+  getAssetLoader
+} = require('./AssetLoader');
+var WORKLET_MESSAGE_TYPES = require('./workletMessageTypes');
+var createWorkletModule = require('./createWorkletModule');
+var workletCode = require('./aiNoiseSuppressionWorkletSource');
+
+/**
+ * AINoiseSuppression Core 运行时。
+ *
+ * 它只负责：
+ * - 拉取 WASM / 模型资源
+ * - 注册 AudioWorklet 模块
+ * - 创建 AudioWorkletNode
+ * - 向 Worklet 发送运行时控制消息
+ *
+ * 它不直接处理 MediaStream，也不管理 AudioContext 生命周期。
+ * MediaStream 图的搭建由 `AINoiseSuppressionMediaStreamProcessor` 负责。
+ */
+module.exports = class AiNSCore {
+  /**
+   * @param {Object} [config]
+   * @param {number} [config.sampleRate=48000]
+   * @param {number} [config.noiseReductionLevel=80]
+   * @param {Object} [config.assetConfig]
+   */
+  constructor(config = {}) {
+    var initialNoiseReductionLevel = typeof config.noiseReductionLevel === 'number' && !Number.isNaN(config.noiseReductionLevel) ? Math.max(0, Math.min(100, Math.floor(config.noiseReductionLevel))) : 80;
+    this.assetLoader = getAssetLoader(config.assetConfig);
+    this.assets = null;
+    this.workletNode = null;
+    this.isInitialized = false;
+    this.bypassEnabled = false;
+    this.config = {
+      sampleRate: config.sampleRate || 48000,
+      noiseReductionLevel: initialNoiseReductionLevel,
+      assetConfig: config.assetConfig || null
+    };
+  }
+
+  /**
+   * 预加载 AINoiseSuppression 运行时资源。
+   *
+   * 设计成显式初始化有两个好处：
+     * - 可以把网络开销前移到真正建图之前；
+   * - 发生失败时更容易在业务侧做降级和提示。
+   *
+   * @returns {Promise<void>}
+   */
+  async initialize() {
+    if (this.isInitialized) return;
+    var assetUrls = this.assetLoader.getAssetUrls();
+    var assets = await Promise.all([this.assetLoader.fetchAsset(assetUrls.wasm), this.assetLoader.fetchAsset(assetUrls.model)]);
+    this.assets = {
+      wasmBytes: assets[0],
+      modelBytes: assets[1]
+    };
+    this.isInitialized = true;
+  }
+
+  /**
+   * 在给定 AudioContext 上创建降噪 WorkletNode。
+   *
+   * 注意：
+   * - 这里假设 initialize() 已经完成；
+   * - Worklet 只关心处理逻辑，不直接连接 source/destination；
+   * - Audio graph 的连线留给上层 MediaStreamProcessor 负责。
+   *
+   * @param {AudioContext} audioContext
+   * @returns {Promise<AudioWorkletNode>}
+   */
+  async createAudioWorkletNode(audioContext) {
+    this.ensureInitialized();
+    if (!this.assets) {
+      throw new Error('Assets not loaded');
+    }
+    await createWorkletModule(audioContext, workletCode);
+    this.workletNode = new AudioWorkletNode(audioContext, 'ai-noise-suppression-audio-processor', {
+      processorOptions: {
+        wasmBytes: this.assets.wasmBytes,
+        modelBytes: this.assets.modelBytes,
+        suppressionLevel: this.config.noiseReductionLevel
+      }
+    });
+    return this.workletNode;
+  }
+
+  /**
+   * 动态调整降噪强度，范围会被夹到 0~100。
+   *
+   * @param {number} level
+   */
+  setSuppressionLevel(level) {
+    if (typeof level !== 'number' || Number.isNaN(level)) return;
+    var clampedLevel = Math.max(0, Math.min(100, Math.floor(level)));
+    this.config.noiseReductionLevel = clampedLevel;
+    if (!this.workletNode) return;
+    this.workletNode.port.postMessage({
+      type: WORKLET_MESSAGE_TYPES.SET_SUPPRESSION_LEVEL,
+      value: clampedLevel
+    });
+  }
+
+  /**
+   * 启用或禁用 AI 降噪。
+   *
+   * 实现方式不是销毁 Worklet，而是切换为 bypass，
+   * 这样开关更快，也不会频繁重建 AudioWorkletNode。
+   *
+   * @param {boolean} enabled
+   */
+  setNoiseSuppressionEnabled(enabled) {
+    if (!this.workletNode) return;
+    this.bypassEnabled = !enabled;
+    this.workletNode.port.postMessage({
+      type: WORKLET_MESSAGE_TYPES.SET_BYPASS,
+      value: !enabled
+    });
+  }
+  isNoiseSuppressionEnabled() {
+    return !this.bypassEnabled;
+  }
+
+  /**
+   * 销毁 Core 级资源引用。
+   *
+   * 这里不关闭 AudioContext，因为 AudioContext 归上层 Processor 管理。
+   */
+  destroy() {
+    if (this.workletNode) {
+      this.workletNode.disconnect();
+      this.workletNode = null;
+    }
+    this.assets = null;
+    this.isInitialized = false;
+  }
+
+  /**
+   * 在需要 WorkletNode 之前确保 initialize() 已被调用。
+   */
+  ensureInitialized() {
+    if (!this.isInitialized) {
+      throw new Error('Processor not initialized. Call initialize() first.');
+    }
+  }
+};
+},{"./AssetLoader":3,"./aiNoiseSuppressionWorkletSource":4,"./createWorkletModule":5,"./workletMessageTypes":7}],2:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var AiNSCore = require('./AINoiseSuppressionCore');
+var logger = new Logger('AINoiseSuppression');
+
+/**
+ * AINoiseSuppression 的 MediaStream 处理器。
+ *
+ * 职责：
+ * 1. 接收原始 MediaStream / MediaStreamTrack；
+ * 2. 搭建 AudioContext -> MediaStreamSource -> AudioWorkletNode -> Destination 图；
+ * 3. 输出一个新的、可直接送入 JsSIP/RTCSession 的降噪后 MediaStream；
+ * 4. 负责 AudioContext 和音频节点的生命周期。
+ *
+ * 这个类是“音频图编排层”，不会关心 RTCSession 之类的会话状态。
+ */
+module.exports = class AiNSMediaStreamProcessor {
+  /**
+   * @param {Object} [options]
+   * @param {boolean} [options.enabled=true]
+   * @param {boolean} [options.preserveOtherTracks=true]
+   * @param {number} [options.sampleRate=48000]
+   * @param {number} [options.noiseReductionLevel=80]
+   * @param {Object} [options.assetConfig]
+   */
+  constructor(options = {}) {
+    var initialNoiseReductionLevel = typeof options.noiseReductionLevel === 'number' && !Number.isNaN(options.noiseReductionLevel) ? Math.max(0, Math.min(100, Math.floor(options.noiseReductionLevel))) : 80;
+    this.name = 'ai-noise-suppression-media-stream-processor';
+    this.processedTrack = null;
+    this.processedStream = null;
+    this.audioContext = null;
+    this.sourceNode = null;
+    this.workletNode = null;
+    this.destination = null;
+    this.enabled = options.enabled !== false;
+    this.originalTrack = null;
+    this.originalStream = null;
+    this.preserveOtherTracks = options.preserveOtherTracks !== false;
+    this.processor = new AiNSCore({
+      sampleRate: options.sampleRate || 48000,
+      noiseReductionLevel: initialNoiseReductionLevel,
+      assetConfig: options.assetConfig || null
+    });
+  }
+
+  /**
+   * 浏览器能力检查。
+   *
+   * 只有同时具备：
+   * - AudioContext
+   * - AudioWorkletNode
+   * - WebAssembly
+   *
+   * 才认为当前环境可以跑 AI 降噪。
+   */
+  static isSupported() {
+    return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
+  }
+
+  /**
+   * 初始化处理图并返回降噪后的 MediaStream。
+   *
+   * @param {MediaStream|MediaStreamTrack} input
+   * @returns {Promise<MediaStream>}
+   */
+  async init(input) {
+    this.setInput(input);
+    await this.ensureGraph();
+    if (!this.processedStream) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor.init: failed to create processed MediaStream');
+    }
+    return this.processedStream;
+  }
+
+  /**
+   * 重启处理链。
+   *
+   * 用于切换输入流、切换麦克风或重新建图的场景。
+   *
+   * @param {MediaStream|MediaStreamTrack} [input]
+   * @returns {Promise<MediaStream>}
+   */
+  async restart(input) {
+    if (input) {
+      this.setInput(input);
+    }
+    return this.init(this.originalStream || this.originalTrack);
+  }
+
+  /**
+   * 运行时开关 AI 降噪，不销毁图。
+   *
+   * @param {boolean} enable
+   * @returns {Promise<boolean>}
+   */
+  async setEnabled(enable) {
+    this.enabled = enable;
+    this.processor.setNoiseSuppressionEnabled(enable);
+    return this.enabled;
+  }
+  setSuppressionLevel(level) {
+    this.processor.setSuppressionLevel(level);
+  }
+  isEnabled() {
+    return this.enabled;
+  }
+
+  /**
+   * 暂停 AudioContext，用于页面隐藏、临时节能等场景。
+   */
+  async suspend() {
+    if (this.audioContext && this.audioContext.state === 'running') {
+      await this.audioContext.suspend();
+    }
+  }
+
+  /**
+   * 恢复 AudioContext。
+   */
+  async resume() {
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+  }
+
+  /**
+   * 销毁完整处理图。
+   *
+   * 会释放：
+   * - source/worklet/destination 节点
+   * - AudioContext
+   * - Core 内部的 WorkletNode 引用
+   */
+  async destroy() {
+    await this.teardownGraph();
+    this.processor.destroy();
+    this.originalTrack = null;
+    this.originalStream = null;
+  }
+
+  /**
+   * 统一规范输入类型，允许传入整个流或单个音轨。
+   *
+   * @param {MediaStream|MediaStreamTrack} input
+   */
+  setInput(input) {
+    if (input instanceof MediaStream) {
+      var audioTrack = input.getAudioTracks()[0];
+      if (!audioTrack) {
+        throw new Error('AINoiseSuppressionMediaStreamProcessor: input stream has no audio track');
+      }
+      this.originalStream = input;
+      this.originalTrack = audioTrack;
+      return;
+    }
+    if (!input || input.kind !== 'audio') {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor: input track must be audio');
+    }
+    this.originalTrack = input;
+    this.originalStream = new MediaStream([input]);
+  }
+
+  /**
+   * 真正创建或重建音频处理图。
+   *
+   * 调用顺序：
+   * 1. 保证 AudioContext 可用
+   * 2. 初始化 Core 资源
+   * 3. 创建 WorkletNode
+   * 4. 创建 source/destination
+   * 5. 连接整张图
+   * 6. 生成 processedStream
+   */
+  async ensureGraph() {
+    if (!this.originalTrack || !this.originalStream) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor: missing source audio track');
+    }
+    this.audioContext = this.audioContext || new AudioContext({
+      sampleRate: 48000
+    });
+    if (this.audioContext.state !== 'running') {
+      try {
+        await this.audioContext.resume();
+      } catch (error) {
+        logger.warn('ensureGraph() | audioContext resume failed', error);
+      }
+    }
+    await this.processor.initialize();
+    if (!this.workletNode) {
+      this.workletNode = await this.processor.createAudioWorkletNode(this.audioContext);
+    }
+    if (!this.destination) {
+      this.destination = this.audioContext.createMediaStreamDestination();
+    }
+    if (this.sourceNode) {
+      this.sourceNode.disconnect();
+    }
+    this.sourceNode = this.audioContext.createMediaStreamSource(new MediaStream([this.originalTrack]));
+    this.sourceNode.connect(this.workletNode).connect(this.destination);
+    this.rebuildProcessedStream();
+    await this.setEnabled(this.enabled);
+  }
+
+  /**
+   * 根据 destination 中的音轨重建最终输出流。
+   *
+   * 默认保留原始流中的非音频轨道，这样接入 RTCSession 时：
+   * - 音频会换成降噪后的轨
+   * - 视频轨仍沿用原始轨道
+   */
+  rebuildProcessedStream() {
+    if (!this.destination) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor: missing destination node');
+    }
+    var processedTrack = this.destination.stream.getAudioTracks()[0];
+    if (!processedTrack) {
+      throw new Error('AINoiseSuppressionMediaStreamProcessor: worklet destination did not produce an audio track');
+    }
+    this.processedTrack = processedTrack;
+    var outputTracks = [processedTrack];
+    if (this.preserveOtherTracks && this.originalStream) {
+      this.originalStream.getTracks().forEach(track => {
+        if (track.kind !== 'audio') {
+          outputTracks.push(track);
+        }
+      });
+    }
+    this.processedStream = new MediaStream(outputTracks);
+  }
+
+  /**
+   * 拆除音频图并尽量吞掉清理阶段的非关键异常。
+   *
+   * 这么做是为了避免会话结束时因个别节点状态异常而阻断整体清理流程。
+   */
+  async teardownGraph() {
+    try {
+      if (this.workletNode) {
+        this.workletNode.disconnect();
+        this.workletNode = null;
+      }
+      if (this.sourceNode) {
+        this.sourceNode.disconnect();
+        this.sourceNode = null;
+      }
+      if (this.destination) {
+        this.destination.disconnect();
+        this.destination = null;
+      }
+      if (this.audioContext) {
+        await this.audioContext.close();
+        this.audioContext = null;
+      }
+    } catch (error) {
+      logger.warn('teardownGraph() | ignore cleanup error', error);
+    } finally {
+      this.processedTrack = null;
+      this.processedStream = null;
+    }
+  }
+};
+},{"../Logger":46,"./AINoiseSuppressionCore":1}],3:[function(require,module,exports){
+"use strict";
+
+/**
+ * AINoiseSuppression 资源加载器。
+ *
+ * 职责：
+ * 1. 统一管理 WASM 与模型文件的根路径。
+ * 2. 生成固定的资源 URL，避免业务层散落路径拼接逻辑。
+ * 3. 提供基础的二进制拉取能力，供 Core 初始化阶段复用。
+ *
+ * 说明：
+ * - 这里不做 WebAudio、Worklet、MediaStream 相关逻辑，保持单一职责。
+ * - 若后续要改成私有 CDN、本地静态目录或按环境切换路径，只改这里即可。
+ */
+var DEFAULT_CDN_URL = './static';
+class AssetLoader {
+  /**
+   * @param {Object} [config]
+   * @param {string} [config.cdnUrl] AINoiseSuppression 静态资源根路径。
+   */
+  constructor(config = {}) {
+    this.cdnUrl = config.cdnUrl || DEFAULT_CDN_URL;
+  }
+
+  /**
+   * 根据根路径拼出完整资源地址。
+   *
+   * @param {string} relativePath AINoiseSuppression 资源相对路径。
+   * @returns {string}
+   */
+  getCdnUrl(relativePath) {
+    return `${this.cdnUrl}/${relativePath}`;
+  }
+
+  /**
+   * 返回当前版本 AINoiseSuppression 所需的资源清单。
+   *
+   * 这里固定了：
+   * - `ans.js`：WASM 胶水代码
+   * - `ans_bg.wasm`：WASM 运行时
+   * - `ans_onnx.tar.gz`：模型压缩包
+   *
+   * @returns {{glue: string, wasm: string, model: string}}
+   */
+  getAssetUrls() {
+    return {
+      glue: this.getCdnUrl('v2/ans.js'),
+      wasm: this.getCdnUrl('v2/ans.wasm'),
+      model: this.getCdnUrl('v2/ans_onnx.tar.gz')
+    };
+  }
+
+  /**
+   * 拉取远端二进制资源并返回 ArrayBuffer。
+   *
+   * @param {string} url
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async fetchAsset(url) {
+    var response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+    }
+    return response.arrayBuffer();
+  }
+}
+var defaultLoader = null;
+
+/**
+ * 获取默认 AssetLoader。
+ *
+ * 设计成单例的原因：
+ * - 同一个页面通常只需要一套资源定位配置；
+ * - 避免重复创建 loader 对象；
+ * - 保留通过新 config 覆盖默认实例的能力。
+ *
+ * @param {Object} [config]
+ * @returns {AssetLoader}
+ */
+function getAssetLoader(config) {
+  if (!defaultLoader || config) {
+    defaultLoader = new AssetLoader(config);
+  }
+  return defaultLoader;
+}
+exports.AssetLoader = AssetLoader;
+exports.getAssetLoader = getAssetLoader;
+exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
+},{}],4:[function(require,module,exports){
+"use strict";
+
+/**
+ * AINoiseSuppression AudioWorklet 内联源码。
+ *
+ * 为什么单独放在一个文件：
+ * - 这段源码体积大、细节多，和主线程控制逻辑混在一起会显著降低可读性；
+ * - Worklet 运行在独立作用域，不能直接复用主线程模块依赖；
+ * - 未来若要替换为外链 Worklet 文件、压缩版本或自动生成版本，改动范围最小。
+ *
+ * 这段代码主要完成：
+ * 1. 在 Worklet 线程内同步初始化 WASM 模块；
+ * 2. 根据模型句柄获取 frameLength；
+ * 3. 使用环形缓冲区适配 WebAudio 128-sample quantum 与 DF3 固定帧长；
+ * 4. 提供 bypass 与 suppressionLevel 的实时控制。
+ */
+module.exports = String.raw`(function () {
+  'use strict';
+
+  let cachedFloat32ArrayMemory0 = null;
+  let cachedUint8ArrayMemory0 = null;
+  let cachedTextDecoder = null;
+  let WASM_VECTOR_LEN = 0;
+  let wasmModule;
+  let wasmInstance;
+  let wasm;
+
+  function getTextDecoder()
+  {
+    if (cachedTextDecoder === null && typeof TextDecoder !== 'undefined')
+    {
+      cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+      cachedTextDecoder.decode();
+    }
+
+    return cachedTextDecoder;
+  }
+
+  const MAX_SAFARI_DECODE_BYTES = 2146435072;
+  let numBytesDecoded = 0;
+
+  function getFloat32ArrayMemory0()
+  {
+    if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0)
+    {
+      cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
+    }
+
+    return cachedFloat32ArrayMemory0;
+  }
+
+  function getUint8ArrayMemory0()
+  {
+    if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0)
+    {
+      cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+    }
+
+    return cachedUint8ArrayMemory0;
+  }
+
+  function decodeText(ptr, len)
+  {
+    const decoder = getTextDecoder();
+
+    if (!decoder)
+    {
+      return '';
+    }
+
+    numBytesDecoded += len;
+
+    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES)
+    {
+      cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+      cachedTextDecoder.decode();
+      numBytesDecoded = len;
+    }
+
+    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+  }
+
+  function getStringFromWasm0(ptr, len)
+  {
+    return decodeText(ptr >>> 0, len);
+  }
+
+  function addToExternrefTable0(obj)
+  {
+    const idx = wasm.__externref_table_alloc();
+
+    wasm.__wbindgen_externrefs.set(idx, obj);
+
+    return idx;
+  }
+
+  function handleError(f, args)
+  {
+    try
+    {
+      return f.apply(this, args);
+    }
+    catch (e)
+    {
+      const idx = addToExternrefTable0(e);
+
+      wasm.__wbindgen_exn_store(idx);
+    }
+  }
+
+  function passArray8ToWasm0(arg, malloc)
+  {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+
+    getUint8ArrayMemory0().set(arg, ptr);
+    WASM_VECTOR_LEN = arg.length;
+
+    return ptr;
+  }
+
+  function passArrayF32ToWasm0(arg, malloc)
+  {
+    const ptr = malloc(arg.length * 4, 4) >>> 0;
+
+    getFloat32ArrayMemory0().set(arg, ptr / 4);
+    WASM_VECTOR_LEN = arg.length;
+
+    return ptr;
+  }
+
+  function ans_create(modelBytes, attenLim)
+  {
+    const ptr0 = passArray8ToWasm0(modelBytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ans_create(ptr0, len0, attenLim);
+
+    return ret >>> 0;
+  }
+
+  function ans_get_frame_length(st)
+  {
+    const ret = wasm.ans_get_frame_length(st);
+
+    return ret >>> 0;
+  }
+
+  function ans_process_frame(st, input)
+  {
+    const ptr0 = passArrayF32ToWasm0(input, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+
+    return wasm.ans_process_frame(st, ptr0, len0);
+  }
+
+  function ans_set_atten_lim(st, limDb)
+  {
+    wasm.ans_set_atten_lim(st, limDb);
+  }
+
+  function __wbg_get_imports()
+  {
+    const import0 = {
+      __proto__ : null,
+      __wbg___wbindgen_is_function_754e9f305ff6029e(arg0)
+      {
+        return typeof arg0 === 'function';
+      },
+      __wbg___wbindgen_is_object_56732c2bc353f41d(arg0)
+      {
+        return typeof arg0 === 'object' && arg0 !== null;
+      },
+      __wbg___wbindgen_is_string_c236cabd84a4d769(arg0)
+      {
+        return typeof arg0 === 'string';
+      },
+      __wbg___wbindgen_is_undefined_67b456be8673d3d7(arg0)
+      {
+        return arg0 === undefined;
+      },
+      __wbg___wbindgen_memory_fbc4c3e30b409f08()
+      {
+        return wasm.memory;
+      },
+      __wbg___wbindgen_throw_1506f2235d1bdba0(arg0, arg1)
+      {
+        throw new Error(getStringFromWasm0(arg0, arg1));
+      },
+      __wbg_buffer_dab8cf7849f66ff8(arg0)
+      {
+        return arg0.buffer;
+      },
+      __wbg_call_4ffe5b44583f9954()
+      {
+        return handleError(function(arg0, arg1, arg2)
+        {
+          return arg0.call(arg1, arg2);
+        }, arguments);
+      },
+      __wbg_call_aa058b3a50f1c0a1()
+      {
+        return handleError(function(arg0, arg1)
+        {
+          return arg0.call(arg1);
+        }, arguments);
+      },
+      __wbg_crypto_90efa04a103d6db2(arg0)
+      {
+        return arg0.crypto;
+      },
+      __wbg_getRandomValues_b9488c03d6ecdc0d()
+      {
+        return handleError(function(arg0, arg1)
+        {
+          arg0.getRandomValues(arg1);
+        }, arguments);
+      },
+      __wbg_globalThis_d76c93eb4fcb97ff()
+      {
+        return handleError(function()
+        {
+          return globalThis.globalThis;
+        }, arguments);
+      },
+      __wbg_global_d5571d09e84f338f()
+      {
+        return handleError(function()
+        {
+          return global.global;
+        }, arguments);
+      },
+      __wbg_msCrypto_68b2f4999b2901b0(arg0)
+      {
+        return arg0.msCrypto;
+      },
+      __wbg_new_1c499b98736d881b(arg0)
+      {
+        return new Float32Array(arg0);
+      },
+      __wbg_new_f3375b05b49ca4cb(arg0)
+      {
+        return new Uint8Array(arg0);
+      },
+      __wbg_new_no_args_4856846a7397439f(arg0, arg1)
+      {
+        return new Function(getStringFromWasm0(arg0, arg1));
+      },
+      __wbg_new_with_byte_offset_and_length_ae71716dc4a8aa2f(arg0, arg1, arg2)
+      {
+        return new Float32Array(arg0, arg1 >>> 0, arg2 >>> 0);
+      },
+      __wbg_new_with_byte_offset_and_length_c74776d039a72b10(arg0, arg1, arg2)
+      {
+        return new Uint8Array(arg0, arg1 >>> 0, arg2 >>> 0);
+      },
+      __wbg_new_with_length_135fb0a3b25f39fc(arg0)
+      {
+        return new Uint8Array(arg0 >>> 0);
+      },
+      __wbg_node_046e1cb1b8cf3d92(arg0)
+      {
+        return arg0.node;
+      },
+      __wbg_process_7b13606d1afee88f(arg0)
+      {
+        return arg0.process;
+      },
+      __wbg_randomFillSync_73a2861b2e659112()
+      {
+        return handleError(function(arg0, arg1)
+        {
+          arg0.randomFillSync(arg1);
+        }, arguments);
+      },
+      __wbg_require_01ac6430ef887047()
+      {
+        return handleError(function()
+        {
+          return module.require;
+        }, arguments);
+      },
+      __wbg_self_84d02e00450d52f3()
+      {
+        return handleError(function()
+        {
+          return self.self;
+        }, arguments);
+      },
+      __wbg_set_8ab55bbf9f2507cd(arg0, arg1, arg2)
+      {
+        arg0.set(arg1, arg2 >>> 0);
+      },
+      __wbg_subarray_a1d2eeb856ccb090(arg0, arg1, arg2)
+      {
+        return arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+      },
+      __wbg_versions_6963303269777792(arg0)
+      {
+        return arg0.versions;
+      },
+      __wbg_window_58f68528f5b015de()
+      {
+        return handleError(function()
+        {
+          return window.window;
+        }, arguments);
+      },
+      __wbindgen_cast_0000000000000001(arg0, arg1)
+      {
+        return getStringFromWasm0(arg0, arg1);
+      },
+      __wbindgen_init_externref_table()
+      {
+        const table = wasm.__wbindgen_externrefs;
+        const offset = table.grow(4);
+
+        table.set(0, undefined);
+        table.set(offset + 0, undefined);
+        table.set(offset + 1, null);
+        table.set(offset + 2, true);
+        table.set(offset + 3, false);
+      }
+    };
+
+    return {
+      __proto__   : null,
+      './ans_bg.js' : import0
+    };
+  }
+
+  function __wbg_finalize_init(instance, module)
+  {
+    wasmInstance = instance;
+    wasm = instance.exports;
+    wasmModule = module;
+    cachedFloat32ArrayMemory0 = null;
+    cachedUint8ArrayMemory0 = null;
+    wasm.__wbindgen_start();
+
+    return wasm;
+  }
+
+  function initSync(module)
+  {
+    if (wasm !== undefined) return wasm;
+
+    if (module !== undefined && Object.getPrototypeOf(module) === Object.prototype)
+    {
+      ({ module } = module);
+    }
+
+    const imports = __wbg_get_imports();
+
+    if (!(module instanceof WebAssembly.Module))
+    {
+      module = new WebAssembly.Module(module);
+    }
+
+    const instance = new WebAssembly.Instance(module, imports);
+
+    return __wbg_finalize_init(instance, module);
+  }
+
+  const WorkletMessageTypes = {
+    SET_SUPPRESSION_LEVEL : 'SET_SUPPRESSION_LEVEL',
+    SET_BYPASS            : 'SET_BYPASS'
+  };
+
+  class DeepFilterAudioProcessor extends AudioWorkletProcessor
+  {
+    constructor(options)
+    {
+      super();
+      this.dfModel = null;
+      this.inputWritePos = 0;
+      this.inputReadPos = 0;
+      this.outputWritePos = 0;
+      this.outputReadPos = 0;
+      this.bypass = false;
+      this.isInitialized = false;
+      this.tempFrame = null;
+      this.bufferSize = 8192;
+      this.inputBuffer = new Float32Array(this.bufferSize);
+      this.outputBuffer = new Float32Array(this.bufferSize);
+
+      try
+      {
+        initSync(options.processorOptions.wasmBytes);
+        const modelBytes = new Uint8Array(options.processorOptions.modelBytes);
+        const handle = ans_create(modelBytes, options.processorOptions.suppressionLevel ?? 50);
+        const frameLength = ans_get_frame_length(handle);
+
+        this.dfModel = { handle, frameLength };
+        this.bufferSize = frameLength * 4;
+        this.inputBuffer = new Float32Array(this.bufferSize);
+        this.outputBuffer = new Float32Array(this.bufferSize);
+        this.tempFrame = new Float32Array(frameLength);
+        this.isInitialized = true;
+        this.port.onmessage = (event) => this.handleMessage(event.data);
+      }
+      catch (error)
+      {
+        console.error('Failed to initialize DeepFilter in AudioWorklet:', error);
+        this.isInitialized = false;
+      }
+    }
+
+    handleMessage(data)
+    {
+      switch (data.type)
+      {
+        case WorkletMessageTypes.SET_SUPPRESSION_LEVEL:
+          if (this.dfModel && typeof data.value === 'number')
+          {
+            const level = Math.max(0, Math.min(100, Math.floor(data.value)));
+            ans_set_atten_lim(this.dfModel.handle, level);
+          }
+          break;
+        case WorkletMessageTypes.SET_BYPASS:
+          this.bypass = Boolean(data.value);
+          break;
+      }
+    }
+
+    getInputAvailable()
+    {
+      return (this.inputWritePos - this.inputReadPos + this.bufferSize) % this.bufferSize;
+    }
+
+    getOutputAvailable()
+    {
+      return (this.outputWritePos - this.outputReadPos + this.bufferSize) % this.bufferSize;
+    }
+
+    process(inputList, outputList)
+    {
+      const sourceLimit = Math.min(inputList.length, outputList.length);
+      const input = inputList[0] && inputList[0][0];
+
+      if (!input) return true;
+
+      if (!this.isInitialized || !this.dfModel || this.bypass || !this.tempFrame)
+      {
+        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
+        {
+          const output = outputList[inputNum];
+          const channelCount = output.length;
+
+          for (let channelNum = 0; channelNum < channelCount; channelNum++)
+          {
+            output[channelNum].set(input);
+          }
+        }
+
+        return true;
+      }
+
+      for (let i = 0; i < input.length; i++)
+      {
+        this.inputBuffer[this.inputWritePos] = input[i];
+        this.inputWritePos = (this.inputWritePos + 1) % this.bufferSize;
+      }
+
+      const frameLength = this.dfModel.frameLength;
+
+      while (this.getInputAvailable() >= frameLength)
+      {
+        for (let i = 0; i < frameLength; i++)
+        {
+          this.tempFrame[i] = this.inputBuffer[this.inputReadPos];
+          this.inputReadPos = (this.inputReadPos + 1) % this.bufferSize;
+        }
+
+        const processed = ans_process_frame(this.dfModel.handle, this.tempFrame);
+
+        for (let i = 0; i < processed.length; i++)
+        {
+          this.outputBuffer[this.outputWritePos] = processed[i];
+          this.outputWritePos = (this.outputWritePos + 1) % this.bufferSize;
+        }
+      }
+
+      const outputAvailable = this.getOutputAvailable();
+
+      if (outputAvailable >= 128)
+      {
+        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
+        {
+          const output = outputList[inputNum];
+          const channelCount = output.length;
+
+          for (let channelNum = 0; channelNum < channelCount; channelNum++)
+          {
+            const outputChannel = output[channelNum];
+            let readPos = this.outputReadPos;
+
+            for (let i = 0; i < 128; i++)
+            {
+              outputChannel[i] = this.outputBuffer[readPos];
+              readPos = (readPos + 1) % this.bufferSize;
+            }
+          }
+        }
+
+        this.outputReadPos = (this.outputReadPos + 128) % this.bufferSize;
+      }
+      else
+      {
+        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
+        {
+          const output = outputList[inputNum];
+          const channelCount = output.length;
+
+          for (let channelNum = 0; channelNum < channelCount; channelNum++)
+          {
+            output[channelNum].fill(0);
+          }
+        }
+      }
+
+      return true;
+    }
+  }
+
+  registerProcessor('ai-noise-suppression-audio-processor', DeepFilterAudioProcessor);
+})();`;
+},{}],5:[function(require,module,exports){
+"use strict";
+
+/**
+ * 将内联 Worklet 源码注册到 AudioWorklet。
+ *
+ * 为什么做成独立工具：
+ * - Core 只关心“如何创建 WorkletNode”，不关心 Blob URL 细节；
+ * - 便于后续替换为外链 worklet 文件或更复杂的缓存策略；
+ * - 便于集中处理 URL.revokeObjectURL 的资源回收。
+ *
+ * @param {AudioContext} audioContext
+ * @param {string} inlineCode
+ * @returns {Promise<void>}
+ */
+module.exports = async function createWorkletModule(audioContext, inlineCode) {
+  var blob = new Blob([inlineCode], {
+    type: 'application/javascript'
+  });
+  var blobUrl = URL.createObjectURL(blob);
+  try {
+    await audioContext.audioWorklet.addModule(blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+};
+},{}],6:[function(require,module,exports){
+"use strict";
+
+var AiNSMediaStreamProcessor = require('./AINoiseSuppressionMediaStreamProcessor');
+
+/**
+ * AINoiseSuppression 对外门面。
+ *
+ * 这个类作为唯一公开入口，负责实例化和管理降噪处理器。
+ */
+class AiNSEngine {
+  /**
+   * @param {Object} [options]
+   */
+  constructor(options = {}) {
+    this.options = options;
+    this.processor = new AiNSMediaStreamProcessor(options);
+    this.inputStream = null;
+    this.outputStream = null;
+  }
+
+  /**
+   * 以“引擎模式”初始化降噪输出流。
+   *
+   * @param {{inputStream: MediaStream}} [params]
+   * @returns {Promise<MediaStream>}
+   */
+  async init(params = {}) {
+    if (!params.inputStream) {
+      throw new Error('inputStream required');
+    }
+    this.inputStream = params.inputStream;
+    this.outputStream = await this.processor.init(this.inputStream);
+    return this.outputStream;
+  }
+
+  /**
+   * 获取最近一次 init 后的输出流。
+   *
+   * @returns {MediaStream|null}
+   */
+  getOutputStream() {
+    return this.outputStream;
+  }
+
+  /**
+   * 兼容 RTCSession 的实例式 mediaStreamProcessor 接口。
+   *
+   * @param {MediaStream} inputStream
+   * @returns {Promise<MediaStream>}
+   */
+  async process(inputStream) {
+    return this.init({
+      inputStream
+    });
+  }
+
+  /**
+   * 暴露当前实例内部处理器，供业务层在已实例化前提下调试或调参。
+   *
+   * @returns {AiNSMediaStreamProcessor}
+   */
+  getProcessor() {
+    return this.processor;
+  }
+
+  /**
+   * 动态开关 AI 降噪。
+   *
+   * @param {boolean} enable
+   * @returns {Promise<boolean>}
+   */
+  setEnabled(enable) {
+    return this.processor.setEnabled(enable);
+  }
+
+  /**
+   * 动态调整降噪强度。
+   *
+   * @param {number} level
+   */
+  setSuppressionLevel(level) {
+    this.processor.setSuppressionLevel(level);
+  }
+
+  /**
+   * 销毁引擎内部所有运行时资源。
+   */
+  async destroy() {
+    await this.processor.destroy();
+    this.inputStream = null;
+    this.outputStream = null;
+  }
+
+  /**
+   * 浏览器能力探测。
+   */
+  static isSupported() {
+    return AiNSMediaStreamProcessor.isSupported();
+  }
+}
+module.exports = AiNSEngine;
+},{"./AINoiseSuppressionMediaStreamProcessor":2}],7:[function(require,module,exports){
+"use strict";
+
+/**
+ * 主线程与 AudioWorklet 之间的消息类型。
+ *
+ * 目前只保留两个最小控制面：
+ * - `SET_SUPPRESSION_LEVEL`：动态调整降噪强度
+ * - `SET_BYPASS`：启用/停用 AI 降噪，保留原始音频透传
+ *
+ * 单独抽文件的目的是避免主线程和 worklet 字符串里出现“魔法字符串”。
+ */
+module.exports = {
+  SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
+  SET_BYPASS: 'SET_BYPASS'
+};
+},{}],8:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23,7 +1194,7 @@ var BFCPLib = {
   'AttributeName': AttributeName
 };
 module.exports = BFCPLib;
-},{"./lib/attributes/name.js":9,"./lib/messages/primitive.js":26,"./lib/messages/requestStatusValue.js":27,"./lib/user/user.js":30}],2:[function(require,module,exports){
+},{"./lib/attributes/name.js":16,"./lib/messages/primitive.js":33,"./lib/messages/requestStatusValue.js":34,"./lib/user/user.js":37}],9:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -193,7 +1364,7 @@ class Attribute {
   }
 }
 module.exports = Attribute;
-},{"../parser/complements.js":28,"./format.js":7,"./type.js":13}],3:[function(require,module,exports){
+},{"../parser/complements.js":35,"./format.js":14,"./type.js":20}],10:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -219,7 +1390,7 @@ class FloorId extends Attribute {
   }
 }
 module.exports = FloorId;
-},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],4:[function(require,module,exports){
+},{"./attribute.js":9,"./format.js":14,"./length.js":15,"./type.js":20}],11:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -245,7 +1416,7 @@ class FloorRequestId extends Attribute {
   }
 }
 module.exports = FloorRequestId;
-},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],5:[function(require,module,exports){
+},{"./attribute.js":9,"./format.js":14,"./length.js":15,"./type.js":20}],12:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -277,7 +1448,7 @@ class FloorRequestInformation extends Attribute {
   }
 }
 module.exports = FloorRequestInformation;
-},{"./attribute.js":2,"./floorRequestStatus.js":6,"./format.js":7,"./length.js":8,"./type.js":13}],6:[function(require,module,exports){
+},{"./attribute.js":9,"./floorRequestStatus.js":13,"./format.js":14,"./length.js":15,"./type.js":20}],13:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -308,7 +1479,7 @@ class FloorRequestStatus extends Attribute {
   }
 }
 module.exports = FloorRequestStatus;
-},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./requestStatus.js":10,"./type.js":13}],7:[function(require,module,exports){
+},{"./attribute.js":9,"./format.js":14,"./length.js":15,"./requestStatus.js":17,"./type.js":20}],14:[function(require,module,exports){
 "use strict";
 
 /**
@@ -361,7 +1532,7 @@ class Format {
   }
 }
 module.exports = Format;
-},{}],8:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 
 /**
@@ -554,7 +1725,7 @@ class Length {
   }
 }
 module.exports = Length;
-},{}],9:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 
 /**
@@ -745,7 +1916,7 @@ class Name {
   }
 }
 module.exports = Name;
-},{}],10:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -776,7 +1947,7 @@ class RequestStatus extends Attribute {
   }
 }
 module.exports = RequestStatus;
-},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],11:[function(require,module,exports){
+},{"./attribute.js":9,"./format.js":14,"./length.js":15,"./type.js":20}],18:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -810,7 +1981,7 @@ class SupportedAttributes extends Attribute {
   }
 }
 module.exports = SupportedAttributes;
-},{"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],12:[function(require,module,exports){
+},{"./attribute.js":9,"./format.js":14,"./length.js":15,"./type.js":20}],19:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -856,7 +2027,7 @@ class SupportedPrimitives extends Attribute {
   }
 }
 module.exports = SupportedPrimitives;
-},{"../messages/primitive.js":26,"./attribute.js":2,"./format.js":7,"./length.js":8,"./type.js":13}],13:[function(require,module,exports){
+},{"../messages/primitive.js":33,"./attribute.js":9,"./format.js":14,"./length.js":15,"./type.js":20}],20:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1049,7 +2220,7 @@ class Type {
   }
 }
 module.exports = Type;
-},{}],14:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -1157,7 +2328,7 @@ class CommonHeader {
   }
 }
 module.exports = CommonHeader;
-},{"../parser/complements.js":28}],15:[function(require,module,exports){
+},{"../parser/complements.js":35}],22:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1187,7 +2358,7 @@ class FloorQuery extends Message {
   }
 }
 module.exports = FloorQuery;
-},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],16:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],23:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1217,7 +2388,7 @@ class FloorRelease extends Message {
   }
 }
 module.exports = FloorRelease;
-},{"../attributes/floorRequestId.js":4,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],17:[function(require,module,exports){
+},{"../attributes/floorRequestId.js":11,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],24:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1247,7 +2418,7 @@ class FloorRequest extends Message {
   }
 }
 module.exports = FloorRequest;
-},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],18:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],25:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1279,7 +2450,7 @@ class FloorRequestStatus extends Message {
   }
 }
 module.exports = FloorRequestStatus;
-},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],19:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":12,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],26:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1309,7 +2480,7 @@ class FloorRequestStatusAck extends Message {
   }
 }
 module.exports = FloorRequestStatusAck;
-},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],20:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],27:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1341,7 +2512,7 @@ class FloorStatus extends Message {
   }
 }
 module.exports = FloorStatus;
-},{"../attributes/floorRequestInformation.js":5,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],21:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":12,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],28:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1371,7 +2542,7 @@ class FloorStatusAck extends Message {
   }
 }
 module.exports = FloorStatusAck;
-},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],22:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],29:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1401,7 +2572,7 @@ class Hello extends Message {
   }
 }
 module.exports = Hello;
-},{"../attributes/floorId.js":3,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],23:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],30:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -1431,7 +2602,7 @@ class HelloAck extends Message {
   }
 }
 module.exports = HelloAck;
-},{"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"./commonHeader.js":14,"./message.js":24,"./payloadLength.js":25,"./primitive.js":26}],24:[function(require,module,exports){
+},{"../attributes/supportedAttributes.js":18,"../attributes/supportedPrimitives.js":19,"./commonHeader.js":21,"./message.js":31,"./payloadLength.js":32,"./primitive.js":33}],31:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1514,7 +2685,7 @@ class Message {
   }
 }
 module.exports = Message;
-},{}],25:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1679,7 +2850,7 @@ class PayloadLength {
   }
 }
 module.exports = PayloadLength;
-},{}],26:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1866,7 +3037,7 @@ class Primitive {
   }
 }
 module.exports = Primitive;
-},{}],27:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1949,7 +3120,7 @@ class RequestStatusValue {
   }
 }
 module.exports = RequestStatusValue;
-},{}],28:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1994,7 +3165,7 @@ class Complements {
   }
 }
 module.exports = Complements;
-},{}],29:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 "use strict";
 
 var FloorRequest = require('../messages/floorRequest.js');
@@ -2272,7 +3443,7 @@ class Parser {
   }
 }
 module.exports = Parser;
-},{"../attributes/floorId.js":3,"../attributes/floorRequestId.js":4,"../attributes/floorRequestInformation.js":5,"../attributes/floorRequestStatus.js":6,"../attributes/requestStatus.js":10,"../attributes/supportedAttributes.js":11,"../attributes/supportedPrimitives.js":12,"../attributes/type.js":13,"../messages/commonHeader.js":14,"../messages/floorQuery.js":15,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../parser/complements.js":28}],30:[function(require,module,exports){
+},{"../attributes/floorId.js":10,"../attributes/floorRequestId.js":11,"../attributes/floorRequestInformation.js":12,"../attributes/floorRequestStatus.js":13,"../attributes/requestStatus.js":17,"../attributes/supportedAttributes.js":18,"../attributes/supportedPrimitives.js":19,"../attributes/type.js":20,"../messages/commonHeader.js":21,"../messages/floorQuery.js":22,"../messages/floorRelease.js":23,"../messages/floorRequest.js":24,"../messages/floorRequestStatus.js":25,"../messages/floorRequestStatusAck.js":26,"../messages/floorStatus.js":27,"../messages/floorStatusAck.js":28,"../messages/hello.js":29,"../messages/helloAck.js":30,"../messages/primitive.js":33,"../parser/complements.js":35}],37:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -2534,7 +3705,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":9,"../messages/floorRelease.js":16,"../messages/floorRequest.js":17,"../messages/floorRequestStatus.js":18,"../messages/floorRequestStatusAck.js":19,"../messages/floorStatus.js":20,"../messages/floorStatusAck.js":21,"../messages/hello.js":22,"../messages/helloAck.js":23,"../messages/primitive.js":26,"../messages/requestStatusValue.js":27,"../parser/parser.js":29,"buffer":92}],31:[function(require,module,exports){
+},{"../attributes/name.js":16,"../messages/floorRelease.js":23,"../messages/floorRequest.js":24,"../messages/floorRequestStatus.js":25,"../messages/floorRequestStatusAck.js":26,"../messages/floorStatus.js":27,"../messages/floorStatusAck.js":28,"../messages/hello.js":29,"../messages/helloAck.js":30,"../messages/primitive.js":33,"../messages/requestStatusValue.js":34,"../parser/parser.js":36,"buffer":99}],38:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -2783,11 +3954,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Socket":71,"./URI":77,"./Utils":78}],32:[function(require,module,exports){
+},{"./Constants":39,"./Exceptions":43,"./Grammar":44,"./Socket":78,"./URI":84,"./Utils":85}],39:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212062844 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212124028 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -3015,7 +4186,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{}],33:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -3254,7 +4425,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":32,"./Dialog/RequestSender":34,"./Logger":39,"./SIPMessage":70,"./Transactions":74,"./Utils":78}],34:[function(require,module,exports){
+},{"./Constants":39,"./Dialog/RequestSender":41,"./Logger":46,"./SIPMessage":77,"./Transactions":81,"./Utils":85}],41:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -3349,7 +4520,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":32,"../RequestSender":69,"../Transactions":74}],35:[function(require,module,exports){
+},{"../Constants":39,"../RequestSender":76,"../Transactions":81}],42:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -3528,7 +4699,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":39,"./Utils":78}],36:[function(require,module,exports){
+},{"./Logger":46,"./Utils":85}],43:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -3572,7 +4743,7 @@ module.exports = {
   NotSupportedError,
   NotReadyError
 };
-},{}],37:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -15980,7 +17151,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":59,"./URI":77}],38:[function(require,module,exports){
+},{"./NameAddrHeader":66,"./URI":84}],45:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -15996,7 +17167,8 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.0.405212062844');
+var AINoiseSuppression = require('./AINoiseSuppression/index.js');
+debug('version %s', '1.13.0.405212124028');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16027,6 +17199,7 @@ module.exports = {
   WebSocketInterface,
   Mixer,
   VirtualBackground,
+  AINoiseSuppression,
   Grammar,
   getStats,
   // Expose the debug module.
@@ -16035,10 +17208,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212062844';
+    return '1.13.0.405212124028';
   }
 };
-},{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":59,"./Stats":72,"./UA":76,"./URI":77,"./Utils":78,"./VirtualBackground/index.js":80,"./WebSocketInterface":88,"debug":93}],39:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":6,"./BFCP":8,"./Constants":39,"./Exceptions":43,"./Grammar":44,"./Mixer":48,"./NameAddrHeader":66,"./Stats":79,"./UA":83,"./URI":84,"./Utils":85,"./VirtualBackground/index.js":87,"./WebSocketInterface":95,"debug":100}],46:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -16140,7 +17313,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":93}],40:[function(require,module,exports){
+},{"debug":100}],47:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -16353,7 +17526,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./URI":77,"./Utils":78,"events":91}],41:[function(require,module,exports){
+},{"./Constants":39,"./Exceptions":43,"./Logger":46,"./RequestSender":76,"./SIPMessage":77,"./URI":84,"./Utils":85,"events":98}],48:[function(require,module,exports){
 "use strict";
 
 /**
@@ -16367,7 +17540,7 @@ module.exports = class Message extends EventEmitter {
  * @see module:MixerCore/MixerController
  */
 module.exports = require('./MixerCore/MixerController');
-},{"./MixerCore/MixerController":45}],42:[function(require,module,exports){
+},{"./MixerCore/MixerController":52}],49:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17578,7 +18751,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{}],43:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17929,7 +19102,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],44:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -18128,7 +19301,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":39}],45:[function(require,module,exports){
+},{"../Logger":46}],52:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -19175,7 +20348,7 @@ module.exports = class MediaStreamMixer {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
 };
-},{"../Logger":39,"./AudioMixer":42,"./LayoutEngine":43,"./MixerConfig":44,"./MixerDomAdapter":46,"./OutputStreamManager":47,"./RenderLoop":48,"./SourceRegistry":49,"./WatermarkManager":50}],46:[function(require,module,exports){
+},{"../Logger":46,"./AudioMixer":49,"./LayoutEngine":50,"./MixerConfig":51,"./MixerDomAdapter":53,"./OutputStreamManager":54,"./RenderLoop":55,"./SourceRegistry":56,"./WatermarkManager":57}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19317,7 +20490,7 @@ class MixerDomAdapter {
   }
 }
 module.exports = MixerDomAdapter;
-},{}],47:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -19928,7 +21101,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],48:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20427,7 +21600,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MixerRenderer/MainCanvas2DRenderer":52,"../MixerRenderer/MainWebGL2Renderer":53,"../MixerRenderer/RendererFactory":54,"../MixerRenderer/WorkerRenderer":55}],49:[function(require,module,exports){
+},{"../MixerRenderer/MainCanvas2DRenderer":59,"../MixerRenderer/MainWebGL2Renderer":60,"../MixerRenderer/RendererFactory":61,"../MixerRenderer/WorkerRenderer":62}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20795,7 +21968,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],50:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21257,7 +22430,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],51:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21398,7 +22571,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],52:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21578,7 +22751,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":51}],53:[function(require,module,exports){
+},{"./BaseRenderer":58}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21972,7 +23145,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._activeMirrorX = null;
   }
 };
-},{"./BaseRenderer":51,"./helpers/color":56,"./helpers/gl":57}],54:[function(require,module,exports){
+},{"./BaseRenderer":58,"./helpers/color":63,"./helpers/gl":64}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22139,7 +23312,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":52,"./MainWebGL2Renderer":53,"./WorkerRenderer":55}],55:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":59,"./MainWebGL2Renderer":60,"./WorkerRenderer":62}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22721,7 +23894,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":51,"./workerScript":58}],56:[function(require,module,exports){
+},{"./BaseRenderer":58,"./workerScript":65}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22814,7 +23987,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],57:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22889,7 +24062,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],58:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22915,7 +24088,7 @@ exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
   return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
 };
-},{}],59:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -23004,7 +24177,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":37,"./URI":77}],60:[function(require,module,exports){
+},{"./Grammar":44,"./URI":84}],67:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -23210,7 +24383,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":32,"./Exceptions":36,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./Utils":78,"events":91}],61:[function(require,module,exports){
+},{"./Constants":39,"./Exceptions":43,"./Logger":46,"./RequestSender":76,"./SIPMessage":77,"./Utils":85,"events":98}],68:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -23464,7 +24637,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":37,"./Logger":39,"./SIPMessage":70}],62:[function(require,module,exports){
+},{"./Grammar":44,"./Logger":46,"./SIPMessage":77}],69:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -23473,7 +24646,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],63:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -23831,6 +25004,24 @@ module.exports = class RTCSession extends EventEmitter {
       return _stream;
     }
   }
+
+  /**
+   * 根据上层注入的处理器标记，微调 getUserMedia 约束。
+   * 例如 AI 降噪场景下，先关闭浏览器原生降噪，再交给自定义处理器。
+   */
+  _getGumConstraintsWithProcessorFlags(constraints) {
+    var nextConstraints = Utils.cloneObject(constraints);
+    if (!nextConstraints || !this._mediaStreamProcessor) return nextConstraints;
+    if (this._mediaStreamProcessor.disableNativeNoiseSuppression && nextConstraints.audio !== false && nextConstraints.audio !== undefined) {
+      nextConstraints.audio = nextConstraints.audio === true ? {
+        noiseSuppression: false
+      } : Object.assign({}, nextConstraints.audio, {
+        noiseSuppression: false
+      });
+    }
+    logger.debug(`nextConstraints: ${JSON.stringify(nextConstraints)}`);
+    return nextConstraints;
+  }
   _buildMixerCtorOptions(stream, mixerOptions) {
     var options = Object.assign({}, mixerOptions || {});
     var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
@@ -23939,7 +25130,9 @@ module.exports = class RTCSession extends EventEmitter {
     }
   }
   async _getUserMediaWithSessionPipeline(constraints, mixerOptions) {
-    var stream = await navigator.mediaDevices.getUserMedia(constraints);
+    // 统一在取流前应用处理器声明的约束修正，避免上层各处重复拼装 mediaConstraints。
+    var gumConstraints = this._getGumConstraintsWithProcessorFlags(constraints);
+    var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
     var processed = await this._processMediaStream(stream);
     return await this._applyMixerOnSdkGumStream(processed, mixerOptions);
   }
@@ -25135,7 +26328,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
         this._localMediaStreamLocallyGenerated = true;
         _constraints.audio = audioConstraints;
-        return navigator.mediaDevices.getUserMedia(_constraints).catch(error => {
+        return navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags(_constraints)).catch(error => {
           this._logEventError('error', 'getusermediafailed', error);
           this.emit('getusermediafailed', error);
           throw new Error('getUserMedia() failed');
@@ -27782,10 +28975,10 @@ module.exports = class RTCSession extends EventEmitter {
 
             // 兼容安卓微信Bug
             if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-              navigator.mediaDevices.getUserMedia({
+              navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
                 audio: this._inviteMediaConstraints.audio || true,
                 video: false
-              }).then(stream => {
+              })).then(stream => {
                 var sender = this._connection.getSenders().find(s => {
                   return s.track.kind == 'audio';
                 });
@@ -27869,10 +29062,10 @@ module.exports = class RTCSession extends EventEmitter {
               // 兼容安卓微信Bug及iOS蓝牙问题
               var mics = await Utils.getMicrophones();
               if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-                navigator.mediaDevices.getUserMedia({
+                navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
-                }).then(stream => {
+                })).then(stream => {
                   var sender = this._connection.getSenders().find(s => {
                     return s.track.kind == 'audio';
                   });
@@ -28861,10 +30054,10 @@ module.exports = class RTCSession extends EventEmitter {
    */
   _replaceAudioToMic() {
     // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
-    navigator.mediaDevices.getUserMedia({
+    navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
       audio: this._inviteMediaConstraints.audio || true,
       video: false
-    }).then(stream => {
+    })).then(stream => {
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'audio') {
           // 保持媒体的muted状态
@@ -29472,7 +30665,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":1,"./Constants":32,"./Dialog":33,"./Exceptions":36,"./Logger":39,"./Mixer":41,"./RTCSession/DTMF":64,"./RTCSession/Info":65,"./RTCSession/ReferNotifier":66,"./RTCSession/ReferSubscriber":67,"./RequestSender":69,"./SIPMessage":70,"./Timers":73,"./Transactions":74,"./URI":77,"./Utils":78,"buffer":92,"events":91,"sdp-transform":100}],64:[function(require,module,exports){
+},{"./BFCP/index":8,"./Constants":39,"./Dialog":40,"./Exceptions":43,"./Logger":46,"./Mixer":48,"./RTCSession/DTMF":71,"./RTCSession/Info":72,"./RTCSession/ReferNotifier":73,"./RTCSession/ReferSubscriber":74,"./RequestSender":76,"./SIPMessage":77,"./Timers":80,"./Transactions":81,"./URI":84,"./Utils":85,"buffer":99,"events":98,"sdp-transform":107}],71:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29611,7 +30804,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":32,"../Exceptions":36,"../Logger":39,"../Utils":78,"events":91}],65:[function(require,module,exports){
+},{"../Constants":39,"../Exceptions":43,"../Logger":46,"../Utils":85,"events":98}],72:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29692,7 +30885,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":32,"../Exceptions":36,"../Utils":78,"events":91}],66:[function(require,module,exports){
+},{"../Constants":39,"../Exceptions":43,"../Utils":85,"events":98}],73:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -29739,7 +30932,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":32,"../Logger":39}],67:[function(require,module,exports){
+},{"../Constants":39,"../Logger":46}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -29863,7 +31056,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":32,"../Grammar":37,"../Logger":39,"../Utils":78,"events":91}],68:[function(require,module,exports){
+},{"../Constants":39,"../Grammar":44,"../Logger":46,"../Utils":85,"events":98}],75:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -30161,7 +31354,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":32,"./Logger":39,"./RequestSender":69,"./SIPMessage":70,"./Utils":78}],69:[function(require,module,exports){
+},{"./Constants":39,"./Logger":46,"./RequestSender":76,"./SIPMessage":77,"./Utils":85}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -30300,7 +31493,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":32,"./DigestAuthentication":35,"./Logger":39,"./Transactions":74}],70:[function(require,module,exports){
+},{"./Constants":39,"./DigestAuthentication":42,"./Logger":46,"./Transactions":81}],77:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -30872,7 +32065,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":32,"./Grammar":37,"./Logger":39,"./NameAddrHeader":59,"./Utils":78,"sdp-transform":100}],71:[function(require,module,exports){
+},{"./Constants":39,"./Grammar":44,"./Logger":46,"./NameAddrHeader":66,"./Utils":85,"sdp-transform":107}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -30940,7 +32133,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":37,"./Logger":39,"./Utils":78}],72:[function(require,module,exports){
+},{"./Grammar":44,"./Logger":46,"./Utils":85}],79:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -31346,7 +32539,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":32,"./Logger":39,"./Utils":78,"events":91}],73:[function(require,module,exports){
+},{"./Constants":39,"./Logger":46,"./Utils":85,"events":98}],80:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -31367,7 +32560,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],74:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -31957,7 +33150,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":32,"./Logger":39,"./SIPMessage":70,"./Timers":73,"events":91}],75:[function(require,module,exports){
+},{"./Constants":39,"./Logger":46,"./SIPMessage":77,"./Timers":80,"events":98}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -32330,7 +33523,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":32,"./Logger":39,"./Socket":71,"./Utils":78}],76:[function(require,module,exports){
+},{"./Constants":39,"./Logger":46,"./Socket":78,"./Utils":85}],83:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33390,7 +34583,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":31,"./Constants":32,"./Exceptions":36,"./Logger":39,"./Message":40,"./Options":60,"./Parser":61,"./Pk":62,"./RTCSession":63,"./Registrator":68,"./SIPMessage":70,"./Transactions":74,"./Transport":75,"./URI":77,"./Utils":78,"./sanityCheck":89,"events":91,"jsencrypt":96}],77:[function(require,module,exports){
+},{"./Config":38,"./Constants":39,"./Exceptions":43,"./Logger":46,"./Message":47,"./Options":67,"./Parser":68,"./Pk":69,"./RTCSession":70,"./Registrator":75,"./SIPMessage":77,"./Transactions":81,"./Transport":82,"./URI":84,"./Utils":85,"./sanityCheck":96,"events":98,"jsencrypt":103}],84:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -33562,7 +34755,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":32,"./Grammar":37,"./Utils":78}],78:[function(require,module,exports){
+},{"./Constants":39,"./Grammar":44,"./Utils":85}],85:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -35428,7 +36621,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":32,"./Grammar":37,"./URI":77}],79:[function(require,module,exports){
+},{"./Constants":39,"./Grammar":44,"./URI":84}],86:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -35552,7 +36745,7 @@ exports.createTimerWorker = () => {
   };
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],80:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 "use strict";
 
 var {
@@ -36111,7 +37304,7 @@ module.exports = class VirtualBackgroundEngine {
     this.timerWorker = null;
   }
 };
-},{"../Logger":39,"./helpers/timerHelper.js":79,"./pipelines/webgl2/webgl2Pipeline.js":87}],81:[function(require,module,exports){
+},{"../Logger":46,"./helpers/timerHelper.js":86,"./pipelines/webgl2/webgl2Pipeline.js":94}],88:[function(require,module,exports){
 "use strict";
 
 exports.glsl = String.raw;
@@ -36300,7 +37493,7 @@ exports.readPixelsAsync = async (gl, x, y, width, height, format, type, dest) =>
   gl.deleteBuffer(buf);
   return dest;
 };
-},{}],82:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
@@ -36516,7 +37709,7 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
     cleanUp
   };
 }
-},{"../helpers/webglHelper.js":81}],83:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88}],90:[function(require,module,exports){
 "use strict";
 
 var {
@@ -36692,7 +37885,7 @@ exports.buildBackgroundImageStage = (gl, positionBuffer, texCoordBuffer, personM
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":81}],84:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88}],91:[function(require,module,exports){
 "use strict";
 
 var {
@@ -36825,7 +38018,7 @@ exports.buildJointBilateralFilterStage = (gl, vertexShader, positionBuffer, texC
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":81}],85:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88}],92:[function(require,module,exports){
 "use strict";
 
 var {
@@ -36904,7 +38097,7 @@ exports.buildResizingStage = (gl, vertexShader, positionBuffer, texCoordBuffer, 
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":81}],86:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88}],93:[function(require,module,exports){
 "use strict";
 
 var {
@@ -36971,7 +38164,7 @@ exports.buildSoftmaxStage = (gl, vertexShader, positionBuffer, texCoordBuffer, s
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":81}],87:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88}],94:[function(require,module,exports){
 "use strict";
 
 var {
@@ -37336,7 +38529,7 @@ exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":81,"./backgroundBlurStage.js":82,"./backgroundImageStage.js":83,"./jointBilateralFilterStage.js":84,"./resizingStage.js":85,"./softmaxStage.js":86}],88:[function(require,module,exports){
+},{"../helpers/webglHelper.js":88,"./backgroundBlurStage.js":89,"./backgroundImageStage.js":90,"./jointBilateralFilterStage.js":91,"./resizingStage.js":92,"./softmaxStage.js":93}],95:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37455,7 +38648,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":37,"./Logger":39}],89:[function(require,module,exports){
+},{"./Grammar":44,"./Logger":46}],96:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37648,7 +38841,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":32,"./Logger":39,"./SIPMessage":70,"./Utils":78}],90:[function(require,module,exports){
+},{"./Constants":39,"./Logger":46,"./SIPMessage":77,"./Utils":85}],97:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -37800,7 +38993,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],91:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -38325,7 +39518,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],92:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -40106,7 +41299,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":90,"buffer":92,"ieee754":95}],93:[function(require,module,exports){
+},{"base64-js":97,"buffer":99,"ieee754":102}],100:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -40382,7 +41575,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":94,"_process":98}],94:[function(require,module,exports){
+},{"./common":101,"_process":105}],101:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -40676,7 +41869,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":97}],95:[function(require,module,exports){
+},{"ms":104}],102:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -40763,7 +41956,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],96:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -46154,7 +47347,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],97:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -46318,7 +47511,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],98:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -46504,7 +47697,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],99:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -47000,7 +48193,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],100:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -47015,7 +48208,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":99,"./parser":101,"./writer":102}],101:[function(require,module,exports){
+},{"./grammar":106,"./parser":108,"./writer":109}],108:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -47141,7 +48334,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":99}],102:[function(require,module,exports){
+},{"./grammar":106}],109:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -47257,5 +48450,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":99}]},{},[38])(38)
+},{"./grammar":106}]},{},[45])(45)
 });

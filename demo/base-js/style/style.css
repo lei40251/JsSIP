@@ -367,15 +367,48 @@ body {
   margin-bottom: 0.35rem;
 }
 
+.call-config-layout {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.call-config-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.call-config-group {
+  min-width: 0;
+  border: 1px solid #dbe5f0;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #fcfdff, #f7faff);
+  padding: 0.28rem 0.4rem 0.38rem;
+}
+
+.call-config-group-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #48617d;
+  margin-bottom: 0.18rem;
+  line-height: 1.1;
+}
+
 .call-config-grid {
   display: grid;
-  gap: 0.65rem;
-  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr);
+  gap: 0.45rem 0.55rem;
+  grid-template-columns: repeat(6, minmax(120px, max-content));
   align-items: end;
 }
 
-.call-field {
-  min-width: 0;
+.call-config-grid-main {
+  grid-template-columns:
+    minmax(110px, 1.4fr) minmax(120px, 1.35fr) minmax(120px, 1.35fr) minmax(100px, 1fr) minmax(100px, 1fr);
+}
+
+.call-config-grid-ai {
+  grid-template-columns: minmax(130px, 170px) minmax(120px, 150px) minmax(78px, 88px);
 }
 
 .call-field .form-control,
@@ -385,28 +418,31 @@ body {
   max-width: none;
 }
 
-.call-config-grid #useupdate,
-.call-config-grid #videoHint,
-.call-config-grid #virtualBackground,
-.call-config-grid #cameras,
-.call-config-grid #mics,
-.call-config-grid #callee {
-  max-width: none !important;
+.call-config-grid-main #callee,
+.call-config-grid-main #cameras,
+.call-config-grid-main #mics,
+.call-config-grid-main #useupdate,
+.call-config-grid-main #videoHint,
+.call-config-grid-ai #virtualBackground,
+.call-config-grid-ai #aiNoiseSuppression,
+.call-config-grid-ai #aiNoiseReductionLevel {
   width: 100%;
+  max-width: none !important;
 }
 
 .call-field-label {
-  font-size: 0.75rem;
+  font-size: 0.71rem;
   font-weight: 700;
   color: #4e5f76;
-  margin-bottom: 0.28rem;
+  margin-bottom: 0.18rem;
   line-height: 1.2;
 }
 
-.call-config-grid>.mixer-detail {
-  grid-column: span 3;
-  width: 100%;
-  margin-top: 0.05rem;
+.call-config-mixer {
+  margin-top: 0.4rem;
+  width: calc(50% - 0.25rem);
+  max-width: calc(50% - 0.25rem);
+  justify-self: start;
 }
 
 .btn {
@@ -526,22 +562,62 @@ body {
 }
 
 @media (max-width: 1399px) {
-  .call-config-grid {
-    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  .call-config-mixer {
+    width: 100%;
+    max-width: 100%;
   }
 
-  .call-config-grid>.mixer-detail {
-    grid-column: 1 / -1;
+  .call-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .call-config-grid {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-main {
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-ai {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 1510px) and (min-width: 1400px) {
+  .call-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .call-config-grid {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-main {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-ai {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .call-config-mixer {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 991px) {
   .call-config-grid {
-    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 
-  .call-config-grid>.mixer-detail {
-    grid-column: 1 / -1;
+  .call-config-grid-main {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+  }
+
+  .call-config-grid-ai {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
   }
 }
 
@@ -569,6 +645,26 @@ body {
 
   .control-card {
     padding: 0.62rem;
+  }
+
+  .call-config-row {
+    grid-template-columns: 1fr;
+  }
+
+  .call-config-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .call-config-grid-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .call-config-grid-ai {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .call-config-mixer {
+    margin-top: 0.24rem;
   }
 
   .control-card .btn {
