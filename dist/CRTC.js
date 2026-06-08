@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026681811
+ * CRTC v1.13.0.20266909
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -71,7 +71,7 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   return Object.keys(normalized).length > 0 ? normalized : null;
 };
-},{"../Logger":51}],2:[function(require,module,exports){
+},{"../Logger":49}],2:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -279,7 +279,7 @@ module.exports = class AiNSCore {
     }
   }
 };
-},{"../Logger":51,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
+},{"../Logger":49,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -617,7 +617,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
   }
 };
-},{"../Logger":51,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
+},{"../Logger":49,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1267,26 +1267,26 @@ class AiNSEngine {
   }
 }
 module.exports = AiNSEngine;
-},{"../Logger":51,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
+},{"../Logger":49,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
 var Config = require('./AiVBEConfig');
-var AssetManifest = require('./AiVBEAssetManifest');
 var logger = new Logger('AiVBEAssetLoader');
+var TASKS_GLOBAL = 'CRTCAiVBEVisionTasks';
 var SCRIPT_READY_ATTR = 'data-aivbe-ready';
 var SCRIPT_ERROR_ATTR = 'data-aivbe-error';
 var SCRIPT_WAIT_TIMEOUT_MS = 15000;
+var TASKS_LOAD_PROMISES = {};
 module.exports = class AiVBEAssetLoader {
   constructor(assetConfig) {
     this.assetConfig = Config.normalizeAssetConfig(assetConfig);
   }
-  getAssetUrls(modelPath) {
+  getRuntimeOptions(modelPath) {
     return {
-      visionScriptUrl: this.assetConfig.visionScriptUrl,
-      visionBaseUrl: this.assetConfig.visionBaseUrl,
-      modelUrl: this.resolveModelUrl(modelPath),
-      runtimeGlobal: AssetManifest.RUNTIME_GLOBAL
+      moduleUrl: this.assetConfig.moduleUrl,
+      wasmBaseUrl: this.assetConfig.wasmBaseUrl,
+      modelUrl: this.resolveModelUrl(modelPath)
     };
   }
   resolveModelUrl(modelPath) {
@@ -1295,26 +1295,41 @@ module.exports = class AiVBEAssetLoader {
     }
     return this.assetConfig.modelUrl;
   }
-  async ensureScriptLoaded() {
+  async ensureTasksLoaded() {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       throw new Error('AiVBE requires browser environment');
     }
-    if (window[AssetManifest.RUNTIME_GLOBAL]) {
-      return window[AssetManifest.RUNTIME_GLOBAL];
+    if (window[TASKS_GLOBAL]) {
+      return window[TASKS_GLOBAL];
     }
-    var scriptUrl = this.assetConfig.visionScriptUrl;
-    var selector = `script[data-aivbe-script="${scriptUrl}"]`;
+    var moduleUrl = this.assetConfig.moduleUrl;
+    if (TASKS_LOAD_PROMISES[moduleUrl]) {
+      await TASKS_LOAD_PROMISES[moduleUrl];
+      return window[TASKS_GLOBAL];
+    }
+    TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl);
+    try {
+      await TASKS_LOAD_PROMISES[moduleUrl];
+    } finally {
+      delete TASKS_LOAD_PROMISES[moduleUrl];
+    }
+    logger.debug(`Loaded MediaPipe Tasks runtime: ${moduleUrl}`);
+    return window[TASKS_GLOBAL];
+  }
+  async loadTasksRuntime(moduleUrl) {
+    var selector = `script[data-aivbe-module="${moduleUrl}"]`;
     var existingScript = document.querySelector(selector);
     if (existingScript) {
-      await this.waitForExistingScript(existingScript, scriptUrl);
-      return window[AssetManifest.RUNTIME_GLOBAL];
+      await this.waitForExistingScript(existingScript, moduleUrl);
+      return window[TASKS_GLOBAL];
     }
     await new Promise((resolve, reject) => {
       var script = document.createElement('script');
-      script.src = scriptUrl;
+      script.type = 'module';
       script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.setAttribute('data-aivbe-script', scriptUrl);
+      script.setAttribute('data-aivbe-module', moduleUrl);
+      script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
+        window.${TASKS_GLOBAL} = { FilesetResolver, ImageSegmenter };`;
       script.onload = () => {
         script.setAttribute(SCRIPT_READY_ATTR, 'true');
         script.removeAttribute(SCRIPT_ERROR_ATTR);
@@ -1322,25 +1337,23 @@ module.exports = class AiVBEAssetLoader {
       };
       script.onerror = () => {
         script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
-        reject(new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`));
+        reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
       };
       document.head.appendChild(script);
     });
-    logger.debug(`Loaded MediaPipe runtime script: ${scriptUrl}`);
-    return window[AssetManifest.RUNTIME_GLOBAL];
   }
-  async waitForExistingScript(script, scriptUrl) {
-    if (window[AssetManifest.RUNTIME_GLOBAL]) {
+  async waitForExistingScript(script, moduleUrl) {
+    if (window[TASKS_GLOBAL]) {
       return;
     }
     if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
-      throw new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`);
+      throw new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`);
     }
     if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
-      if (window[AssetManifest.RUNTIME_GLOBAL]) {
+      if (window[TASKS_GLOBAL]) {
         return;
       }
-      throw new Error(`MediaPipe runtime script loaded but global not found: ${scriptUrl}`);
+      throw new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`);
     }
     await new Promise((resolve, reject) => {
       var timeoutId = null;
@@ -1360,43 +1373,27 @@ module.exports = class AiVBEAssetLoader {
       function handleError() {
         cleanup();
         script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
-        reject(new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`));
+        reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
       }
       timeoutId = window.setTimeout(() => {
         cleanup();
-        reject(new Error(`Timed out waiting for MediaPipe runtime script: ${scriptUrl}`));
+        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
       }, SCRIPT_WAIT_TIMEOUT_MS);
       script.addEventListener('load', handleLoad);
       script.addEventListener('error', handleError);
     });
   }
 };
-},{"../Logger":51,"./AiVBEAssetManifest":7,"./AiVBEConfig":8}],7:[function(require,module,exports){
-"use strict";
-
-var RUNTIME_GLOBAL = 'CRTCAiVBERuntime';
-var WASM_FACTORY_GLOBAL = 'createCRTCAiVBEWasm';
-var FILES = {
-  runtimeScript: 'aivb.js',
-  simdLoaderScript: 'aivb_simd.js',
-  simdWasmBinary: 'aivb_simd.wasm',
-  noSimdLoaderScript: 'aivb_nosimd.js',
-  noSimdWasmBinary: 'aivb_nosimd.wasm',
-  graphBinary: 'aivb_graph.binarypb',
-  landscapeModel: 'aivb_landscape.tflite',
-  portraitModel: 'aivb_portrait.tflite'
-};
-module.exports = {
-  RUNTIME_GLOBAL,
-  WASM_FACTORY_GLOBAL,
-  FILES
-};
-},{}],8:[function(require,module,exports){
+},{"../Logger":49,"./AiVBEConfig":7}],7:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
-var AssetManifest = require('./AiVBEAssetManifest');
 var logger = new Logger('AiVBEConfig');
+var SUPPORTED_DELEGATES = new Set(['CPU', 'GPU']);
+var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror'];
+var SEGMENTATION_OPTION_KEYS = ['delegate'];
+var POST_PROCESSING_OPTION_KEYS = ['blurRadius'];
+var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
 var DEFAULT_VIDEO = {
   width: 1280,
   height: 720,
@@ -1404,33 +1401,21 @@ var DEFAULT_VIDEO = {
   mirror: false
 };
 var DEFAULT_SEGMENTATION = {
-  backend: 'mediapipeSelfieSegmentation',
-  inputResolution: '160x96',
-  model: 'selfie_segmenter_landscape',
-  pipeline: 'webgl2',
-  targetFps: 15,
-  delegate: 'GPU',
-  modelSelection: 1
+  delegate: 'GPU'
 };
 var DEFAULT_POST_PROCESSING = {
-  smoothSegmentationMask: true,
-  coverage: [0.5, 0.75],
-  lightWrapping: 0.2,
-  blendMode: 'screen',
-  jointBilateralFilter: {
-    sigmaSpace: 3,
-    sigmaColor: 0.2
-  }
+  blurRadius: 20
 };
-var DEFAULT_ASSET_BASE_URL = './virtual-background/mediapipe';
-var DEFAULT_VISION_SCRIPT_PATH = `v2/${AssetManifest.FILES.runtimeScript}`;
-var DEFAULT_MODEL_FILE = `v2/${AssetManifest.FILES.landscapeModel}`;
+var DEFAULT_TASKS_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2';
+var DEFAULT_TASKS_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm';
+var DEFAULT_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite';
 exports.create = function (options = {}) {
+  var assetConfig = exports.normalizeAssetConfig(options.assetConfig);
   var config = {
     video: exports.normalizeVideo(options.video),
     segmentation: exports.normalizeSegmentation(options.segmentation),
     postProcessing: exports.normalizePostProcessing(options.postProcessing),
-    assetConfig: exports.normalizeAssetConfig(options.assetConfig)
+    assetConfig
   };
   logger.debug(`Config created: ${JSON.stringify(config)}`);
   return config;
@@ -1440,6 +1425,7 @@ exports.normalizeVideo = function (video) {
   if (!video || typeof video !== 'object') {
     return normalized;
   }
+  assertKnownKeys('video', video, VIDEO_OPTION_KEYS);
   if (Number.isFinite(Number(video.width)) && Number(video.width) > 0) {
     normalized.width = Math.floor(Number(video.width));
   }
@@ -1447,7 +1433,7 @@ exports.normalizeVideo = function (video) {
     normalized.height = Math.floor(Number(video.height));
   }
   if (Number.isFinite(Number(video.targetFps)) && Number(video.targetFps) > 0) {
-    normalized.targetFps = Math.floor(Number(video.targetFps));
+    normalized.targetFps = clampNumber(video.targetFps, 1, 60, DEFAULT_VIDEO.targetFps);
   }
   if (typeof video.mirror === 'boolean') {
     normalized.mirror = video.mirror;
@@ -1459,81 +1445,194 @@ exports.normalizeSegmentation = function (segmentation) {
   if (!segmentation || typeof segmentation !== 'object') {
     return normalized;
   }
-  if (typeof segmentation.backend === 'string' && segmentation.backend.trim()) {
-    normalized.backend = segmentation.backend.trim();
-  }
-  if (typeof segmentation.inputResolution === 'string' && segmentation.inputResolution.trim()) {
-    normalized.inputResolution = segmentation.inputResolution.trim();
-  }
-  if (typeof segmentation.model === 'string' && segmentation.model.trim()) {
-    normalized.model = segmentation.model.trim();
-  }
-  if (typeof segmentation.pipeline === 'string' && segmentation.pipeline.trim()) {
-    normalized.pipeline = segmentation.pipeline.trim();
-  }
-  if (Number.isFinite(Number(segmentation.targetFps)) && Number(segmentation.targetFps) > 0) {
-    normalized.targetFps = Math.floor(Number(segmentation.targetFps));
-  }
+  assertKnownKeys('segmentation', segmentation, SEGMENTATION_OPTION_KEYS);
   if (typeof segmentation.delegate === 'string' && segmentation.delegate.trim()) {
-    normalized.delegate = segmentation.delegate.trim().toUpperCase();
-  }
-  if (Number.isFinite(Number(segmentation.modelSelection))) {
-    var selection = Math.floor(Number(segmentation.modelSelection));
-    normalized.modelSelection = selection === 0 ? 0 : 1;
+    var delegate = segmentation.delegate.trim().toUpperCase();
+    if (SUPPORTED_DELEGATES.has(delegate)) {
+      normalized.delegate = delegate;
+    }
   }
   return normalized;
 };
 exports.normalizePostProcessing = function (postProcessing) {
-  var normalized = JSON.parse(JSON.stringify(DEFAULT_POST_PROCESSING));
+  var normalized = Object.assign({}, DEFAULT_POST_PROCESSING);
   if (!postProcessing || typeof postProcessing !== 'object') {
     return normalized;
   }
-  Object.assign(normalized, postProcessing);
-  if (postProcessing.jointBilateralFilter && typeof postProcessing.jointBilateralFilter === 'object') {
-    Object.assign(normalized.jointBilateralFilter, postProcessing.jointBilateralFilter);
-  }
+  assertKnownKeys('postProcessing', postProcessing, POST_PROCESSING_OPTION_KEYS);
+  normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, 100, DEFAULT_POST_PROCESSING.blurRadius);
   return normalized;
 };
 exports.normalizeAssetConfig = function (assetConfig) {
   var normalized = {
-    baseUrl: DEFAULT_ASSET_BASE_URL,
-    visionScriptUrl: `${DEFAULT_ASSET_BASE_URL}/${DEFAULT_VISION_SCRIPT_PATH}`,
-    visionBaseUrl: `${DEFAULT_ASSET_BASE_URL}/v2`,
-    modelBaseUrl: `${DEFAULT_ASSET_BASE_URL}/v2`,
-    modelUrl: `${DEFAULT_ASSET_BASE_URL}/${DEFAULT_MODEL_FILE}`
+    moduleUrl: DEFAULT_TASKS_MODULE_URL,
+    wasmBaseUrl: DEFAULT_TASKS_WASM_BASE_URL,
+    modelUrl: DEFAULT_MODEL_URL
   };
   if (!assetConfig || typeof assetConfig !== 'object') {
     return normalized;
   }
-  if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
-    normalized.baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
-    normalized.visionScriptUrl = `${normalized.baseUrl}/${DEFAULT_VISION_SCRIPT_PATH}`;
-    normalized.visionBaseUrl = `${normalized.baseUrl}/v2`;
-    normalized.modelBaseUrl = `${normalized.baseUrl}/v2`;
-    normalized.modelUrl = `${normalized.baseUrl}/${DEFAULT_MODEL_FILE}`;
+  assertKnownKeys('assetConfig', assetConfig, ASSET_CONFIG_OPTION_KEYS);
+  if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
+    var baseUrl = assetConfig.cdnUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${baseUrl}/vision_bundle.mjs`;
+    normalized.wasmBaseUrl = `${baseUrl}/wasm`;
+  } else if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
+    var _baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${_baseUrl}/vision_bundle.mjs`;
+    normalized.wasmBaseUrl = `${_baseUrl}/wasm`;
   }
-  if (typeof assetConfig.visionScriptUrl === 'string' && assetConfig.visionScriptUrl.trim()) {
-    normalized.visionScriptUrl = assetConfig.visionScriptUrl.trim();
+  if (typeof assetConfig.moduleUrl === 'string' && assetConfig.moduleUrl.trim()) {
+    normalized.moduleUrl = assetConfig.moduleUrl.trim();
   }
-  if (typeof assetConfig.visionBaseUrl === 'string' && assetConfig.visionBaseUrl.trim()) {
-    normalized.visionBaseUrl = assetConfig.visionBaseUrl.trim().replace(/\/$/, '');
-  }
-  if (typeof assetConfig.modelBaseUrl === 'string' && assetConfig.modelBaseUrl.trim()) {
-    normalized.modelBaseUrl = assetConfig.modelBaseUrl.trim().replace(/\/$/, '');
-    normalized.modelUrl = `${normalized.modelBaseUrl}/${AssetManifest.FILES.landscapeModel}`;
+  if (typeof assetConfig.wasmBaseUrl === 'string' && assetConfig.wasmBaseUrl.trim()) {
+    normalized.wasmBaseUrl = assetConfig.wasmBaseUrl.trim().replace(/\/$/, '');
   }
   if (typeof assetConfig.modelUrl === 'string' && assetConfig.modelUrl.trim()) {
     normalized.modelUrl = assetConfig.modelUrl.trim();
   }
   return normalized;
 };
-},{"../Logger":51,"./AiVBEAssetManifest":7}],9:[function(require,module,exports){
+function clampNumber(value, min, max, fallback) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numericValue));
+}
+function assertKnownKeys(sectionName, value, allowedKeys) {
+  var allowedKeySet = new Set(allowedKeys);
+  var unknownKeys = Object.keys(value).filter(key => !allowedKeySet.has(key));
+  if (unknownKeys.length > 0) {
+    throw new Error(`Unsupported AiVBE ${sectionName} option(s): ${unknownKeys.join(', ')}`);
+  }
+}
+},{"../Logger":49}],8:[function(require,module,exports){
+"use strict";
+
+function buildCanvas2DPipeline(options) {
+  var {
+    canvas,
+    videoElement,
+    backgroundImage,
+    backgroundColor,
+    mode,
+    mirror,
+    segmenterRuntime,
+    blurRadius
+  } = options;
+  var context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('2D canvas not supported');
+  }
+  var personCanvas = document.createElement('canvas');
+  var personContext = personCanvas.getContext('2d');
+  if (!personContext) {
+    throw new Error('Unable to create person mask canvas');
+  }
+  personCanvas.width = canvas.width;
+  personCanvas.height = canvas.height;
+  var state = {
+    backgroundImage,
+    backgroundColor: backgroundColor || '#00ff00',
+    blurRadius: typeof blurRadius === 'number' ? blurRadius : 20,
+    mirror: Boolean(mirror),
+    mode
+  };
+  async function render() {
+    if (state.mode === 'none') {
+      clearCanvas(context, canvas);
+      drawVideoFrame(context, videoElement, canvas, state.mirror);
+      return;
+    }
+    var segmentationResult = await segmenterRuntime.segmentForVideo(videoElement);
+    if (!segmentationResult || !segmentationResult.segmentationMask) {
+      throw new Error('MediaPipe segmentation did not return segmentationMask');
+    }
+    clearCanvas(personContext, personCanvas);
+    drawVideoFrame(personContext, videoElement, personCanvas, state.mirror);
+    personContext.globalCompositeOperation = 'destination-in';
+    drawVideoFrame(personContext, segmentationResult.segmentationMask, personCanvas, state.mirror);
+    personContext.globalCompositeOperation = 'source-over';
+    clearCanvas(context, canvas);
+    if (state.mode === 'blur') {
+      context.save();
+      context.filter = `blur(${state.blurRadius}px)`;
+      drawVideoFrame(context, videoElement, canvas, state.mirror);
+      context.restore();
+    } else if (state.mode === 'image') {
+      drawCoverImage(context, state.backgroundImage, canvas);
+    } else if (state.mode === 'color') {
+      context.fillStyle = state.backgroundColor;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
+  }
+  function updateMirror(nextMirror) {
+    state.mirror = Boolean(nextMirror);
+  }
+  function updateEffectConfig(effectConfig = {}) {
+    if (typeof effectConfig.blurRadius === 'number') {
+      state.blurRadius = Math.max(0, Math.min(effectConfig.blurRadius, 100));
+    }
+  }
+  function cleanUp() {
+    clearCanvas(context, canvas);
+    clearCanvas(personContext, personCanvas);
+  }
+  return {
+    render,
+    updateMirror,
+    updateEffectConfig,
+    cleanUp
+  };
+}
+function clearCanvas(context, canvas) {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+}
+function drawVideoFrame(context, videoElement, canvas, mirror) {
+  context.save();
+  if (mirror) {
+    context.translate(canvas.width, 0);
+    context.scale(-1, 1);
+  }
+  context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  context.restore();
+}
+function drawCoverImage(context, image, canvas) {
+  if (!image) {
+    throw new Error('Background image required for image mode');
+  }
+  var sourceWidth = image.naturalWidth || image.videoWidth || image.width;
+  var sourceHeight = image.naturalHeight || image.videoHeight || image.height;
+  if (!sourceWidth || !sourceHeight) {
+    throw new Error('Background image has invalid dimensions');
+  }
+  var sourceRatio = sourceWidth / sourceHeight;
+  var targetRatio = canvas.width / canvas.height;
+  var cropWidth = sourceWidth;
+  var cropHeight = sourceHeight;
+  var offsetX = 0;
+  var offsetY = 0;
+  if (sourceRatio > targetRatio) {
+    cropWidth = sourceHeight * targetRatio;
+    offsetX = (sourceWidth - cropWidth) / 2;
+  } else {
+    cropHeight = sourceWidth / targetRatio;
+    offsetY = (sourceHeight - cropHeight) / 2;
+  }
+  context.drawImage(image, offsetX, offsetY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+}
+module.exports = {
+  buildCanvas2DPipeline
+};
+},{}],9:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
 var AiVBEAssetLoader = require('./AiVBEAssetLoader');
-var AssetManifest = require('./AiVBEAssetManifest');
 var logger = new Logger('AiVBEMediaPipeRuntime');
+var DEFAULT_DELEGATE = 'GPU';
 module.exports = class MediaPipeSegmenterRuntime {
   constructor(config = {}) {
     this.assetLoader = new AiVBEAssetLoader(config.assetConfig);
@@ -1542,9 +1641,13 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.initialized = false;
     this.initializingPromise = null;
     this.pendingRequest = null;
-    this.latestResult = null;
+    this.queuedRequest = null;
     this.destroyed = false;
-    this.handleResults = this.handleResults.bind(this);
+    this.labels = [];
+    this.personMaskIndex = 0;
+    this.maskCanvas = null;
+    this.maskContext = null;
+    this.maskImageData = null;
   }
   async initialize(options = {}) {
     if (this.destroyed) {
@@ -1557,34 +1660,30 @@ module.exports = class MediaPipeSegmenterRuntime {
       return this.initializingPromise;
     }
     this.initializingPromise = (async () => {
-      var SelfieSegmentation = await this.assetLoader.ensureScriptLoaded();
+      var {
+        FilesetResolver,
+        ImageSegmenter
+      } = await this.assetLoader.ensureTasksLoaded();
       if (this.destroyed) {
         throw new Error('MediaPipe segmenter destroyed');
       }
-      this.assetUrls = this.assetLoader.getAssetUrls(options.modelPath);
-      var landscapeModelFile = AssetManifest.FILES.landscapeModel;
-      var portraitModelFile = AssetManifest.FILES.portraitModel;
-      var segmenter = new SelfieSegmentation({
-        locateFile: file => {
-          if (file === landscapeModelFile || file === portraitModelFile) {
-            return this.assetUrls.modelUrl;
-          }
-          return `${this.assetUrls.visionBaseUrl}/${file}`;
-        }
+      this.assetUrls = this.assetLoader.getRuntimeOptions(options.modelPath);
+      var vision = await FilesetResolver.forVisionTasks(this.assetUrls.wasmBaseUrl);
+      var segmenter = await ImageSegmenter.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: this.assetUrls.modelUrl,
+          delegate: options.delegate === 'CPU' ? 'CPU' : DEFAULT_DELEGATE
+        },
+        runningMode: 'VIDEO',
+        outputCategoryMask: false,
+        outputConfidenceMasks: true
       });
       try {
-        segmenter.setOptions({
-          // Keep mask coordinates aligned with the original video frame.
-          // Output mirroring is handled later by the WebGL composition stage.
-          selfieMode: false,
-          modelSelection: options.modelSelection === 0 ? 0 : 1
-        });
-        await segmenter.initialize();
         if (this.destroyed) {
           throw new Error('MediaPipe segmenter destroyed');
         }
-        segmenter.onResults(this.handleResults);
         this.segmenter = segmenter;
+        this.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
         this.initialized = true;
         logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
       } catch (error) {
@@ -1598,7 +1697,11 @@ module.exports = class MediaPipeSegmenterRuntime {
         this.segmenter = null;
         this.assetUrls = null;
         this.initialized = false;
-        this.latestResult = null;
+        this.labels = [];
+        this.personMaskIndex = 0;
+        this.maskCanvas = null;
+        this.maskContext = null;
+        this.maskImageData = null;
         if (this.pendingRequest) {
           var pending = this.pendingRequest;
           this.pendingRequest = null;
@@ -1617,14 +1720,29 @@ module.exports = class MediaPipeSegmenterRuntime {
     if (!this.initialized || !this.segmenter) {
       throw new Error('MediaPipe segmenter not initialized');
     }
-    if (this.latestResult) {
-      var latestResult = this.latestResult;
-      this.latestResult = null;
-      return latestResult;
-    }
     if (this.pendingRequest) {
-      return this.pendingRequest.promise;
+      if (!this.queuedRequest) {
+        var resolveQueued;
+        var rejectQueued;
+        var queuedPromise = new Promise((resolve, reject) => {
+          resolveQueued = resolve;
+          rejectQueued = reject;
+        });
+        this.queuedRequest = {
+          videoElement,
+          resolve: resolveQueued,
+          reject: rejectQueued,
+          promise: queuedPromise
+        };
+      } else {
+        this.queuedRequest.videoElement = videoElement;
+      }
+      logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
+      return this.queuedRequest.promise;
     }
+    return this.runSegmentation(videoElement);
+  }
+  async runSegmentation(videoElement) {
     var resolvePending;
     var rejectPending;
     var promise = new Promise((resolve, reject) => {
@@ -1636,26 +1754,127 @@ module.exports = class MediaPipeSegmenterRuntime {
       reject: rejectPending,
       promise
     };
-    this.segmenter.send({
-      image: videoElement
-    }).catch(error => {
-      if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
-        return;
-      }
+    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    try {
+      this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
+        if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
+          return;
+        }
+        var pending = this.pendingRequest;
+        this.pendingRequest = null;
+        try {
+          pending.resolve({
+            segmentationMask: this.createSegmentationMask(result)
+          });
+        } catch (error) {
+          pending.reject(error);
+        } finally {
+          this.closeSegmentationResult(result);
+          this.processQueuedRequest();
+        }
+      });
+    } catch (error) {
       var pending = this.pendingRequest;
       this.pendingRequest = null;
       pending.reject(error);
-    });
+      this.processQueuedRequest();
+    }
     return promise;
   }
-  handleResults(results) {
-    if (this.pendingRequest) {
-      var pending = this.pendingRequest;
-      this.pendingRequest = null;
-      pending.resolve(results);
+  processQueuedRequest() {
+    if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
       return;
     }
-    this.latestResult = results;
+    var queued = this.queuedRequest;
+    this.queuedRequest = null;
+    this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
+  }
+  resolvePersonMaskIndex(maskCount) {
+    for (var index = 0; index < this.labels.length; index += 1) {
+      if (typeof this.labels[index] === 'string' && /person/i.test(this.labels[index])) {
+        return index;
+      }
+    }
+    if (maskCount > 1) {
+      return maskCount - 1;
+    }
+    return 0;
+  }
+  createSegmentationMask(result) {
+    var mask = this.resolveOutputMask(result);
+    var width = mask.width;
+    var height = mask.height;
+    if (!width || !height) {
+      throw new Error('ImageSegmenter returned invalid categoryMask size');
+    }
+    if (!this.maskCanvas) {
+      this.maskCanvas = document.createElement('canvas');
+      this.maskContext = this.maskCanvas.getContext('2d');
+    }
+    if (!this.maskContext) {
+      throw new Error('Unable to create segmentation mask canvas');
+    }
+    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height || !this.maskImageData) {
+      this.maskCanvas.width = width;
+      this.maskCanvas.height = height;
+      this.maskImageData = this.maskContext.createImageData(width, height);
+    }
+    var confidenceValues = this.readMaskValues(mask);
+    var imageData = this.maskImageData.data;
+    var offset = 0;
+    for (var i = 0; i < confidenceValues.length; i += 1) {
+      var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[i] * 255)));
+      imageData[offset] = 0;
+      imageData[offset + 1] = 0;
+      imageData[offset + 2] = 0;
+      imageData[offset + 3] = alpha;
+      offset += 4;
+    }
+    this.maskContext.putImageData(this.maskImageData, 0, 0);
+    return this.maskCanvas;
+  }
+  resolveOutputMask(result) {
+    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
+      this.personMaskIndex = this.resolvePersonMaskIndex(result.confidenceMasks.length);
+      return result.confidenceMasks[this.personMaskIndex];
+    }
+    if (result && result.categoryMask) {
+      return result.categoryMask;
+    }
+    throw new Error('ImageSegmenter did not return a supported mask output');
+  }
+  readMaskValues(mask) {
+    if (!mask) {
+      throw new Error('ImageSegmenter mask is required');
+    }
+    if (typeof mask.getAsFloat32Array === 'function') {
+      return mask.getAsFloat32Array();
+    }
+    if (typeof mask.getAsUint8Array === 'function') {
+      var categoryValues = mask.getAsUint8Array();
+      var floatValues = new Float32Array(categoryValues.length);
+      for (var i = 0; i < categoryValues.length; i += 1) {
+        floatValues[i] = categoryValues[i] > 0 ? 1 : 0;
+      }
+      return floatValues;
+    }
+    throw new Error('Unsupported ImageSegmenter mask format');
+  }
+  closeSegmentationResult(result) {
+    if (result && typeof result.close === 'function') {
+      result.close();
+      return;
+    }
+    if (result && Array.isArray(result.confidenceMasks)) {
+      result.confidenceMasks.forEach(mask => {
+        if (mask && typeof mask.close === 'function') {
+          mask.close();
+        }
+      });
+    }
+    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
+      result.categoryMask.close();
+    }
   }
   async destroy() {
     this.destroyed = true;
@@ -1663,6 +1882,11 @@ module.exports = class MediaPipeSegmenterRuntime {
       var pending = this.pendingRequest;
       this.pendingRequest = null;
       pending.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+    if (this.queuedRequest) {
+      var queued = this.queuedRequest;
+      this.queuedRequest = null;
+      queued.reject(new Error('MediaPipe segmenter destroyed'));
     }
     if (this.initializingPromise) {
       try {
@@ -1678,18 +1902,19 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.assetUrls = null;
     this.initialized = false;
     this.initializingPromise = null;
-    this.latestResult = null;
+    this.labels = [];
+    this.personMaskIndex = 0;
+    this.maskCanvas = null;
+    this.maskContext = null;
+    this.maskImageData = null;
   }
 };
-},{"../Logger":51,"./AiVBEAssetLoader":6,"./AiVBEAssetManifest":7}],10:[function(require,module,exports){
+},{"../Logger":49,"./AiVBEAssetLoader":6}],10:[function(require,module,exports){
 "use strict";
 
 var {
-  createTimerWorker
-} = require('../VirtualBackground/helpers/timerHelper.js');
-var {
-  buildWebGL2Pipeline
-} = require('./pipelines/webgl2/webgl2Pipeline.js');
+  buildCanvas2DPipeline
+} = require('./Canvas2DPipeline.js');
 var Config = require('./AiVBEConfig');
 var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
 var Logger = require('../Logger');
@@ -1698,7 +1923,6 @@ class AiVBEEngine {
   constructor(options = {}) {
     this.config = Config.create(options);
     this.pipeline = null;
-    this.timerWorker = createTimerWorker();
     this.segmenterRuntime = new MediaPipeSegmenterRuntime({
       assetConfig: this.config.assetConfig
     });
@@ -1709,14 +1933,31 @@ class AiVBEEngine {
     this.backgroundEl = null;
     this.isRunning = false;
     this.animationFrameId = null;
-    this.renderTimeoutId = null;
-    this.solidColorCanvas = null;
-    this._cachedSolidColor = null;
-    this._cachedSolidColorDataUrl = null;
+    this.currentBackgroundKind = 'none';
     this.lastFrameTime = 0;
     this.isRendering = false;
+    this.renderPromise = null;
+    this.destroyed = false;
+    this.pipelineRequestId = 0;
+    this.pendingImageLoad = null;
   }
-  _cleanUpPipeline() {
+  _cancelPendingImageLoad(reason) {
+    if (!this.pendingImageLoad) {
+      return;
+    }
+    var pending = this.pendingImageLoad;
+    this.pendingImageLoad = null;
+    if (pending.image) {
+      pending.image.onload = null;
+      pending.image.onerror = null;
+      pending.image.src = '';
+    }
+    pending.reject(new Error(reason || 'Background image load cancelled'));
+  }
+  _cleanUpPipeline(options = {}) {
+    if (options.cancelPendingImageLoad !== false) {
+      this._cancelPendingImageLoad('Background image load cancelled');
+    }
     if (this.pipeline && this.pipeline.cleanUp) {
       this.pipeline.cleanUp();
     }
@@ -1736,16 +1977,23 @@ class AiVBEEngine {
     if (!inputStream) {
       throw new Error('inputStream required');
     }
+    this.destroyed = false;
     this.inputStream = inputStream;
     this.canvas = canvas || document.createElement('canvas');
     this.canvas.width = this.config.video.width;
     this.canvas.height = this.config.video.height;
-    await this.segmenterRuntime.initialize({
-      modelPath,
-      modelSelection: this.config.segmentation.modelSelection
-    });
-    await this.createVideoElement();
-    this.createOutputStream();
+    try {
+      await this.segmenterRuntime.initialize({
+        modelPath,
+        delegate: this.config.segmentation.delegate
+      });
+      await this.createVideoElement();
+      this.createOutputStream();
+      this.clearBackground();
+    } catch (error) {
+      await this.destroy();
+      throw error;
+    }
   }
   async createVideoElement() {
     this.videoEl = document.createElement('video');
@@ -1756,28 +2004,79 @@ class AiVBEEngine {
     await this.videoEl.play();
   }
   async setupPipeline(type, src) {
+    this._assertInitialized();
+    if (this.destroyed) {
+      throw new Error('AiVBEEngine destroyed');
+    }
+    var requestId = ++this.pipelineRequestId;
     this._cleanUpPipeline();
+    if (type === 'blur') {
+      var blurRadius = typeof src === 'number' ? src : this.config.postProcessing.blurRadius;
+      this.pipeline = buildCanvas2DPipeline({
+        canvas: this.canvas,
+        videoElement: this.videoEl,
+        mode: 'blur',
+        mirror: this.config.video.mirror,
+        segmenterRuntime: this.segmenterRuntime,
+        blurRadius: blurRadius
+      });
+      this.currentBackgroundKind = 'blur';
+      return;
+    }
+    if (type === 'color') {
+      this.pipeline = buildCanvas2DPipeline({
+        canvas: this.canvas,
+        videoElement: this.videoEl,
+        mode: 'color',
+        mirror: this.config.video.mirror,
+        segmenterRuntime: this.segmenterRuntime,
+        backgroundColor: src
+      });
+      this.currentBackgroundKind = 'color';
+      return;
+    }
     return new Promise((resolve, reject) => {
       var backgroundEl = document.createElement('img');
-      backgroundEl.onerror = () => reject(new Error('Failed to load background image'));
+      var settled = false;
+      var settle = (callback, value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (this.pendingImageLoad && this.pendingImageLoad.image === backgroundEl) {
+          this.pendingImageLoad = null;
+        }
+        backgroundEl.onload = null;
+        backgroundEl.onerror = null;
+        callback(value);
+      };
+      this.pendingImageLoad = {
+        image: backgroundEl,
+        reject: error => settle(reject, error)
+      };
+      backgroundEl.onerror = () => settle(reject, new Error('Failed to load background image'));
       backgroundEl.onload = () => {
         try {
+          if (requestId !== this.pipelineRequestId || this.destroyed) {
+            settle(reject, new Error('Background image load cancelled'));
+            return;
+          }
           this.backgroundEl = backgroundEl;
-          this.pipeline = buildWebGL2Pipeline({
-            width: this.config.video.width,
-            height: this.config.video.height,
-            htmlElement: this.videoEl
-          }, this.backgroundEl, {
-            type,
-            mirror: this.config.video.mirror
-          }, this.config.segmentation, this.canvas, this.segmenterRuntime);
-          this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
-          resolve();
+          this.pipeline = buildCanvas2DPipeline({
+            canvas: this.canvas,
+            videoElement: this.videoEl,
+            mode: 'image',
+            mirror: this.config.video.mirror,
+            segmenterRuntime: this.segmenterRuntime,
+            backgroundImage: backgroundEl
+          });
+          this.currentBackgroundKind = 'image';
+          settle(resolve);
         } catch (error) {
-          reject(error);
+          settle(reject, error);
         }
       };
-      backgroundEl.src = src || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+      backgroundEl.src = src;
     });
   }
   createOutputStream() {
@@ -1805,10 +2104,6 @@ class AiVBEEngine {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    if (this.renderTimeoutId) {
-      this.timerWorker.clearTimeout(this.renderTimeoutId);
-      this.renderTimeoutId = null;
-    }
   }
   async loop(now) {
     if (!this.isRunning) return;
@@ -1820,166 +2115,80 @@ class AiVBEEngine {
         return;
       }
       this.isRendering = true;
-      try {
-        if (this.pipeline) {
-          await this.pipeline.render();
+      this.renderPromise = (async () => {
+        var pipeline = this.pipeline;
+        try {
+          if (pipeline) {
+            await pipeline.render();
+          }
+        } catch (error) {
+          logger.error(`Render error: ${error.message}`);
+        } finally {
+          this.isRendering = false;
+          this.renderPromise = null;
         }
-      } catch (error) {
-        logger.error(`Render error: ${error.message}`);
-      } finally {
-        this.isRendering = false;
-      }
+      })();
+      await this.renderPromise;
     }
     if (this.isRunning) {
       this.animationFrameId = requestAnimationFrame(this.loop);
     }
   }
   async setBackgroundImage(url) {
-    if (typeof url !== 'string' || !url.trim()) {
+    this._assertInitialized();
+    var normalizedUrl = typeof url === 'string' ? url.trim() : '';
+    if (!normalizedUrl) {
       throw new Error('Invalid background image URL');
     }
-    if (url === 'none') {
+    if (normalizedUrl === 'none') {
       this.clearBackground();
       return;
     }
-    return this.setupPipeline('image', url);
+    return this.setupPipeline('image', normalizedUrl);
   }
   clearBackground() {
+    this._assertInitialized();
     this._cleanUpPipeline();
-    var gl = this.canvas.getContext('webgl2');
-    if (!gl) {
-      throw new Error('WebGL2 not available');
-    }
-    var vsSrc = `#version 300 es
-      in vec2 a_position;
-      in vec2 a_texCoord;
-      out vec2 v_texCoord;
-      void main() {
-        gl_Position = vec4(a_position, 0.0, 1.0);
-        v_texCoord = a_texCoord;
-      }
-    `;
-    var fsSrc = `#version 300 es
-      precision highp float;
-      in vec2 v_texCoord;
-      out vec4 outColor;
-      uniform sampler2D u_inputFrame;
-      void main() {
-        outColor = texture(u_inputFrame, v_texCoord);
-      }
-    `;
-    var vs = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vs, vsSrc);
-    gl.compileShader(vs);
-    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-      throw new Error(`Passthrough VS compile failed: ${gl.getShaderInfoLog(vs)}`);
-    }
-    var fs = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fs, fsSrc);
-    gl.compileShader(fs);
-    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-      throw new Error(`Passthrough FS compile failed: ${gl.getShaderInfoLog(fs)}`);
-    }
-    var program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(`Passthrough program link failed: ${gl.getProgramInfoLog(program)}`);
-    }
-    var vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    var posBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    var posLoc = gl.getAttribLocation(program, 'a_position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-    var texBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]), gl.STATIC_DRAW);
-    var texLoc = gl.getAttribLocation(program, 'a_texCoord');
-    gl.enableVertexAttribArray(texLoc);
-    gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.useProgram(program);
-    gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
-    var {
-      videoEl,
-      canvas
-    } = this;
-    this.pipeline = {
-      async render() {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoEl);
-        gl.bindVertexArray(vao);
-        gl.useProgram(program);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      },
-      updatePostProcessingConfig() {},
-      updateMirror() {},
-      cleanUp() {
-        gl.deleteTexture(texture);
-        gl.deleteBuffer(texBuf);
-        gl.deleteBuffer(posBuf);
-        gl.deleteShader(vs);
-        gl.deleteShader(fs);
-        gl.deleteProgram(program);
-        gl.deleteVertexArray(vao);
-      }
-    };
+    this.pipeline = buildCanvas2DPipeline({
+      canvas: this.canvas,
+      videoElement: this.videoEl,
+      mode: 'none',
+      mirror: this.config.video.mirror,
+      segmenterRuntime: this.segmenterRuntime
+    });
+    this.currentBackgroundKind = 'none';
   }
   async setBlurBackground(radius) {
-    await this.setupPipeline('blur');
-    radius = typeof radius === 'number' ? radius : 20;
+    this._assertInitialized();
+    radius = typeof radius === 'number' ? radius : this.config.postProcessing.blurRadius;
     if (radius < 0 || radius > 100) {
-      radius = 20;
+      radius = this.config.postProcessing.blurRadius;
     }
-    this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
-      blurRadius: radius
-    }));
+    await this.setupPipeline('blur', radius);
   }
   async setSolidColor(color = '#00ff00') {
-    var isValidColor = /^#[0-9A-Fa-f]{6}$/.test(color) || /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color);
-    if (!isValidColor) {
+    this._assertInitialized();
+    if (!isValidColor(color)) {
       throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
     }
-    if (this._cachedSolidColor === color && this._cachedSolidColorDataUrl && this.pipeline && this.backgroundEl) {
-      this.backgroundEl.src = this._cachedSolidColorDataUrl;
-      return;
+    return this.setupPipeline('color', color);
+  }
+  _assertInitialized() {
+    if (!this.canvas || !this.videoEl || !this.outputStream) {
+      throw new Error('AiVBEEngine not initialized');
     }
-    if (!this.solidColorCanvas) {
-      this.solidColorCanvas = document.createElement('canvas');
-      this.solidColorCanvas.width = 16;
-      this.solidColorCanvas.height = 16;
-    }
-    var ctx = this.solidColorCanvas.getContext('2d');
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 16, 16);
-    this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
-    this._cachedSolidColor = color;
-    return this.setupPipeline('image', this._cachedSolidColorDataUrl);
   }
   async destroy() {
+    if (this.destroyed && !this.canvas && !this.videoEl && !this.outputStream) {
+      return;
+    }
+    this.destroyed = true;
     this.stop();
+    if (this.renderPromise) {
+      await this.renderPromise;
+    }
     this._cleanUpPipeline();
-    if (this.solidColorCanvas) {
-      this.solidColorCanvas = null;
-    }
-    this._cachedSolidColor = null;
-    this._cachedSolidColorDataUrl = null;
-    if (this.timerWorker) {
-      this.timerWorker.terminate();
-    }
+    this.currentBackgroundKind = 'none';
     if (this.videoEl) {
       this.videoEl.srcObject = null;
       this.videoEl.load();
@@ -1992,219 +2201,25 @@ class AiVBEEngine {
     this.outputStream = null;
     this.canvas = null;
     this.videoEl = null;
-    this.timerWorker = null;
+    this.backgroundEl = null;
   }
 }
+function isValidColor(color) {
+  if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    return true;
+  }
+  var match = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(,\s*(\d*(?:\.\d+)?)\s*)?\)$/.exec(color);
+  if (!match) {
+    return false;
+  }
+  var red = Number(match[1]);
+  var green = Number(match[2]);
+  var blue = Number(match[3]);
+  var alpha = match[5] === undefined || match[5] === '' ? 1 : Number(match[5]);
+  return red <= 255 && green <= 255 && blue <= 255 && alpha >= 0 && alpha <= 1;
+}
 module.exports = AiVBEEngine;
-},{"../Logger":51,"../VirtualBackground/helpers/timerHelper.js":91,"./AiVBEConfig":8,"./MediaPipeSegmenterRuntime":9,"./pipelines/webgl2/webgl2Pipeline.js":12}],11:[function(require,module,exports){
-"use strict";
-
-var {
-  compileShader,
-  createPiplelineStageProgram,
-  createTexture,
-  glsl
-} = require('../../../VirtualBackground/pipelines/helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildMaskUploadStage = (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, outputTexture) => {
-  var fragmentShaderSource = glsl`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_segmentationMask;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    void main() {
-      vec4 mask = texture(u_segmentationMask, v_texCoord);
-      float alpha = mask.a > 0.0 ? mask.a : max(mask.r, max(mask.g, mask.b));
-      outColor = vec4(0.0, 0.0, 0.0, alpha);
-    }
-  `;
-  var [segmentationWidth, segmentationHeight] = inputResolutions[segmentationConfig.inputResolution];
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var maskLocation = gl.getUniformLocation(program, 'u_segmentationMask');
-  var inputTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight, gl.LINEAR, gl.LINEAR);
-  var frameBuffer = gl.createFramebuffer();
-  var maskCanvas = null;
-  var maskContext = null;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  gl.useProgram(program);
-  gl.uniform1i(maskLocation, 1);
-  function getUploadSource(maskSource) {
-    if (typeof document === 'undefined') {
-      return maskSource;
-    }
-    if (!maskCanvas) {
-      maskCanvas = document.createElement('canvas');
-      maskCanvas.width = segmentationWidth;
-      maskCanvas.height = segmentationHeight;
-      maskContext = maskCanvas.getContext('2d');
-    }
-    if (!maskContext) {
-      return maskSource;
-    }
-    maskContext.clearRect(0, 0, segmentationWidth, segmentationHeight);
-    maskContext.drawImage(maskSource, 0, 0, segmentationWidth, segmentationHeight);
-    return maskCanvas;
-  }
-  function render(maskSource) {
-    var uploadSource = getUploadSource(maskSource);
-    gl.viewport(0, 0, segmentationWidth, segmentationHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uploadSource);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(inputTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render,
-    cleanUp
-  };
-};
-},{"../../../VirtualBackground/pipelines/helpers/webglHelper.js":93}],12:[function(require,module,exports){
-"use strict";
-
-var {
-  buildJointBilateralFilterStage
-} = require('../../../VirtualBackground/pipelines/webgl2/jointBilateralFilterStage.js');
-var {
-  buildBackgroundImageStage
-} = require('../../../VirtualBackground/pipelines/webgl2/backgroundImageStage.js');
-var {
-  buildBackgroundBlurStage
-} = require('../../../VirtualBackground/pipelines/webgl2/backgroundBlurStage.js');
-var {
-  buildMaskUploadStage
-} = require('./maskUploadStage.js');
-var {
-  compileShader,
-  createTexture,
-  glsl
-} = require('../../../VirtualBackground/pipelines/helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig, segmentationConfig, canvas, segmenterRuntime) => {
-  var vertexShaderSource = glsl`#version 300 es
-
-    in vec2 a_position;
-    in vec2 a_texCoord;
-
-    out vec2 v_texCoord;
-
-    void main() {
-      gl_Position = vec4(a_position, 0.0, 1.0);
-      v_texCoord = a_texCoord;
-    }
-  `;
-  var {
-    width: frameWidth,
-    height: frameHeight
-  } = sourcePlayback;
-  var segmentationResolution = inputResolutions[segmentationConfig.inputResolution];
-  if (!segmentationResolution) {
-    throw new Error(`Unsupported segmentation inputResolution: ${segmentationConfig.inputResolution}`);
-  }
-  var [segmentationWidth, segmentationHeight] = segmentationResolution;
-  var gl = canvas.getContext('webgl2');
-  if (!gl) {
-    throw new Error('WebGL2 not supported');
-  }
-  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var vertexArray = gl.createVertexArray();
-  gl.bindVertexArray(vertexArray);
-  var positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-  var texCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-  var inputFrameTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  var segmentationTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight, gl.LINEAR, gl.LINEAR);
-  var personMaskTexture = createTexture(gl, gl.RGBA8, frameWidth, frameHeight);
-  var maskUploadStage = buildMaskUploadStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, segmentationTexture);
-  var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
-  async function render() {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourcePlayback.htmlElement);
-    gl.bindVertexArray(vertexArray);
-    var segmentationResult = await segmenterRuntime.segmentForVideo(sourcePlayback.htmlElement);
-    if (!segmentationResult || !segmentationResult.segmentationMask) {
-      throw new Error('MediaPipe segmentation did not return segmentationMask');
-    }
-    maskUploadStage.render(segmentationResult.segmentationMask);
-    jointBilateralFilterStage.render();
-    backgroundStage.render();
-  }
-  function updatePostProcessingConfig(postProcessingConfig) {
-    jointBilateralFilterStage.updateSigmaSpace(postProcessingConfig.jointBilateralFilter.sigmaSpace);
-    jointBilateralFilterStage.updateSigmaColor(postProcessingConfig.jointBilateralFilter.sigmaColor);
-    if (backgroundConfig.type === 'image') {
-      backgroundStage.updateCoverage(postProcessingConfig.coverage);
-      backgroundStage.updateLightWrapping(postProcessingConfig.lightWrapping);
-      backgroundStage.updateBlendMode(postProcessingConfig.blendMode);
-    } else if (backgroundConfig.type === 'blur') {
-      backgroundStage.updateCoverage(postProcessingConfig.coverage);
-      if (typeof postProcessingConfig.blurRadius === 'number') {
-        backgroundStage.updateBlurRadius(postProcessingConfig.blurRadius);
-      }
-    } else {
-      backgroundStage.updateCoverage([0, 0.9999]);
-      backgroundStage.updateLightWrapping(0);
-    }
-  }
-  function updateMirror(mirror) {
-    if (backgroundStage.updateMirror) {
-      backgroundStage.updateMirror(mirror);
-    }
-  }
-  function cleanUp() {
-    backgroundStage.cleanUp();
-    jointBilateralFilterStage.cleanUp();
-    maskUploadStage.cleanUp();
-    gl.deleteTexture(personMaskTexture);
-    gl.deleteTexture(segmentationTexture);
-    gl.deleteTexture(inputFrameTexture);
-    gl.deleteBuffer(texCoordBuffer);
-    gl.deleteBuffer(positionBuffer);
-    gl.deleteVertexArray(vertexArray);
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render,
-    updatePostProcessingConfig,
-    updateMirror,
-    cleanUp
-  };
-};
-},{"../../../VirtualBackground/pipelines/helpers/webglHelper.js":93,"../../../VirtualBackground/pipelines/webgl2/backgroundBlurStage.js":94,"../../../VirtualBackground/pipelines/webgl2/backgroundImageStage.js":95,"../../../VirtualBackground/pipelines/webgl2/jointBilateralFilterStage.js":96,"./maskUploadStage.js":11}],13:[function(require,module,exports){
+},{"../Logger":49,"./AiVBEConfig":7,"./Canvas2DPipeline.js":8,"./MediaPipeSegmenterRuntime":9}],11:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2223,7 +2238,7 @@ var BFCPLib = {
   'AttributeName': AttributeName
 };
 module.exports = BFCPLib;
-},{"./lib/attributes/name.js":21,"./lib/messages/primitive.js":38,"./lib/messages/requestStatusValue.js":39,"./lib/user/user.js":42}],14:[function(require,module,exports){
+},{"./lib/attributes/name.js":19,"./lib/messages/primitive.js":36,"./lib/messages/requestStatusValue.js":37,"./lib/user/user.js":40}],12:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -2393,7 +2408,7 @@ class Attribute {
   }
 }
 module.exports = Attribute;
-},{"../parser/complements.js":40,"./format.js":19,"./type.js":25}],15:[function(require,module,exports){
+},{"../parser/complements.js":38,"./format.js":17,"./type.js":23}],13:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -2419,7 +2434,7 @@ class FloorId extends Attribute {
   }
 }
 module.exports = FloorId;
-},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],16:[function(require,module,exports){
+},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],14:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -2445,7 +2460,7 @@ class FloorRequestId extends Attribute {
   }
 }
 module.exports = FloorRequestId;
-},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],17:[function(require,module,exports){
+},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],15:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -2477,7 +2492,7 @@ class FloorRequestInformation extends Attribute {
   }
 }
 module.exports = FloorRequestInformation;
-},{"./attribute.js":14,"./floorRequestStatus.js":18,"./format.js":19,"./length.js":20,"./type.js":25}],18:[function(require,module,exports){
+},{"./attribute.js":12,"./floorRequestStatus.js":16,"./format.js":17,"./length.js":18,"./type.js":23}],16:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -2508,7 +2523,7 @@ class FloorRequestStatus extends Attribute {
   }
 }
 module.exports = FloorRequestStatus;
-},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./requestStatus.js":22,"./type.js":25}],19:[function(require,module,exports){
+},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./requestStatus.js":20,"./type.js":23}],17:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2561,7 +2576,7 @@ class Format {
   }
 }
 module.exports = Format;
-},{}],20:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2754,7 +2769,7 @@ class Length {
   }
 }
 module.exports = Length;
-},{}],21:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2945,7 +2960,7 @@ class Name {
   }
 }
 module.exports = Name;
-},{}],22:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -2976,7 +2991,7 @@ class RequestStatus extends Attribute {
   }
 }
 module.exports = RequestStatus;
-},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],23:[function(require,module,exports){
+},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],21:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3010,7 +3025,7 @@ class SupportedAttributes extends Attribute {
   }
 }
 module.exports = SupportedAttributes;
-},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],24:[function(require,module,exports){
+},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],22:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3056,7 +3071,7 @@ class SupportedPrimitives extends Attribute {
   }
 }
 module.exports = SupportedPrimitives;
-},{"../messages/primitive.js":38,"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],25:[function(require,module,exports){
+},{"../messages/primitive.js":36,"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],23:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3249,7 +3264,7 @@ class Type {
   }
 }
 module.exports = Type;
-},{}],26:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -3357,7 +3372,7 @@ class CommonHeader {
   }
 }
 module.exports = CommonHeader;
-},{"../parser/complements.js":40}],27:[function(require,module,exports){
+},{"../parser/complements.js":38}],25:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3387,7 +3402,7 @@ class FloorQuery extends Message {
   }
 }
 module.exports = FloorQuery;
-},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],28:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],26:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3417,7 +3432,7 @@ class FloorRelease extends Message {
   }
 }
 module.exports = FloorRelease;
-},{"../attributes/floorRequestId.js":16,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],29:[function(require,module,exports){
+},{"../attributes/floorRequestId.js":14,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],27:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3447,7 +3462,7 @@ class FloorRequest extends Message {
   }
 }
 module.exports = FloorRequest;
-},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],30:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],28:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3479,7 +3494,7 @@ class FloorRequestStatus extends Message {
   }
 }
 module.exports = FloorRequestStatus;
-},{"../attributes/floorRequestInformation.js":17,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],31:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":15,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],29:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3509,7 +3524,7 @@ class FloorRequestStatusAck extends Message {
   }
 }
 module.exports = FloorRequestStatusAck;
-},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],32:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],30:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3541,7 +3556,7 @@ class FloorStatus extends Message {
   }
 }
 module.exports = FloorStatus;
-},{"../attributes/floorRequestInformation.js":17,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],33:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":15,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],31:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3571,7 +3586,7 @@ class FloorStatusAck extends Message {
   }
 }
 module.exports = FloorStatusAck;
-},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],34:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],32:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3601,7 +3616,7 @@ class Hello extends Message {
   }
 }
 module.exports = Hello;
-},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],35:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],33:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -3631,7 +3646,7 @@ class HelloAck extends Message {
   }
 }
 module.exports = HelloAck;
-},{"../attributes/supportedAttributes.js":23,"../attributes/supportedPrimitives.js":24,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],36:[function(require,module,exports){
+},{"../attributes/supportedAttributes.js":21,"../attributes/supportedPrimitives.js":22,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],34:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3714,7 +3729,7 @@ class Message {
   }
 }
 module.exports = Message;
-},{}],37:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3879,7 +3894,7 @@ class PayloadLength {
   }
 }
 module.exports = PayloadLength;
-},{}],38:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4066,7 +4081,7 @@ class Primitive {
   }
 }
 module.exports = Primitive;
-},{}],39:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4149,7 +4164,7 @@ class RequestStatusValue {
   }
 }
 module.exports = RequestStatusValue;
-},{}],40:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4194,7 +4209,7 @@ class Complements {
   }
 }
 module.exports = Complements;
-},{}],41:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 "use strict";
 
 var FloorRequest = require('../messages/floorRequest.js');
@@ -4472,7 +4487,7 @@ class Parser {
   }
 }
 module.exports = Parser;
-},{"../attributes/floorId.js":15,"../attributes/floorRequestId.js":16,"../attributes/floorRequestInformation.js":17,"../attributes/floorRequestStatus.js":18,"../attributes/requestStatus.js":22,"../attributes/supportedAttributes.js":23,"../attributes/supportedPrimitives.js":24,"../attributes/type.js":25,"../messages/commonHeader.js":26,"../messages/floorQuery.js":27,"../messages/floorRelease.js":28,"../messages/floorRequest.js":29,"../messages/floorRequestStatus.js":30,"../messages/floorRequestStatusAck.js":31,"../messages/floorStatus.js":32,"../messages/floorStatusAck.js":33,"../messages/hello.js":34,"../messages/helloAck.js":35,"../messages/primitive.js":38,"../parser/complements.js":40}],42:[function(require,module,exports){
+},{"../attributes/floorId.js":13,"../attributes/floorRequestId.js":14,"../attributes/floorRequestInformation.js":15,"../attributes/floorRequestStatus.js":16,"../attributes/requestStatus.js":20,"../attributes/supportedAttributes.js":21,"../attributes/supportedPrimitives.js":22,"../attributes/type.js":23,"../messages/commonHeader.js":24,"../messages/floorQuery.js":25,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../parser/complements.js":38}],40:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -4734,7 +4749,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":21,"../messages/floorRelease.js":28,"../messages/floorRequest.js":29,"../messages/floorRequestStatus.js":30,"../messages/floorRequestStatusAck.js":31,"../messages/floorStatus.js":32,"../messages/floorStatusAck.js":33,"../messages/hello.js":34,"../messages/helloAck.js":35,"../messages/primitive.js":38,"../messages/requestStatusValue.js":39,"../parser/parser.js":41,"buffer":104}],43:[function(require,module,exports){
+},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":102}],41:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4983,11 +4998,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":44,"./Exceptions":48,"./Grammar":49,"./Socket":83,"./URI":89,"./Utils":90}],44:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Socket":81,"./URI":87,"./Utils":88}],42:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212163622 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212180018 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -5215,7 +5230,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{}],45:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -5454,7 +5469,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":44,"./Dialog/RequestSender":46,"./Logger":51,"./SIPMessage":82,"./Transactions":86,"./Utils":90}],46:[function(require,module,exports){
+},{"./Constants":42,"./Dialog/RequestSender":44,"./Logger":49,"./SIPMessage":80,"./Transactions":84,"./Utils":88}],44:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -5549,7 +5564,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":44,"../RequestSender":81,"../Transactions":86}],47:[function(require,module,exports){
+},{"../Constants":42,"../RequestSender":79,"../Transactions":84}],45:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -5728,7 +5743,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":51,"./Utils":90}],48:[function(require,module,exports){
+},{"./Logger":49,"./Utils":88}],46:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -5772,7 +5787,7 @@ module.exports = {
   NotSupportedError,
   NotReadyError
 };
-},{}],49:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -18180,7 +18195,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":71,"./URI":89}],50:[function(require,module,exports){
+},{"./NameAddrHeader":69,"./URI":87}],48:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -18198,7 +18213,7 @@ var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
 var AiVBE = require('./AiVBE/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '1.13.0.405212163622');
+debug('version %s', '1.13.0.405212180018');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -18241,10 +18256,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212163622';
+    return '1.13.0.405212180018';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./AiVBE/index.js":10,"./BFCP":13,"./Constants":44,"./Exceptions":48,"./Grammar":49,"./Mixer":53,"./NameAddrHeader":71,"./Stats":84,"./UA":88,"./URI":89,"./Utils":90,"./VirtualBackground/index.js":92,"./WebSocketInterface":100,"debug":105}],51:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./AiVBE/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Mixer":51,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./VirtualBackground/index.js":90,"./WebSocketInterface":98,"debug":103}],49:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -18346,7 +18361,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":105}],52:[function(require,module,exports){
+},{"debug":103}],50:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -18559,7 +18574,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":44,"./Exceptions":48,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./URI":89,"./Utils":90,"events":103}],53:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":101}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -18573,7 +18588,7 @@ module.exports = class Message extends EventEmitter {
  * @see module:MixerCore/MixerController
  */
 module.exports = require('./MixerCore/MixerController');
-},{"./MixerCore/MixerController":57}],54:[function(require,module,exports){
+},{"./MixerCore/MixerController":55}],52:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19784,7 +19799,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{}],55:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20135,7 +20150,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],56:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20334,7 +20349,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":51}],57:[function(require,module,exports){
+},{"../Logger":49}],55:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -21410,7 +21425,7 @@ module.exports = class MediaStreamMixer {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
 };
-},{"../Logger":51,"./AudioMixer":54,"./LayoutEngine":55,"./MixerConfig":56,"./MixerDomAdapter":58,"./OutputStreamManager":59,"./RenderLoop":60,"./SourceRegistry":61,"./WatermarkManager":62}],58:[function(require,module,exports){
+},{"../Logger":49,"./AudioMixer":52,"./LayoutEngine":53,"./MixerConfig":54,"./MixerDomAdapter":56,"./OutputStreamManager":57,"./RenderLoop":58,"./SourceRegistry":59,"./WatermarkManager":60}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21552,7 +21567,7 @@ class MixerDomAdapter {
   }
 }
 module.exports = MixerDomAdapter;
-},{}],59:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -22163,7 +22178,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],60:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22662,7 +22677,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MixerRenderer/MainCanvas2DRenderer":64,"../MixerRenderer/MainWebGL2Renderer":65,"../MixerRenderer/RendererFactory":66,"../MixerRenderer/WorkerRenderer":67}],61:[function(require,module,exports){
+},{"../MixerRenderer/MainCanvas2DRenderer":62,"../MixerRenderer/MainWebGL2Renderer":63,"../MixerRenderer/RendererFactory":64,"../MixerRenderer/WorkerRenderer":65}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23030,7 +23045,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],62:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23492,7 +23507,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],63:[function(require,module,exports){
+},{}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23633,7 +23648,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],64:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23813,7 +23828,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":63}],65:[function(require,module,exports){
+},{"./BaseRenderer":61}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24207,7 +24222,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._activeMirrorX = null;
   }
 };
-},{"./BaseRenderer":63,"./helpers/color":68,"./helpers/gl":69}],66:[function(require,module,exports){
+},{"./BaseRenderer":61,"./helpers/color":66,"./helpers/gl":67}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24374,7 +24389,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":64,"./MainWebGL2Renderer":65,"./WorkerRenderer":67}],67:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":62,"./MainWebGL2Renderer":63,"./WorkerRenderer":65}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24956,7 +24971,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":63,"./workerScript":70}],68:[function(require,module,exports){
+},{"./BaseRenderer":61,"./workerScript":68}],66:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25049,7 +25064,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],69:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25124,7 +25139,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],70:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25150,7 +25165,7 @@ exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
   return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
 };
-},{}],71:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -25239,7 +25254,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":49,"./URI":89}],72:[function(require,module,exports){
+},{"./Grammar":47,"./URI":87}],70:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -25445,7 +25460,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":44,"./Exceptions":48,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./Utils":90,"events":103}],73:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":101}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -25699,7 +25714,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":49,"./Logger":51,"./SIPMessage":82}],74:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49,"./SIPMessage":80}],72:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -25708,7 +25723,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],75:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -31811,7 +31826,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./AINoiseSuppression/index.js":5,"./BFCP/index":13,"./Constants":44,"./Dialog":45,"./Exceptions":48,"./Logger":51,"./Mixer":53,"./RTCSession/DTMF":76,"./RTCSession/Info":77,"./RTCSession/ReferNotifier":78,"./RTCSession/ReferSubscriber":79,"./RequestSender":81,"./SIPMessage":82,"./Timers":85,"./Transactions":86,"./URI":89,"./Utils":90,"buffer":104,"events":103,"sdp-transform":112}],76:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./Mixer":51,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":102,"events":101,"sdp-transform":110}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -31950,7 +31965,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":44,"../Exceptions":48,"../Logger":51,"../Utils":90,"events":103}],77:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":88,"events":101}],75:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -32031,7 +32046,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":44,"../Exceptions":48,"../Utils":90,"events":103}],78:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Utils":88,"events":101}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -32078,7 +32093,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":44,"../Logger":51}],79:[function(require,module,exports){
+},{"../Constants":42,"../Logger":49}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -32202,7 +32217,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":44,"../Grammar":49,"../Logger":51,"../Utils":90,"events":103}],80:[function(require,module,exports){
+},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":88,"events":101}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -32500,7 +32515,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":44,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./Utils":90}],81:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -32639,7 +32654,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":44,"./DigestAuthentication":47,"./Logger":51,"./Transactions":86}],82:[function(require,module,exports){
+},{"./Constants":42,"./DigestAuthentication":45,"./Logger":49,"./Transactions":84}],80:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -33211,7 +33226,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":44,"./Grammar":49,"./Logger":51,"./NameAddrHeader":71,"./Utils":90,"sdp-transform":112}],83:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":88,"sdp-transform":110}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -33279,7 +33294,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":49,"./Logger":51,"./Utils":90}],84:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49,"./Utils":88}],82:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -33685,7 +33700,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":44,"./Logger":51,"./Utils":90,"events":103}],85:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./Utils":88,"events":101}],83:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -33706,7 +33721,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],86:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34296,7 +34311,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":44,"./Logger":51,"./SIPMessage":82,"./Timers":85,"events":103}],87:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Timers":83,"events":101}],85:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34669,7 +34684,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":44,"./Logger":51,"./Socket":83,"./Utils":90}],88:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./Socket":81,"./Utils":88}],86:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35729,7 +35744,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":43,"./Constants":44,"./Exceptions":48,"./Logger":51,"./Message":52,"./Options":72,"./Parser":73,"./Pk":74,"./RTCSession":75,"./Registrator":80,"./SIPMessage":82,"./Transactions":86,"./Transport":87,"./URI":89,"./Utils":90,"./sanityCheck":101,"events":103,"jsencrypt":108}],89:[function(require,module,exports){
+},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":50,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":99,"events":101,"jsencrypt":106}],87:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -35901,7 +35916,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":44,"./Grammar":49,"./Utils":90}],90:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./Utils":88}],88:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -37767,7 +37782,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":44,"./Grammar":49,"./URI":89}],91:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./URI":87}],89:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -37891,7 +37906,7 @@ exports.createTimerWorker = () => {
   };
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],92:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 "use strict";
 
 var {
@@ -38450,7 +38465,7 @@ module.exports = class VirtualBackgroundEngine {
     this.timerWorker = null;
   }
 };
-},{"../Logger":51,"./helpers/timerHelper.js":91,"./pipelines/webgl2/webgl2Pipeline.js":99}],93:[function(require,module,exports){
+},{"../Logger":49,"./helpers/timerHelper.js":89,"./pipelines/webgl2/webgl2Pipeline.js":97}],91:[function(require,module,exports){
 "use strict";
 
 exports.glsl = String.raw;
@@ -38639,7 +38654,7 @@ exports.readPixelsAsync = async (gl, x, y, width, height, format, type, dest) =>
   gl.deleteBuffer(buf);
   return dest;
 };
-},{}],94:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
@@ -38855,7 +38870,7 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
     cleanUp
   };
 }
-},{"../helpers/webglHelper.js":93}],95:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91}],93:[function(require,module,exports){
 "use strict";
 
 var {
@@ -39031,7 +39046,7 @@ exports.buildBackgroundImageStage = (gl, positionBuffer, texCoordBuffer, personM
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":93}],96:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91}],94:[function(require,module,exports){
 "use strict";
 
 var {
@@ -39164,7 +39179,7 @@ exports.buildJointBilateralFilterStage = (gl, vertexShader, positionBuffer, texC
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":93}],97:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91}],95:[function(require,module,exports){
 "use strict";
 
 var {
@@ -39243,7 +39258,7 @@ exports.buildResizingStage = (gl, vertexShader, positionBuffer, texCoordBuffer, 
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":93}],98:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91}],96:[function(require,module,exports){
 "use strict";
 
 var {
@@ -39310,7 +39325,7 @@ exports.buildSoftmaxStage = (gl, vertexShader, positionBuffer, texCoordBuffer, s
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":93}],99:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91}],97:[function(require,module,exports){
 "use strict";
 
 var {
@@ -39675,7 +39690,7 @@ exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":93,"./backgroundBlurStage.js":94,"./backgroundImageStage.js":95,"./jointBilateralFilterStage.js":96,"./resizingStage.js":97,"./softmaxStage.js":98}],100:[function(require,module,exports){
+},{"../helpers/webglHelper.js":91,"./backgroundBlurStage.js":92,"./backgroundImageStage.js":93,"./jointBilateralFilterStage.js":94,"./resizingStage.js":95,"./softmaxStage.js":96}],98:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39794,7 +39809,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":49,"./Logger":51}],101:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49}],99:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39987,7 +40002,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":44,"./Logger":51,"./SIPMessage":82,"./Utils":90}],102:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Utils":88}],100:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -40139,7 +40154,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],103:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -40664,7 +40679,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],104:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -42445,7 +42460,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":102,"buffer":104,"ieee754":107}],105:[function(require,module,exports){
+},{"base64-js":100,"buffer":102,"ieee754":105}],103:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -42721,7 +42736,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":106,"_process":110}],106:[function(require,module,exports){
+},{"./common":104,"_process":108}],104:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -43015,7 +43030,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":109}],107:[function(require,module,exports){
+},{"ms":107}],105:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -43102,7 +43117,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],108:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -48493,7 +48508,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],109:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -48657,7 +48672,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],110:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -48843,7 +48858,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],111:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -49339,7 +49354,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],112:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -49354,7 +49369,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":111,"./parser":113,"./writer":114}],113:[function(require,module,exports){
+},{"./grammar":109,"./parser":111,"./writer":112}],111:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -49480,7 +49495,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":111}],114:[function(require,module,exports){
+},{"./grammar":109}],112:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -49596,5 +49611,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":111}]},{},[50])(50)
+},{"./grammar":109}]},{},[48])(48)
 });

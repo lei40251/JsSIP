@@ -232,6 +232,7 @@ gulp.task('test-files', function()
     'test/test-properties.js',
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
+    'test/test-aivbe.js',
     'test/test-mixer.js',
     'test/test-rtcsession-mixer.js',
     'test/test-bfcp.js'
@@ -243,7 +244,11 @@ gulp.task('test-files', function()
 
 gulp.task('mixer-test', function(done)
 {
-  require('./test/test-mixer').run()
+  require('./test/test-aivbe').run()
+    .then(function()
+    {
+      return require('./test/test-mixer').run();
+    })
     .then(function()
     {
       return require('./test/test-rtcsession-mixer').run();
