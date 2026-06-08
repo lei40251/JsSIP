@@ -2,11 +2,6 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
-window.addEventListener('VirtualBackgroundEngineReady', async() => 
-{
-  setStatus('加载虚拟背景');
-});
-
 // 调试信息输出
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
@@ -71,7 +66,8 @@ const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
-const AI_VBE_ASSET_ROOT = './assets/aivb';
+const AI_VBE_TASKS_ROOT = './assets/tasks';
+const AI_VBE_MODEL_URL = `${AI_VBE_TASKS_ROOT}/selfie_segmenter_landscape.tflite`;
 
 // AI 降噪相关
 let aiNsType = '';
@@ -2195,19 +2191,9 @@ async function call(type, direction, mediaStream)
       video : videoConstraints
     });
 
-    if (virtualBackgroundEngineType === 'aivbe')
-    {
-      await engine.init({
-        inputStream
-      });
-    }
-    else
-    {
-      await engine.init({
-        inputStream,
-        modelPath : getVirtualBackgroundModelPath()
-      });
-    }
+    await engine.init({
+      inputStream
+    });
 
     engine.start();
 
@@ -2868,6 +2854,7 @@ document.querySelector('#mics').addEventListener('change', function()
 document.querySelector('#virtualBackground').addEventListener('change', function() 
 {
   virtualBackgroundType = this.options[this.selectedIndex].value;
+
   virtualBackgroundEngineType = virtualBackgroundType.indexOf('aivbe:') === 0 ? 'aivbe' : 'legacy';
 
   if (virtualBackgroundEngineType === 'aivbe')
@@ -2971,7 +2958,10 @@ function createVirtualBackgroundEngine()
   {
     return new CRTC.AiVBEEngine({
       video       : Object.assign({}, videoConstraints, { mirror: false }),
-      assetConfig : { baseUrl: AI_VBE_ASSET_ROOT }
+      assetConfig : {
+        baseUrl  : AI_VBE_TASKS_ROOT,
+        modelUrl : AI_VBE_MODEL_URL
+      }
     });
   }
 
@@ -3017,7 +3007,7 @@ async function mediaStreamProcessor(mediastream)
   const audioTrack = mediastream.getAudioTracks()[0];
 
   engine = createVirtualBackgroundEngine();
- 
+
   if (virtualBackgroundEngineType === 'aivbe')
   {
     await engine.init({
