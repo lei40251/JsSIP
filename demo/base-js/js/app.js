@@ -2195,10 +2195,19 @@ async function call(type, direction, mediaStream)
       video : videoConstraints
     });
 
-    await engine.init({
-      inputStream,
-      modelPath : getVirtualBackgroundModelPath()
-    });
+    if (virtualBackgroundEngineType === 'aivbe')
+    {
+      await engine.init({
+        inputStream
+      });
+    }
+    else
+    {
+      await engine.init({
+        inputStream,
+        modelPath : getVirtualBackgroundModelPath()
+      });
+    }
 
     engine.start();
 
@@ -2971,11 +2980,6 @@ function createVirtualBackgroundEngine()
 
 function getVirtualBackgroundModelPath()
 {
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    return `${AI_VBE_ASSET_ROOT}/aivb/aivb_landscape.tflite`;
-  }
-
   return './virtual-background/models/slv.tflite';
 }
 
@@ -3014,10 +3018,19 @@ async function mediaStreamProcessor(mediastream)
 
   engine = createVirtualBackgroundEngine();
  
-  await engine.init({
-    inputStream : mediastream,
-    modelPath   : getVirtualBackgroundModelPath()
-  });
+  if (virtualBackgroundEngineType === 'aivbe')
+  {
+    await engine.init({
+      inputStream : mediastream
+    });
+  }
+  else
+  {
+    await engine.init({
+      inputStream : mediastream,
+      modelPath   : getVirtualBackgroundModelPath()
+    });
+  }
   engine.start();
   if (virtualBackgroundType==='blur')
   {

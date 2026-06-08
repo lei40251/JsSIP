@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.2026662222
+ * CRTC v1.13.0.2026681811
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -7,8 +7,78 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
-var workletCode = require('./aiNoiseSuppressionWorkletSource');
+var Logger = require('../Logger');
+var logger = new Logger('AINoiseSuppressionConfig');
+var DEFAULT_SAMPLE_RATE = 48000;
+var DEFAULT_SUPPRESSION_LEVEL = 80;
 var DEFAULT_CDN_URL = './static';
+exports.DEFAULT_SAMPLE_RATE = DEFAULT_SAMPLE_RATE;
+exports.DEFAULT_SUPPRESSION_LEVEL = DEFAULT_SUPPRESSION_LEVEL;
+exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
+exports.create = function (options) {
+  options = options && typeof options === 'object' ? options : {};
+  var config = {
+    enabled: exports.normalizeBoolean(options.enabled, true),
+    preserveOtherTracks: exports.normalizeBoolean(options.preserveOtherTracks, true),
+    sampleRate: exports.normalizePositiveInteger(options.sampleRate, DEFAULT_SAMPLE_RATE),
+    noiseReductionLevel: exports.normalizeSuppressionLevel(options.noiseReductionLevel, DEFAULT_SUPPRESSION_LEVEL),
+    assetConfig: exports.normalizeAssetConfig(options.assetConfig)
+  };
+  logger.debug(`Config created: ${JSON.stringify(config)}`);
+  return config;
+};
+exports.normalizeBoolean = function (value, fallback) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (value !== undefined) {
+    logger.debug(`normalizeBoolean fallback: value=${value} fallback=${fallback}`);
+  }
+  return Boolean(fallback);
+};
+exports.normalizePositiveInteger = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  if (value !== undefined) {
+    logger.debug(`normalizePositiveInteger fallback: value=${value} fallback=${fallback}`);
+  }
+  return fallback;
+};
+exports.normalizeSuppressionLevel = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue)) {
+    return Math.max(0, Math.min(100, Math.floor(numberValue)));
+  }
+  if (value !== undefined) {
+    logger.debug(`normalizeSuppressionLevel fallback: value=${value} fallback=${fallback}`);
+  }
+  return fallback;
+};
+exports.normalizeAssetConfig = function (assetConfig) {
+  if (!assetConfig || typeof assetConfig !== 'object') {
+    if (assetConfig !== undefined && assetConfig !== null) {
+      logger.debug(`normalizeAssetConfig fallback: invalid value=${assetConfig}`);
+    }
+    return null;
+  }
+  var normalized = {};
+  if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
+    normalized.cdnUrl = assetConfig.cdnUrl.trim();
+  } else if (assetConfig.cdnUrl !== undefined) {
+    logger.debug(`normalizeAssetConfig ignore cdnUrl: value=${assetConfig.cdnUrl}`);
+  }
+  return Object.keys(normalized).length > 0 ? normalized : null;
+};
+},{"../Logger":51}],2:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var AiNSConfig = require('./AINoiseSuppressionConfig');
+var workletCode = require('./aiNoiseSuppressionWorkletSource');
+var logger = new Logger('AINoiseSuppressionCore');
+var DEFAULT_CDN_URL = AiNSConfig.DEFAULT_CDN_URL;
 var WORKLET_MESSAGE_TYPES = {
   SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
   SET_BYPASS: 'SET_BYPASS'
@@ -71,17 +141,18 @@ module.exports = class AiNSCore {
    * @param {Object} [config.assetConfig]
    */
   constructor(config = {}) {
-    var initialNoiseReductionLevel = typeof config.noiseReductionLevel === 'number' && !Number.isNaN(config.noiseReductionLevel) ? Math.max(0, Math.min(100, Math.floor(config.noiseReductionLevel))) : 80;
-    this.assetLoader = new AssetLoader(config.assetConfig);
+    var normalizedConfig = AiNSConfig.create(config);
+    this.assetLoader = new AssetLoader(normalizedConfig.assetConfig);
     this.assets = null;
     this.workletNode = null;
     this.isInitialized = false;
     this.bypassEnabled = false;
     this.config = {
-      sampleRate: config.sampleRate || 48000,
-      noiseReductionLevel: initialNoiseReductionLevel,
-      assetConfig: config.assetConfig || null
+      sampleRate: normalizedConfig.sampleRate,
+      noiseReductionLevel: normalizedConfig.noiseReductionLevel,
+      assetConfig: normalizedConfig.assetConfig
     };
+    logger.debug(`Core constructed: ${JSON.stringify(this.config)}`);
   }
 
   /**
@@ -94,14 +165,20 @@ module.exports = class AiNSCore {
    * @returns {Promise<void>}
    */
   async initialize() {
-    if (this.isInitialized) return;
+    if (this.isInitialized) {
+      logger.debug('initialize() skipped: already initialized');
+      return;
+    }
+    logger.debug('initialize() start');
     var assetUrls = this.assetLoader.getAssetUrls();
+    logger.debug(`initialize() asset urls: ${JSON.stringify(assetUrls)}`);
     var assets = await Promise.all([this.assetLoader.fetchAsset(assetUrls.wasm), this.assetLoader.fetchAsset(assetUrls.model)]);
     this.assets = {
       wasmBytes: assets[0],
       modelBytes: assets[1]
     };
     this.isInitialized = true;
+    logger.debug(`initialize() complete: wasmBytes=${this.assets.wasmBytes.byteLength} modelBytes=${this.assets.modelBytes.byteLength}`);
   }
 
   /**
@@ -120,6 +197,7 @@ module.exports = class AiNSCore {
     if (!this.assets) {
       throw new Error('Assets not loaded');
     }
+    logger.debug(`createAudioWorkletNode() start: sampleRate=${audioContext && audioContext.sampleRate}`);
     await registerInlineWorkletModule(audioContext, workletCode);
     this.workletNode = new AudioWorkletNode(audioContext, 'ai-noise-suppression-audio-processor', {
       processorOptions: {
@@ -128,6 +206,7 @@ module.exports = class AiNSCore {
         suppressionLevel: this.config.noiseReductionLevel
       }
     });
+    logger.debug('createAudioWorkletNode() complete');
     return this.workletNode;
   }
 
@@ -137,10 +216,13 @@ module.exports = class AiNSCore {
    * @param {number} level
    */
   setSuppressionLevel(level) {
-    if (typeof level !== 'number' || Number.isNaN(level)) return;
-    var clampedLevel = Math.max(0, Math.min(100, Math.floor(level)));
+    var clampedLevel = AiNSConfig.normalizeSuppressionLevel(level, this.config.noiseReductionLevel);
     this.config.noiseReductionLevel = clampedLevel;
-    if (!this.workletNode) return;
+    logger.debug(`setSuppressionLevel(): ${clampedLevel}`);
+    if (!this.workletNode) {
+      logger.debug('setSuppressionLevel() deferred: worklet node not ready');
+      return;
+    }
     this.workletNode.port.postMessage({
       type: WORKLET_MESSAGE_TYPES.SET_SUPPRESSION_LEVEL,
       value: clampedLevel
@@ -156,11 +238,16 @@ module.exports = class AiNSCore {
    * @param {boolean} enabled
    */
   setNoiseSuppressionEnabled(enabled) {
-    if (!this.workletNode) return;
-    this.bypassEnabled = !enabled;
+    var normalizedEnabled = AiNSConfig.normalizeBoolean(enabled, true);
+    this.bypassEnabled = !normalizedEnabled;
+    logger.debug(`setNoiseSuppressionEnabled(): enabled=${normalizedEnabled}`);
+    if (!this.workletNode) {
+      logger.debug('setNoiseSuppressionEnabled() deferred: worklet node not ready');
+      return;
+    }
     this.workletNode.port.postMessage({
       type: WORKLET_MESSAGE_TYPES.SET_BYPASS,
-      value: !enabled
+      value: !normalizedEnabled
     });
   }
   isNoiseSuppressionEnabled() {
@@ -173,6 +260,7 @@ module.exports = class AiNSCore {
    * 这里不关闭 AudioContext，因为 AudioContext 归上层 Processor 管理。
    */
   destroy() {
+    logger.debug('destroy()');
     if (this.workletNode) {
       this.workletNode.disconnect();
       this.workletNode = null;
@@ -186,14 +274,16 @@ module.exports = class AiNSCore {
    */
   ensureInitialized() {
     if (!this.isInitialized) {
+      logger.warn('ensureInitialized() failed: processor not initialized');
       throw new Error('Processor not initialized. Call initialize() first.');
     }
   }
 };
-},{"./aiNoiseSuppressionWorkletSource":3}],2:[function(require,module,exports){
+},{"../Logger":51,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
+var AiNSConfig = require('./AINoiseSuppressionConfig');
 var AiNSCore = require('./AINoiseSuppressionCore');
 var logger = new Logger('AINoiseSuppression');
 
@@ -218,7 +308,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @param {Object} [options.assetConfig]
    */
   constructor(options = {}) {
-    var initialNoiseReductionLevel = typeof options.noiseReductionLevel === 'number' && !Number.isNaN(options.noiseReductionLevel) ? Math.max(0, Math.min(100, Math.floor(options.noiseReductionLevel))) : 80;
+    var normalizedOptions = AiNSConfig.create(options);
     this.name = 'ai-noise-suppression-media-stream-processor';
     this.processedTrack = null;
     this.processedStream = null;
@@ -226,15 +316,17 @@ module.exports = class AiNSMediaStreamProcessor {
     this.sourceNode = null;
     this.workletNode = null;
     this.destination = null;
-    this.enabled = options.enabled !== false;
+    this.enabled = normalizedOptions.enabled;
     this.originalTrack = null;
     this.originalStream = null;
-    this.preserveOtherTracks = options.preserveOtherTracks !== false;
+    this.preserveOtherTracks = normalizedOptions.preserveOtherTracks;
+    this.config = normalizedOptions;
     this.processor = new AiNSCore({
-      sampleRate: options.sampleRate || 48000,
-      noiseReductionLevel: initialNoiseReductionLevel,
-      assetConfig: options.assetConfig || null
+      sampleRate: normalizedOptions.sampleRate,
+      noiseReductionLevel: normalizedOptions.noiseReductionLevel,
+      assetConfig: normalizedOptions.assetConfig
     });
+    logger.debug(`constructor: ${JSON.stringify(this.config)}`);
   }
 
   /**
@@ -258,6 +350,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @returns {Promise<MediaStream>}
    */
   async init(input) {
+    logger.debug('init()');
     this.setInput(input);
     await this.ensureGraph();
     if (!this.processedStream) {
@@ -275,6 +368,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @returns {Promise<MediaStream>}
    */
   async restart(input) {
+    logger.debug(`restart(): hasNewInput=${Boolean(input)}`);
     if (input) {
       this.setInput(input);
     }
@@ -291,6 +385,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @returns {Promise<MediaStream>}
    */
   async replaceAudioTrack(input) {
+    logger.debug('replaceAudioTrack()');
     var nextAudioTrack = this._resolveInputAudioTrack(input);
     if (!nextAudioTrack) {
       throw new Error('AINoiseSuppressionMediaStreamProcessor: replacement input has no audio track');
@@ -312,12 +407,16 @@ module.exports = class AiNSMediaStreamProcessor {
    * @returns {Promise<boolean>}
    */
   async setEnabled(enable) {
-    this.enabled = enable;
-    this.processor.setNoiseSuppressionEnabled(enable);
+    this.enabled = AiNSConfig.normalizeBoolean(enable, this.enabled);
+    logger.debug(`setEnabled(): enabled=${this.enabled}`);
+    this.processor.setNoiseSuppressionEnabled(this.enabled);
     return this.enabled;
   }
   setSuppressionLevel(level) {
-    this.processor.setSuppressionLevel(level);
+    var nextLevel = AiNSConfig.normalizeSuppressionLevel(level, this.config.noiseReductionLevel);
+    this.config.noiseReductionLevel = nextLevel;
+    logger.debug(`setSuppressionLevel(): level=${nextLevel}`);
+    this.processor.setSuppressionLevel(nextLevel);
   }
   isEnabled() {
     return this.enabled;
@@ -327,6 +426,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * 暂停 AudioContext，用于页面隐藏、临时节能等场景。
    */
   async suspend() {
+    logger.debug(`suspend(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
     if (this.audioContext && this.audioContext.state === 'running') {
       await this.audioContext.suspend();
     }
@@ -336,6 +436,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * 恢复 AudioContext。
    */
   async resume() {
+    logger.debug(`resume(): state=${this.audioContext ? this.audioContext.state : 'none'}`);
     if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
@@ -350,6 +451,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * - Core 内部的 WorkletNode 引用
    */
   async destroy() {
+    logger.debug('destroy()');
     await this.teardownGraph();
     this.processor.destroy();
     this.originalTrack = null;
@@ -362,6 +464,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @param {MediaStream|MediaStreamTrack} input
    */
   setInput(input) {
+    logger.debug(`setInput(): type=${this._getInputType(input)}`);
     if (input instanceof MediaStream) {
       var audioTrack = this._resolveInputAudioTrack(input);
       if (!audioTrack) {
@@ -369,6 +472,7 @@ module.exports = class AiNSMediaStreamProcessor {
       }
       this.originalStream = input;
       this.originalTrack = audioTrack;
+      logger.debug(`setInput() stream resolved: audioTracks=${input.getAudioTracks().length} totalTracks=${input.getTracks().length}`);
       return;
     }
     if (!input || input.kind !== 'audio') {
@@ -376,6 +480,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
     this.originalTrack = input;
     this.originalStream = new MediaStream([input]);
+    logger.debug('setInput() single audio track wrapped into MediaStream');
   }
   _resolveInputAudioTrack(input) {
     if (input instanceof MediaStream) {
@@ -385,6 +490,15 @@ module.exports = class AiNSMediaStreamProcessor {
       return input;
     }
     return null;
+  }
+  _getInputType(input) {
+    if (input instanceof MediaStream) {
+      return 'MediaStream';
+    }
+    if (input && typeof input.kind === 'string') {
+      return `MediaStreamTrack:${input.kind}`;
+    }
+    return typeof input;
   }
   _buildStreamWithReplacedAudioTrack(audioTrack) {
     if (!this.originalStream) {
@@ -411,11 +525,12 @@ module.exports = class AiNSMediaStreamProcessor {
    * 6. 生成 processedStream
    */
   async ensureGraph() {
+    logger.debug('ensureGraph() start');
     if (!this.originalTrack || !this.originalStream) {
       throw new Error('AINoiseSuppressionMediaStreamProcessor: missing source audio track');
     }
     this.audioContext = this.audioContext || new AudioContext({
-      sampleRate: 48000
+      sampleRate: this.config.sampleRate
     });
     if (this.audioContext.state !== 'running') {
       try {
@@ -438,6 +553,7 @@ module.exports = class AiNSMediaStreamProcessor {
     this.sourceNode.connect(this.workletNode).connect(this.destination);
     this.rebuildProcessedStream();
     await this.setEnabled(this.enabled);
+    logger.debug(`ensureGraph() complete: contextState=${this.audioContext.state} preserveOtherTracks=${this.preserveOtherTracks}`);
   }
 
   /**
@@ -465,6 +581,7 @@ module.exports = class AiNSMediaStreamProcessor {
       });
     }
     this.processedStream = new MediaStream(outputTracks);
+    logger.debug(`rebuildProcessedStream(): trackCount=${outputTracks.length}`);
   }
 
   /**
@@ -473,6 +590,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * 这么做是为了避免会话结束时因个别节点状态异常而阻断整体清理流程。
    */
   async teardownGraph() {
+    logger.debug('teardownGraph() start');
     try {
       if (this.workletNode) {
         this.workletNode.disconnect();
@@ -495,10 +613,11 @@ module.exports = class AiNSMediaStreamProcessor {
     } finally {
       this.processedTrack = null;
       this.processedStream = null;
+      logger.debug('teardownGraph() complete');
     }
   }
 };
-},{"../Logger":43,"./AINoiseSuppressionCore":1}],3:[function(require,module,exports){
+},{"../Logger":51,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1024,10 +1143,12 @@ module.exports = String.raw`(function () {
 
   registerProcessor('ai-noise-suppression-audio-processor', DeepFilterAudioProcessor);
 })();`;
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 
 var AiNSMediaStreamProcessor = require('./AINoiseSuppressionMediaStreamProcessor');
+var Logger = require('../Logger');
+var logger = new Logger('AiNSEngine');
 
 /**
  * AINoiseSuppression 对外门面。
@@ -1043,6 +1164,7 @@ class AiNSEngine {
     this.processor = new AiNSMediaStreamProcessor(options);
     this.inputStream = null;
     this.outputStream = null;
+    logger.debug(`constructor: ${JSON.stringify(this.processor.config)}`);
   }
 
   /**
@@ -1052,11 +1174,13 @@ class AiNSEngine {
    * @returns {Promise<MediaStream>}
    */
   async init(params = {}) {
+    logger.debug('init()');
     if (!params.inputStream) {
       throw new Error('inputStream required');
     }
     this.inputStream = params.inputStream;
     this.outputStream = await this.processor.init(this.inputStream);
+    logger.debug(`init() complete: hasOutput=${Boolean(this.outputStream)}`);
     return this.outputStream;
   }
 
@@ -1076,6 +1200,7 @@ class AiNSEngine {
    * @returns {Promise<MediaStream>}
    */
   async process(inputStream) {
+    logger.debug('process()');
     return this.init({
       inputStream
     });
@@ -1088,6 +1213,7 @@ class AiNSEngine {
    * @returns {Promise<MediaStream>}
    */
   async replaceAudioTrack(input) {
+    logger.debug('replaceAudioTrack()');
     this.outputStream = await this.processor.replaceAudioTrack(input);
     this.inputStream = this.processor.originalStream;
     return this.outputStream;
@@ -1109,6 +1235,7 @@ class AiNSEngine {
    * @returns {Promise<boolean>}
    */
   setEnabled(enable) {
+    logger.debug(`setEnabled(): requested=${enable}`);
     return this.processor.setEnabled(enable);
   }
 
@@ -1118,6 +1245,7 @@ class AiNSEngine {
    * @param {number} level
    */
   setSuppressionLevel(level) {
+    logger.debug(`setSuppressionLevel(): requested=${level}`);
     this.processor.setSuppressionLevel(level);
   }
 
@@ -1125,6 +1253,7 @@ class AiNSEngine {
    * 销毁引擎内部所有运行时资源。
    */
   async destroy() {
+    logger.debug('destroy()');
     await this.processor.destroy();
     this.inputStream = null;
     this.outputStream = null;
@@ -1138,7 +1267,944 @@ class AiNSEngine {
   }
 }
 module.exports = AiNSEngine;
-},{"./AINoiseSuppressionMediaStreamProcessor":2}],5:[function(require,module,exports){
+},{"../Logger":51,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var Config = require('./AiVBEConfig');
+var AssetManifest = require('./AiVBEAssetManifest');
+var logger = new Logger('AiVBEAssetLoader');
+var SCRIPT_READY_ATTR = 'data-aivbe-ready';
+var SCRIPT_ERROR_ATTR = 'data-aivbe-error';
+var SCRIPT_WAIT_TIMEOUT_MS = 15000;
+module.exports = class AiVBEAssetLoader {
+  constructor(assetConfig) {
+    this.assetConfig = Config.normalizeAssetConfig(assetConfig);
+  }
+  getAssetUrls(modelPath) {
+    return {
+      visionScriptUrl: this.assetConfig.visionScriptUrl,
+      visionBaseUrl: this.assetConfig.visionBaseUrl,
+      modelUrl: this.resolveModelUrl(modelPath),
+      runtimeGlobal: AssetManifest.RUNTIME_GLOBAL
+    };
+  }
+  resolveModelUrl(modelPath) {
+    if (typeof modelPath === 'string' && modelPath.trim()) {
+      return modelPath.trim();
+    }
+    return this.assetConfig.modelUrl;
+  }
+  async ensureScriptLoaded() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      throw new Error('AiVBE requires browser environment');
+    }
+    if (window[AssetManifest.RUNTIME_GLOBAL]) {
+      return window[AssetManifest.RUNTIME_GLOBAL];
+    }
+    var scriptUrl = this.assetConfig.visionScriptUrl;
+    var selector = `script[data-aivbe-script="${scriptUrl}"]`;
+    var existingScript = document.querySelector(selector);
+    if (existingScript) {
+      await this.waitForExistingScript(existingScript, scriptUrl);
+      return window[AssetManifest.RUNTIME_GLOBAL];
+    }
+    await new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      script.src = scriptUrl;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.setAttribute('data-aivbe-script', scriptUrl);
+      script.onload = () => {
+        script.setAttribute(SCRIPT_READY_ATTR, 'true');
+        script.removeAttribute(SCRIPT_ERROR_ATTR);
+        resolve();
+      };
+      script.onerror = () => {
+        script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
+        reject(new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`));
+      };
+      document.head.appendChild(script);
+    });
+    logger.debug(`Loaded MediaPipe runtime script: ${scriptUrl}`);
+    return window[AssetManifest.RUNTIME_GLOBAL];
+  }
+  async waitForExistingScript(script, scriptUrl) {
+    if (window[AssetManifest.RUNTIME_GLOBAL]) {
+      return;
+    }
+    if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
+      throw new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`);
+    }
+    if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+      if (window[AssetManifest.RUNTIME_GLOBAL]) {
+        return;
+      }
+      throw new Error(`MediaPipe runtime script loaded but global not found: ${scriptUrl}`);
+    }
+    await new Promise((resolve, reject) => {
+      var timeoutId = null;
+      function cleanup() {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+        script.removeEventListener('load', handleLoad);
+        script.removeEventListener('error', handleError);
+      }
+      function handleLoad() {
+        cleanup();
+        script.setAttribute(SCRIPT_READY_ATTR, 'true');
+        script.removeAttribute(SCRIPT_ERROR_ATTR);
+        resolve();
+      }
+      function handleError() {
+        cleanup();
+        script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
+        reject(new Error(`Failed to load MediaPipe runtime script: ${scriptUrl}`));
+      }
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for MediaPipe runtime script: ${scriptUrl}`));
+      }, SCRIPT_WAIT_TIMEOUT_MS);
+      script.addEventListener('load', handleLoad);
+      script.addEventListener('error', handleError);
+    });
+  }
+};
+},{"../Logger":51,"./AiVBEAssetManifest":7,"./AiVBEConfig":8}],7:[function(require,module,exports){
+"use strict";
+
+var RUNTIME_GLOBAL = 'CRTCAiVBERuntime';
+var WASM_FACTORY_GLOBAL = 'createCRTCAiVBEWasm';
+var FILES = {
+  runtimeScript: 'aivb.js',
+  simdLoaderScript: 'aivb_simd.js',
+  simdWasmBinary: 'aivb_simd.wasm',
+  noSimdLoaderScript: 'aivb_nosimd.js',
+  noSimdWasmBinary: 'aivb_nosimd.wasm',
+  graphBinary: 'aivb_graph.binarypb',
+  landscapeModel: 'aivb_landscape.tflite',
+  portraitModel: 'aivb_portrait.tflite'
+};
+module.exports = {
+  RUNTIME_GLOBAL,
+  WASM_FACTORY_GLOBAL,
+  FILES
+};
+},{}],8:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var AssetManifest = require('./AiVBEAssetManifest');
+var logger = new Logger('AiVBEConfig');
+var DEFAULT_VIDEO = {
+  width: 1280,
+  height: 720,
+  targetFps: 15,
+  mirror: false
+};
+var DEFAULT_SEGMENTATION = {
+  backend: 'mediapipeSelfieSegmentation',
+  inputResolution: '160x96',
+  model: 'selfie_segmenter_landscape',
+  pipeline: 'webgl2',
+  targetFps: 15,
+  delegate: 'GPU',
+  modelSelection: 1
+};
+var DEFAULT_POST_PROCESSING = {
+  smoothSegmentationMask: true,
+  coverage: [0.5, 0.75],
+  lightWrapping: 0.2,
+  blendMode: 'screen',
+  jointBilateralFilter: {
+    sigmaSpace: 3,
+    sigmaColor: 0.2
+  }
+};
+var DEFAULT_ASSET_BASE_URL = './virtual-background/mediapipe';
+var DEFAULT_VISION_SCRIPT_PATH = `v2/${AssetManifest.FILES.runtimeScript}`;
+var DEFAULT_MODEL_FILE = `v2/${AssetManifest.FILES.landscapeModel}`;
+exports.create = function (options = {}) {
+  var config = {
+    video: exports.normalizeVideo(options.video),
+    segmentation: exports.normalizeSegmentation(options.segmentation),
+    postProcessing: exports.normalizePostProcessing(options.postProcessing),
+    assetConfig: exports.normalizeAssetConfig(options.assetConfig)
+  };
+  logger.debug(`Config created: ${JSON.stringify(config)}`);
+  return config;
+};
+exports.normalizeVideo = function (video) {
+  var normalized = Object.assign({}, DEFAULT_VIDEO);
+  if (!video || typeof video !== 'object') {
+    return normalized;
+  }
+  if (Number.isFinite(Number(video.width)) && Number(video.width) > 0) {
+    normalized.width = Math.floor(Number(video.width));
+  }
+  if (Number.isFinite(Number(video.height)) && Number(video.height) > 0) {
+    normalized.height = Math.floor(Number(video.height));
+  }
+  if (Number.isFinite(Number(video.targetFps)) && Number(video.targetFps) > 0) {
+    normalized.targetFps = Math.floor(Number(video.targetFps));
+  }
+  if (typeof video.mirror === 'boolean') {
+    normalized.mirror = video.mirror;
+  }
+  return normalized;
+};
+exports.normalizeSegmentation = function (segmentation) {
+  var normalized = Object.assign({}, DEFAULT_SEGMENTATION);
+  if (!segmentation || typeof segmentation !== 'object') {
+    return normalized;
+  }
+  if (typeof segmentation.backend === 'string' && segmentation.backend.trim()) {
+    normalized.backend = segmentation.backend.trim();
+  }
+  if (typeof segmentation.inputResolution === 'string' && segmentation.inputResolution.trim()) {
+    normalized.inputResolution = segmentation.inputResolution.trim();
+  }
+  if (typeof segmentation.model === 'string' && segmentation.model.trim()) {
+    normalized.model = segmentation.model.trim();
+  }
+  if (typeof segmentation.pipeline === 'string' && segmentation.pipeline.trim()) {
+    normalized.pipeline = segmentation.pipeline.trim();
+  }
+  if (Number.isFinite(Number(segmentation.targetFps)) && Number(segmentation.targetFps) > 0) {
+    normalized.targetFps = Math.floor(Number(segmentation.targetFps));
+  }
+  if (typeof segmentation.delegate === 'string' && segmentation.delegate.trim()) {
+    normalized.delegate = segmentation.delegate.trim().toUpperCase();
+  }
+  if (Number.isFinite(Number(segmentation.modelSelection))) {
+    var selection = Math.floor(Number(segmentation.modelSelection));
+    normalized.modelSelection = selection === 0 ? 0 : 1;
+  }
+  return normalized;
+};
+exports.normalizePostProcessing = function (postProcessing) {
+  var normalized = JSON.parse(JSON.stringify(DEFAULT_POST_PROCESSING));
+  if (!postProcessing || typeof postProcessing !== 'object') {
+    return normalized;
+  }
+  Object.assign(normalized, postProcessing);
+  if (postProcessing.jointBilateralFilter && typeof postProcessing.jointBilateralFilter === 'object') {
+    Object.assign(normalized.jointBilateralFilter, postProcessing.jointBilateralFilter);
+  }
+  return normalized;
+};
+exports.normalizeAssetConfig = function (assetConfig) {
+  var normalized = {
+    baseUrl: DEFAULT_ASSET_BASE_URL,
+    visionScriptUrl: `${DEFAULT_ASSET_BASE_URL}/${DEFAULT_VISION_SCRIPT_PATH}`,
+    visionBaseUrl: `${DEFAULT_ASSET_BASE_URL}/v2`,
+    modelBaseUrl: `${DEFAULT_ASSET_BASE_URL}/v2`,
+    modelUrl: `${DEFAULT_ASSET_BASE_URL}/${DEFAULT_MODEL_FILE}`
+  };
+  if (!assetConfig || typeof assetConfig !== 'object') {
+    return normalized;
+  }
+  if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
+    normalized.baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
+    normalized.visionScriptUrl = `${normalized.baseUrl}/${DEFAULT_VISION_SCRIPT_PATH}`;
+    normalized.visionBaseUrl = `${normalized.baseUrl}/v2`;
+    normalized.modelBaseUrl = `${normalized.baseUrl}/v2`;
+    normalized.modelUrl = `${normalized.baseUrl}/${DEFAULT_MODEL_FILE}`;
+  }
+  if (typeof assetConfig.visionScriptUrl === 'string' && assetConfig.visionScriptUrl.trim()) {
+    normalized.visionScriptUrl = assetConfig.visionScriptUrl.trim();
+  }
+  if (typeof assetConfig.visionBaseUrl === 'string' && assetConfig.visionBaseUrl.trim()) {
+    normalized.visionBaseUrl = assetConfig.visionBaseUrl.trim().replace(/\/$/, '');
+  }
+  if (typeof assetConfig.modelBaseUrl === 'string' && assetConfig.modelBaseUrl.trim()) {
+    normalized.modelBaseUrl = assetConfig.modelBaseUrl.trim().replace(/\/$/, '');
+    normalized.modelUrl = `${normalized.modelBaseUrl}/${AssetManifest.FILES.landscapeModel}`;
+  }
+  if (typeof assetConfig.modelUrl === 'string' && assetConfig.modelUrl.trim()) {
+    normalized.modelUrl = assetConfig.modelUrl.trim();
+  }
+  return normalized;
+};
+},{"../Logger":51,"./AiVBEAssetManifest":7}],9:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var AiVBEAssetLoader = require('./AiVBEAssetLoader');
+var AssetManifest = require('./AiVBEAssetManifest');
+var logger = new Logger('AiVBEMediaPipeRuntime');
+module.exports = class MediaPipeSegmenterRuntime {
+  constructor(config = {}) {
+    this.assetLoader = new AiVBEAssetLoader(config.assetConfig);
+    this.assetUrls = null;
+    this.segmenter = null;
+    this.initialized = false;
+    this.initializingPromise = null;
+    this.pendingRequest = null;
+    this.latestResult = null;
+    this.destroyed = false;
+    this.handleResults = this.handleResults.bind(this);
+  }
+  async initialize(options = {}) {
+    if (this.destroyed) {
+      throw new Error('MediaPipe segmenter destroyed');
+    }
+    if (this.initialized) {
+      return;
+    }
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
+    this.initializingPromise = (async () => {
+      var SelfieSegmentation = await this.assetLoader.ensureScriptLoaded();
+      if (this.destroyed) {
+        throw new Error('MediaPipe segmenter destroyed');
+      }
+      this.assetUrls = this.assetLoader.getAssetUrls(options.modelPath);
+      var landscapeModelFile = AssetManifest.FILES.landscapeModel;
+      var portraitModelFile = AssetManifest.FILES.portraitModel;
+      var segmenter = new SelfieSegmentation({
+        locateFile: file => {
+          if (file === landscapeModelFile || file === portraitModelFile) {
+            return this.assetUrls.modelUrl;
+          }
+          return `${this.assetUrls.visionBaseUrl}/${file}`;
+        }
+      });
+      try {
+        segmenter.setOptions({
+          // Keep mask coordinates aligned with the original video frame.
+          // Output mirroring is handled later by the WebGL composition stage.
+          selfieMode: false,
+          modelSelection: options.modelSelection === 0 ? 0 : 1
+        });
+        await segmenter.initialize();
+        if (this.destroyed) {
+          throw new Error('MediaPipe segmenter destroyed');
+        }
+        segmenter.onResults(this.handleResults);
+        this.segmenter = segmenter;
+        this.initialized = true;
+        logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
+      } catch (error) {
+        if (typeof segmenter.close === 'function') {
+          try {
+            await segmenter.close();
+          } catch (closeError) {
+            logger.warn(`Failed to close MediaPipe segmenter after initialize error: ${closeError.message}`);
+          }
+        }
+        this.segmenter = null;
+        this.assetUrls = null;
+        this.initialized = false;
+        this.latestResult = null;
+        if (this.pendingRequest) {
+          var pending = this.pendingRequest;
+          this.pendingRequest = null;
+          pending.reject(error);
+        }
+        throw error;
+      }
+    })();
+    try {
+      await this.initializingPromise;
+    } finally {
+      this.initializingPromise = null;
+    }
+  }
+  async segmentForVideo(videoElement) {
+    if (!this.initialized || !this.segmenter) {
+      throw new Error('MediaPipe segmenter not initialized');
+    }
+    if (this.latestResult) {
+      var latestResult = this.latestResult;
+      this.latestResult = null;
+      return latestResult;
+    }
+    if (this.pendingRequest) {
+      return this.pendingRequest.promise;
+    }
+    var resolvePending;
+    var rejectPending;
+    var promise = new Promise((resolve, reject) => {
+      resolvePending = resolve;
+      rejectPending = reject;
+    });
+    this.pendingRequest = {
+      resolve: resolvePending,
+      reject: rejectPending,
+      promise
+    };
+    this.segmenter.send({
+      image: videoElement
+    }).catch(error => {
+      if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
+        return;
+      }
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(error);
+    });
+    return promise;
+  }
+  handleResults(results) {
+    if (this.pendingRequest) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.resolve(results);
+      return;
+    }
+    this.latestResult = results;
+  }
+  async destroy() {
+    this.destroyed = true;
+    if (this.pendingRequest) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+    if (this.initializingPromise) {
+      try {
+        await this.initializingPromise;
+      } catch (error) {
+        logger.debug(`destroy() ignored initialize error: ${error.message}`);
+      }
+    }
+    if (this.segmenter && typeof this.segmenter.close === 'function') {
+      await this.segmenter.close();
+    }
+    this.segmenter = null;
+    this.assetUrls = null;
+    this.initialized = false;
+    this.initializingPromise = null;
+    this.latestResult = null;
+  }
+};
+},{"../Logger":51,"./AiVBEAssetLoader":6,"./AiVBEAssetManifest":7}],10:[function(require,module,exports){
+"use strict";
+
+var {
+  createTimerWorker
+} = require('../VirtualBackground/helpers/timerHelper.js');
+var {
+  buildWebGL2Pipeline
+} = require('./pipelines/webgl2/webgl2Pipeline.js');
+var Config = require('./AiVBEConfig');
+var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
+var Logger = require('../Logger');
+var logger = new Logger('AiVBE');
+class AiVBEEngine {
+  constructor(options = {}) {
+    this.config = Config.create(options);
+    this.pipeline = null;
+    this.timerWorker = createTimerWorker();
+    this.segmenterRuntime = new MediaPipeSegmenterRuntime({
+      assetConfig: this.config.assetConfig
+    });
+    this.inputStream = null;
+    this.outputStream = null;
+    this.canvas = null;
+    this.videoEl = null;
+    this.backgroundEl = null;
+    this.isRunning = false;
+    this.animationFrameId = null;
+    this.renderTimeoutId = null;
+    this.solidColorCanvas = null;
+    this._cachedSolidColor = null;
+    this._cachedSolidColorDataUrl = null;
+    this.lastFrameTime = 0;
+    this.isRendering = false;
+  }
+  _cleanUpPipeline() {
+    if (this.pipeline && this.pipeline.cleanUp) {
+      this.pipeline.cleanUp();
+    }
+    this.pipeline = null;
+    if (this.backgroundEl) {
+      this.backgroundEl.onload = null;
+      this.backgroundEl.onerror = null;
+      this.backgroundEl.src = '';
+      this.backgroundEl = null;
+    }
+  }
+  async init({
+    inputStream,
+    modelPath,
+    canvas
+  } = {}) {
+    if (!inputStream) {
+      throw new Error('inputStream required');
+    }
+    this.inputStream = inputStream;
+    this.canvas = canvas || document.createElement('canvas');
+    this.canvas.width = this.config.video.width;
+    this.canvas.height = this.config.video.height;
+    await this.segmenterRuntime.initialize({
+      modelPath,
+      modelSelection: this.config.segmentation.modelSelection
+    });
+    await this.createVideoElement();
+    this.createOutputStream();
+  }
+  async createVideoElement() {
+    this.videoEl = document.createElement('video');
+    this.videoEl.muted = true;
+    this.videoEl.autoplay = true;
+    this.videoEl.playsInline = true;
+    this.videoEl.srcObject = this.inputStream;
+    await this.videoEl.play();
+  }
+  async setupPipeline(type, src) {
+    this._cleanUpPipeline();
+    return new Promise((resolve, reject) => {
+      var backgroundEl = document.createElement('img');
+      backgroundEl.onerror = () => reject(new Error('Failed to load background image'));
+      backgroundEl.onload = () => {
+        try {
+          this.backgroundEl = backgroundEl;
+          this.pipeline = buildWebGL2Pipeline({
+            width: this.config.video.width,
+            height: this.config.video.height,
+            htmlElement: this.videoEl
+          }, this.backgroundEl, {
+            type,
+            mirror: this.config.video.mirror
+          }, this.config.segmentation, this.canvas, this.segmenterRuntime);
+          this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      backgroundEl.src = src || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+    });
+  }
+  createOutputStream() {
+    this.outputStream = this.canvas.captureStream(this.config.video.targetFps);
+  }
+  getOutputStream() {
+    return this.outputStream;
+  }
+  setMirror(mirror) {
+    this.config.video.mirror = Boolean(mirror);
+    if (this.pipeline && this.pipeline.updateMirror) {
+      this.pipeline.updateMirror(this.config.video.mirror);
+    }
+  }
+  start() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.lastFrameTime = 0;
+    this.loop = this.loop.bind(this);
+    this.animationFrameId = requestAnimationFrame(this.loop);
+  }
+  stop() {
+    this.isRunning = false;
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    if (this.renderTimeoutId) {
+      this.timerWorker.clearTimeout(this.renderTimeoutId);
+      this.renderTimeoutId = null;
+    }
+  }
+  async loop(now) {
+    if (!this.isRunning) return;
+    var interval = 1000 / this.config.video.targetFps;
+    if (now - this.lastFrameTime >= interval) {
+      this.lastFrameTime = now;
+      if (this.isRendering) {
+        this.animationFrameId = requestAnimationFrame(this.loop);
+        return;
+      }
+      this.isRendering = true;
+      try {
+        if (this.pipeline) {
+          await this.pipeline.render();
+        }
+      } catch (error) {
+        logger.error(`Render error: ${error.message}`);
+      } finally {
+        this.isRendering = false;
+      }
+    }
+    if (this.isRunning) {
+      this.animationFrameId = requestAnimationFrame(this.loop);
+    }
+  }
+  async setBackgroundImage(url) {
+    if (typeof url !== 'string' || !url.trim()) {
+      throw new Error('Invalid background image URL');
+    }
+    if (url === 'none') {
+      this.clearBackground();
+      return;
+    }
+    return this.setupPipeline('image', url);
+  }
+  clearBackground() {
+    this._cleanUpPipeline();
+    var gl = this.canvas.getContext('webgl2');
+    if (!gl) {
+      throw new Error('WebGL2 not available');
+    }
+    var vsSrc = `#version 300 es
+      in vec2 a_position;
+      in vec2 a_texCoord;
+      out vec2 v_texCoord;
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_texCoord;
+      }
+    `;
+    var fsSrc = `#version 300 es
+      precision highp float;
+      in vec2 v_texCoord;
+      out vec4 outColor;
+      uniform sampler2D u_inputFrame;
+      void main() {
+        outColor = texture(u_inputFrame, v_texCoord);
+      }
+    `;
+    var vs = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vs, vsSrc);
+    gl.compileShader(vs);
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+      throw new Error(`Passthrough VS compile failed: ${gl.getShaderInfoLog(vs)}`);
+    }
+    var fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, fsSrc);
+    gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+      throw new Error(`Passthrough FS compile failed: ${gl.getShaderInfoLog(fs)}`);
+    }
+    var program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(`Passthrough program link failed: ${gl.getProgramInfoLog(program)}`);
+    }
+    var vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    var posBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    var posLoc = gl.getAttribLocation(program, 'a_position');
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+    var texBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]), gl.STATIC_DRAW);
+    var texLoc = gl.getAttribLocation(program, 'a_texCoord');
+    gl.enableVertexAttribArray(texLoc);
+    gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.useProgram(program);
+    gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
+    var {
+      videoEl,
+      canvas
+    } = this;
+    this.pipeline = {
+      async render() {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoEl);
+        gl.bindVertexArray(vao);
+        gl.useProgram(program);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      },
+      updatePostProcessingConfig() {},
+      updateMirror() {},
+      cleanUp() {
+        gl.deleteTexture(texture);
+        gl.deleteBuffer(texBuf);
+        gl.deleteBuffer(posBuf);
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+        gl.deleteProgram(program);
+        gl.deleteVertexArray(vao);
+      }
+    };
+  }
+  async setBlurBackground(radius) {
+    await this.setupPipeline('blur');
+    radius = typeof radius === 'number' ? radius : 20;
+    if (radius < 0 || radius > 100) {
+      radius = 20;
+    }
+    this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
+      blurRadius: radius
+    }));
+  }
+  async setSolidColor(color = '#00ff00') {
+    var isValidColor = /^#[0-9A-Fa-f]{6}$/.test(color) || /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color);
+    if (!isValidColor) {
+      throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
+    }
+    if (this._cachedSolidColor === color && this._cachedSolidColorDataUrl && this.pipeline && this.backgroundEl) {
+      this.backgroundEl.src = this._cachedSolidColorDataUrl;
+      return;
+    }
+    if (!this.solidColorCanvas) {
+      this.solidColorCanvas = document.createElement('canvas');
+      this.solidColorCanvas.width = 16;
+      this.solidColorCanvas.height = 16;
+    }
+    var ctx = this.solidColorCanvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 16, 16);
+    this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
+    this._cachedSolidColor = color;
+    return this.setupPipeline('image', this._cachedSolidColorDataUrl);
+  }
+  async destroy() {
+    this.stop();
+    this._cleanUpPipeline();
+    if (this.solidColorCanvas) {
+      this.solidColorCanvas = null;
+    }
+    this._cachedSolidColor = null;
+    this._cachedSolidColorDataUrl = null;
+    if (this.timerWorker) {
+      this.timerWorker.terminate();
+    }
+    if (this.videoEl) {
+      this.videoEl.srcObject = null;
+      this.videoEl.load();
+    }
+    if (this.segmenterRuntime) {
+      await this.segmenterRuntime.destroy();
+    }
+    this.pipeline = null;
+    this.inputStream = null;
+    this.outputStream = null;
+    this.canvas = null;
+    this.videoEl = null;
+    this.timerWorker = null;
+  }
+}
+module.exports = AiVBEEngine;
+},{"../Logger":51,"../VirtualBackground/helpers/timerHelper.js":91,"./AiVBEConfig":8,"./MediaPipeSegmenterRuntime":9,"./pipelines/webgl2/webgl2Pipeline.js":12}],11:[function(require,module,exports){
+"use strict";
+
+var {
+  compileShader,
+  createPiplelineStageProgram,
+  createTexture,
+  glsl
+} = require('../../../VirtualBackground/pipelines/helpers/webglHelper.js');
+var inputResolutions = {
+  '640x360': [640, 360],
+  '256x256': [256, 256],
+  '256x144': [256, 144],
+  '160x96': [160, 96]
+};
+exports.buildMaskUploadStage = (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, outputTexture) => {
+  var fragmentShaderSource = glsl`#version 300 es
+
+    precision highp float;
+
+    uniform sampler2D u_segmentationMask;
+
+    in vec2 v_texCoord;
+
+    out vec4 outColor;
+
+    void main() {
+      vec4 mask = texture(u_segmentationMask, v_texCoord);
+      float alpha = mask.a > 0.0 ? mask.a : max(mask.r, max(mask.g, mask.b));
+      outColor = vec4(0.0, 0.0, 0.0, alpha);
+    }
+  `;
+  var [segmentationWidth, segmentationHeight] = inputResolutions[segmentationConfig.inputResolution];
+  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
+  var maskLocation = gl.getUniformLocation(program, 'u_segmentationMask');
+  var inputTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight, gl.LINEAR, gl.LINEAR);
+  var frameBuffer = gl.createFramebuffer();
+  var maskCanvas = null;
+  var maskContext = null;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
+  gl.useProgram(program);
+  gl.uniform1i(maskLocation, 1);
+  function getUploadSource(maskSource) {
+    if (typeof document === 'undefined') {
+      return maskSource;
+    }
+    if (!maskCanvas) {
+      maskCanvas = document.createElement('canvas');
+      maskCanvas.width = segmentationWidth;
+      maskCanvas.height = segmentationHeight;
+      maskContext = maskCanvas.getContext('2d');
+    }
+    if (!maskContext) {
+      return maskSource;
+    }
+    maskContext.clearRect(0, 0, segmentationWidth, segmentationHeight);
+    maskContext.drawImage(maskSource, 0, 0, segmentationWidth, segmentationHeight);
+    return maskCanvas;
+  }
+  function render(maskSource) {
+    var uploadSource = getUploadSource(maskSource);
+    gl.viewport(0, 0, segmentationWidth, segmentationHeight);
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uploadSource);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  function cleanUp() {
+    gl.deleteFramebuffer(frameBuffer);
+    gl.deleteTexture(inputTexture);
+    gl.deleteProgram(program);
+    gl.deleteShader(fragmentShader);
+  }
+  return {
+    render,
+    cleanUp
+  };
+};
+},{"../../../VirtualBackground/pipelines/helpers/webglHelper.js":93}],12:[function(require,module,exports){
+"use strict";
+
+var {
+  buildJointBilateralFilterStage
+} = require('../../../VirtualBackground/pipelines/webgl2/jointBilateralFilterStage.js');
+var {
+  buildBackgroundImageStage
+} = require('../../../VirtualBackground/pipelines/webgl2/backgroundImageStage.js');
+var {
+  buildBackgroundBlurStage
+} = require('../../../VirtualBackground/pipelines/webgl2/backgroundBlurStage.js');
+var {
+  buildMaskUploadStage
+} = require('./maskUploadStage.js');
+var {
+  compileShader,
+  createTexture,
+  glsl
+} = require('../../../VirtualBackground/pipelines/helpers/webglHelper.js');
+var inputResolutions = {
+  '640x360': [640, 360],
+  '256x256': [256, 256],
+  '256x144': [256, 144],
+  '160x96': [160, 96]
+};
+exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig, segmentationConfig, canvas, segmenterRuntime) => {
+  var vertexShaderSource = glsl`#version 300 es
+
+    in vec2 a_position;
+    in vec2 a_texCoord;
+
+    out vec2 v_texCoord;
+
+    void main() {
+      gl_Position = vec4(a_position, 0.0, 1.0);
+      v_texCoord = a_texCoord;
+    }
+  `;
+  var {
+    width: frameWidth,
+    height: frameHeight
+  } = sourcePlayback;
+  var segmentationResolution = inputResolutions[segmentationConfig.inputResolution];
+  if (!segmentationResolution) {
+    throw new Error(`Unsupported segmentation inputResolution: ${segmentationConfig.inputResolution}`);
+  }
+  var [segmentationWidth, segmentationHeight] = segmentationResolution;
+  var gl = canvas.getContext('webgl2');
+  if (!gl) {
+    throw new Error('WebGL2 not supported');
+  }
+  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+  var vertexArray = gl.createVertexArray();
+  gl.bindVertexArray(vertexArray);
+  var positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
+  var texCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
+  var inputFrameTexture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  var segmentationTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight, gl.LINEAR, gl.LINEAR);
+  var personMaskTexture = createTexture(gl, gl.RGBA8, frameWidth, frameHeight);
+  var maskUploadStage = buildMaskUploadStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, segmentationTexture);
+  var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
+  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
+  async function render() {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourcePlayback.htmlElement);
+    gl.bindVertexArray(vertexArray);
+    var segmentationResult = await segmenterRuntime.segmentForVideo(sourcePlayback.htmlElement);
+    if (!segmentationResult || !segmentationResult.segmentationMask) {
+      throw new Error('MediaPipe segmentation did not return segmentationMask');
+    }
+    maskUploadStage.render(segmentationResult.segmentationMask);
+    jointBilateralFilterStage.render();
+    backgroundStage.render();
+  }
+  function updatePostProcessingConfig(postProcessingConfig) {
+    jointBilateralFilterStage.updateSigmaSpace(postProcessingConfig.jointBilateralFilter.sigmaSpace);
+    jointBilateralFilterStage.updateSigmaColor(postProcessingConfig.jointBilateralFilter.sigmaColor);
+    if (backgroundConfig.type === 'image') {
+      backgroundStage.updateCoverage(postProcessingConfig.coverage);
+      backgroundStage.updateLightWrapping(postProcessingConfig.lightWrapping);
+      backgroundStage.updateBlendMode(postProcessingConfig.blendMode);
+    } else if (backgroundConfig.type === 'blur') {
+      backgroundStage.updateCoverage(postProcessingConfig.coverage);
+      if (typeof postProcessingConfig.blurRadius === 'number') {
+        backgroundStage.updateBlurRadius(postProcessingConfig.blurRadius);
+      }
+    } else {
+      backgroundStage.updateCoverage([0, 0.9999]);
+      backgroundStage.updateLightWrapping(0);
+    }
+  }
+  function updateMirror(mirror) {
+    if (backgroundStage.updateMirror) {
+      backgroundStage.updateMirror(mirror);
+    }
+  }
+  function cleanUp() {
+    backgroundStage.cleanUp();
+    jointBilateralFilterStage.cleanUp();
+    maskUploadStage.cleanUp();
+    gl.deleteTexture(personMaskTexture);
+    gl.deleteTexture(segmentationTexture);
+    gl.deleteTexture(inputFrameTexture);
+    gl.deleteBuffer(texCoordBuffer);
+    gl.deleteBuffer(positionBuffer);
+    gl.deleteVertexArray(vertexArray);
+    gl.deleteShader(vertexShader);
+  }
+  return {
+    render,
+    updatePostProcessingConfig,
+    updateMirror,
+    cleanUp
+  };
+};
+},{"../../../VirtualBackground/pipelines/helpers/webglHelper.js":93,"../../../VirtualBackground/pipelines/webgl2/backgroundBlurStage.js":94,"../../../VirtualBackground/pipelines/webgl2/backgroundImageStage.js":95,"../../../VirtualBackground/pipelines/webgl2/jointBilateralFilterStage.js":96,"./maskUploadStage.js":11}],13:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1157,7 +2223,7 @@ var BFCPLib = {
   'AttributeName': AttributeName
 };
 module.exports = BFCPLib;
-},{"./lib/attributes/name.js":13,"./lib/messages/primitive.js":30,"./lib/messages/requestStatusValue.js":31,"./lib/user/user.js":34}],6:[function(require,module,exports){
+},{"./lib/attributes/name.js":21,"./lib/messages/primitive.js":38,"./lib/messages/requestStatusValue.js":39,"./lib/user/user.js":42}],14:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -1327,7 +2393,7 @@ class Attribute {
   }
 }
 module.exports = Attribute;
-},{"../parser/complements.js":32,"./format.js":11,"./type.js":17}],7:[function(require,module,exports){
+},{"../parser/complements.js":40,"./format.js":19,"./type.js":25}],15:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1353,7 +2419,7 @@ class FloorId extends Attribute {
   }
 }
 module.exports = FloorId;
-},{"./attribute.js":6,"./format.js":11,"./length.js":12,"./type.js":17}],8:[function(require,module,exports){
+},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],16:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1379,7 +2445,7 @@ class FloorRequestId extends Attribute {
   }
 }
 module.exports = FloorRequestId;
-},{"./attribute.js":6,"./format.js":11,"./length.js":12,"./type.js":17}],9:[function(require,module,exports){
+},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],17:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1411,7 +2477,7 @@ class FloorRequestInformation extends Attribute {
   }
 }
 module.exports = FloorRequestInformation;
-},{"./attribute.js":6,"./floorRequestStatus.js":10,"./format.js":11,"./length.js":12,"./type.js":17}],10:[function(require,module,exports){
+},{"./attribute.js":14,"./floorRequestStatus.js":18,"./format.js":19,"./length.js":20,"./type.js":25}],18:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1442,7 +2508,7 @@ class FloorRequestStatus extends Attribute {
   }
 }
 module.exports = FloorRequestStatus;
-},{"./attribute.js":6,"./format.js":11,"./length.js":12,"./requestStatus.js":14,"./type.js":17}],11:[function(require,module,exports){
+},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./requestStatus.js":22,"./type.js":25}],19:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1495,7 +2561,7 @@ class Format {
   }
 }
 module.exports = Format;
-},{}],12:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1688,7 +2754,7 @@ class Length {
   }
 }
 module.exports = Length;
-},{}],13:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1879,7 +2945,7 @@ class Name {
   }
 }
 module.exports = Name;
-},{}],14:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1910,7 +2976,7 @@ class RequestStatus extends Attribute {
   }
 }
 module.exports = RequestStatus;
-},{"./attribute.js":6,"./format.js":11,"./length.js":12,"./type.js":17}],15:[function(require,module,exports){
+},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],23:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1944,7 +3010,7 @@ class SupportedAttributes extends Attribute {
   }
 }
 module.exports = SupportedAttributes;
-},{"./attribute.js":6,"./format.js":11,"./length.js":12,"./type.js":17}],16:[function(require,module,exports){
+},{"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],24:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -1990,7 +3056,7 @@ class SupportedPrimitives extends Attribute {
   }
 }
 module.exports = SupportedPrimitives;
-},{"../messages/primitive.js":30,"./attribute.js":6,"./format.js":11,"./length.js":12,"./type.js":17}],17:[function(require,module,exports){
+},{"../messages/primitive.js":38,"./attribute.js":14,"./format.js":19,"./length.js":20,"./type.js":25}],25:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2183,7 +3249,7 @@ class Type {
   }
 }
 module.exports = Type;
-},{}],18:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -2291,7 +3357,7 @@ class CommonHeader {
   }
 }
 module.exports = CommonHeader;
-},{"../parser/complements.js":32}],19:[function(require,module,exports){
+},{"../parser/complements.js":40}],27:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2321,7 +3387,7 @@ class FloorQuery extends Message {
   }
 }
 module.exports = FloorQuery;
-},{"../attributes/floorId.js":7,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],20:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],28:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2351,7 +3417,7 @@ class FloorRelease extends Message {
   }
 }
 module.exports = FloorRelease;
-},{"../attributes/floorRequestId.js":8,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],21:[function(require,module,exports){
+},{"../attributes/floorRequestId.js":16,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],29:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2381,7 +3447,7 @@ class FloorRequest extends Message {
   }
 }
 module.exports = FloorRequest;
-},{"../attributes/floorId.js":7,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],22:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],30:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2413,7 +3479,7 @@ class FloorRequestStatus extends Message {
   }
 }
 module.exports = FloorRequestStatus;
-},{"../attributes/floorRequestInformation.js":9,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],23:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":17,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],31:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2443,7 +3509,7 @@ class FloorRequestStatusAck extends Message {
   }
 }
 module.exports = FloorRequestStatusAck;
-},{"../attributes/floorId.js":7,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],24:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],32:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2475,7 +3541,7 @@ class FloorStatus extends Message {
   }
 }
 module.exports = FloorStatus;
-},{"../attributes/floorRequestInformation.js":9,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],25:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":17,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],33:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2505,7 +3571,7 @@ class FloorStatusAck extends Message {
   }
 }
 module.exports = FloorStatusAck;
-},{"../attributes/floorId.js":7,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],26:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],34:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2535,7 +3601,7 @@ class Hello extends Message {
   }
 }
 module.exports = Hello;
-},{"../attributes/floorId.js":7,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],27:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],35:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -2565,7 +3631,7 @@ class HelloAck extends Message {
   }
 }
 module.exports = HelloAck;
-},{"../attributes/supportedAttributes.js":15,"../attributes/supportedPrimitives.js":16,"./commonHeader.js":18,"./message.js":28,"./payloadLength.js":29,"./primitive.js":30}],28:[function(require,module,exports){
+},{"../attributes/supportedAttributes.js":23,"../attributes/supportedPrimitives.js":24,"./commonHeader.js":26,"./message.js":36,"./payloadLength.js":37,"./primitive.js":38}],36:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2648,7 +3714,7 @@ class Message {
   }
 }
 module.exports = Message;
-},{}],29:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 "use strict";
 
 /**
@@ -2813,7 +3879,7 @@ class PayloadLength {
   }
 }
 module.exports = PayloadLength;
-},{}],30:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3000,7 +4066,7 @@ class Primitive {
   }
 }
 module.exports = Primitive;
-},{}],31:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3083,7 +4149,7 @@ class RequestStatusValue {
   }
 }
 module.exports = RequestStatusValue;
-},{}],32:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3128,7 +4194,7 @@ class Complements {
   }
 }
 module.exports = Complements;
-},{}],33:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 "use strict";
 
 var FloorRequest = require('../messages/floorRequest.js');
@@ -3406,7 +4472,7 @@ class Parser {
   }
 }
 module.exports = Parser;
-},{"../attributes/floorId.js":7,"../attributes/floorRequestId.js":8,"../attributes/floorRequestInformation.js":9,"../attributes/floorRequestStatus.js":10,"../attributes/requestStatus.js":14,"../attributes/supportedAttributes.js":15,"../attributes/supportedPrimitives.js":16,"../attributes/type.js":17,"../messages/commonHeader.js":18,"../messages/floorQuery.js":19,"../messages/floorRelease.js":20,"../messages/floorRequest.js":21,"../messages/floorRequestStatus.js":22,"../messages/floorRequestStatusAck.js":23,"../messages/floorStatus.js":24,"../messages/floorStatusAck.js":25,"../messages/hello.js":26,"../messages/helloAck.js":27,"../messages/primitive.js":30,"../parser/complements.js":32}],34:[function(require,module,exports){
+},{"../attributes/floorId.js":15,"../attributes/floorRequestId.js":16,"../attributes/floorRequestInformation.js":17,"../attributes/floorRequestStatus.js":18,"../attributes/requestStatus.js":22,"../attributes/supportedAttributes.js":23,"../attributes/supportedPrimitives.js":24,"../attributes/type.js":25,"../messages/commonHeader.js":26,"../messages/floorQuery.js":27,"../messages/floorRelease.js":28,"../messages/floorRequest.js":29,"../messages/floorRequestStatus.js":30,"../messages/floorRequestStatusAck.js":31,"../messages/floorStatus.js":32,"../messages/floorStatusAck.js":33,"../messages/hello.js":34,"../messages/helloAck.js":35,"../messages/primitive.js":38,"../parser/complements.js":40}],42:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -3668,7 +4734,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":13,"../messages/floorRelease.js":20,"../messages/floorRequest.js":21,"../messages/floorRequestStatus.js":22,"../messages/floorRequestStatusAck.js":23,"../messages/floorStatus.js":24,"../messages/floorStatusAck.js":25,"../messages/hello.js":26,"../messages/helloAck.js":27,"../messages/primitive.js":30,"../messages/requestStatusValue.js":31,"../parser/parser.js":33,"buffer":96}],35:[function(require,module,exports){
+},{"../attributes/name.js":21,"../messages/floorRelease.js":28,"../messages/floorRequest.js":29,"../messages/floorRequestStatus.js":30,"../messages/floorRequestStatusAck.js":31,"../messages/floorStatus.js":32,"../messages/floorStatusAck.js":33,"../messages/hello.js":34,"../messages/helloAck.js":35,"../messages/primitive.js":38,"../messages/requestStatusValue.js":39,"../parser/parser.js":41,"buffer":104}],43:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -3917,11 +4983,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":36,"./Exceptions":40,"./Grammar":41,"./Socket":75,"./URI":81,"./Utils":82}],36:[function(require,module,exports){
+},{"./Constants":44,"./Exceptions":48,"./Grammar":49,"./Socket":83,"./URI":89,"./Utils":90}],44:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212124444 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212163622 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4149,7 +5215,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{}],37:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4388,7 +5454,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":36,"./Dialog/RequestSender":38,"./Logger":43,"./SIPMessage":74,"./Transactions":78,"./Utils":82}],38:[function(require,module,exports){
+},{"./Constants":44,"./Dialog/RequestSender":46,"./Logger":51,"./SIPMessage":82,"./Transactions":86,"./Utils":90}],46:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4483,7 +5549,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":36,"../RequestSender":73,"../Transactions":78}],39:[function(require,module,exports){
+},{"../Constants":44,"../RequestSender":81,"../Transactions":86}],47:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4662,7 +5728,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":43,"./Utils":82}],40:[function(require,module,exports){
+},{"./Logger":51,"./Utils":90}],48:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -4706,7 +5772,7 @@ module.exports = {
   NotSupportedError,
   NotReadyError
 };
-},{}],41:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -17114,7 +18180,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":63,"./URI":81}],42:[function(require,module,exports){
+},{"./NameAddrHeader":71,"./URI":89}],50:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17130,8 +18196,9 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
+var AiVBE = require('./AiVBE/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '1.13.0.405212124444');
+debug('version %s', '1.13.0.405212163622');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17164,6 +18231,7 @@ module.exports = {
   VirtualBackground,
   // 兼容老版本
   AiVBEngine: VirtualBackground,
+  AiVBEEngine: AiVBE,
   AiNSEngine: AINoiseSuppression,
   Grammar,
   getStats,
@@ -17173,10 +18241,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212124444';
+    return '1.13.0.405212163622';
   }
 };
-},{"./AINoiseSuppression/index.js":4,"./BFCP":5,"./Constants":36,"./Exceptions":40,"./Grammar":41,"./Mixer":45,"./NameAddrHeader":63,"./Stats":76,"./UA":80,"./URI":81,"./Utils":82,"./VirtualBackground/index.js":84,"./WebSocketInterface":92,"debug":97}],43:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./AiVBE/index.js":10,"./BFCP":13,"./Constants":44,"./Exceptions":48,"./Grammar":49,"./Mixer":53,"./NameAddrHeader":71,"./Stats":84,"./UA":88,"./URI":89,"./Utils":90,"./VirtualBackground/index.js":92,"./WebSocketInterface":100,"debug":105}],51:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17278,7 +18346,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":97}],44:[function(require,module,exports){
+},{"debug":105}],52:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -17491,7 +18559,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":36,"./Exceptions":40,"./Logger":43,"./RequestSender":73,"./SIPMessage":74,"./URI":81,"./Utils":82,"events":95}],45:[function(require,module,exports){
+},{"./Constants":44,"./Exceptions":48,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./URI":89,"./Utils":90,"events":103}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17505,7 +18573,7 @@ module.exports = class Message extends EventEmitter {
  * @see module:MixerCore/MixerController
  */
 module.exports = require('./MixerCore/MixerController');
-},{"./MixerCore/MixerController":49}],46:[function(require,module,exports){
+},{"./MixerCore/MixerController":57}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -18716,7 +19784,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{}],47:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19067,7 +20135,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],48:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19266,7 +20334,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../Logger":43}],49:[function(require,module,exports){
+},{"../Logger":51}],57:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -19360,6 +20428,7 @@ module.exports = class MediaStreamMixer {
 
     this._sourceRegistry = null;
     var config = MixerConfig.create(options);
+    logger.debug(`constructor normalized config: ${JSON.stringify(config)}`);
 
     /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
     this._destroyed = false;
@@ -19542,6 +20611,8 @@ module.exports = class MediaStreamMixer {
       if (!this._destroyed) {
         this._drawVideosToCanvas(undefined, true);
       }
+    }).catch(error => {
+      logger.warn(`Initial watermarks setup failed: ${error.message || String(error)}`);
     });
 
     // -- 将初始传入的源加入混流 --
@@ -19638,7 +20709,11 @@ module.exports = class MediaStreamMixer {
   }
   _refreshRendererPolicyForMirror() {
     var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled();
+    var previousPolicy = this._config.forceMainThreadRenderer;
     this._config.forceMainThreadRenderer = shouldForceMainThread;
+    if (previousPolicy !== shouldForceMainThread) {
+      logger.debug(`Mirror renderer policy updated: forceMainThread=${shouldForceMainThread}`);
+    }
     if (!shouldForceMainThread || !this._renderer || !this._renderer.getInfo) {
       return;
     }
@@ -19711,6 +20786,7 @@ module.exports = class MediaStreamMixer {
    */
   _assertNotDestroyed(methodName) {
     if (this._destroyed) {
+      logger.warn(`Method called after stop(): ${methodName}`);
       throw new Error(`MediaStreamMixer has been stopped. Create a new mixer before calling ${methodName}.`);
     }
   }
@@ -19731,6 +20807,9 @@ module.exports = class MediaStreamMixer {
       logger.debug(`Removing mixer source: id=${source.id} slot=${source.slot}`);
     }
     var removed = this._sourceRegistry.remove(source);
+    if (!removed) {
+      logger.debug('Removing mixer source skipped: source not found');
+    }
     return removed;
   }
 
@@ -19934,6 +21013,7 @@ module.exports = class MediaStreamMixer {
   stop() {
     logger.debug('stop');
     if (this._destroyed) {
+      logger.debug('stop skipped: already destroyed');
       return;
     }
     this._destroyed = true;
@@ -19942,6 +21022,7 @@ module.exports = class MediaStreamMixer {
     this._audioMixer.stop();
     this._renderLoop.destroy();
     this._outputStreamManager.stop();
+    logger.debug('stop complete');
   }
 
   /**
@@ -19997,6 +21078,7 @@ module.exports = class MediaStreamMixer {
 
     // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
     this._renderLoop.start();
+    logger.debug(`appendStream complete: appended=${appended} totalSources=${this._sources.length}`);
     return appended;
   }
 
@@ -20011,7 +21093,9 @@ module.exports = class MediaStreamMixer {
   removeStream(streamOrId) {
     logger.debug(`removeStream: ${typeof streamOrId === 'string' ? streamOrId : '[object]'}`);
     this._assertNotDestroyed('removeStream()');
-    return this._removeSource(this._findSource(streamOrId));
+    var removed = this._removeSource(this._findSource(streamOrId));
+    logger.debug(`removeStream complete: removed=${removed} remaining=${this._sources.length}`);
+    return removed;
   }
 
   /**
@@ -20024,6 +21108,7 @@ module.exports = class MediaStreamMixer {
     sources.forEach(source => {
       this._removeSource(source);
     });
+    logger.debug(`clearStreams complete: remaining=${this._sources.length}`);
   }
 
   /**
@@ -20044,6 +21129,7 @@ module.exports = class MediaStreamMixer {
   setGlobalMirror(enabled) {
     this._assertNotDestroyed('setGlobalMirror()');
     this._config.mirrorX = Boolean(enabled);
+    logger.debug(`setGlobalMirror(): enabled=${this._config.mirrorX}`);
     this._refreshRendererPolicyForMirror();
     this._drawVideosToCanvas(undefined, true);
   }
@@ -20054,6 +21140,7 @@ module.exports = class MediaStreamMixer {
   setOutputMirror(enabled) {
     this._assertNotDestroyed('setOutputMirror()');
     this._config.outputMirrorX = Boolean(enabled);
+    logger.debug(`setOutputMirror(): enabled=${this._config.outputMirrorX}`);
     this._refreshRendererPolicyForMirror();
     this._drawVideosToCanvas(undefined, true);
   }
@@ -20064,6 +21151,7 @@ module.exports = class MediaStreamMixer {
   setMirrorWatermarksWithOutput(enabled) {
     this._assertNotDestroyed('setMirrorWatermarksWithOutput()');
     this._config.mirrorWatermarksWithOutput = Boolean(enabled);
+    logger.debug(`setMirrorWatermarksWithOutput(): enabled=${this._config.mirrorWatermarksWithOutput}`);
     this._drawVideosToCanvas(undefined, true);
   }
   getMirrorWatermarksWithOutput() {
@@ -20079,8 +21167,10 @@ module.exports = class MediaStreamMixer {
     var key = String(normalizedSlot);
     if (enabled === undefined || enabled === null) {
       delete this._slotMirrorXOverrides[key];
+      logger.debug(`setSlotMirror(): cleared slot=${normalizedSlot}`);
     } else {
       this._slotMirrorXOverrides[key] = Boolean(enabled);
+      logger.debug(`setSlotMirror(): slot=${normalizedSlot} enabled=${this._slotMirrorXOverrides[key]}`);
     }
     this._refreshRendererPolicyForMirror();
     this._drawVideosToCanvas(undefined, true);
@@ -20123,7 +21213,9 @@ module.exports = class MediaStreamMixer {
    * @returns {Object} 音频状态快照
    */
   getAudioInfo() {
-    return this._audioMixer.getInfo();
+    var info = this._audioMixer.getInfo();
+    logger.debug(`getAudioInfo(): status=${info.status} requested=${info.requested} ` + `sources=${info.sourceCount}/${info.liveSourceCount} outputTracks=${info.outputTracks}`);
+    return info;
   }
 
   /**
@@ -20187,6 +21279,7 @@ module.exports = class MediaStreamMixer {
     var mixedAudioStream = await this.getAudioStream();
     logger.debug(`getMixedStream() audio resolved: tracks=${mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0}`);
     this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
+    logger.debug(`getMixedStream() complete: videoTracks=${mixedVideoStream.getVideoTracks().length} audioTracks=${mixedVideoStream.getAudioTracks().length}`);
     return mixedVideoStream;
   }
 
@@ -20222,6 +21315,7 @@ module.exports = class MediaStreamMixer {
     logger.debug(`getAudioStream(): ${JSON.stringify(options || null)}`);
     this._assertNotDestroyed('getAudioStream()');
     var audioStream = await this._audioMixer.getAudioStream(options);
+    logger.debug(`getAudioStream() resolved: tracks=${audioStream ? audioStream.getAudioTracks().length : 0}`);
     return audioStream;
   }
 
@@ -20236,6 +21330,7 @@ module.exports = class MediaStreamMixer {
     logger.debug(`getIsolatedSubmixAudioStream(): ${JSON.stringify(options || null)}`);
     this._assertNotDestroyed('getIsolatedSubmixAudioStream()');
     var audioStream = await this._audioMixer.getIsolatedSubmixAudioStream(options);
+    logger.debug(`getIsolatedSubmixAudioStream() resolved: tracks=${audioStream ? audioStream.getAudioTracks().length : 0}`);
     return audioStream;
   }
 
@@ -20248,7 +21343,9 @@ module.exports = class MediaStreamMixer {
   releaseSubmixAudioStream(options) {
     logger.debug(`releaseSubmixAudioStream(): ${JSON.stringify(options || null)}`);
     this._assertNotDestroyed('releaseSubmixAudioStream()');
-    return this._audioMixer.releaseSubmixAudioStream(options);
+    var released = this._audioMixer.releaseSubmixAudioStream(options);
+    logger.debug(`releaseSubmixAudioStream() complete: released=${released}`);
+    return released;
   }
 
   // -- SourceRegistry 委派 --
@@ -20313,7 +21410,7 @@ module.exports = class MediaStreamMixer {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
 };
-},{"../Logger":43,"./AudioMixer":46,"./LayoutEngine":47,"./MixerConfig":48,"./MixerDomAdapter":50,"./OutputStreamManager":51,"./RenderLoop":52,"./SourceRegistry":53,"./WatermarkManager":54}],50:[function(require,module,exports){
+},{"../Logger":51,"./AudioMixer":54,"./LayoutEngine":55,"./MixerConfig":56,"./MixerDomAdapter":58,"./OutputStreamManager":59,"./RenderLoop":60,"./SourceRegistry":61,"./WatermarkManager":62}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20455,7 +21552,7 @@ class MixerDomAdapter {
   }
 }
 module.exports = MixerDomAdapter;
-},{}],51:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -21066,7 +22163,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],52:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21565,7 +22662,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MixerRenderer/MainCanvas2DRenderer":56,"../MixerRenderer/MainWebGL2Renderer":57,"../MixerRenderer/RendererFactory":58,"../MixerRenderer/WorkerRenderer":59}],53:[function(require,module,exports){
+},{"../MixerRenderer/MainCanvas2DRenderer":64,"../MixerRenderer/MainWebGL2Renderer":65,"../MixerRenderer/RendererFactory":66,"../MixerRenderer/WorkerRenderer":67}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21933,7 +23030,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],54:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22395,7 +23492,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],55:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22536,7 +23633,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],56:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22716,7 +23813,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":55}],57:[function(require,module,exports){
+},{"./BaseRenderer":63}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23110,7 +24207,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._activeMirrorX = null;
   }
 };
-},{"./BaseRenderer":55,"./helpers/color":60,"./helpers/gl":61}],58:[function(require,module,exports){
+},{"./BaseRenderer":63,"./helpers/color":68,"./helpers/gl":69}],66:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23277,7 +24374,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":56,"./MainWebGL2Renderer":57,"./WorkerRenderer":59}],59:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":64,"./MainWebGL2Renderer":65,"./WorkerRenderer":67}],67:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23859,7 +24956,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":55,"./workerScript":62}],60:[function(require,module,exports){
+},{"./BaseRenderer":63,"./workerScript":70}],68:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23952,7 +25049,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],61:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24027,7 +25124,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],62:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24053,7 +25150,7 @@ exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
   return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
 };
-},{}],63:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -24142,7 +25239,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":41,"./URI":81}],64:[function(require,module,exports){
+},{"./Grammar":49,"./URI":89}],72:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -24348,7 +25445,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":36,"./Exceptions":40,"./Logger":43,"./RequestSender":73,"./SIPMessage":74,"./Utils":82,"events":95}],65:[function(require,module,exports){
+},{"./Constants":44,"./Exceptions":48,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./Utils":90,"events":103}],73:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -24602,7 +25699,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":41,"./Logger":43,"./SIPMessage":74}],66:[function(require,module,exports){
+},{"./Grammar":49,"./Logger":51,"./SIPMessage":82}],74:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -24611,7 +25708,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],67:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -30714,7 +31811,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./AINoiseSuppression/index.js":4,"./BFCP/index":5,"./Constants":36,"./Dialog":37,"./Exceptions":40,"./Logger":43,"./Mixer":45,"./RTCSession/DTMF":68,"./RTCSession/Info":69,"./RTCSession/ReferNotifier":70,"./RTCSession/ReferSubscriber":71,"./RequestSender":73,"./SIPMessage":74,"./Timers":77,"./Transactions":78,"./URI":81,"./Utils":82,"buffer":96,"events":95,"sdp-transform":104}],68:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./BFCP/index":13,"./Constants":44,"./Dialog":45,"./Exceptions":48,"./Logger":51,"./Mixer":53,"./RTCSession/DTMF":76,"./RTCSession/Info":77,"./RTCSession/ReferNotifier":78,"./RTCSession/ReferSubscriber":79,"./RequestSender":81,"./SIPMessage":82,"./Timers":85,"./Transactions":86,"./URI":89,"./Utils":90,"buffer":104,"events":103,"sdp-transform":112}],76:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -30853,7 +31950,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":36,"../Exceptions":40,"../Logger":43,"../Utils":82,"events":95}],69:[function(require,module,exports){
+},{"../Constants":44,"../Exceptions":48,"../Logger":51,"../Utils":90,"events":103}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -30934,7 +32031,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":36,"../Exceptions":40,"../Utils":82,"events":95}],70:[function(require,module,exports){
+},{"../Constants":44,"../Exceptions":48,"../Utils":90,"events":103}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -30981,7 +32078,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":36,"../Logger":43}],71:[function(require,module,exports){
+},{"../Constants":44,"../Logger":51}],79:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -31105,7 +32202,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":36,"../Grammar":41,"../Logger":43,"../Utils":82,"events":95}],72:[function(require,module,exports){
+},{"../Constants":44,"../Grammar":49,"../Logger":51,"../Utils":90,"events":103}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -31403,7 +32500,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":36,"./Logger":43,"./RequestSender":73,"./SIPMessage":74,"./Utils":82}],73:[function(require,module,exports){
+},{"./Constants":44,"./Logger":51,"./RequestSender":81,"./SIPMessage":82,"./Utils":90}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -31542,7 +32639,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":36,"./DigestAuthentication":39,"./Logger":43,"./Transactions":78}],74:[function(require,module,exports){
+},{"./Constants":44,"./DigestAuthentication":47,"./Logger":51,"./Transactions":86}],82:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -32114,7 +33211,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":36,"./Grammar":41,"./Logger":43,"./NameAddrHeader":63,"./Utils":82,"sdp-transform":104}],75:[function(require,module,exports){
+},{"./Constants":44,"./Grammar":49,"./Logger":51,"./NameAddrHeader":71,"./Utils":90,"sdp-transform":112}],83:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -32182,7 +33279,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":41,"./Logger":43,"./Utils":82}],76:[function(require,module,exports){
+},{"./Grammar":49,"./Logger":51,"./Utils":90}],84:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -32588,7 +33685,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":36,"./Logger":43,"./Utils":82,"events":95}],77:[function(require,module,exports){
+},{"./Constants":44,"./Logger":51,"./Utils":90,"events":103}],85:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -32609,7 +33706,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],78:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33199,7 +34296,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":36,"./Logger":43,"./SIPMessage":74,"./Timers":77,"events":95}],79:[function(require,module,exports){
+},{"./Constants":44,"./Logger":51,"./SIPMessage":82,"./Timers":85,"events":103}],87:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -33572,7 +34669,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":36,"./Logger":43,"./Socket":75,"./Utils":82}],80:[function(require,module,exports){
+},{"./Constants":44,"./Logger":51,"./Socket":83,"./Utils":90}],88:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34632,7 +35729,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":35,"./Constants":36,"./Exceptions":40,"./Logger":43,"./Message":44,"./Options":64,"./Parser":65,"./Pk":66,"./RTCSession":67,"./Registrator":72,"./SIPMessage":74,"./Transactions":78,"./Transport":79,"./URI":81,"./Utils":82,"./sanityCheck":93,"events":95,"jsencrypt":100}],81:[function(require,module,exports){
+},{"./Config":43,"./Constants":44,"./Exceptions":48,"./Logger":51,"./Message":52,"./Options":72,"./Parser":73,"./Pk":74,"./RTCSession":75,"./Registrator":80,"./SIPMessage":82,"./Transactions":86,"./Transport":87,"./URI":89,"./Utils":90,"./sanityCheck":101,"events":103,"jsencrypt":108}],89:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -34804,7 +35901,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":36,"./Grammar":41,"./Utils":82}],82:[function(require,module,exports){
+},{"./Constants":44,"./Grammar":49,"./Utils":90}],90:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -36670,7 +37767,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":36,"./Grammar":41,"./URI":81}],83:[function(require,module,exports){
+},{"./Constants":44,"./Grammar":49,"./URI":89}],91:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -36794,7 +37891,7 @@ exports.createTimerWorker = () => {
   };
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],84:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 "use strict";
 
 var {
@@ -37353,7 +38450,7 @@ module.exports = class VirtualBackgroundEngine {
     this.timerWorker = null;
   }
 };
-},{"../Logger":43,"./helpers/timerHelper.js":83,"./pipelines/webgl2/webgl2Pipeline.js":91}],85:[function(require,module,exports){
+},{"../Logger":51,"./helpers/timerHelper.js":91,"./pipelines/webgl2/webgl2Pipeline.js":99}],93:[function(require,module,exports){
 "use strict";
 
 exports.glsl = String.raw;
@@ -37542,7 +38639,7 @@ exports.readPixelsAsync = async (gl, x, y, width, height, format, type, dest) =>
   gl.deleteBuffer(buf);
   return dest;
 };
-},{}],86:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 "use strict";
 
 exports.__esModule = true;
@@ -37758,7 +38855,7 @@ function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
     cleanUp
   };
 }
-},{"../helpers/webglHelper.js":85}],87:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93}],95:[function(require,module,exports){
 "use strict";
 
 var {
@@ -37934,7 +39031,7 @@ exports.buildBackgroundImageStage = (gl, positionBuffer, texCoordBuffer, personM
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":85}],88:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93}],96:[function(require,module,exports){
 "use strict";
 
 var {
@@ -38067,7 +39164,7 @@ exports.buildJointBilateralFilterStage = (gl, vertexShader, positionBuffer, texC
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":85}],89:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93}],97:[function(require,module,exports){
 "use strict";
 
 var {
@@ -38146,7 +39243,7 @@ exports.buildResizingStage = (gl, vertexShader, positionBuffer, texCoordBuffer, 
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":85}],90:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93}],98:[function(require,module,exports){
 "use strict";
 
 var {
@@ -38213,7 +39310,7 @@ exports.buildSoftmaxStage = (gl, vertexShader, positionBuffer, texCoordBuffer, s
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":85}],91:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93}],99:[function(require,module,exports){
 "use strict";
 
 var {
@@ -38578,7 +39675,7 @@ exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig
     cleanUp
   };
 };
-},{"../helpers/webglHelper.js":85,"./backgroundBlurStage.js":86,"./backgroundImageStage.js":87,"./jointBilateralFilterStage.js":88,"./resizingStage.js":89,"./softmaxStage.js":90}],92:[function(require,module,exports){
+},{"../helpers/webglHelper.js":93,"./backgroundBlurStage.js":94,"./backgroundImageStage.js":95,"./jointBilateralFilterStage.js":96,"./resizingStage.js":97,"./softmaxStage.js":98}],100:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38697,7 +39794,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":41,"./Logger":43}],93:[function(require,module,exports){
+},{"./Grammar":49,"./Logger":51}],101:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -38890,7 +39987,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":36,"./Logger":43,"./SIPMessage":74,"./Utils":82}],94:[function(require,module,exports){
+},{"./Constants":44,"./Logger":51,"./SIPMessage":82,"./Utils":90}],102:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -39042,7 +40139,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],95:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -39567,7 +40664,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],96:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -41348,7 +42445,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":94,"buffer":96,"ieee754":99}],97:[function(require,module,exports){
+},{"base64-js":102,"buffer":104,"ieee754":107}],105:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -41624,7 +42721,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":98,"_process":102}],98:[function(require,module,exports){
+},{"./common":106,"_process":110}],106:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -41918,7 +43015,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":101}],99:[function(require,module,exports){
+},{"ms":109}],107:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -42005,7 +43102,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],100:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -47396,7 +48493,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],101:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -47560,7 +48657,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],102:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -47746,7 +48843,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],103:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -48242,7 +49339,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],104:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -48257,7 +49354,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":103,"./parser":105,"./writer":106}],105:[function(require,module,exports){
+},{"./grammar":111,"./parser":113,"./writer":114}],113:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -48383,7 +49480,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":103}],106:[function(require,module,exports){
+},{"./grammar":111}],114:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -48499,5 +49596,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":103}]},{},[42])(42)
+},{"./grammar":111}]},{},[50])(50)
 });
