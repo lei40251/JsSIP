@@ -62,10 +62,10 @@
       </section>
 
       <section class="control-stage row g-2" id="ele">
-        <div class="col-12 col-xxl-9">
+        <div class="col-12 col-xl-9">
           <div class="control-groups">
             <section class="panel-card control-card">
-              <div class="card-title">呼叫与接听</div>
+              <!-- <div class="card-title">呼叫与接听</div> -->
               <div class="call-config-layout">
                 <div class="call-config-row">
                   <div class="call-config-group call-config-group-main">
@@ -92,7 +92,7 @@
                       <div class="call-field">
                         <div class="call-field-label">画质偏好</div>
                         <select id="videoHint" class="form-select">
-                          <option value="" selected>默认策略</option>
+                          <option value="" selected>默认</option>
                           <option value="detail">保清晰</option>
                           <option value="motion">保流畅</option>
                           <option value="text">文本</option>
@@ -106,17 +106,21 @@
                       <div class="call-field">
                         <div class="call-field-label">虚拟背景</div>
                         <select id="virtualBackground" class="form-select">
-                          <option value=''>不开启虚拟背景</option>
+                          <option value=''>不开启</option>
                           <option value="none">无图片</option>
                           <option value="img1">office</option>
                           <option value="img2">sky</option>
                           <option value="blur">背景模糊</option>
+                          <option value="aivbe:none">AiVBE 实验-无图片</option>
+                          <option value="aivbe:img1">AiVBE 实验-office</option>
+                          <option value="aivbe:img2">AiVBE 实验-sky</option>
+                          <option value="aivbe:blur">AiVBE 实验-背景模糊</option>
                         </select>
                       </div>
                       <div class="call-field">
-                        <div class="call-field-label">降噪模式</div>
+                        <div class="call-field-label">Ai降噪</div>
                         <select id="aiNoiseSuppression" class="form-select">
-                          <option value="">不开启 AI 降噪</option>
+                          <option value="">不开启</option>
                           <option value="AiNS">AiNS</option>
                         </select>
                       </div>
@@ -270,7 +274,7 @@
           </div>
         </div>
 
-        <aside class="col-12 col-xxl-3">
+        <aside class="col-12 col-xl-3">
           <div class="panel-card log-card">
             <div class="card-title">会话日志</div>
             <pre id="status" class="mb-0"></pre>

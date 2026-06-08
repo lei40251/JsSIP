@@ -64,16 +64,18 @@ let notificationUnsupportedLogged = false;
 
 // 虚拟背景相关
 let virtualBackgroundType;
+let virtualBackgroundEngineType = 'legacy';
 let engine;
 let localMediaStream;
 const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
+const AI_VBE_ASSET_ROOT = './assets/aivb';
 
 // AI 降噪相关
 let aiNsType = '';
-const AI_NOISE_ASSET_ROOT = './assets/';
+const AI_NOISE_ASSET_ROOT = './assets/ains';
 let aiNsMonitorStream = null;
 let aiNsMonitorProcessedStream = null;
 let aiNsMonitorProcessor = null;
@@ -2187,7 +2189,7 @@ async function call(type, direction, mediaStream)
 
   if (type === 'callVB') 
   {
-    const engine = new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+    const engine = createVirtualBackgroundEngine();
 
     const inputStream = await navigator.mediaDevices.getUserMedia({
       video : videoConstraints
@@ -2195,7 +2197,7 @@ async function call(type, direction, mediaStream)
 
     await engine.init({
       inputStream,
-      modelPath : './virtual-background/models/slv.tflite'
+      modelPath : getVirtualBackgroundModelPath()
     });
 
     engine.start();
@@ -2610,7 +2612,7 @@ async function updateDevices()
   await CRTC.Utils.getMicrophones()
     .then((microphones) => 
     {
-      let menus = '<option selected value="">切换音频输入</option>';
+      let menus = '<option selected value="">切换麦克风</option>';
 
       microphones.forEach((device) => 
       {
@@ -2857,6 +2859,12 @@ document.querySelector('#mics').addEventListener('change', function()
 document.querySelector('#virtualBackground').addEventListener('change', function() 
 {
   virtualBackgroundType = this.options[this.selectedIndex].value;
+  virtualBackgroundEngineType = virtualBackgroundType.indexOf('aivbe:') === 0 ? 'aivbe' : 'legacy';
+
+  if (virtualBackgroundEngineType === 'aivbe')
+  {
+    virtualBackgroundType = virtualBackgroundType.slice('aivbe:'.length);
+  }
   
   setStatus(`${this.options[this.selectedIndex].innerText}`);
 
@@ -2948,6 +2956,29 @@ function buildCallMediaStreamProcessor()
   return virtualBackgroundType ? mediaStreamProcessor : null;
 }
 
+function createVirtualBackgroundEngine()
+{
+  if (virtualBackgroundEngineType === 'aivbe')
+  {
+    return new CRTC.AiVBEEngine({
+      video       : Object.assign({}, videoConstraints, { mirror: false }),
+      assetConfig : { baseUrl: AI_VBE_ASSET_ROOT }
+    });
+  }
+
+  return new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+}
+
+function getVirtualBackgroundModelPath()
+{
+  if (virtualBackgroundEngineType === 'aivbe')
+  {
+    return `${AI_VBE_ASSET_ROOT}/aivb/aivb_landscape.tflite`;
+  }
+
+  return './virtual-background/models/slv.tflite';
+}
+
 /**
  * 根据当前 UI 选择构建 RTCSession 的 AI 降噪参数。
  *
@@ -2981,11 +3012,11 @@ async function mediaStreamProcessor(mediastream)
   // 先取出音频
   const audioTrack = mediastream.getAudioTracks()[0];
 
-  engine = new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
+  engine = createVirtualBackgroundEngine();
  
   await engine.init({
     inputStream : mediastream,
-    modelPath   : './virtual-background/models/slv.tflite'
+    modelPath   : getVirtualBackgroundModelPath()
   });
   engine.start();
   if (virtualBackgroundType==='blur')
