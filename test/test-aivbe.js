@@ -366,10 +366,14 @@ function installBrowserMocks()
   const previousMediaStream = global.MediaStream;
   const previousMediaStreamTrack = global.MediaStreamTrack;
   const previousPerformance = global.performance;
+  const previousSetInterval = global.setInterval;
+  const previousClearInterval = global.clearInterval;
 
   global.window = {
     setTimeout,
     clearTimeout,
+    setInterval,
+    clearInterval,
     performance : {
       now()
       {
@@ -532,6 +536,8 @@ function installBrowserMocks()
     global.MediaStream = previousMediaStream;
     global.MediaStreamTrack = previousMediaStreamTrack;
     global.performance = previousPerformance;
+    global.setInterval = previousSetInterval;
+    global.clearInterval = previousClearInterval;
     nextAnimationFrameId = 1;
     scheduledFrames = {};
     createdCanvases = [];
@@ -1015,6 +1021,19 @@ async function testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions()
   assert.strictEqual(config.assetConfig.modelUrl, './assets/tasks/selfie_segmenter_landscape.tflite');
 }
 
+async function testConfigNormalizesFlatAivbAssetBaseUrl()
+{
+  const config = Config.create({
+    assetConfig : {
+      flatBaseUrl : './assets/aivb/'
+    }
+  });
+
+  assert.strictEqual(config.assetConfig.moduleUrl, './assets/aivb/vision.js');
+  assert.strictEqual(config.assetConfig.wasmBaseUrl, './assets/aivb');
+  assert.strictEqual(config.assetConfig.modelUrl, './assets/aivb/selfie_segmenter_landscape.tflite');
+}
+
 async function testConfigRejectsLegacySegmentationOptions()
 {
   assert.throws(
@@ -1078,6 +1097,7 @@ async function run()
     { name: 'testRuntimeProcessesLatestQueuedFrame', fn: testRuntimeProcessesLatestQueuedFrame },
     { name: 'testAssetLoaderSharesConcurrentRuntimeLoad', fn: testAssetLoaderSharesConcurrentRuntimeLoad },
     { name: 'testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions', fn: testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions },
+    { name: 'testConfigNormalizesFlatAivbAssetBaseUrl', fn: testConfigNormalizesFlatAivbAssetBaseUrl },
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges }

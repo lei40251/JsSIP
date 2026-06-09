@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.20266909
+ * CRTC v1.13.0.202669118
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -1270,18 +1270,62 @@ module.exports = AiNSEngine;
 },{"../Logger":49,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
 "use strict";
 
+/**
+ * AiVBEAssetLoader —— 通过向 document 注入 <script type="module"> 标签，
+ * 动态加载 MediaPipe Tasks Vision 运行时。
+ *
+ * 核心行为：
+ *   - 每个唯一的 moduleUrl 只对应一个 script 标签。如果标签已存在（由其他
+ *     AiVBE 实例或之前的加载创建），则等待它完成，而不是注入重复标签。
+ *   - 运行时全局变量（FilesetResolver、ImageSegmenter）暴露在
+ *     `window.CRTCAiVBEVisionTasks` 上。
+ *   - 加载 Promise 按 moduleUrl 全局去重，因此并发的 AiVBE 实例不会触发重复请求。
+ *
+ * @module AiVBEAssetLoader
+ */
+
 var Logger = require('../Logger');
 var Config = require('./AiVBEConfig');
 var logger = new Logger('AiVBEAssetLoader');
+
+/** window 上存储 MediaPipe Tasks 全局变量的键名 */
 var TASKS_GLOBAL = 'CRTCAiVBEVisionTasks';
+
+/** 注入的 script 加载完成后设置的 data 属性，值为 'true' */
 var SCRIPT_READY_ATTR = 'data-aivbe-ready';
+
+/** 注入的 script 加载失败后设置的 data 属性，值为 'true' */
 var SCRIPT_ERROR_ATTR = 'data-aivbe-error';
+
+/** 等待已存在的 script 标签完成加载的最大时间（毫秒） */
 var SCRIPT_WAIT_TIMEOUT_MS = 15000;
+
+/** 轮询模块脚本执行结果的间隔（毫秒） */
+var SCRIPT_POLL_INTERVAL_MS = 50;
+
+/**
+ * 全局去重表：moduleUrl → Promise<void>。
+ *
+ * 每个 moduleUrl 同一时间只有一个加载在进行；后续调用方等待同一个 Promise。
+ *
+ * @type {Object.<string, Promise<void>>}
+ */
 var TASKS_LOAD_PROMISES = {};
 module.exports = class AiVBEAssetLoader {
+  /**
+   * @param {Object} [assetConfig] — 原始资源配置（参见 AiVBEConfig.normalizeAssetConfig）
+   */
   constructor(assetConfig) {
+    /** @type {Object} 归一化后的资源配置，包含解析完成的 URL */
     this.assetConfig = Config.normalizeAssetConfig(assetConfig);
   }
+
+  /**
+   * 返回 MediaPipe FilesetResolver 和 ImageSegmenter 工厂所需的运行时选项。
+   *
+   * @param {string} [modelPath] — 可选的按实例覆盖的模型 URL
+   * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
+   */
   getRuntimeOptions(modelPath) {
     return {
       moduleUrl: this.assetConfig.moduleUrl,
@@ -1289,20 +1333,42 @@ module.exports = class AiVBEAssetLoader {
       modelUrl: this.resolveModelUrl(modelPath)
     };
   }
+
+  /**
+   * 解析模型 URL：显式传入的 modelPath 优先，否则使用配置的默认值。
+   *
+   * @private
+   * @param {string} [modelPath]
+   * @returns {string}
+   */
   resolveModelUrl(modelPath) {
     if (typeof modelPath === 'string' && modelPath.trim()) {
       return modelPath.trim();
     }
     return this.assetConfig.modelUrl;
   }
+
+  /**
+   * 确保 MediaPipe Tasks Vision 运行时已加载并在 `window[TASKS_GLOBAL]` 上可用。
+   *
+   * 若已加载则立即返回。否则注入 <script type="module"> 标签（或等待已有的标签完成）。
+   *
+   * @returns {Promise<{ FilesetResolver: Object, ImageSegmenter: Object }>}
+   *   Tasks 全局命名空间
+   * @throws {Error} 如果不在浏览器环境中运行
+   */
   async ensureTasksLoaded() {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       throw new Error('AiVBE requires browser environment');
     }
+
+    // 已加载 —— 立即返回
     if (window[TASKS_GLOBAL]) {
       return window[TASKS_GLOBAL];
     }
     var moduleUrl = this.assetConfig.moduleUrl;
+
+    // 其他调用方正在加载此 moduleUrl —— 等待它完成
     if (TASKS_LOAD_PROMISES[moduleUrl]) {
       await TASKS_LOAD_PROMISES[moduleUrl];
       return window[TASKS_GLOBAL];
@@ -1316,6 +1382,18 @@ module.exports = class AiVBEAssetLoader {
     logger.debug(`Loaded MediaPipe Tasks runtime: ${moduleUrl}`);
     return window[TASKS_GLOBAL];
   }
+
+  /**
+   * 注入 <script type="module"> 标签，从给定 moduleUrl 导入 FilesetResolver
+   * 和 ImageSegmenter，并将其暴露在 `window[TASKS_GLOBAL]` 上。
+   *
+   * 如果 DOM 中已存在此 moduleUrl 的 script 标签，则委托给 `waitForExistingScript`
+   * 而不是注入重复标签。
+   *
+   * @private
+   * @param {string} moduleUrl — MediaPipe Tasks Vision ESM 包的 URL
+   * @returns {Promise<void>}
+   */
   async loadTasksRuntime(moduleUrl) {
     var selector = `script[data-aivbe-module="${moduleUrl}"]`;
     var existingScript = document.querySelector(selector);
@@ -1325,90 +1403,184 @@ module.exports = class AiVBEAssetLoader {
     }
     await new Promise((resolve, reject) => {
       var script = document.createElement('script');
+      var timeoutId = null;
+      var intervalId = null;
+      function cleanup() {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+        if (intervalId) {
+          window.clearInterval(intervalId);
+        }
+        script.onerror = null;
+      }
       script.type = 'module';
       script.async = true;
       script.setAttribute('data-aivbe-module', moduleUrl);
+
+      // 内联 ESM import —— 无需单独的 JS 文件
       script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
         window.${TASKS_GLOBAL} = { FilesetResolver, ImageSegmenter };`;
-      script.onload = () => {
-        script.setAttribute(SCRIPT_READY_ATTR, 'true');
-        script.removeAttribute(SCRIPT_ERROR_ATTR);
-        resolve();
-      };
       script.onerror = () => {
+        cleanup();
         script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
         reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
       };
       document.head.appendChild(script);
+      intervalId = window.setInterval(() => {
+        if (window[TASKS_GLOBAL]) {
+          cleanup();
+          script.setAttribute(SCRIPT_READY_ATTR, 'true');
+          script.removeAttribute(SCRIPT_ERROR_ATTR);
+          resolve();
+        }
+      }, SCRIPT_POLL_INTERVAL_MS);
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
+      }, SCRIPT_WAIT_TIMEOUT_MS);
     });
   }
+
+  /**
+   * 等待由其他 AiVBE 实例（或之前的页面加载）注入的 script 标签完成加载。
+   *
+   * 处理三种情况：
+   *   1. 全局变量已设置 → 立即返回
+   *   2. script 之前加载失败 → 立即抛出
+   *   3. script 仍在加载中 → 绑定 load/error 事件监听并等待（带超时）
+   *
+   * @private
+   * @param {HTMLScriptElement} script — DOM 中已存在的 script 元素
+   * @param {string} moduleUrl — 模块 URL（用于错误消息）
+   * @returns {Promise<void>}
+   * @throws {Error} 如果 script 加载失败或超时
+   */
   async waitForExistingScript(script, moduleUrl) {
+    // 情况 1：全局变量已可用
     if (window[TASKS_GLOBAL]) {
       return;
     }
+
+    // 情况 2：已有的 script 已加载失败
     if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
       throw new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`);
     }
+
+    // 边缘情况：script 标记为就绪但全局变量缺失
     if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
       if (window[TASKS_GLOBAL]) {
         return;
       }
       throw new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`);
     }
+
+    // 情况 3：script 仍在加载中 —— 轮询全局变量 / 状态属性
     await new Promise((resolve, reject) => {
       var timeoutId = null;
+      var intervalId = null;
       function cleanup() {
         if (timeoutId) {
           window.clearTimeout(timeoutId);
         }
-        script.removeEventListener('load', handleLoad);
-        script.removeEventListener('error', handleError);
+        if (intervalId) {
+          window.clearInterval(intervalId);
+        }
       }
-      function handleLoad() {
-        cleanup();
-        script.setAttribute(SCRIPT_READY_ATTR, 'true');
-        script.removeAttribute(SCRIPT_ERROR_ATTR);
-        resolve();
-      }
-      function handleError() {
-        cleanup();
-        script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
-        reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
-      }
+      intervalId = window.setInterval(() => {
+        if (window[TASKS_GLOBAL] || script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+          cleanup();
+          resolve();
+          return;
+        }
+        if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
+          cleanup();
+          reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
+        }
+      }, SCRIPT_POLL_INTERVAL_MS);
       timeoutId = window.setTimeout(() => {
         cleanup();
         reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
       }, SCRIPT_WAIT_TIMEOUT_MS);
-      script.addEventListener('load', handleLoad);
-      script.addEventListener('error', handleError);
     });
   }
 };
 },{"../Logger":49,"./AiVBEConfig":7}],7:[function(require,module,exports){
 "use strict";
 
+/**
+ * AiVBEConfig —— AiVBE 引擎的配置归一化模块。
+ *
+ * 将用户提供的选项与安全默认值合并，校验已知 key，
+ * 并尽早拒绝未知选项以捕获拼写错误 / 误配置。
+ *
+ * 以函数集合形式导出（而非类），以便 AiVBEEngine 和 AiVBEAssetLoader
+ * 无需实例化即可使用。
+ *
+ * @module AiVBEConfig
+ */
+
 var Logger = require('../Logger');
 var logger = new Logger('AiVBEConfig');
+
+/** MediaPipe 推理允许的 delegate 值 */
 var SUPPORTED_DELEGATES = new Set(['CPU', 'GPU']);
+
+/** `video` 选项块下已识别的 key */
 var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror'];
+
+/** `segmentation` 选项块下已识别的 key */
 var SEGMENTATION_OPTION_KEYS = ['delegate'];
+
+/** `postProcessing` 选项块下已识别的 key */
 var POST_PROCESSING_OPTION_KEYS = ['blurRadius'];
-var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
+
+/** `assetConfig` 选项块下已识别的 key */
+var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
+
+// ---------------------------------------------------------------------------
+// 默认值
+// ---------------------------------------------------------------------------
+
+/** @type {{ width: number, height: number, targetFps: number, mirror: boolean }} */
 var DEFAULT_VIDEO = {
   width: 1280,
   height: 720,
   targetFps: 15,
   mirror: false
 };
+
+/** @type {{ delegate: 'CPU'|'GPU' }} */
 var DEFAULT_SEGMENTATION = {
   delegate: 'GPU'
 };
+
+/** @type {{ blurRadius: number }} */
 var DEFAULT_POST_PROCESSING = {
   blurRadius: 20
 };
+
+/** MediaPipe Tasks Vision 默认 CDN URL（jsDelivr） */
 var DEFAULT_TASKS_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2';
 var DEFAULT_TASKS_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm';
+
+/** 默认 selfie-segmenter landscape 模型（Google Cloud Storage） */
 var DEFAULT_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite';
+
+// ---------------------------------------------------------------------------
+// 顶层工厂函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 创建完全归一化的 AiVBE 配置对象。
+ *
+ * @param {Object} [options={}] — 用户提供的原始选项
+ * @param {Object} [options.video] — 视频流设置
+ * @param {Object} [options.segmentation] — 分割设置
+ * @param {Object} [options.postProcessing] — 后处理设置
+ * @param {Object} [options.assetConfig] — CDN / 路径覆盖
+ * @returns {{ video: Object, segmentation: Object, postProcessing: Object, assetConfig: Object }}
+ */
 exports.create = function (options = {}) {
   var assetConfig = exports.normalizeAssetConfig(options.assetConfig);
   var config = {
@@ -1420,6 +1592,21 @@ exports.create = function (options = {}) {
   logger.debug(`Config created: ${JSON.stringify(config)}`);
   return config;
 };
+
+// ---------------------------------------------------------------------------
+// 各段归一化函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 归一化 `video` 选项块。
+ *
+ * 接受部分对象；缺失的 key 回退到 DEFAULT_VIDEO。
+ * 未知 key 会导致立即抛出错误。
+ *
+ * @param {Object} [video] — 原始视频选项
+ * @returns {{ width: number, height: number, targetFps: number, mirror: boolean }}
+ * @throws {Error} 如果存在未知 key
+ */
 exports.normalizeVideo = function (video) {
   var normalized = Object.assign({}, DEFAULT_VIDEO);
   if (!video || typeof video !== 'object') {
@@ -1440,6 +1627,14 @@ exports.normalizeVideo = function (video) {
   }
   return normalized;
 };
+
+/**
+ * 归一化 `segmentation` 选项块。
+ *
+ * @param {Object} [segmentation] — 原始分割选项
+ * @returns {{ delegate: 'CPU'|'GPU' }}
+ * @throws {Error} 如果存在未知 key
+ */
 exports.normalizeSegmentation = function (segmentation) {
   var normalized = Object.assign({}, DEFAULT_SEGMENTATION);
   if (!segmentation || typeof segmentation !== 'object') {
@@ -1454,6 +1649,14 @@ exports.normalizeSegmentation = function (segmentation) {
   }
   return normalized;
 };
+
+/**
+ * 归一化 `postProcessing` 选项块。
+ *
+ * @param {Object} [postProcessing] — 原始后处理选项
+ * @returns {{ blurRadius: number }} — 钳位到 [0, 100]
+ * @throws {Error} 如果存在未知 key
+ */
 exports.normalizePostProcessing = function (postProcessing) {
   var normalized = Object.assign({}, DEFAULT_POST_PROCESSING);
   if (!postProcessing || typeof postProcessing !== 'object') {
@@ -1463,6 +1666,20 @@ exports.normalizePostProcessing = function (postProcessing) {
   normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, 100, DEFAULT_POST_PROCESSING.blurRadius);
   return normalized;
 };
+
+/**
+ * 归一化 `assetConfig` 选项块。
+ *
+ * URL 解析优先级（从高到低）：
+ *   1. 显式的 `moduleUrl` / `wasmBaseUrl` / `modelUrl`
+ *   2. `cdnUrl` 或 `baseUrl`（自动推导传统 tasks 目录的 module + wasm 路径）
+ *   3. `flatBaseUrl`（自动推导扁平 aivb 目录的 vision.js + wasm + model 路径）
+ *   4. 硬编码的 jsDelivr + Google Cloud Storage 默认值
+ *
+ * @param {Object} [assetConfig] — 原始资源配置
+ * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
+ * @throws {Error} 如果存在未知 key
+ */
 exports.normalizeAssetConfig = function (assetConfig) {
   var normalized = {
     moduleUrl: DEFAULT_TASKS_MODULE_URL,
@@ -1473,6 +1690,8 @@ exports.normalizeAssetConfig = function (assetConfig) {
     return normalized;
   }
   assertKnownKeys('assetConfig', assetConfig, ASSET_CONFIG_OPTION_KEYS);
+
+  // 便捷方式：从单个 cdnUrl / baseUrl 推导 module 和 wasm URL
   if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
     var baseUrl = assetConfig.cdnUrl.trim().replace(/\/$/, '');
     normalized.moduleUrl = `${baseUrl}/vision_bundle.mjs`;
@@ -1481,7 +1700,14 @@ exports.normalizeAssetConfig = function (assetConfig) {
     var _baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
     normalized.moduleUrl = `${_baseUrl}/vision_bundle.mjs`;
     normalized.wasmBaseUrl = `${_baseUrl}/wasm`;
+  } else if (typeof assetConfig.flatBaseUrl === 'string' && assetConfig.flatBaseUrl.trim()) {
+    var _baseUrl2 = assetConfig.flatBaseUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${_baseUrl2}/vision.js`;
+    normalized.wasmBaseUrl = _baseUrl2;
+    normalized.modelUrl = `${_baseUrl2}/selfie_segmenter_landscape.tflite`;
   }
+
+  // 显式的逐项 URL 覆盖具有最高优先级
   if (typeof assetConfig.moduleUrl === 'string' && assetConfig.moduleUrl.trim()) {
     normalized.moduleUrl = assetConfig.moduleUrl.trim();
   }
@@ -1493,6 +1719,20 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   return normalized;
 };
+
+// ---------------------------------------------------------------------------
+// 内部辅助函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 将数值钳位到 [min, max] 范围。如果值无法转换为有限数值，则返回 fallback。
+ *
+ * @param {*} value
+ * @param {number} min
+ * @param {number} max
+ * @param {number} fallback
+ * @returns {number}
+ */
 function clampNumber(value, min, max, fallback) {
   var numericValue = Number(value);
   if (!Number.isFinite(numericValue)) {
@@ -1500,6 +1740,17 @@ function clampNumber(value, min, max, fallback) {
   }
   return Math.min(max, Math.max(min, numericValue));
 }
+
+/**
+ * 验证选项对象仅包含已识别的 key，若发现未知 key 则抛出错误。
+ *
+ * 此函数充当拼写错误的早期预警（例如使用了 `blur_radius` 而非 `blurRadius`）。
+ *
+ * @param {string} sectionName — 人类可读的配置段名称（用于错误消息）
+ * @param {Object} value — 原始选项对象
+ * @param {string[]} allowedKeys — 已识别 key 的白名单
+ * @throws {Error} 如果 `value` 包含不在 `allowedKeys` 中的 key
+ */
 function assertKnownKeys(sectionName, value, allowedKeys) {
   var allowedKeySet = new Set(allowedKeys);
   var unknownKeys = Object.keys(value).filter(key => !allowedKeySet.has(key));
@@ -1510,6 +1761,42 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
 },{"../Logger":49}],8:[function(require,module,exports){
 "use strict";
 
+/**
+ * Canvas2DPipeline —— 基于 Canvas2D 的快速合成管线，用于虚拟背景效果。
+ *
+ * 使用一个离屏 <canvas> 做人像遮罩，目标 canvas 做最终合成。
+ * 无需 WebGL —— 所有支持 Canvas2D 的环境均可工作。
+ *
+ * 支持的合成模式：
+ *   - 'none'  — 直接绘制视频帧，不做背景替换
+ *   - 'blur'  — 模糊原始背景，再将人像叠加在上层
+ *   - 'image' — 用 cover-fit 图片替换背景
+ *   - 'color' — 用纯色填充背景
+ *
+ * @module Canvas2DPipeline
+ */
+
+/**
+ * 构建 Canvas2D 渲染管线。
+ *
+ * 返回的管线对象暴露四个方法：
+ *   - render()              — 渲染一帧（异步）
+ *   - updateMirror(bool)    — 运行时切换水平镜像
+ *   - updateEffectConfig({ blurRadius }) — 运行时更新模糊半径
+ *   - cleanUp()             — 清空画布（丢弃管线前调用）
+ *
+ * @param {Object} options
+ * @param {HTMLCanvasElement} options.canvas — 目标输出 canvas
+ * @param {HTMLVideoElement} options.videoElement — 源视频元素
+ * @param {HTMLImageElement} [options.backgroundImage] — 背景图片（'image' 模式必需）
+ * @param {string} [options.backgroundColor='#00ff00'] — 'color' 模式使用的 CSS 颜色
+ * @param {'none'|'blur'|'image'|'color'} options.mode — 合成模式
+ * @param {boolean} [options.mirror=false] — 是否水平镜像输出
+ * @param {Object} options.segmenterRuntime — MediaPipe 分割器实例（需暴露 segmentForVideo(videoEl) 方法）
+ * @param {number} [options.blurRadius=20] — 高斯模糊半径（像素，0-100）
+ * @returns {Object} 管线句柄 —— { render, updateMirror, updateEffectConfig, cleanUp }
+ * @throws {Error} 如果无法从 canvas 获取 2D 上下文
+ */
 function buildCanvas2DPipeline(options) {
   var {
     canvas,
@@ -1525,6 +1812,8 @@ function buildCanvas2DPipeline(options) {
   if (!context) {
     throw new Error('2D canvas not supported');
   }
+
+  // 离屏 canvas，用于通过 destination-in 合成方式分离出人物剪影
   var personCanvas = document.createElement('canvas');
   var personContext = personCanvas.getContext('2d');
   if (!personContext) {
@@ -1532,6 +1821,8 @@ function buildCanvas2DPipeline(options) {
   }
   personCanvas.width = canvas.width;
   personCanvas.height = canvas.height;
+
+  /** @type {Object} 可变的管线状态 */
   var state = {
     backgroundImage,
     backgroundColor: backgroundColor || '#00ff00',
@@ -1539,6 +1830,20 @@ function buildCanvas2DPipeline(options) {
     mirror: Boolean(mirror),
     mode
   };
+
+  /**
+   * 渲染一帧。
+   *
+   * 工作流程：
+   *   1. 若模式为 'none'，直接绘制视频帧并返回
+   *   2. 对当前视频帧执行 MediaPipe 分割
+   *   3. 将人物剪影绘制到离屏 canvas（视频帧被分割遮罩裁剪，使用 destination-in）
+   *   4. 在目标 canvas 上绘制背景层（模糊/图片/纯色）
+   *   5. 将人物叠加到最上层
+   *
+   * @returns {Promise<void>}
+   * @throws {Error} 如果分割失败或未返回遮罩
+   */
   async function render() {
     if (state.mode === 'none') {
       clearCanvas(context, canvas);
@@ -1549,11 +1854,16 @@ function buildCanvas2DPipeline(options) {
     if (!segmentationResult || !segmentationResult.segmentationMask) {
       throw new Error('MediaPipe segmentation did not return segmentationMask');
     }
+
+    // ---- 构建人物遮罩（离屏） ----
     clearCanvas(personContext, personCanvas);
     drawVideoFrame(personContext, videoElement, personCanvas, state.mirror);
+    // 仅保留分割遮罩非零的像素
     personContext.globalCompositeOperation = 'destination-in';
     drawVideoFrame(personContext, segmentationResult.segmentationMask, personCanvas, state.mirror);
     personContext.globalCompositeOperation = 'source-over';
+
+    // ---- 绘制背景层 ----
     clearCanvas(context, canvas);
     if (state.mode === 'blur') {
       context.save();
@@ -1566,16 +1876,37 @@ function buildCanvas2DPipeline(options) {
       context.fillStyle = state.backgroundColor;
       context.fillRect(0, 0, canvas.width, canvas.height);
     }
+
+    // ---- 将人物叠加到最上层 ----
     context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
   }
+
+  /**
+   * 运行时更新水平镜像设置，无需重建管线。
+   *
+   * @param {boolean} nextMirror
+   */
   function updateMirror(nextMirror) {
     state.mirror = Boolean(nextMirror);
   }
+
+  /**
+   * 运行时更新效果配置。
+   *
+   * 目前仅支持 `blurRadius`。
+   *
+   * @param {Object} [effectConfig={}]
+   * @param {number} [effectConfig.blurRadius] — 新的模糊半径（钳位到 0-100）
+   */
   function updateEffectConfig(effectConfig = {}) {
     if (typeof effectConfig.blurRadius === 'number') {
       state.blurRadius = Math.max(0, Math.min(effectConfig.blurRadius, 100));
     }
   }
+
+  /**
+   * 清空两个 canvas。在丢弃管线前调用。
+   */
   function cleanUp() {
     clearCanvas(context, canvas);
     clearCanvas(personContext, personCanvas);
@@ -1587,9 +1918,31 @@ function buildCanvas2DPipeline(options) {
     cleanUp
   };
 }
+
+// ---------------------------------------------------------------------------
+// 内部绘图辅助函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 将 canvas 清空为透明黑色。
+ *
+ * @param {CanvasRenderingContext2D} context
+ * @param {HTMLCanvasElement} canvas
+ */
 function clearCanvas(context, canvas) {
   context.clearRect(0, 0, canvas.width, canvas.height);
 }
+
+/**
+ * 将视频/canvas 元素绘制到目标 canvas 上，可选水平镜像。
+ *
+ * 镜像通过 scale(-1, 1) 变换实现。
+ *
+ * @param {CanvasRenderingContext2D} context — 目标 2D 上下文
+ * @param {HTMLVideoElement|HTMLCanvasElement} videoElement — 源元素
+ * @param {HTMLCanvasElement} canvas — 目标 canvas（用于获取尺寸）
+ * @param {boolean} mirror — 是否水平翻转
+ */
 function drawVideoFrame(context, videoElement, canvas, mirror) {
   context.save();
   if (mirror) {
@@ -1599,10 +1952,21 @@ function drawVideoFrame(context, videoElement, canvas, mirror) {
   context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
   context.restore();
 }
+
+/**
+ * 以 "cover" 模式绘制图片 —— 等比缩放并裁剪，使图片填满 canvas 同时保持宽高比。
+ *
+ * @param {CanvasRenderingContext2D} context
+ * @param {HTMLImageElement} image — 源图片（必须已加载完成）
+ * @param {HTMLCanvasElement} canvas — 目标 canvas
+ * @throws {Error} 如果未提供图片或图片尺寸无效
+ */
 function drawCoverImage(context, image, canvas) {
   if (!image) {
     throw new Error('Background image required for image mode');
   }
+
+  // 兼容 <img>、<video> 以及原始 ImageData / ImageBitmap
   var sourceWidth = image.naturalWidth || image.videoWidth || image.width;
   var sourceHeight = image.naturalHeight || image.videoHeight || image.height;
   if (!sourceWidth || !sourceHeight) {
@@ -1614,10 +1978,14 @@ function drawCoverImage(context, image, canvas) {
   var cropHeight = sourceHeight;
   var offsetX = 0;
   var offsetY = 0;
+
+  // 裁剪较长的一边以匹配目标宽高比
   if (sourceRatio > targetRatio) {
+    // 图片更宽 —— 裁剪左右两侧
     cropWidth = sourceHeight * targetRatio;
     offsetX = (sourceWidth - cropWidth) / 2;
   } else {
+    // 图片更高 —— 裁剪上下两侧
     cropHeight = sourceWidth / targetRatio;
     offsetY = (sourceHeight - cropHeight) / 2;
   }
@@ -1629,26 +1997,91 @@ module.exports = {
 },{}],9:[function(require,module,exports){
 "use strict";
 
+/**
+ * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
+ * 为 AiVBE 提供人像分割能力。
+ *
+ * 职责：
+ *   - 通过 AiVBEAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
+ *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
+ *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
+ *   - 最多排队一个待处理帧，避免背压积累
+ *   - 销毁时干净关闭分割器并拒绝所有未完成的 Promise
+ *
+ * @module MediaPipeSegmenterRuntime
+ */
+
 var Logger = require('../Logger');
 var AiVBEAssetLoader = require('./AiVBEAssetLoader');
 var logger = new Logger('AiVBEMediaPipeRuntime');
+
+/** 默认推理后端 —— 'GPU' 以获得最佳性能 */
 var DEFAULT_DELEGATE = 'GPU';
 module.exports = class MediaPipeSegmenterRuntime {
+  /**
+   * @param {Object} [config={}]
+   * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
+   */
   constructor(config = {}) {
+    /** @type {AiVBEAssetLoader} 负责 MediaPipe 的动态脚本加载 */
     this.assetLoader = new AiVBEAssetLoader(config.assetConfig);
+
+    /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
     this.assetUrls = null;
+
+    /** @type {Object|null} MediaPipe ImageSegmenter 实例 */
     this.segmenter = null;
+
+    /** @type {boolean} 分割器是否已成功初始化 */
     this.initialized = false;
+
+    /** @type {Promise|null} 正在进行的初始化 Promise（用于去重，防止并发初始化） */
     this.initializingPromise = null;
+
+    /** @type {Object|null} 当前正在执行的分割请求 —— { resolve, reject, promise } */
     this.pendingRequest = null;
+
+    /** @type {Object|null} 排队中的分割请求，当前一个请求完成后立即处理 ——
+     *   { videoElement, resolve, reject, promise } */
     this.queuedRequest = null;
+
+    /** @type {boolean} 是否已调用 destroy() */
     this.destroyed = false;
+
+    /** @type {string[]} 分割模型返回的标签列表 */
     this.labels = [];
+
+    /** @type {number} 'person' 标签在 labels 中的索引 */
     this.personMaskIndex = 0;
+
+    /** @type {HTMLCanvasElement|null} 复用的离屏 canvas，用于生成 alpha 遮罩 */
     this.maskCanvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} maskCanvas 的 2D 上下文 */
     this.maskContext = null;
+
+    /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
     this.maskImageData = null;
   }
+
+  // ---------------------------------------------------------------------------
+  // 生命周期
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 初始化 MediaPipe ImageSegmenter。
+   *
+   * 加载 Tasks Vision 运行时（动态 <script> 注入）、解析 WASM 和模型 URL、
+   * 创建分割器并记录标签列表，以便后续定位人物遮罩。
+   *
+   * 可安全地多次调用 —— 已初始化时立即返回，正在初始化时共享同一个 Promise。
+   *
+   * @param {Object} [options={}]
+   * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
+   * @param {'CPU'|'GPU'} [options.delegate='GPU'] — 推理后端
+   * @returns {Promise<void>}
+   * @throws {Error} 如果分割器已被销毁
+   */
   async initialize(options = {}) {
     if (this.destroyed) {
       throw new Error('MediaPipe segmenter destroyed');
@@ -1687,6 +2120,7 @@ module.exports = class MediaPipeSegmenterRuntime {
         this.initialized = true;
         logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
       } catch (error) {
+        // 尽力关闭刚创建的分割器
         if (typeof segmenter.close === 'function') {
           try {
             await segmenter.close();
@@ -1702,6 +2136,8 @@ module.exports = class MediaPipeSegmenterRuntime {
         this.maskCanvas = null;
         this.maskContext = null;
         this.maskImageData = null;
+
+        // 拒绝正在等待初始化的请求
         if (this.pendingRequest) {
           var pending = this.pendingRequest;
           this.pendingRequest = null;
@@ -1716,6 +2152,21 @@ module.exports = class MediaPipeSegmenterRuntime {
       this.initializingPromise = null;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 分割
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 为给定视频帧排期一次分割。
+   *
+   * 如果已有分割正在进行，最新的帧会被排队（仅保留一帧排队 —— 更早的排队帧会被替换）。
+   * 这样可以在不积压请求的前提下保持管线响应。
+   *
+   * @param {HTMLVideoElement} videoElement — 源视频元素
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
+   * @throws {Error} 如果分割器未初始化
+   */
   async segmentForVideo(videoElement) {
     if (!this.initialized || !this.segmenter) {
       throw new Error('MediaPipe segmenter not initialized');
@@ -1735,6 +2186,7 @@ module.exports = class MediaPipeSegmenterRuntime {
           promise: queuedPromise
         };
       } else {
+        // 替换之前的排队帧 —— 只有最新的帧才重要
         this.queuedRequest.videoElement = videoElement;
       }
       logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
@@ -1742,6 +2194,16 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     return this.runSegmentation(videoElement);
   }
+
+  /**
+   * 执行一次分割。
+   *
+   * 调用 MediaPipe 分割器的 VIDEO 模式 API，将置信度遮罩输出转换为基于 canvas 的 alpha 遮罩。
+   *
+   * @private
+   * @param {HTMLVideoElement} videoElement
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
+   */
   async runSegmentation(videoElement) {
     var resolvePending;
     var rejectPending;
@@ -1756,7 +2218,9 @@ module.exports = class MediaPipeSegmenterRuntime {
     };
     var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
     try {
+      // MediaPipe VIDEO 模式的分割是基于回调的
       this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
+        // 防止 destroy() 已将 pendingRequest 置空后的过时回调
         if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
           return;
         }
@@ -1781,6 +2245,12 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     return promise;
   }
+
+  /**
+   * 如果有排队请求且没有其他请求正在执行，将其出队并执行。
+   *
+   * @private
+   */
   processQueuedRequest() {
     if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
       return;
@@ -1789,6 +2259,22 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.queuedRequest = null;
     this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
   }
+
+  // ---------------------------------------------------------------------------
+  // 遮罩构建
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 确定哪个置信度遮罩对应"人物"。
+   *
+   * 启发式策略：
+   *   1. 在标签中搜索匹配 /person/i 的项
+   *   2. 若无标签匹配且有多个遮罩，选最后一个（selfie-segmenter 模型的最后一个输出通常是人像）
+   *   3. 兜底使用索引 0
+   *
+   * @param {number} maskCount — 返回的置信度遮罩总数
+   * @returns {number} 从 0 开始的索引
+   */
   resolvePersonMaskIndex(maskCount) {
     for (var index = 0; index < this.labels.length; index += 1) {
       if (typeof this.labels[index] === 'string' && /person/i.test(this.labels[index])) {
@@ -1800,6 +2286,21 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     return 0;
   }
+
+  /**
+   * 从原始分割结果构建基于 canvas 的 alpha 遮罩。
+   *
+   * 遮罩为灰度 canvas，其中：
+   *   - R=G=B=0（黑色）
+   *   - A = round(置信度 × 255)
+   *
+   * 此 canvas 可作为 destination-in 合成的源来使用。
+   *
+   * @private
+   * @param {Object} result — 原始 MediaPipe ImageSegmenterResult
+   * @returns {HTMLCanvasElement} 已绘制 alpha 遮罩的 canvas
+   * @throws {Error} 如果未找到支持的遮罩输出
+   */
   createSegmentationMask(result) {
     var mask = this.resolveOutputMask(result);
     var width = mask.width;
@@ -1807,6 +2308,8 @@ module.exports = class MediaPipeSegmenterRuntime {
     if (!width || !height) {
       throw new Error('ImageSegmenter returned invalid categoryMask size');
     }
+
+    // 懒创建 / 调整复用的遮罩 canvas
     if (!this.maskCanvas) {
       this.maskCanvas = document.createElement('canvas');
       this.maskContext = this.maskCanvas.getContext('2d');
@@ -1822,6 +2325,8 @@ module.exports = class MediaPipeSegmenterRuntime {
     var confidenceValues = this.readMaskValues(mask);
     var imageData = this.maskImageData.data;
     var offset = 0;
+
+    // 将置信度值写入 alpha 通道（R=G=B=0, A=置信度）
     for (var i = 0; i < confidenceValues.length; i += 1) {
       var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[i] * 255)));
       imageData[offset] = 0;
@@ -1833,6 +2338,18 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.maskContext.putImageData(this.maskImageData, 0, 0);
     return this.maskCanvas;
   }
+
+  /**
+   * 从分割结果中解析出要使用的遮罩。
+   *
+   * 优先使用 confidenceMasks[personMaskIndex]（如果可用）；
+   * 回退到 categoryMask（兼容旧模型）。
+   *
+   * @private
+   * @param {Object} result
+   * @returns {Object} 单个遮罩对象（含 width、height 及数据访问方法）
+   * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
+   */
   resolveOutputMask(result) {
     if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
       this.personMaskIndex = this.resolvePersonMaskIndex(result.confidenceMasks.length);
@@ -1843,6 +2360,18 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     throw new Error('ImageSegmenter did not return a supported mask output');
   }
+
+  /**
+   * 从 MediaPipe 遮罩中读取原始置信度值。
+   *
+   * 支持 Float32Array 输出（置信度遮罩）和 Uint8Array 输出（类别遮罩），
+   * 全部归一化为 [0, 1] 范围内的 Float32。
+   *
+   * @private
+   * @param {Object} mask — MediaPipe 遮罩对象
+   * @returns {Float32Array} [0, 1] 范围内的置信度值
+   * @throws {Error} 如果遮罩格式不受支持
+   */
   readMaskValues(mask) {
     if (!mask) {
       throw new Error('ImageSegmenter mask is required');
@@ -1860,6 +2389,16 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     throw new Error('Unsupported ImageSegmenter mask format');
   }
+
+  /**
+   * 释放分割结果关联的 MediaPipe 资源。
+   *
+   * MediaPipe 结果可能持有 WASM 底层资源，需要显式清理。
+   * 此方法同时关闭结果本身及其子遮罩对象。
+   *
+   * @private
+   * @param {Object} result — MediaPipe ImageSegmenterResult
+   */
   closeSegmentationResult(result) {
     if (result && typeof result.close === 'function') {
       result.close();
@@ -1876,18 +2415,36 @@ module.exports = class MediaPipeSegmenterRuntime {
       result.categoryMask.close();
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 销毁
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 销毁分割器：关闭 MediaPipe 实例、拒绝未完成的 Promise、释放所有资源。
+   *
+   * 可安全地多次调用。
+   *
+   * @returns {Promise<void>}
+   */
   async destroy() {
     this.destroyed = true;
+
+    // 拒绝正在执行的分割
     if (this.pendingRequest) {
       var pending = this.pendingRequest;
       this.pendingRequest = null;
       pending.reject(new Error('MediaPipe segmenter destroyed'));
     }
+
+    // 拒绝排队中的帧
     if (this.queuedRequest) {
       var queued = this.queuedRequest;
       this.queuedRequest = null;
       queued.reject(new Error('MediaPipe segmenter destroyed'));
     }
+
+    // 等待初始化完成，以便安全关闭它可能已创建的分割器
     if (this.initializingPromise) {
       try {
         await this.initializingPromise;
@@ -1912,6 +2469,19 @@ module.exports = class MediaPipeSegmenterRuntime {
 },{"../Logger":49,"./AiVBEAssetLoader":6}],10:[function(require,module,exports){
 "use strict";
 
+/**
+ * AiVBE（AI Virtual Background Engine）—— 基于 MediaPipe 人像分割的
+ * 实时视频虚拟背景引擎。
+ *
+ * 支持四种背景模式：
+ *   - 'none'  — 直通模式，不做背景替换（仍会运行分割）
+ *   - 'blur'  — 对原始背景做高斯模糊
+ *   - 'image' — 用自定义图片替换背景（cover-fit 裁剪）
+ *   - 'color' — 用纯色填充背景
+ *
+ * @module AiVBE
+ */
+
 var {
   buildCanvas2DPipeline
 } = require('./Canvas2DPipeline.js');
@@ -1919,28 +2489,102 @@ var Config = require('./AiVBEConfig');
 var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
 var Logger = require('../Logger');
 var logger = new Logger('AiVBE');
+
+/**
+ * AI 虚拟背景引擎核心类。
+ *
+ * 典型生命周期：
+ *   1. new AiVBEEngine({ ... })
+ *   2. await engine.init({ inputStream, canvas })
+ *   3. await engine.setBlurBackground(20)   // 或 setBackgroundImage / setSolidColor
+ *   4. engine.start()
+ *   5. … 使用 engine.getOutputStream() 作为处理后的视频轨道 …
+ *   6. engine.stop()
+ *   7. await engine.destroy()
+ *
+ * @class
+ */
 class AiVBEEngine {
+  /**
+   * @param {Object} [options={}] — 引擎配置
+   * @param {Object} [options.video] — 视频流参数
+   * @param {number} [options.video.width=1280] — 输出宽度
+   * @param {number} [options.video.height=720] — 输出高度
+   * @param {number} [options.video.targetFps=15] — 渲染目标帧率（1-60）
+   * @param {boolean} [options.video.mirror=false] — 是否水平镜像
+   * @param {Object} [options.segmentation] — MediaPipe 分割参数
+   * @param {'CPU'|'GPU'} [options.segmentation.delegate='GPU'] — 推理后端
+   * @param {Object} [options.postProcessing] — 后处理参数
+   * @param {number} [options.postProcessing.blurRadius=20] — 模糊半径（0-100）
+   * @param {Object} [options.assetConfig] — CDN / 资源路径覆盖（MediaPipe 运行时和模型文件）
+   */
   constructor(options = {}) {
+    /** @type {Object} 归一化后的配置对象（参见 AiVBEConfig） */
     this.config = Config.create(options);
+
+    /** @type {Object|null} 当前渲染管线句柄（Canvas2D pipeline） */
     this.pipeline = null;
+
+    /** @type {MediaPipeSegmenterRuntime} 人像分割运行时 */
     this.segmenterRuntime = new MediaPipeSegmenterRuntime({
       assetConfig: this.config.assetConfig
     });
+
+    /** @type {MediaStream|null} 输入视频流 */
     this.inputStream = null;
+
+    /** @type {MediaStream|null} 输出流（从 canvas 捕获的处理后帧） */
     this.outputStream = null;
+
+    /** @type {HTMLCanvasElement|null} 用于合成的离屏 canvas */
     this.canvas = null;
+
+    /** @type {HTMLVideoElement|null} 由 inputStream 驱动的内部 video 元素 */
     this.videoEl = null;
+
+    /** @type {HTMLImageElement|null} 背景图片元素（仅 image 模式使用） */
     this.backgroundEl = null;
+
+    /** @type {boolean} 渲染循环是否正在运行 */
     this.isRunning = false;
+
+    /** @type {number|null} requestAnimationFrame 句柄 */
     this.animationFrameId = null;
+
+    /** @type {'none'|'blur'|'image'|'color'} 当前生效的背景模式 */
     this.currentBackgroundKind = 'none';
+
+    /** @type {number} 上一帧的渲染时间戳（毫秒） */
     this.lastFrameTime = 0;
+
+    /** @type {boolean} 防止并发渲染的互斥锁 */
     this.isRendering = false;
+
+    /** @type {Promise|null} 当前正在执行的渲染 Promise */
     this.renderPromise = null;
+
+    /** @type {boolean} 是否已调用 destroy() */
     this.destroyed = false;
+
+    /** @type {number} 单调递增的请求 ID，用于取消过时的管线设置操作（例如不再需要的图片加载） */
     this.pipelineRequestId = 0;
+
+    /** @type {Object|null} 正在进行的背景图片加载句柄，结构为 { image, reject }。加载完成或被取消时清空 */
     this.pendingImageLoad = null;
   }
+
+  // ---------------------------------------------------------------------------
+  // 内部辅助方法
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 取消正在进行的背景图片加载。
+   *
+   * 清除图片元素的回调、重置 src，并拒绝调用方正在等待的 Promise。
+   *
+   * @private
+   * @param {string} [reason='Background image load cancelled'] — 拒绝原因
+   */
   _cancelPendingImageLoad(reason) {
     if (!this.pendingImageLoad) {
       return;
@@ -1954,6 +2598,17 @@ class AiVBEEngine {
     }
     pending.reject(new Error(reason || 'Background image load cancelled'));
   }
+
+  /**
+   * 销毁当前渲染管线并释放相关资源。
+   *
+   * 默认同时取消正在进行的背景图片加载。传入 `{ cancelPendingImageLoad: false }`
+   * 可跳过（例如在 destroy 流程中单独处理取消逻辑时）。
+   *
+   * @private
+   * @param {Object} [options={}]
+   * @param {boolean} [options.cancelPendingImageLoad=true]
+   */
   _cleanUpPipeline(options = {}) {
     if (options.cancelPendingImageLoad !== false) {
       this._cancelPendingImageLoad('Background image load cancelled');
@@ -1969,6 +2624,36 @@ class AiVBEEngine {
       this.backgroundEl = null;
     }
   }
+
+  /**
+   * 断言引擎已初始化完毕，否则抛出错误。
+   *
+   * @private
+   * @throws {Error} 如果 canvas、videoEl 或 outputStream 缺失
+   */
+  _assertInitialized() {
+    if (!this.canvas || !this.videoEl || !this.outputStream) {
+      throw new Error('AiVBEEngine not initialized');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 公开 API —— 生命周期
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 使用输入视频流初始化引擎。
+   *
+   * 此方法会引导 MediaPipe 分割器、创建内部 video 元素、建立输出
+   * canvas 捕获流，并设置默认的直通（'none'）管线。
+   *
+   * @param {Object} options
+   * @param {MediaStream} options.inputStream — 待处理的原始摄像头/屏幕共享流
+   * @param {string} [options.modelPath] — 可选的分割模型 URL 覆盖
+   * @param {HTMLCanvasElement} [options.canvas] — 复用的已有 canvas，省略则自动创建
+   * @returns {Promise<void>}
+   * @throws {Error} 如果未提供 inputStream
+   */
   async init({
     inputStream,
     modelPath,
@@ -1995,6 +2680,14 @@ class AiVBEEngine {
       throw error;
     }
   }
+
+  /**
+   * 创建由 inputStream 驱动的内部 <video> 元素。
+   *
+   * 元素设为静音、自动播放、内联播放，以确保在各浏览器中无需用户手势即可工作。
+   *
+   * @returns {Promise<void>}
+   */
   async createVideoElement() {
     this.videoEl = document.createElement('video');
     this.videoEl.muted = true;
@@ -2003,6 +2696,18 @@ class AiVBEEngine {
     this.videoEl.srcObject = this.inputStream;
     await this.videoEl.play();
   }
+
+  /**
+   * 为指定模式构建（或重建）Canvas2D 渲染管线。
+   *
+   * 'blur' 和 'color' 模式同步创建管线。
+   * 'image' 模式需先加载背景图片，因此返回 Promise，图片就绪后完成管线装配。
+   *
+   * @private
+   * @param {'blur'|'color'|'image'} type — 背景效果类型
+   * @param {number|string} src — 模糊半径（数字）、颜色字符串或图片 URL
+   * @returns {Promise<void>|void}
+   */
   async setupPipeline(type, src) {
     this._assertInitialized();
     if (this.destroyed) {
@@ -2035,9 +2740,19 @@ class AiVBEEngine {
       this.currentBackgroundKind = 'color';
       return;
     }
+
+    // ---- image 模式：异步加载背景图片 ----
     return new Promise((resolve, reject) => {
       var backgroundEl = document.createElement('img');
       var settled = false;
+
+      /**
+       * 确保 Promise 只被敲定一次。清理事件回调和 pendingImageLoad 引用，
+       * 防止过时的加载操作泄漏。
+       *
+       * @param {Function} callback — resolve 或 reject
+       * @param {*} value — 传递给 callback 的值
+       */
       var settle = (callback, value) => {
         if (settled) {
           return;
@@ -2057,6 +2772,7 @@ class AiVBEEngine {
       backgroundEl.onerror = () => settle(reject, new Error('Failed to load background image'));
       backgroundEl.onload = () => {
         try {
+          // 如果已有更新的 setupPipeline 调用启动，或引擎已被销毁，丢弃本次加载结果
           if (requestId !== this.pipelineRequestId || this.destroyed) {
             settle(reject, new Error('Background image load cancelled'));
             return;
@@ -2076,21 +2792,51 @@ class AiVBEEngine {
           settle(reject, error);
         }
       };
+
+      // 开始加载图片
       backgroundEl.src = src;
     });
   }
+
+  /**
+   * 通过 captureStream() 从内部 canvas 创建输出 MediaStream。
+   *
+   * 下游消费者（如 WebRTC 对等连接）应使用此流作为处理后的视频轨道。
+   */
   createOutputStream() {
     this.outputStream = this.canvas.captureStream(this.config.video.targetFps);
   }
+
+  /**
+   * 返回处理后的视频流。
+   *
+   * @returns {MediaStream|null}
+   */
   getOutputStream() {
     return this.outputStream;
   }
+
+  /**
+   * 运行时切换水平镜像，无需重建管线。
+   *
+   * @param {boolean} mirror — 是否开启镜像
+   */
   setMirror(mirror) {
     this.config.video.mirror = Boolean(mirror);
     if (this.pipeline && this.pipeline.updateMirror) {
       this.pipeline.updateMirror(this.config.video.mirror);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 渲染循环
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 启动 requestAnimationFrame 渲染循环。
+   *
+   * 如果循环已在运行，调用无效果。
+   */
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
@@ -2098,6 +2844,12 @@ class AiVBEEngine {
     this.loop = this.loop.bind(this);
     this.animationFrameId = requestAnimationFrame(this.loop);
   }
+
+  /**
+   * 停止渲染循环。
+   *
+   * 取消下一次已排期的动画帧。正在渲染中的帧仍会完成。
+   */
   stop() {
     this.isRunning = false;
     if (this.animationFrameId) {
@@ -2105,12 +2857,24 @@ class AiVBEEngine {
       this.animationFrameId = null;
     }
   }
+
+  /**
+   * 由 requestAnimationFrame 驱动的逐帧渲染回调。
+   *
+   * 按 targetFps 节流以避免不必要的渲染。前一帧仍在渲染时跳过当前帧
+   *（丢弃而非排队），防止背压积累。
+   *
+   * @private
+   * @param {number} now — rAF 提供的 DOMHighResTimeStamp
+   * @returns {Promise<void>}
+   */
   async loop(now) {
     if (!this.isRunning) return;
     var interval = 1000 / this.config.video.targetFps;
     if (now - this.lastFrameTime >= interval) {
       this.lastFrameTime = now;
       if (this.isRendering) {
+        // 上一帧仍在渲染中 —— 跳过当前帧以避免背压
         this.animationFrameId = requestAnimationFrame(this.loop);
         return;
       }
@@ -2134,6 +2898,20 @@ class AiVBEEngine {
       this.animationFrameId = requestAnimationFrame(this.loop);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 公开 API —— 背景效果
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 设置自定义图片作为虚拟背景。
+   *
+   * 传入 `'none'` 可移除背景（等效于 clearBackground()）。
+   *
+   * @param {string} url — 图片 URL，必须为非空字符串
+   * @returns {Promise<void>}
+   * @throws {Error} 如果 url 为空/无效或引擎未初始化
+   */
   async setBackgroundImage(url) {
     this._assertInitialized();
     var normalizedUrl = typeof url === 'string' ? url.trim() : '';
@@ -2146,6 +2924,12 @@ class AiVBEEngine {
     }
     return this.setupPipeline('image', normalizedUrl);
   }
+
+  /**
+   * 移除虚拟背景效果（直通模式）。
+   *
+   * 人像分割仍会运行，因此输出流仍是合成后的 canvas，但不做背景替换。
+   */
   clearBackground() {
     this._assertInitialized();
     this._cleanUpPipeline();
@@ -2158,6 +2942,15 @@ class AiVBEEngine {
     });
     this.currentBackgroundKind = 'none';
   }
+
+  /**
+   * 应用高斯模糊背景效果。
+   *
+   * 人像被分割出来，原始背景做模糊处理。
+   *
+   * @param {number} [radius] — 模糊半径（像素，0-100）。省略或超出范围时回退到配置的默认值
+   * @returns {Promise<void>}
+   */
   async setBlurBackground(radius) {
     this._assertInitialized();
     radius = typeof radius === 'number' ? radius : this.config.postProcessing.blurRadius;
@@ -2166,6 +2959,14 @@ class AiVBEEngine {
     }
     await this.setupPipeline('blur', radius);
   }
+
+  /**
+   * 用纯色替换背景。
+   *
+   * @param {string} [color='#00ff00'] — CSS 颜色，格式为 #RRGGBB 或 rgba(r,g,b,a)
+   * @returns {Promise<void>}
+   * @throws {Error} 如果颜色格式无法识别
+   */
   async setSolidColor(color = '#00ff00') {
     this._assertInitialized();
     if (!isValidColor(color)) {
@@ -2173,11 +2974,18 @@ class AiVBEEngine {
     }
     return this.setupPipeline('color', color);
   }
-  _assertInitialized() {
-    if (!this.canvas || !this.videoEl || !this.outputStream) {
-      throw new Error('AiVBEEngine not initialized');
-    }
-  }
+
+  // ---------------------------------------------------------------------------
+  // 销毁
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 完全销毁引擎：停止渲染循环、释放管线、分割器以及所有 DOM / 流引用。
+   *
+   * 可安全地多次调用；一旦完全销毁，后续调用为无操作。
+   *
+   * @returns {Promise<void>}
+   */
   async destroy() {
     if (this.destroyed && !this.canvas && !this.videoEl && !this.outputStream) {
       return;
@@ -2204,6 +3012,17 @@ class AiVBEEngine {
     this.backgroundEl = null;
   }
 }
+
+/**
+ * 验证 CSS 颜色字符串的合法性。
+ *
+ * 接受：
+ *   - 6 位十六进制： #RRGGBB
+ *   - rgb / rgba 函数表示法
+ *
+ * @param {string} color
+ * @returns {boolean}
+ */
 function isValidColor(color) {
   if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
     return true;
@@ -5002,7 +5821,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212180018 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212182216 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -18213,7 +19032,7 @@ var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
 var AiVBE = require('./AiVBE/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '1.13.0.405212180018');
+debug('version %s', '1.13.0.405212182216');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -18256,7 +19075,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212180018';
+    return '1.13.0.405212182216';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./AiVBE/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Mixer":51,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./VirtualBackground/index.js":90,"./WebSocketInterface":98,"debug":103}],49:[function(require,module,exports){
