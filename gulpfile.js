@@ -232,9 +232,9 @@ gulp.task('test-files', function()
     'test/test-properties.js',
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
-    'test/test-aivbe.js',
-    'test/test-mixer.js',
-    'test/test-rtcsession-mixer.js',
+    'test/test-ai-virtual-background.js',
+    'test/test-media-stream-composer.js',
+    'test/test-rtcsession-media-stream-composer.js',
     'test/test-bfcp.js'
   ];
 
@@ -242,16 +242,16 @@ gulp.task('test-files', function()
     .pipe(expect(EXPECT_OPTIONS, src));
 });
 
-gulp.task('mixer-test', function(done)
+gulp.task('media-stream-composer-test', function(done)
 {
-  require('./test/test-aivbe').run()
+  require('./test/test-ai-virtual-background').run()
     .then(function()
     {
-      return require('./test/test-mixer').run();
+      return require('./test/test-media-stream-composer').run();
     })
     .then(function()
     {
-      return require('./test/test-rtcsession-mixer').run();
+      return require('./test/test-rtcsession-media-stream-composer').run();
     })
     .then(function()
     {
@@ -259,6 +259,8 @@ gulp.task('mixer-test', function(done)
     })
     .catch(done);
 });
+
+gulp.task('mixer-test', gulp.series('media-stream-composer-test'));
 
 gulp.task('bfcp-test', function(done)
 {
@@ -300,7 +302,7 @@ gulp.task('sdk-test', function(done)
     .catch(done);
 });
 
-gulp.task('test', gulp.series('test-files', 'sdk-test', 'mixer-test', 'bfcp-test'));
+gulp.task('test', gulp.series('test-files', 'sdk-test', 'media-stream-composer-test', 'bfcp-test'));
 
 gulp.task('grammar', function(cb)
 {

@@ -57,9 +57,8 @@ let recorder;
 let incomingCallNotification = null;
 let notificationUnsupportedLogged = false;
 
-// 虚拟背景相关
-let virtualBackgroundType;
-let virtualBackgroundEngineType = 'legacy';
+// 虚拟背景相关，仅保留 AiVBEngine 方案
+let virtualBackgroundType = '';
 let engine;
 let localMediaStream;
 let virtualBackgroundPreviewEngine;
@@ -70,7 +69,7 @@ const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
-const AI_VBE_TASKS_ROOT = './assets/aivb';
+const AI_VB_TASKS_ROOT = './assets/ai-vb';
 
 // AI 降噪相关
 let aiNsType = '';
@@ -1935,19 +1934,19 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
-function buildCallMixerOptions()
+function buildCallMediaStreamComposerOptions()
 {
-  const outputMirrorEl = document.getElementById('callMixerOutputMirror');
+  const outputMirrorEl = document.getElementById('callMediaStreamComposerOutputMirror');
   const outputMirrorX = Boolean(outputMirrorEl && outputMirrorEl.checked);
   const watermarks = [];
-  const text = String((document.getElementById('callMixerTextWatermarkText') || {}).value || '').trim();
+  const text = String((document.getElementById('callMediaStreamComposerTextWatermarkText') || {}).value || '').trim();
 
   if (text)
   {
-    const textPos = String((document.getElementById('callMixerTextWatermarkPosition') || {}).value || 'bottom-right');
-    const textSize = (document.getElementById('callMixerTextWatermarkSize') || {}).value;
-    const textColor = String((document.getElementById('callMixerTextWatermarkColor') || {}).value || '').trim();
-    const textOpacity = readCallMixerOpacity(document.getElementById('callMixerTextWatermarkOpacity'));
+    const textPos = String((document.getElementById('callMediaStreamComposerTextWatermarkPosition') || {}).value || 'bottom-right');
+    const textSize = (document.getElementById('callMediaStreamComposerTextWatermarkSize') || {}).value;
+    const textColor = String((document.getElementById('callMediaStreamComposerTextWatermarkColor') || {}).value || '').trim();
+    const textOpacity = readCallMediaStreamComposerOpacity(document.getElementById('callMediaStreamComposerTextWatermarkOpacity'));
     const textWatermark = {
       id       : 'call-output-text-watermark',
       target   : 'output',
@@ -1974,14 +1973,14 @@ function buildCallMixerOptions()
     watermarks.push(textWatermark);
   }
 
-  const imageUrl = String((document.getElementById('callMixerImageWatermarkUrl') || {}).value || '').trim();
+  const imageUrl = String((document.getElementById('callMediaStreamComposerImageWatermarkUrl') || {}).value || '').trim();
 
   if (imageUrl)
   {
-    const imagePos = String((document.getElementById('callMixerImageWatermarkPosition') || {}).value || 'bottom-right');
-    const imageWidth = (document.getElementById('callMixerImageWatermarkWidth') || {}).value;
-    const imageHeight = (document.getElementById('callMixerImageWatermarkHeight') || {}).value;
-    const imageOpacity = readCallMixerOpacity(document.getElementById('callMixerImageWatermarkOpacity'));
+    const imagePos = String((document.getElementById('callMediaStreamComposerImageWatermarkPosition') || {}).value || 'bottom-right');
+    const imageWidth = (document.getElementById('callMediaStreamComposerImageWatermarkWidth') || {}).value;
+    const imageHeight = (document.getElementById('callMediaStreamComposerImageWatermarkHeight') || {}).value;
+    const imageOpacity = readCallMediaStreamComposerOpacity(document.getElementById('callMediaStreamComposerImageWatermarkOpacity'));
     const imageWatermark = {
       id       : 'call-output-image-watermark',
       target   : 'output',
@@ -2013,22 +2012,22 @@ function buildCallMixerOptions()
     return null;
   }
 
-  const mixerOptions = {};
+  const composerOptions = {};
 
   if (outputMirrorX)
   {
-    mixerOptions.outputMirrorX = true;
+    composerOptions.outputMirrorX = true;
   }
 
   if (watermarks.length)
   {
-    mixerOptions.watermarks = watermarks;
+    composerOptions.watermarks = watermarks;
   }
 
-  return mixerOptions;
+  return composerOptions;
 }
 
-function readCallMixerOpacity(inputEl)
+function readCallMediaStreamComposerOpacity(inputEl)
 {
   const raw = String((inputEl || {}).value || '').trim();
 
@@ -2083,11 +2082,11 @@ async function call(type, direction, mediaStream)
     pcConfig      : pcConfig
   };
 
-  const mixerOptions = buildCallMixerOptions();
+  const composerOptions = buildCallMediaStreamComposerOptions();
 
-  if (mixerOptions)
+  if (composerOptions)
   {
-    options.mixer = mixerOptions;
+    options.mixer = composerOptions;
   }
 
   // options = {
@@ -2191,52 +2190,6 @@ async function call(type, direction, mediaStream)
       audio : type === 'callnullvideo' ? true : false,
       video : type === 'callnullaudio' ? videoConstraints : true
     };
-  }
-
-  if (type === 'callVB') 
-  {
-    const engine = createVirtualBackgroundEngine();
-
-    const inputStream = await navigator.mediaDevices.getUserMedia({
-      video : videoConstraints
-    });
-
-    await engine.init({
-      inputStream
-    });
-
-    engine.start();
-
-    engine.setBackgroundImage('./virtual-background/backgrounds/office.png');
-
-    setTimeout(() => 
-    {
-      engine.setMirror(true);
-      engine.setBackgroundImage('./virtual-background/backgrounds/sky.jpg');
-      setTimeout(() => 
-      {
-        engine.setBlurBackground();
-      }, 5000);
-    }, 10000);
-
-
-    // engine.setSolidColor();
-
-    const processedStream = engine.getOutputStream();
-
-    // console.warn(processedStream);
-    // document.getElementById('video').srcObject = processedStream;
-
-    window.novideo = processedStream;
-
-    options['mediaStream'] = processedStream;
-
-    // 系统麦克风和摄像头
-    options['mediaConstraints'] = {
-      audio : true,
-      video : type === true
-    };
-
   }
 
   if (type === 'onlyVideo') 
@@ -2689,12 +2642,6 @@ function start()
     call('callnullaudio');
   };
 
-  // 发起虚拟背景呼叫
-  document.querySelector('#callVB').onclick = function() 
-  {
-    call('callVB');
-  };
-
   document.querySelector('#toggleVirtualBackgroundPreview').onclick = async function()
   {
     if (virtualBackgroundPreviewPending)
@@ -2725,7 +2672,6 @@ function start()
       setStatus(`本端虚拟背景演示启动失败：${error && error.message ? error.message : error}`);
     }
   };
-
 
   // 发起无摄像头呼叫
   document.querySelector('#callNullVideo').onclick = function() 
@@ -2904,13 +2850,6 @@ document.querySelector('#virtualBackground').addEventListener('change', function
 async function handleVirtualBackgroundChange(selectEl)
 {
   virtualBackgroundType = selectEl.options[selectEl.selectedIndex].value;
-  virtualBackgroundEngineType = virtualBackgroundType.indexOf('aivbe:') === 0 ? 'aivbe' : 'legacy';
-
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    virtualBackgroundType = virtualBackgroundType.slice('aivbe:'.length);
-  }
-  
   setStatus(`${selectEl.options[selectEl.selectedIndex].innerText}`);
 
   if (!engine && !virtualBackgroundPreviewEngine)
@@ -2936,6 +2875,7 @@ async function handleVirtualBackgroundChange(selectEl)
     await applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
   }
 }
+
 
 /**
  * 切换 AI 降噪模式。
@@ -3055,29 +2995,19 @@ function restoreLocalPreview()
 
 function createVirtualBackgroundEngine()
 {
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    const aiVbeVideoConfig = {
-      width     : videoConstraints.width,
-      height    : videoConstraints.height,
-      targetFps : videoConstraints.frameRate,
-      mirror    : false
-    };
+  const aiVbeVideoConfig = {
+    width     : videoConstraints.width,
+    height    : videoConstraints.height,
+    targetFps : videoConstraints.frameRate,
+    mirror    : false
+  };
 
-    return new CRTC.AiVBEEngine({
-      video       : aiVbeVideoConfig,
-      assetConfig : {
-        flatBaseUrl : AI_VBE_TASKS_ROOT
-      }
-    });
-  }
-
-  return new CRTC.AiVBEngine({ video: Object.assign({}, videoConstraints, { mirror: false }) });
-}
-
-function getVirtualBackgroundModelPath()
-{
-  return './virtual-background/models/slv.tflite';
+  return new CRTC.AiVBEngine({
+    video       : aiVbeVideoConfig,
+    assetConfig : {
+      flatBaseUrl : AI_VB_TASKS_ROOT
+    }
+  });
 }
 
 async function applyVirtualBackgroundSelection(targetEngine)
@@ -3162,21 +3092,9 @@ async function startVirtualBackgroundPreview()
   });
 
   virtualBackgroundPreviewEngine = createVirtualBackgroundEngine();
-
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    await virtualBackgroundPreviewEngine.init({
-      inputStream : virtualBackgroundPreviewInputStream
-    });
-  }
-  else
-  {
-    await virtualBackgroundPreviewEngine.init({
-      inputStream : virtualBackgroundPreviewInputStream,
-      modelPath   : getVirtualBackgroundModelPath()
-    });
-  }
-
+  await virtualBackgroundPreviewEngine.init({
+    inputStream : virtualBackgroundPreviewInputStream
+  });
   virtualBackgroundPreviewEngine.start();
   await applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
 
@@ -3218,29 +3136,16 @@ async function mediaStreamProcessor(mediastream)
 
   localMediaStream = mediastream;
 
-  // 先取出音频
   const audioTrack = mediastream.getAudioTracks()[0];
 
   engine = createVirtualBackgroundEngine();
-
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    await engine.init({
-      inputStream : mediastream
-    });
-  }
-  else
-  {
-    await engine.init({
-      inputStream : mediastream,
-      modelPath   : getVirtualBackgroundModelPath()
-    });
-  }
+  await engine.init({
+    inputStream : mediastream
+  });
   engine.start();
   await applyVirtualBackgroundSelection(engine);
   const processedStream = engine.getOutputStream();
 
-  // 如果有音频，需要恢复音频
   audioTrack && processedStream.addTrack(audioTrack);
   setStatus('视频增加了虚拟背景');
   

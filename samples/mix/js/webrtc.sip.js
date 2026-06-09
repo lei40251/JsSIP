@@ -838,7 +838,7 @@ WebRTC.prototype.toMCU = async function(target)
 
   console.warn('othStream: ', othStream);
 
-  const mix = new CRTC.Mixer(othStream);
+  const mix = new CRTC.MediaStreamComposer(othStream);
   const lVs = await mix.getMixedStream();
 
   _session[target].connection.getSenders().forEach((sender) =>

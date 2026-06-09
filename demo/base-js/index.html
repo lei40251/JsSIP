@@ -111,10 +111,6 @@
                           <option value="img1">office</option>
                           <option value="img2">sky</option>
                           <option value="blur">背景模糊</option>
-                          <option value="aivbe:none">AiVBE 实验-无图片</option>
-                          <option value="aivbe:img1">AiVBE 实验-office</option>
-                          <option value="aivbe:img2">AiVBE 实验-sky</option>
-                          <option value="aivbe:blur">AiVBE 实验-背景模糊</option>
                         </select>
                       </div>
                       <div class="call-field">
@@ -133,23 +129,23 @@
                   </div>
                 </div>
 
-                <details class="mixer-detail call-config-mixer">
-                  <summary>呼叫时 Mixer 参数（紧凑配置）</summary>
-                  <div class="pt-2 compact-mixer">
+                <details class="composer-detail call-config-composer">
+                  <summary>呼叫时 MediaStreamComposer 参数（紧凑配置）</summary>
+                  <div class="pt-2 compact-composer">
                     <div class="row g-2 align-items-center mb-2">
                       <div class="col-auto">
                         <div class="form-check"><input class="form-check-input" type="checkbox"
-                            id="callMixerOutputMirror"><label class="form-check-label"
-                            for="callMixerOutputMirror">初始输出镜像</label></div>
+                            id="callMediaStreamComposerOutputMirror"><label class="form-check-label"
+                            for="callMediaStreamComposerOutputMirror">初始输出镜像</label></div>
                       </div>
                     </div>
-                    <div class="compact-mixer-grid">
+                    <div class="compact-composer-grid">
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">文字水印</div>
-                        <input class="form-control mixer-row" id="callMixerTextWatermarkText"
+                        <input class="form-control composer-row" id="callMediaStreamComposerTextWatermarkText"
                           placeholder="文字内容（留空不启用）" />
-                        <div class="mixer-inline-row watermark-inline-row mixer-row">
-                          <select class="form-select" id="callMixerTextWatermarkPosition">
+                        <div class="composer-inline-row watermark-inline-row composer-row">
+                          <select class="form-select" id="callMediaStreamComposerTextWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
                             <option value="top-right">右上</option>
@@ -158,20 +154,20 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMixerTextWatermarkSize" type="number" min="8"
+                          <input class="form-control" id="callMediaStreamComposerTextWatermarkSize" type="number" min="8"
                             placeholder="字号" />
-                          <input class="form-control form-control-color" id="callMixerTextWatermarkColor" type="color"
+                          <input class="form-control form-control-color" id="callMediaStreamComposerTextWatermarkColor" type="color"
                             value="#ffffff" />
-                          <input class="form-control" id="callMixerTextWatermarkOpacity" type="text" inputmode="decimal"
+                          <input class="form-control" id="callMediaStreamComposerTextWatermarkOpacity" type="text" inputmode="decimal"
                             placeholder="透明度(0~1)" />
                         </div>
                       </div>
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">图片水印</div>
-                        <input class="form-control mixer-row" id="callMixerImageWatermarkUrl"
+                        <input class="form-control composer-row" id="callMediaStreamComposerImageWatermarkUrl"
                           placeholder="图片 URL（留空不启用）" />
-                        <div class="mixer-inline-row watermark-inline-row mixer-row">
-                          <select class="form-select" id="callMixerImageWatermarkPosition">
+                        <div class="composer-inline-row watermark-inline-row composer-row">
+                          <select class="form-select" id="callMediaStreamComposerImageWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
                             <option value="top-right">右上</option>
@@ -180,11 +176,11 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMixerImageWatermarkWidth" type="number" min="1"
+                          <input class="form-control" id="callMediaStreamComposerImageWatermarkWidth" type="number" min="1"
                             placeholder="宽度" />
-                          <input class="form-control" id="callMixerImageWatermarkHeight" type="number" min="1"
+                          <input class="form-control" id="callMediaStreamComposerImageWatermarkHeight" type="number" min="1"
                             placeholder="高度" />
-                          <input class="form-control" id="callMixerImageWatermarkOpacity" type="text"
+                          <input class="form-control" id="callMediaStreamComposerImageWatermarkOpacity" type="text"
                             inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
                       </div>
@@ -221,8 +217,6 @@
                 <button class="btn btn-success" id="callNullVideo">音视频外呼(无摄像头)</button>
                 <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
                     class="bi-person-bounding-box me-1"></i>本端演示虚拟背景</button>
-                <button class="btn btn-warning hide" id="callVB"><i
-                    class="bi-person-bounding-box me-1"></i>虚拟背景外呼</button>
                 <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
               </div>
             </section>
@@ -250,7 +244,7 @@
             </section>
 
             <section class="panel-card control-card">
-              <details class="mixer-detail">
+              <details class="composer-detail">
                 <summary>共享与推流</summary>
                 <div class="pt-2">
                   <div class="sub-group-title">常规分享与控制</div>
@@ -283,7 +277,7 @@
           </div>
 
           <section class="panel-card control-card mt-2">
-            <details class="mixer-detail">
+            <details class="composer-detail">
               <summary>辅助功能</summary>
               <div class="pt-2">
                 <div class="tool-stack">
@@ -386,7 +380,6 @@
   <script src="./js/MediaStreamRecorder.min.js"></script>
   <script src="./js/adapter-latest.js"></script>
   <script src="../../dist/CRTC.min.js"></script>
-  <script src="./virtual-background/tflite/tflite-simd.js"></script>
   <script src="../config.js"></script>
   <script src="./js/app.js"></script>
   <script>

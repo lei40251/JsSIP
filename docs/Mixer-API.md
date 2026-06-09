@@ -1,4 +1,4 @@
-# CRTC.Mixer API 参考
+# CRTC.MediaStreamComposer API 参考
 
 将多路 `MediaStream` / `HTMLVideoElement` 合并为单路音视频输出流的混流器。
 
@@ -23,7 +23,7 @@
 
 ```js
 // 1. 创建混流器
-const mixer = new CRTC.Mixer(
+const mixer = new CRTC.MediaStreamComposer(
   [localStream, remoteStream],  // 初始输入源（可为空数组）
   { width: 1280, height: 720 } // 输出配置
 );
@@ -42,7 +42,7 @@ mixer.stop();
 **最小示例**（仅视频混流，不含音频）：
 
 ```js
-const mixer = new CRTC.Mixer([streamA, streamB]);
+const mixer = new CRTC.MediaStreamComposer([streamA, streamB]);
 const videoStream = mixer.getVideoStream(); // MediaStream，仅视频轨
 
 // 在 <video> 元素上预览
@@ -53,10 +53,10 @@ previewVideo.srcObject = videoStream;
 
 ## 2. 构造函数
 
-### `new CRTC.Mixer(videos, options)`
+### `new CRTC.MediaStreamComposer(videos, options)`
 
 ```js
-const mixer = new CRTC.Mixer(
+const mixer = new CRTC.MediaStreamComposer(
   [localStream, remoteStream],
   {
     width: 1280,
@@ -449,7 +449,7 @@ mixer.stop();
 // 之后调用任何其他方法都会抛出 Error
 ```
 
-**重要**: `stop()` 后必须 `new CRTC.Mixer()` 创建新实例才能继续使用。
+**重要**: `stop()` 后必须 `new CRTC.MediaStreamComposer()` 创建新实例才能继续使用。
 
 ---
 
@@ -463,7 +463,7 @@ async function startMixingAndPush() {
   const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
 
   // 创建混流器：本地摄像头在 slot 0，屏幕共享在 slot 1
-  const mixer = new CRTC.Mixer([localStream, screenStream], {
+  const mixer = new CRTC.MediaStreamComposer([localStream, screenStream], {
     width: 1280,
     height: 720,
     fps: 15,
@@ -487,7 +487,7 @@ async function startMixingAndPush() {
 ### 示例 2：动态增删源
 
 ```js
-const mixer = new CRTC.Mixer([], { width: 1280, height: 720 });
+const mixer = new CRTC.MediaStreamComposer([], { width: 1280, height: 720 });
 
 // 先获取视频输出（此时无源，显示背景色）
 const previewStream = mixer.getVideoStream();
@@ -517,7 +517,7 @@ mixer.appendStream(stream3, 0);
 ### 示例 3：多路源镜像控制
 
 ```js
-const mixer = new CRTC.Mixer([localStream, remoteStream], {
+const mixer = new CRTC.MediaStreamComposer([localStream, remoteStream], {
   width: 1280,
   height: 720,
   mirrorX: false // 默认不镜像
@@ -537,7 +537,7 @@ console.log('Slot mirrors:', mixer.getSlotMirrors());    // { "0": true }
 ### 示例 4：水印管理
 
 ```js
-const mixer = new CRTC.Mixer([], {
+const mixer = new CRTC.MediaStreamComposer([], {
   width: 1280,
   height: 720,
   watermarks: [
@@ -572,7 +572,7 @@ await mixer.setWatermarks([
 ### 示例 5：独立子混音（监听场景）
 
 ```js
-const mixer = new CRTC.Mixer([streamA, streamB, streamC], { width: 1280, height: 720 });
+const mixer = new CRTC.MediaStreamComposer([streamA, streamB, streamC], { width: 1280, height: 720 });
 const mixedStream = await mixer.getMixedStream(); // 主输出
 
 // 单独监听 slot 0 和 1 的音频（不影响主输出）
@@ -589,7 +589,7 @@ mixer.releaseSubmixAudioStream({ slots: [0, 1], isolated: true });
 
 ### Q: `stop()` 后能复用吗？
 
-**不能**。`stop()` 后实例即销毁，调用任何方法都会抛出 `Error`。需要 `new CRTC.Mixer()` 创建新实例。
+**不能**。`stop()` 后实例即销毁，调用任何方法都会抛出 `Error`。需要 `new CRTC.MediaStreamComposer()` 创建新实例。
 
 ### Q: 最多支持多少路输入源？
 

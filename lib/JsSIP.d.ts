@@ -12,6 +12,8 @@ export {URI} from './URI'
 export {NameAddrHeader} from './NameAddrHeader'
 export {WebSocketInterface, Socket, WeightedSocket} from './WebSocketInterface'
 
+export const MediaStreamComposer: any
+export const Mixer: any
 export const debug: Debug
 export const name: string
 export const version: string

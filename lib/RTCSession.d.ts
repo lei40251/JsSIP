@@ -55,6 +55,9 @@ export interface MixerOptions {
   [key: string]: any;
 }
 
+export interface MediaStreamComposerWatermarkOptions extends MixerWatermarkOptions {}
+export interface MediaStreamComposerOptions extends MixerOptions {}
+
 export interface ExtraHeaders {
   extraHeaders?: string[];
 }
@@ -314,6 +317,7 @@ export class RTCSession extends EventEmitter {
   get status(): SessionStatus;
 
   getMixer(): any | null;
+  getMediaStreamComposer(): any | null;
 
   isInProgress(): boolean;
 

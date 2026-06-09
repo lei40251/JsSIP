@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.0.202669118
+ * CRTC v1.13.0.2026691649
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -1271,31 +1271,31 @@ module.exports = AiNSEngine;
 "use strict";
 
 /**
- * AiVBEAssetLoader —— 通过向 document 注入 <script type="module"> 标签，
+ * AiVBAssetLoader —— 通过向 document 注入 <script type="module"> 标签，
  * 动态加载 MediaPipe Tasks Vision 运行时。
  *
  * 核心行为：
  *   - 每个唯一的 moduleUrl 只对应一个 script 标签。如果标签已存在（由其他
- *     AiVBE 实例或之前的加载创建），则等待它完成，而不是注入重复标签。
+ *     AIVirtualBackground 实例或之前的加载创建），则等待它完成，而不是注入重复标签。
  *   - 运行时全局变量（FilesetResolver、ImageSegmenter）暴露在
- *     `window.CRTCAiVBEVisionTasks` 上。
- *   - 加载 Promise 按 moduleUrl 全局去重，因此并发的 AiVBE 实例不会触发重复请求。
+ *     `window.CRTCAiVBVisionTasks` 上。
+ *   - 加载 Promise 按 moduleUrl 全局去重，因此并发的 AIVirtualBackground 实例不会触发重复请求。
  *
- * @module AiVBEAssetLoader
+ * @module AiVBAssetLoader
  */
 
 var Logger = require('../Logger');
-var Config = require('./AiVBEConfig');
-var logger = new Logger('AiVBEAssetLoader');
+var Config = require('./AiVBConfig');
+var logger = new Logger('AiVBAssetLoader');
 
 /** window 上存储 MediaPipe Tasks 全局变量的键名 */
-var TASKS_GLOBAL = 'CRTCAiVBEVisionTasks';
+var TASKS_GLOBAL = 'CRTCAiVBVisionTasks';
 
 /** 注入的 script 加载完成后设置的 data 属性，值为 'true' */
-var SCRIPT_READY_ATTR = 'data-aivbe-ready';
+var SCRIPT_READY_ATTR = 'data-aivb-ready';
 
 /** 注入的 script 加载失败后设置的 data 属性，值为 'true' */
-var SCRIPT_ERROR_ATTR = 'data-aivbe-error';
+var SCRIPT_ERROR_ATTR = 'data-aivb-error';
 
 /** 等待已存在的 script 标签完成加载的最大时间（毫秒） */
 var SCRIPT_WAIT_TIMEOUT_MS = 15000;
@@ -1311,9 +1311,9 @@ var SCRIPT_POLL_INTERVAL_MS = 50;
  * @type {Object.<string, Promise<void>>}
  */
 var TASKS_LOAD_PROMISES = {};
-module.exports = class AiVBEAssetLoader {
+module.exports = class AiVBAssetLoader {
   /**
-   * @param {Object} [assetConfig] — 原始资源配置（参见 AiVBEConfig.normalizeAssetConfig）
+   * @param {Object} [assetConfig] — 原始资源配置（参见 AiVBConfig.normalizeAssetConfig）
    */
   constructor(assetConfig) {
     /** @type {Object} 归一化后的资源配置，包含解析完成的 URL */
@@ -1359,7 +1359,7 @@ module.exports = class AiVBEAssetLoader {
    */
   async ensureTasksLoaded() {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
-      throw new Error('AiVBE requires browser environment');
+      throw new Error('AIVirtualBackground requires browser environment');
     }
 
     // 已加载 —— 立即返回
@@ -1395,7 +1395,7 @@ module.exports = class AiVBEAssetLoader {
    * @returns {Promise<void>}
    */
   async loadTasksRuntime(moduleUrl) {
-    var selector = `script[data-aivbe-module="${moduleUrl}"]`;
+    var selector = `script[data-aivb-module="${moduleUrl}"]`;
     var existingScript = document.querySelector(selector);
     if (existingScript) {
       await this.waitForExistingScript(existingScript, moduleUrl);
@@ -1416,7 +1416,7 @@ module.exports = class AiVBEAssetLoader {
       }
       script.type = 'module';
       script.async = true;
-      script.setAttribute('data-aivbe-module', moduleUrl);
+      script.setAttribute('data-aivb-module', moduleUrl);
 
       // 内联 ESM import —— 无需单独的 JS 文件
       script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
@@ -1443,7 +1443,7 @@ module.exports = class AiVBEAssetLoader {
   }
 
   /**
-   * 等待由其他 AiVBE 实例（或之前的页面加载）注入的 script 标签完成加载。
+   * 等待由其他 AIVirtualBackground 实例（或之前的页面加载）注入的 script 标签完成加载。
    *
    * 处理三种情况：
    *   1. 全局变量已设置 → 立即返回
@@ -1505,35 +1505,35 @@ module.exports = class AiVBEAssetLoader {
     });
   }
 };
-},{"../Logger":49,"./AiVBEConfig":7}],7:[function(require,module,exports){
+},{"../Logger":49,"./AiVBConfig":7}],7:[function(require,module,exports){
 "use strict";
 
 /**
- * AiVBEConfig —— AiVBE 引擎的配置归一化模块。
+ * AiVBConfig —— AIVirtualBackground 引擎的配置归一化模块。
  *
  * 将用户提供的选项与安全默认值合并，校验已知 key，
  * 并尽早拒绝未知选项以捕获拼写错误 / 误配置。
  *
- * 以函数集合形式导出（而非类），以便 AiVBEEngine 和 AiVBEAssetLoader
+ * 以函数集合形式导出（而非类），以便 AIVirtualBackground 和 AiVBAssetLoader
  * 无需实例化即可使用。
  *
- * @module AiVBEConfig
+ * @module AiVBConfig
  */
 
 var Logger = require('../Logger');
-var logger = new Logger('AiVBEConfig');
+var logger = new Logger('AiVBConfig');
 
 /** MediaPipe 推理允许的 delegate 值 */
 var SUPPORTED_DELEGATES = new Set(['CPU', 'GPU']);
 
 /** `video` 选项块下已识别的 key */
-var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror'];
+var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror', 'processingScale'];
 
 /** `segmentation` 选项块下已识别的 key */
-var SEGMENTATION_OPTION_KEYS = ['delegate'];
+var SEGMENTATION_OPTION_KEYS = ['delegate', 'frameSkip'];
 
 /** `postProcessing` 选项块下已识别的 key */
-var POST_PROCESSING_OPTION_KEYS = ['blurRadius'];
+var POST_PROCESSING_OPTION_KEYS = ['blurRadius', 'maxBlurRadius'];
 
 /** `assetConfig` 选项块下已识别的 key */
 var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
@@ -1542,22 +1542,25 @@ var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl',
 // 默认值
 // ---------------------------------------------------------------------------
 
-/** @type {{ width: number, height: number, targetFps: number, mirror: boolean }} */
+/** @type {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }} */
 var DEFAULT_VIDEO = {
   width: 1280,
   height: 720,
   targetFps: 15,
-  mirror: false
+  mirror: false,
+  processingScale: 0.5
 };
 
-/** @type {{ delegate: 'CPU'|'GPU' }} */
+/** @type {{ delegate: 'CPU'|'GPU', frameSkip: number }} */
 var DEFAULT_SEGMENTATION = {
-  delegate: 'GPU'
+  delegate: 'GPU',
+  frameSkip: 1
 };
 
-/** @type {{ blurRadius: number }} */
+/** @type {{ blurRadius: number, maxBlurRadius: number }} */
 var DEFAULT_POST_PROCESSING = {
-  blurRadius: 20
+  blurRadius: 20,
+  maxBlurRadius: 12
 };
 
 /** MediaPipe Tasks Vision 默认 CDN URL（jsDelivr） */
@@ -1572,7 +1575,7 @@ var DEFAULT_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/image_s
 // ---------------------------------------------------------------------------
 
 /**
- * 创建完全归一化的 AiVBE 配置对象。
+ * 创建完全归一化的 AIVirtualBackground 配置对象。
  *
  * @param {Object} [options={}] — 用户提供的原始选项
  * @param {Object} [options.video] — 视频流设置
@@ -1604,7 +1607,7 @@ exports.create = function (options = {}) {
  * 未知 key 会导致立即抛出错误。
  *
  * @param {Object} [video] — 原始视频选项
- * @returns {{ width: number, height: number, targetFps: number, mirror: boolean }}
+ * @returns {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }}
  * @throws {Error} 如果存在未知 key
  */
 exports.normalizeVideo = function (video) {
@@ -1625,6 +1628,9 @@ exports.normalizeVideo = function (video) {
   if (typeof video.mirror === 'boolean') {
     normalized.mirror = video.mirror;
   }
+  if (Number.isFinite(Number(video.processingScale))) {
+    normalized.processingScale = clampNumber(video.processingScale, 0.1, 1, DEFAULT_VIDEO.processingScale);
+  }
   return normalized;
 };
 
@@ -1632,7 +1638,7 @@ exports.normalizeVideo = function (video) {
  * 归一化 `segmentation` 选项块。
  *
  * @param {Object} [segmentation] — 原始分割选项
- * @returns {{ delegate: 'CPU'|'GPU' }}
+ * @returns {{ delegate: 'CPU'|'GPU', frameSkip: number }}
  * @throws {Error} 如果存在未知 key
  */
 exports.normalizeSegmentation = function (segmentation) {
@@ -1647,6 +1653,9 @@ exports.normalizeSegmentation = function (segmentation) {
       normalized.delegate = delegate;
     }
   }
+  if (Number.isFinite(Number(segmentation.frameSkip))) {
+    normalized.frameSkip = Math.floor(clampNumber(segmentation.frameSkip, 0, 120, DEFAULT_SEGMENTATION.frameSkip));
+  }
   return normalized;
 };
 
@@ -1654,7 +1663,7 @@ exports.normalizeSegmentation = function (segmentation) {
  * 归一化 `postProcessing` 选项块。
  *
  * @param {Object} [postProcessing] — 原始后处理选项
- * @returns {{ blurRadius: number }} — 钳位到 [0, 100]
+ * @returns {{ blurRadius: number, maxBlurRadius: number }} — 钳位到 [0, 100]
  * @throws {Error} 如果存在未知 key
  */
 exports.normalizePostProcessing = function (postProcessing) {
@@ -1663,7 +1672,8 @@ exports.normalizePostProcessing = function (postProcessing) {
     return normalized;
   }
   assertKnownKeys('postProcessing', postProcessing, POST_PROCESSING_OPTION_KEYS);
-  normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, 100, DEFAULT_POST_PROCESSING.blurRadius);
+  normalized.maxBlurRadius = clampNumber(postProcessing.maxBlurRadius, 0, 100, DEFAULT_POST_PROCESSING.maxBlurRadius);
+  normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, normalized.maxBlurRadius, Math.min(DEFAULT_POST_PROCESSING.blurRadius, normalized.maxBlurRadius));
   return normalized;
 };
 
@@ -1755,7 +1765,7 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
   var allowedKeySet = new Set(allowedKeys);
   var unknownKeys = Object.keys(value).filter(key => !allowedKeySet.has(key));
   if (unknownKeys.length > 0) {
-    throw new Error(`Unsupported AiVBE ${sectionName} option(s): ${unknownKeys.join(', ')}`);
+    throw new Error(`Unsupported AIVirtualBackground ${sectionName} option(s): ${unknownKeys.join(', ')}`);
   }
 }
 },{"../Logger":49}],8:[function(require,module,exports){
@@ -1779,22 +1789,23 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
 /**
  * 构建 Canvas2D 渲染管线。
  *
- * 返回的管线对象暴露四个方法：
- *   - render()              — 渲染一帧（异步）
- *   - updateMirror(bool)    — 运行时切换水平镜像
- *   - updateEffectConfig({ blurRadius }) — 运行时更新模糊半径
- *   - cleanUp()             — 清空画布（丢弃管线前调用）
+ * 返回的管线对象在 init 后长期复用，通过 updateState 更新模式和资源，
+ * 避免每次切换背景都销毁再重建。
  *
  * @param {Object} options
  * @param {HTMLCanvasElement} options.canvas — 目标输出 canvas
  * @param {HTMLVideoElement} options.videoElement — 源视频元素
- * @param {HTMLImageElement} [options.backgroundImage] — 背景图片（'image' 模式必需）
+ * @param {HTMLImageElement} [options.backgroundImage] — 背景图片（'image' 模式使用）
  * @param {string} [options.backgroundColor='#00ff00'] — 'color' 模式使用的 CSS 颜色
  * @param {'none'|'blur'|'image'|'color'} options.mode — 合成模式
  * @param {boolean} [options.mirror=false] — 是否水平镜像输出
  * @param {Object} options.segmenterRuntime — MediaPipe 分割器实例（需暴露 segmentForVideo(videoEl) 方法）
- * @param {number} [options.blurRadius=20] — 高斯模糊半径（像素，0-100）
- * @returns {Object} 管线句柄 —— { render, updateMirror, updateEffectConfig, cleanUp }
+ * @param {number} [options.blurRadius=20] — 高斯模糊半径
+ * @param {number} [options.maxBlurRadius=12] — 高斯模糊半径上限
+ * @param {number} [options.processingScale=0.5] — 分割输入缩放比例
+ * @param {number} [options.frameSkip=1] — 分割降频参数，0 表示每帧都做
+ * @param {Object} [options.metrics] — 可选的指标回调
+ * @returns {Object} 管线句柄
  * @throws {Error} 如果无法从 canvas 获取 2D 上下文
  */
 function buildCanvas2DPipeline(options) {
@@ -1806,64 +1817,91 @@ function buildCanvas2DPipeline(options) {
     mode,
     mirror,
     segmenterRuntime,
-    blurRadius
+    blurRadius,
+    maxBlurRadius,
+    processingScale,
+    frameSkip,
+    metrics
   } = options;
   var context = canvas.getContext('2d');
   if (!context) {
     throw new Error('2D canvas not supported');
   }
-
-  // 离屏 canvas，用于通过 destination-in 合成方式分离出人物剪影
   var personCanvas = document.createElement('canvas');
   var personContext = personCanvas.getContext('2d');
   if (!personContext) {
     throw new Error('Unable to create person mask canvas');
+  }
+  var segmentationCanvas = document.createElement('canvas');
+  var segmentationContext = segmentationCanvas.getContext('2d');
+  if (!segmentationContext) {
+    throw new Error('Unable to create segmentation input canvas');
   }
   personCanvas.width = canvas.width;
   personCanvas.height = canvas.height;
 
   /** @type {Object} 可变的管线状态 */
   var state = {
-    backgroundImage,
+    backgroundImage: backgroundImage || null,
     backgroundColor: backgroundColor || '#00ff00',
-    blurRadius: typeof blurRadius === 'number' ? blurRadius : 20,
+    blurRadius: clampBlurRadius(blurRadius, maxBlurRadius),
+    frameSkip: normalizeFrameSkip(frameSkip),
+    maxBlurRadius: normalizeMaxBlurRadius(maxBlurRadius),
     mirror: Boolean(mirror),
-    mode
+    mode: mode || 'none',
+    processingScale: normalizeProcessingScale(processingScale)
   };
 
-  /**
-   * 渲染一帧。
-   *
-   * 工作流程：
-   *   1. 若模式为 'none'，直接绘制视频帧并返回
-   *   2. 对当前视频帧执行 MediaPipe 分割
-   *   3. 将人物剪影绘制到离屏 canvas（视频帧被分割遮罩裁剪，使用 destination-in）
-   *   4. 在目标 canvas 上绘制背景层（模糊/图片/纯色）
-   *   5. 将人物叠加到最上层
-   *
-   * @returns {Promise<void>}
-   * @throws {Error} 如果分割失败或未返回遮罩
-   */
+  /** @type {HTMLCanvasElement|null} 上一帧可复用的分割遮罩 */
+  var lastSegmentationMask = null;
+
+  /** @type {number} 自上次新分割以来已输出的帧数 */
+  var renderedSinceSegmentation = 0;
+
+  /** @type {boolean} 最近一帧是否复用了旧遮罩 */
+  var lastMaskReused = false;
+  resizeWorkingCanvases();
   async function render() {
+    var renderStartAt = getNow();
+    ensureCanvasSizes();
     if (state.mode === 'none') {
       clearCanvas(context, canvas);
       drawVideoFrame(context, videoElement, canvas, state.mirror);
+      renderedSinceSegmentation += 1;
+      lastMaskReused = false;
+      emitMetric('onRenderComplete', {
+        renderDurationMs: getNow() - renderStartAt,
+        reusedMask: false,
+        segmentationDurationMs: 0,
+        segmentationRan: false,
+        segmentationMask: null
+      });
       return;
     }
-    var segmentationResult = await segmenterRuntime.segmentForVideo(videoElement);
-    if (!segmentationResult || !segmentationResult.segmentationMask) {
+    var segmentationDecision = shouldRunSegmentation();
+    var segmentationMask = lastSegmentationMask;
+    var segmentationRan = false;
+    var segmentationDurationMs = 0;
+    if (segmentationDecision.run) {
+      var segmentationStartAt = getNow();
+      segmentationMask = await getSegmentationMask();
+      segmentationRan = true;
+      segmentationDurationMs = getNow() - segmentationStartAt;
+      lastSegmentationMask = segmentationMask;
+      renderedSinceSegmentation = 0;
+      lastMaskReused = false;
+    } else {
+      renderedSinceSegmentation += 1;
+      lastMaskReused = true;
+    }
+    if (!segmentationMask) {
       throw new Error('MediaPipe segmentation did not return segmentationMask');
     }
-
-    // ---- 构建人物遮罩（离屏） ----
     clearCanvas(personContext, personCanvas);
     drawVideoFrame(personContext, videoElement, personCanvas, state.mirror);
-    // 仅保留分割遮罩非零的像素
     personContext.globalCompositeOperation = 'destination-in';
-    drawVideoFrame(personContext, segmentationResult.segmentationMask, personCanvas, state.mirror);
+    drawVideoFrame(personContext, segmentationMask, personCanvas, state.mirror);
     personContext.globalCompositeOperation = 'source-over';
-
-    // ---- 绘制背景层 ----
     clearCanvas(context, canvas);
     if (state.mode === 'blur') {
       context.save();
@@ -1876,73 +1914,159 @@ function buildCanvas2DPipeline(options) {
       context.fillStyle = state.backgroundColor;
       context.fillRect(0, 0, canvas.width, canvas.height);
     }
-
-    // ---- 将人物叠加到最上层 ----
     context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
+    emitMetric('onRenderComplete', {
+      renderDurationMs: getNow() - renderStartAt,
+      reusedMask: lastMaskReused,
+      segmentationDurationMs: segmentationDurationMs,
+      segmentationRan: segmentationRan,
+      segmentationMask: segmentationMask
+    });
   }
-
-  /**
-   * 运行时更新水平镜像设置，无需重建管线。
-   *
-   * @param {boolean} nextMirror
-   */
-  function updateMirror(nextMirror) {
-    state.mirror = Boolean(nextMirror);
-  }
-
-  /**
-   * 运行时更新效果配置。
-   *
-   * 目前仅支持 `blurRadius`。
-   *
-   * @param {Object} [effectConfig={}]
-   * @param {number} [effectConfig.blurRadius] — 新的模糊半径（钳位到 0-100）
-   */
-  function updateEffectConfig(effectConfig = {}) {
-    if (typeof effectConfig.blurRadius === 'number') {
-      state.blurRadius = Math.max(0, Math.min(effectConfig.blurRadius, 100));
+  function updateState(nextState = {}) {
+    if (Object.prototype.hasOwnProperty.call(nextState, 'mode') && nextState.mode) {
+      state.mode = nextState.mode;
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'mirror')) {
+      state.mirror = Boolean(nextState.mirror);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'backgroundImage')) {
+      state.backgroundImage = nextState.backgroundImage || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'backgroundColor') && nextState.backgroundColor) {
+      state.backgroundColor = nextState.backgroundColor;
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'maxBlurRadius')) {
+      state.maxBlurRadius = normalizeMaxBlurRadius(nextState.maxBlurRadius);
+      state.blurRadius = clampBlurRadius(state.blurRadius, state.maxBlurRadius);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'blurRadius')) {
+      state.blurRadius = clampBlurRadius(nextState.blurRadius, state.maxBlurRadius);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'processingScale')) {
+      state.processingScale = normalizeProcessingScale(nextState.processingScale);
+      resizeWorkingCanvases();
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'frameSkip')) {
+      state.frameSkip = normalizeFrameSkip(nextState.frameSkip);
     }
   }
-
-  /**
-   * 清空两个 canvas。在丢弃管线前调用。
-   */
+  function setMode(nextMode) {
+    updateState({
+      mode: nextMode
+    });
+  }
+  function setBackgroundImage(nextImage) {
+    updateState({
+      backgroundImage: nextImage
+    });
+  }
+  function setBackgroundColor(nextColor) {
+    updateState({
+      backgroundColor: nextColor
+    });
+  }
+  function setBlurRadius(nextBlurRadius) {
+    updateState({
+      blurRadius: nextBlurRadius
+    });
+  }
+  function updateMirror(nextMirror) {
+    updateState({
+      mirror: nextMirror
+    });
+  }
+  function updateEffectConfig(effectConfig = {}) {
+    updateState(effectConfig);
+  }
+  function getState() {
+    return {
+      backgroundImage: state.backgroundImage,
+      backgroundColor: state.backgroundColor,
+      blurRadius: state.blurRadius,
+      frameSkip: state.frameSkip,
+      maxBlurRadius: state.maxBlurRadius,
+      mirror: state.mirror,
+      mode: state.mode,
+      processingScale: state.processingScale
+    };
+  }
   function cleanUp() {
     clearCanvas(context, canvas);
     clearCanvas(personContext, personCanvas);
+    clearCanvas(segmentationContext, segmentationCanvas);
+    lastSegmentationMask = null;
+    renderedSinceSegmentation = 0;
+    lastMaskReused = false;
+  }
+  function ensureCanvasSizes() {
+    if (personCanvas.width !== canvas.width || personCanvas.height !== canvas.height) {
+      personCanvas.width = canvas.width;
+      personCanvas.height = canvas.height;
+    }
+    resizeWorkingCanvases();
+  }
+  function resizeWorkingCanvases() {
+    var width = Math.max(1, Math.round(canvas.width * state.processingScale));
+    var height = Math.max(1, Math.round(canvas.height * state.processingScale));
+    if (segmentationCanvas.width !== width) {
+      segmentationCanvas.width = width;
+    }
+    if (segmentationCanvas.height !== height) {
+      segmentationCanvas.height = height;
+    }
+  }
+  function shouldRunSegmentation() {
+    if (!lastSegmentationMask) {
+      return {
+        run: true
+      };
+    }
+    if (state.frameSkip <= 0) {
+      return {
+        run: true
+      };
+    }
+    if (renderedSinceSegmentation >= state.frameSkip) {
+      return {
+        run: true
+      };
+    }
+    return {
+      run: false
+    };
+  }
+  async function getSegmentationMask() {
+    clearCanvas(segmentationContext, segmentationCanvas);
+    drawVideoFrame(segmentationContext, videoElement, segmentationCanvas, false);
+    var segmentationResult = await segmenterRuntime.segmentForVideo(segmentationCanvas);
+    if (!segmentationResult || !segmentationResult.segmentationMask) {
+      throw new Error('MediaPipe segmentation did not return segmentationMask');
+    }
+    return segmentationResult.segmentationMask;
+  }
+  function emitMetric(method, payload) {
+    if (!metrics || typeof metrics[method] !== 'function') {
+      return;
+    }
+    metrics[method](payload);
   }
   return {
     render,
+    updateState,
+    setMode,
+    setBackgroundImage,
+    setBackgroundColor,
+    setBlurRadius,
     updateMirror,
     updateEffectConfig,
+    getState,
     cleanUp
   };
 }
-
-// ---------------------------------------------------------------------------
-// 内部绘图辅助函数
-// ---------------------------------------------------------------------------
-
-/**
- * 将 canvas 清空为透明黑色。
- *
- * @param {CanvasRenderingContext2D} context
- * @param {HTMLCanvasElement} canvas
- */
 function clearCanvas(context, canvas) {
   context.clearRect(0, 0, canvas.width, canvas.height);
 }
-
-/**
- * 将视频/canvas 元素绘制到目标 canvas 上，可选水平镜像。
- *
- * 镜像通过 scale(-1, 1) 变换实现。
- *
- * @param {CanvasRenderingContext2D} context — 目标 2D 上下文
- * @param {HTMLVideoElement|HTMLCanvasElement} videoElement — 源元素
- * @param {HTMLCanvasElement} canvas — 目标 canvas（用于获取尺寸）
- * @param {boolean} mirror — 是否水平翻转
- */
 function drawVideoFrame(context, videoElement, canvas, mirror) {
   context.save();
   if (mirror) {
@@ -1952,21 +2076,10 @@ function drawVideoFrame(context, videoElement, canvas, mirror) {
   context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
   context.restore();
 }
-
-/**
- * 以 "cover" 模式绘制图片 —— 等比缩放并裁剪，使图片填满 canvas 同时保持宽高比。
- *
- * @param {CanvasRenderingContext2D} context
- * @param {HTMLImageElement} image — 源图片（必须已加载完成）
- * @param {HTMLCanvasElement} canvas — 目标 canvas
- * @throws {Error} 如果未提供图片或图片尺寸无效
- */
 function drawCoverImage(context, image, canvas) {
   if (!image) {
     throw new Error('Background image required for image mode');
   }
-
-  // 兼容 <img>、<video> 以及原始 ImageData / ImageBitmap
   var sourceWidth = image.naturalWidth || image.videoWidth || image.width;
   var sourceHeight = image.naturalHeight || image.videoHeight || image.height;
   if (!sourceWidth || !sourceHeight) {
@@ -1978,18 +2091,49 @@ function drawCoverImage(context, image, canvas) {
   var cropHeight = sourceHeight;
   var offsetX = 0;
   var offsetY = 0;
-
-  // 裁剪较长的一边以匹配目标宽高比
   if (sourceRatio > targetRatio) {
-    // 图片更宽 —— 裁剪左右两侧
     cropWidth = sourceHeight * targetRatio;
     offsetX = (sourceWidth - cropWidth) / 2;
   } else {
-    // 图片更高 —— 裁剪上下两侧
     cropHeight = sourceWidth / targetRatio;
     offsetY = (sourceHeight - cropHeight) / 2;
   }
   context.drawImage(image, offsetX, offsetY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+}
+function normalizeProcessingScale(value) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0.5;
+  }
+  return Math.min(1, Math.max(0.1, numericValue));
+}
+function normalizeFrameSkip(value) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 1;
+  }
+  return Math.max(0, Math.floor(numericValue));
+}
+function normalizeMaxBlurRadius(value) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 12;
+  }
+  return Math.min(100, Math.max(0, numericValue));
+}
+function clampBlurRadius(value, maxBlurRadius) {
+  var numericValue = Number(value);
+  var maxValue = normalizeMaxBlurRadius(maxBlurRadius);
+  if (!Number.isFinite(numericValue)) {
+    return Math.min(20, maxValue);
+  }
+  return Math.min(maxValue, Math.max(0, numericValue));
+}
+function getNow() {
+  if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
 }
 module.exports = {
   buildCanvas2DPipeline
@@ -1999,10 +2143,10 @@ module.exports = {
 
 /**
  * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
- * 为 AiVBE 提供人像分割能力。
+ * 为 AIVirtualBackground 提供人像分割能力。
  *
  * 职责：
- *   - 通过 AiVBEAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
+ *   - 通过 AiVBAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
  *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
  *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
  *   - 最多排队一个待处理帧，避免背压积累
@@ -2012,8 +2156,8 @@ module.exports = {
  */
 
 var Logger = require('../Logger');
-var AiVBEAssetLoader = require('./AiVBEAssetLoader');
-var logger = new Logger('AiVBEMediaPipeRuntime');
+var AiVBAssetLoader = require('./AiVBAssetLoader');
+var logger = new Logger('AiVBMediaPipeRuntime');
 
 /** 默认推理后端 —— 'GPU' 以获得最佳性能 */
 var DEFAULT_DELEGATE = 'GPU';
@@ -2023,8 +2167,8 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
    */
   constructor(config = {}) {
-    /** @type {AiVBEAssetLoader} 负责 MediaPipe 的动态脚本加载 */
-    this.assetLoader = new AiVBEAssetLoader(config.assetConfig);
+    /** @type {AiVBAssetLoader} 负责 MediaPipe 的动态脚本加载 */
+    this.assetLoader = new AiVBAssetLoader(config.assetConfig);
 
     /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
     this.assetUrls = null;
@@ -2466,125 +2610,74 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.maskImageData = null;
   }
 };
-},{"../Logger":49,"./AiVBEAssetLoader":6}],10:[function(require,module,exports){
+},{"../Logger":49,"./AiVBAssetLoader":6}],10:[function(require,module,exports){
 "use strict";
 
 /**
- * AiVBE（AI Virtual Background Engine）—— 基于 MediaPipe 人像分割的
+ * AIVirtualBackground—— 基于 MediaPipe 人像分割的
  * 实时视频虚拟背景引擎。
  *
  * 支持四种背景模式：
- *   - 'none'  — 直通模式，不做背景替换（仍会运行分割）
+ *   - 'none'  — 直通模式，不做背景替换
  *   - 'blur'  — 对原始背景做高斯模糊
  *   - 'image' — 用自定义图片替换背景（cover-fit 裁剪）
  *   - 'color' — 用纯色填充背景
  *
- * @module AiVBE
+ * @module AIVirtualBackground
  */
 
 var {
   buildCanvas2DPipeline
 } = require('./Canvas2DPipeline.js');
-var Config = require('./AiVBEConfig');
+var Config = require('./AiVBConfig');
 var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
 var Logger = require('../Logger');
-var logger = new Logger('AiVBE');
-
-/**
- * AI 虚拟背景引擎核心类。
- *
- * 典型生命周期：
- *   1. new AiVBEEngine({ ... })
- *   2. await engine.init({ inputStream, canvas })
- *   3. await engine.setBlurBackground(20)   // 或 setBackgroundImage / setSolidColor
- *   4. engine.start()
- *   5. … 使用 engine.getOutputStream() 作为处理后的视频轨道 …
- *   6. engine.stop()
- *   7. await engine.destroy()
- *
- * @class
- */
-class AiVBEEngine {
-  /**
-   * @param {Object} [options={}] — 引擎配置
-   * @param {Object} [options.video] — 视频流参数
-   * @param {number} [options.video.width=1280] — 输出宽度
-   * @param {number} [options.video.height=720] — 输出高度
-   * @param {number} [options.video.targetFps=15] — 渲染目标帧率（1-60）
-   * @param {boolean} [options.video.mirror=false] — 是否水平镜像
-   * @param {Object} [options.segmentation] — MediaPipe 分割参数
-   * @param {'CPU'|'GPU'} [options.segmentation.delegate='GPU'] — 推理后端
-   * @param {Object} [options.postProcessing] — 后处理参数
-   * @param {number} [options.postProcessing.blurRadius=20] — 模糊半径（0-100）
-   * @param {Object} [options.assetConfig] — CDN / 资源路径覆盖（MediaPipe 运行时和模型文件）
-   */
+var logger = new Logger('AIVirtualBackground');
+var PERFORMANCE_LOG_INTERVAL_MS = 5000;
+class AIVirtualBackground {
   constructor(options = {}) {
-    /** @type {Object} 归一化后的配置对象（参见 AiVBEConfig） */
     this.config = Config.create(options);
-
-    /** @type {Object|null} 当前渲染管线句柄（Canvas2D pipeline） */
     this.pipeline = null;
-
-    /** @type {MediaPipeSegmenterRuntime} 人像分割运行时 */
     this.segmenterRuntime = new MediaPipeSegmenterRuntime({
       assetConfig: this.config.assetConfig
     });
-
-    /** @type {MediaStream|null} 输入视频流 */
     this.inputStream = null;
-
-    /** @type {MediaStream|null} 输出流（从 canvas 捕获的处理后帧） */
     this.outputStream = null;
-
-    /** @type {HTMLCanvasElement|null} 用于合成的离屏 canvas */
     this.canvas = null;
-
-    /** @type {HTMLVideoElement|null} 由 inputStream 驱动的内部 video 元素 */
     this.videoEl = null;
-
-    /** @type {HTMLImageElement|null} 背景图片元素（仅 image 模式使用） */
     this.backgroundEl = null;
-
-    /** @type {boolean} 渲染循环是否正在运行 */
     this.isRunning = false;
-
-    /** @type {number|null} requestAnimationFrame 句柄 */
     this.animationFrameId = null;
-
-    /** @type {'none'|'blur'|'image'|'color'} 当前生效的背景模式 */
     this.currentBackgroundKind = 'none';
-
-    /** @type {number} 上一帧的渲染时间戳（毫秒） */
     this.lastFrameTime = 0;
-
-    /** @type {boolean} 防止并发渲染的互斥锁 */
     this.isRendering = false;
-
-    /** @type {Promise|null} 当前正在执行的渲染 Promise */
     this.renderPromise = null;
-
-    /** @type {boolean} 是否已调用 destroy() */
     this.destroyed = false;
-
-    /** @type {number} 单调递增的请求 ID，用于取消过时的管线设置操作（例如不再需要的图片加载） */
     this.pipelineRequestId = 0;
-
-    /** @type {Object|null} 正在进行的背景图片加载句柄，结构为 { image, reject }。加载完成或被取消时清空 */
     this.pendingImageLoad = null;
+    this._performanceLogTimer = null;
+    this._performance = this._createPerformanceState();
   }
-
-  // ---------------------------------------------------------------------------
-  // 内部辅助方法
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 取消正在进行的背景图片加载。
-   *
-   * 清除图片元素的回调、重置 src，并拒绝调用方正在等待的 Promise。
-   *
-   * @private
-   * @param {string} [reason='Background image load cancelled'] — 拒绝原因
-   */
+  _createPerformanceState() {
+    return {
+      avgRenderMs: 0,
+      avgSegmentationMs: 0,
+      currentMode: 'none',
+      droppedFrames: 0,
+      frameSkip: this.config.segmentation.frameSkip,
+      lastMaskReused: false,
+      maskReuseRate: 0,
+      maskReusedFrames: 0,
+      processingScale: this.config.video.processingScale,
+      renderedFrames: 0,
+      segmentedFrames: 0,
+      totalRenderMs: 0,
+      totalSegmentationMs: 0
+    };
+  }
+  _resetPerformanceState() {
+    this._performance = this._createPerformanceState();
+  }
   _cancelPendingImageLoad(reason) {
     if (!this.pendingImageLoad) {
       return;
@@ -2598,17 +2691,6 @@ class AiVBEEngine {
     }
     pending.reject(new Error(reason || 'Background image load cancelled'));
   }
-
-  /**
-   * 销毁当前渲染管线并释放相关资源。
-   *
-   * 默认同时取消正在进行的背景图片加载。传入 `{ cancelPendingImageLoad: false }`
-   * 可跳过（例如在 destroy 流程中单独处理取消逻辑时）。
-   *
-   * @private
-   * @param {Object} [options={}]
-   * @param {boolean} [options.cancelPendingImageLoad=true]
-   */
   _cleanUpPipeline(options = {}) {
     if (options.cancelPendingImageLoad !== false) {
       this._cancelPendingImageLoad('Background image load cancelled');
@@ -2617,43 +2699,21 @@ class AiVBEEngine {
       this.pipeline.cleanUp();
     }
     this.pipeline = null;
-    if (this.backgroundEl) {
-      this.backgroundEl.onload = null;
-      this.backgroundEl.onerror = null;
-      this.backgroundEl.src = '';
-      this.backgroundEl = null;
-    }
   }
-
-  /**
-   * 断言引擎已初始化完毕，否则抛出错误。
-   *
-   * @private
-   * @throws {Error} 如果 canvas、videoEl 或 outputStream 缺失
-   */
+  _releaseBackgroundImage() {
+    if (!this.backgroundEl) {
+      return;
+    }
+    this.backgroundEl.onload = null;
+    this.backgroundEl.onerror = null;
+    this.backgroundEl.src = '';
+    this.backgroundEl = null;
+  }
   _assertInitialized() {
-    if (!this.canvas || !this.videoEl || !this.outputStream) {
-      throw new Error('AiVBEEngine not initialized');
+    if (!this.canvas || !this.videoEl || !this.outputStream || !this.pipeline) {
+      throw new Error('AIVirtualBackground not initialized');
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // 公开 API —— 生命周期
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 使用输入视频流初始化引擎。
-   *
-   * 此方法会引导 MediaPipe 分割器、创建内部 video 元素、建立输出
-   * canvas 捕获流，并设置默认的直通（'none'）管线。
-   *
-   * @param {Object} options
-   * @param {MediaStream} options.inputStream — 待处理的原始摄像头/屏幕共享流
-   * @param {string} [options.modelPath] — 可选的分割模型 URL 覆盖
-   * @param {HTMLCanvasElement} [options.canvas] — 复用的已有 canvas，省略则自动创建
-   * @returns {Promise<void>}
-   * @throws {Error} 如果未提供 inputStream
-   */
   async init({
     inputStream,
     modelPath,
@@ -2667,12 +2727,14 @@ class AiVBEEngine {
     this.canvas = canvas || document.createElement('canvas');
     this.canvas.width = this.config.video.width;
     this.canvas.height = this.config.video.height;
+    this._resetPerformanceState();
     try {
       await this.segmenterRuntime.initialize({
         modelPath,
         delegate: this.config.segmentation.delegate
       });
       await this.createVideoElement();
+      this.createPipeline();
       this.createOutputStream();
       this.clearBackground();
     } catch (error) {
@@ -2680,14 +2742,6 @@ class AiVBEEngine {
       throw error;
     }
   }
-
-  /**
-   * 创建由 inputStream 驱动的内部 <video> 元素。
-   *
-   * 元素设为静音、自动播放、内联播放，以确保在各浏览器中无需用户手势即可工作。
-   *
-   * @returns {Promise<void>}
-   */
   async createVideoElement() {
     this.videoEl = document.createElement('video');
     this.videoEl.muted = true;
@@ -2696,185 +2750,153 @@ class AiVBEEngine {
     this.videoEl.srcObject = this.inputStream;
     await this.videoEl.play();
   }
-
-  /**
-   * 为指定模式构建（或重建）Canvas2D 渲染管线。
-   *
-   * 'blur' 和 'color' 模式同步创建管线。
-   * 'image' 模式需先加载背景图片，因此返回 Promise，图片就绪后完成管线装配。
-   *
-   * @private
-   * @param {'blur'|'color'|'image'} type — 背景效果类型
-   * @param {number|string} src — 模糊半径（数字）、颜色字符串或图片 URL
-   * @returns {Promise<void>|void}
-   */
-  async setupPipeline(type, src) {
-    this._assertInitialized();
-    if (this.destroyed) {
-      throw new Error('AiVBEEngine destroyed');
-    }
-    var requestId = ++this.pipelineRequestId;
-    this._cleanUpPipeline();
-    if (type === 'blur') {
-      var blurRadius = typeof src === 'number' ? src : this.config.postProcessing.blurRadius;
-      this.pipeline = buildCanvas2DPipeline({
-        canvas: this.canvas,
-        videoElement: this.videoEl,
-        mode: 'blur',
-        mirror: this.config.video.mirror,
-        segmenterRuntime: this.segmenterRuntime,
-        blurRadius: blurRadius
-      });
-      this.currentBackgroundKind = 'blur';
-      return;
-    }
-    if (type === 'color') {
-      this.pipeline = buildCanvas2DPipeline({
-        canvas: this.canvas,
-        videoElement: this.videoEl,
-        mode: 'color',
-        mirror: this.config.video.mirror,
-        segmenterRuntime: this.segmenterRuntime,
-        backgroundColor: src
-      });
-      this.currentBackgroundKind = 'color';
-      return;
-    }
-
-    // ---- image 模式：异步加载背景图片 ----
-    return new Promise((resolve, reject) => {
-      var backgroundEl = document.createElement('img');
-      var settled = false;
-
-      /**
-       * 确保 Promise 只被敲定一次。清理事件回调和 pendingImageLoad 引用，
-       * 防止过时的加载操作泄漏。
-       *
-       * @param {Function} callback — resolve 或 reject
-       * @param {*} value — 传递给 callback 的值
-       */
-      var settle = (callback, value) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        if (this.pendingImageLoad && this.pendingImageLoad.image === backgroundEl) {
-          this.pendingImageLoad = null;
-        }
-        backgroundEl.onload = null;
-        backgroundEl.onerror = null;
-        callback(value);
-      };
-      this.pendingImageLoad = {
-        image: backgroundEl,
-        reject: error => settle(reject, error)
-      };
-      backgroundEl.onerror = () => settle(reject, new Error('Failed to load background image'));
-      backgroundEl.onload = () => {
-        try {
-          // 如果已有更新的 setupPipeline 调用启动，或引擎已被销毁，丢弃本次加载结果
-          if (requestId !== this.pipelineRequestId || this.destroyed) {
-            settle(reject, new Error('Background image load cancelled'));
-            return;
-          }
-          this.backgroundEl = backgroundEl;
-          this.pipeline = buildCanvas2DPipeline({
-            canvas: this.canvas,
-            videoElement: this.videoEl,
-            mode: 'image',
-            mirror: this.config.video.mirror,
-            segmenterRuntime: this.segmenterRuntime,
-            backgroundImage: backgroundEl
-          });
-          this.currentBackgroundKind = 'image';
-          settle(resolve);
-        } catch (error) {
-          settle(reject, error);
-        }
-      };
-
-      // 开始加载图片
-      backgroundEl.src = src;
+  createPipeline() {
+    this.pipeline = buildCanvas2DPipeline({
+      backgroundColor: '#00ff00',
+      backgroundImage: null,
+      blurRadius: this.config.postProcessing.blurRadius,
+      canvas: this.canvas,
+      frameSkip: this.config.segmentation.frameSkip,
+      maxBlurRadius: this.config.postProcessing.maxBlurRadius,
+      metrics: {
+        onRenderComplete: payload => this._recordRenderMetrics(payload)
+      },
+      mirror: this.config.video.mirror,
+      mode: 'none',
+      processingScale: this.config.video.processingScale,
+      segmenterRuntime: this.segmenterRuntime,
+      videoElement: this.videoEl
     });
   }
-
-  /**
-   * 通过 captureStream() 从内部 canvas 创建输出 MediaStream。
-   *
-   * 下游消费者（如 WebRTC 对等连接）应使用此流作为处理后的视频轨道。
-   */
   createOutputStream() {
     this.outputStream = this.canvas.captureStream(this.config.video.targetFps);
   }
-
-  /**
-   * 返回处理后的视频流。
-   *
-   * @returns {MediaStream|null}
-   */
   getOutputStream() {
     return this.outputStream;
   }
-
-  /**
-   * 运行时切换水平镜像，无需重建管线。
-   *
-   * @param {boolean} mirror — 是否开启镜像
-   */
-  setMirror(mirror) {
-    this.config.video.mirror = Boolean(mirror);
-    if (this.pipeline && this.pipeline.updateMirror) {
-      this.pipeline.updateMirror(this.config.video.mirror);
+  _recordRenderMetrics(payload = {}) {
+    var renderDurationMs = Number(payload.renderDurationMs) || 0;
+    var segmentationDurationMs = Number(payload.segmentationDurationMs) || 0;
+    this._performance.renderedFrames += 1;
+    this._performance.totalRenderMs += renderDurationMs;
+    this._performance.avgRenderMs = this._performance.totalRenderMs / this._performance.renderedFrames;
+    this._performance.lastMaskReused = Boolean(payload.reusedMask);
+    if (payload.reusedMask) {
+      this._performance.maskReusedFrames += 1;
+    }
+    this._performance.maskReuseRate = this._performance.renderedFrames > 0 ? this._performance.maskReusedFrames / this._performance.renderedFrames : 0;
+    if (payload.segmentationRan) {
+      this._performance.segmentedFrames += 1;
+      this._performance.totalSegmentationMs += segmentationDurationMs;
+      this._performance.avgSegmentationMs = this._performance.totalSegmentationMs / this._performance.segmentedFrames;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // 渲染循环
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 启动 requestAnimationFrame 渲染循环。
-   *
-   * 如果循环已在运行，调用无效果。
-   */
+  setupPipeline(type, src) {
+    if (type === 'blur') {
+      return this.setBlurBackground(src);
+    }
+    if (type === 'color') {
+      return this.setSolidColor(src);
+    }
+    if (type === 'image') {
+      return this.setBackgroundImage(src);
+    }
+    if (type === 'none') {
+      this.clearBackground();
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error(`Unsupported pipeline type: ${type}`));
+  }
+  _recordDroppedFrame() {
+    this._performance.droppedFrames += 1;
+    if (this._performance.droppedFrames === 1 || this._performance.droppedFrames % 30 === 0) {
+      logger.warn(`Dropped frame: total=${this._performance.droppedFrames} mode=${this.currentBackgroundKind} ` + `fps=${this.config.video.targetFps}`);
+    }
+  }
+  _updatePipelineState(nextState = {}) {
+    if (!this.pipeline) {
+      throw new Error('AIVirtualBackground not initialized');
+    }
+    this.pipeline.updateState(nextState);
+    if (Object.prototype.hasOwnProperty.call(nextState, 'mode') && nextState.mode) {
+      this.currentBackgroundKind = nextState.mode;
+      this._performance.currentMode = nextState.mode;
+      logger.debug(`Background mode changed: ${nextState.mode}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'mirror')) {
+      logger.debug(`Mirror changed: ${Boolean(nextState.mirror)}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'processingScale')) {
+      this._performance.processingScale = this.config.video.processingScale;
+      logger.debug(`Processing scale changed: ${this.config.video.processingScale}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'frameSkip')) {
+      this._performance.frameSkip = this.config.segmentation.frameSkip;
+      logger.debug(`Frame skip changed: ${this.config.segmentation.frameSkip}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(nextState, 'maxBlurRadius')) {
+      logger.debug(`Max blur radius changed: ${this.config.postProcessing.maxBlurRadius}`);
+    }
+  }
+  _startPerformanceLogger() {
+    this._stopPerformanceLogger();
+    this._performanceLogTimer = setInterval(() => {
+      var info = this.getPerformanceInfo();
+      logger.debug(`Perf summary: mode=${info.currentMode} rendered=${info.renderedFrames} ` + `segmented=${info.segmentedFrames} dropped=${info.droppedFrames} ` + `avgRenderMs=${info.avgRenderMs.toFixed(2)} avgSegmentationMs=${info.avgSegmentationMs.toFixed(2)} ` + `maskReuseRate=${info.maskReuseRate.toFixed(2)}`);
+    }, PERFORMANCE_LOG_INTERVAL_MS);
+  }
+  _stopPerformanceLogger() {
+    if (!this._performanceLogTimer) {
+      return;
+    }
+    clearInterval(this._performanceLogTimer);
+    this._performanceLogTimer = null;
+  }
+  getPerformanceInfo() {
+    return {
+      avgRenderMs: this._performance.avgRenderMs,
+      avgSegmentationMs: this._performance.avgSegmentationMs,
+      currentMode: this.currentBackgroundKind,
+      droppedFrames: this._performance.droppedFrames,
+      frameSkip: this.config.segmentation.frameSkip,
+      lastMaskReused: this._performance.lastMaskReused,
+      maskReuseRate: this._performance.maskReuseRate,
+      processingScale: this.config.video.processingScale,
+      renderedFrames: this._performance.renderedFrames,
+      segmentedFrames: this._performance.segmentedFrames
+    };
+  }
+  setMirror(mirror) {
+    this.config.video.mirror = Boolean(mirror);
+    if (this.pipeline) {
+      this._updatePipelineState({
+        mirror: this.config.video.mirror
+      });
+    }
+  }
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
     this.lastFrameTime = 0;
+    this._startPerformanceLogger();
     this.loop = this.loop.bind(this);
     this.animationFrameId = requestAnimationFrame(this.loop);
   }
-
-  /**
-   * 停止渲染循环。
-   *
-   * 取消下一次已排期的动画帧。正在渲染中的帧仍会完成。
-   */
   stop() {
     this.isRunning = false;
+    this._stopPerformanceLogger();
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
   }
-
-  /**
-   * 由 requestAnimationFrame 驱动的逐帧渲染回调。
-   *
-   * 按 targetFps 节流以避免不必要的渲染。前一帧仍在渲染时跳过当前帧
-   *（丢弃而非排队），防止背压积累。
-   *
-   * @private
-   * @param {number} now — rAF 提供的 DOMHighResTimeStamp
-   * @returns {Promise<void>}
-   */
   async loop(now) {
     if (!this.isRunning) return;
     var interval = 1000 / this.config.video.targetFps;
     if (now - this.lastFrameTime >= interval) {
       this.lastFrameTime = now;
       if (this.isRendering) {
-        // 上一帧仍在渲染中 —— 跳过当前帧以避免背压
+        this._recordDroppedFrame();
         this.animationFrameId = requestAnimationFrame(this.loop);
         return;
       }
@@ -2898,94 +2920,93 @@ class AiVBEEngine {
       this.animationFrameId = requestAnimationFrame(this.loop);
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // 公开 API —— 背景效果
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 设置自定义图片作为虚拟背景。
-   *
-   * 传入 `'none'` 可移除背景（等效于 clearBackground()）。
-   *
-   * @param {string} url — 图片 URL，必须为非空字符串
-   * @returns {Promise<void>}
-   * @throws {Error} 如果 url 为空/无效或引擎未初始化
-   */
   async setBackgroundImage(url) {
     this._assertInitialized();
     var normalizedUrl = typeof url === 'string' ? url.trim() : '';
     if (!normalizedUrl) {
       throw new Error('Invalid background image URL');
     }
-    if (normalizedUrl === 'none') {
+    if (normalizedUrl.toLowerCase() === 'none') {
       this.clearBackground();
       return;
     }
-    return this.setupPipeline('image', normalizedUrl);
+    var requestId = ++this.pipelineRequestId;
+    this._cancelPendingImageLoad('Background image load cancelled');
+    return new Promise((resolve, reject) => {
+      var backgroundEl = document.createElement('img');
+      var settled = false;
+      var settle = (callback, value) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (this.pendingImageLoad && this.pendingImageLoad.image === backgroundEl) {
+          this.pendingImageLoad = null;
+        }
+        backgroundEl.onload = null;
+        backgroundEl.onerror = null;
+        callback(value);
+      };
+      this.pendingImageLoad = {
+        image: backgroundEl,
+        reject: error => settle(reject, error)
+      };
+      backgroundEl.onerror = () => settle(reject, new Error('Failed to load background image'));
+      backgroundEl.onload = () => {
+        try {
+          if (requestId !== this.pipelineRequestId || this.destroyed) {
+            settle(reject, new Error('Background image load cancelled'));
+            return;
+          }
+          this._releaseBackgroundImage();
+          this.backgroundEl = backgroundEl;
+          this._updatePipelineState({
+            backgroundImage: backgroundEl,
+            mode: 'image'
+          });
+          logger.debug(`Background image changed: ${normalizedUrl}`);
+          settle(resolve);
+        } catch (error) {
+          settle(reject, error);
+        }
+      };
+      backgroundEl.src = normalizedUrl;
+    });
   }
-
-  /**
-   * 移除虚拟背景效果（直通模式）。
-   *
-   * 人像分割仍会运行，因此输出流仍是合成后的 canvas，但不做背景替换。
-   */
   clearBackground() {
     this._assertInitialized();
-    this._cleanUpPipeline();
-    this.pipeline = buildCanvas2DPipeline({
-      canvas: this.canvas,
-      videoElement: this.videoEl,
-      mode: 'none',
-      mirror: this.config.video.mirror,
-      segmenterRuntime: this.segmenterRuntime
+    this._cancelPendingImageLoad('Background image load cancelled');
+    this._releaseBackgroundImage();
+    this._updatePipelineState({
+      backgroundImage: null,
+      mode: 'none'
     });
-    this.currentBackgroundKind = 'none';
   }
-
-  /**
-   * 应用高斯模糊背景效果。
-   *
-   * 人像被分割出来，原始背景做模糊处理。
-   *
-   * @param {number} [radius] — 模糊半径（像素，0-100）。省略或超出范围时回退到配置的默认值
-   * @returns {Promise<void>}
-   */
   async setBlurBackground(radius) {
     this._assertInitialized();
-    radius = typeof radius === 'number' ? radius : this.config.postProcessing.blurRadius;
-    if (radius < 0 || radius > 100) {
-      radius = this.config.postProcessing.blurRadius;
-    }
-    await this.setupPipeline('blur', radius);
+    var fallbackRadius = Math.min(this.config.postProcessing.blurRadius, this.config.postProcessing.maxBlurRadius);
+    var normalizedRadius = clampNumber(typeof radius === 'number' ? radius : fallbackRadius, 0, this.config.postProcessing.maxBlurRadius, fallbackRadius);
+    this._cancelPendingImageLoad('Background image load cancelled');
+    this._releaseBackgroundImage();
+    this._updatePipelineState({
+      backgroundImage: null,
+      blurRadius: normalizedRadius,
+      mode: 'blur'
+    });
   }
-
-  /**
-   * 用纯色替换背景。
-   *
-   * @param {string} [color='#00ff00'] — CSS 颜色，格式为 #RRGGBB 或 rgba(r,g,b,a)
-   * @returns {Promise<void>}
-   * @throws {Error} 如果颜色格式无法识别
-   */
   async setSolidColor(color = '#00ff00') {
     this._assertInitialized();
     if (!isValidColor(color)) {
       throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
     }
-    return this.setupPipeline('color', color);
+    this._cancelPendingImageLoad('Background image load cancelled');
+    this._releaseBackgroundImage();
+    this._updatePipelineState({
+      backgroundColor: color,
+      backgroundImage: null,
+      mode: 'color'
+    });
   }
-
-  // ---------------------------------------------------------------------------
-  // 销毁
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 完全销毁引擎：停止渲染循环、释放管线、分割器以及所有 DOM / 流引用。
-   *
-   * 可安全地多次调用；一旦完全销毁，后续调用为无操作。
-   *
-   * @returns {Promise<void>}
-   */
   async destroy() {
     if (this.destroyed && !this.canvas && !this.videoEl && !this.outputStream) {
       return;
@@ -2995,8 +3016,12 @@ class AiVBEEngine {
     if (this.renderPromise) {
       await this.renderPromise;
     }
-    this._cleanUpPipeline();
+    this._cancelPendingImageLoad('Background image load cancelled');
+    this._cleanUpPipeline({
+      cancelPendingImageLoad: false
+    });
     this.currentBackgroundKind = 'none';
+    this._releaseBackgroundImage();
     if (this.videoEl) {
       this.videoEl.srcObject = null;
       this.videoEl.load();
@@ -3012,17 +3037,6 @@ class AiVBEEngine {
     this.backgroundEl = null;
   }
 }
-
-/**
- * 验证 CSS 颜色字符串的合法性。
- *
- * 接受：
- *   - 6 位十六进制： #RRGGBB
- *   - rgb / rgba 函数表示法
- *
- * @param {string} color
- * @returns {boolean}
- */
 function isValidColor(color) {
   if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
     return true;
@@ -3037,8 +3051,15 @@ function isValidColor(color) {
   var alpha = match[5] === undefined || match[5] === '' ? 1 : Number(match[5]);
   return red <= 255 && green <= 255 && blue <= 255 && alpha >= 0 && alpha <= 1;
 }
-module.exports = AiVBEEngine;
-},{"../Logger":49,"./AiVBEConfig":7,"./Canvas2DPipeline.js":8,"./MediaPipeSegmenterRuntime":9}],11:[function(require,module,exports){
+function clampNumber(value, min, max, fallback) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numericValue));
+}
+module.exports = AIVirtualBackground;
+},{"../Logger":49,"./AiVBConfig":7,"./Canvas2DPipeline.js":8,"./MediaPipeSegmenterRuntime":9}],11:[function(require,module,exports){
 "use strict";
 
 /**
@@ -5568,7 +5589,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":102}],41:[function(require,module,exports){
+},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":93}],41:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -5821,7 +5842,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.0.405212182216 (Web)',
+  USER_AGENT: 'UA/1.13.0.405212183298 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -19028,11 +19049,10 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-var Mixer = require('./Mixer');
-var VirtualBackground = require('./VirtualBackground/index.js');
-var AiVBE = require('./AiVBE/index.js');
+var MediaStreamComposer = require('./MediaStreamComposer/index.js');
+var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '1.13.0.405212182216');
+debug('version %s', '1.13.0.405212183298');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19061,11 +19081,10 @@ module.exports = {
   URI,
   NameAddrHeader,
   WebSocketInterface,
-  Mixer,
-  VirtualBackground,
-  // 兼容老版本
-  AiVBEngine: VirtualBackground,
-  AiVBEEngine: AiVBE,
+  MediaStreamComposer,
+  Mixer: MediaStreamComposer,
+  VirtualBackground: AIVirtualBackground,
+  AiVBEngine: AIVirtualBackground,
   AiNSEngine: AINoiseSuppression,
   Grammar,
   getStats,
@@ -19075,10 +19094,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.0.405212182216';
+    return '1.13.0.405212183298';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./AiVBE/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Mixer":51,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./VirtualBackground/index.js":90,"./WebSocketInterface":98,"debug":103}],49:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],49:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -19180,234 +19199,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":103}],50:[function(require,module,exports){
-"use strict";
-
-var EventEmitter = require('events').EventEmitter;
-var Logger = require('./Logger');
-var CRTC_C = require('./Constants');
-var SIPMessage = require('./SIPMessage');
-var Utils = require('./Utils');
-var RequestSender = require('./RequestSender');
-var Exceptions = require('./Exceptions');
-var URI = require('./URI');
-var logger = new Logger('Message');
-module.exports = class Message extends EventEmitter {
-  constructor(ua) {
-    super();
-    this._ua = ua;
-    this._request = null;
-    this._closed = false;
-    this._direction = null;
-    this._local_identity = null;
-    this._remote_identity = null;
-
-    // Whether an incoming message has been replied.
-    this._is_replied = false;
-
-    // Custom message empty object for high level use.
-    this._data = {};
-  }
-  get direction() {
-    return this._direction;
-  }
-  get local_identity() {
-    return this._local_identity;
-  }
-  get remote_identity() {
-    return this._remote_identity;
-  }
-  send(target, body, options = {}) {
-    var originalTarget = target;
-    if (target === undefined || body === undefined) {
-      throw new TypeError('Not enough arguments');
-    }
-
-    // Check target validity.
-    target = this._ua.normalizeTarget(target);
-    if (!target) {
-      throw new TypeError(`Invalid target: ${originalTarget}`);
-    }
-
-    // Get call options.
-    var extraHeaders = Utils.cloneArray(options.extraHeaders);
-    var eventHandlers = Utils.cloneObject(options.eventHandlers);
-    var contentType = options.contentType || 'text/plain';
-    var requestParams = {};
-    if (options.fromUserName) {
-      requestParams.from_uri = new URI('sip', options.fromUserName, this._ua.configuration.uri.host);
-      extraHeaders.push(`P-Preferred-Identity: ${this._ua.configuration.uri.toString()}`);
-    }
-    if (options.fromDisplayName) {
-      requestParams.from_display_name = options.fromDisplayName;
-    }
-
-    // Set event handlers.
-    for (var event in eventHandlers) {
-      if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
-        this.on(event, eventHandlers[event]);
-      }
-    }
-    extraHeaders.push(`Content-Type: ${contentType}`);
-    this._request = new SIPMessage.OutgoingRequest(CRTC_C.MESSAGE, target, this._ua, requestParams, extraHeaders);
-    if (body) {
-      this._request.body = body;
-    }
-    var request_sender = new RequestSender(this._ua, this._request, {
-      onRequestTimeout: () => {
-        this._onRequestTimeout();
-      },
-      onTransportError: () => {
-        this._onTransportError();
-      },
-      onReceiveResponse: response => {
-        this._receiveResponse(response);
-      }
-    });
-    this._newMessage('local', this._request);
-    request_sender.send();
-  }
-  init_incoming(request) {
-    this._request = request;
-    this._newMessage('remote', request);
-
-    // Reply with a 200 OK if the user didn't reply.
-    if (!this._is_replied) {
-      this._is_replied = true;
-      request.reply(200);
-    }
-    this._close();
-  }
-
-  /**
-   * Accept the incoming Message
-   * Only valid for incoming Messages
-   */
-  accept(options = {}) {
-    var extraHeaders = Utils.cloneArray(options.extraHeaders);
-    var body = options.body;
-    if (this._direction !== 'incoming') {
-      throw new Exceptions.NotSupportedError('"accept" not supported for outgoing Message');
-    }
-    if (this._is_replied) {
-      throw new Error('incoming Message already replied');
-    }
-    this._is_replied = true;
-    this._request.reply(200, null, extraHeaders, body);
-  }
-
-  /**
-   * Reject the incoming Message
-   * Only valid for incoming Messages
-   */
-  reject(options = {}) {
-    var status_code = options.status_code || 480;
-    var reason_phrase = options.reason_phrase;
-    var extraHeaders = Utils.cloneArray(options.extraHeaders);
-    var body = options.body;
-    if (this._direction !== 'incoming') {
-      throw new Exceptions.NotSupportedError('"reject" not supported for outgoing Message');
-    }
-    if (this._is_replied) {
-      throw new Error('incoming Message already replied');
-    }
-    if (status_code < 300 || status_code >= 700) {
-      throw new TypeError(`Invalid status_code: ${status_code}`);
-    }
-    this._is_replied = true;
-    this._request.reply(status_code, reason_phrase, extraHeaders, body);
-  }
-  _receiveResponse(response) {
-    if (this._closed) {
-      return;
-    }
-    switch (true) {
-      case /^1[0-9]{2}$/.test(response.status_code):
-        // Ignore provisional responses.
-        break;
-      case /^2[0-9]{2}$/.test(response.status_code):
-        this._succeeded('remote', response);
-        break;
-      default:
-        {
-          var cause = Utils.sipErrorCause(response.status_code);
-          this._failed('remote', response, cause);
-          break;
-        }
-    }
-  }
-  _onRequestTimeout() {
-    if (this._closed) {
-      return;
-    }
-    this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
-  }
-  _onTransportError() {
-    if (this._closed) {
-      return;
-    }
-    this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
-  }
-  _close() {
-    this._closed = true;
-    this._ua.destroyMessage(this);
-  }
-
-  /**
-   * Internal Callbacks
-   */
-
-  _newMessage(originator, request) {
-    if (originator === 'remote') {
-      this._direction = 'incoming';
-      this._local_identity = request.to;
-      this._remote_identity = request.from;
-    } else if (originator === 'local') {
-      this._direction = 'outgoing';
-      this._local_identity = request.from;
-      this._remote_identity = request.to;
-    }
-    this._ua.newMessage(this, {
-      originator,
-      message: this,
-      request
-    });
-  }
-  _failed(originator, response, cause) {
-    logger.debug('MESSAGE failed');
-    this._close();
-    logger.debug('emit "failed"');
-    this.emit('failed', {
-      originator,
-      response: response || null,
-      cause
-    });
-  }
-  _succeeded(originator, response) {
-    logger.debug('MESSAGE succeeded');
-    this._close();
-    logger.debug('emit "succeeded"');
-    this.emit('succeeded', {
-      originator,
-      response
-    });
-  }
-};
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":101}],51:[function(require,module,exports){
-"use strict";
-
-/**
- * Mixer 模块入口
- *
- * 这是 MediaStreamMixer 的公共入口点。旧代码通过 require('./Mixer') 引用，
- * 实际实现已拆分到 MixerCore/MixerController.js。
- * 此文件保留为 barrel 文件，确保向后兼容。
- *
- * @module Mixer
- * @see module:MixerCore/MixerController
- */
-module.exports = require('./MixerCore/MixerController');
-},{"./MixerCore/MixerController":55}],52:[function(require,module,exports){
+},{"debug":94}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20618,7 +20410,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{}],53:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20969,218 +20761,19 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],54:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 "use strict";
 
-/**
- * MixerConfig — 混流器配置归一化工具模块
- *
- * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
- * 所有方法均为纯函数（无副作用），方便单元测试。
- *
- * @module MixerConfig
- */
-
-var Logger = require('../Logger');
-var logger = new Logger('MixerConfig');
-
-/** 最大参与方数（含视频和纯音频源） */
-var MAX_SOURCES = 9;
-
-/** 合法的渲染后端模式集合 */
-var VALID_RENDER_MODES = {
-  auto: true,
-  // 自动选择（优先 Worker WebGL2）
-  'worker-webgl2': true,
-  // Worker 线程 WebGL2
-  'main-webgl2': true,
-  // 主线程 WebGL2
-  'worker-2d': true,
-  // Worker 线程 Canvas2D
-  'main-2d': true // 主线程 Canvas2D（最兼容）
-};
-
-/**
- * 创建归一化的混流配置对象。
- *
- * @param {Object} [options={}] - 原始配置参数
- * @returns {Object} 归一化后的配置对象
- * @returns {number} returns.width - 输出宽度（默认 1280）
- * @returns {number} returns.height - 输出高度（默认 720）
- * @returns {number} returns.fps - 输出帧率（默认 15）
- * @returns {string} returns.backgroundColor - 画布底色
- * @returns {number} returns.audioGain - 全局默认音量增益
- * @returns {string} returns.renderMode - 渲染后端选择
- * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
- * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
- * @returns {number} returns.maxFrameQueue - 最大帧队列长度
- * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
- * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
- * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
- * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
- * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
- * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
- */
-exports.create = function (options) {
-  options = options || {};
-  var config = {
-    width: exports.normalizePositiveInteger(options.width, 1280),
-    height: exports.normalizePositiveInteger(options.height, 720),
-    fps: exports.normalizePositiveInteger(options.fps, 15),
-    backgroundColor: options.backgroundColor || '#000',
-    audioGain: exports.normalizeGain(options.audioGain, 0.8),
-    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
-    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
-    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
-    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
-    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
-    mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
-    outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
-    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
-    enableInsertable: options.enableInsertable === true,
-    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
-    watermarks: options.watermarks || []
-  };
-  logger.debug(`Config created: ${JSON.stringify(config)}`);
-  return config;
-};
-
-/**
- * 归一化渲染模式字符串。
- * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
- *
- * @param {*} value - 原始传入的 renderMode
- * @param {string} fallback - 非法或未传时使用的备选值
- * @returns {string} 合法的渲染模式
- */
-exports.normalizeRenderMode = function (value, fallback) {
-  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
-    return value;
-  }
-  logger.debug(`normalizeRenderMode fallback: value=${value} fallback=${fallback || 'auto'}`);
-  return fallback || 'auto';
-};
-
-/**
- * 归一化为正整数。
- * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
- *
- * @param {*} value - 原始输入值
- * @param {number|null} fallback - 非法时使用的备选值
- * @returns {number|null} 归一化后的正整数，或 fallback
- */
-exports.normalizePositiveInteger = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue > 0) {
-    return Math.floor(numberValue);
-  }
-  logger.debug(`normalizePositiveInteger fallback: value=${value} fallback=${fallback}`);
-  return fallback;
-};
-
-/**
- * 归一化 slot 值。
- * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
- *
- * @param {*} value - 原始 slot 值
- * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
- * @returns {number|null} 归一化后的 slot，非法则返回 null
- */
-exports.normalizeSlot = function (value, index) {
-  var numberValue = Number(value);
-  if (!Number.isFinite(numberValue)) {
-    logger.debug(`normalizeSlot invalid: value=${value} index=${index}`);
-    return null;
-  }
-  return Math.max(0, Math.floor(numberValue)) + index;
-};
-
-/**
- * 归一化音量增益值。
- * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
- *
- * @param {*} value - 原始增益值
- * @param {number} fallback - 非法时的备选值
- * @returns {number} 归一化后的增益值（>= 0）
- */
-exports.normalizeGain = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return numberValue;
-  }
-  logger.debug(`normalizeGain fallback: value=${value} fallback=${fallback}`);
-  return fallback;
-};
-
-/**
- * 归一化水平镜像开关。
- *
- * @param {*} primary - 主参数（推荐 mirrorX）
- * @param {*} legacy - 兼容参数（mirror）
- * @param {boolean} fallback - 默认值
- * @returns {boolean}
- */
-exports.normalizeMirrorX = function (primary, legacy, fallback) {
-  if (typeof primary === 'boolean') {
-    return primary;
-  }
-  if (typeof legacy === 'boolean') {
-    return legacy;
-  }
-  return Boolean(fallback);
-};
-
-/**
- * 统一 appendStream() 第二个参数的格式。
- * 支持两种调用方式：
- *   appendStream(stream, 3)               → 数字作为 slot
- *   appendStream(stream, { slot, gain })  → 对象解构
- *
- * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
- * @param {number} index - 数组索引，批量添加时 slot 递增
- * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
- */
-/**
- * 返回最大参与方数限制。
- * @returns {number}
- */
-exports.getMaxSources = function () {
-  return MAX_SOURCES;
-};
-exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
-  var options = {};
-  if (typeof optionsOrSlot === 'number') {
-    options.slot = exports.normalizeSlot(optionsOrSlot, index);
-  } else if (optionsOrSlot && typeof optionsOrSlot === 'object') {
-    if (typeof optionsOrSlot.slot === 'number') {
-      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
-    }
-    if (typeof optionsOrSlot.gain === 'number') {
-      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
-    }
-    if (typeof optionsOrSlot.mirrorX === 'boolean') {
-      options.mirrorX = optionsOrSlot.mirrorX;
-    } else if (typeof optionsOrSlot.mirror === 'boolean') {
-      options.mirrorX = optionsOrSlot.mirror;
-    }
-  }
-  logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
-  return options;
-};
-},{"../Logger":49}],55:[function(require,module,exports){
-"use strict";
-
-var Logger = require('../Logger');
+var Logger = require('../../Logger');
 var SourceRegistry = require('./SourceRegistry');
 var LayoutEngine = require('./LayoutEngine');
 var AudioMixer = require('./AudioMixer');
 var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
-var MixerConfig = require('./MixerConfig');
-var MixerDomAdapter = require('./MixerDomAdapter');
+var MediaStreamComposerConfig = require('./MixerConfig');
+var ComposerDomAdapter = require('./MixerDomAdapter');
 var WatermarkManager = require('./WatermarkManager');
-var logger = new Logger('MediaStreamMixer');
+var logger = new Logger('MediaStreamComposer');
 var lastRenderInfoLogSignature = '';
 
 /**
@@ -21200,7 +20793,7 @@ var DEFAULT_AUDIO_INFO = Object.freeze({
 });
 
 /**
- * MediaStreamMixer — 多路音视频混流器
+ * MediaStreamComposer — 多路音视频合成器
  *
  * 功能：
  *   - 将多个 MediaStream / HTMLVideoElement(srcObject=MediaStream) 合并为一个 MediaStream
@@ -21211,11 +20804,11 @@ var DEFAULT_AUDIO_INFO = Object.freeze({
  * 不随源数量动态变化。
  *
  * 使用示例：
- *   const mixer = new MediaStreamMixer([localStream, remoteStream], { width: 1280, height: 720 });
- *   const output = await mixer.getMixedStream();
+ *   const composer = new MediaStreamComposer([localStream, remoteStream], { width: 1280, height: 720 });
+ *   const output = await composer.getMixedStream();
  *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
  */
-module.exports = class MediaStreamMixer {
+class MediaStreamComposer {
   // =========================================================================
   //  构造与初始化
   // =========================================================================
@@ -21261,7 +20854,7 @@ module.exports = class MediaStreamMixer {
     // -----------------------------------------------------------------------
 
     this._sourceRegistry = null;
-    var config = MixerConfig.create(options);
+    var config = MediaStreamComposerConfig.create(options);
     logger.debug(`constructor normalized config: ${JSON.stringify(config)}`);
 
     /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
@@ -21300,7 +20893,7 @@ module.exports = class MediaStreamMixer {
     this._config = config;
     this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX || this._config.outputMirrorX);
     this._slotMirrorXOverrides = Object.create(null);
-    this._domAdapter = new MixerDomAdapter({
+    this._domAdapter = new ComposerDomAdapter({
       config: this._config,
       logger: logger
     });
@@ -21466,7 +21059,7 @@ module.exports = class MediaStreamMixer {
    * @returns {string} 合法渲染模式
    */
   _normalizeRenderMode(value, fallback) {
-    return MixerConfig.normalizeRenderMode(value, fallback);
+    return MediaStreamComposerConfig.normalizeRenderMode(value, fallback);
   }
 
   /**
@@ -21478,7 +21071,7 @@ module.exports = class MediaStreamMixer {
    * @returns {number|null} 归一化后的整数，或 fallback
    */
   _normalizePositiveInteger(value, fallback) {
-    return MixerConfig.normalizePositiveInteger(value, fallback);
+    return MediaStreamComposerConfig.normalizePositiveInteger(value, fallback);
   }
 
   /**
@@ -21490,7 +21083,7 @@ module.exports = class MediaStreamMixer {
    * @returns {number|null} 归一化后的 slot，非法则返回 null
    */
   _normalizeSlot(value, index) {
-    return MixerConfig.normalizeSlot(value, index);
+    return MediaStreamComposerConfig.normalizeSlot(value, index);
   }
 
   /**
@@ -21502,7 +21095,7 @@ module.exports = class MediaStreamMixer {
    * @returns {number} 归一化后的增益值（>= 0）
    */
   _normalizeGain(value, fallback) {
-    return MixerConfig.normalizeGain(value, fallback);
+    return MediaStreamComposerConfig.normalizeGain(value, fallback);
   }
 
   /**
@@ -21516,7 +21109,7 @@ module.exports = class MediaStreamMixer {
    * @returns {Object} { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
    */
   _normalizeSourceOptions(optionsOrSlot, index) {
-    return MixerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+    return MediaStreamComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
   }
   _resolveMirrorX(source, slot) {
     var key = String(slot);
@@ -21621,7 +21214,7 @@ module.exports = class MediaStreamMixer {
   _assertNotDestroyed(methodName) {
     if (this._destroyed) {
       logger.warn(`Method called after stop(): ${methodName}`);
-      throw new Error(`MediaStreamMixer has been stopped. Create a new mixer before calling ${methodName}.`);
+      throw new Error(`MediaStreamComposer has been stopped. Create a new composer before calling ${methodName}.`);
     }
   }
 
@@ -21886,7 +21479,7 @@ module.exports = class MediaStreamMixer {
     }
 
     // ---- 最多 9 路源限制 ----
-    var maxSources = MixerConfig.getMaxSources();
+    var maxSources = MediaStreamComposerConfig.getMaxSources();
     var currentCount = this._sources.length;
     var available = Math.max(0, maxSources - currentCount);
     if (available <= 0) {
@@ -22243,8 +21836,208 @@ module.exports = class MediaStreamMixer {
   get _videoStream() {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
+}
+module.exports = MediaStreamComposer;
+},{"../../Logger":49,"./AudioMixer":50,"./LayoutEngine":51,"./MixerConfig":53,"./MixerDomAdapter":54,"./OutputStreamManager":55,"./RenderLoop":56,"./SourceRegistry":57,"./WatermarkManager":58}],53:[function(require,module,exports){
+"use strict";
+
+/**
+ * MixerConfig — 混流器配置归一化工具模块
+ *
+ * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
+ * 所有方法均为纯函数（无副作用），方便单元测试。
+ *
+ * @module MixerConfig
+ */
+
+var Logger = require('../../Logger');
+var logger = new Logger('MixerConfig');
+
+/** 最大参与方数（含视频和纯音频源） */
+var MAX_SOURCES = 9;
+
+/** 合法的渲染后端模式集合 */
+var VALID_RENDER_MODES = {
+  auto: true,
+  // 自动选择（优先 Worker WebGL2）
+  'worker-webgl2': true,
+  // Worker 线程 WebGL2
+  'main-webgl2': true,
+  // 主线程 WebGL2
+  'worker-2d': true,
+  // Worker 线程 Canvas2D
+  'main-2d': true // 主线程 Canvas2D（最兼容）
 };
-},{"../Logger":49,"./AudioMixer":52,"./LayoutEngine":53,"./MixerConfig":54,"./MixerDomAdapter":56,"./OutputStreamManager":57,"./RenderLoop":58,"./SourceRegistry":59,"./WatermarkManager":60}],56:[function(require,module,exports){
+
+/**
+ * 创建归一化的混流配置对象。
+ *
+ * @param {Object} [options={}] - 原始配置参数
+ * @returns {Object} 归一化后的配置对象
+ * @returns {number} returns.width - 输出宽度（默认 1280）
+ * @returns {number} returns.height - 输出高度（默认 720）
+ * @returns {number} returns.fps - 输出帧率（默认 15）
+ * @returns {string} returns.backgroundColor - 画布底色
+ * @returns {number} returns.audioGain - 全局默认音量增益
+ * @returns {string} returns.renderMode - 渲染后端选择
+ * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
+ * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
+ * @returns {number} returns.maxFrameQueue - 最大帧队列长度
+ * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
+ * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
+ * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
+ * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
+ * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
+ * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
+ */
+exports.create = function (options) {
+  options = options || {};
+  var config = {
+    width: exports.normalizePositiveInteger(options.width, 1280),
+    height: exports.normalizePositiveInteger(options.height, 720),
+    fps: exports.normalizePositiveInteger(options.fps, 15),
+    backgroundColor: options.backgroundColor || '#000',
+    audioGain: exports.normalizeGain(options.audioGain, 0.8),
+    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
+    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
+    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
+    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
+    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
+    mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
+    outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
+    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
+    enableInsertable: options.enableInsertable === true,
+    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
+    watermarks: options.watermarks || []
+  };
+  logger.debug(`Config created: ${JSON.stringify(config)}`);
+  return config;
+};
+
+/**
+ * 归一化渲染模式字符串。
+ * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
+ *
+ * @param {*} value - 原始传入的 renderMode
+ * @param {string} fallback - 非法或未传时使用的备选值
+ * @returns {string} 合法的渲染模式
+ */
+exports.normalizeRenderMode = function (value, fallback) {
+  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
+    return value;
+  }
+  logger.debug(`normalizeRenderMode fallback: value=${value} fallback=${fallback || 'auto'}`);
+  return fallback || 'auto';
+};
+
+/**
+ * 归一化为正整数。
+ * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
+ *
+ * @param {*} value - 原始输入值
+ * @param {number|null} fallback - 非法时使用的备选值
+ * @returns {number|null} 归一化后的正整数，或 fallback
+ */
+exports.normalizePositiveInteger = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  logger.debug(`normalizePositiveInteger fallback: value=${value} fallback=${fallback}`);
+  return fallback;
+};
+
+/**
+ * 归一化 slot 值。
+ * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
+ *
+ * @param {*} value - 原始 slot 值
+ * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+ * @returns {number|null} 归一化后的 slot，非法则返回 null
+ */
+exports.normalizeSlot = function (value, index) {
+  var numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    logger.debug(`normalizeSlot invalid: value=${value} index=${index}`);
+    return null;
+  }
+  return Math.max(0, Math.floor(numberValue)) + index;
+};
+
+/**
+ * 归一化音量增益值。
+ * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
+ *
+ * @param {*} value - 原始增益值
+ * @param {number} fallback - 非法时的备选值
+ * @returns {number} 归一化后的增益值（>= 0）
+ */
+exports.normalizeGain = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return numberValue;
+  }
+  logger.debug(`normalizeGain fallback: value=${value} fallback=${fallback}`);
+  return fallback;
+};
+
+/**
+ * 归一化水平镜像开关。
+ *
+ * @param {*} primary - 主参数（推荐 mirrorX）
+ * @param {*} legacy - 兼容参数（mirror）
+ * @param {boolean} fallback - 默认值
+ * @returns {boolean}
+ */
+exports.normalizeMirrorX = function (primary, legacy, fallback) {
+  if (typeof primary === 'boolean') {
+    return primary;
+  }
+  if (typeof legacy === 'boolean') {
+    return legacy;
+  }
+  return Boolean(fallback);
+};
+
+/**
+ * 统一 appendStream() 第二个参数的格式。
+ * 支持两种调用方式：
+ *   appendStream(stream, 3)               → 数字作为 slot
+ *   appendStream(stream, { slot, gain })  → 对象解构
+ *
+ * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
+ * @param {number} index - 数组索引，批量添加时 slot 递增
+ * @param {number} defaultGain - 未指定 gain 时使用的默认值
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
+ */
+/**
+ * 返回最大参与方数限制。
+ * @returns {number}
+ */
+exports.getMaxSources = function () {
+  return MAX_SOURCES;
+};
+exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
+  var options = {};
+  if (typeof optionsOrSlot === 'number') {
+    options.slot = exports.normalizeSlot(optionsOrSlot, index);
+  } else if (optionsOrSlot && typeof optionsOrSlot === 'object') {
+    if (typeof optionsOrSlot.slot === 'number') {
+      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
+    }
+    if (typeof optionsOrSlot.gain === 'number') {
+      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
+    }
+    if (typeof optionsOrSlot.mirrorX === 'boolean') {
+      options.mirrorX = optionsOrSlot.mirrorX;
+    } else if (typeof optionsOrSlot.mirror === 'boolean') {
+      options.mirrorX = optionsOrSlot.mirror;
+    }
+  }
+  logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
+  return options;
+};
+},{"../../Logger":49}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22386,7 +22179,7 @@ class MixerDomAdapter {
   }
 }
 module.exports = MixerDomAdapter;
-},{}],57:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -22997,7 +22790,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],58:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23012,10 +22805,10 @@ module.exports = OutputStreamManager;
  * @module RenderLoop
  */
 
-var RendererFactory = require('../MixerRenderer/RendererFactory');
-var MainCanvas2DRenderer = require('../MixerRenderer/MainCanvas2DRenderer');
-var MainWebGL2Renderer = require('../MixerRenderer/MainWebGL2Renderer');
-var WorkerRenderer = require('../MixerRenderer/WorkerRenderer');
+var RendererFactory = require('../Renderers/RendererFactory');
+var MainCanvas2DRenderer = require('../Renderers/MainCanvas2DRenderer');
+var MainWebGL2Renderer = require('../Renderers/MainWebGL2Renderer');
+var WorkerRenderer = require('../Renderers/WorkerRenderer');
 class RenderLoop {
   /**
    * @param {Object} options
@@ -23496,7 +23289,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../MixerRenderer/MainCanvas2DRenderer":62,"../MixerRenderer/MainWebGL2Renderer":63,"../MixerRenderer/RendererFactory":64,"../MixerRenderer/WorkerRenderer":65}],59:[function(require,module,exports){
+},{"../Renderers/MainCanvas2DRenderer":60,"../Renderers/MainWebGL2Renderer":61,"../Renderers/RendererFactory":62,"../Renderers/WorkerRenderer":63}],57:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23864,7 +23657,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],60:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24326,7 +24119,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],61:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24467,7 +24260,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],62:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24647,7 +24440,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":61}],63:[function(require,module,exports){
+},{"./BaseRenderer":59}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25041,7 +24834,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._activeMirrorX = null;
   }
 };
-},{"./BaseRenderer":61,"./helpers/color":66,"./helpers/gl":67}],64:[function(require,module,exports){
+},{"./BaseRenderer":59,"./helpers/color":64,"./helpers/gl":65}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25208,7 +25001,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":62,"./MainWebGL2Renderer":63,"./WorkerRenderer":65}],65:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":60,"./MainWebGL2Renderer":61,"./WorkerRenderer":63}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25790,7 +25583,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":61,"./workerScript":68}],66:[function(require,module,exports){
+},{"./BaseRenderer":59,"./workerScript":66}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25883,7 +25676,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],67:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25958,7 +25751,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],68:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25984,7 +25777,227 @@ exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
   return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
 };
-},{}],69:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
+"use strict";
+
+/**
+ * MediaStreamComposer public entry point.
+ */
+module.exports = require('./Core/MediaStreamComposer');
+},{"./Core/MediaStreamComposer":52}],68:[function(require,module,exports){
+"use strict";
+
+var EventEmitter = require('events').EventEmitter;
+var Logger = require('./Logger');
+var CRTC_C = require('./Constants');
+var SIPMessage = require('./SIPMessage');
+var Utils = require('./Utils');
+var RequestSender = require('./RequestSender');
+var Exceptions = require('./Exceptions');
+var URI = require('./URI');
+var logger = new Logger('Message');
+module.exports = class Message extends EventEmitter {
+  constructor(ua) {
+    super();
+    this._ua = ua;
+    this._request = null;
+    this._closed = false;
+    this._direction = null;
+    this._local_identity = null;
+    this._remote_identity = null;
+
+    // Whether an incoming message has been replied.
+    this._is_replied = false;
+
+    // Custom message empty object for high level use.
+    this._data = {};
+  }
+  get direction() {
+    return this._direction;
+  }
+  get local_identity() {
+    return this._local_identity;
+  }
+  get remote_identity() {
+    return this._remote_identity;
+  }
+  send(target, body, options = {}) {
+    var originalTarget = target;
+    if (target === undefined || body === undefined) {
+      throw new TypeError('Not enough arguments');
+    }
+
+    // Check target validity.
+    target = this._ua.normalizeTarget(target);
+    if (!target) {
+      throw new TypeError(`Invalid target: ${originalTarget}`);
+    }
+
+    // Get call options.
+    var extraHeaders = Utils.cloneArray(options.extraHeaders);
+    var eventHandlers = Utils.cloneObject(options.eventHandlers);
+    var contentType = options.contentType || 'text/plain';
+    var requestParams = {};
+    if (options.fromUserName) {
+      requestParams.from_uri = new URI('sip', options.fromUserName, this._ua.configuration.uri.host);
+      extraHeaders.push(`P-Preferred-Identity: ${this._ua.configuration.uri.toString()}`);
+    }
+    if (options.fromDisplayName) {
+      requestParams.from_display_name = options.fromDisplayName;
+    }
+
+    // Set event handlers.
+    for (var event in eventHandlers) {
+      if (Object.prototype.hasOwnProperty.call(eventHandlers, event)) {
+        this.on(event, eventHandlers[event]);
+      }
+    }
+    extraHeaders.push(`Content-Type: ${contentType}`);
+    this._request = new SIPMessage.OutgoingRequest(CRTC_C.MESSAGE, target, this._ua, requestParams, extraHeaders);
+    if (body) {
+      this._request.body = body;
+    }
+    var request_sender = new RequestSender(this._ua, this._request, {
+      onRequestTimeout: () => {
+        this._onRequestTimeout();
+      },
+      onTransportError: () => {
+        this._onTransportError();
+      },
+      onReceiveResponse: response => {
+        this._receiveResponse(response);
+      }
+    });
+    this._newMessage('local', this._request);
+    request_sender.send();
+  }
+  init_incoming(request) {
+    this._request = request;
+    this._newMessage('remote', request);
+
+    // Reply with a 200 OK if the user didn't reply.
+    if (!this._is_replied) {
+      this._is_replied = true;
+      request.reply(200);
+    }
+    this._close();
+  }
+
+  /**
+   * Accept the incoming Message
+   * Only valid for incoming Messages
+   */
+  accept(options = {}) {
+    var extraHeaders = Utils.cloneArray(options.extraHeaders);
+    var body = options.body;
+    if (this._direction !== 'incoming') {
+      throw new Exceptions.NotSupportedError('"accept" not supported for outgoing Message');
+    }
+    if (this._is_replied) {
+      throw new Error('incoming Message already replied');
+    }
+    this._is_replied = true;
+    this._request.reply(200, null, extraHeaders, body);
+  }
+
+  /**
+   * Reject the incoming Message
+   * Only valid for incoming Messages
+   */
+  reject(options = {}) {
+    var status_code = options.status_code || 480;
+    var reason_phrase = options.reason_phrase;
+    var extraHeaders = Utils.cloneArray(options.extraHeaders);
+    var body = options.body;
+    if (this._direction !== 'incoming') {
+      throw new Exceptions.NotSupportedError('"reject" not supported for outgoing Message');
+    }
+    if (this._is_replied) {
+      throw new Error('incoming Message already replied');
+    }
+    if (status_code < 300 || status_code >= 700) {
+      throw new TypeError(`Invalid status_code: ${status_code}`);
+    }
+    this._is_replied = true;
+    this._request.reply(status_code, reason_phrase, extraHeaders, body);
+  }
+  _receiveResponse(response) {
+    if (this._closed) {
+      return;
+    }
+    switch (true) {
+      case /^1[0-9]{2}$/.test(response.status_code):
+        // Ignore provisional responses.
+        break;
+      case /^2[0-9]{2}$/.test(response.status_code):
+        this._succeeded('remote', response);
+        break;
+      default:
+        {
+          var cause = Utils.sipErrorCause(response.status_code);
+          this._failed('remote', response, cause);
+          break;
+        }
+    }
+  }
+  _onRequestTimeout() {
+    if (this._closed) {
+      return;
+    }
+    this._failed('system', null, CRTC_C.causes.REQUEST_TIMEOUT);
+  }
+  _onTransportError() {
+    if (this._closed) {
+      return;
+    }
+    this._failed('system', null, CRTC_C.causes.CONNECTION_ERROR);
+  }
+  _close() {
+    this._closed = true;
+    this._ua.destroyMessage(this);
+  }
+
+  /**
+   * Internal Callbacks
+   */
+
+  _newMessage(originator, request) {
+    if (originator === 'remote') {
+      this._direction = 'incoming';
+      this._local_identity = request.to;
+      this._remote_identity = request.from;
+    } else if (originator === 'local') {
+      this._direction = 'outgoing';
+      this._local_identity = request.from;
+      this._remote_identity = request.to;
+    }
+    this._ua.newMessage(this, {
+      originator,
+      message: this,
+      request
+    });
+  }
+  _failed(originator, response, cause) {
+    logger.debug('MESSAGE failed');
+    this._close();
+    logger.debug('emit "failed"');
+    this.emit('failed', {
+      originator,
+      response: response || null,
+      cause
+    });
+  }
+  _succeeded(originator, response) {
+    logger.debug('MESSAGE succeeded');
+    this._close();
+    logger.debug('emit "succeeded"');
+    this.emit('succeeded', {
+      originator,
+      response
+    });
+  }
+};
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":92}],69:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -26279,7 +26292,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":101}],71:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":92}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -26565,7 +26578,7 @@ var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
-var Mixer = require('./Mixer');
+var Mixer = require('./MediaStreamComposer');
 var AiNSEngine = require('./AINoiseSuppression/index.js');
 var logger = new Logger('RTCSession');
 var BFCPUser = BFCPLib.User;
@@ -26850,6 +26863,9 @@ module.exports = class RTCSession extends EventEmitter {
     return this._status;
   }
   getMixer() {
+    return this._mixer;
+  }
+  getMediaStreamComposer() {
     return this._mixer;
   }
   isInProgress() {
@@ -32645,7 +32661,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./AINoiseSuppression/index.js":5,"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./Mixer":51,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":102,"events":101,"sdp-transform":110}],74:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./MediaStreamComposer":67,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":93,"events":92,"sdp-transform":101}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -32784,7 +32800,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":88,"events":101}],75:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":88,"events":92}],75:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -32865,7 +32881,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Exceptions":46,"../Utils":88,"events":101}],76:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Utils":88,"events":92}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -33036,7 +33052,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":88,"events":101}],78:[function(require,module,exports){
+},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":88,"events":92}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34045,7 +34061,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":88,"sdp-transform":110}],81:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":88,"sdp-transform":101}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34519,7 +34535,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":42,"./Logger":49,"./Utils":88,"events":101}],83:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./Utils":88,"events":92}],83:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -35130,7 +35146,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Timers":83,"events":101}],85:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Timers":83,"events":92}],85:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -36563,7 +36579,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":50,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":99,"events":101,"jsencrypt":106}],87:[function(require,module,exports){
+},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":68,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":90,"events":92,"jsencrypt":97}],87:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -38602,1914 +38618,6 @@ exports.disableVideoInSdp = sdp => {
   return newSdp;
 };
 },{"./Constants":42,"./Grammar":47,"./URI":87}],89:[function(require,module,exports){
-(function (global){(function (){
-"use strict";
-
-/**
- * 创建一个基于 Web Worker 的 Timer
- * 作用：避免主线程 setTimeout 在页面卡顿时不准的问题
- */
-exports.createTimerWorker = () => {
-  var callbacks = new Map();
-  if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
-    var root = typeof window !== 'undefined' ? window : global;
-    var timeoutIds = new Set();
-    return {
-      setTimeout(callback, timeoutMs) {
-        var timeoutId = root.setTimeout(() => {
-          timeoutIds.delete(timeoutId);
-          callback();
-        }, timeoutMs);
-        timeoutIds.add(timeoutId);
-        return timeoutId;
-      },
-      clearTimeout(timeoutId) {
-        if (!timeoutIds.has(timeoutId)) {
-          return;
-        }
-        root.clearTimeout(timeoutId);
-        timeoutIds.delete(timeoutId);
-      },
-      terminate() {
-        timeoutIds.forEach(timeoutId => root.clearTimeout(timeoutId));
-        timeoutIds.clear();
-      }
-    };
-  }
-
-  /**
-   * Worker 内运行的代码
-   * 负责真正执行 setTimeout
-   */
-  var code = `
-    const timeoutIds = new Map();
-
-    self.onmessage = (event) =>
-    {
-      if (event.data.timeoutMs !== undefined)
-      {
-        const timeoutId = self.setTimeout(() =>
-        {
-          self.postMessage({ callbackId: event.data.callbackId });
-          timeoutIds.delete(event.data.callbackId);
-        }, event.data.timeoutMs);
-
-        timeoutIds.set(event.data.callbackId, timeoutId);
-      }
-      else
-      {
-        const timeoutId = timeoutIds.get(event.data.callbackId);
-
-        self.clearTimeout(timeoutId);
-        timeoutIds.delete(event.data.callbackId);
-      }
-    }
-  `;
-  var blob = new Blob([code], {
-    type: 'application/javascript'
-  });
-  var url = URL.createObjectURL(blob);
-  var worker = new Worker(url);
-  URL.revokeObjectURL(url);
-  worker.onmessage = event => {
-    var callback = callbacks.get(event.data.callbackId);
-    if (!callback) {
-      return;
-    }
-    callbacks.delete(event.data.callbackId);
-    callback();
-  };
-  var nextCallbackId = 1;
-
-  /**
-   * 在 Web Worker 中设置一个延时回调
-   * @param {Function} callback - 延时后执行的回调函数
-   * @param {number} timeoutMs - 延时时间（毫秒）
-   * @returns {number} 回调 ID，可用于取消该延时
-   */
-  function setTimeout(callback, timeoutMs) {
-    var callbackId = nextCallbackId++;
-    callbacks.set(callbackId, callback);
-    worker.postMessage({
-      callbackId,
-      timeoutMs
-    });
-    return callbackId;
-  }
-
-  /**
-   * 取消通过 setTimeout 设置的延时回调
-   * @param {number} callbackId - 要取消的回调 ID
-   */
-  function clearTimeout(callbackId) {
-    if (!callbacks.has(callbackId)) {
-      return;
-    }
-    worker.postMessage({
-      callbackId
-    });
-    callbacks.delete(callbackId);
-  }
-
-  /**
-   * 终止 Timer Worker 并清理所有资源
-   */
-  function terminate() {
-    callbacks.clear();
-    worker.terminate();
-  }
-  return {
-    setTimeout,
-    clearTimeout,
-    terminate
-  };
-};
-}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],90:[function(require,module,exports){
-"use strict";
-
-var {
-  buildWebGL2Pipeline
-} = require('./pipelines/webgl2/webgl2Pipeline.js');
-var {
-  createTimerWorker
-} = require('./helpers/timerHelper.js');
-var Logger = require('../Logger');
-var logger = new Logger('VirtualBackground');
-var DEFAULT_CONFIG = {
-  video: {
-    width: 1280,
-    height: 720,
-    targetFps: 15,
-    mirror: false
-  },
-  segmentation: {
-    backend: 'wasmSimd',
-    inputResolution: '160x96',
-    model: 'meet',
-    pipeline: 'webgl2',
-    targetFps: 15
-  },
-  postProcessing: {
-    smoothSegmentationMask: true,
-    coverage: [0.5, 0.75],
-    lightWrapping: 0.2,
-    blendMode: 'screen',
-    jointBilateralFilter: {
-      sigmaSpace: 3,
-      sigmaColor: 0.2
-    }
-  }
-};
-module.exports = class VirtualBackgroundEngine {
-  /**
-   * 创建虚拟背景引擎实例
-   * @param {Object} options - 可选的配置选项
-   */
-  constructor(options = {}) {
-    logger.debug('new VirtualBackgroundEngine');
-    this.config = this.mergeConfig(options);
-    this.pipeline = null;
-    this.tfs = null;
-    this.timerWorker = createTimerWorker();
-    this.inputStream = null;
-    this.outputStream = null;
-    this.canvas = null;
-    this.videoEl = null;
-    this.backgroundEl = null;
-    this.isRunning = false;
-    this.renderTimeoutId = null;
-    this.animationFrameId = null;
-    this.solidColorCanvas = null;
-    this._cachedSolidColor = null;
-    this._cachedSolidColorDataUrl = null;
-    this.lastFrameTime = 0; // 上一帧的时间戳，用于帧率控制
-    this.isRendering = false; // 渲染锁，防止并发渲染
-  }
-
-  /**
-   * 清理当前 pipeline 资源
-   */
-  _cleanUpPipeline() {
-    if (this.pipeline && this.pipeline.cleanUp) {
-      this.pipeline.cleanUp(); // 释放所有 WebGL 资源
-    }
-    this.pipeline = null;
-
-    // 清理背景图片元素，避免内存泄漏
-    if (this.backgroundEl) {
-      this.backgroundEl.onload = null;
-      this.backgroundEl.onerror = null;
-      this.backgroundEl.src = '';
-      this.backgroundEl = null;
-    }
-  }
-
-  /**
-   * 合并用户配置与默认配置
-   * @param {Object} options - 用户提供的配置选项
-   * @returns {Object} 合并后的配置对象
-   */
-  mergeConfig(options) {
-    options = options || {};
-    logger.debug(`mergeConfig() ${JSON.stringify(options)}`);
-
-    // 深拷贝默认配置，避免污染原始配置
-    var config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-
-    // 递归合并用户配置
-    if (options.video) {
-      Object.assign(config.video, options.video);
-    }
-    if (options.segmentation) {
-      Object.assign(config.segmentation, options.segmentation);
-    }
-    if (options.postProcessing) {
-      var postProcessing = Object.assign({}, options.postProcessing);
-      var jointBilateralFilter = postProcessing.jointBilateralFilter;
-      delete postProcessing.jointBilateralFilter;
-      Object.assign(config.postProcessing, postProcessing);
-      // 处理嵌套对象
-      if (jointBilateralFilter) {
-        Object.assign(config.postProcessing.jointBilateralFilter, jointBilateralFilter);
-      }
-    }
-    return config;
-  }
-
-  /**
-   * 初始化虚拟背景引擎
-   * @param {Object} params - 初始化参数
-   * @param {MediaStream} params.inputStream - 输入的媒体流（必需）
-   * @param {string} params.modelPath - 模型文件路径（必需）
-   * @param {HTMLCanvasElement} [params.canvas] - 可选的画布元素
-   */
-  async init({
-    inputStream,
-    modelPath,
-    canvas
-  }) {
-    logger.debug('init()');
-    if (!inputStream) {
-      logger.error('inputStream required');
-      throw new Error('inputStream required');
-    }
-    if (!modelPath) {
-      logger.error('modelPath required');
-      throw new Error('modelPath required');
-    }
-    this.inputStream = inputStream;
-    this.canvas = canvas || document.createElement('canvas');
-    this.canvas.width = this.config.video.width;
-    this.canvas.height = this.config.video.height;
-    try {
-      await this.loadModel(modelPath);
-      await this.createVideoElement();
-      this.createOutputStream();
-    } catch (err) {
-      this.destroy();
-      logger.error('init error: ', err.message);
-      throw err;
-    }
-  }
-
-  /**
-   * 加载 TFLite SIMD 分割模型
-   * @param {string} modelPath - 模型文件路径
-   * @returns {Promise<void>}
-   */
-  async loadModel(modelPath) {
-    logger.debug(`loadModel() ${modelPath}`);
-    if (typeof createTFLiteSIMDModule === 'undefined') {
-      logger.error('TFLite SIMD not loaded');
-      throw new Error('TFLite SIMD not loaded');
-    }
-
-    // eslint-disable-next-line no-undef
-    this.tfs = await createTFLiteSIMDModule();
-    var modelResponse;
-    try {
-      modelResponse = await fetch(modelPath);
-      if (!modelResponse.ok) {
-        logger.error(`HTTP ${modelResponse.status}: ${modelResponse.statusText}`);
-        throw new Error(`HTTP ${modelResponse.status}: ${modelResponse.statusText}`);
-      }
-    } catch (err) {
-      logger.error(`Failed to fetch model: ${err.message}`);
-      throw new Error(`Failed to fetch model: ${err.message}`);
-    }
-    var model = await modelResponse.arrayBuffer();
-    var bufferOffset = await this.tfs._getModelBufferMemoryOffset();
-    this.tfs.HEAPU8.set(new Uint8Array(model), bufferOffset);
-    this.tfs._loadModel(model.byteLength);
-  }
-
-  /**
-   * 创建视频元素并播放输入流
-   * @returns {Promise<void>}
-   */
-  async createVideoElement() {
-    logger.debug('createVideoElement()');
-    this.videoEl = document.createElement('video');
-    this.videoEl.muted = true;
-    this.videoEl.autoplay = true;
-    this.videoEl.playsInline = true;
-    this.videoEl.srcObject = this.inputStream;
-    try {
-      await this.videoEl.play();
-    } catch (err) {
-      logger.error(`Video play failed: ${err.message}`);
-      throw new Error(`Video play failed: ${err.message}`);
-    }
-  }
-
-  /**
-   * 设置 WebGL2 处理管道
-   * @param {string} type - 背景类型 ('image' | 'blur')
-   * @param {string} src - 背景图片地址（可选）
-   * @returns {Promise<void>}
-   */
-  async setupPipeline(type, src) {
-    logger.debug(`setupPipeline() ${type}`);
-    this._cleanUpPipeline();
-    return new Promise((resolve, reject) => {
-      var backgroundEl = document.createElement('img');
-      backgroundEl.onerror = () => {
-        logger.warn('load image error.');
-        reject(new Error('Failed to load background image'));
-      };
-      backgroundEl.onload = () => {
-        try {
-          var sourcePlayback = {
-            width: this.config.video.width,
-            height: this.config.video.height,
-            htmlElement: this.videoEl
-          };
-          this.backgroundEl = backgroundEl;
-          this.pipeline = buildWebGL2Pipeline(sourcePlayback, this.backgroundEl, {
-            type: type,
-            mirror: this.config.video.mirror
-          }, this.config.segmentation, this.canvas, this.tfs, () => {});
-          this.pipeline.updatePostProcessingConfig(this.config.postProcessing);
-          resolve();
-        } catch (err) {
-          logger.error(`setupPipeline error: ${err.message}`);
-          reject(err);
-        }
-      };
-      backgroundEl.src = src || 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
-    });
-  }
-
-  /**
-   * 创建输出媒体流
-   * 使用画布捕获视频帧生成输出流
-   */
-  createOutputStream() {
-    logger.debug('createOutputStream()');
-    var stream = this.canvas.captureStream(this.config.video.targetFps);
-    this.outputStream = stream;
-  }
-
-  /**
-   * 获取输出媒体流
-   * @returns {MediaStream} 处理后的输出媒体流
-   */
-  getOutputStream() {
-    logger.debug('getOutputStream()');
-    return this.outputStream;
-  }
-
-  /**
-   * 设置输出画面是否水平镜像
-   * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
-   */
-  setMirror(mirror) {
-    logger.debug(`setMirror() ${mirror}`);
-    this.config.video.mirror = Boolean(mirror);
-    if (this.pipeline && this.pipeline.updateMirror) {
-      this.pipeline.updateMirror(this.config.video.mirror);
-    }
-  }
-
-  /**
-   * 启动虚拟背景渲染循环
-   * 开始处理视频帧并应用虚拟背景效果
-   */
-  start() {
-    logger.debug(`start() ${this.isRunning}`);
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.lastFrameTime = 0;
-    this.loop = this.loop.bind(this);
-    if (this.isRunning) {
-      this.animationFrameId = requestAnimationFrame(this.loop);
-    }
-  }
-
-  /**
-   * 停止虚拟背景渲染循环
-   * 释放动画帧和定时器资源
-   */
-  stop() {
-    logger.debug('stop()');
-    this.isRunning = false;
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-    if (this.renderTimeoutId) {
-      this.timerWorker.clearTimeout(this.renderTimeoutId);
-      this.renderTimeoutId = null;
-    }
-  }
-
-  /**
-   * 渲染循环 - 递归调用以持续处理视频帧
-   * @param {number} now - 当前时间戳（毫秒）
-   */
-  async loop(now) {
-    if (!this.isRunning) return;
-    var interval = 1000 / this.config.video.targetFps;
-    if (now - this.lastFrameTime >= interval) {
-      this.lastFrameTime = now;
-      if (this.isRendering) {
-        this.animationFrameId = requestAnimationFrame(this.loop);
-        return;
-      }
-      this.isRendering = true;
-      try {
-        this.pipeline && (await this.pipeline.render());
-      } catch (err) {
-        logger.error(`Render error: ${err.message}`);
-      } finally {
-        this.isRendering = false;
-      }
-    }
-    if (this.isRunning) {
-      this.animationFrameId = requestAnimationFrame(this.loop);
-    }
-  }
-
-  /**
-   * 设置背景图片
-   * 异步加载图片并更新背景元素
-   * @param {string} url - 背景图片的 URL 地址
-   * @returns {Promise<void>} 图片加载完成后 resolve，加载失败则 reject
-   */
-  async setBackgroundImage(url) {
-    logger.debug(`setBackgroundImage() ${url}`);
-
-    // 参数验证
-    if (typeof url !== 'string' || !url.trim()) {
-      throw new Error('Invalid background image URL');
-    }
-    if (url === 'none') {
-      this.clearBackground();
-      return;
-    }
-    return this.setupPipeline('image', url);
-  }
-
-  /**
-   * 清除虚拟背景，输出原始视频流
-   * 关闭所有虚拟背景效果，通过 WebGL2 直通管道直接将原始摄像头画面输出到画布
-   */
-  clearBackground() {
-    logger.debug('clearBackground()');
-    this._cleanUpPipeline();
-    var gl = this.canvas.getContext('webgl2');
-    if (!gl) {
-      throw new Error('WebGL2 not available');
-    }
-
-    // 直通着色器：直接将视频帧渲染到画布，不做任何分割/背景处理
-    var vsSrc = `#version 300 es
-      in vec2 a_position;
-      in vec2 a_texCoord;
-      out vec2 v_texCoord;
-      void main() {
-        gl_Position = vec4(a_position, 0.0, 1.0);
-        v_texCoord = a_texCoord;
-      }
-    `;
-    var fsSrc = `#version 300 es
-      precision highp float;
-      in vec2 v_texCoord;
-      out vec4 outColor;
-      uniform sampler2D u_inputFrame;
-      void main() {
-        outColor = texture(u_inputFrame, v_texCoord);
-      }
-    `;
-    var vs = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vs, vsSrc);
-    gl.compileShader(vs);
-    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
-      throw new Error(`Passthrough VS compile failed: ${gl.getShaderInfoLog(vs)}`);
-    }
-    var fs = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fs, fsSrc);
-    gl.compileShader(fs);
-    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
-      throw new Error(`Passthrough FS compile failed: ${gl.getShaderInfoLog(fs)}`);
-    }
-    var program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      throw new Error(`Passthrough program link failed: ${gl.getProgramInfoLog(program)}`);
-    }
-    var vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
-    var posBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    var posLoc = gl.getAttribLocation(program, 'a_position');
-    gl.enableVertexAttribArray(posLoc);
-    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-    var texBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]), gl.STATIC_DRAW);
-    var texLoc = gl.getAttribLocation(program, 'a_texCoord');
-    gl.enableVertexAttribArray(texLoc);
-    gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.useProgram(program);
-    gl.uniform1i(gl.getUniformLocation(program, 'u_inputFrame'), 0);
-
-    // 使用局部变量捕获，避免方法简写中 this 指向问题
-    var {
-      videoEl,
-      canvas
-    } = this;
-    this.pipeline = {
-      async render() {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, videoEl);
-        gl.bindVertexArray(vao);
-        gl.useProgram(program);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      },
-      updatePostProcessingConfig() {},
-      updateMirror() {},
-      cleanUp() {
-        gl.deleteTexture(texture);
-        gl.deleteBuffer(texBuf);
-        gl.deleteBuffer(posBuf);
-        gl.deleteShader(vs);
-        gl.deleteShader(fs);
-        gl.deleteProgram(program);
-        gl.deleteVertexArray(vao);
-      }
-    };
-  }
-
-  /**
-   * 设置模糊背景效果
-   * 使用高斯模糊对原始视频背景进行模糊处理
-   * @param {number} [radius=20] - 模糊半径，值越大模糊程度越高
-   * @returns {Promise<void>}
-   */
-  async setBlurBackground(radius) {
-    logger.debug('setBlurBackground() ', radius);
-    await this.setupPipeline('blur');
-    radius = typeof radius === 'number' ? radius : 20;
-
-    // 添加范围验证
-    if (radius < 0 || radius > 100) {
-      logger.warn('blur radius out of range, using default value 20');
-      radius = 20;
-    }
-    this.pipeline.updatePostProcessingConfig(Object.assign({}, this.config.postProcessing, {
-      blurRadius: radius
-    }));
-  }
-
-  /**
-   * 设置纯色背景
-   * 创建一个纯色画布作为虚拟背景
-   * @param {string} [color='#00ff00'] - 背景颜色，默认为绿色
-   * @returns {Promise<void>}
-   */
-  async setSolidColor(color = '#00ff00') {
-    logger.debug(`setSolidColor() ${color}`);
-
-    // 参数验证：支持 #RRGGBB 或 rgba(r,g,b,a) 格式
-    var isValidColor = /^#[0-9A-Fa-f]{6}$/.test(color) || /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/.test(color);
-    if (!isValidColor) {
-      throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
-    }
-
-    // 检查缓存，如果颜色相同且 pipeline 已初始化，直接更新背景
-    if (this._cachedSolidColor === color && this._cachedSolidColorDataUrl && this.pipeline) {
-      this.backgroundEl.src = this._cachedSolidColorDataUrl;
-      return;
-    }
-
-    // 创建或复用纯色画布
-    if (!this.solidColorCanvas) {
-      this.solidColorCanvas = document.createElement('canvas');
-      this.solidColorCanvas.width = 16;
-      this.solidColorCanvas.height = 16;
-    }
-    var ctx = this.solidColorCanvas.getContext('2d');
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, 16, 16);
-
-    // 更新缓存
-    this._cachedSolidColorDataUrl = this.solidColorCanvas.toDataURL();
-    this._cachedSolidColor = color;
-    return this.setupPipeline('image', this._cachedSolidColorDataUrl);
-  }
-
-  /**
-   * 销毁虚拟背景引擎实例
-   * 释放所有资源，包括 Web Worker、模型内存、媒体流等
-   */
-  destroy() {
-    logger.debug('destroy()');
-    this.stop();
-
-    // 清理 pipeline 和背景元素
-    this._cleanUpPipeline();
-
-    // 清理纯色背景画布
-    if (this.solidColorCanvas) {
-      this.solidColorCanvas = null;
-    }
-
-    // 清理缓存属性
-    this._cachedSolidColor = null;
-    this._cachedSolidColorDataUrl = null;
-
-    // 释放模型内存
-    if (this.tfs && this.tfs._freeModelBuffer) {
-      this.tfs._freeModelBuffer();
-    }
-
-    // 终止定时器 Worker
-    if (this.timerWorker) {
-      this.timerWorker.terminate();
-    }
-
-    // 停止输入流的所有轨道
-    if (this.inputStream) {
-      this.inputStream.getTracks().forEach(t => t.stop());
-    }
-
-    // 清理视频元素
-    if (this.videoEl) {
-      this.videoEl.srcObject = null;
-      this.videoEl.load();
-    }
-
-    // 重置所有引用
-    this.pipeline = null;
-    this.tfs = null;
-    this.inputStream = null;
-    this.outputStream = null;
-    this.canvas = null;
-    this.videoEl = null;
-    this.timerWorker = null;
-  }
-};
-},{"../Logger":49,"./helpers/timerHelper.js":89,"./pipelines/webgl2/webgl2Pipeline.js":97}],91:[function(require,module,exports){
-"use strict";
-
-exports.glsl = String.raw;
-
-/**
- * 创建 WebGL 程序对象
- * @param {WebGLRenderingContext} gl - WebGL 渲染上下文
- * @param {WebGLShader} vertexShader - 顶点着色器
- * @param {WebGLShader} fragmentShader - 片元着色器
- * @returns {WebGLProgram} 创建的 WebGL 程序对象
- */
-function createProgram(gl, vertexShader, fragmentShader) {
-  var program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw new Error(`Could not link WebGL program: ${gl.getProgramInfoLog(program)}`);
-  }
-  return program;
-}
-
-/**
- * 异步获取 WebGL 缓冲区数据
- * 通过 GPU 同步机制确保数据在读取前已完全写入
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} target - 缓冲区目标（如 gl.ARRAY_BUFFER）
- * @param {WebGLBuffer} buffer - WebGL 缓冲区对象
- * @param {number} srcByteOffset - 源数据的字节偏移量
- * @param {ArrayBufferView} dstBuffer - 目标缓冲区（用于存储读取的数据）
- * @param {number} dstOffset - 目标缓冲区的写入偏移量
- * @param {number} length - 要读取的数据长度
- * @returns {Promise<void>}
- */
-async function getBufferSubDataAsync(gl, target, buffer, srcByteOffset, dstBuffer, dstOffset, length) {
-  // 创建 GPU 同步对象，用于确保 GPU 命令执行完成
-  var sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-  // 刷新 GPU 命令队列，确保所有待执行的命令已发送到 GPU
-  gl.flush();
-  // 异步等待 GPU 完成所有命令
-  var res = await clientWaitAsync(gl, sync);
-
-  // 删除同步对象，释放资源
-  gl.deleteSync(sync);
-
-  // 如果等待未失败，则读取缓冲区数据
-  if (res !== gl.WAIT_FAILED) {
-    // 绑定目标缓冲区
-    gl.bindBuffer(target, buffer);
-    // 从缓冲区读取数据到目标数组
-    gl.getBufferSubData(target, srcByteOffset, dstBuffer, dstOffset, length);
-    // 解除缓冲区绑定
-    gl.bindBuffer(target, null);
-  }
-}
-
-/**
- * 异步等待 GPU 同步对象完成
- * 使用 requestAnimationFrame 轮询 GPU 命令完成状态
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {WebGLSync} sync - GPU 同步对象
- * @returns {Promise<number>} 返回 Promise，解析为 GPU 等待结果状态
- */
-function clientWaitAsync(gl, sync) {
-  return new Promise(resolve => {
-    function test() {
-      // 查询同步对象的状态
-      // 参数：sync 对象, flags=0, timeout=0（立即返回，不阻塞）
-      var res = gl.clientWaitSync(sync, 0, 0);
-
-      // 如果等待失败（如 sync 对象无效），直接 resolve
-      if (res === gl.WAIT_FAILED) {
-        resolve(res);
-        return;
-      }
-      // 如果超时（GPU 尚未完成），使用 requestAnimationFrame 延迟后重试
-      if (res === gl.TIMEOUT_EXPIRED) {
-        requestAnimationFrame(test);
-        return;
-      }
-      // GPU 已完成工作，resolve 结果
-      resolve(res);
-    }
-    // 立即开始第一次检查
-    requestAnimationFrame(test);
-  });
-}
-
-/**
- * 创建并配置管道阶段的 WebGL 程序
- * 包含顶点着色器、片元着色器，并设置顶点属性和坐标缓冲区
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {WebGLShader} vertexShader - 顶点着色器
- * @param {WebGLShader} fragmentShader - 片元着色器
- * @param {WebGLBuffer} positionBuffer - 顶点位置缓冲区
- * @param {WebGLBuffer} texCoordBuffer - 纹理坐标缓冲区
- * @returns {WebGLProgram} 配置完成的 WebGL 程序对象
- */
-exports.createPiplelineStageProgram = (gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer) => {
-  // 创建 WebGL 程序并附加着色器进行链接
-  var program = createProgram(gl, vertexShader, fragmentShader);
-  // 获取顶点着色器中属性位置（a_position：顶点坐标）
-  var positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
-
-  // 启用顶点属性数组，以便 GPU 可以访问属性数据
-  gl.enableVertexAttribArray(positionAttributeLocation);
-  // 绑定顶点位置缓冲区
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  // 设置顶点属性指针：2个分量（x, y），FLOAT类型，不归一化，步长为0，偏移为0
-  gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-
-  // 获取顶点着色器中属性位置（a_texCoord：纹理坐标）
-  var texCoordAttributeLocation = gl.getAttribLocation(program, 'a_texCoord');
-
-  // 启用纹理坐标属性数组
-  gl.enableVertexAttribArray(texCoordAttributeLocation);
-  // 绑定纹理坐标缓冲区
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  // 设置纹理坐标属性指针：2个分量（u, v），FLOAT类型
-  gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-
-  // 返回配置完成的程序对象
-  return program;
-};
-
-/**
- * 编译 WebGL 着色器
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} shaderType - 着色器类型（如 gl.VERTEX_SHADER 或 gl.FRAGMENT_SHADER）
- * @param {string} shaderSource - 着色器源代码
- * @returns {WebGLShader} 编译完成的着色器对象
- */
-exports.compileShader = (gl, shaderType, shaderSource) => {
-  var shader = gl.createShader(shaderType);
-  gl.shaderSource(shader, shaderSource);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(`Could not compile shader: ${gl.getShaderInfoLog(shader)}`);
-  }
-  return shader;
-};
-
-/**
- * 创建 WebGL 2D 纹理
- * 配置纹理参数并分配 GPU 内存
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} internalformat - 纹理内部格式（如 gl.R8, gl.RGBA8 等）
- * @param {number} width - 纹理宽度
- * @param {number} height - 纹理高度
- * @param {number} [minFilter=gl.NEAREST] - 缩小过滤模式
- * @param {number} [magFilter=gl.NEAREST] - 放大过滤模式
- * @returns {WebGLTexture} 创建的纹理对象
- */
-exports.createTexture = (gl, internalformat, width, height, minFilter = gl.NEAREST, magFilter = gl.NEAREST) => {
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-  gl.texStorage2D(gl.TEXTURE_2D, 1, internalformat, width, height);
-  return texture;
-};
-
-/**
- * 异步读取像素数据
- * 使用 PIXEL_PACK_BUFFER 和 GPU 同步机制确保读取完成
- * @param {WebGL2RenderingContext} gl - WebGL2 渲染上下文
- * @param {number} x - 读取区域的起始 x 坐标
- * @param {number} y - 读取区域的起始 y 坐标
- * @param {number} width - 读取区域的宽度
- * @param {number} height - 读取区域的高度
- * @param {number} format - 像素数据格式（如 gl.RED, gl.RGBA 等）
- * @param {number} type - 像素数据类型（如 gl.UNSIGNED_BYTE, gl.FLOAT 等）
- * @param {ArrayBufferView} dest - 目标缓冲区，用于存储读取的像素数据
- * @returns {Promise<ArrayBufferView>} 返回包含像素数据的缓冲区
- */
-exports.readPixelsAsync = async (gl, x, y, width, height, format, type, dest) => {
-  var buf = gl.createBuffer();
-  gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buf);
-  gl.bufferData(gl.PIXEL_PACK_BUFFER, dest.byteLength, gl.STREAM_READ);
-  gl.readPixels(x, y, width, height, format, type, 0);
-  gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-  await getBufferSubDataAsync(gl, gl.PIXEL_PACK_BUFFER, buf, 0, dest);
-  gl.deleteBuffer(buf);
-  return dest;
-};
-},{}],92:[function(require,module,exports){
-"use strict";
-
-exports.__esModule = true;
-exports.buildBackgroundBlurStage = buildBackgroundBlurStage;
-var _webglHelper = require("../helpers/webglHelper.js");
-function buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, mirror) {
-  var blurPass = buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas);
-  var blendPass = buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror);
-  function render() {
-    blurPass.render();
-    blendPass.render();
-  }
-  function updateCoverage(coverage) {
-    blendPass.updateCoverage(coverage);
-  }
-  function updateBlurRadius(radius) {
-    blurPass.updateBlurRadius(radius);
-  }
-  function updateMirror(shouldMirror) {
-    blendPass.updateMirror(shouldMirror);
-  }
-  function cleanUp() {
-    blendPass.cleanUp();
-    blurPass.cleanUp();
-  }
-  return {
-    render,
-    updateCoverage,
-    updateBlurRadius,
-    updateMirror,
-    cleanUp
-  };
-}
-function buildBlurPass(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas) {
-  var fragmentShaderSource = (0, _webglHelper.glsl)`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputFrame;
-    uniform sampler2D u_personMask;
-    uniform vec2 u_texelSize;
-    uniform float u_radiusScale;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    const float offset[5] = float[](0.0, 1.0, 2.0, 3.0, 4.0);
-    const float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216,
-      0.0540540541, 0.0162162162);
-
-    void main() {
-      vec4 centerColor = texture(u_inputFrame, v_texCoord);
-      float personMask = texture(u_personMask, v_texCoord).a;
-
-      vec4 frameColor = centerColor * weight[0] * (1.0 - personMask);
-
-      for (int i = 1; i < 5; i++) {
-        vec2 offset = vec2(offset[i]) * u_texelSize * u_radiusScale;
-
-        vec2 texCoord = v_texCoord + offset;
-        frameColor += texture(u_inputFrame, texCoord) * weight[i] *
-          (1.0 - texture(u_personMask, texCoord).a);
-
-        texCoord = v_texCoord - offset;
-        frameColor += texture(u_inputFrame, texCoord) * weight[i] *
-          (1.0 - texture(u_personMask, texCoord).a);
-      }
-      outColor = vec4(frameColor.rgb + (1.0 - frameColor.a) * centerColor.rgb, 1.0);
-    }
-  `;
-  var scale = 0.5;
-  var outputWidth = canvas.width * scale;
-  var outputHeight = canvas.height * scale;
-  var texelWidth = 1 / outputWidth;
-  var texelHeight = 1 / outputHeight;
-  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
-  var radiusScaleLocation = gl.getUniformLocation(program, 'u_radiusScale');
-  var texture1 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
-  var texture2 = (0, _webglHelper.createTexture)(gl, gl.RGBA8, outputWidth, outputHeight, gl.NEAREST, gl.LINEAR);
-  var frameBuffer1 = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
-  var frameBuffer2 = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture2, 0);
-  gl.useProgram(program);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform1f(radiusScaleLocation, 1);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.uniform1i(inputFrameLocation, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, personMaskTexture);
-    for (var i = 0; i < 3; i++) {
-      gl.uniform2f(texelSizeLocation, 0, texelHeight);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer1);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, texture1);
-      gl.uniform1i(inputFrameLocation, 2);
-      gl.uniform2f(texelSizeLocation, texelWidth, 0);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer2);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      gl.bindTexture(gl.TEXTURE_2D, texture2);
-    }
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer2);
-    gl.deleteFramebuffer(frameBuffer1);
-    gl.deleteTexture(texture2);
-    gl.deleteTexture(texture1);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  function updateBlurRadius(radius) {
-    radius = Math.max(0, Math.min(radius, 100));
-    gl.useProgram(program);
-    gl.uniform1f(radiusScaleLocation, radius / 20);
-  }
-  return {
-    render,
-    updateBlurRadius,
-    cleanUp
-  };
-}
-function buildBlendPass(gl, positionBuffer, texCoordBuffer, canvas, mirror) {
-  var vertexShaderSource = (0, _webglHelper.glsl)`#version 300 es
-
-    uniform float u_mirror;
-
-    in vec2 a_position;
-    in vec2 a_texCoord;
-
-    out vec2 v_texCoord;
-
-    void main() {
-      // Flipping Y is required when rendering to canvas
-      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);
-      v_texCoord = a_texCoord;
-      if (u_mirror > 0.5) {
-        v_texCoord.x = 1.0 - v_texCoord.x;
-      }
-    }
-  `;
-  var fragmentShaderSource = (0, _webglHelper.glsl)`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputFrame;
-    uniform sampler2D u_personMask;
-    uniform sampler2D u_blurredInputFrame;
-    uniform vec2 u_coverage;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    void main() {
-      vec3 color = texture(u_inputFrame, v_texCoord).rgb;
-      vec3 blurredColor = texture(u_blurredInputFrame, v_texCoord).rgb;
-      float personMask = texture(u_personMask, v_texCoord).a;
-      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);
-      outColor = vec4(mix(blurredColor, color, personMask), 1.0);
-    }
-  `;
-  var {
-    width: outputWidth,
-    height: outputHeight
-  } = canvas;
-  var vertexShader = (0, _webglHelper.compileShader)(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var fragmentShader = (0, _webglHelper.compileShader)(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = (0, _webglHelper.createPiplelineStageProgram)(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var blurredInputFrame = gl.getUniformLocation(program, 'u_blurredInputFrame');
-  var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform1i(blurredInputFrame, 2);
-  gl.uniform2f(coverageLocation, 0, 1);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateCoverage(coverage) {
-    gl.useProgram(program);
-    gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
-  }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
-  function cleanUp() {
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render,
-    updateCoverage,
-    updateMirror,
-    cleanUp
-  };
-}
-},{"../helpers/webglHelper.js":91}],93:[function(require,module,exports){
-"use strict";
-
-var {
-  compileShader,
-  createPiplelineStageProgram,
-  createTexture,
-  glsl
-} = require('../helpers/webglHelper.js');
-exports.buildBackgroundImageStage = (gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, mirror) => {
-  var vertexShaderSource = glsl`#version 300 es
-
-    uniform vec2 u_backgroundScale;
-    uniform vec2 u_backgroundOffset;
-    uniform float u_mirror;
-
-    in vec2 a_position;
-    in vec2 a_texCoord;
-
-    out vec2 v_texCoord;
-    out vec2 v_backgroundCoord;
-
-    void main() {
-      // Flipping Y is required when rendering to canvas
-      gl_Position = vec4(a_position * vec2(1.0, -1.0), 0.0, 1.0);
-      vec2 texCoord = a_texCoord;
-      if (u_mirror > 0.5) {
-        texCoord.x = 1.0 - texCoord.x;
-      }
-      v_texCoord = texCoord;
-      v_backgroundCoord = texCoord * u_backgroundScale + u_backgroundOffset;
-    }
-  `;
-  var fragmentShaderSource = glsl`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputFrame;
-    uniform sampler2D u_personMask;
-    uniform sampler2D u_background;
-    uniform vec2 u_coverage;
-    uniform float u_lightWrapping;
-    uniform float u_blendMode;
-
-    in vec2 v_texCoord;
-    in vec2 v_backgroundCoord;
-
-    out vec4 outColor;
-
-    vec3 screen(vec3 a, vec3 b) {
-      return 1.0 - (1.0 - a) * (1.0 - b);
-    }
-
-    vec3 linearDodge(vec3 a, vec3 b) {
-      return a + b;
-    }
-
-    void main() {
-      vec3 frameColor = texture(u_inputFrame, v_texCoord).rgb;
-      vec3 backgroundColor = texture(u_background, v_backgroundCoord).rgb;
-      float personMask = texture(u_personMask, v_texCoord).a;
-      float lightWrapMask = 1.0 - max(0.0, personMask - u_coverage.y) / (1.0 - u_coverage.y);
-      vec3 lightWrap = u_lightWrapping * lightWrapMask * backgroundColor;
-      frameColor = u_blendMode * linearDodge(frameColor, lightWrap) +
-        (1.0 - u_blendMode) * screen(frameColor, lightWrap);
-      personMask = smoothstep(u_coverage.x, u_coverage.y, personMask);
-      outColor = vec4(frameColor * personMask + backgroundColor * (1.0 - personMask), 1.0);
-    }
-  `;
-  var {
-    width: outputWidth,
-    height: outputHeight
-  } = canvas;
-  var outputRatio = outputWidth / outputHeight;
-  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var backgroundScaleLocation = gl.getUniformLocation(program, 'u_backgroundScale');
-  var backgroundOffsetLocation = gl.getUniformLocation(program, 'u_backgroundOffset');
-  var mirrorLocation = gl.getUniformLocation(program, 'u_mirror');
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var personMaskLocation = gl.getUniformLocation(program, 'u_personMask');
-  var backgroundLocation = gl.getUniformLocation(program, 'u_background');
-  var coverageLocation = gl.getUniformLocation(program, 'u_coverage');
-  var lightWrappingLocation = gl.getUniformLocation(program, 'u_lightWrapping');
-  var blendModeLocation = gl.getUniformLocation(program, 'u_blendMode');
-  gl.useProgram(program);
-  gl.uniform2f(backgroundScaleLocation, 1, 1);
-  gl.uniform2f(backgroundOffsetLocation, 0, 0);
-  gl.uniform1f(mirrorLocation, mirror ? 1 : 0);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(personMaskLocation, 1);
-  gl.uniform2f(coverageLocation, 0, 1);
-  gl.uniform1f(lightWrappingLocation, 0);
-  gl.uniform1f(blendModeLocation, 0);
-  var backgroundTexture = null;
-  // TODO Find a better to handle background being loaded
-
-  if (backgroundImage.complete) {
-    updateBackgroundImage(backgroundImage);
-  } else if (backgroundImage) {
-    backgroundImage.onload = () => {
-      updateBackgroundImage(backgroundImage);
-    };
-  }
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, personMaskTexture);
-    if (backgroundTexture !== null) {
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
-      // TODO Handle correctly the background not loaded yet
-      gl.uniform1i(backgroundLocation, 2);
-    }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateBackgroundImage(bgImage) {
-    if (backgroundTexture) {
-      gl.deleteTexture(backgroundTexture);
-    }
-    backgroundTexture = createTexture(gl, gl.RGBA8, bgImage.naturalWidth, bgImage.naturalHeight, gl.LINEAR, gl.LINEAR);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, bgImage.naturalWidth, bgImage.naturalHeight, gl.RGBA, gl.UNSIGNED_BYTE, bgImage);
-    var xOffset = 0;
-    var yOffset = 0;
-    var backgroundWidth = bgImage.naturalWidth;
-    var backgroundHeight = bgImage.naturalHeight;
-    var backgroundRatio = backgroundWidth / backgroundHeight;
-    if (backgroundRatio < outputRatio) {
-      backgroundHeight = backgroundWidth / outputRatio;
-      yOffset = (bgImage.naturalHeight - backgroundHeight) / 2;
-    } else {
-      backgroundWidth = backgroundHeight * outputRatio;
-      xOffset = (bgImage.naturalWidth - backgroundWidth) / 2;
-    }
-    var xScale = backgroundWidth / bgImage.naturalWidth;
-    var yScale = backgroundHeight / bgImage.naturalHeight;
-    xOffset /= bgImage.naturalWidth;
-    yOffset /= bgImage.naturalHeight;
-    gl.useProgram(program);
-    gl.uniform2f(backgroundScaleLocation, xScale, yScale);
-    gl.uniform2f(backgroundOffsetLocation, xOffset, yOffset);
-  }
-  function updateCoverage(coverage) {
-    gl.useProgram(program);
-    gl.uniform2f(coverageLocation, coverage[0], coverage[1]);
-  }
-  function updateLightWrapping(lightWrapping) {
-    gl.useProgram(program);
-    gl.uniform1f(lightWrappingLocation, lightWrapping);
-  }
-  function updateBlendMode(blendMode) {
-    gl.useProgram(program);
-    gl.uniform1f(blendModeLocation, blendMode === 'screen' ? 0 : 1);
-  }
-  function updateMirror(shouldMirror) {
-    gl.useProgram(program);
-    gl.uniform1f(mirrorLocation, shouldMirror ? 1 : 0);
-  }
-  function cleanUp() {
-    gl.deleteTexture(backgroundTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render,
-    updateCoverage,
-    updateLightWrapping,
-    updateBlendMode,
-    updateMirror,
-    cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":91}],94:[function(require,module,exports){
-"use strict";
-
-var {
-  compileShader,
-  createPiplelineStageProgram,
-  glsl
-} = require('../helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildJointBilateralFilterStage = (gl, vertexShader, positionBuffer, texCoordBuffer, inputTexture, segmentationConfig, outputTexture, canvas) => {
-  var fragmentShaderSource = glsl`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputFrame;
-    uniform sampler2D u_segmentationMask;
-    uniform vec2 u_texelSize;
-    uniform float u_step;
-    uniform float u_radius;
-    uniform float u_offset;
-    uniform float u_sigmaTexel;
-    uniform float u_sigmaColor;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    float gaussian(float x, float sigma) {
-      float coeff = -0.5 / (sigma * sigma * 4.0 + 1.0e-6);
-      return exp((x * x) * coeff);
-    }
-
-    void main() {
-      vec2 centerCoord = v_texCoord;
-      vec3 centerColor = texture(u_inputFrame, centerCoord).rgb;
-      float newVal = 0.0;
-
-      float spaceWeight = 0.0;
-      float colorWeight = 0.0;
-      float totalWeight = 0.0;
-
-      // Subsample kernel space.
-      for (float i = -u_radius + u_offset; i <= u_radius; i += u_step) {
-        for (float j = -u_radius + u_offset; j <= u_radius; j += u_step) {
-          vec2 shift = vec2(j, i) * u_texelSize;
-          vec2 coord = vec2(centerCoord + shift);
-          vec3 frameColor = texture(u_inputFrame, coord).rgb;
-          float outVal = texture(u_segmentationMask, coord).a;
-
-          spaceWeight = gaussian(distance(centerCoord, coord), u_sigmaTexel);
-          colorWeight = gaussian(distance(centerColor, frameColor), u_sigmaColor);
-          totalWeight += spaceWeight * colorWeight;
-
-          newVal += spaceWeight * colorWeight * outVal;
-        }
-      }
-      newVal /= totalWeight;
-
-      outColor = vec4(vec3(0.0), newVal);
-    }
-  `;
-  var [segmentationWidth, segmentationHeight] = inputResolutions[segmentationConfig.inputResolution];
-  var {
-    width: outputWidth,
-    height: outputHeight
-  } = canvas;
-  var texelWidth = 1 / outputWidth;
-  var texelHeight = 1 / outputHeight;
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var segmentationMaskLocation = gl.getUniformLocation(program, 'u_segmentationMask');
-  var texelSizeLocation = gl.getUniformLocation(program, 'u_texelSize');
-  var stepLocation = gl.getUniformLocation(program, 'u_step');
-  var radiusLocation = gl.getUniformLocation(program, 'u_radius');
-  var offsetLocation = gl.getUniformLocation(program, 'u_offset');
-  var sigmaTexelLocation = gl.getUniformLocation(program, 'u_sigmaTexel');
-  var sigmaColorLocation = gl.getUniformLocation(program, 'u_sigmaColor');
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  gl.uniform1i(segmentationMaskLocation, 1);
-  gl.uniform2f(texelSizeLocation, texelWidth, texelHeight);
-
-  // Ensures default values are configured to prevent infinite
-  // loop in fragment shader
-  updateSigmaSpace(0);
-  updateSigmaColor(0);
-  function render() {
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function updateSigmaSpace(sigmaSpace) {
-    sigmaSpace *= Math.max(outputWidth / segmentationWidth, outputHeight / segmentationHeight);
-    var kSparsityFactor = 0.66; // Higher is more sparse.
-    var sparsity = Math.max(1, Math.sqrt(sigmaSpace) * kSparsityFactor);
-    var step = sparsity;
-    var radius = sigmaSpace;
-    var offset = step > 1 ? step * 0.5 : 0;
-    var sigmaTexel = Math.max(texelWidth, texelHeight) * sigmaSpace;
-    gl.useProgram(program);
-    gl.uniform1f(stepLocation, step);
-    gl.uniform1f(radiusLocation, radius);
-    gl.uniform1f(offsetLocation, offset);
-    gl.uniform1f(sigmaTexelLocation, sigmaTexel);
-  }
-  function updateSigmaColor(sigmaColor) {
-    gl.useProgram(program);
-    gl.uniform1f(sigmaColorLocation, sigmaColor);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render,
-    updateSigmaSpace,
-    updateSigmaColor,
-    cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":91}],95:[function(require,module,exports){
-"use strict";
-
-var {
-  compileShader,
-  createPiplelineStageProgram,
-  createTexture,
-  glsl,
-  readPixelsAsync
-} = require('../helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildResizingStage = (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite) => {
-  var fragmentShaderSource = glsl`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputFrame;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    void main() {
-      outColor = texture(u_inputFrame, v_texCoord);
-    }
-  `;
-
-  // TFLite memory will be accessed as float32
-  var tfliteInputMemoryOffset = tflite._getInputMemoryOffset() / 4;
-  var [outputWidth, outputHeight] = inputResolutions[segmentationConfig.inputResolution];
-  var outputPixelCount = outputWidth * outputHeight;
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputFrameLocation = gl.getUniformLocation(program, 'u_inputFrame');
-  var outputTexture = createTexture(gl, gl.RGBA8, outputWidth, outputHeight);
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  var outputPixels = new Uint8Array(outputPixelCount * 4);
-  gl.useProgram(program);
-  gl.uniform1i(inputFrameLocation, 0);
-  async function render() {
-    // console.log('draA: ', gl.RGBA, gl.UNSIGNED_BYTE, outputPixels);
-    gl.viewport(0, 0, outputWidth, outputHeight);
-    gl.useProgram(program);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    var readPixelsPromise = readPixelsAsync(gl, 0, 0, outputWidth, outputHeight, gl.RGBA, gl.UNSIGNED_BYTE, outputPixels);
-    if (segmentationConfig.deferInputResizing) {
-      // Downloads pixels asynchronously from GPU while rendering the current frame.
-      // The pixels will be available in the next frame render which results
-      // in offsets in the segmentation output but increases the frame rate.
-    } else {
-      await readPixelsPromise;
-    }
-    for (var i = 0; i < outputPixelCount; i++) {
-      var tfliteIndex = tfliteInputMemoryOffset + i * 3;
-      var outputIndex = i * 4;
-      tflite.HEAPF32[tfliteIndex] = outputPixels[outputIndex] / 255;
-      tflite.HEAPF32[tfliteIndex + 1] = outputPixels[outputIndex + 1] / 255;
-      tflite.HEAPF32[tfliteIndex + 2] = outputPixels[outputIndex + 2] / 255;
-    }
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(outputTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render,
-    cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":91}],96:[function(require,module,exports){
-"use strict";
-
-var {
-  compileShader,
-  createPiplelineStageProgram,
-  createTexture,
-  glsl
-} = require('../helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-exports.buildSoftmaxStage = (gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, outputTexture) => {
-  var fragmentShaderSource = glsl`#version 300 es
-
-    precision highp float;
-
-    uniform sampler2D u_inputSegmentation;
-
-    in vec2 v_texCoord;
-
-    out vec4 outColor;
-
-    void main() {
-      vec2 segmentation = texture(u_inputSegmentation, v_texCoord).rg;
-      float shift = max(segmentation.r, segmentation.g);
-      float backgroundExp = exp(segmentation.r - shift);
-      float personExp = exp(segmentation.g - shift);
-      outColor = vec4(vec3(0.0), personExp / (backgroundExp + personExp));
-    }
-  `;
-
-  // TFLite memory will be accessed as float32
-  var tfliteOutputMemoryOffset = tflite._getOutputMemoryOffset() / 4;
-  var [segmentationWidth, segmentationHeight] = inputResolutions[segmentationConfig.inputResolution];
-  var fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-  var program = createPiplelineStageProgram(gl, vertexShader, fragmentShader, positionBuffer, texCoordBuffer);
-  var inputLocation = gl.getUniformLocation(program, 'u_inputSegmentation');
-  var inputTexture = createTexture(gl, gl.RG32F, segmentationWidth, segmentationHeight);
-  var frameBuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, outputTexture, 0);
-  gl.useProgram(program);
-  gl.uniform1i(inputLocation, 1);
-  function render() {
-    gl.viewport(0, 0, segmentationWidth, segmentationHeight);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, segmentationWidth, segmentationHeight, gl.RG, gl.FLOAT, tflite.HEAPF32, tfliteOutputMemoryOffset);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  }
-  function cleanUp() {
-    gl.deleteFramebuffer(frameBuffer);
-    gl.deleteTexture(inputTexture);
-    gl.deleteProgram(program);
-    gl.deleteShader(fragmentShader);
-  }
-  return {
-    render,
-    cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":91}],97:[function(require,module,exports){
-"use strict";
-
-var {
-  buildJointBilateralFilterStage
-} = require('./jointBilateralFilterStage.js');
-var {
-  buildResizingStage
-} = require('./resizingStage.js');
-var {
-  buildSoftmaxStage
-} = require('./softmaxStage.js');
-var {
-  buildBackgroundImageStage
-} = require('./backgroundImageStage.js');
-var {
-  buildBackgroundBlurStage
-} = require('./backgroundBlurStage.js');
-var {
-  compileShader,
-  createTexture,
-  glsl
-} = require('../helpers/webglHelper.js');
-var inputResolutions = {
-  '640x360': [640, 360],
-  '256x256': [256, 256],
-  '256x144': [256, 144],
-  '160x96': [160, 96]
-};
-
-/**
- * 构建 WebGL2 虚拟背景处理管道
- *
- * 这是虚拟背景引擎的核心模块，负责创建完整的 WebGL2 渲染管道。
- * 管道包含以下处理阶段：
- *
- * 1. 尺寸调整阶段 (ResizingStage)
- *    - 将输入视频帧缩放至分割模型所需尺寸 (160x96)
- *    - 使用双线性插值保持图像质量
- *
- * 2. Softmax 阶段 (SoftmaxStage)
- *    - 将 TFLite 模型的原始输出转换为概率分布
- *    - 生成人物分割遮罩 (person mask)
- *
- * 3. 联合双边滤波阶段 (JointBilateralFilterStage)
- *    - 对分割遮罩进行边缘平滑处理
- *    - 同时考虑颜色信息和空间距离，消除锯齿和噪声
- *
- * 4. 背景合成阶段 (BackgroundImageStage)
- *    - 将人物与虚拟背景进行合成
- *    - 支持多种混合模式和光晕效果
- *
- * @param {Object} sourcePlayback - 源视频播放配置
- * @param {number} sourcePlayback.width - 源视频宽度
- * @param {number} sourcePlayback.height - 源视频高度
- * @param {HTMLVideoElement} sourcePlayback.htmlElement - HTML 视频元素
- *
- * @param {HTMLImageElement} backgroundImage - 背景图片元素
- *
- * @param {Object} backgroundConfig - 背景配置
- * @param {string} backgroundConfig.type - 背景类型：
- *   - 'image': 使用自定义图片作为背景
- *   - 'blur': 使用模糊后的视频作为背景
- *   - 其他值: 无背景（仅显示人物）
- *
- * @param {Object} segmentationConfig - 分割配置
- * @param {string} segmentationConfig.backend - 后端类型 (如 'wasmSimd')
- * @param {string} segmentationConfig.inputResolution - 输入分辨率 (如 '160x96')
- * @param {string} segmentationConfig.model - 模型名称 (如 'meet')
- * @param {string} segmentationConfig.pipeline - 管道类型 (如 'webgl2')
- * @param {number} segmentationConfig.targetFps - 目标帧率
- *
- * @param {HTMLCanvasElement} canvas - 输出画布元素
- * @param {Object} tflite - TensorFlow Lite SIMD 模块实例
- *
- * @returns {Object} 管道对象，包含以下方法：
- *   - render(): 执行一帧渲染，返回 Promise
- *   - updatePostProcessingConfig(config): 更新后处理配置
- *   - cleanUp(): 释放所有 WebGL 资源
- *
- * @example
- * const pipeline = buildWebGL2Pipeline(
- *   { width: 1280, height: 720, htmlElement: videoEl },
- *   backgroundImgEl,
- *   { type: 'image' },
- *   { backend: 'wasmSimd', inputResolution: '160x96', model: 'meet', pipeline: 'webgl2', targetFps: 15 },
- *   canvas,
- *   tflite
- * );
- *
- * await pipeline.render(); // 渲染一帧
- * pipeline.updatePostProcessingConfig({ jointBilateralFilter: { sigmaSpace: 1, sigmaColor: 0.1 } });
- * pipeline.cleanUp(); // 清理资源
- */
-exports.buildWebGL2Pipeline = (sourcePlayback, backgroundImage, backgroundConfig, segmentationConfig, canvas, tflite) => {
-  var vertexShaderSource = glsl`#version 300 es
-
-    in vec2 a_position;
-    in vec2 a_texCoord;
-
-    out vec2 v_texCoord;
-
-    void main() {
-      gl_Position = vec4(a_position, 0.0, 1.0);
-      v_texCoord = a_texCoord;
-    }
-  `;
-  var {
-    width: frameWidth,
-    height: frameHeight
-  } = sourcePlayback;
-  var segmentationResolution = inputResolutions[segmentationConfig.inputResolution];
-  if (!segmentationResolution) {
-    throw new Error(`Unsupported segmentation inputResolution: ${segmentationConfig.inputResolution}`);
-  }
-  var [segmentationWidth, segmentationHeight] = segmentationResolution;
-  var gl = canvas.getContext('webgl2');
-  if (!gl) {
-    throw new Error('WebGL2 not supported');
-  }
-  var vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-  var vertexArray = gl.createVertexArray();
-  gl.bindVertexArray(vertexArray);
-  var positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-  var texCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]), gl.STATIC_DRAW);
-
-  // We don't use texStorage2D here because texImage2D seems faster
-  // to upload video texture than texSubImage2D even though the latter
-  // is supposed to be the recommended way:
-  // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#use_texstorage_to_create_textures
-  var inputFrameTexture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-  // TODO Rename segmentation and person mask to be more specific
-  var segmentationTexture = createTexture(gl, gl.RGBA8, segmentationWidth, segmentationHeight);
-  var personMaskTexture = createTexture(gl, gl.RGBA8, frameWidth, frameHeight);
-  var resizingStage = buildResizingStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite);
-  var loadSegmentationStage = buildSoftmaxStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationConfig, tflite, segmentationTexture);
-  var jointBilateralFilterStage = buildJointBilateralFilterStage(gl, vertexShader, positionBuffer, texCoordBuffer, segmentationTexture, segmentationConfig, personMaskTexture, canvas);
-  var backgroundStage = backgroundConfig.type === 'blur' ? buildBackgroundBlurStage(gl, vertexShader, positionBuffer, texCoordBuffer, personMaskTexture, canvas, backgroundConfig.mirror) : buildBackgroundImageStage(gl, positionBuffer, texCoordBuffer, personMaskTexture, backgroundImage, canvas, backgroundConfig.mirror);
-
-  /**
-   * 执行一帧的渲染处理
-   *
-   * 这是 WebGL2 虚拟背景管道的核心渲染方法，负责处理视频帧的完整流程：
-   * 1. 上传视频帧到 GPU 纹理
-   * 2. 调整帧大小以适配分割模型输入
-   * 3. 运行 AI 分割模型进行人物识别
-   * 4. 加载分割结果（人物遮罩）
-   * 5. 应用联合双边滤波器进行边缘平滑
-   * 6. 渲染最终合成结果（背景+人物）
-   *
-   * 渲染流程：
-   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-   * │  视频帧      │───▶│  调整大小    │───▶│  AI 分割    │
-   * │ (WebGL纹理) │    │ (160x96)    │    │ (TFLite)    │
-   * └─────────────┘    └─────────────┘    └─────────────┘
-   *                                                │
-   *                                                ▼
-   * ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-   * │  最终输出   │◀───│  背景合成   │◀───│  边缘平滑   │
-   * │  (Canvas)   │    │  (Blend)    │    │ (双边滤波)  │
-   * └─────────────┘    └─────────────┘    └─────────────┘
-   *
-   * @returns {Promise<void>} 渲染完成后 resolve
-   */
-  async function render() {
-    // 1. 激活纹理单元 0 并绑定输入帧纹理
-    // WebGL 支持多个纹理单元（TEXTURE0, TEXTURE1 等）
-    // 着色器可以从不同纹理单元采样，本例使用单元 0
-    gl.activeTexture(gl.TEXTURE0);
-    // 绑定输入帧纹理，这是存放当前视频帧的纹理对象
-    gl.bindTexture(gl.TEXTURE_2D, inputFrameTexture);
-
-    // 2. 上传视频帧数据到 GPU 纹理
-    // texImage2D 比 texSubImage2D 上传视频帧更快
-    // 参数说明：
-    //   - TEXTURE_2D: 目标纹理类型
-    //   - 0: Mipmap 级别（0 表示基础级别）
-    //   - RGBA: 内部格式（GPU 存储格式）
-    //   - RGBA: 源格式（视频数据格式）
-    //   - UNSIGNED_BYTE: 源数据类型（8位无符号）
-    //   - sourcePlayback.htmlElement: HTML 视频/图像元素
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourcePlayback.htmlElement);
-    // 3. 绑定顶点数组对象（VAO）
-    // VAO 存储顶点属性配置（位置、纹理坐标等）
-    // 绑定 VAO 后，后续的 draw 调用会使用这个配置
-    gl.bindVertexArray(vertexArray);
-    // 4. 渲染调整大小阶段
-    // 将视频帧从原始尺寸调整到分割模型输入尺寸 (160x96)
-    // 使用 await 确保此阶段完成后再进行下一步
-    await resizingStage.render();
-    // 5. 运行 TFLite 推理
-    // 调用 TensorFlow Lite SIMD 模型进行人物分割
-    // 分割结果输出到 segmentationTexture
-    tflite._runInference();
-    // 6. 渲染分割结果加载阶段
-    // 将 TFLite 的分割结果（原始遮罩数据）加载到纹理
-    loadSegmentationStage.render();
-    // 7. 渲染联合双边滤波阶段
-    // 对分割遮罩进行边缘平滑处理，消除锯齿和噪声
-    // 联合双边滤波会考虑颜色信息和空间距离
-    jointBilateralFilterStage.render();
-    // 8. 渲染背景合成阶段
-    // 将平滑后的分割遮罩与背景图像合成
-    // 人物区域显示原始视频，背景区域显示虚拟背景
-    backgroundStage.render();
-  }
-
-  /**
-   * 更新后处理配置
-   *
-   * 用于动态调整虚拟背景的后处理效果，包括分割边缘平滑参数和背景合成参数。
-   * 可以在渲染过程中调用以实时更改效果。
-   *
-   * 后处理配置包含两个主要部分：
-   * 1. 联合双边滤波器 (Joint Bilateral Filter) - 用于平滑分割边缘
-   * 2. 背景合成参数 - 用于控制背景与人物的合成方式
-   *
-   * @param {Object} postProcessingConfig - 后处理配置对象
-   * @param {Object} postProcessingConfig.jointBilateralFilter - 联合双边滤波配置
-   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaSpace - 空间 sigma，控制滤波的空间影响范围
-   * @param {number} postProcessingConfig.jointBilateralFilter.sigmaColor - 颜色 sigma，控制颜色相似性的权重
-   * @param {number[]} postProcessingConfig.coverage - 人物遮罩覆盖率 [min, max]
-   * @param {number} postProcessingConfig.lightWrapping - 光晕强度 (0-1)，使人物边缘产生光晕效果
-   * @param {string} postProcessingConfig.blendMode - 混合模式，如 'screen', 'multiply' 等
-   */
-  function updatePostProcessingConfig(postProcessingConfig) {
-    // 1. 更新联合双边滤波器的空间 sigma 参数
-    // sigmaSpace 控制滤波器在空间域的影响范围，值越大表示考虑更远的像素
-    // 较大的值会产生更平滑的边缘，但可能损失细节
-    jointBilateralFilterStage.updateSigmaSpace(postProcessingConfig.jointBilateralFilter.sigmaSpace);
-    // 2. 更新联合双边滤波器的颜色 sigma 参数
-    // sigmaColor 控制颜色相似性在滤波中的权重，值越大表示颜色差异影响越小
-    // 较大的值会使滤波器对颜色差异更不敏感，产生更均匀的遮罩
-    jointBilateralFilterStage.updateSigmaColor(postProcessingConfig.jointBilateralFilter.sigmaColor);
-    // 3. 根据背景类型进行不同的配置
-    if (backgroundConfig.type === 'image') {
-      // === 背景图片模式 ===
-      // 使用自定义图片作为虚拟背景
-      var backgroundImageStage = backgroundStage;
-
-      // 更新人物遮罩覆盖率
-      // coverage 是一个 [min, max] 数组，控制遮罩的强度范围
-      // 值通常在 0-1 之间，min 控制最小覆盖率，max 控制最大覆盖率
-      backgroundImageStage.updateCoverage(postProcessingConfig.coverage);
-      // 更新光晕效果强度
-      // lightWrapping 使人物边缘产生发光效果，营造与背景融合的感觉
-      // 值为 0 时关闭光晕，值越大光晕越强
-      backgroundImageStage.updateLightWrapping(postProcessingConfig.lightWrapping);
-      // 更新混合模式
-      // 决定如何将人物与背景合成：
-      // - 'screen': 滤色模式，产生较亮的结果
-      // - 'multiply': 正片叠底模式，产生较暗的结果
-      // - 其他模式可产生不同的艺术效果
-      backgroundImageStage.updateBlendMode(postProcessingConfig.blendMode);
-    } else if (backgroundConfig.type === 'blur') {
-      // === 背景模糊模式 ===
-      // 使用模糊后的原视频作为背景（模拟景深效果）
-      var backgroundBlurStage = backgroundStage;
-
-      // 更新遮罩覆盖率
-      // 在模糊模式下，控制模糊背景的可见程度
-      backgroundBlurStage.updateCoverage(postProcessingConfig.coverage);
-      if (typeof postProcessingConfig.blurRadius === 'number') {
-        backgroundBlurStage.updateBlurRadius(postProcessingConfig.blurRadius);
-      }
-    } else {
-      // === 无背景/纯视频模式 ===
-      // TODO: 应该使用单独的管道处理无背景情况
-      // 当前实现：将覆盖率设为最大，关闭光晕效果
-      var _backgroundImageStage = backgroundStage;
-
-      // 设置覆盖率接近 100%，使视频完整显示
-      // [0, 0.9999] 而不是 [0, 1]，避免除零错误
-      _backgroundImageStage.updateCoverage([0, 0.9999]);
-      // 关闭光晕效果
-      _backgroundImageStage.updateLightWrapping(0);
-    }
-  }
-
-  /**
-   * 更新最终输出是否水平镜像。
-   * 分割和滤波阶段保持原始坐标，只在最终合成阶段翻转输出采样坐标。
-   *
-   * @param {boolean} mirror - true: 镜像输出，false: 原始方向输出
-   */
-  function updateMirror(mirror) {
-    if (backgroundStage.updateMirror) {
-      backgroundStage.updateMirror(mirror);
-    }
-  }
-
-  /**
-   * 清理 WebGL 管道资源
-   *
-   * 当不再需要 WebGL2 虚拟背景管道时，调用此函数释放所有 GPU 资源。
-   * 正确清理资源对于避免 GPU 内存泄漏至关重要，特别是在单页面应用中。
-   *
-   * 清理顺序说明：
-   * 1. 先清理各管道阶段（包含着色器程序和帧缓冲区）
-   * 2. 再清理独立的 GPU 对象（纹理、缓冲区、着色器）
-   *
-   * 清理内容：
-   * - 管道阶段：背景合成、双边滤波、分割加载、尺寸调整
-   * - GPU 资源：纹理对象、缓冲区对象、顶点数组对象、着色器对象
-   */
-  function cleanUp() {
-    // 1. 清理各管道阶段
-    // 每个阶段可能包含自己的着色器程序、帧缓冲区等资源
-    // cleanUp 方法会负责释放这些内部资源
-
-    // 清理背景合成阶段
-    // 包含背景图片/模糊的着色器程序和渲染目标
-    backgroundStage.cleanUp();
-    // 清理联合双边滤波阶段
-    // 包含边缘平滑处理的着色器程序和中间渲染目标
-    jointBilateralFilterStage.cleanUp();
-    // 清理分割结果加载阶段
-    // 包含将 TFLite 输出加载到纹理的着色器程序
-    loadSegmentationStage.cleanUp();
-    // 清理尺寸调整阶段
-    // 包含视频帧缩放的着色器程序和渲染目标
-    resizingStage.cleanUp();
-
-    // 2. 清理独立的 GPU 对象
-    // 按照依赖关系顺序清理：先清理依赖它们的资源，再清理被依赖的资源
-
-    // 删除人物遮罩纹理
-    // 存储分割后的人物遮罩数据，用于背景合成
-    gl.deleteTexture(personMaskTexture);
-    // 删除分割纹理
-    // 存储 TFLite 模型的分割结果（原始概率数据）
-    gl.deleteTexture(segmentationTexture);
-    // 删除输入帧纹理
-    // 存储当前视频帧的 RGBA 数据
-    gl.deleteTexture(inputFrameTexture);
-    // 删除纹理坐标缓冲区
-    // 存储顶点的 UV 坐标，用于纹理映射
-    gl.deleteBuffer(texCoordBuffer);
-    // 删除顶点位置缓冲区
-    // 存储顶点的 x, y 坐标
-    gl.deleteBuffer(positionBuffer);
-    // 删除顶点数组对象（VAO）
-    // VAO 存储顶点属性的配置状态
-    gl.deleteVertexArray(vertexArray);
-    // 删除顶点着色器
-    // 注意：片元着色器在各自阶段内部清理
-    gl.deleteShader(vertexShader);
-  }
-  return {
-    render,
-    updatePostProcessingConfig,
-    updateMirror,
-    cleanUp
-  };
-};
-},{"../helpers/webglHelper.js":91,"./backgroundBlurStage.js":92,"./backgroundImageStage.js":93,"./jointBilateralFilterStage.js":94,"./resizingStage.js":95,"./softmaxStage.js":96}],98:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40628,7 +38736,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":47,"./Logger":49}],99:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49}],90:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40821,7 +38929,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Utils":88}],100:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Utils":88}],91:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -40973,7 +39081,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],101:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -41498,7 +39606,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],102:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -43279,7 +41387,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":100,"buffer":102,"ieee754":105}],103:[function(require,module,exports){
+},{"base64-js":91,"buffer":93,"ieee754":96}],94:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -43555,7 +41663,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":104,"_process":108}],104:[function(require,module,exports){
+},{"./common":95,"_process":99}],95:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -43849,7 +41957,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":107}],105:[function(require,module,exports){
+},{"ms":98}],96:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -43936,7 +42044,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],106:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -49327,7 +47435,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],107:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -49491,7 +47599,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],108:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -49677,7 +47785,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],109:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -50173,7 +48281,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],110:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -50188,7 +48296,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":109,"./parser":111,"./writer":112}],111:[function(require,module,exports){
+},{"./grammar":100,"./parser":102,"./writer":103}],102:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -50314,7 +48422,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":109}],112:[function(require,module,exports){
+},{"./grammar":100}],103:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -50430,5 +48538,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":109}]},{},[48])(48)
+},{"./grammar":100}]},{},[48])(48)
 });
