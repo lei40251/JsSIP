@@ -1,0 +1,538 @@
+# CRTC.MediaStreamComposer API 参考
+
+将多路 `MediaStream` / `HTMLVideoElement` 合并为单路音视频输出流的混流器。
+
+---
+
+## 目录
+
+1. [快速开始](#1-快速开始)
+2. [构造函数](#2-构造函数)
+3. [新公共 API](#3-新公共-api)
+4. [兼容旧 API 映射](#4-兼容旧-api-映射)
+5. [完整使用示例](#5-完整使用示例)
+6. [常见问题](#6-常见问题)
+
+---
+
+## 1. 快速开始
+
+```js
+// 1. 创建混流器
+const composer = new CRTC.MediaStreamComposer(
+  [localStream, remoteStream],
+  { width: 1280, height: 720, fps: 15 }
+);
+
+// 2. 获取完整音视频输出
+const mixedStream = await composer.getOutput({ type: 'mixed' });
+
+// 3. 推送到 WebRTC
+mixedStream.getTracks().forEach((track) => {
+  peerConnection.addTrack(track, mixedStream);
+});
+
+// 4. 结束时销毁
+composer.stop();
+```
+
+**仅视频预览：**
+
+```js
+const composer = new CRTC.MediaStreamComposer([streamA, streamB]);
+const previewStream = await composer.getOutput({ type: 'video' });
+previewVideo.srcObject = previewStream;
+```
+
+**旧写法兼容：**
+
+```js
+const previewStream = composer.getVideoStream();      // 兼容保留，同步
+const mixedStream = await composer.getMixedStream();  // 兼容保留
+```
+
+---
+
+## 2. 构造函数
+
+### `new CRTC.MediaStreamComposer(videos, options)`
+
+```js
+const composer = new CRTC.MediaStreamComposer(
+  [localStream, remoteStream],
+  {
+    width: 1280,
+    height: 720,
+    fps: 15,
+    backgroundColor: '#000',
+    sourceMirror: false,
+    mirror: false,
+    mirrorWatermarksWithOutput: true,
+    watermarks: []
+  }
+);
+```
+
+#### 参数 `videos`
+
+`MediaStream | HTMLVideoElement | Array<MediaStream|HTMLVideoElement>`
+
+| 形式 | 示例 | 说明 |
+|------|------|------|
+| 空数组 | `[]` | 不添加初始源，后续通过 `addSource()` 添加 |
+| 单个流 | `stream` | 单个 `MediaStream` |
+| 多个流 | `[s1, s2, s3]` | 按顺序分配 slot 0, 1, 2 |
+| Video 元素 | `videoElement` | 外部 `HTMLVideoElement`，需 `srcObject=MediaStream` |
+
+#### 参数 `options`
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `width` | `number` | `1280` | 输出视频宽度（px） |
+| `height` | `number` | `720` | 输出视频高度（px） |
+| `fps` | `number` | `15` | 输出帧率 |
+| `backgroundColor` | `string` | `'#000'` | 画布底色 |
+| `sourceMirror` | `boolean` | `false` | 所有源默认镜像 |
+| `mirror` | `boolean` | `false` | 构造期整体输出镜像 |
+| `mirrorWatermarksWithOutput` | `boolean` | `true` | 输出镜像时水印是否跟随 |
+| `watermarks` | `Array<Object>` | `[]` | 初始水印配置 |
+
+---
+
+## 3. 新公共 API
+
+### `addSource(videos, optionsOrSlot?)`
+
+添加输入源。
+
+```js
+composer.addSource(stream);
+composer.addSource(stream, 2);
+composer.addSource(stream, { slot: 1, gain: 0.5, sourceMirror: true });
+composer.addSource([streamA, streamB], 3);
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `videos` | `MediaStream \| HTMLVideoElement \| Array` | 必传 |
+| `optionsOrSlot` | `number \| Object` | `slot` 或 `{ slot, gain, sourceMirror }` |
+
+| 返回值 | 说明 |
+|--------|------|
+| `boolean` | `true` 表示至少成功添加了一路 |
+
+规则：
+- 同 slot 已有源时会被覆盖
+- 最多支持 9 路源
+- `stop()` 后调用会抛出 `Error`
+
+**旧写法兼容：**
+
+```js
+composer.appendStream(stream, 2);
+```
+
+### `removeSource(target)`
+
+移除一路输入源。
+
+```js
+composer.removeSource(stream);
+composer.removeSource(videoElement);
+composer.removeSource(stream.id);
+composer.removeSource(source.id);
+```
+
+| 返回值 | 说明 |
+|--------|------|
+| `boolean` | `true` 表示找到并移除成功 |
+
+说明：
+- 不传参数时不会自动清空全部源
+- 批量清空请使用 `clearSources()`
+
+**旧写法兼容：**
+
+```js
+composer.removeStream(stream.id);
+```
+
+### `clearSources()`
+
+移除全部输入源。
+
+```js
+composer.clearSources();
+```
+
+说明：
+- 只清空源，不重置镜像、水印等配置
+- 后续仍可继续 `addSource()`
+
+**旧写法兼容：**
+
+```js
+composer.clearStreams();
+```
+
+### `setConfig(patch)`
+
+统一更新运行时配置。支持镜像、水印等动态修改。
+
+```js
+await composer.setConfig({
+  outputMirror: true,
+  mirrorWatermarksWithOutput: true
+});
+
+await composer.setConfig({
+  sourceMirror: true,
+  sourceMirrorOverrides: {
+    0: false,
+    2: true
+  }
+});
+
+await composer.setConfig({
+  watermarks: [
+    { id: 'brand', target: 'output', type: 'text', text: 'CRTC', position: 'bottom-right' }
+  ]
+});
+
+await composer.setConfig({
+  clearWatermarks: true,
+  clearWatermarkFilter: { target: 'source', slot: 0 }
+});
+```
+
+#### `patch` 支持字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `outputMirror` | `boolean` | 设置整体输出镜像 |
+| `mirrorWatermarksWithOutput` | `boolean` | 设置水印是否跟随输出镜像 |
+| `sourceMirror` | `boolean` | 设置所有源默认镜像 |
+| `sourceMirrorOverrides` | `Object` | 槽位级镜像覆盖，如 `{ 0: true, 1: null }` |
+| `clearSourceMirrorOverrides` | `boolean` | 清空全部槽位镜像覆盖 |
+| `watermarks` | `Array<Object> \| Object \| null` | 替换全部水印 |
+| `clearWatermarks` | `boolean` | 是否执行按条件清空水印 |
+| `clearWatermarkFilter` | `Object` | 清空水印过滤条件 |
+
+| 返回值 | 说明 |
+|--------|------|
+| `Promise<Object>` | 最新配置快照 |
+
+#### 水印对象字段
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `id` | `string` | — | 必传，唯一标识 |
+| `target` | `string` | `'output'` | `'output'` 或 `'source'` |
+| `type` | `string` | `'text'` | `'text'` 或 `'image'` |
+| `text` | `string` | — | 文本水印内容 |
+| `image` | `*` | — | 图片：URL / `HTMLImageElement` / `ImageBitmap` 等 |
+| `slot` | `number` | — | source 水印匹配槽位 |
+| `streamId` | `string` | — | source 水印匹配 `MediaStream.id` |
+| `position` | `string \| Object` | `'bottom-right'` | 预设位置或 `{ x, y }` |
+| `width` | `number` | — | 图片宽度 |
+| `height` | `number` | — | 图片高度 |
+| `fontSize` | `number` | `28` | 文本字号 |
+| `color` | `string` | `'#fff'` | 文本颜色 |
+| `backgroundColor` | `string` | `'rgba(0,0,0,0.45)'` | 文本底色 |
+| `opacity` | `number` | `1` | 透明度 |
+| `padding` | `number` | `3` | 内边距 |
+| `margin` | `number` | `16` | 外边距 |
+
+预设位置：
+`'top-left'`, `'top-center'`, `'top-right'`, `'center'`, `'bottom-left'`, `'bottom-center'`, `'bottom-right'`
+
+**旧写法兼容：**
+
+```js
+await composer.setWatermarks(watermarks);
+composer.clearWatermarks({ target: 'output' });
+composer.setMirror(true);
+composer.setMirrorWatermarksWithOutput(true);
+composer.setSourceMirror(0, true);
+composer.clearSourceMirror(0);
+```
+
+### `getState()`
+
+返回统一状态快照。
+
+```js
+const state = composer.getState();
+
+console.log(state.sources);
+console.log(state.config);
+console.log(state.render);
+console.log(state.audio);
+```
+
+返回结构：
+
+```js
+{
+  sources: [
+    {
+      id: 'source-1',
+      streamId: 'abc',
+      slot: 0,
+      gain: 0.8,
+      sourceMirror: false,
+      hasAudio: true,
+      hasVideo: true
+    }
+  ],
+  config: {
+    outputMirror: false,
+    sourceMirror: false,
+    sourceMirrorOverrides: {},
+    mirrorWatermarksWithOutput: true,
+    watermarks: []
+  },
+  render: {
+    requestedMode: 'auto',
+    actualMode: 'worker-webgl2',
+    droppedFrames: 0
+  },
+  audio: {
+    status: 'idle',
+    connectedSources: 0,
+    liveSourceCount: 0
+  }
+}
+```
+
+**旧写法兼容：**
+
+```js
+composer.getSources();
+composer.getRenderInfo();
+composer.getAudioInfo();
+composer.getWatermarks();
+composer.getMirror();
+composer.getMirrorWatermarksWithOutput();
+composer.getSourceMirror();
+```
+
+### `getOutput(options?)`
+
+统一获取输出流。
+
+#### 获取完整音视频输出
+
+```js
+const mixedStream = await composer.getOutput({ type: 'mixed' });
+```
+
+#### 获取仅视频输出
+
+```js
+const videoStream = await composer.getOutput({ type: 'video' });
+previewVideo.srcObject = videoStream;
+```
+
+#### 获取音频输出
+
+```js
+const audioStream = await composer.getOutput({ type: 'audio' });
+const submixStream = await composer.getOutput({ type: 'audio', slots: [0, 2] });
+const isolatedSubmix = await composer.getOutput({ type: 'audio', slots: [0, 1], isolated: true });
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `options.type` | `'mixed' \| 'video' \| 'audio'` | 输出类型 |
+| `options.slots` | `number[]` | 子混音槽位列表，仅 `audio` 有效 |
+| `options.isolated` | `boolean` | 是否独立子混音，仅 `audio` 有效 |
+
+| 返回值 | 说明 |
+|--------|------|
+| `Promise<MediaStream>` | `mixed` / `video` 输出流 |
+| `Promise<MediaStream \| null>` | `audio` 输出流；无音频时可返回 `null` |
+
+说明：
+- `type: 'mixed'` 内部会先拿视频输出，再合入音频轨
+- `type: 'video'` 走统一新入口，但旧 `getVideoStream()` 仍保留同步兼容行为
+- `type: 'audio'` + `isolated: true` 会走独立子混音链路
+
+**旧写法兼容：**
+
+```js
+await composer.getMixedStream();
+composer.getVideoStream();
+await composer.getAudioStream();
+await composer.getIsolatedSubmixAudioStream({ slots: [0, 1] });
+```
+
+### `releaseOutput(options)`
+
+释放通过 `getOutput({ type: 'audio', ... })` 创建的子混音资源。
+
+```js
+composer.releaseOutput({ type: 'audio', slots: [0, 1], isolated: true });
+composer.releaseOutput({ type: 'audio', slots: [2, 3] });
+```
+
+| 返回值 | 说明 |
+|--------|------|
+| `boolean` | `true` 表示成功释放 |
+
+说明：
+- 当前仅 `audio` 类型支持释放
+
+**旧写法兼容：**
+
+```js
+composer.releaseSubmixAudioStream({ slots: [0, 1], isolated: true });
+```
+
+### `stop()`
+
+释放所有资源，停止混流器。调用后实例不可复用。
+
+```js
+composer.stop();
+```
+
+---
+
+## 4. 兼容旧 API 映射
+
+| 旧方法 | 新方法 / 新写法 |
+|--------|------------------|
+| `appendStream(videos, optionsOrSlot)` | `addSource(videos, optionsOrSlot)` |
+| `removeStream(streamOrId)` | `removeSource(streamOrId)` |
+| `clearStreams()` | `clearSources()` |
+| `getSources()` | `getState().sources` |
+| `setMirror(enabled)` | `await setConfig({ outputMirror: enabled })` |
+| `getMirror()` | `getState().config.outputMirror` |
+| `setMirrorWatermarksWithOutput(enabled)` | `await setConfig({ mirrorWatermarksWithOutput: enabled })` |
+| `getMirrorWatermarksWithOutput()` | `getState().config.mirrorWatermarksWithOutput` |
+| `setSourceMirror(true)` | `await setConfig({ sourceMirror: true })` |
+| `setSourceMirror(slot, enabled)` | `await setConfig({ sourceMirrorOverrides: { [slot]: enabled } })` |
+| `clearSourceMirror()` | `await setConfig({ clearSourceMirrorOverrides: true })` |
+| `clearSourceMirror(slot)` | `await setConfig({ sourceMirrorOverrides: { [slot]: null } })` |
+| `setWatermarks(watermarks)` | `await setConfig({ watermarks })` |
+| `clearWatermarks(filter)` | `await setConfig({ clearWatermarks: true, clearWatermarkFilter: filter })` |
+| `getWatermarks()` | `getState().config.watermarks` |
+| `getRenderInfo()` | `getState().render` |
+| `getAudioInfo()` | `getState().audio` |
+| `getMixedStream()` | `await getOutput({ type: 'mixed' })` |
+| `getVideoStream()` | `await getOutput({ type: 'video' })` |
+| `getAudioStream(options)` | `await getOutput({ type: 'audio', ...options })` |
+| `getIsolatedSubmixAudioStream(options)` | `await getOutput({ type: 'audio', isolated: true, ...options })` |
+| `releaseSubmixAudioStream(options)` | `releaseOutput({ type: 'audio', ...options })` |
+
+兼容说明：
+- 旧方法当前仍可调用，内部实现已经转调到新控制路径
+- 建议新接入统一使用 `addSource / setConfig / getState / getOutput / releaseOutput`
+- `getVideoStream()` 仍保留同步行为，主要用于兼容历史代码
+
+---
+
+## 5. 完整使用示例
+
+### 示例 1：基础推流
+
+```js
+async function startMixingAndPush() {
+  const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+  const composer = new CRTC.MediaStreamComposer([], {
+    width: 1280,
+    height: 720,
+    fps: 15
+  });
+
+  composer.addSource(localStream, 0);
+  composer.addSource(screenStream, { slot: 1, gain: 0.5 });
+
+  const mixedStream = await composer.getOutput({ type: 'mixed' });
+  mixedStream.getTracks().forEach((track) => pc.addTrack(track, mixedStream));
+
+  return { composer, mixedStream };
+}
+```
+
+### 示例 2：统一状态读取
+
+```js
+const state = composer.getState();
+
+console.log('sources', state.sources);
+console.log('render', state.render);
+console.log('audio', state.audio);
+```
+
+### 示例 3：镜像和水印动态配置
+
+```js
+await composer.setConfig({
+  outputMirror: true,
+  mirrorWatermarksWithOutput: true,
+  sourceMirrorOverrides: {
+    0: true
+  },
+  watermarks: [
+    { id: 'brand', target: 'output', type: 'text', text: 'Live', position: 'top-right' },
+    { id: 'host', target: 'source', slot: 0, type: 'text', text: 'Host', position: 'bottom-left' }
+  ]
+});
+```
+
+### 示例 4：子混音监听
+
+```js
+const submix = await composer.getOutput({
+  type: 'audio',
+  slots: [0, 1],
+  isolated: true
+});
+
+monitorAudio.srcObject = submix;
+
+composer.releaseOutput({
+  type: 'audio',
+  slots: [0, 1],
+  isolated: true
+});
+```
+
+---
+
+## 6. 常见问题
+
+### Q: `removeSource()` 不传参数能否当作 `clearSources()`？
+
+不能。当前 API 有意保持分离：
+- `removeSource(target)` 明确表示移除一路
+- `clearSources()` 明确表示清空全部
+
+这样调用语义更清晰，也避免误删全部源。
+
+### Q: `stop()` 后能复用吗？
+
+不能。`stop()` 后实例已销毁，需要重新 `new CRTC.MediaStreamComposer()`。
+
+### Q: 最多支持多少路输入源？
+
+9 路。
+
+### Q: 为什么还保留旧方法？
+
+为了平滑迁移旧业务代码。当前旧方法仍可使用，但内部都已尽量复用新实现。
+
+### Q: `getOutput({ type: 'video' })` 和 `getVideoStream()` 有什么区别？
+
+- 新代码建议统一使用 `await getOutput({ type: 'video' })`
+- `getVideoStream()` 是兼容层，仍保持同步返回
+
+### Q: 什么时候才会初始化音频混音？
+
+延迟初始化。只有请求音频输出时才会创建音频链路，例如：
+- `await getOutput({ type: 'audio' })`
+- `await getOutput({ type: 'mixed' })`

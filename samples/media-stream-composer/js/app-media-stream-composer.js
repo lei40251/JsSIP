@@ -64,7 +64,7 @@ Object.assign(window.app, {
     try
     {
       // 启动阶段仅获取视频输出流，避免默认拉起完整音频混流
-      const outStream = this.composer.getVideoStream();
+      const outStream = await this.composer.getOutput({ type: 'video' });
 
       // 通知 UI 层展示预览视频
       this.onComposerStarted(outStream, w, h, fps);
@@ -115,7 +115,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return null;
 
-    return this.composer.getSources().find((source) => source.slot === this.currentSlot) || null;
+    return this.composer.getState().sources.find((source) => source.slot === this.currentSlot) || null;
   },
 
   /**
@@ -126,8 +126,8 @@ Object.assign(window.app, {
    */
   hasSlotWatermark(slot)
   {
-    if (!this.composer || !this.composer.getWatermarks) return false;
-    const watermarks = this.composer.getWatermarks() || [];
+    if (!this.composer) return false;
+    const watermarks = this.composer.getState().config.watermarks || [];
 
     return watermarks.some((item) => item.target === 'source' && item.slot === slot);
   },
@@ -140,9 +140,9 @@ Object.assign(window.app, {
    */
   getWatermarkSnapshot()
   {
-    if (!this.composer || !this.composer.getWatermarks) return [];
+    if (!this.composer) return [];
 
-    return this.composer.getWatermarks() || [];
+    return this.composer.getState().config.watermarks || [];
   },
 
   // ==========================================================
@@ -166,9 +166,9 @@ Object.assign(window.app, {
    *
    * @returns {MediaStream|null} 仅视频的输出流；无 composer 时返回 null。
    */
-  getOutputVideoStream()
+  async getOutputVideoStream()
   {
-    return this.composer ? this.composer.getVideoStream() : null;
+    return this.composer ? this.composer.getOutput({ type: 'video' }) : null;
   },
 
   /**
@@ -180,7 +180,7 @@ Object.assign(window.app, {
    */
   async getOutputMixedStream()
   {
-    return this.composer ? this.composer.getMixedStream() : null;
+    return this.composer ? this.composer.getOutput({ type: 'mixed' }) : null;
   },
 
   /**
@@ -191,7 +191,7 @@ Object.assign(window.app, {
    */
   getSources()
   {
-    return this.composer ? this.composer.getSources() : [];
+    return this.composer ? this.composer.getState().sources : [];
   },
 
   /**
@@ -202,9 +202,28 @@ Object.assign(window.app, {
    */
   getSourceMirror(slot)
   {
-    if (!this.composer || !this.composer.getSourceMirror) return slot === undefined ? { global: false, overrides: {} } : null;
+    if (!this.composer) return slot === undefined ? { global: false, overrides: {} } : null;
 
-    return slot === undefined ? this.composer.getSourceMirror() : this.composer.getSourceMirror(Number(slot));
+    const config = this.composer.getState().config;
+    const global = Boolean(config.sourceMirror);
+    const overrides = Object.assign({}, config.sourceMirrorOverrides || {});
+
+    if (slot === undefined)
+    {
+      return { global, overrides };
+    }
+
+    const normalizedSlot = Number(slot);
+    const key = String(normalizedSlot);
+    const hasOverride = Object.prototype.hasOwnProperty.call(overrides, key);
+    const override = hasOverride ? Boolean(overrides[key]) : null;
+
+    return {
+      slot      : normalizedSlot,
+      global    : global,
+      override  : override,
+      effective : override === null ? global : override
+    };
   },
 
   /**
@@ -214,9 +233,9 @@ Object.assign(window.app, {
    */
   getMirror()
   {
-    if (!this.composer || !this.composer.getMirror) return false;
+    if (!this.composer) return false;
 
-    return Boolean(this.composer.getMirror());
+    return Boolean(this.composer.getState().config.outputMirror);
   },
 
   /**
@@ -226,9 +245,9 @@ Object.assign(window.app, {
    */
   getOutputWatermarkMirror()
   {
-    if (!this.composer || !this.composer.getMirrorWatermarksWithOutput) return true;
+    if (!this.composer) return true;
 
-    return Boolean(this.composer.getMirrorWatermarksWithOutput());
+    return Boolean(this.composer.getState().config.mirrorWatermarksWithOutput);
   },
 
   /**
@@ -238,17 +257,21 @@ Object.assign(window.app, {
    * @param {boolean} [enabled] - 传入槽位时表示该槽位覆盖值
    * @returns {boolean} 是否执行成功
    */
-  setSourceMirror(slotOrEnabled, enabled)
+  async setSourceMirror(slotOrEnabled, enabled)
   {
-    if (!this.composer || !this.composer.setSourceMirror) return false;
+    if (!this.composer) return false;
 
     if (typeof slotOrEnabled === 'boolean' && enabled === undefined)
     {
-      this.composer.setSourceMirror(slotOrEnabled);
+      await this.composer.setConfig({ sourceMirror: slotOrEnabled });
     }
     else
     {
-      this.composer.setSourceMirror(Number(slotOrEnabled), enabled);
+      await this.composer.setConfig({
+        sourceMirrorOverrides : {
+          [Number(slotOrEnabled)] : Boolean(enabled)
+        }
+      });
     }
 
     return true;
@@ -260,10 +283,10 @@ Object.assign(window.app, {
    * @param {boolean} enabled - true 开启，false 关闭
    * @returns {boolean} 是否执行成功
    */
-  setMirror(enabled)
+  async setMirror(enabled)
   {
-    if (!this.composer || !this.composer.setMirror) return false;
-    this.composer.setMirror(Boolean(enabled));
+    if (!this.composer) return false;
+    await this.composer.setConfig({ outputMirror: Boolean(enabled) });
 
     return true;
   },
@@ -274,10 +297,10 @@ Object.assign(window.app, {
    * @param {boolean} enabled
    * @returns {boolean}
    */
-  setOutputWatermarkMirror(enabled)
+  async setOutputWatermarkMirror(enabled)
   {
-    if (!this.composer || !this.composer.setMirrorWatermarksWithOutput) return false;
-    this.composer.setMirrorWatermarksWithOutput(Boolean(enabled));
+    if (!this.composer) return false;
+    await this.composer.setConfig({ mirrorWatermarksWithOutput: Boolean(enabled) });
 
     return true;
   },
@@ -288,17 +311,21 @@ Object.assign(window.app, {
    * @param {number} [slot] - 不传则清除全部槽位覆盖
    * @returns {boolean} 是否执行成功
    */
-  clearSourceMirror(slot)
+  async clearSourceMirror(slot)
   {
-    if (!this.composer || !this.composer.clearSourceMirror) return false;
+    if (!this.composer) return false;
 
     if (slot === undefined)
     {
-      this.composer.clearSourceMirror();
+      await this.composer.setConfig({ clearSourceMirrorOverrides: true });
     }
     else
     {
-      this.composer.clearSourceMirror(Number(slot));
+      await this.composer.setConfig({
+        sourceMirrorOverrides : {
+          [Number(slot)] : null
+        }
+      });
     }
 
     return true;
@@ -312,7 +339,7 @@ Object.assign(window.app, {
    */
   getAudioInfo()
   {
-    return this.composer && this.composer.getAudioInfo ? this.composer.getAudioInfo() : null;
+    return this.composer ? this.composer.getState().audio : null;
   },
 
   /**
@@ -323,7 +350,7 @@ Object.assign(window.app, {
    */
   getRenderInfo()
   {
-    return this.composer && this.composer.getRenderInfo ? this.composer.getRenderInfo() : null;
+    return this.composer ? this.composer.getState().render : null;
   },
 
   /**
@@ -402,7 +429,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    await this.composer.setWatermarks(watermarks);
+    await this.composer.setConfig({ watermarks });
     // 刷新界面：水印列表 + 槽位状态标记
     this.refreshWatermarkList();
     this.updateSlotUI();
@@ -416,11 +443,14 @@ Object.assign(window.app, {
    * @fires updateSlotUI
    * @returns {void}
    */
-  clearOutputWatermarks()
+  async clearOutputWatermarks()
   {
     if (!this.composer) return;
 
-    this.composer.clearWatermarks({ target: 'output' });
+    await this.composer.setConfig({
+      clearWatermarks      : true,
+      clearWatermarkFilter : { target: 'output' }
+    });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },
@@ -433,11 +463,14 @@ Object.assign(window.app, {
    * @fires updateSlotUI
    * @returns {void}
    */
-  clearSelectedSlotWatermark()
+  async clearSelectedSlotWatermark()
   {
     if (!this.composer) return;
 
-    this.composer.clearWatermarks({ target: 'source', slot: this.currentSlot });
+    await this.composer.setConfig({
+      clearWatermarks      : true,
+      clearWatermarkFilter : { target: 'source', slot: this.currentSlot }
+    });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },
@@ -450,11 +483,14 @@ Object.assign(window.app, {
    * @fires updateSlotUI
    * @returns {void}
    */
-  clearAllSlotWatermarks()
+  async clearAllSlotWatermarks()
   {
     if (!this.composer) return;
 
-    this.composer.clearWatermarks({ target: 'source' });
+    await this.composer.setConfig({
+      clearWatermarks      : true,
+      clearWatermarkFilter : { target: 'source' }
+    });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },
@@ -528,7 +564,11 @@ Object.assign(window.app, {
       }
 
       // 从 MediaStreamComposer 获取独立的子混音音频流
-      const stream = await this.composer.getAudioStream({ slots: normalizedSlots, isolated: useIsolatedSubmix });
+      const stream = await this.composer.getOutput({
+        type     : 'audio',
+        slots    : normalizedSlots,
+        isolated : useIsolatedSubmix
+      });
       const playbackStream = this.createAudioPlaybackStream(stream);
       const trackCount = stream ? stream.getAudioTracks().length : 0;
 
@@ -613,14 +653,15 @@ Object.assign(window.app, {
    */
   releaseSubmixAudioRequest(slots, isolated)
   {
-    if (!this.composer || !this.composer.releaseSubmixAudioStream) return false;
+    if (!this.composer) return false;
     const normalizedSlots = this.normalizeSubmixSlots(slots);
 
     if (!normalizedSlots.length) return false;
 
     try
     {
-      return this.composer.releaseSubmixAudioStream({
+      return this.composer.releaseOutput({
+        type     : 'audio',
         slots    : normalizedSlots,
         isolated : Boolean(isolated)
       });
@@ -676,13 +717,13 @@ Object.assign(window.app, {
     // 先从 composer 中移除所有流
     sorted.forEach((item) =>
     {
-      this.composer.removeStream(item.stream.id);
+      this.composer.removeSource(item.stream.id);
     });
 
     // 按顺序重新添加到 composer，分配连续槽位
     sorted.forEach((item, index) =>
     {
-      this.composer.appendStream(item.stream, index);
+      this.composer.addSource(item.stream, index);
       item.slot = index;
     });
 
@@ -736,7 +777,7 @@ Object.assign(window.app, {
     // 移除目标槽位的旧源（如有）
     this.removeLocalStreamBySlot(slot);
     // 将新源添加到 MediaStreamComposer 指定槽位
-    this.composer.appendStream(stream, slot);
+    this.composer.addSource(stream, slot);
 
     // 记录本地源列表
     this.localStreams.push({ stream, slot, label });
@@ -777,7 +818,7 @@ Object.assign(window.app, {
     if (!this.composer) return;
 
     // 从 MediaStreamComposer 移除流
-    this.composer.removeStream(id);
+    this.composer.removeSource(id);
 
     // 在本地列表中查找并移除
     const idx = this.localStreams.findIndex((item) => item.stream.id === id);

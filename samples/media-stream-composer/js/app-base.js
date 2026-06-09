@@ -471,41 +471,41 @@ const app = {
     }
   },
 
-  toggleGlobalMirror()
+  async toggleGlobalMirror()
   {
     if (!this.isRunning()) return;
 
     const sourceMirror = this.getSourceMirror();
     const next = !(sourceMirror && sourceMirror.global);
 
-    if (!this.setSourceMirror(next)) return;
+    if (!await this.setSourceMirror(next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
 
-  toggleOutputMirror()
+  async toggleOutputMirror()
   {
     if (!this.isRunning()) return;
 
     const next = !this.getMirror();
 
-    if (!this.setMirror(next)) return;
+    if (!await this.setMirror(next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
 
-  toggleOutputWatermarkMirror()
+  async toggleOutputWatermarkMirror()
   {
     if (!this.isRunning()) return;
 
     const next = !this.getOutputWatermarkMirror();
 
-    if (!this.setOutputWatermarkMirror(next)) return;
+    if (!await this.setOutputWatermarkMirror(next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
 
-  toggleCurrentSlotMirror()
+  async toggleCurrentSlotMirror()
   {
     if (!this.isRunning()) return;
 
@@ -514,15 +514,15 @@ const app = {
       !mirrorState.effective :
       !mirrorState.slotOverride;
 
-    if (!this.setSourceMirror(this.currentSlot, next)) return;
+    if (!await this.setSourceMirror(this.currentSlot, next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
 
-  clearCurrentSlotMirror()
+  async clearCurrentSlotMirror()
   {
     if (!this.isRunning()) return;
-    if (!this.clearSourceMirror(this.currentSlot)) return;
+    if (!await this.clearSourceMirror(this.currentSlot)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
@@ -2099,11 +2099,11 @@ const app = {
       {
         const stream = await this.stressSourceFactory.create(`AUX${i + 1}-SRC${slot + 1}`, slot, i + 1);
 
-        composer.appendStream(stream, slot);
+        composer.addSource(stream, slot);
         streams.push(stream);
       }
 
-      const outputStream = composer.getVideoStream();
+      const outputStream = await composer.getOutput({ type: 'video' });
 
       auxList.push({ composer, streams, outputStream });
     }
@@ -2177,8 +2177,8 @@ const app = {
     if (mainInfo) infos.push(mainInfo);
     (this.stressAuxComposers || []).forEach((item) =>
     {
-      if (!item || !item.composer || !item.composer.getRenderInfo) return;
-      const auxInfo = item.composer.getRenderInfo();
+      if (!item || !item.composer || !item.composer.getState) return;
+      const auxInfo = item.composer.getState().render;
 
       if (auxInfo) infos.push(auxInfo);
     });

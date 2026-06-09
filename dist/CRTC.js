@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026691834
+ * CRTC v2.0.0.2026692255
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -7,14 +7,74 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.CRTC = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 
+/**
+ * AINoiseSuppressionConfig — AI 降噪引擎的配置归一化模块。
+ *
+ * 职责：
+ *   - 将外部传入的选项与安全默认值合并
+ *   - 对每种参数类型做类型校验与范围钳位
+ *   - 输出规格一致的配置快照，避免下游重复校验
+ *
+ * 设计要点：
+ *   - 所有归一化函数都是纯函数（无副作用），方便单元测试
+ *   - 对外导出常量供 Core 和 Processor 直接引用，避免魔术数字
+ *   - 非法值统一回退到安全的默认值，并在 debug 级别记录 fallback 原因
+ *
+ * @module AINoiseSuppressionConfig
+ */
+
 var Logger = require('../Logger');
 var logger = new Logger('AINoiseSuppressionConfig');
+
+/**
+ * 默认采样率（48kHz）。
+ *
+ * 与 WASM 模型期望的输入一致。若 AudioContext 无法以 48kHz
+ * 创建，Core 会回退到浏览器默认值。
+ * @type {number}
+ */
 var DEFAULT_SAMPLE_RATE = 48000;
+
+/**
+ * 默认降噪强度（0-100 范围）。
+ *
+ * 80 在"足够降噪"和"保持语音自然度"之间取平衡。
+ * 值越高降噪越激进，也越容易造成语音失真。
+ * @type {number}
+ */
 var DEFAULT_SUPPRESSION_LEVEL = 80;
+
+/**
+ * 降噪 WASM/模型资源的默认 CDN 地址（相对路径）。
+ *
+ * 部署时可通过 options.assetConfig.cdnUrl 覆盖为绝对 URL
+ * 或其他 CDN 地址。最终拼接规则由 Core.AssetLoader 负责。
+ * @type {string}
+ */
 var DEFAULT_CDN_URL = './static';
 exports.DEFAULT_SAMPLE_RATE = DEFAULT_SAMPLE_RATE;
 exports.DEFAULT_SUPPRESSION_LEVEL = DEFAULT_SUPPRESSION_LEVEL;
 exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
+
+/**
+ * 创建完全归一化的 AINoiseSuppression 配置对象。
+ *
+ * 所有外部选项经此函数处理后，下游代码可以按标准类型直接使用，
+ * 无需再做额外校验。
+ *
+ * @param {Object} [options] — 用户提供的原始选项
+ * @param {boolean} [options.enabled=true] — 是否默认启用降噪
+ * @param {boolean} [options.preserveOtherTracks=true] — 处理时是否保留原始流中非音频轨道（如视频轨）
+ * @param {number} [options.sampleRate=48000] — AudioContext 采样率
+ * @param {number} [options.noiseReductionLevel=80] — 降噪强度（0-100）
+ * @param {Object} [options.assetConfig] — 资源 CDN / 路径覆盖，含 cdnUrl 字段
+ * @returns {Object} 归一化后的配置对象
+ * @returns {boolean} returns.enabled
+ * @returns {boolean} returns.preserveOtherTracks
+ * @returns {number} returns.sampleRate
+ * @returns {number} returns.noiseReductionLevel — 已钳位到 [0, 100]
+ * @returns {Object|null} returns.assetConfig — 归一化后的资源配置，或 null
+ */
 exports.create = function (options) {
   options = options && typeof options === 'object' ? options : {};
   var config = {
@@ -27,6 +87,18 @@ exports.create = function (options) {
   logger.debug(`Config created: ${JSON.stringify(config)}`);
   return config;
 };
+
+/**
+ * 归一化为布尔值。
+ *
+ * 仅当 value 严格为 boolean 类型时直接返回；其他情况（undefined、
+ * 字符串、数字等）均回退到 fallback。避免 JS 隐式类型转换
+ * （如字符串 "false" 被转为 true）带来的配置错误。
+ *
+ * @param {*} value — 原始传入值
+ * @param {boolean} fallback — 非法或未传时使用的备选值
+ * @returns {boolean}
+ */
 exports.normalizeBoolean = function (value, fallback) {
   if (typeof value === 'boolean') {
     return value;
@@ -36,6 +108,17 @@ exports.normalizeBoolean = function (value, fallback) {
   }
   return Boolean(fallback);
 };
+
+/**
+ * 归一化为正整数（严格大于 0）。
+ *
+ * 无限值、NaN、负数、零均视为非法，回退到 fallback。
+ * 合法的小数值向下取整（Math.floor）。
+ *
+ * @param {*} value — 原始传入值
+ * @param {number} fallback — 非法或未传时使用的备选值
+ * @returns {number}
+ */
 exports.normalizePositiveInteger = function (value, fallback) {
   var numberValue = Number(value);
   if (Number.isFinite(numberValue) && numberValue > 0) {
@@ -46,6 +129,22 @@ exports.normalizePositiveInteger = function (value, fallback) {
   }
   return fallback;
 };
+
+/**
+ * 归一化降噪强度级别。
+ *
+ * 将输入钳位到 [0, 100] 范围：
+ *   - 0 = 无降噪（完全 bypass）
+ *   - 100 = 最大降噪强度
+ *   - 非法值回退到 fallback
+ *
+ * 钳位使用 Math.min/max 而非取模，确保配置有明确上限，
+ * 不会因极端值导致 WASM 内部异常。
+ *
+ * @param {*} value — 原始传入值
+ * @param {number} fallback — 非法或未传时使用的备选值
+ * @returns {number} 钳位到 [0, 100] 的正整数
+ */
 exports.normalizeSuppressionLevel = function (value, fallback) {
   var numberValue = Number(value);
   if (Number.isFinite(numberValue)) {
@@ -56,6 +155,19 @@ exports.normalizeSuppressionLevel = function (value, fallback) {
   }
   return fallback;
 };
+
+/**
+ * 归一化资源配置。
+ *
+ * 规则：
+ *   - 非 object 类型（含 null）直接返回 null
+ *   - 只接受 string 类型的 cdnUrl（且去除首尾空白后非空）
+ *   - 若归一化后对象为空（没有有效 key），返回 null 而非空对象，
+ *     方便下游用 `if (assetConfig)` 判断是否配置了自定义资源路径
+ *
+ * @param {*} assetConfig — 原始资源配置
+ * @returns {Object|null} 归一化后的资源配置 { cdnUrl: string }，或 null
+ */
 exports.normalizeAssetConfig = function (assetConfig) {
   if (!assetConfig || typeof assetConfig !== 'object') {
     if (assetConfig !== undefined && assetConfig !== null) {
@@ -1861,6 +1973,21 @@ function buildCanvas2DPipeline(options) {
   /** @type {boolean} 最近一帧是否复用了旧遮罩 */
   var lastMaskReused = false;
   resizeWorkingCanvases();
+
+  /**
+   * 执行一帧渲染。
+   *
+   * 完整的每帧合成流程（按顺序）：
+   *
+   *   1. 'none' 模式 → 直接绘制视频帧到目标 canvas，跳过后续步骤
+   *   2. 分割决策：首帧/无缓存 → 必须分割；按 frameSkip 降频复用
+   *   3. 获取人像遮罩：MediaPipe segmentForVideo → confidenceMask → alpha canvas
+   *   4. 提取人像到 personCanvas：destination-in 合成保留人物区域
+   *   5. 绘制背景层：'blur'→模糊视频帧 / 'image'→cover-fit 图片 / 'color'→纯色填充
+   *   6. 合成人像层：ctx.drawImage(personCanvas) 将人像叠加到背景上
+   *
+   * @returns {Promise<void>}
+   */
   async function render() {
     var renderStartAt = getNow();
     ensureCanvasSizes();
@@ -1923,6 +2050,17 @@ function buildCanvas2DPipeline(options) {
       segmentationMask: segmentationMask
     });
   }
+
+  /**
+   * 更新管线运行状态（部分更新，未传入的字段保持不变）。
+   *
+   * 可热切换的属性：mode、mirror、backgroundImage、backgroundColor、
+   * blurRadius、maxBlurRadius、processingScale、frameSkip。
+   *
+   * 这允许在渲染过程中无缝切换背景类型，无需销毁/重建管线。
+   *
+   * @param {Object} [nextState={}] - 要更新的状态字段
+   */
   function updateState(nextState = {}) {
     if (Object.prototype.hasOwnProperty.call(nextState, 'mode') && nextState.mode) {
       state.mode = nextState.mode;
@@ -2714,6 +2852,32 @@ class AIVirtualBackground {
       throw new Error('AIVirtualBackground not initialized');
     }
   }
+
+  /**
+   * 初始化虚拟背景引擎。
+   *
+   * 完整的初始化管线（按顺序）：
+   *
+   *   1. 加载 MediaPipe 分割模型（selfie-segmenter）
+   *      └─ segmenterRuntime.initialize() → WASM + TFLite 模型
+   *   2. 创建隐藏 <video> 元素
+   *      └─ createVideoElement() → video.srcObject = inputStream
+   *   3. 构建 Canvas2D 渲染管线
+   *      └─ buildCanvas2DPipeline() → 离屏 canvas + 分割输入 canvas
+   *   4. 创建输出流
+   *      └─ canvas.captureStream(fps) → MediaStream 输出
+   *   5. 重置背景为"直通"模式
+   *      └─ clearBackground()
+   *
+   * 调用 start() 后，requestAnimationFrame 循环开始逐帧处理。
+   * 初始化失败时自动销毁已创建的资源。
+   *
+   * @param {Object} [options]
+   * @param {MediaStream} options.inputStream — 原始摄像头采集流
+   * @param {string} [options.modelPath]     — 可选的分割模型 URL 覆盖
+   * @param {HTMLCanvasElement} [options.canvas] — 可选的外部 canvas
+   * @returns {Promise<void>}
+   */
   async init({
     inputStream,
     modelPath,
@@ -2791,6 +2955,20 @@ class AIVirtualBackground {
       this._performance.avgSegmentationMs = this._performance.totalSegmentationMs / this._performance.segmentedFrames;
     }
   }
+
+  /**
+   * 设置虚拟背景模式（统一入口）。
+   *
+   * 四种模式：
+   *   - 'none'  → clearBackground()：直通原始视频帧
+   *   - 'blur'  → setBlurBackground(src)：高斯模糊原始背景
+   *   - 'image' → setBackgroundImage(src)：用自定义图片替换背景
+   *   - 'color' → setSolidColor(src)：用纯色填充背景
+   *
+   * @param {string} type — 'none' | 'blur' | 'image' | 'color'
+   * @param {string|number} [src] — 模式参数（blur 半径 / 图片 URL / 颜色值）
+   * @returns {Promise<void>}
+   */
   setupPipeline(type, src) {
     if (type === 'blur') {
       return this.setBlurBackground(src);
@@ -2874,6 +3052,17 @@ class AIVirtualBackground {
       });
     }
   }
+
+  /**
+   * 启动渲染循环（requestAnimationFrame）。
+   *
+   * 每帧执行：loop() → pipeline.render() → Canvas2D 合成 → captureStream 输出。
+   *
+   * 帧率由 config.video.targetFps 控制（默认 15fps），
+   * rAF 负责调度，实际合成按目标帧间隔节流。
+   *
+   * 循环会持续运行直到 stop() 被调用或引擎被 destroy()。
+   */
   start() {
     if (this.isRunning) return;
     this.isRunning = true;
@@ -2890,6 +3079,19 @@ class AIVirtualBackground {
       this.animationFrameId = null;
     }
   }
+
+  /**
+   * 单帧渲染回调（rAF）。
+   *
+   * 每帧流程：
+   *   1. 按 targetFps 节流，未达到目标帧间隔时跳过绘制
+   *   2. 防止并发渲染（isRendering 互斥锁），并发时记录丢帧
+   *   3. 调用 pipeline.render() 执行 Canvas2D 合成
+   *   4. canvas 内容由 captureStream 自动输出到 MediaStream
+   *   5. 调度下一帧 rAF
+   *
+   * @param {number} now — performance.now() 传入的高精度时间戳（毫秒）
+   */
   async loop(now) {
     if (!this.isRunning) return;
     var interval = 1000 / this.config.video.targetFps;
@@ -3007,6 +3209,23 @@ class AIVirtualBackground {
       mode: 'color'
     });
   }
+
+  /**
+   * 销毁虚拟背景引擎，释放所有资源。
+   *
+   * 清理顺序：
+   *   1. 停止渲染循环（stop → cancelAnimationFrame）
+   *   2. 等待最后一帧渲染完成（renderPromise）
+   *   3. 取消正在加载的背景图片
+   *   4. 清理渲染管线（cleanUp）
+   *   5. 释放背景图片引用
+   *   6. 清理 video 元素（srcObject = null）
+   *   7. 关闭 MediaPipe 分割器（释放 WASM 资源）
+   *
+   * 可安全地多次调用（destroyed 标记保护）。
+   *
+   * @returns {Promise<void>}
+   */
   async destroy() {
     if (this.destroyed && !this.canvas && !this.videoEl && !this.outputStream) {
       return;
@@ -5842,7 +6061,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212183668 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212184510 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -19052,7 +19271,7 @@ var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212183668');
+debug('version %s', '2.0.0.405212184510');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19094,7 +19313,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212183668';
+    return '2.0.0.405212184510';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],49:[function(require,module,exports){
@@ -19203,7 +19422,7 @@ module.exports = class Logger {
 "use strict";
 
 /**
- * AudioMixer — WebAudio 混音模块
+ * AudioComposer — WebAudio 音频合成模块
  *
  * 负责混流器的音频处理部分：
  *   - 延迟创建 AudioContext（用户交互后才初始化）
@@ -19211,9 +19430,9 @@ module.exports = class Logger {
  *   - 汇总到 MediaStreamAudioDestinationNode 输出
  *   - 支持动态增删源、外部换源检测、自动重连
  *
- * @module AudioMixer
+ * @module AudioComposer
  */
-class AudioMixer {
+class AudioComposer {
   /**
    * @param {Object} options
    * @param {Object} options.logger - 日志记录器
@@ -19274,7 +19493,7 @@ class AudioMixer {
       lastError: ''
     };
     if (this._logger) {
-      this._logger.debug('AudioMixer constructed');
+      this._logger.debug('AudioComposer constructed');
     }
   }
 
@@ -19542,7 +19761,7 @@ class AudioMixer {
    */
   stop() {
     if (this._logger) {
-      this._logger.debug('Stopping AudioMixer');
+      this._logger.debug('Stopping AudioComposer');
     }
     if (this._compressorNode) {
       this._safeDisconnect(this._compressorNode);
@@ -19582,7 +19801,7 @@ class AudioMixer {
     this._audioSystemReadyPromise = null;
     this._updateAudioInfo({
       status: 'stopped',
-      reason: 'Mixer stopped'
+      reason: 'Composer stopped'
     });
   }
 
@@ -20129,7 +20348,7 @@ class AudioMixer {
     if (!this._audioRequested && !bus || this._getDestroyed()) {
       this._updateAudioInfo({
         status: this._getDestroyed() ? 'stopped' : 'not-requested',
-        reason: this._getDestroyed() ? 'Mixer stopped' : ''
+        reason: this._getDestroyed() ? 'Composer stopped' : ''
       });
       return Promise.resolve(null);
     }
@@ -20409,8 +20628,347 @@ class AudioMixer {
     return this._audioInfo;
   }
 }
-module.exports = AudioMixer;
+module.exports = AudioComposer;
 },{}],51:[function(require,module,exports){
+"use strict";
+
+/**
+ * ComposerConfig — 合成器配置归一化工具模块
+ *
+ * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
+ * 所有方法均为纯函数（无副作用），方便单元测试。
+ *
+ * @module ComposerConfig
+ */
+
+var Logger = require('../../Logger');
+var logger = new Logger('ComposerConfig');
+
+/** 最大参与方数（含视频和纯音频源） */
+var MAX_SOURCES = 9;
+
+/** 合法的渲染后端模式集合 */
+var VALID_RENDER_MODES = {
+  auto: true,
+  // 自动选择（优先 Worker WebGL2）
+  'worker-webgl2': true,
+  // Worker 线程 WebGL2
+  'main-webgl2': true,
+  // 主线程 WebGL2
+  'worker-2d': true,
+  // Worker 线程 Canvas2D
+  'main-2d': true // 主线程 Canvas2D（最兼容）
+};
+
+/**
+ * 创建归一化的混流配置对象。
+ *
+ * @param {Object} [options={}] - 原始配置参数
+ * @returns {Object} 归一化后的配置对象
+ * @returns {number} returns.width - 输出宽度（默认 1280）
+ * @returns {number} returns.height - 输出高度（默认 720）
+ * @returns {number} returns.fps - 输出帧率（默认 15）
+ * @returns {string} returns.backgroundColor - 画布底色
+ * @returns {number} returns.audioGain - 全局默认音量增益
+ * @returns {string} returns.renderMode - 渲染后端选择
+ * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
+ * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
+ * @returns {number} returns.maxFrameQueue - 最大帧队列长度
+ * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
+ * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像（公开参数名 sourceMirror）
+ * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像（公开参数名 mirror）
+ * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
+ * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
+ * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
+ */
+exports.create = function (options) {
+  options = options || {};
+  var config = {
+    width: exports.normalizePositiveInteger(options.width, 1280),
+    height: exports.normalizePositiveInteger(options.height, 720),
+    fps: exports.normalizePositiveInteger(options.fps, 15),
+    backgroundColor: options.backgroundColor || '#000',
+    audioGain: exports.normalizeGain(options.audioGain, 0.8),
+    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
+    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
+    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
+    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
+    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
+    mirrorX: exports.normalizeMirrorX(options.sourceMirror, undefined, false),
+    outputMirrorX: exports.normalizeMirrorX(options.mirror, undefined, false),
+    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
+    enableInsertable: options.enableInsertable === true,
+    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
+    watermarks: options.watermarks || []
+  };
+  logger.debug(`Config created: ${JSON.stringify(config)}`);
+  return config;
+};
+
+/**
+ * 归一化渲染模式字符串。
+ * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
+ *
+ * @param {*} value - 原始传入的 renderMode
+ * @param {string} fallback - 非法或未传时使用的备选值
+ * @returns {string} 合法的渲染模式
+ */
+exports.normalizeRenderMode = function (value, fallback) {
+  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
+    return value;
+  }
+  logger.debug(`normalizeRenderMode fallback: value=${value} fallback=${fallback || 'auto'}`);
+  return fallback || 'auto';
+};
+
+/**
+ * 归一化为正整数。
+ * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
+ *
+ * @param {*} value - 原始输入值
+ * @param {number|null} fallback - 非法时使用的备选值
+ * @returns {number|null} 归一化后的正整数，或 fallback
+ */
+exports.normalizePositiveInteger = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue > 0) {
+    return Math.floor(numberValue);
+  }
+  logger.debug(`normalizePositiveInteger fallback: value=${value} fallback=${fallback}`);
+  return fallback;
+};
+
+/**
+ * 归一化 slot 值。
+ * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
+ *
+ * @param {*} value - 原始 slot 值
+ * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
+ * @returns {number|null} 归一化后的 slot，非法则返回 null
+ */
+exports.normalizeSlot = function (value, index) {
+  var numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    logger.debug(`normalizeSlot invalid: value=${value} index=${index}`);
+    return null;
+  }
+  return Math.max(0, Math.floor(numberValue)) + index;
+};
+
+/**
+ * 归一化音量增益值。
+ * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
+ *
+ * @param {*} value - 原始增益值
+ * @param {number} fallback - 非法时的备选值
+ * @returns {number} 归一化后的增益值（>= 0）
+ */
+exports.normalizeGain = function (value, fallback) {
+  var numberValue = Number(value);
+  if (Number.isFinite(numberValue) && numberValue >= 0) {
+    return numberValue;
+  }
+  logger.debug(`normalizeGain fallback: value=${value} fallback=${fallback}`);
+  return fallback;
+};
+
+/**
+ * 归一化水平镜像开关。
+ *
+ * @param {*} primary - 主参数
+ * @param {*} legacy - 兼容参数
+ * @param {boolean} fallback - 默认值
+ * @returns {boolean}
+ */
+exports.normalizeMirrorX = function (primary, legacy, fallback) {
+  if (typeof primary === 'boolean') {
+    return primary;
+  }
+  if (typeof legacy === 'boolean') {
+    return legacy;
+  }
+  return Boolean(fallback);
+};
+
+/**
+ * 统一 appendStream() 第二个参数的格式。
+ * 支持两种调用方式：
+ *   appendStream(stream, 3)               → 数字作为 slot
+ *   appendStream(stream, { slot, gain })  → 对象解构
+ *
+ * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
+ * @param {number} index - 数组索引，批量添加时 slot 递增
+ * @param {number} defaultGain - 未指定 gain 时使用的默认值
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
+ */
+/**
+ * 返回最大参与方数限制。
+ * @returns {number}
+ */
+exports.getMaxSources = function () {
+  return MAX_SOURCES;
+};
+exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
+  var options = {};
+  if (typeof optionsOrSlot === 'number') {
+    options.slot = exports.normalizeSlot(optionsOrSlot, index);
+  } else if (optionsOrSlot && typeof optionsOrSlot === 'object') {
+    if (typeof optionsOrSlot.slot === 'number') {
+      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
+    }
+    if (typeof optionsOrSlot.gain === 'number') {
+      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
+    }
+    if (typeof optionsOrSlot.sourceMirror === 'boolean') {
+      options.sourceMirror = optionsOrSlot.sourceMirror;
+    }
+  }
+  logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
+  return options;
+};
+},{"../../Logger":49}],52:[function(require,module,exports){
+"use strict";
+
+/**
+ * ComposerDomAdapter — 合成器 DOM 元素创建适配器
+ *
+ * 负责创建和管理混流器内部使用的 DOM 元素：
+ *   - 离屏 canvas：用于合成视频帧
+ *   - 隐藏 video 元素：用于播放每个 MediaStream
+ *
+ * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
+ *
+ * @module ComposerDomAdapter
+ */
+class ComposerDomAdapter {
+  /**
+   * @param {Object} options
+   * @param {Object} options.config - 混流配置对象（含 width/height 等）
+   * @param {Object} options.logger - 日志记录器
+   */
+  constructor(options) {
+    options = options || {};
+    this._config = options.config;
+    this._logger = options.logger;
+    if (this._logger) {
+      this._logger.debug('ComposerDomAdapter constructed');
+    }
+  }
+
+  /**
+   * 创建一个隐藏的离屏 canvas 元素。
+   * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
+   *
+   * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
+   */
+  createCanvas() {
+    var canvas = document.createElement('canvas');
+    canvas.setAttribute('style', 'display:none');
+    if (this._logger) {
+      this._logger.debug('Hidden composer canvas created');
+    }
+    return canvas;
+  }
+
+  /**
+   * 将 canvas 尺寸设置为配置值（grid 模式）。
+   * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
+   *
+   * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
+   */
+  prepareCanvas(canvas) {
+    var width = this._config.width || 1280;
+    var height = this._config.height || 720;
+    var resized = false;
+
+    // canvas width/height 设置时会清空画布，只在尺寸变化时才写
+    if (canvas.width !== width) {
+      canvas.width = width;
+      resized = true;
+    }
+    if (canvas.height !== height) {
+      canvas.height = height;
+      resized = true;
+    }
+    if (resized && this._logger) {
+      this._logger.debug(`Canvas prepared: ${width}x${height}`);
+    }
+  }
+
+  /**
+   * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
+   * video 元素属性：display:none、muted、autoplay、playsinline。
+   *
+   * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
+   * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
+   */
+  createVideoElement(mediaStream) {
+    var video = document.createElement('video');
+    video.setAttribute('style', 'display:none');
+    video.muted = true;
+    video.autoplay = true;
+    video.setAttribute('playsinline', '');
+    video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
+    if (this._logger) {
+      var stream = video.srcObject;
+      var streamId = stream && stream.id ? stream.id : 'unknown';
+      this._logger.debug(`Video element created for stream ${streamId}`);
+    }
+    var capturedStreamId = video.srcObject && video.srcObject.id || 'unknown';
+    video.play().catch(error => {
+      // 确认 video 是否仍关联着该 stream。如果 stream 已被清理（pause + srcObject = null），
+      // 说明该 video 在被 play() resolve 之前已被上层逻辑主动移除，此为良性竞态，不必报 error。
+      var isOrphaned = !video.srcObject;
+      if (isOrphaned) {
+        return;
+      }
+      this._logger.error(`video play error for stream ${capturedStreamId}: ${error.message || String(error)}`);
+    });
+    return video;
+  }
+
+  /**
+   * 为 captureStream 输出创建隐藏的消费 video。
+   * 用于规避部分 Chromium 在未被本地 UI 消费时对 captureStream 降质/丢帧。
+   *
+   * @param {MediaStream} mediaStream - 要持续播放的 captureStream 输出
+   * @returns {HTMLVideoElement} 隐藏的消费 video 元素
+   */
+  createOutputSinkVideoElement(mediaStream) {
+    var video = this.createVideoElement(mediaStream);
+    if (this._logger) {
+      var streamId = mediaStream && mediaStream.id ? mediaStream.id : 'unknown';
+      this._logger.debug(`Output sink video created for captureStream ${streamId}`);
+    }
+    return video;
+  }
+
+  /**
+   * 清理隐藏的 video 元素。
+   *
+   * @param {HTMLVideoElement|null} video - 要清理的隐藏 video
+   */
+  disposeVideoElement(video) {
+    if (!video) {
+      return;
+    }
+    try {
+      if (typeof video.pause === 'function') {
+        video.pause();
+      }
+    } catch (error) {}
+    try {
+      video.srcObject = null;
+    } catch (error) {}
+    try {
+      if (typeof video.remove === 'function') {
+        video.remove();
+      }
+    } catch (error) {}
+  }
+}
+module.exports = ComposerDomAdapter;
+},{}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20761,36 +21319,20 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],52:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../../Logger');
 var SourceRegistry = require('./SourceRegistry');
 var LayoutEngine = require('./LayoutEngine');
-var AudioMixer = require('./AudioMixer');
+var AudioComposer = require('./AudioComposer');
 var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
-var MediaStreamComposerConfig = require('./MixerConfig');
-var ComposerDomAdapter = require('./MixerDomAdapter');
+var MediaStreamComposerConfig = require('./ComposerConfig');
+var ComposerDomAdapter = require('./ComposerDomAdapter');
 var WatermarkManager = require('./WatermarkManager');
 var logger = new Logger('MediaStreamComposer');
 var lastRenderInfoLogSignature = '';
-
-/**
- * _audioInfo 的默认值，子模块未初始化或不可用时使用。
- * @type {Object}
- */
-var DEFAULT_AUDIO_INFO = Object.freeze({
-  requested: false,
-  status: 'not-requested',
-  contextState: null,
-  sourceCount: 0,
-  liveSourceCount: 0,
-  connectedSources: 0,
-  outputTracks: 0,
-  reason: '',
-  lastError: ''
-});
 
 /**
  * MediaStreamComposer — 多路音视频合成器
@@ -20818,7 +21360,7 @@ class MediaStreamComposer {
    *   需要混流的输入源。为了兼容旧版 SDK，仍然支持只传数组；新版也允许传单个源。
    *   每个元素可以是：
    *     - MediaStream：原生 WebRTC 媒体流
-   *     - HTMLVideoElement：外部 video 元素，需使用 srcObject=MediaStream（mixer 不接管生命周期）
+   *     - HTMLVideoElement：外部 video 元素，需使用 srcObject=MediaStream（composer 不接管生命周期）
    *     - { mediaStream: MediaStream }：SDK 内部包装对象
    * @param {Object} [options]
    *   混流配置。
@@ -20870,9 +21412,7 @@ class MediaStreamComposer {
     // WebAudio 相关
     // -----------------------------------------------------------------------
 
-    this._audioMixer = null;
-    this._audioRefreshPromise = null;
-    this._audioRefreshPending = false;
+    this._audioComposer = null;
     this._outputStreamManager = null;
     this._domAdapter = null;
     this._watermarkManager = null;
@@ -20988,7 +21528,7 @@ class MediaStreamComposer {
     });
 
     // -----------------------------------------------------------------------
-    // 音频混音器（AudioMixer）—— 将所有源的音频轨道混合为一路输出。
+    // 音频合成器（AudioComposer）—— 将所有源的音频轨道混合为一路输出。
     //
     // 职责：
     //   1. 通过 WebAudio API（AudioContext, GainNode）创建混音管线
@@ -21001,7 +21541,7 @@ class MediaStreamComposer {
     //   getDestroyed          → 防销毁后误操作
     // -----------------------------------------------------------------------
 
-    this._audioMixer = new AudioMixer({
+    this._audioComposer = new AudioComposer({
       logger: logger,
       sourceRegistry: this._sourceRegistry,
       getDestroyed: () => this._destroyed,
@@ -21049,30 +21589,6 @@ class MediaStreamComposer {
   // =========================================================================
   //  配置检测与参数归一化
   // =========================================================================
-
-  /**
-   * 归一化渲染模式。
-   * 非法值统一回到 auto，避免外部拼写错误导致构造失败。
-   *
-   * @param {*} value - 用户传入的 renderMode
-   * @param {string} fallback - 非法或未传时使用的模式
-   * @returns {string} 合法渲染模式
-   */
-  _normalizeRenderMode(value, fallback) {
-    return MediaStreamComposerConfig.normalizeRenderMode(value, fallback);
-  }
-
-  /**
-   * 将输入值归一化为正整数。
-   * 对外暴露的 width/height/fps 只接受正数；非法值回退默认值，不让 canvas 进入 0 尺寸。
-   *
-   * @param {*} value - 原始输入
-   * @param {number|null} fallback - 非法值时使用的备选值
-   * @returns {number|null} 归一化后的整数，或 fallback
-   */
-  _normalizePositiveInteger(value, fallback) {
-    return MediaStreamComposerConfig.normalizePositiveInteger(value, fallback);
-  }
 
   /**
    * 归一化 slot 值。
@@ -21159,20 +21675,6 @@ class MediaStreamComposer {
   }
 
   /**
-   * 确保渲染后端已经初始化。
-   *
-   * RendererFactory 是整个 Mixer 唯一允许初始化输出 canvas context 的地方。
-   * 这样可以避免不同 renderer 抢占同一个 canvas context。
-   *
-   * @returns {BaseRenderer} 当前实际使用的渲染后端
-   */
-  _ensureRenderer() {
-    logger.debug('Ensuring mixer renderer');
-    var renderer = this._renderLoop.ensureRenderer();
-    return renderer;
-  }
-
-  /**
    * 将当前输出画布尺寸同步给 renderer。
    *
    * @param {number} width - 输出宽度
@@ -21206,7 +21708,7 @@ class MediaStreamComposer {
    * 防止 stop() 后继续复用同一个实例。
    *
    * stop() 会释放 renderer、AudioContext、captureStream tracks 和内部源。
-   * 继续复用同一个实例容易让调用方拿到已 ended 的输出轨，因此明确要求重新 new Mixer。
+   * 继续复用同一个实例容易让调用方拿到已 ended 的输出轨，因此明确要求重新 new composer。
    *
    * @param {string} methodName - 当前公开方法名
    * @throws {Error} 实例已 stop
@@ -21231,11 +21733,11 @@ class MediaStreamComposer {
    */
   _removeSource(source) {
     if (source) {
-      logger.debug(`Removing mixer source: id=${source.id} slot=${source.slot}`);
+      logger.debug(`Removing composer source: id=${source.id} slot=${source.slot}`);
     }
     var removed = this._sourceRegistry.remove(source);
     if (!removed) {
-      logger.debug('Removing mixer source skipped: source not found');
+      logger.debug('Removing composer source skipped: source not found');
     }
     return removed;
   }
@@ -21254,56 +21756,6 @@ class MediaStreamComposer {
   //  源状态检测
   // =========================================================================
 
-  /**
-   * 检测某路源是否有 live（活跃）状态的音频轨。
-   * 只混入 live 状态音频轨，避免 ended track 触发 WebAudio 创建失败或无效混音。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=至少有一条 live 音频轨
-   */
-  _hasLiveAudioTrack(source) {
-    return this._sourceRegistry.hasLiveAudioTrack(source);
-  }
-
-  /**
-   * 检测某路源是否有视频轨（不判断 readyState）。
-   * readyState 在绘制阶段才判断；这样刚加入但尚未出帧的源仍保留在布局中。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=至少有一条视频轨
-   */
-  _hasVideoTrack(source) {
-    return this._sourceRegistry.hasVideoTrack(source);
-  }
-
-  /**
-   * 判断某路源当前是否可渲染。
-   * 条件：stream 存在且 active，并且有视频轨。
-   * 具体视频帧是否可画由 video.readyState 在绘制时判断。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {boolean} true=可渲染
-   */
-  _isRenderable(source) {
-    return this._sourceRegistry.isRenderable(source);
-  }
-
-  /**
-   * 获取 source 当前关联的 MediaStream。
-   *
-   * 对于外部传入的 HTMLVideoElement，调用方可能后续替换 srcObject，
-   * 这里同步更新 source.stream 引用，确保后续操作使用最新流。
-   *
-   * 注意：此方法仅同步 stream 引用，不断开音频。
-   * 如果外部替换了 srcObject，音频重连由 _connectAudio() 中的换源检测处理。
-   *
-   * @param {Object} source - 内部 source 对象
-   * @returns {MediaStream|null} 当前 MediaStream
-   */
-  _getSourceStream(source) {
-    return this._sourceRegistry.getStream(source);
-  }
-
   // =========================================================================
   //  渲染数据构建
   // =========================================================================
@@ -21311,7 +21763,7 @@ class MediaStreamComposer {
   /**
    * 构建一帧渲染 payload。
    *
-   * Mixer 本身只负责决定每路视频应该画在哪里；真正的绘制由当前 renderer 完成。
+   * Composer 本身只负责决定每路视频应该画在哪里；真正的绘制由当前 renderer 完成。
    * 这样 Canvas2D、WebGL2、Worker Canvas2D、Worker WebGL2 可以复用完全一致的布局结果。
    *
    * @returns {Object} renderer.render() 可直接消费的数据
@@ -21345,7 +21797,7 @@ class MediaStreamComposer {
    */
   _drawVideosToCanvas(timestamp, forceRender = false) {
     if (forceRender) {
-      logger.debug('Force rendering mixer frame');
+      logger.debug('Force rendering composer frame');
     }
     this._renderLoop.renderFrame(timestamp, forceRender);
   }
@@ -21374,15 +21826,15 @@ class MediaStreamComposer {
    * 异步刷新音频连接；用于不能 await 的路径（appendStream / rAF）。
    */
   _scheduleAudioRefresh() {
-    logger.debug('Scheduling mixer audio refresh');
-    this._audioMixer.scheduleRefresh();
+    logger.debug('Scheduling composer audio refresh');
+    this._audioComposer.scheduleRefresh();
   }
 
   /**
    * 检测外部 HTMLMediaElement 是否替换了 srcObject，并同步音频连接。
    */
   _syncExternalSourceAudio() {
-    this._audioMixer.syncExternalSourceAudio();
+    this._audioComposer.syncExternalSourceAudio();
   }
 
   /**
@@ -21396,9 +21848,9 @@ class MediaStreamComposer {
    */
   _disconnectAudio(source) {
     if (source) {
-      logger.debug(`Disconnecting mixer audio: id=${source.id}`);
+      logger.debug(`Disconnecting composer audio: id=${source.id}`);
     }
-    this._audioMixer.disconnectSource(source);
+    this._audioComposer.disconnectSource(source);
   }
 
   /**
@@ -21422,181 +21874,22 @@ class MediaStreamComposer {
     logger.debug('Adding audio tracks to mixed output stream');
     this._outputStreamManager.addAudioTracksToStream(targetStream, audioStream);
   }
-
-  // =========================================================================
-  //  公开 API
-  // =========================================================================
-
-  /**
-   * 停止混流，释放所有资源。
-   *
-   * 清理步骤：
-   *   1. 设置停止标记 + cancelAnimationFrame 停止渲染循环
-   *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
-   *   3. 断开并关闭 AudioContext
-   *   4. 清空画布
-   *   5. 停止所有 captureStream 的 tracks
-   */
-  stop() {
-    logger.debug('stop');
-    if (this._destroyed) {
-      logger.debug('stop skipped: already destroyed');
-      return;
+  _removeSourcesInternal(target) {
+    if (target === undefined) {
+      logger.debug(`clearSources: count=${this._sources.length}`);
+      var sources = this._sources.slice();
+      sources.forEach(source => {
+        this._removeSource(source);
+      });
+      logger.debug(`clearSources complete: remaining=${this._sources.length}`);
+      return true;
     }
-    this._destroyed = true;
-    this._renderLoop.stop();
-    this.clearStreams();
-    this._audioMixer.stop();
-    this._renderLoop.destroy();
-    this._outputStreamManager.stop();
-    logger.debug('stop complete');
-  }
-
-  /**
-   * 向混流器添加新的输入源。
-   *
-   * 支持多种调用方式：
-   *   appendStream(stream)          → 自动分配 slot（grid 模式）
-   *   appendStream(stream, 3)       → 指定 slot
-   *   appendStream(stream, { slot: 3, gain: 0.5, sourceMirror: true })
-   *   appendStream([streamA, ...])  → 批量添加
-   *
-   * 同 slot 已有源会被新源覆盖。
-   *
-   * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
-   * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
-   * @returns {boolean} true=至少成功添加了一个源
-   * @throws {TypeError} 未传 videos
-   */
-  appendStream(videos, optionsOrSlot) {
-    logger.debug(`appendStream: count=${videos instanceof Array ? videos.length : 1}`);
-    this._assertNotDestroyed('appendStream()');
-    if (!videos) {
-      throw new TypeError('First parameter is required.');
-    }
-    if (!(videos instanceof Array)) {
-      videos = [videos];
-    }
-
-    // ---- 最多 9 路源限制 ----
-    var maxSources = MediaStreamComposerConfig.getMaxSources();
-    var currentCount = this._sources.length;
-    var available = Math.max(0, maxSources - currentCount);
-    if (available <= 0) {
-      logger.warn(`appendStream: max sources (${maxSources}) reached, skipping all`);
-      return false;
-    }
-    if (videos.length > available) {
-      logger.warn(`appendStream: truncating ${videos.length - available} source(s) to enforce ${maxSources}-source limit`);
-      videos = videos.slice(0, available);
-    }
-    var appended = false;
-    videos.forEach((video, index) => {
-      var sourceOptions = this._normalizeSourceOptions(optionsOrSlot, index);
-      this._sourceRegistry.add(video, sourceOptions);
-      appended = true;
-
-      // 如果音频系统已初始化，立即连接该源的音频
-      if (this._audioMixer.hasAudioContext || this._audioMixer.requested) {
-        this._scheduleAudioRefresh();
-      }
-    });
-    this._refreshRendererPolicyForMirror();
-
-    // 如果 rAF 因无源而暂停且混流器仍活跃，恢复帧循环
-    this._renderLoop.start();
-    logger.debug(`appendStream complete: appended=${appended} totalSources=${this._sources.length}`);
-    return appended;
-  }
-
-  /**
-   * 按 MediaStream 或 ID 移除一路源。
-   *
-   * @param {MediaStream|string} streamOrId - 要移除的流或 ID
-   *   - MediaStream 对象：按引用匹配
-   *   - string：先匹配 source.id，再匹配 stream.id
-   * @returns {boolean} true=找到并移除了源
-   */
-  removeStream(streamOrId) {
-    logger.debug(`removeStream: ${typeof streamOrId === 'string' ? streamOrId : '[object]'}`);
-    this._assertNotDestroyed('removeStream()');
-    var removed = this._removeSource(this._findSource(streamOrId));
-    logger.debug(`removeStream complete: removed=${removed} remaining=${this._sources.length}`);
+    logger.debug(`removeSource: ${typeof target === 'string' ? target : '[object]'}`);
+    var removed = this._removeSource(this._findSource(target));
+    logger.debug(`removeSource complete: removed=${removed} remaining=${this._sources.length}`);
     return removed;
   }
-
-  /**
-   * 移除所有输入源。
-   * 遍历 _sources 快照逐条清理，过程中 _sources 数组会变化。
-   */
-  clearStreams() {
-    logger.debug(`clearStreams: count=${this._sources.length}`);
-    var sources = this._sources.slice();
-    sources.forEach(source => {
-      this._removeSource(source);
-    });
-    logger.debug(`clearStreams complete: remaining=${this._sources.length}`);
-  }
-
-  /**
-   * 返回当前所有源的快照。
-   * 返回新对象数组，外部修改不影响内部状态。
-   *
-   * @returns {Array<Object>} 源信息列表：
-   *   { id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
-   */
-  getSources() {
-    this._assertNotDestroyed('getSources()');
-    logger.debug(`getSources(): count=${this._sources.length}`);
-    return this._sourceRegistry.getSnapshot();
-  }
-  setMirror(enabled) {
-    this._assertNotDestroyed('setMirror()');
-    this._config.outputMirrorX = Boolean(enabled);
-    logger.debug(`setMirror(): enabled=${this._config.outputMirrorX}`);
-    this._refreshRendererPolicyForMirror();
-    this._drawVideosToCanvas(undefined, true);
-  }
-  getMirror() {
-    this._assertNotDestroyed('getMirror()');
-    return Boolean(this._config.outputMirrorX);
-  }
-  setMirrorWatermarksWithOutput(enabled) {
-    this._assertNotDestroyed('setMirrorWatermarksWithOutput()');
-    this._config.mirrorWatermarksWithOutput = Boolean(enabled);
-    logger.debug(`setMirrorWatermarksWithOutput(): enabled=${this._config.mirrorWatermarksWithOutput}`);
-    this._drawVideosToCanvas(undefined, true);
-  }
-  getMirrorWatermarksWithOutput() {
-    this._assertNotDestroyed('getMirrorWatermarksWithOutput()');
-    return this._config.mirrorWatermarksWithOutput !== false;
-  }
-  setSourceMirror(slotOrEnabled, enabled) {
-    this._assertNotDestroyed('setSourceMirror()');
-    if (typeof slotOrEnabled === 'boolean' && enabled === undefined) {
-      this._config.mirrorX = slotOrEnabled;
-      logger.debug(`setSourceMirror(): global=${this._config.mirrorX}`);
-      this._refreshRendererPolicyForMirror();
-      this._drawVideosToCanvas(undefined, true);
-      return;
-    }
-    var normalizedSlot = this._normalizeSlot(slotOrEnabled, 0);
-    if (normalizedSlot === null) {
-      throw new TypeError('Invalid slot.');
-    }
-    var key = String(normalizedSlot);
-    if (enabled === undefined || enabled === null) {
-      delete this._slotMirrorXOverrides[key];
-      logger.debug(`setSourceMirror(): cleared slot=${normalizedSlot}`);
-    } else {
-      this._slotMirrorXOverrides[key] = Boolean(enabled);
-      logger.debug(`setSourceMirror(): slot=${normalizedSlot} enabled=${this._slotMirrorXOverrides[key]}`);
-    }
-    this._refreshRendererPolicyForMirror();
-    this._drawVideosToCanvas(undefined, true);
-  }
-  getSourceMirror(slot) {
-    this._assertNotDestroyed('getSourceMirror()');
+  _getSourceMirrorLegacySnapshot(slot) {
     var global = Boolean(this._config.mirrorX);
     var overrides = Object.keys(this._slotMirrorXOverrides).reduce((snapshot, key) => {
       snapshot[key] = this._slotMirrorXOverrides[key];
@@ -21629,16 +21922,345 @@ class MediaStreamComposer {
       effective: Boolean(effective)
     };
   }
+  _collectRenderInfo(logResult = true) {
+    var info = this._renderLoop.getRenderInfo();
+    var outputRouteInfo = this._outputStreamManager && this._outputStreamManager.getOutputRouteInfo ? this._outputStreamManager.getOutputRouteInfo() : {};
+    var mergedInfo = Object.assign({}, info, outputRouteInfo);
+    if (!logResult) {
+      return mergedInfo;
+    }
+    var signature = [mergedInfo.requestedMode, mergedInfo.actualMode, mergedInfo.isWorker ? 1 : 0, mergedInfo.isWebGL2 ? 1 : 0, mergedInfo.isFallback ? 1 : 0, mergedInfo.reason || '', mergedInfo.outputMode || '', mergedInfo.insertableActive ? 1 : 0, mergedInfo.insertableSupported ? 1 : 0, mergedInfo.insertableGeneratorType || '', mergedInfo.insertableSupportReason || ''].join('|');
+    if (signature !== lastRenderInfoLogSignature) {
+      lastRenderInfoLogSignature = signature;
+      logger.debug(`getRenderInfo(): requested=${mergedInfo.requestedMode} actual=${mergedInfo.actualMode} ` + `worker=${mergedInfo.isWorker} webgl2=${mergedInfo.isWebGL2} fallback=${mergedInfo.isFallback} ` + `reason=${mergedInfo.reason || ''} rendered=${mergedInfo.renderedFrames || 0} dropped=${mergedInfo.droppedFrames || 0} ` + `outputMode=${mergedInfo.outputMode || '-'} insertableActive=${Boolean(mergedInfo.insertableActive)} ` + `insertableSupported=${Boolean(mergedInfo.insertableSupported)} generator=${mergedInfo.insertableGeneratorType || '-'} ` + `insertableReason=${mergedInfo.insertableSupportReason || '-'} ` + `captureFrameControl=${mergedInfo.captureFrameControlMode || '-'} ` + `fps=${mergedInfo.fps || 0} size=${mergedInfo.width || 0}x${mergedInfo.height || 0}`);
+    }
+    return mergedInfo;
+  }
+  _collectAudioInfo(logResult = true) {
+    var info = this._audioComposer.getInfo();
+    if (logResult) {
+      logger.debug(`getAudioInfo(): status=${info.status} requested=${info.requested} ` + `sources=${info.sourceCount}/${info.liveSourceCount} outputTracks=${info.outputTracks}`);
+    }
+    return info;
+  }
+  _getConfigStateSnapshot() {
+    return {
+      outputMirror: Boolean(this._config.outputMirrorX),
+      sourceMirror: Boolean(this._config.mirrorX),
+      sourceMirrorOverrides: Object.keys(this._slotMirrorXOverrides).reduce((snapshot, key) => {
+        snapshot[key] = this._slotMirrorXOverrides[key];
+        return snapshot;
+      }, {}),
+      mirrorWatermarksWithOutput: this._config.mirrorWatermarksWithOutput !== false,
+      watermarks: this._watermarkManager.getWatermarks()
+    };
+  }
+  _getVideoOutputSync() {
+    this._renderLoop.resume();
+    if (this._outputStreamManager.hasLiveVideoStream()) {
+      this._renderLoop.start();
+      return this._outputStreamManager.videoStream;
+    }
+    var videoStream = this._outputStreamManager.getVideoStream(() => {
+      this._renderLoop.resetFrameTiming();
+      this._drawVideosToCanvas(undefined, true);
+    });
+    logger.debug(`getVideoStream() created: tracks=${videoStream.getVideoTracks().length}`);
+    return videoStream;
+  }
+  async _getMixedOutput() {
+    this._renderLoop.resume();
+    var mixedVideoStream = this._getVideoOutputSync();
+    this._outputStreamManager.setMixedStream(mixedVideoStream);
+    var mixedAudioStream = await this._audioComposer.getAudioStream();
+    logger.debug(`getMixedStream() audio resolved: tracks=${mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0}`);
+    this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
+    logger.debug(`getMixedStream() complete: videoTracks=${mixedVideoStream.getVideoTracks().length} audioTracks=${mixedVideoStream.getAudioTracks().length}`);
+    return mixedVideoStream;
+  }
+  _normalizeOutputRequest(options) {
+    if (options === undefined || options === null) {
+      return {
+        type: 'mixed'
+      };
+    }
+    if (typeof options === 'string') {
+      return {
+        type: options
+      };
+    }
+    return Object.assign({
+      type: 'mixed'
+    }, options);
+  }
+
+  // =========================================================================
+  //  公开 API
+  // =========================================================================
+
+  /**
+   * 停止混流，释放所有资源。
+   *
+   * 清理步骤：
+   *   1. 设置停止标记 + cancelAnimationFrame 停止渲染循环
+   *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
+   *   3. 断开并关闭 AudioContext
+   *   4. 清空画布
+   *   5. 停止所有 captureStream 的 tracks
+   */
+  stop() {
+    logger.debug('stop');
+    if (this._destroyed) {
+      logger.debug('stop skipped: already destroyed');
+      return;
+    }
+    this._destroyed = true;
+    this._renderLoop.stop();
+    this._removeSourcesInternal(undefined);
+    this._audioComposer.stop();
+    this._renderLoop.destroy();
+    this._outputStreamManager.stop();
+    logger.debug('stop complete');
+  }
+  addSource(videos, optionsOrSlot) {
+    logger.debug(`addSource: count=${videos instanceof Array ? videos.length : 1}`);
+    this._assertNotDestroyed('addSource()');
+    if (!videos) {
+      throw new TypeError('First parameter is required.');
+    }
+    if (!(videos instanceof Array)) {
+      videos = [videos];
+    }
+    var maxSources = MediaStreamComposerConfig.getMaxSources();
+    var currentCount = this._sources.length;
+    var available = Math.max(0, maxSources - currentCount);
+    if (available <= 0) {
+      logger.warn(`addSource: max sources (${maxSources}) reached, skipping all`);
+      return false;
+    }
+    if (videos.length > available) {
+      logger.warn(`addSource: truncating ${videos.length - available} source(s) to enforce ${maxSources}-source limit`);
+      videos = videos.slice(0, available);
+    }
+    var appended = false;
+    videos.forEach((video, index) => {
+      var sourceOptions = this._normalizeSourceOptions(optionsOrSlot, index);
+      this._sourceRegistry.add(video, sourceOptions);
+      appended = true;
+      if (this._audioComposer.hasAudioContext || this._audioComposer.requested) {
+        this._scheduleAudioRefresh();
+      }
+    });
+    this._refreshRendererPolicyForMirror();
+    this._renderLoop.start();
+    logger.debug(`addSource complete: appended=${appended} totalSources=${this._sources.length}`);
+    return appended;
+  }
+  removeSource(target) {
+    this._assertNotDestroyed('removeSource()');
+    if (target === undefined) {
+      return false;
+    }
+    return this._removeSourcesInternal(target);
+  }
+  clearSources() {
+    this._assertNotDestroyed('clearSources()');
+    this._removeSourcesInternal(undefined);
+  }
+  async setConfig(patch) {
+    this._assertNotDestroyed('setConfig()');
+    patch = patch || {};
+    var needsMirrorPolicyRefresh = false;
+    var needsForceRender = false;
+    if (Object.prototype.hasOwnProperty.call(patch, 'outputMirror')) {
+      this._config.outputMirrorX = Boolean(patch.outputMirror);
+      needsMirrorPolicyRefresh = true;
+      needsForceRender = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'mirrorWatermarksWithOutput')) {
+      this._config.mirrorWatermarksWithOutput = Boolean(patch.mirrorWatermarksWithOutput);
+      needsForceRender = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'sourceMirror')) {
+      this._config.mirrorX = Boolean(patch.sourceMirror);
+      needsMirrorPolicyRefresh = true;
+      needsForceRender = true;
+    }
+    if (patch.clearSourceMirrorOverrides === true) {
+      this._slotMirrorXOverrides = Object.create(null);
+      needsMirrorPolicyRefresh = true;
+      needsForceRender = true;
+    }
+    if (patch.sourceMirrorOverrides && typeof patch.sourceMirrorOverrides === 'object') {
+      Object.keys(patch.sourceMirrorOverrides).forEach(slotKey => {
+        var normalizedSlot = this._normalizeSlot(slotKey, 0);
+        if (normalizedSlot === null) {
+          throw new TypeError('Invalid slot.');
+        }
+        var key = String(normalizedSlot);
+        var value = patch.sourceMirrorOverrides[slotKey];
+        if (value === null || value === undefined) {
+          delete this._slotMirrorXOverrides[key];
+        } else {
+          this._slotMirrorXOverrides[key] = Boolean(value);
+        }
+      });
+      needsMirrorPolicyRefresh = true;
+      needsForceRender = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'watermarks')) {
+      await this._watermarkManager.setWatermarks(patch.watermarks);
+      needsForceRender = true;
+    }
+    if (patch.clearWatermarks === true) {
+      this._watermarkManager.clearWatermarks(patch.clearWatermarkFilter || null);
+      needsForceRender = true;
+    }
+    if (needsMirrorPolicyRefresh) {
+      this._refreshRendererPolicyForMirror();
+    }
+    if (needsForceRender) {
+      this._drawVideosToCanvas(undefined, true);
+    }
+    return this._getConfigStateSnapshot();
+  }
+  getState() {
+    this._assertNotDestroyed('getState()');
+    return {
+      sources: this._sourceRegistry.getSnapshot(),
+      config: this._getConfigStateSnapshot(),
+      render: this._collectRenderInfo(false),
+      audio: this._collectAudioInfo(false)
+    };
+  }
+  async getOutput(options) {
+    var request = this._normalizeOutputRequest(options);
+    var type = request.type;
+    logger.debug(`getOutput(): ${JSON.stringify(request)}`);
+    this._assertNotDestroyed('getOutput()');
+    if (type === 'video') {
+      return this._getVideoOutputSync();
+    }
+    if (type === 'audio') {
+      if (request.isolated === true) {
+        return this._audioComposer.getIsolatedSubmixAudioStream(request);
+      }
+      return this._audioComposer.getAudioStream(request.slots ? request : undefined);
+    }
+    if (type === 'mixed') {
+      return this._getMixedOutput();
+    }
+    throw new TypeError('Invalid output type.');
+  }
+  releaseOutput(options) {
+    var request = this._normalizeOutputRequest(options);
+    logger.debug(`releaseOutput(): ${JSON.stringify(request)}`);
+    this._assertNotDestroyed('releaseOutput()');
+    if (request.type !== 'audio') {
+      return false;
+    }
+    return this._audioComposer.releaseSubmixAudioStream(request);
+  }
+
+  /**
+   * 向混流器添加新的输入源。
+   *
+   * 支持多种调用方式：
+   *   appendStream(stream)          → 自动分配 slot（grid 模式）
+   *   appendStream(stream, 3)       → 指定 slot
+   *   appendStream(stream, { slot: 3, gain: 0.5, sourceMirror: true })
+   *   appendStream([streamA, ...])  → 批量添加
+   *
+   * 同 slot 已有源会被新源覆盖。
+   *
+   * @param {MediaStream|HTMLVideoElement|Array|Object} videos - 输入源
+   * @param {number|Object} [optionsOrSlot] - slot 数字或 { slot, gain } 对象
+   * @returns {boolean} true=至少成功添加了一个源
+   * @throws {TypeError} 未传 videos
+   */
+  appendStream(videos, optionsOrSlot) {
+    return this.addSource(videos, optionsOrSlot);
+  }
+
+  /**
+   * 按 MediaStream 或 ID 移除一路源。
+   *
+   * @param {MediaStream|string} streamOrId - 要移除的流或 ID
+   *   - MediaStream 对象：按引用匹配
+   *   - string：先匹配 source.id，再匹配 stream.id
+   * @returns {boolean} true=找到并移除了源
+   */
+  removeStream(streamOrId) {
+    return this.removeSource(streamOrId);
+  }
+
+  /**
+   * 移除所有输入源。
+   * 遍历 _sources 快照逐条清理，过程中 _sources 数组会变化。
+   */
+  clearStreams() {
+    this.clearSources();
+  }
+
+  /**
+   * 返回当前所有源的快照。
+   * 返回新对象数组，外部修改不影响内部状态。
+   *
+   * @returns {Array<Object>} 源信息列表：
+   *   { id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
+   */
+  getSources() {
+    return this.getState().sources;
+  }
+  setMirror(enabled) {
+    this._assertNotDestroyed('setMirror()');
+    this.setConfig({
+      outputMirror: enabled
+    });
+  }
+  getMirror() {
+    return this.getState().config.outputMirror;
+  }
+  setMirrorWatermarksWithOutput(enabled) {
+    this._assertNotDestroyed('setMirrorWatermarksWithOutput()');
+    this.setConfig({
+      mirrorWatermarksWithOutput: enabled
+    });
+  }
+  getMirrorWatermarksWithOutput() {
+    return this.getState().config.mirrorWatermarksWithOutput;
+  }
+  setSourceMirror(slotOrEnabled, enabled) {
+    this._assertNotDestroyed('setSourceMirror()');
+    if (typeof slotOrEnabled === 'boolean' && enabled === undefined) {
+      this.setConfig({
+        sourceMirror: slotOrEnabled
+      });
+      return;
+    }
+    this.setConfig({
+      sourceMirrorOverrides: {
+        [slotOrEnabled]: enabled
+      }
+    });
+  }
+  getSourceMirror(slot) {
+    this._assertNotDestroyed('getSourceMirror()');
+    return this._getSourceMirrorLegacySnapshot(slot);
+  }
   clearSourceMirror(slot) {
     this._assertNotDestroyed('clearSourceMirror()');
     if (slot === undefined || slot === null) {
-      this._slotMirrorXOverrides = Object.create(null);
-      logger.debug('clearSourceMirror(): cleared all slot overrides');
-      this._refreshRendererPolicyForMirror();
-      this._drawVideosToCanvas(undefined, true);
+      this.setConfig({
+        clearSourceMirrorOverrides: true
+      });
       return;
     }
-    this.setSourceMirror(slot, null);
+    this.setConfig({
+      sourceMirrorOverrides: {
+        [slot]: null
+      }
+    });
   }
 
   /**
@@ -21651,15 +22273,8 @@ class MediaStreamComposer {
    * @returns {Object} 渲染状态快照
    */
   getRenderInfo() {
-    var info = this._renderLoop.getRenderInfo();
-    var outputRouteInfo = this._outputStreamManager && this._outputStreamManager.getOutputRouteInfo ? this._outputStreamManager.getOutputRouteInfo() : {};
-    var mergedInfo = Object.assign({}, info, outputRouteInfo);
-    var signature = [mergedInfo.requestedMode, mergedInfo.actualMode, mergedInfo.isWorker ? 1 : 0, mergedInfo.isWebGL2 ? 1 : 0, mergedInfo.isFallback ? 1 : 0, mergedInfo.reason || '', mergedInfo.outputMode || '', mergedInfo.insertableActive ? 1 : 0, mergedInfo.insertableSupported ? 1 : 0, mergedInfo.insertableGeneratorType || '', mergedInfo.insertableSupportReason || ''].join('|');
-    if (signature !== lastRenderInfoLogSignature) {
-      lastRenderInfoLogSignature = signature;
-      logger.debug(`getRenderInfo(): requested=${mergedInfo.requestedMode} actual=${mergedInfo.actualMode} ` + `worker=${mergedInfo.isWorker} webgl2=${mergedInfo.isWebGL2} fallback=${mergedInfo.isFallback} ` + `reason=${mergedInfo.reason || ''} rendered=${mergedInfo.renderedFrames || 0} dropped=${mergedInfo.droppedFrames || 0} ` + `outputMode=${mergedInfo.outputMode || '-'} insertableActive=${Boolean(mergedInfo.insertableActive)} ` + `insertableSupported=${Boolean(mergedInfo.insertableSupported)} generator=${mergedInfo.insertableGeneratorType || '-'} ` + `insertableReason=${mergedInfo.insertableSupportReason || '-'} ` + `captureFrameControl=${mergedInfo.captureFrameControlMode || '-'} ` + `fps=${mergedInfo.fps || 0} size=${mergedInfo.width || 0}x${mergedInfo.height || 0}`);
-    }
-    return mergedInfo;
+    this._assertNotDestroyed('getRenderInfo()');
+    return this._collectRenderInfo();
   }
 
   /**
@@ -21668,9 +22283,8 @@ class MediaStreamComposer {
    * @returns {Object} 音频状态快照
    */
   getAudioInfo() {
-    var info = this._audioMixer.getInfo();
-    logger.debug(`getAudioInfo(): status=${info.status} requested=${info.requested} ` + `sources=${info.sourceCount}/${info.liveSourceCount} outputTracks=${info.outputTracks}`);
-    return info;
+    this._assertNotDestroyed('getAudioInfo()');
+    return this._collectAudioInfo();
   }
 
   /**
@@ -21680,12 +22294,9 @@ class MediaStreamComposer {
    * @returns {Promise<Array<Object>>} 当前水印快照
    */
   setWatermarks(watermarks) {
-    this._assertNotDestroyed('setWatermarks()');
-    logger.debug(`setWatermarks(): count=${watermarks instanceof Array ? watermarks.length : watermarks ? 1 : 0}`);
-    return this._watermarkManager.setWatermarks(watermarks).then(snapshot => {
-      this._drawVideosToCanvas(undefined, true);
-      return snapshot;
-    });
+    return this.setConfig({
+      watermarks
+    }).then(() => this.getState().config.watermarks);
   }
 
   /**
@@ -21695,9 +22306,10 @@ class MediaStreamComposer {
    */
   clearWatermarks(filter) {
     this._assertNotDestroyed('clearWatermarks()');
-    logger.debug(`clearWatermarks(): filter=${JSON.stringify(filter || null)}`);
-    this._watermarkManager.clearWatermarks(filter);
-    this._drawVideosToCanvas(undefined, true);
+    this.setConfig({
+      clearWatermarks: true,
+      clearWatermarkFilter: filter
+    });
   }
 
   /**
@@ -21706,9 +22318,7 @@ class MediaStreamComposer {
    * @returns {Array<Object>} 水印状态列表
    */
   getWatermarks() {
-    this._assertNotDestroyed('getWatermarks()');
-    logger.debug('getWatermarks()');
-    return this._watermarkManager.getWatermarks();
+    return this.getState().config.watermarks;
   }
 
   /**
@@ -21724,18 +22334,9 @@ class MediaStreamComposer {
    */
   async getMixedStream() {
     logger.debug('getMixedStream()');
-    this._assertNotDestroyed('getMixedStream()');
-    this._renderLoop.resume();
-    var mixedVideoStream = this.getVideoStream();
-
-    // 先保存 mixed stream，再初始化音频；这样启动时无音频、后续 append 有音频源时，
-    // _connectAudio() 可以把 MediaStreamDestination 的音频轨补到已经返回给调用方的流里。
-    this._outputStreamManager.setMixedStream(mixedVideoStream);
-    var mixedAudioStream = await this.getAudioStream();
-    logger.debug(`getMixedStream() audio resolved: tracks=${mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0}`);
-    this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
-    logger.debug(`getMixedStream() complete: videoTracks=${mixedVideoStream.getVideoTracks().length} audioTracks=${mixedVideoStream.getAudioTracks().length}`);
-    return mixedVideoStream;
+    return this.getOutput({
+      type: 'mixed'
+    });
   }
 
   /**
@@ -21747,17 +22348,7 @@ class MediaStreamComposer {
   getVideoStream() {
     logger.debug('getVideoStream()');
     this._assertNotDestroyed('getVideoStream()');
-    this._renderLoop.resume();
-    if (this._outputStreamManager.hasLiveVideoStream()) {
-      this._renderLoop.start();
-      return this._outputStreamManager.videoStream;
-    }
-    var videoStream = this._outputStreamManager.getVideoStream(() => {
-      this._renderLoop.resetFrameTiming();
-      this._drawVideosToCanvas(undefined, true);
-    });
-    logger.debug(`getVideoStream() created: tracks=${videoStream.getVideoTracks().length}`);
-    return videoStream;
+    return this._getVideoOutputSync();
   }
 
   /**
@@ -21769,7 +22360,7 @@ class MediaStreamComposer {
   async getAudioStream(options) {
     logger.debug(`getAudioStream(): ${JSON.stringify(options || null)}`);
     this._assertNotDestroyed('getAudioStream()');
-    var audioStream = await this._audioMixer.getAudioStream(options);
+    var audioStream = await this._audioComposer.getAudioStream(options);
     logger.debug(`getAudioStream() resolved: tracks=${audioStream ? audioStream.getAudioTracks().length : 0}`);
     return audioStream;
   }
@@ -21783,8 +22374,12 @@ class MediaStreamComposer {
    */
   async getIsolatedSubmixAudioStream(options) {
     logger.debug(`getIsolatedSubmixAudioStream(): ${JSON.stringify(options || null)}`);
-    this._assertNotDestroyed('getIsolatedSubmixAudioStream()');
-    var audioStream = await this._audioMixer.getIsolatedSubmixAudioStream(options);
+    var audioStream = await this.getOutput(Object.assign({
+      type: 'audio',
+      isolated: true
+    }, options instanceof Array ? {
+      slots: options
+    } : options || {}));
     logger.debug(`getIsolatedSubmixAudioStream() resolved: tracks=${audioStream ? audioStream.getAudioTracks().length : 0}`);
     return audioStream;
   }
@@ -21797,8 +22392,11 @@ class MediaStreamComposer {
    */
   releaseSubmixAudioStream(options) {
     logger.debug(`releaseSubmixAudioStream(): ${JSON.stringify(options || null)}`);
-    this._assertNotDestroyed('releaseSubmixAudioStream()');
-    var released = this._audioMixer.releaseSubmixAudioStream(options);
+    var released = this.releaseOutput(Object.assign({
+      type: 'audio'
+    }, options instanceof Array ? {
+      slots: options
+    } : options || {}));
     logger.debug(`releaseSubmixAudioStream() complete: released=${released}`);
     return released;
   }
@@ -21807,405 +22405,36 @@ class MediaStreamComposer {
   get _sources() {
     return this._sourceRegistry && this._sourceRegistry.sources || [];
   }
-  get _videos() {
-    return this._sourceRegistry && this._sourceRegistry.videos || [];
-  }
 
   // -- RenderLoop 委派 --
   get _renderer() {
     return this._renderLoop && this._renderLoop.renderer || null;
   }
-  get _animationId() {
-    return this._renderLoop && this._renderLoop.animationId || null;
-  }
-  get _lastRenderTime() {
-    return this._renderLoop && this._renderLoop.lastRenderTime || 0;
-  }
-  get _renderFrameInterval() {
-    return this._renderLoop && this._renderLoop.renderFrameInterval || 0;
-  }
-  get _renderErrorCount() {
-    return this._renderLoop && this._renderLoop.renderErrorCount || 0;
-  }
-  get _rendererErrorCount() {
-    return this._renderLoop && this._renderLoop.rendererErrorCount || 0;
-  }
   get _isStopDrawingFrames() {
     return this._renderLoop ? this._renderLoop.isStopped : false;
   }
 
-  // -- AudioMixer 委派 --
+  // -- AudioComposer 委派 --
   get _audioSources() {
-    return this._audioMixer && this._audioMixer.audioSources || [];
+    return this._audioComposer && this._audioComposer.audioSources || [];
   }
   get _audioDestination() {
-    return this._audioMixer && this._audioMixer.audioDestination || null;
+    return this._audioComposer && this._audioComposer.audioDestination || null;
   }
   get _audioContext() {
-    return this._audioMixer && this._audioMixer.audioContext || null;
-  }
-  get _audioRequested() {
-    return this._audioMixer ? this._audioMixer.requested : false;
-  }
-  get _audioInfo() {
-    return this._audioMixer && this._audioMixer.audioInfo || DEFAULT_AUDIO_INFO;
+    return this._audioComposer && this._audioComposer.audioContext || null;
   }
 
   // -- OutputStreamManager 委派 --
-  get _mixedStream() {
-    return this._outputStreamManager && this._outputStreamManager.mixedStream || null;
-  }
   get _capturedStreams() {
     return this._outputStreamManager && this._outputStreamManager.capturedStreams || [];
-  }
-  get _capturedStream() {
-    return this._outputStreamManager && this._outputStreamManager.capturedStream || null;
   }
   get _videoStream() {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
 }
 module.exports = MediaStreamComposer;
-},{"../../Logger":49,"./AudioMixer":50,"./LayoutEngine":51,"./MixerConfig":53,"./MixerDomAdapter":54,"./OutputStreamManager":55,"./RenderLoop":56,"./SourceRegistry":57,"./WatermarkManager":58}],53:[function(require,module,exports){
-"use strict";
-
-/**
- * MixerConfig — 混流器配置归一化工具模块
- *
- * 负责将外部传入的配置参数进行校验、归一化和默认值填充。
- * 所有方法均为纯函数（无副作用），方便单元测试。
- *
- * @module MixerConfig
- */
-
-var Logger = require('../../Logger');
-var logger = new Logger('MixerConfig');
-
-/** 最大参与方数（含视频和纯音频源） */
-var MAX_SOURCES = 9;
-
-/** 合法的渲染后端模式集合 */
-var VALID_RENDER_MODES = {
-  auto: true,
-  // 自动选择（优先 Worker WebGL2）
-  'worker-webgl2': true,
-  // Worker 线程 WebGL2
-  'main-webgl2': true,
-  // 主线程 WebGL2
-  'worker-2d': true,
-  // Worker 线程 Canvas2D
-  'main-2d': true // 主线程 Canvas2D（最兼容）
-};
-
-/**
- * 创建归一化的混流配置对象。
- *
- * @param {Object} [options={}] - 原始配置参数
- * @returns {Object} 归一化后的配置对象
- * @returns {number} returns.width - 输出宽度（默认 1280）
- * @returns {number} returns.height - 输出高度（默认 720）
- * @returns {number} returns.fps - 输出帧率（默认 15）
- * @returns {string} returns.backgroundColor - 画布底色
- * @returns {number} returns.audioGain - 全局默认音量增益
- * @returns {string} returns.renderMode - 渲染后端选择
- * @returns {string|null} returns.workerUrl - 外部 Worker 脚本地址
- * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
- * @returns {number} returns.maxFrameQueue - 最大帧队列长度
- * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
- * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像（公开参数名 sourceMirror）
- * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像（公开参数名 mirror）
- * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
- * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
- * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
- */
-exports.create = function (options) {
-  options = options || {};
-  var config = {
-    width: exports.normalizePositiveInteger(options.width, 1280),
-    height: exports.normalizePositiveInteger(options.height, 720),
-    fps: exports.normalizePositiveInteger(options.fps, 15),
-    backgroundColor: options.backgroundColor || '#000',
-    audioGain: exports.normalizeGain(options.audioGain, 0.8),
-    renderMode: exports.normalizeRenderMode(options.renderMode, 'auto'),
-    workerUrl: typeof options.workerUrl === 'string' ? options.workerUrl : null,
-    dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
-    maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
-    preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
-    mirrorX: exports.normalizeMirrorX(options.sourceMirror, undefined, false),
-    outputMirrorX: exports.normalizeMirrorX(options.mirror, undefined, false),
-    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
-    enableInsertable: options.enableInsertable === true,
-    manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
-    watermarks: options.watermarks || []
-  };
-  logger.debug(`Config created: ${JSON.stringify(config)}`);
-  return config;
-};
-
-/**
- * 归一化渲染模式字符串。
- * 非法值统一回退到 fallback，避免外部拼写错误导致构造异常。
- *
- * @param {*} value - 原始传入的 renderMode
- * @param {string} fallback - 非法或未传时使用的备选值
- * @returns {string} 合法的渲染模式
- */
-exports.normalizeRenderMode = function (value, fallback) {
-  if (typeof value === 'string' && VALID_RENDER_MODES[value]) {
-    return value;
-  }
-  logger.debug(`normalizeRenderMode fallback: value=${value} fallback=${fallback || 'auto'}`);
-  return fallback || 'auto';
-};
-
-/**
- * 归一化为正整数。
- * 对外暴露的 width/height/fps 只接受正数，非法值回退到 fallback。
- *
- * @param {*} value - 原始输入值
- * @param {number|null} fallback - 非法时使用的备选值
- * @returns {number|null} 归一化后的正整数，或 fallback
- */
-exports.normalizePositiveInteger = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue > 0) {
-    return Math.floor(numberValue);
-  }
-  logger.debug(`normalizePositiveInteger fallback: value=${value} fallback=${fallback}`);
-  return fallback;
-};
-
-/**
- * 归一化 slot 值。
- * slot 只允许非负整数，数组批量添加时从起始 slot 递增。
- *
- * @param {*} value - 原始 slot 值
- * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
- * @returns {number|null} 归一化后的 slot，非法则返回 null
- */
-exports.normalizeSlot = function (value, index) {
-  var numberValue = Number(value);
-  if (!Number.isFinite(numberValue)) {
-    logger.debug(`normalizeSlot invalid: value=${value} index=${index}`);
-    return null;
-  }
-  return Math.max(0, Math.floor(numberValue)) + index;
-};
-
-/**
- * 归一化音量增益值。
- * 允许大于 1 做放大（音频增强场景），但不允许负数。非法值使用 fallback。
- *
- * @param {*} value - 原始增益值
- * @param {number} fallback - 非法时的备选值
- * @returns {number} 归一化后的增益值（>= 0）
- */
-exports.normalizeGain = function (value, fallback) {
-  var numberValue = Number(value);
-  if (Number.isFinite(numberValue) && numberValue >= 0) {
-    return numberValue;
-  }
-  logger.debug(`normalizeGain fallback: value=${value} fallback=${fallback}`);
-  return fallback;
-};
-
-/**
- * 归一化水平镜像开关。
- *
- * @param {*} primary - 主参数
- * @param {*} legacy - 兼容参数
- * @param {boolean} fallback - 默认值
- * @returns {boolean}
- */
-exports.normalizeMirrorX = function (primary, legacy, fallback) {
-  if (typeof primary === 'boolean') {
-    return primary;
-  }
-  if (typeof legacy === 'boolean') {
-    return legacy;
-  }
-  return Boolean(fallback);
-};
-
-/**
- * 统一 appendStream() 第二个参数的格式。
- * 支持两种调用方式：
- *   appendStream(stream, 3)               → 数字作为 slot
- *   appendStream(stream, { slot, gain })  → 对象解构
- *
- * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
- * @param {number} index - 数组索引，批量添加时 slot 递增
- * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
- */
-/**
- * 返回最大参与方数限制。
- * @returns {number}
- */
-exports.getMaxSources = function () {
-  return MAX_SOURCES;
-};
-exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
-  var options = {};
-  if (typeof optionsOrSlot === 'number') {
-    options.slot = exports.normalizeSlot(optionsOrSlot, index);
-  } else if (optionsOrSlot && typeof optionsOrSlot === 'object') {
-    if (typeof optionsOrSlot.slot === 'number') {
-      options.slot = exports.normalizeSlot(optionsOrSlot.slot, index);
-    }
-    if (typeof optionsOrSlot.gain === 'number') {
-      options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
-    }
-    if (typeof optionsOrSlot.sourceMirror === 'boolean') {
-      options.sourceMirror = optionsOrSlot.sourceMirror;
-    }
-  }
-  logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
-  return options;
-};
-},{"../../Logger":49}],54:[function(require,module,exports){
-"use strict";
-
-/**
- * MixerDomAdapter — 混流器 DOM 元素创建适配器
- *
- * 负责创建和管理混流器内部使用的 DOM 元素：
- *   - 离屏 canvas：用于合成视频帧
- *   - 隐藏 video 元素：用于播放每个 MediaStream
- *
- * 将这些 DOM 操作集中在此，方便测试时 mock 和后续迁移到 WebWorker 环境。
- *
- * @module MixerDomAdapter
- */
-class MixerDomAdapter {
-  /**
-   * @param {Object} options
-   * @param {Object} options.config - 混流配置对象（含 width/height 等）
-   * @param {Object} options.logger - 日志记录器
-   */
-  constructor(options) {
-    options = options || {};
-    this._config = options.config;
-    this._logger = options.logger;
-    if (this._logger) {
-      this._logger.debug('MixerDomAdapter constructed');
-    }
-  }
-
-  /**
-   * 创建一个隐藏的离屏 canvas 元素。
-   * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
-   *
-   * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
-   */
-  createCanvas() {
-    var canvas = document.createElement('canvas');
-    canvas.setAttribute('style', 'display:none');
-    if (this._logger) {
-      this._logger.debug('Hidden mixer canvas created');
-    }
-    return canvas;
-  }
-
-  /**
-   * 将 canvas 尺寸设置为配置值（grid 模式）。
-   * 设置 canvas.width/height 会清空画布内容，因此只在尺寸变化时才修改。
-   *
-   * @param {HTMLCanvasElement} canvas - 目标 canvas 元素
-   */
-  prepareCanvas(canvas) {
-    var width = this._config.width || 1280;
-    var height = this._config.height || 720;
-    var resized = false;
-
-    // canvas width/height 设置时会清空画布，只在尺寸变化时才写
-    if (canvas.width !== width) {
-      canvas.width = width;
-      resized = true;
-    }
-    if (canvas.height !== height) {
-      canvas.height = height;
-      resized = true;
-    }
-    if (resized && this._logger) {
-      this._logger.debug(`Canvas prepared: ${width}x${height}`);
-    }
-  }
-
-  /**
-   * 将 MediaStream 包裹为隐藏的 HTMLVideoElement。
-   * video 元素属性：display:none、muted、autoplay、playsinline。
-   *
-   * @param {MediaStream|Object} mediaStream - MediaStream 或 { mediaStream } 包装对象
-   * @returns {HTMLVideoElement} 可播放该流的隐藏 video 元素
-   */
-  createVideoElement(mediaStream) {
-    var video = document.createElement('video');
-    video.setAttribute('style', 'display:none');
-    video.muted = true;
-    video.autoplay = true;
-    video.setAttribute('playsinline', '');
-    video.srcObject = mediaStream && (mediaStream.mediaStream || mediaStream);
-    if (this._logger) {
-      var stream = video.srcObject;
-      var streamId = stream && stream.id ? stream.id : 'unknown';
-      this._logger.debug(`Video element created for stream ${streamId}`);
-    }
-    var capturedStreamId = video.srcObject && video.srcObject.id || 'unknown';
-    video.play().catch(error => {
-      // 确认 video 是否仍关联着该 stream。如果 stream 已被清理（pause + srcObject = null），
-      // 说明该 video 在被 play() resolve 之前已被上层逻辑主动移除，此为良性竞态，不必报 error。
-      var isOrphaned = !video.srcObject;
-      if (isOrphaned) {
-        return;
-      }
-      this._logger.error(`video play error for stream ${capturedStreamId}: ${error.message || String(error)}`);
-    });
-    return video;
-  }
-
-  /**
-   * 为 captureStream 输出创建隐藏的消费 video。
-   * 用于规避部分 Chromium 在未被本地 UI 消费时对 captureStream 降质/丢帧。
-   *
-   * @param {MediaStream} mediaStream - 要持续播放的 captureStream 输出
-   * @returns {HTMLVideoElement} 隐藏的消费 video 元素
-   */
-  createOutputSinkVideoElement(mediaStream) {
-    var video = this.createVideoElement(mediaStream);
-    if (this._logger) {
-      var streamId = mediaStream && mediaStream.id ? mediaStream.id : 'unknown';
-      this._logger.debug(`Output sink video created for captureStream ${streamId}`);
-    }
-    return video;
-  }
-
-  /**
-   * 清理隐藏的 video 元素。
-   *
-   * @param {HTMLVideoElement|null} video - 要清理的隐藏 video
-   */
-  disposeVideoElement(video) {
-    if (!video) {
-      return;
-    }
-    try {
-      if (typeof video.pause === 'function') {
-        video.pause();
-      }
-    } catch (error) {}
-    try {
-      video.srcObject = null;
-    } catch (error) {}
-    try {
-      if (typeof video.remove === 'function') {
-        video.remove();
-      }
-    } catch (error) {}
-  }
-}
-module.exports = MixerDomAdapter;
-},{}],55:[function(require,module,exports){
+},{"../../Logger":49,"./AudioComposer":50,"./ComposerConfig":51,"./ComposerDomAdapter":52,"./LayoutEngine":53,"./OutputStreamManager":55,"./RenderLoop":56,"./SourceRegistry":57,"./WatermarkManager":58}],55:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -23253,7 +23482,7 @@ class RenderLoop {
    * @param {Error} error - 渲染异常
    */
   _handleRenderError(error) {
-    var reason = `Mixer render failed: ${error.message || String(error)}`;
+    var reason = `Composer render failed: ${error.message || String(error)}`;
     this._renderErrorCount += 1;
     this._logger.warn(reason);
     if (this._renderer && this._renderer._updateInfo) {
@@ -23450,7 +23679,7 @@ class SourceRegistry {
       this._onBeforeRemove(source);
     }
 
-    // 如果是 mixr 内部创建的 video 元素，清理 DOM
+    // 如果是 composer 内部创建的 video 元素，清理 DOM
     if (source.ownedVideo && source.video) {
       source.video.pause();
       source.video.srcObject = null;
@@ -23603,11 +23832,11 @@ class SourceRegistry {
       gain: this._normalizeGain(options.gain, this._getDefaultGain()),
       mirrorX: typeof options.sourceMirror === 'boolean' ? options.sourceMirror : null,
       audioSourceNode: null,
-      // WebAudio 源节点（由 AudioMixer 连接时赋值）
+      // WebAudio 源节点（由 AudioComposer 连接时赋值）
       masterGainNode: null,
       // 每路输入唯一 fan-out 节点，避免 MediaStreamSource 直接扇出
       gainNode: null,
-      // 默认全量混音音量节点（由 AudioMixer 连接时赋值）
+      // 默认全量混音音量节点（由 AudioComposer 连接时赋值）
       outputGains: new Set(),
       // 该源所有下游 gain，用于后续音量同步和安全清理
       audioStream: null,
@@ -23639,7 +23868,7 @@ class SourceRegistry {
    * @returns {string} 唯一 ID
    */
   _createSourceId(stream, video) {
-    var baseId = stream && stream.id || video.id || `mixer-source-${this._sourceSeq + 1}`;
+    var baseId = stream && stream.id || video.id || `composer-source-${this._sourceSeq + 1}`;
     var sourceId = baseId;
     while (this.sources.some(source => source.id === sourceId)) {
       this._sourceSeq += 1;
@@ -23687,7 +23916,7 @@ module.exports = SourceRegistry;
 "use strict";
 
 /**
- * WatermarkManager — Mixer 水印配置、加载和布局模块
+ * WatermarkManager — Composer 水印配置、加载和布局模块
  *
  * 负责将外部水印配置归一化为 renderer 可直接绘制的图片面，并按输出画布
  * 或每路 source 的 draw 区域计算最终绘制矩形。
@@ -24152,7 +24381,7 @@ module.exports = WatermarkManager;
  * BaseRenderer — 渲染器基类
  *
  * 定义所有渲染后端的统一接口。
- * 渲染器只负责把 Mixer 算好的布局 payload 绘制到 canvas，
+ * 渲染器只负责把 Composer 算好的布局 payload 绘制到 canvas，
  * 不关心源管理、布局计算、音频混音等业务逻辑。
  *
  * 子类必须实现：
@@ -24167,7 +24396,7 @@ module.exports = WatermarkManager;
  */
 module.exports = class BaseRenderer {
   /**
-   * @param {Object} config - 混流配置（来自 MixerConfig）
+   * @param {Object} config - 混流配置（来自 ComposerConfig）
    * @param {string} [config.renderMode] - 请求的渲染模式
    * @param {number} [config.fps] - 目标帧率
    * @param {number} [config.width] - 输出宽度
@@ -24298,7 +24527,7 @@ module.exports = class BaseRenderer {
  * 特点：
  *   - 兼容性最好，所有支持 Canvas 的浏览器均可使用
  *   - 性能依赖浏览器 Canvas2D 实现的硬件加速能力
- *   - 行为与旧版 Mixer drawImage 逻辑一致，作为稳定兜底
+ *   - 行为与旧版 composer drawImage 逻辑一致，作为稳定兜底
  *
  * @module MainCanvas2DRenderer
  */
@@ -24871,7 +25100,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
  *   - worker-webgl2 / worker-2d: Worker 线程渲染
  *   - main-webgl2 / main-2d: 主线程渲染
  *
- * 注意：这是 Mixer 中第一个初始化输出 canvas context 的位置，
+ * 注意：这是 Composer 中第一个初始化输出 canvas context 的位置，
  * 不同渲染器需依次尝试，避免 context 抢占（canvas 只能有一个上下文）。
  *
  * @module RendererFactory
@@ -25810,7 +26039,7 @@ exports.createWorkerScript = function () {
  * MediaStreamComposer public entry point.
  */
 module.exports = require('./Core/MediaStreamComposer');
-},{"./Core/MediaStreamComposer":52}],68:[function(require,module,exports){
+},{"./Core/MediaStreamComposer":54}],68:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -26703,11 +26932,11 @@ module.exports = class RTCSession extends EventEmitter {
     this._sessionAiNSEngine = null;
     this._sessionAiNSOptions = null;
     this._aiNSInputStream = null;
-    this._mixer = null;
+    this._mediaStreamComposer = null;
     // 记录当前送入 MediaStreamComposer 的“原始输入流”（非合成输出流）。
     // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的合成输出轨。
-    this._mixerInputStream = null;
-    this._sessionMixerOptions = null;
+    this._mediaStreamComposerInputStream = null;
+    this._sessionMediaStreamComposerOptions = null;
 
     // 用于华为安卓记录后摄
     this._environment = null;
@@ -26888,21 +27117,26 @@ module.exports = class RTCSession extends EventEmitter {
   get status() {
     return this._status;
   }
-  getMixer() {
-    return this._mixer;
-  }
   getMediaStreamComposer() {
-    return this._mixer;
+    return this._mediaStreamComposer;
   }
+
+  /**
+   * 解析用户传入的 mediaStreamComposer 配置。
+   *
+   * 从会话选项中提取混流器配置。传 null/false 表示禁用混流。
+   *
+   * @param {Object} [options={}] - 会话选项
+   * @param {Object|null|boolean} [options.mediaStreamComposer] - 混流配置，
+   *   null/false 时禁用混流
+   * @returns {Object|null} 归一化后的混流配置或 null
+   */
   _resolveMediaStreamComposerOptions(options = {}) {
     if (!options || typeof options !== 'object') {
       return null;
     }
     if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
       return options.mediaStreamComposer || null;
-    }
-    if (Object.prototype.hasOwnProperty.call(options, 'mixer')) {
-      return options.mixer || null;
     }
     return null;
   }
@@ -26958,6 +27192,18 @@ module.exports = class RTCSession extends EventEmitter {
       return _stream;
     }
   }
+
+  /**
+   * 归一化 AI 降噪配置选项。
+   *
+   * 支持多种传入格式：
+   *   - false/null/undefined → 不启用降噪，返回 null
+   *   - true → 启用降噪，使用默认配置，返回 {}
+   *   - 对象 → 使用用户提供的配置；若显式 enabled:false 则返回 null
+   *
+   * @param {boolean|Object|null} aiNSOptions - 原始 AI 降噪配置
+   * @returns {Object|null} 归一化后的配置快照，或 null（不启用）
+   */
   _normalizeSessionAiNSOptions(aiNSOptions) {
     if (aiNSOptions === undefined || aiNSOptions === null || aiNSOptions === false) {
       return null;
@@ -26970,6 +27216,18 @@ module.exports = class RTCSession extends EventEmitter {
     }
     return null;
   }
+
+  /**
+   * 停止会话级 AI 降噪。
+   *
+   * 关闭降噪引擎实例并释放其输入流。流程：
+   *   1. 保存引擎引用和输入流引用，然后置空成员变量
+   *   2. 若引擎可销毁，调用 destroy() 后清理输入流
+   *   3. 若引擎不可销毁（无 destroy 方法），直接清理输入流
+   *
+   * 销毁是异步的（WASM/Worklet 资源释放），但上层不等待结果，
+   * 通过安全关闭输入流避免设备采集流泄漏。
+   */
   _stopSessionAiNoiseSuppression() {
     var engine = this._sessionAiNSEngine;
     var aiNSInputStream = this._aiNSInputStream;
@@ -26986,6 +27244,28 @@ module.exports = class RTCSession extends EventEmitter {
       this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
     });
   }
+
+  /**
+   * 对 SDK getusermedia 采集到的流应用 AI 降噪。
+   *
+   * 这是 AI 降噪的主入口，在上层调用链中的位置：
+   *   getUserMedia → _processMediaStream → 
+   *     _applyAiNoiseSuppressionOnSdkGumStream → _applyMediaStreamComposerOnSdkGumStream
+   *
+   * 流程：
+   *   1. 校验输入（非空、有音频轨）
+   *   2. 停止旧的降噪引擎实例（避免残留）
+   *   3. 创建新的 AiNSEngine，调用 process() 建立 AudioContext → Worklet → Destination 音频图
+   *   4. 保存输入流引用（后续用于 switchDevice 时 replaceAudioTrack）
+   *   5. 返回降噪后的 MediaStream
+   *
+   * 失败时：打 warn 日志，停止降噪引擎，返回原始流（降级直通），
+   * 确保通话不受降噪失败影响。
+   *
+   * @param {MediaStream} stream - 原始采集流
+   * @param {Object|boolean|null} aiNSOptions - AI 降噪配置
+   * @returns {Promise<MediaStream>} 降噪后的流（失败时返回原始流）
+   */
   async _applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) {
     logger.debug(`applyAiNoiseSuppressionOnSdkGumStream: ${JSON.stringify(aiNSOptions)}`);
     if (!stream || !(stream instanceof MediaStream)) {
@@ -27007,6 +27287,23 @@ module.exports = class RTCSession extends EventEmitter {
       return stream;
     }
   }
+
+  /**
+   * 替换会话 AI 降噪的输入音轨并重建处理链。
+   *
+   * 用于 switchDevice(audio) 场景：麦克风切换时，不需要销毁整个降噪引擎，
+   * 只需替换输入轨道。流程：
+   *   1. 若引擎尚未创建 → 委托 _applyAiNoiseSuppressionOnSdkGumStream 从头初始化
+   *   2. 若引擎已存在 → 调用 engine.replaceAudioTrack(stream)，保留已有 Worklet 图
+   *   3. 清理旧的输入流引用，更新为新流
+   *
+   * 失败时：停止降噪引擎，回退到重新初始化（_applyAiNoiseSuppressionOnSdkGumStream），
+   * 优先保障音频连通性。
+   *
+   * @param {MediaStream} stream - 新采集的音频/视频流
+   * @param {Object|boolean|null} [aiNSOptions] - AI 降噪配置，默认沿用会话配置
+   * @returns {Promise<MediaStream>} 替换音轨后的降噪流
+   */
   async _replaceAudioTrackWithSessionAiNoiseSuppression(stream, aiNSOptions = this._sessionAiNSOptions) {
     var normalizedOptions = this._normalizeSessionAiNSOptions(aiNSOptions);
     if (!normalizedOptions || !stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
@@ -27031,6 +27328,18 @@ module.exports = class RTCSession extends EventEmitter {
    * 根据上层注入的处理器标记，微调 getUserMedia 约束。
    * 例如 AI 降噪场景下，先关闭浏览器原生降噪，再交给自定义处理器。
    */
+  /**
+   * 根据上层注入的处理器标记，微调 getUserMedia 约束。
+   *
+   * 当启用了 AI 降噪或自定义 mediaStreamProcessor 且该处理器声明了
+   * disableNativeNoiseSuppression 时，在 getUserMedia 的 audio 约束中
+   * 追加 noiseSuppression: false，避免浏览器内置降噪与自定义处理链叠加
+   * 导致双重处理（声音闷、延迟高）。
+   *
+   * @param {Object} constraints - 原始 getUserMedia 约束
+   * @param {Object|null} [aiNSOptions=null] - AI 降噪配置
+   * @returns {Object} 调整后的约束深拷贝
+   */
   _getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = null) {
     var nextConstraints = Utils.cloneObject(constraints);
     if (!nextConstraints) return nextConstraints;
@@ -27044,6 +27353,19 @@ module.exports = class RTCSession extends EventEmitter {
     logger.debug(`nextConstraints: ${JSON.stringify(nextConstraints)}`);
     return nextConstraints;
   }
+
+  /**
+   * 构建 MediaStreamComposer 的构造配置。
+   *
+   * 从会话配置和采集流的实际参数中推导输出尺寸和帧率：
+   *   1. 优先使用用户显式指定的 width/height/fps
+   *   2. 未指定时从视频轨的 getSettings() 中提取实际采集参数
+   *   3. 移动端设备自动交换宽高（横竖屏适配），可通过 forceNoSwapWH 禁用
+   *
+   * @param {MediaStream} stream - 送入 composer 的输入流，用于提取视频轨参数
+   * @param {Object} composerOptions - 用户配置的混流选项
+   * @returns {Object} 可直接传入 MediaStreamComposer 构造函数的配置对象
+   */
   _buildMediaStreamComposerCtorOptions(stream, composerOptions) {
     var options = Object.assign({}, composerOptions || {});
     var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
@@ -27073,31 +27395,45 @@ module.exports = class RTCSession extends EventEmitter {
     }
     return options;
   }
-  _stopSessionMixer() {
-    var mixerInputStream = this._mixerInputStream;
-    if (!this._mixer) {
-      this._mixer = null;
-      // 即使 mixer 实例已不在，也要尝试释放之前送入 mixer 的原始输入流，
+
+  /**
+   * 停止会话级 MediaStreamComposer 实例。
+   *
+   * 在通话结束（close）、重新初始化混流或混流失败时调用。
+   * 清理步骤：
+   *   1. 保存 composer 输入流引用
+   *   2. 调用 composer.stop() → 停止渲染循环、关闭 AudioContext、停止 captureStream tracks
+   *   3. 安全关闭 composer 的原始输入流（避免设备采集流悬挂，占用摄像头/麦克风）
+   *   4. 置空 composer 和输入流引用
+   *
+   * 注意：composer.stop() 只释放 composer 内部资源，不会主动 stop 外部传入的源流。
+   * RTCSession 需要显式关闭这路输入流以确保设备资源彻底释放。
+   */
+  _stopSessionMediaStreamComposer() {
+    var composerInputStream = this._mediaStreamComposerInputStream;
+    if (!this._mediaStreamComposer) {
+      this._mediaStreamComposer = null;
+      // 即使 composer 实例已不在，也要尝试释放之前送入 composer 的原始输入流，
       // 避免设备采集流悬挂，导致挂断后仍占用摄像头/麦克风。
-      this._safeCloseMediaStream(mixerInputStream, 'close mixer input stream failed');
-      this._mixerInputStream = null;
+      this._safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+      this._mediaStreamComposerInputStream = null;
       return;
     }
-    this._safeStopMixer(this._mixer, 'stop mixer failed');
-    // Mixer.stop() 只负责释放 mixer 内部资源，不会主动 stop 外部传入的源流。
+    this._safeStopMediaStreamComposer(this._mediaStreamComposer, 'stop composer failed');
+    // MediaStreamComposer.stop() 只负责释放 composer 内部资源，不会主动 stop 外部传入的源流。
     // RTCSession 在结束通话时需要显式释放这路输入流，避免设备无法彻底关闭。
-    this._safeCloseMediaStream(mixerInputStream, 'close mixer input stream failed');
-    this._mixer = null;
-    // mixer 已销毁，输入流引用必须同步释放，防止悬挂引用。
-    this._mixerInputStream = null;
+    this._safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+    this._mediaStreamComposer = null;
+    // composer 已销毁，输入流引用必须同步释放，防止悬挂引用。
+    this._mediaStreamComposerInputStream = null;
   }
-  _safeStopMixer(mixer, message) {
-    if (!mixer) {
+  _safeStopMediaStreamComposer(composer, message) {
+    if (!composer) {
       return;
     }
     try {
-      if (typeof mixer.stop === 'function') {
-        mixer.stop();
+      if (typeof composer.stop === 'function') {
+        composer.stop();
       }
     } catch (error) {
       logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
@@ -27113,24 +27449,54 @@ module.exports = class RTCSession extends EventEmitter {
       logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
     }
   }
-  async _applyMixerOnSdkGumStream(stream, mixerOptions) {
-    logger.debug(`applyMixerOnSdkGumStream: ${JSON.stringify(mixerOptions)}`);
-    if (!stream || !mixerOptions || !(stream instanceof MediaStream)) {
+
+  /**
+   * 对 SDK getusermedia 采集到的流应用混流合成（MediaStreamComposer）。
+   *
+   * 这是混流的主入口，在整个采集管线中的位置（最后一步）：
+   *   getUserMedia → _processMediaStream → 
+   *      _applyAiNoiseSuppressionOnSdkGumStream → _applyMediaStreamComposerOnSdkGumStream
+   *
+   * 即：原始采集 → 虚拟背景预处理 → AI 降噪 → 混流合成 → 送入 RTC 连接。
+   *
+   * 流程：
+   *   1. 校验输入（非空、有视频轨），无视频轨时不需要混流，原样返回
+   *   2. 停止旧的 composer 实例（避免残留）
+   *   3. 创建新 MediaStreamComposer，以当前流为输入源
+   *   4. 获取 composer 的 video 输出 → 替换视频轨
+   *   5. 保留原始音频轨，与合成视频轨合并为新的 mixedStream
+   *   6. 保存 composer 实例和输入流引用（供 switchDevice 使用）
+   *
+   * 混合流的组成：
+   *   - 视频轨：composer 合成输出（多路画面、布局、水印）
+   *   - 音频轨：原始采集的音频轨（不做混音，混音由 AudioComposer 独立管理）
+   *
+   * 失败时：打 warn 日志，停止 composer，返回原始流（降级直通）。
+   *
+   * @param {MediaStream} stream - 预处理后的采集流（已过虚拟背景 + AI 降噪）
+   * @param {Object|null} composerOptions - 混流配置
+   * @returns {Promise<MediaStream>} 混流合成后的流（失败时返回原始流）
+   */
+  async _applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) {
+    logger.debug(`applyMediaStreamComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
+    if (!stream || !composerOptions || !(stream instanceof MediaStream)) {
       return stream;
     }
     if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
       return stream;
     }
-    var mixerCtorOptions = this._buildMediaStreamComposerCtorOptions(stream, mixerOptions);
-    var mixer = null;
-    logger.debug(`mixerCtorOptions: ${JSON.stringify(mixerCtorOptions)}`);
+    var composerCtorOptions = this._buildMediaStreamComposerCtorOptions(stream, composerOptions);
+    var composer = null;
+    logger.debug(`composerCtorOptions: ${JSON.stringify(composerCtorOptions)}`);
     try {
-      this._stopSessionMixer();
-      mixer = new MediaStreamComposer([stream], mixerCtorOptions);
-      var mixedVideoStream = mixer.getVideoStream();
+      this._stopSessionMediaStreamComposer();
+      composer = new MediaStreamComposer([stream], composerCtorOptions);
+      var mixedVideoStream = await composer.getOutput({
+        type: 'video'
+      });
       var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
       if (!mixedVideoTrack) {
-        throw new Error('mixer output has no video track');
+        throw new Error('composer output has no video track');
       }
       var mixedStream = new MediaStream();
       stream.getAudioTracks && stream.getAudioTracks().forEach(track => {
@@ -27138,26 +27504,53 @@ module.exports = class RTCSession extends EventEmitter {
       });
       mixedVideoTrack.contentHint = 'detail';
       mixedStream.addTrack(mixedVideoTrack, mixedStream);
-      this._mixer = mixer;
-      // 记录本次送入 mixer 的输入源，供 switchDevice(camera) 在 mixer 场景下做“输入替换”。
-      this._mixerInputStream = stream;
+      this._mediaStreamComposer = composer;
+      // 记录本次送入 composer 的输入源，供 switchDevice(camera) 在 composer 场景下做“输入替换”。
+      this._mediaStreamComposerInputStream = stream;
       return mixedStream;
     } catch (error) {
-      logger.warn(`${this._id} apply mixer failed:`, error);
-      this._safeStopMixer(mixer, 'mixer stop after apply failure failed');
-      this._mixer = null;
+      logger.warn(`${this._id} apply composer failed:`, error);
+      this._safeStopMediaStreamComposer(composer, 'composer stop after apply failure failed');
+      this._mediaStreamComposer = null;
       // 创建失败时清空输入流引用，避免后续分支判断使用到无效状态。
-      this._mixerInputStream = null;
+      this._mediaStreamComposerInputStream = null;
       return stream;
     }
   }
-  async _getUserMediaWithSessionPipeline(constraints, mixerOptions, aiNSOptions = this._sessionAiNSOptions) {
+
+  /**
+   * 完整的 SDK getusermedia 采集管线。
+   *
+   * 这是 RTCSession 内部统一的媒体采集入口，按顺序经过以下处理阶段：
+   *
+   *   ┌─────────────────────────────────────────────────────────────┐
+   *   │ 1. getUserMedia(constraints)                                │
+   *   │    └─ _getGumConstraintsWithProcessorFlags: 关闭浏览器自带降噪 │
+   *   │                                                             │
+   *   │ 2. _processMediaStream(stream)                              │
+   *   │    └─ 用户注入的 mediaStreamProcessor（如虚拟背景）             │
+   *   │                                                             │
+   *   │ 3. _applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) │
+   *   │    └─ AI 降噪：AudioContext → WorkletNode → Destination       │
+   *   │                                                             │
+   *   │ 4. _applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) │
+   *   │    └─ 混流合成：Canvas 渲染 → captureStream 输出               │
+   *   └─────────────────────────────────────────────────────────────┘
+   *
+   * 每一阶段失败都会保留前一阶段的输出作为降级，不会阻断通话建立。
+   *
+   * @param {Object} constraints - getUserMedia 媒体约束
+   * @param {Object|null} composerOptions - 混流配置
+   * @param {Object|boolean|null} [aiNSOptions] - AI 降噪配置（默认沿用会话级配置）
+   * @returns {Promise<MediaStream>} 经过完整管线处理后的 MediaStream
+   */
+  async _getUserMediaWithSessionPipeline(constraints, composerOptions, aiNSOptions = this._sessionAiNSOptions) {
     // 统一在取流前应用处理器声明的约束修正，避免上层各处重复拼装 mediaConstraints。
     var gumConstraints = this._getGumConstraintsWithProcessorFlags(constraints, aiNSOptions);
     var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
     var processedStream = await this._processMediaStream(stream);
     var aiNoiseSuppressedStream = await this._applyAiNoiseSuppressionOnSdkGumStream(processedStream, aiNSOptions);
-    return await this._applyMixerOnSdkGumStream(aiNoiseSuppressedStream, mixerOptions);
+    return await this._applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
   isOnHold() {
     return {
@@ -27177,9 +27570,9 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = options.rtcOfferConstraints || null;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
-    var mixerOptions = this._resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
-    this._sessionMixerOptions = mixerOptions;
+    this._sessionMediaStreamComposerOptions = composerOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
     this._stopSessionAiNoiseSuppression();
@@ -27344,7 +27737,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
         logger.debug(`${this._id} currMediaConstraints: `, JSON.stringify(currMediaConstraints));
         if (currMediaConstraints.audio || currMediaConstraints.video) {
-          var tStream = await this._getUserMediaWithSessionPipeline(currMediaConstraints, mixerOptions).catch(error => {
+          var tStream = await this._getUserMediaWithSessionPipeline(currMediaConstraints, composerOptions).catch(error => {
             if (this._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -27564,9 +27957,10 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
-    var mixerOptions = this._resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
-    this._sessionMixerOptions = mixerOptions;
+    this._sessionMediaStreamComposerOptions = composerOptions;
+    this._syncMediaStreamComposerCompatAliases();
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
 
@@ -27722,7 +28116,7 @@ module.exports = class RTCSession extends EventEmitter {
         if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
           this._localToAudio = true;
         }
-        var mStream = await this._getUserMediaWithSessionPipeline(mediaConstraints, mixerOptions).catch(error => {
+        var mStream = await this._getUserMediaWithSessionPipeline(mediaConstraints, composerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -27882,8 +28276,8 @@ module.exports = class RTCSession extends EventEmitter {
     if (!done) {
       done = () => {};
     }
-    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer') || Object.prototype.hasOwnProperty.call(options, 'mixer')) {
-      this._sessionMixerOptions = this._resolveMediaStreamComposerOptions(options);
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
+      this._sessionMediaStreamComposerOptions = this._resolveMediaStreamComposerOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件
@@ -27914,7 +28308,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._localToAudio = false;
     this._localToVideo = true;
     return Promise.resolve().then(async () => {
-      var mixerOptions = this._sessionMixerOptions;
+      var composerOptions = this._sessionMediaStreamComposerOptions;
 
       // 兼容重复调用，或者由单向视频切换双向视频，或者双向视频切换单向视频的情况
       if (this._localMediaStream.getVideoTracks().length > 0) {
@@ -27948,7 +28342,7 @@ module.exports = class RTCSession extends EventEmitter {
       } else {
         stream = await this._getUserMediaWithSessionPipeline({
           video: videoConstraints
-        }, mixerOptions).catch(error => {
+        }, composerOptions).catch(error => {
           throw error;
         });
         if (stream) {
@@ -28087,6 +28481,43 @@ module.exports = class RTCSession extends EventEmitter {
   /**
    * 切换设备，一般用于切换摄像头
    */
+  /**
+   * 切换设备（摄像头/麦克风）。
+   *
+   * 当会话中启用了 MediaStreamComposer 时，摄像头切换走 composer 分支：
+   *
+   *   switchDevice('camera'):
+   *   ┌────────────────────────────────────────────────────────────┐
+   *   │ 1. getUserMedia 获取新摄像头流                             │
+   *   │                                                            │
+   *   │ 2. 管线处理（与初始化相同）：                               │
+   *   │    └─ _processMediaStream → AI 降噪 → 混流合成             │
+   *   │                                                            │
+   *   │ 3. composer 分支（useComposerBranch=true 时）：             │
+   *   │    ├─ 停止旧输入 videoTrack                                │
+   *   │    ├─ currentComposer.removeSource(oldInputStream)          │
+   *   │    ├─ currentComposer.addSource(newInputStream)             │
+   *   │    │   保持同一个 composer 实例，避免重建带来的状态抖动      │
+   *   │    └─ currentComposer.getOutput('video') → 新合成输出轨     │
+   *   │                                                            │
+   *   │ 4. 回退分支（composer 操作失败时）：                        │
+   *   │    └─ 走默认 sender.replaceTrack 路径                       │
+   *   └────────────────────────────────────────────────────────────┘
+   *
+   *   switchDevice('audio'):
+   *   ┌────────────────────────────────────────────────────────────┐
+   *   │ 1. getUserMedia 获取新麦克风流                             │
+   *   │ 2. _replaceAudioTrackWithSessionAiNoiseSuppression(stream)  │
+   *   │    └─ 引擎已存在 → replaceAudioTrack 替换输入音轨           │
+   *   │    └─ 引擎不存在 → 降级为从头初始化                        │
+   *   │ 3. 更新 localMediaStream 中的音轨                           │
+   *   │ 4. sender.replaceTrack(audioTrack)                         │
+   *   └────────────────────────────────────────────────────────────┘
+   *
+   * @param {string} type - 'camera' | 'audio'
+   * @param {string} [deviceId] - 目标设备 ID
+   * @returns {Promise<MediaStream>} 切换后的新流
+   */
   async switchDevice(type, deviceId) {
     logger.debug(`${this._id} switchDevice(), type:${type}, deviceId:${deviceId}`);
 
@@ -28097,7 +28528,7 @@ module.exports = class RTCSession extends EventEmitter {
 
     // TODO 需要判断当前是否是视频通话
     if (type === 'camera') {
-      var mixerOptions = this._sessionMixerOptions;
+      var composerOptions = this._sessionMediaStreamComposerOptions;
       if (this._localCameras.length === 0) {
         var cameras = await Utils.getCameras();
         cameras.forEach(cam => {
@@ -28112,11 +28543,11 @@ module.exports = class RTCSession extends EventEmitter {
         video: true
       };
       return Promise.resolve().then(() => {
-        // mixer 专用分支开启条件：
-        // 1) 当前会话声明了 mixer 配置；
-        // 2) mixer 实例已存在（说明通话已在用 mixer）；
-        // 3) 已记录有效的 mixer 输入流（用于 stop old input + remove/append）。
-        var useMixerBranch = Boolean(mixerOptions && this._mixer && this._mixerInputStream);
+        // composer 专用分支开启条件：
+        // 1) 当前会话声明了 composer 配置；
+        // 2) composer 实例已存在（说明通话已在用 composer）；
+        // 3) 已记录有效的 composer 输入流（用于 stop old input + remove/add）。
+        var useComposerBranch = Boolean(composerOptions && this._mediaStreamComposer && this._mediaStreamComposerInputStream);
         var videoConstraints;
 
         // 如果传参包含deviceId则使用deviceId
@@ -28185,16 +28616,16 @@ module.exports = class RTCSession extends EventEmitter {
           logger.debug(`${this._id} kind: ${s.track && s.track.kind}`);
           if (s.track && s.track.kind == 'video') {
             // 只要检测到“会话中存在视频 sender”即可继续流程。
-            // 注意：在 mixer 分支里 sender.track 可能是 mixer 输出轨，不能提前 stop。
+            // 注意：在 composer 分支里 sender.track 可能是 composer 输出轨，不能提前 stop。
             next = true;
             if (this._enableBFCP) {
               // 启用了BFCP，区分一下BFCP控制的视频轨道
               // eslint-disable-next-line max-len
-              if (!useMixerBranch && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0])) {
+              if (!useComposerBranch && s.track != this._bfcpVideoTrack && s.track != (this._localShareStream && this._localShareStream.getVideoTracks()[0])) {
                 s.track.stop();
               }
             } else {
-              !useMixerBranch && s.track.stop();
+              !useComposerBranch && s.track.stop();
             }
           }
         });
@@ -28210,11 +28641,11 @@ module.exports = class RTCSession extends EventEmitter {
         constraints.video = Object.assign(this._inviteMediaConstraints.video, constraints.video);
         return {
           constraints,
-          useMixerBranch
+          useComposerBranch
         };
       }).then(async ({
         constraints: videoConstraints,
-        useMixerBranch
+        useComposerBranch
       }) => {
         logger.debug(`${this._id} videoConstraints`, JSON.stringify(videoConstraints));
         var sender = this._connection.getSenders().find(s => {
@@ -28229,8 +28660,8 @@ module.exports = class RTCSession extends EventEmitter {
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
 
-        // 统一媒体获取 + 预处理入口（虚拟背景等），默认流和 mixer 流共用。
-        // 这里显式不走 _getUserMediaWithSessionPipeline，避免默认路径隐式重建 mixer。
+        // 统一媒体获取 + 预处理入口（虚拟背景等），默认流和 composer 流共用。
+        // 这里显式不走 _getUserMediaWithSessionPipeline，避免默认路径隐式重建 composer。
         var getProcessedStream = async () => {
           return await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
             return await this._processMediaStream(mediastream);
@@ -28277,8 +28708,8 @@ module.exports = class RTCSession extends EventEmitter {
             videoStream: streamForEvent
           });
         };
-        if (!useMixerBranch) {
-          // 默认分支（无 mixer 或 mixer 状态不完整）：
+        if (!useComposerBranch) {
+          // 默认分支（无 composer 或 composer 状态不完整）：
           // 与你当前逻辑一致：先停 sender 旧轨，再取新流并直接替换 sender。
           // 先释放原来的设备再获取新的
           sender && sender.track && sender.track.stop();
@@ -28288,16 +28719,16 @@ module.exports = class RTCSession extends EventEmitter {
           return stream;
         }
         try {
-          var currentMixer = this._mixer;
-          var oldInputStream = this._mixerInputStream;
+          var currentComposer = this._mediaStreamComposer;
+          var oldInputStream = this._mediaStreamComposerInputStream;
           var oldInputVideoTrack = oldInputStream && oldInputStream.getVideoTracks && oldInputStream.getVideoTracks()[0];
 
-          // mixer 分支关键点：先停“旧输入 videoTrack”，而不是 sender 上的 mixer 输出轨。
+          // composer 分支关键点：先停“旧输入 videoTrack”，而不是 sender 上的 composer 输出轨。
           oldInputVideoTrack && oldInputVideoTrack.stop();
           var _stream2 = normalizeStream(await getProcessedStream());
           var newVideoTrack = _stream2.getVideoTracks && _stream2.getVideoTracks()[0];
           if (!newVideoTrack) {
-            throw new Error('switchDevice mixer branch has no video track');
+            throw new Error('switchDevice composer branch has no video track');
           }
           var newInputStream = new MediaStream();
           _stream2.getAudioTracks && _stream2.getAudioTracks().forEach(track => {
@@ -28305,22 +28736,24 @@ module.exports = class RTCSession extends EventEmitter {
           });
           newInputStream.addTrack(newVideoTrack, newInputStream);
 
-          // 在同一个 mixer 内完成输入替换，避免重建 mixer 带来的状态抖动。
-          currentMixer.removeStream(oldInputStream);
-          currentMixer.appendStream(newInputStream);
+          // 在同一个 composer 内完成输入替换，避免重建 composer 带来的状态抖动。
+          currentComposer.removeSource(oldInputStream);
+          currentComposer.addSource(newInputStream);
           // 记录最新输入流，供下次 switchDevice 继续替换。
-          this._mixerInputStream = newInputStream;
-          var mixedVideoStream = currentMixer.getVideoStream();
+          this._mediaStreamComposerInputStream = newInputStream;
+          var mixedVideoStream = await currentComposer.getOutput({
+            type: 'video'
+          });
           var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks && mixedVideoStream.getVideoTracks()[0];
           if (!mixedVideoTrack) {
-            throw new Error('switchDevice mixer output has no video track');
+            throw new Error('switchDevice composer output has no video track');
           }
           applyTrack(mixedVideoTrack, mixedVideoStream);
           return mixedVideoStream;
         } catch (error) {
-          // mixer 分支任一步失败（remove/append/output 取轨等），回退到默认路径，
-          // 目标是优先保障“能切成功”，同时保留 warn 方便后续排查 mixer 分支失败原因。
-          logger.warn(`${this._id} switchDevice mixer branch failed, fallback to default flow:`, error);
+          // composer 分支任一步失败（remove/add/output 取轨等），回退到默认路径，
+          // 目标是优先保障“能切成功”，同时保留 warn 方便后续排查 composer 分支失败原因。
+          logger.warn(`${this._id} switchDevice composer branch failed, fallback to default flow:`, error);
           sender && sender.track && sender.track.stop();
           var fallbackStream = normalizeStream(await getProcessedStream());
           var fallbackTrack = fallbackStream.getVideoTracks()[0];
@@ -29437,9 +29870,24 @@ module.exports = class RTCSession extends EventEmitter {
       logger.debug(`${this._id} close() | closing local bfcp MediaStream`);
       Utils.closeMediaStream(this._bfcpStream);
     }
-    this._stopSessionMixer();
+
+    /**
+     * 释放媒体管线资源。
+     *
+     * 清理顺序（与初始化逆序）：
+     *   1. _stopSessionMediaStreamComposer()
+     *      └─ composer.stop() → 停止渲染循环、关闭 AudioContext、
+     *         停止 captureStream tracks
+     *   2. _stopSessionAiNoiseSuppression()
+     *      └─ engine.destroy() → 关闭 WorkletNode、释放 WASM 资源、
+     *         关闭 AudioContext
+     *   3. 置空配置引用
+     *
+     * 这两个 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
+     */
+    this._stopSessionMediaStreamComposer();
     this._stopSessionAiNoiseSuppression();
-    this._sessionMixerOptions = null;
+    this._sessionMediaStreamComposerOptions = null;
     this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
@@ -30479,7 +30927,7 @@ module.exports = class RTCSession extends EventEmitter {
           Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS);
         }
         logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-        return this._getUserMediaWithSessionPipeline(videoConstraints, this._sessionMixerOptions).catch(error => {
+        return this._getUserMediaWithSessionPipeline(videoConstraints, this._sessionMediaStreamComposerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -32161,7 +32609,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._getUserMediaWithSessionPipeline({
       audio: false,
       video: this._inviteMediaConstraints.video || true
-    }, this._sessionMixerOptions).then(stream => {
+    }, this._sessionMediaStreamComposerOptions).then(stream => {
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'video') {
           // 停止绘制并清空画布

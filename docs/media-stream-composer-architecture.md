@@ -2,773 +2,600 @@
 
 ## 模块总览
 
-MediaStreamComposer 是一个**多路音视频混流器**，将多个 `MediaStream` / `HTMLMediaElement`（常见为 `HTMLVideoElement`）合并为一个包含视频轨和音频轨的 `MediaStream`，可直接传递给 `RTCPeerConnection` 用于 WebRTC 推流。
+`MediaStreamComposer` 是一个多路音视频混流器，将多个 `MediaStream` / `HTMLMediaElement` 合并为一个输出 `MediaStream`，可直接给 `RTCPeerConnection`、本地预览或录制链路使用。
+
+这一版对外 API 已经收敛为 8 个主方法：
+
+- `addSource()`
+- `removeSource()`
+- `clearSources()`
+- `setConfig()`
+- `getState()`
+- `getOutput()`
+- `releaseOutput()`
+- `stop()`
+
+旧方法仍保留，但主要作为兼容包装层，内部尽量转调到新控制路径。
 
 ### 快速理解路线
 
-如果只想先建立整体模型，不建议从所有文件逐个读起。建议按下面顺序阅读：
-
-1. **入口层**: `lib/Mixer.js` 只做导出，实际实现入口是 `lib/MediaStreamComposer/Core/MediaStreamComposer.js`。
-2. **核心链路**: 输入源由 `SourceRegistry` 管理；视频画面由 `LayoutEngine → RenderLoop → RendererFactory` 处理；音频由 `AudioMixer → OutputStreamManager` 处理。
-3. **渲染实现**: `MainCanvas2DRenderer` 是兜底实现；`MainWebGL2Renderer` 和 `WorkerRenderer` 是性能优化实现。
-4. **运行状态**: `getSources()` 查看输入源状态，`getRenderInfo()` 查看视频渲染状态，`getAudioInfo()` 查看音频混音状态。
-5. **生命周期**: `appendStream()` 添加源，`getMixedStream()/getVideoStream()` 创建输出流，`stop()` 释放资源且实例不可复用。
+1. 入口在 [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)。
+2. 输入源由 `SourceRegistry` 管理。
+3. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
+4. 音频输出由 `AudioMixer` 处理。
+5. 输出流由 `OutputStreamManager` 统一产出。
+6. 水印由 `WatermarkManager` 管理。
 
 ### 模块职责总览
 
 ```
 MediaStreamComposer 是总调度：
   SourceRegistry 管输入源
-  LayoutEngine 只算每路视频画在哪里
-  RenderLoop 负责每一帧什么时候画
+  LayoutEngine 计算布局和镜像后的绘制信息
+  RenderLoop 负责何时渲染
   RendererFactory/Renderer 负责怎么画
-  AudioMixer 负责把所有音轨混到一起
-  OutputStreamManager 负责把 canvas/audio 变成最终 MediaStream
+  WatermarkManager 负责水印状态和异步资源
+  AudioMixer 负责音频混音和子混音
+  OutputStreamManager 负责 canvas/audio 到最终 MediaStream 的导出
 ```
 
-### 代码追踪入口
+### 当前推荐的调试入口
 
-| 追踪目标 | 起点 | 继续查看 |
-|----------|------|----------|
-| 构造 `CRTC.Mixer` 时初始化了哪些子模块 | `MediaStreamComposer.constructor()` | `MixerConfig.create()`、各子模块构造函数 |
-| 添加输入源后的处理流程 | `MediaStreamComposer.appendStream()` | `SourceRegistry.add()`、`AudioMixer.scheduleRefresh()`、`RenderLoop.start()` |
-| slot 自动分配和同 slot 覆盖规则 | `SourceRegistry._getNextSlot()` / `SourceRegistry.add()` | `MixerConfig.normalizeSlot()`、`LayoutEngine._calcLayout()` |
-| 单帧视频渲染流程 | `RenderLoop.renderFrame()` | `LayoutEngine.createRenderPayload()`、当前 renderer 的 `render()` |
-| 渲染后端选择和降级规则 | `RendererFactory.createRenderer()` | `WorkerRenderer.init()`、`MainWebGL2Renderer.init()`、`MainCanvas2DRenderer.init()` |
-| 输出 `MediaStream` 的创建流程 | `MediaStreamComposer.getMixedStream()` | `OutputStreamManager.getVideoStream()`、`AudioMixer.getAudioStream()` |
-| 后续添加的音频源如何补进已返回的 mixed stream | `AudioMixer._connectSource()` | `OutputStreamManager.ensureMixedStreamAudioTrack()` |
-| 移除输入源时的资源清理流程 | `MediaStreamComposer.removeStream()` | `SourceRegistry.remove()`、`AudioMixer.disconnectSource()`、`RenderLoop.removeSource()` |
-| 停止混流器时释放的资源 | `MediaStreamComposer.stop()` | `AudioMixer.stop()`、`RenderLoop.destroy()`、`OutputStreamManager.stop()` |
-| 黑屏、无声、渲染降级的排查入口 | `getRenderInfo()` / `getAudioInfo()` | `RenderLoop._handleRendererInfo()`、`AudioMixer._updateAudioInfo()` |
+| 目标 | 推荐入口 | 对应内部链路 |
+|------|----------|--------------|
+| 看当前所有源 | `getState().sources` | `SourceRegistry.getSnapshot()` |
+| 看镜像/水印配置 | `getState().config` | `_getConfigStateSnapshot()` |
+| 看视频渲染状态 | `getState().render` | `RenderLoop.getRenderInfo()` |
+| 看音频混音状态 | `getState().audio` | `AudioMixer.getInfo()` |
+| 获取完整输出 | `getOutput({ type: 'mixed' })` | `_getMixedOutput()` |
+| 获取子混音 | `getOutput({ type: 'audio', slots, isolated })` | `AudioMixer.getAudioStream()` / `getIsolatedSubmixAudioStream()` |
 
-### 关键状态速查
+### 兼容旧方法如何看待
 
-| 状态/API | 所属模块 | 用来确认 |
-|---------|----------|----------|
-| `source.id` / `source.slot` / `source.gain` | `SourceRegistry` | 标识输入源、布局位置和单路音量 |
-| `source.ownedVideo` | `SourceRegistry` | 区分内部创建的隐藏 video 和外部传入的 video |
-| `render payload.items[].draw` | `LayoutEngine` | renderer 实际消费的绘制矩形 |
-| `_animationId` / `_stopped` | `RenderLoop` | rAF 是否仍在调度 |
-| `actualMode` / `isFallback` / `reason` | renderer info | 当前实际渲染后端、是否降级、降级原因 |
-| `droppedFrames` / `renderedFrames` | renderer info | Worker 是否繁忙、是否发生丢帧 |
-| `status` / `contextState` / `connectedSources` | audio info | 音频是否已请求、AudioContext 状态、已连接源数量 |
-| `_mixedStream` / `_videoStream` | `OutputStreamManager` | 输出流是否已创建、音频是否会补进已返回流 |
+| 旧方法 | 当前角色 |
+|--------|----------|
+| `appendStream()` | `addSource()` 包装层 |
+| `removeStream()` | `removeSource()` 包装层 |
+| `clearStreams()` | `clearSources()` 包装层 |
+| `getSources()` / `getRenderInfo()` / `getAudioInfo()` | `getState()` 的拆分包装层 |
+| `getMixedStream()` / `getAudioStream()` / `getVideoStream()` | `getOutput()` 的兼容入口 |
+| `setMirror()` / `setSourceMirror()` / `setWatermarks()` 等 | `setConfig()` 的兼容入口 |
 
-### 常见调试入口
+---
 
-| 现象 | 优先检查 | 重点确认 |
-|------|----------|----------|
-| 输出黑屏 | `getRenderInfo().actualMode`、`getSources()`、video `readyState` | renderer 是否启动、源是否可渲染、Worker 是否降级、canvas capture 是否创建 |
-| 有画面无声音 | `getAudioInfo()`、源的 `hasAudio` | 是否调用 `getMixedStream()`、AudioContext 是否 suspended、源是否有 live audio track |
-| Worker 渲染没有启用 | `getRenderInfo().actualMode/reason` | `auto` 在 Safari/WKWebView 是否走 main-webgl2、Worker 是否异步进入 `worker-failed` |
-| 新增源没有进入画面 | `getSources()` 的 `slot` 和 `hasVideo` | slot 是否被覆盖、stream 是否 active、video 是否已有尺寸 |
-| remove 后仍有残留 | `SourceRegistry.remove()` 回调链 | 音频节点是否断开、renderer 纹理是否释放、输出流是否仍持有旧 track |
-
-### 目录结构
+## 目录结构
 
 ```
 lib/
-├── Mixer.js                          # 入口 barrel（re-export MediaStreamComposer）
+├── Mixer.js
 │
-├── Core/                       # 核心逻辑层
-│   ├── MediaStreamComposer.js            # 中枢控制器
-│   ├── MixerConfig.js                # 配置归一化（纯函数）
-│   ├── SourceRegistry.js             # 输入源注册表
-│   ├── LayoutEngine.js               # 布局引擎
-│   ├── MixerDomAdapter.js            # DOM 元素创建适配器
-│   ├── AudioMixer.js                 # WebAudio 混音
-│   ├── OutputStreamManager.js        # 输出流管理
-│   └── RenderLoop.js                 # 渲染循环（rAF 驱动）
-│
-└── Renderers/                   # 渲染后端层
-    ├── RendererFactory.js            # 渲染器工厂（自动选择/降级）
-    ├── BaseRenderer.js               # 渲染器基类（抽象接口）
-    ├── MainCanvas2DRenderer.js       # 主线程 Canvas2D（最兼容，最终兜底）
-    ├── MainWebGL2Renderer.js         # 主线程 WebGL2（GPU 加速）
-    ├── WorkerRenderer.js             # Worker 线程渲染器（OffscreenCanvas）
-    ├── workerScript.js               # Worker 内联脚本生成器
-    └── helpers/
-        ├── gl.js                     # WebGL 工具（shader 编译、纹理创建）
-        └── color.js                  # CSS 颜色解析（用于 WebGL clearColor）
-```
-
-### 核心数据流
-
-```
-输入源 (MediaStream / HTMLMediaElement)
-      │
-      ├──▶ [SourceRegistry] ──▶ 源增删管理、video 元素创建
-      │
-      ├──▶ [AudioMixer] ──▶ WebAudio 混音 ──▶ MediaStreamAudioDestinationNode
-      │                           │
-      │                           └──▶ 音频轨注入到输出流
-      │
-      └──▶ [LayoutEngine] ──▶ 布局计算
-                    │
-                    ▼
-            [RenderLoop] ──▶ rAF 驱动
-                    │
-                    ▼
-          ┌──────────────────────────────────────────────────┐
-          │            [RendererFactory]                     │
-          │              /        |        \                 │
-          │     MainCanvas2D  MainWebGL2  WorkerRenderer     │
-          │     (CanvasRendering  (WebGL2   (OffscreenCanvas │
-          │      Context2D)      shader)    → ImageBitmap)   │
-          └──────────────────────┬───────────────────────────┘
-                                 │
-                                 ▼
-                    canvas 帧绘制完成
-                                 │
-                                 ▼
-            [OutputStreamManager] ◀── canvas.captureStream()
-                    │
-                    └──▶ 输出 MediaStream (视频轨 + 音频轨)
+└── MediaStreamComposer/
+    ├── Core/
+    │   ├── MediaStreamComposer.js
+    │   ├── MixerConfig.js
+    │   ├── SourceRegistry.js
+    │   ├── LayoutEngine.js
+    │   ├── MixerDomAdapter.js
+    │   ├── AudioMixer.js
+    │   ├── OutputStreamManager.js
+    │   ├── RenderLoop.js
+    │   └── WatermarkManager.js
+    │
+    └── Renderers/
+        ├── RendererFactory.js
+        ├── BaseRenderer.js
+        ├── MainCanvas2DRenderer.js
+        ├── MainWebGL2Renderer.js
+        ├── WorkerRenderer.js
+        ├── workerScript.js
+        └── helpers/
+            ├── gl.js
+            └── color.js
 ```
 
 ---
 
-## 文件功能分析
+## 中枢控制器
 
-### 入口
+### [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)
 
-#### [lib/Mixer.js](../lib/Mixer.js) — 模块入口（barrel）
+`MediaStreamComposer` 负责协调所有子模块，是整个系统的中介者。
 
-```javascript
-module.exports = require('./Core/MediaStreamComposer');
-```
-
-- **职责**: 向后兼容的 barrel 文件。旧代码 `require('./Mixer')` 仍能工作。
-- **实际类名**: `MediaStreamComposer`（即 MediaStreamComposer 中 `module.exports` 的 class）。
-
----
-
-### Core 层
-
-#### [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js) — 混流控制器（中枢）
-
-**核心类**: `MediaStreamComposer`
-
-##### 构造流程
+### 构造流程
 
 ```
 constructor(videos, options)
   │
   ├─ MixerConfig.create(options) → 归一化配置
-  │
-  ├─ new MixerDomAdapter({ config, logger })
-  │   └─ adapter.createCanvas() → 离屏 canvas
-  │
-  ├─ new SourceRegistry({ logger, callbacks })
-  │   └─ 源增删、video 元素创建、音频/渲染器回调
-  │
-  ├─ new OutputStreamManager({ canvas, config, logger })
-  │   └─ canvas.captureStream() 输出管理
-  │
-  ├─ new RenderLoop({ canvas, config, callbacks })
-  │   └─ rAF 驱动、renderer 生命周期
-  │
-  ├─ new AudioMixer({ sourceRegistry, callbacks })
-  │   └─ WebAudio 混音
-  │
-  └─ new LayoutEngine({ sourceRegistry, canvas, config, callbacks })
-      └─ 布局计算
-      │
-      └─ appendStream(videos) → 添加初始源
+  ├─ new MixerDomAdapter(...)
+  ├─ new WatermarkManager(...)
+  ├─ new SourceRegistry(...)
+  ├─ new OutputStreamManager(...)
+  ├─ new RenderLoop(...)
+  ├─ new AudioMixer(...)
+  ├─ new LayoutEngine(...)
+  └─ appendStream(videos) / addSource(videos) → 添加初始源
 ```
 
-##### 公开 API
+说明：
+- 构造阶段仍然沿用旧初始化路径 `appendStream(videos)`，但该方法已经只是 `addSource()` 包装层。
 
-| 方法 | 功能 | 调用链路 |
-|------|------|---------|
-| `appendStream(videos, options?)` | 添加输入源 | → SourceRegistry.add() → AudioMixer.scheduleRefresh() → RenderLoop.start() |
-| `removeStream(streamOrId)` | 移除一路源 | → SourceRegistry.find() → SourceRegistry.remove() |
-| `clearStreams()` | 移除所有源 | → 遍历 SourceRegistry.remove() |
-| `getMixedStream()` | 获取完整混合流（视频+音频） | → getVideoStream() → setMixedStream() → getAudioStream() → addAudioTracksToStream() |
-| `getVideoStream()` | 仅获取视频流 | → OutputStreamManager.getVideoStream() → 启动 RenderLoop |
-| `getAudioStream()` | 仅获取音频流 | → AudioMixer.getAudioStream() |
-| `getSources()` | 获取源快照 | → SourceRegistry.getSnapshot() |
-| `getRenderInfo()` | 获取渲染状态 | → RenderLoop.getRenderInfo() → renderer.getInfo() |
-| `getAudioInfo()` | 获取音频状态 | → AudioMixer.getInfo() |
-| `stop()` | 销毁混流器 | → RenderLoop.stop() → clearStreams() → AudioMixer.stop() → RenderLoop.destroy() → OutputStreamManager.stop() |
+### 当前公开 API 与内部链路
 
-##### 安全守卫
+| 新方法 | 功能 | 主要链路 |
+|--------|------|----------|
+| `addSource(videos, optionsOrSlot)` | 添加输入源 | `SourceRegistry.add() -> AudioMixer.scheduleRefresh() -> RenderLoop.start()` |
+| `removeSource(target)` | 移除一路源 | `_removeSourcesInternal(target) -> SourceRegistry.remove()` |
+| `clearSources()` | 移除全部源 | `_removeSourcesInternal(undefined)` |
+| `setConfig(patch)` | 动态修改镜像/水印等配置 | 更新 `_config` / `_slotMirrorXOverrides` / `WatermarkManager` / 强制重绘 |
+| `getState()` | 读取统一状态快照 | `SourceRegistry + _getConfigStateSnapshot() + RenderLoop + AudioMixer` |
+| `getOutput(options)` | 获取 `mixed` / `video` / `audio` 输出 | `_getVideoOutputSync()` / `_getMixedOutput()` / `AudioMixer` |
+| `releaseOutput(options)` | 释放音频子混音 | `AudioMixer.releaseSubmixAudioStream()` |
+| `stop()` | 销毁实例 | `RenderLoop.stop() -> clearSources() -> AudioMixer.stop() -> RenderLoop.destroy() -> OutputStreamManager.stop()` |
 
-- `_assertNotDestroyed(methodName)`: 所有公开方法入口检查 `_destroyed` 标记，stop() 后禁止复用
-- `_destroyed`: 构造时为 false，stop() 后设为 true，AudioMixer 也通过 `getDestroyed` 回调检测此标记
+### 兼容旧方法实现方式
 
----
+旧方法现在主要只是薄包装：
 
-#### [lib/MediaStreamComposer/Core/MixerConfig.js](../lib/MediaStreamComposer/Core/MixerConfig.js) — 配置归一化
+```js
+appendStream(videos, optionsOrSlot) {
+  return this.addSource(videos, optionsOrSlot);
+}
 
-**纯函数工具模块**，所有方法无副作用。
+removeStream(streamOrId) {
+  return this.removeSource(streamOrId);
+}
 
-| 方法 | 功能 | 归一化规则 |
-|------|------|-----------|
-| `create(options)` | 创建完整配置对象 | 将所有字段归一化后合并为对象 |
-| `normalizeRenderMode(value, fallback)` | 渲染模式合法化 | 仅在 `VALID_RENDER_MODES` 集合中的值有效 |
-| `normalizePositiveInteger(value, fallback)` | 正整数归一化 | >0 且有限 → floor，否则 fallback |
-| `normalizeSlot(value, index)` | slot 编号归一化 | ≥0 整数 + index 偏移 |
-| `normalizeGain(value, fallback)` | 音量增益归一化 | ≥0，允许放大（>1） |
-| `normalizeSourceOptions(optionsOrSlot, index, defaultGain)` | appendStream 参数归一化 | 支持 `(stream, 3)` 和 `(stream, {slot, gain})` 两种调用形式 |
+clearStreams() {
+  this.clearSources();
+}
 
-**默认配置**: width=1280, height=720, fps=15, backgroundColor='#000', audioGain=0.8, renderMode='auto', dropFrameWhenBusy=true, maxFrameQueue=1, preserveDrawingBuffer=true
-
----
-
-#### [lib/MediaStreamComposer/Core/SourceRegistry.js](../lib/MediaStreamComposer/Core/SourceRegistry.js) — 输入源注册表
-
-**职责**: 管理所有参与混流的输入源生命周期。
-
-**source 对象结构**:
-```javascript
-{
-  id: string,              // 唯一 ID（基于 stream.id 或自增）
-  stream: MediaStream,     // 关联的 MediaStream
-  video: HTMLMediaElement, // 参与绘制/换源检测的 media 元素，通常是 video
-  slot: number | null,     // 布局槽位编号
-  gain: number,            // 音量增益
-  audioSourceNode: AudioNode | null,  // AudioMixer 连接时赋值
-  gainNode: GainNode | null,          // AudioMixer 连接时赋值
-  audioStream: MediaStream | null,    // 已连接的音频流引用
-  ownedVideo: boolean      // 是否为 mixer 创建的 video
+async getMixedStream() {
+  return this.getOutput({ type: 'mixed' });
 }
 ```
 
-**关键方法**: `add` / `remove` / `find` / `getSnapshot` / `getStream` / `hasLiveAudioTrack` / `hasVideoTrack` / `isRenderable`
+需要特别注意的兼容点：
 
-**回调链**（MediaStreamComposer 构造时注入）:
-```
-onBeforeRemove(source)
-  → AudioMixer.disconnectSource(source)   // 断开 WebAudio 连接
-
-onAfterRemove(source)
-  → RenderLoop.removeSource(source.id)    // 通知渲染器释放该源资源
-  → 如果全部源已清空且仍在输出 → 绘制黑帧
-```
+- `getVideoStream()` 仍保留同步行为，内部直接走 `_getVideoOutputSync()`
+- `getAudioStream({ isolated: true })` 仍保留旧调用方式
+- `setMirror()` / `setSourceMirror()` 这类旧 setter 仍然同步返回，但内部调的是异步 `setConfig()`
 
 ---
 
-#### [lib/MediaStreamComposer/Core/LayoutEngine.js](../lib/MediaStreamComposer/Core/LayoutEngine.js) — 布局引擎
+## 新 API 核心实现
 
-**职责**: 根据输入源数量和 slot 分配，计算每路视频在固定画布上的绘制位置。
+### `addSource()`
 
-**网格布局**（3~4路→2x2，5~6路按比例，7~9→3x3，10+→接近正方形）
+`addSource()` 是新的源入口，负责：
 
-**缩放策略**: **contain 模式**：等比缩放使视频完整显示在目标区域内，剩余空间居中留边（更接近 CSS `object-fit: contain`）。如果后续希望铺满并裁剪，需要调整 `LayoutEngine._scaleVideo()`。
+1. 检查实例是否已 `stop()`
+2. 标准化单个源或数组源
+3. 限制最多 9 路
+4. 归一化 `slot/gain/sourceMirror`
+5. 交给 `SourceRegistry.add()`
+6. 若音频链路已经建立，则异步刷新音频连接
+7. 刷新镜像渲染策略
+8. 启动 `RenderLoop`
 
-**render payload 结构**（RendererFactory 各渲染器的输入）:
-```javascript
+调用链：
+
+```
+addSource()
+  ├─ _normalizeSourceOptions()
+  ├─ SourceRegistry.add()
+  ├─ _scheduleAudioRefresh()   (按需)
+  ├─ _refreshRendererPolicyForMirror()
+  └─ RenderLoop.start()
+```
+
+旧方法对应：
+
+```js
+appendStream(...)
+```
+
+### `removeSource()` 和 `clearSources()`
+
+这两个方法有意分开：
+
+- `removeSource(target)` 只处理单个目标
+- `clearSources()` 明确表示清空全部源
+
+内部共用 `_removeSourcesInternal()`，但对外语义保持分离，避免把“不传参数的 remove”变成危险的批量删除。
+
+调用链：
+
+```
+removeSource(target)
+  └─ _removeSourcesInternal(target)
+       ├─ _findSource(target)
+       ├─ SourceRegistry.remove()
+       ├─ onBeforeRemove -> AudioMixer.disconnectSource()
+       └─ onAfterRemove  -> RenderLoop.removeSource()
+
+clearSources()
+  └─ _removeSourcesInternal(undefined)
+       └─ 遍历全部 source 执行同样清理
+```
+
+旧方法对应：
+
+```js
+removeStream(...)
+clearStreams()
+```
+
+### `setConfig()`
+
+`setConfig()` 是新的运行时配置中心，负责统一处理：
+
+- `outputMirror`
+- `mirrorWatermarksWithOutput`
+- `sourceMirror`
+- `sourceMirrorOverrides`
+- `clearSourceMirrorOverrides`
+- `watermarks`
+- `clearWatermarks`
+- `clearWatermarkFilter`
+
+核心实现特点：
+
+1. 先改内存配置 `_config`
+2. 再处理水印异步更新
+3. 计算是否需要刷新镜像渲染策略
+4. 计算是否需要强制重绘
+5. 返回统一配置快照
+
+调用链：
+
+```
+setConfig(patch)
+  ├─ 更新 _config.outputMirrorX / mirrorX
+  ├─ 更新 _slotMirrorXOverrides
+  ├─ WatermarkManager.setWatermarks() / clearWatermarks()
+  ├─ _refreshRendererPolicyForMirror()
+  └─ _drawVideosToCanvas(undefined, true)
+```
+
+旧方法对应：
+
+```js
+setMirror(enabled)
+setMirrorWatermarksWithOutput(enabled)
+setSourceMirror(...)
+clearSourceMirror(...)
+setWatermarks(watermarks)
+clearWatermarks(filter)
+```
+
+### `getState()`
+
+`getState()` 是新的统一状态查询入口，把以前零散的查询合并为一次快照读取：
+
+```js
 {
-  width: number,
-  height: number,
-  backgroundColor: string,
-  items: [{ id, slot, video: HTMLMediaElement, draw: { x, y, width, height } }]
+  sources,
+  config,
+  render,
+  audio
 }
 ```
 
----
+内部来源：
 
-#### [lib/MediaStreamComposer/Core/MixerDomAdapter.js](../lib/MediaStreamComposer/Core/MixerDomAdapter.js) — DOM 适配器
-
-- `createCanvas()`: 创建 `display:none` 离屏 canvas
-- `prepareCanvas(canvas)`: 设置 canvas 尺寸（仅变化时写入，避免清空画布）
-- `createVideoElement(mediaStream)`: 创建隐藏 video 元素（display:none, muted, autoplay, playsinline）
-
----
-
-#### [lib/MediaStreamComposer/Core/AudioMixer.js](../lib/MediaStreamComposer/Core/AudioMixer.js) — WebAudio 混音
-
-**架构**: 每路源独立 `MediaStreamAudioSourceNode → GainNode`，全部汇总到 `MediaStreamAudioDestinationNode`。
-
-**关键特性**:
-- **延迟创建**: `AudioContext` 在调用 `getAudioStream()` 且存在 live 音频源时才初始化；没有 live 音频源时直接返回 `null`
-- **独立音量**: 每路源独立 `GainNode`，通过 `source.gain` 控制
-- **自动重连**: `syncExternalSourceAudio()` 检测外部传入的 `HTMLMediaElement.srcObject` 换源
-- **刷新去抖**: `scheduleRefresh()` 带 pending 标记，避免并发刷新
-
-**音频轨注入到视频流**: `_connectSource()` 成功后调用 `onAudioTrackAvailable` → `OutputStreamManager.ensureMixedStreamAudioTrack()`。
-
----
-
-#### [lib/MediaStreamComposer/Core/OutputStreamManager.js](../lib/MediaStreamComposer/Core/OutputStreamManager.js) — 输出流管理
-
-- `getVideoStream(drawFirstFrame)`: 先绘制首帧，再通过 `canvas.captureStream(fps)` 获取视频轨，并返回只含视频轨的新 `MediaStream`
-- `setMixedStream(stream)`: 保存混合流引用，供后续音频补充
-- `ensureMixedStreamAudioTrack(audioStream)`: 将音频轨注入到已返回给调用方的流中（**延迟音频**关键设计）
-- `addAudioTracksToStream(target, audio)`: 通用去重音频注入
-- `hasLiveVideoStream()`: 检测 video stream 是否仍有 live 轨
-- `stop()`: 停止所有 captured tracks
-
----
-
-#### [lib/MediaStreamComposer/Core/RenderLoop.js](../lib/MediaStreamComposer/Core/RenderLoop.js) — 渲染循环
-
-**rAF 驱动，控制渲染节奏 + 管理渲染后端生命周期**。
-
-```
-requestAnimationFrame
-    │
-    ▼
-renderFrame(timestamp, forceRender)
-    │
-    ├─ fps 节流检测 ── 未到间隔 → 跳过绘制
-    │
-    ├─ syncExternalSourceAudio()    ← 同步外部换源
-    │
-    ├─ createRenderPayload()        ← LayoutEngine 计算布局
-    │
-    ├─ ensureRenderer()             ← 按需创建渲染器（RendererFactory）
-    │     └─ RendererFactory.createRenderer(canvas, config)
-    │           │
-    │           └─ 返回 BaseRenderer 子类实例
-    │
-    ├─ renderer.render(payload)     ← 实际绘制到 canvas
-    │     │
-    │     ├─ MainCanvas2DRenderer.render()  → fillRect() + drawImage()
-    │     ├─ MainWebGL2Renderer.render()    → WebGL2 shader
-    │     └─ WorkerRenderer.render()        → postMessage → Worker
-    │
-    ├─ _handleRendererInfo()        ← Worker 故障检测
-    │
-    └─ _scheduleNextFrame()         ← 无源暂停，有源恢复
-```
-
-**故障降级机制**:
-```
-WorkerRenderer 故障 × 2 或渲染异常 × 2
-    │
-    ▼
-fallbackRenderer(reason)
-    ├─ 条件：当前不是 main-2d && 是 Worker 或 worker-failed
-    ├─ destroy() 当前 renderer
-    ├─ auto: main-webgl2 → worker-2d → main-2d
-    └─ explicit worker mode: main-webgl2/main-2d fallback
-```
-
-**fps 节流**: 非调整 rAF 间隔，而是在 rAF 回调内跳过未到间隔的帧。`forceRender=true` 跳过节流。
-
-**无源暂停**: 源列表为空时不调度 rAF，`appendStream()` 后显式 `RenderLoop.start()` 恢复。
-
----
-
-### Renderers 层
-
-#### [lib/MediaStreamComposer/Renderers/BaseRenderer.js](../lib/MediaStreamComposer/Renderers/BaseRenderer.js) — 渲染器基类
-
-**渲染器抽象接口**，子类必须实现 `init(canvas)` 和 `render(payload)`。
-
-**元信息 `_info`**:
-```javascript
-{
-  requestedMode, actualMode,    // 请求和实际的渲染模式
-  isWorker, isWebGL2,           // 运行环境标记
-  isFallback, reason,           // 降级状态
-  droppedFrames, renderedFrames,// 性能计数
-  fps, width, height            // 输出参数
-}
-```
-
-方法: `init()` / `render()` / `resize()` / `removeSource()` / `destroy()` / `getInfo()` / `_updateInfo()`
-
----
-
-#### [lib/MediaStreamComposer/Renderers/MainCanvas2DRenderer.js](../lib/MediaStreamComposer/Renderers/MainCanvas2DRenderer.js) — 主线程 Canvas2D 渲染器
-
-**最终的兜底路径**，兼容性最好。
-
-```javascript
-render(payload)
-  // 1. 填背景色（覆盖上一帧残留和 contain 留边区域）
-  ctx.fillStyle = backgroundColor;
-  ctx.fillRect(0, 0, width, height);
-  // 2. 遍历 items，drawImage 逐个绘制
-  items.forEach(item => {
-    if (item.video.readyState >= 2)
-      ctx.drawImage(item.video, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
-  });
-```
-
-**注意**: `canvas.getContext('2d', { alpha: false })` — 禁用 alpha 通道，提升性能。
-
----
-
-#### [lib/MediaStreamComposer/Renderers/MainWebGL2Renderer.js](../lib/MediaStreamComposer/Renderers/MainWebGL2Renderer.js) — 主线程 WebGL2 渲染器
-
-**GPU 加速路径**，适用于 Safari/WKWebView 等无法使用 Worker WebGL2 的环境。
-
-**架构**:
-- 编译顶点 shader 和片元 shader（全屏四边形，纹理采样）
-- 每路源一个 `WebGLTexture` 缓存，逐帧更新
-- 通过 `gl.viewport` 裁剪到每个 item 的绘制区域
-
-**render 流程**:
-```
-render(payload)
-  │
-  ├─ gl.clearColor → gl.clear()    ← 清空背景
-  │
-  └─ items.forEach:
-       ├─ _getTexture(id)          ← 获取/创建纹理缓存
-       ├─ gl.texImage2D(video)     ← 上传视频帧到纹理（UNPACK_FLIP_Y_WEBGL）
-       └─ _drawItem(draw, height)  ← gl.viewport → gl.drawArrays
-```
-
-**Y 坐标翻转**: WebGL 原点在左下角，canvas 原点在左上角，`viewportY = canvasHeight - draw.y - draw.height`。
-
-**销毁**: 删除所有纹理 + buffer + program，通过 `WEBGL_lose_context` 扩展释放 GPU 上下文。
-
----
-
-#### [lib/MediaStreamComposer/Renderers/WorkerRenderer.js](../lib/MediaStreamComposer/Renderers/WorkerRenderer.js) — Worker 线程渲染器
-
-**将渲染卸载到 WebWorker**，通过 `OffscreenCanvas` 避免阻塞主线程。
-
-**架构**（注意：这里 transfer 的是新建的 `OffscreenCanvas`，不是输出 canvas 本身）:
-```
-WorkerRenderer（主线程）
-    │
-    ├─ createWorker() → new Worker(Blob URL / 外部脚本)
-    │
-    ├─ init(canvas)
-    │   ├─ 创建新的 OffscreenCanvas，transfer 到 Worker
-    │   └─ 主线程 2D context 备用（绘制 Worker 返回的 ImageBitmap）
-    │
-    ├─ render(payload)
-    │   ├─ Worker 忙、未就绪 → 入队列（replace/drop）
-    │   ├─ _createWorkerPayload() → createImageBitmap(video) / VideoFrame(video) × N
-    │   └─ postMessage({ type: 'render', payload }) + transfer frames
-    │
-    └─ Worker 回传 rendered → drawImage(bitmap) → 主线程 canvas
-
-Worker 线程（workerScript）
-    │
-    ├─ init → worker-webgl2 或 worker-2d
-    │
-    └─ render → 在 OffscreenCanvas 上绘制 → transferToImageBitmap()
-```
-
-**关键设计决策**: **不再 transfer 输出 canvas 本身**。`canvas.captureStream()` 始终绑定主线程 canvas，避免部分浏览器无法捕获 Worker 直接绘制结果而出现黑屏。
-
-**帧抽取**: 优先尝试 `createImageBitmap(video)`，失败后回退 `new VideoFrame(video)`。对于 `worker-webgl2` 路径，`createImageBitmap` 会传入 `{ imageOrientation: 'flipY' }` 补偿 WebGL 纹理翻转。
-
-**队列管理**:
-- `dropFrameWhenBusy=true`: Worker 忙或正在抽帧时，只保留最新待处理 payload，并增加 droppedFrames（默认行为）
-- `dropFrameWhenBusy=false`: 追加到队列，超出 `maxFrameQueue` 时丢弃最早帧
-- `maxFrameQueue<=0`: 不排队，直接计为 dropped frame
-
----
-
-#### [lib/MediaStreamComposer/Renderers/workerScript.js](../lib/MediaStreamComposer/Renderers/workerScript.js) — Worker 内联脚本生成器
-
-**职责**: 生成自包含的 Worker 渲染脚本源码字符串，通过 Blob URL 创建 Worker，无需额外部署脚本文件。
-
-**Worker 内部行为**（与主线程对应渲染器代码同构）:
-- **worker-webgl2**: 在 `OffscreenCanvas` 上获取 `webgl2` context，编译 shader，纹理渲染
-- **worker-2d**: 在 `OffscreenCanvas` 上获取 `2d` context，`drawImage()` 绘制
-
-**消息协议**:
-
-| 消息类型 | 方向 | 说明 |
-|---------|------|------|
-| `init(canvas, requestedMode, ...)` | 主线程 → Worker | 初始化渲染上下文 |
-| `ready(actualMode, isWebGL2)` | Worker → 主线程 | 初始化完成 |
-| `failed(reason)` | Worker → 主线程 | 初始化失败 |
-| `render(payload)` | 主线程 → Worker | 提交一帧布局数据 |
-| `rendered(bitmap)` | Worker → 主线程 | 渲染完成，返回 ImageBitmap |
-| `renderError(reason)` | Worker → 主线程 | 渲染失败 |
-| `removeSource(id)` | 主线程 → Worker | 释放纹理缓存 |
-| `destroy()` | 主线程 → Worker | 销毁渲染资源 |
-
----
-
-#### [lib/MediaStreamComposer/Renderers/helpers/gl.js](../lib/MediaStreamComposer/Renderers/helpers/gl.js) — WebGL 工具
-
-| 方法 | 功能 |
+| 字段 | 来源 |
 |------|------|
-| `compileShader(gl, type, source)` | 编译 WebGL shader，失败抛出编译日志 |
-| `createProgram(gl, vertexShader, fragmentShader)` | 链接 WebGL program，失败抛出链接日志 |
-| `createVideoTexture(gl)` | 创建 2D 纹理（CLAMP_TO_EDGE + LINEAR 滤波） |
+| `sources` | `SourceRegistry.getSnapshot()` |
+| `config` | `_getConfigStateSnapshot()` |
+| `render` | `_collectRenderInfo(false)` |
+| `audio` | `_collectAudioInfo(false)` |
 
-**MainWebGL2Renderer 直接使用该 helper；Worker 内联脚本不 import 此文件，而是在生成的 worker 源码中包含同构实现。**
+旧方法对应：
+
+```js
+getSources()
+getRenderInfo()
+getAudioInfo()
+getWatermarks()
+getMirror()
+getSourceMirror()
+```
+
+### `getOutput()`
+
+`getOutput()` 是新的统一取流入口，按 `type` 分三条路径。
+
+#### 1. `type: 'video'`
+
+```js
+await composer.getOutput({ type: 'video' })
+```
+
+内部走：
+
+```
+getOutput({ type: 'video' })
+  └─ _getVideoOutputSync()
+       ├─ RenderLoop.resume()
+       ├─ OutputStreamManager.hasLiveVideoStream()
+       └─ OutputStreamManager.getVideoStream(drawFirstFrame)
+```
+
+#### 2. `type: 'mixed'`
+
+```js
+await composer.getOutput({ type: 'mixed' })
+```
+
+内部走：
+
+```
+getOutput({ type: 'mixed' })
+  └─ _getMixedOutput()
+       ├─ _getVideoOutputSync()
+       ├─ OutputStreamManager.setMixedStream(videoStream)
+       ├─ AudioMixer.getAudioStream()
+       └─ _addAudioTracksToStream(videoStream, audioStream)
+```
+
+#### 3. `type: 'audio'`
+
+```js
+await composer.getOutput({ type: 'audio' })
+await composer.getOutput({ type: 'audio', slots: [0, 2] })
+await composer.getOutput({ type: 'audio', slots: [0, 2], isolated: true })
+```
+
+内部走：
+
+```
+getOutput({ type: 'audio', ... })
+  ├─ isolated=true  -> AudioMixer.getIsolatedSubmixAudioStream()
+  └─ isolated=false -> AudioMixer.getAudioStream()
+```
+
+旧方法对应：
+
+```js
+getMixedStream()
+getVideoStream()
+getAudioStream()
+getIsolatedSubmixAudioStream()
+```
+
+### `releaseOutput()`
+
+当前 `releaseOutput()` 只负责音频子混音释放：
+
+```
+releaseOutput({ type: 'audio', slots, isolated })
+  └─ AudioMixer.releaseSubmixAudioStream()
+```
+
+旧方法对应：
+
+```js
+releaseSubmixAudioStream(...)
+```
 
 ---
 
-#### [lib/MediaStreamComposer/Renderers/helpers/color.js](../lib/MediaStreamComposer/Renderers/helpers/color.js) — CSS 颜色解析
+## 关键子模块
 
-**只 WebGL 渲染路径使用**（Canvas2D 原生支持 CSS 颜色字符串）。
+### [lib/MediaStreamComposer/Core/MixerConfig.js](../lib/MediaStreamComposer/Core/MixerConfig.js)
 
-将 CSS 颜色解析为归一化 RGBA 数组：
+配置归一化模块，主要负责：
 
-| 输入格式 | 示例 |
-|---------|------|
-| `#rgb` | `#fff` → `[1, 1, 1, 1]` |
-| `#rrggbb` | `#ff0000` → `[1, 0, 0, 1]` |
-| `rgb(r,g,b)` | `rgb(255,0,0)` → `[1, 0, 0, 1]` |
-| `rgba(r,g,b,a)` | `rgba(0,0,0,0.5)` → `[0, 0, 0, 0.5]` |
+- 输出尺寸、fps、renderMode 标准化
+- `slot` 归一化
+- `gain` 归一化
+- 源参数标准化
 
-不支持的格式（如 hsl、named colors）回退到纯黑 `[0, 0, 0, 1]`。
+虽然对外已经推荐 `addSource()`，但 `addSource()` 内部仍会复用这里的 `normalizeSourceOptions()`，所以旧参数形式仍能兼容。
+
+### [lib/MediaStreamComposer/Core/SourceRegistry.js](../lib/MediaStreamComposer/Core/SourceRegistry.js)
+
+输入源注册表，负责：
+
+- 增删查 source
+- 维护 slot 覆盖规则
+- 为 `MediaStream` 创建隐藏 `video`
+- 生成源快照
+
+关键调用：
+
+```
+addSource() / removeSource() / clearSources()
+  -> SourceRegistry.add() / remove() / getSnapshot()
+```
+
+### [lib/MediaStreamComposer/Core/LayoutEngine.js](../lib/MediaStreamComposer/Core/LayoutEngine.js)
+
+负责布局和渲染输入数据生成：
+
+- 根据源数量和 slot 计算网格
+- 根据镜像策略决定源级绘制镜像
+- 组装 renderer 消费的 payload
+- 追加 source/output 水印绘制项
+
+### [lib/MediaStreamComposer/Core/WatermarkManager.js](../lib/MediaStreamComposer/Core/WatermarkManager.js)
+
+新版本里水印管理被明确独立出来，职责包括：
+
+- 保存当前水印状态
+- 异步加载图片水印资源
+- 输出带 `status/reason` 的水印快照
+- 响应 `setConfig({ watermarks })` 和 `setConfig({ clearWatermarks: true })`
+
+### [lib/MediaStreamComposer/Core/AudioMixer.js](../lib/MediaStreamComposer/Core/AudioMixer.js)
+
+音频混音模块，负责：
+
+- 延迟初始化 `AudioContext`
+- 全量混音
+- 指定 slots 子混音
+- `isolated` 独立子混音
+- 子混音释放
+
+这也是 `getOutput({ type: 'audio' })` / `releaseOutput()` 的实际执行者。
+
+### [lib/MediaStreamComposer/Core/OutputStreamManager.js](../lib/MediaStreamComposer/Core/OutputStreamManager.js)
+
+输出流管理模块，负责：
+
+- `canvas.captureStream()` 产出视频流
+- 保存已返回的 mixed stream 引用
+- 在后续音频可用时把音轨补进 mixed stream
+- 停止所有 capture 出来的轨道
+
+### [lib/MediaStreamComposer/Core/RenderLoop.js](../lib/MediaStreamComposer/Core/RenderLoop.js)
+
+渲染循环负责：
+
+- rAF 调度
+- fps 节流
+- renderer 生命周期
+- Worker 失败后的降级
+- 输出渲染信息
+
+`getState().render` 和旧 `getRenderInfo()` 都来自这里。
 
 ---
 
-## 渲染后端选型链路
+## 数据流
+
+### 新 API 视角
 
 ```
-RendererFactory.createRenderer(canvas, config)
-    │
-    ├─ mode === 'main-2d'
-    │   └─ ▶ new MainCanvas2DRenderer() → init(canvas)     ✔
-    │
-    ├─ mode === 'auto' && Safari/WKWebView
-    │   └─ 先尝试 MainWebGL2Renderer
-    │         ├─ 同步成功 ✔
-    │         └─ 同步失败 → 继续走 auto 的后续 Worker / main fallback 尝试
-    │
-    ├─ mode === 'auto' && 非 Safari
-    │   └─ ▶ new WorkerRenderer(worker-webgl2) → init(canvas)
-    │         ├─ ready → worker-webgl2 ✔
-    │         └─ failed → new MainWebGL2Renderer()
-    │               ├─ 成功 ✔
-    │               └─ 失败 → new WorkerRenderer(worker-2d)
-    │                     ├─ ready → worker-2d ✔
-    │                     └─ failed → new MainCanvas2DRenderer() ✔
-    │
-    ├─ mode === 'worker-webgl2' / 'worker-2d'
-    │   └─ ▶ new WorkerRenderer() → init(canvas)
-    │         ├─ 同步成功 ✔（Worker 内部仍可能异步 failed）
-    │         └─ 失败 → createMainFallback()
-    │               ├─ (非 worker-2d) → MainWebGL2Renderer()
-    │               └─ → MainCanvas2DRenderer() ✔
-    │
-    └─ mode === 'main-webgl2'
-        └─ ▶ new MainWebGL2Renderer() → init(canvas)
-              ├─ 成功 ✔
-              └─ 失败 → new MainCanvas2DRenderer() ✔
+addSource()
+  └─ SourceRegistry
+      ├─ LayoutEngine
+      ├─ AudioMixer
+      └─ RenderLoop.start()
+
+setConfig()
+  ├─ 更新镜像配置
+  ├─ 更新水印状态
+  ├─ 刷新 renderer 策略
+  └─ 强制重绘
+
+getOutput()
+  ├─ video -> OutputStreamManager
+  ├─ mixed -> OutputStreamManager + AudioMixer
+  └─ audio -> AudioMixer
+
+getState()
+  └─ 汇总 SourceRegistry + config + RenderLoop + AudioMixer
 ```
 
-**运行期降级**（Worker 已创建后异步失败，或渲染连续异常）:
+### 一帧视频渲染流程
+
 ```
-WorkerRenderer 故障
-    → destroy 当前 renderer
-    → auto: main-webgl2 → worker-2d → main-2d
-    → explicit worker mode: main-webgl2/main-2d fallback
+RenderLoop.renderFrame()
+  ├─ AudioMixer.syncExternalSourceAudio()
+  ├─ LayoutEngine.createRenderPayload()
+  ├─ RendererFactory.ensureRenderer()
+  ├─ renderer.render(payload)
+  └─ OutputStreamManager.onFramePresented()
 ```
 
-auto 的运行期降级顺序与初始化顺序保持一致：`worker-webgl2` 失败后先尝试 `main-webgl2`，再尝试 `worker-2d`，最后回到 `main-2d`。
+### `getOutput({ type: 'mixed' })` 完整流程
+
+```
+getOutput({ type: 'mixed' })
+  ├─ _getVideoOutputSync()
+  │   ├─ OutputStreamManager.getVideoStream(drawFirstFrame)
+  │   └─ canvas.captureStream(fps)
+  │
+  ├─ OutputStreamManager.setMixedStream(videoStream)
+  │
+  ├─ AudioMixer.getAudioStream()
+  │   ├─ _ensureAudioSystem()
+  │   ├─ _refreshAudioConnections()
+  │   └─ 返回 audio destination stream
+  │
+  └─ addAudioTracksToStream(videoStream, audioStream)
+```
+
+### `setConfig()` 完整流程
+
+```
+setConfig(patch)
+  ├─ 解析 outputMirror / sourceMirror / overrides
+  ├─ 解析 clearSourceMirrorOverrides
+  ├─ WatermarkManager.setWatermarks() / clearWatermarks()
+  ├─ _refreshRendererPolicyForMirror()
+  └─ _drawVideosToCanvas(undefined, true)
+```
 
 ---
 
-## 跨文件调用链
+## 渲染后端选型
 
-### 完整的一帧渲染流程
+`RendererFactory` 仍沿用原来的多后端策略：
 
-```
-[Controller] getVideoStream()
-    │
-    ├─ [OutputStreamManager] getVideoStream(drawFirstFrame)
-    │     ├─ drawFirstFrame()
-    │     │   └─ [RenderLoop] resetFrameTiming() + renderFrame(undefined, true)
-    │     │
-    │     └─ canvas.captureStream(fps) → 提取 video track → 返回新 MediaStream
-    │
-    └─ 返回视频流（启动 rAF 持续渲染）
-          │
-          ▼ (每一帧)
-[RenderLoop] renderFrame(timestamp)
-    │
-    ├─ fps 节流检测
-    │
-    ├─ [AudioMixer] syncExternalSourceAudio()  ← 检测外部换源
-    │
-    ├─ [LayoutEngine] createRenderPayload()
-    │     └─ 遍历 SourceRegistry.sources → 计算网格 → render payload
-    │
-    ├─ [RendererFactory] ensureRenderer()  (首次创建)
-    │     └─ new WorkerRenderer() / MainWebGL2Renderer() / MainCanvas2DRenderer()
-    │
-    ├─ renderer.render(payload)
-    │     │
-    │     ├─ MainCanvas2DRenderer:
-    │     │   ├─ ctx.fillStyle/ctx.fillRect() → 填背景
-    │     │   └─ items.forEach → ctx.drawImage(video, x, y, w, h)
-    │     │
-    │     ├─ MainWebGL2Renderer:
-    │     │   ├─ gl.clearColor/gl.clear() → 清空
-    │     │   ├─ items.forEach → gl.texImage2D(video) → gl.viewport → gl.drawArrays
-    │     │   └─ gl.flush()
-    │     │
-    │     └─ WorkerRenderer:
-    │         ├─ createImageBitmap(video) / VideoFrame(video) × N
-    │         ├─ postMessage({ type:'render', payload }) + transfer
-    │         └─ [Worker 内] → OffscreenCanvas 绘制 → transferToImageBitmap()
-    │           └─ [主线程] onmessage('rendered') → drawImage(bitmap)
-    │
-    ├─ _handleRendererInfo()  ← Worker 健康检查
-    │
-    └─ _scheduleNextFrame()
-```
+- `worker-webgl2`
+- `main-webgl2`
+- `worker-2d`
+- `main-2d`
 
-### getMixedStream() 完整流程
+auto 模式降级顺序仍是：
 
 ```
-MediaStreamComposer.getMixedStream()
-  │
-  ├─▶ OutputStreamManager.getVideoStream(drawFirstFrame)
-  │     ├─ drawFirstFrame() → RenderLoop.resetFrameTiming() + renderFrame(undefined, true)
-  │     ├─ canvas.captureStream(fps)
-  │     └─ 返回仅含视频轨的 MediaStream
-  │
-  ├─▶ OutputStreamManager.setMixedStream(videoStream)
-  │     └─ 保存引用，供后续音频轨补充
-  │
-  ├─▶ AudioMixer.getAudioStream()
-  │     ├─ 无 live 音频源 → 返回 null
-  │     ├─ 有 live 音频源 → _ensureAudioSystem() → new AudioContext()
-  │     ├─ _refreshAudioConnections()
-  │     │   ├─ SourceRegistry.hasAnyLiveAudioTrack()
-  │     │   ├─ _connectSource() → createMediaStreamSource → GainNode → Destination
-  │     │   └─ 返回 audioDestination.stream
-  │     └─ 返回仅含音频轨的 MediaStream
-  │
-  └─▶ OutputStreamManager.addAudioTracksToStream(videoStream, audioStream)
-        └─ 将音频轨去重添加到视频流
+worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 ```
 
-### appendStream() 完整流程
+镜像相关的一个实现重点：
 
-```
-MediaStreamComposer.appendStream(videos, options)
-  │
-  ├─ MixerConfig.normalizeSourceOptions(options, index)
-  │
-  ├─▶ SourceRegistry.add(video, sourceOptions)
-  │     ├─ _createSource() → MixerDomAdapter.createVideoElement()
-  │     ├─ slot 冲突检测 → 冲突则 remove(oldSource)
-  │     │     ├─ AudioMixer.disconnectSource()  (onBeforeRemove)
-  │     │     └─ RenderLoop.removeSource()       (onAfterRemove)
-  │     └─ push → _syncVideos()
-  │
-  ├─▶ AudioMixer.scheduleRefresh()（如果音频已请求或 AudioContext 已初始化）
-  │     └─ _refreshAudioConnections() → 为新源建立 WebAudio 管线
-  │         └─ onAudioTrackAvailable → OutputStreamManager.ensureMixedStreamAudioTrack()
-  │
-  └─▶ RenderLoop.start()
-        └─ _scheduleNextFrame() → requestAnimationFrame
-```
+- 当启用了源镜像或输出镜像时，`MediaStreamComposer` 会通过 `_refreshRendererPolicyForMirror()` 更新 `forceMainThreadRenderer`
+- 如当前 renderer 是 Worker 路径，必要时会主动 fallback 到主线程渲染器
 
-### stop() 完整流程
-
-```
-MediaStreamComposer.stop()
-  │
-  ├─ (设置 _destroyed = true)
-  │
-  ├─▶ RenderLoop.stop()
-  │     └─ cancelAnimationFrame + _stopped = true
-  │
-  ├─▶ clearStreams()
-  │     └─ 遍历 SourceRegistry.remove()
-  │         ├─ AudioMixer.disconnectSource() → 断开 WebAudio
-  │         ├─ video.pause() + srcObject=null + remove()（仅 ownedVideo）
-  │         └─ RenderLoop.removeSource(source.id)
-  │               └─ renderer.removeSource(id) → 释放 GPU 纹理
-  │
-  ├─▶ AudioMixer.stop()
-  │     ├─ audioDestination.disconnect()
-  │     └─ audioContext.close()
-  │
-  ├─▶ RenderLoop.destroy()
-  │     ├─ stop()
-  │     └─ renderer.destroy()
-  │           ├─ MainCanvas2DRenderer: clearRect + 清空 context 引用
-  │           ├─ MainWebGL2Renderer: 删除纹理/buffer/program + loseContext
-  │           └─ WorkerRenderer: terminate Worker + revoke Blob URL
-  │
-  └─▶ OutputStreamManager.stop()
-        ├─ 清空引用
-        ├─ 遍历所有 capturedStreams → track.stop()
-        └─ canvas.stream = null
-```
+这也是为什么镜像配置被统一纳入 `setConfig()` 之后，内部仍需要顺带改渲染策略。
 
 ---
 
 ## 分层依赖图
 
 ```
-lib/Mixer.js (barrel)
-    │
-    └─ lib/MediaStreamComposer/Core/MediaStreamComposer.js (中枢控制器)
-          │
-          ├──▶ MixerConfig                     (纯函数, 无依赖)
-          ├──▶ MixerDomAdapter                 (DOM, 无依赖)
-          │
-          ├──▶ SourceRegistry                  ──依赖──▶ MixerDomAdapter.createVideoElement()
-          │                                              MixerConfig (gain/slot 归一化)
-          │                                              MediaStreamComposer (onBefore/AfterRemove)
-          │
-          ├──▶ AudioMixer                      ──依赖──▶ SourceRegistry (源遍历)
-          │                                              MediaStreamComposer (getDestroyed/回调)
-          │
-          ├──▶ LayoutEngine                    ──依赖──▶ SourceRegistry (源列表)
-          │                                              MediaStreamComposer (prepare/resize 回调)
-          │
-          ├──▶ RenderLoop                      ──依赖──▶ RendererFactory
-          │                                              LayoutEngine (createRenderPayload)
-          │                                              AudioMixer (syncExternalSourceAudio)
-          │
-          └──▶ OutputStreamManager             ──依赖──▶ (无, 仅接收 canvas + config)
-                                     
-  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-  
-lib/MediaStreamComposer/Renderers/
-    │
-    ├──▶ RendererFactory                       ──依赖──▶ MainCanvas2DRenderer
-    │                                              ├──▶ MainWebGL2Renderer
-    │                                              └──▶ WorkerRenderer
-    │
-    ├──▶ BaseRenderer                          (基类, 无依赖)
-    │
-    ├──▶ MainCanvas2DRenderer                  ──extends── BaseRenderer
-    │
-    ├──▶ MainWebGL2Renderer                    ──extends── BaseRenderer
-    │                                              ──依赖──▶ gl.js
-    │                                              ──依赖──▶ color.js
-    │
-    ├──▶ WorkerRenderer                        ──extends── BaseRenderer
-    │                                              ──依赖──▶ workerScript.js
-    │
-    └─── workerScript.js                       (无依赖, 自包含字符串)
-         helpers/
-         ├── gl.js                             (无依赖)
-         └── color.js                          (无依赖)
+MediaStreamComposer.js
+  ├── MixerConfig
+  ├── MixerDomAdapter
+  ├── WatermarkManager
+  ├── SourceRegistry
+  ├── LayoutEngine
+  ├── AudioMixer
+  ├── RenderLoop
+  └── OutputStreamManager
+
+RenderLoop
+  └── RendererFactory
+      ├── MainCanvas2DRenderer
+      ├── MainWebGL2Renderer
+      └── WorkerRenderer
 ```
 
 ---
 
-## 设计模式总结
+## 设计取向
 
-| 模式 | 使用位置 | 说明 |
-|------|---------|------|
-| **Mediator（中介者）** | MediaStreamComposer | 协调 SourceRegistry, AudioMixer, RenderLoop, OutputStreamManager, LayoutEngine 之间的交互 |
-| **Strategy（策略）** | RendererFactory | 可切换多种渲染后端（main-2d / main-webgl2 / worker-*） |
-| **Template Method（模板方法）** | BaseRenderer | 定义 `init() → render() → destroy()` 标准接口，子类各自实现 |
-| **Observer（观察者）** | SourceRegistry 回调链 | onBeforeRemove → 断音频, onAfterRemove → 清理渲染器 |
-| **Adapter（适配器）** | MixerDomAdapter | 将 DOM 创建操作统一封装，便于测试和未来迁移 |
-| **Value Object（值对象）** | MixerConfig | 纯函数归一化配置参数，无副作用 |
-| **Registry（注册表）** | SourceRegistry | 统一管理源对象的增删查 |
-| **Dependency Injection（依赖注入）** | 所有模块的 constructor | 每个模块通过构造参数接收依赖 |
-| **Queue + Drop（队列+丢帧）** | WorkerRenderer | Worker 忙时基于 `dropFrameWhenBusy` 策略丢帧 |
+这一版 API 和实现上的主要取向是：
+
+1. 对外入口收敛
+2. 状态读取统一
+3. 配置修改统一
+4. 输出获取统一
+5. 旧方法保留但降级为兼容层
+
+换句话说，架构并不是“另起一套”，而是在保留原有内部模块的前提下，把对外控制面重新整理了一次。
 
 ---
 
 ## 注意事项
 
-1. **不可重用**: `stop()` 后 `_destroyed = true`，必须 `new MediaStreamComposer()` 创建新实例。
-2. **Canvas Context 抢占**: canvas 同一时间只能有一个 context（2D 或 WebGL2），RendererFactory 是唯一允许初始化 canvas context 的地方。
-3. **Worker 输出 canvas 不 transfer**: WorkerRenderer 不将输出 canvas transfer 到 Worker，而是主线程持有 canvas，Worker 返回 ImageBitmap 后通过 `drawImage()` 写入。这是为了确保 `captureStream()` 始终绑定主线程 canvas，避免部分浏览器黑屏。
-4. **AudioContext 延迟创建**: 符合浏览器 autoplay 政策，需用户交互后才能恢复。
-5. **Worker 故障降级**: auto 模式按 `worker-webgl2 → main-webgl2 → worker-2d → main-2d` 自动降级。
-6. **去重保护**: 多处通过 `track.id` 进行去重（音频轨注入、WebAudio 连接）。
-7. **fps 节流**: 不调整 rAF 间隔，在 rAF 回调内按时间戳跳过未到间隔的帧。
-8. **WebGL Y 坐标**: 主线程和 Worker 的 WebGL 路径都通过 `UNPACK_FLIP_Y_WEBGL` 翻转纹理，确保视频方向正确。
-9. **color.js 仅 WebGL 使用**: Canvas2D 原生支持 CSS 颜色字符串，`color.js` 只服务于 WebGL 的 `gl.clearColor()`。
+1. `stop()` 后实例不可复用。
+2. `removeSource(target)` 和 `clearSources()` 对外语义保持分离，不建议合并。
+3. 旧方法当前仍可用，但新代码应优先使用 `addSource / setConfig / getState / getOutput / releaseOutput`。
+4. `getVideoStream()` 仍保留同步兼容行为，这是旧代码迁移期间的特例。
+5. `AudioContext` 仍然延迟创建，只有在请求音频输出时才初始化。
+6. Worker 渲染故障时仍会自动降级。

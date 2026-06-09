@@ -76,12 +76,14 @@ class MockMixer
     MockMixer.instances.push(this);
   }
 
-  getVideoStream()
+  async getOutput(options)
   {
+    this.outputRequest = options;
+    
     return new MockMediaStream([ this.outputTrack ]);
   }
 
-  removeStream(stream)
+  removeSource(stream)
   {
     this.removed = stream;
     MockMixer.removeCalls.push(stream);
@@ -91,7 +93,7 @@ class MockMixer
     }
   }
 
-  appendStream(stream)
+  addSource(stream)
   {
     this.appended = stream;
     MockMixer.appendCalls.push(stream);
@@ -259,13 +261,13 @@ function loadRTCSessionWithMockMixer()
   };
 }
 
-async function testApplyMixerOnSdkGumStreamUsesCtorOptions()
+async function testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceVideo = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
-  const mixed = await session._applyMixerOnSdkGumStream(sourceStream, {
+  const mixed = await session._applyMediaStreamComposerOnSdkGumStream(sourceStream, {
     sourceMirror : true,
     mirror       : true,
     watermarks   : [
@@ -278,7 +280,8 @@ async function testApplyMixerOnSdkGumStreamUsesCtorOptions()
   assert.notStrictEqual(mixed, sourceStream);
   assert.strictEqual(mixed.getAudioTracks().length, 1);
   assert.strictEqual(mixed.getVideoTracks().length, 1);
-  assert.strictEqual(session.getMixer(), MockMixer.instances[0]);
+  assert.strictEqual(session.getMediaStreamComposer(), MockMixer.instances[0]);
+  assert.deepStrictEqual(MockMixer.instances[0].outputRequest, { type: 'video' });
 
   const ctorOptions = MockMixer.instances[0].options;
 
@@ -293,19 +296,19 @@ async function testApplyMixerOnSdkGumStreamUsesCtorOptions()
   assert.strictEqual(ctorOptions.watermarks[2].id, 'none');
 }
 
-async function testApplyMixerSkipsWhenNoVideoOrNoOptions()
+async function testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const audioOnly = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
-  const noOptions = await session._applyMixerOnSdkGumStream(audioOnly, null);
-  const noVideo = await session._applyMixerOnSdkGumStream(audioOnly, { sourceMirror: true });
+  const noOptions = await session._applyMediaStreamComposerOnSdkGumStream(audioOnly, null);
+  const noVideo = await session._applyMediaStreamComposerOnSdkGumStream(audioOnly, { sourceMirror: true });
 
   assert.strictEqual(noOptions, audioOnly);
   assert.strictEqual(noVideo, audioOnly);
-  assert.strictEqual(session.getMixer(), null);
+  assert.strictEqual(session.getMediaStreamComposer(), null);
 }
 
-async function testCloseStopsAndClearsMixer()
+async function testCloseStopsAndClearsMediaStreamComposer()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceAudioTrack = new MockMediaStreamTrack('audio');
@@ -315,13 +318,13 @@ async function testCloseStopsAndClearsMixer()
     sourceVideoTrack
   ]);
 
-  await session._applyMixerOnSdkGumStream(sourceStream, { mirror: true });
-  assert.ok(session.getMixer());
+  await session._applyMediaStreamComposerOnSdkGumStream(sourceStream, { mirror: true });
+  assert.ok(session.getMediaStreamComposer());
 
   session._close();
 
   assert.strictEqual(MockMixer.stopCalls >= 1, true);
-  assert.strictEqual(session.getMixer(), null);
+  assert.strictEqual(session.getMediaStreamComposer(), null);
   assert.strictEqual(sourceAudioTrack.readyState, 'ended');
   assert.strictEqual(sourceVideoTrack.readyState, 'ended');
 }
@@ -349,9 +352,9 @@ async function testUpgradeToVideoAppliesSessionMixerToSdkGum()
   };
   session._localMediaStream = new MockMediaStream([ localAudioTrack ]);
   session._inviteMediaConstraints = { video: true };
-  session._sessionMixerOptions = {
+  session._sessionMediaStreamComposerOptions = {
     sourceMirror : true,
-    watermarks : [ { id: 'wm-upgrade', target: 'output', type: 'text', text: 'upgrade' } ]
+    watermarks   : [ { id: 'wm-upgrade', target: 'output', type: 'text', text: 'upgrade' } ]
   };
   session.renegotiate = function(opts, cb)
   {
@@ -393,9 +396,10 @@ async function testSwitchDeviceCameraDefaultPathDoesNotApplyMixer()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldVideoTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMixerOptions = {
-    mirror       : true,
-    watermarks   : [ { id: 'wm-switch', target: 'output', type: 'text', text: 'switch' } ]
+  
+  session._sessionMediaStreamComposerOptions = {
+    mirror     : true,
+    watermarks : [ { id: 'wm-switch', target: 'output', type: 'text', text: 'switch' } ]
   };
   global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ newVideoTrack ]));
@@ -410,7 +414,7 @@ async function testSwitchDeviceCameraDefaultPathDoesNotApplyMixer()
 async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
 {
   // 目标：active mixer 场景复用同一个 mixer 实例，不重建 mixer。
-  // 预期：走 removeStream + appendStream 替换输入源，sender 仍发送 mixer 输出轨。
+  // 预期：走 removeSource + addSource 替换输入源，sender 仍发送 mixer 输出轨。
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const oldInputVideoTrack = new MockMediaStreamTrack('video');
   const oldInputStream = new MockMediaStream([ oldInputVideoTrack ]);
@@ -432,28 +436,30 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMixerOptions = { mirror: true };
+  session._sessionMediaStreamComposerOptions = { mirror: true };
 
   const mixedOutputTrack = new MockMediaStreamTrack('video', { width: 960, height: 540, frameRate: 20 });
-  const mixer = { 
-    removeStream : function(stream)
+  const composer = { 
+    removeSource : function(stream)
     {
       this.removed = stream;
       MockMixer.removeCalls.push(stream);
     },
-    appendStream : function(stream)
+    addSource : function(stream)
     {
       this.appended = stream;
       MockMixer.appendCalls.push(stream);
     },
-    getVideoStream : function()
+    getOutput : async function(options)
     {
+      this.outputRequest = options;
+      
       return new MockMediaStream([ mixedOutputTrack ]);
     }
   };
 
-  session._mixer = mixer;
-  session._mixerInputStream = oldInputStream;
+  session._mediaStreamComposer = composer;
+  session._mediaStreamComposerInputStream = oldInputStream;
 
   const newVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
 
@@ -467,9 +473,10 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   assert.strictEqual(MockMixer.removeCalls.length, 1);
   assert.strictEqual(MockMixer.appendCalls.length, 1);
   assert.strictEqual(MockMixer.removeCalls[0], oldInputStream);
+  assert.deepStrictEqual(composer.outputRequest, { type: 'video' });
   assert.strictEqual(sender.replaced, mixedOutputTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], mixedOutputTrack);
-  assert.strictEqual(session._mixerInputStream, MockMixer.appendCalls[0]);
+  assert.strictEqual(session._mediaStreamComposerInputStream, MockMixer.appendCalls[0]);
 }
 
 async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
@@ -497,16 +504,16 @@ async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMixerOptions = { mirror: true };
-  session._mixer = {
-    removeStream   : function() {},
-    appendStream   : function() {},
-    getVideoStream : function()
+  session._sessionMediaStreamComposerOptions = { mirror: true };
+  session._mediaStreamComposer = {
+    removeSource : function() {},
+    addSource    : function() {},
+    getOutput    : async function()
     {
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
     }
   };
-  session._mixerInputStream = oldInputStream;
+  session._mediaStreamComposerInputStream = oldInputStream;
 
   let stoppedBeforeGum = false;
   const newVideoTrack = new MockMediaStreamTrack('video');
@@ -550,19 +557,19 @@ async function testSwitchDeviceCameraMixerBranchFallbackToDefault()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMixerOptions = { mirror: true };
-  session._mixer = {
-    removeStream : function()
+  session._sessionMediaStreamComposerOptions = { mirror: true };
+  session._mediaStreamComposer = {
+    removeSource : function()
     {
       throw new Error('remove fail');
     },
-    appendStream   : function() {},
-    getVideoStream : function()
+    addSource : function() {},
+    getOutput : async function()
     {
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
     }
   };
-  session._mixerInputStream = oldInputStream;
+  session._mediaStreamComposerInputStream = oldInputStream;
 
   const fallbackTrack = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
 
@@ -594,7 +601,7 @@ async function testReplaceCanvasToVideoAppliesSessionMixerToSdkGum()
     getSenders : () => [ sender ]
   };
   session._inviteMediaConstraints = { video: true, width: 640, height: 360 };
-  session._sessionMixerOptions = {
+  session._sessionMediaStreamComposerOptions = {
     mirror : true
   };
   session._restoreCameraTrackDraw = 1;
@@ -755,9 +762,9 @@ async function run()
   const failures = [];
 
   const TESTS = [
-    { name: 'testApplyMixerOnSdkGumStreamUsesCtorOptions', fn: testApplyMixerOnSdkGumStreamUsesCtorOptions },
-    { name: 'testApplyMixerSkipsWhenNoVideoOrNoOptions', fn: testApplyMixerSkipsWhenNoVideoOrNoOptions },
-    { name: 'testCloseStopsAndClearsMixer', fn: testCloseStopsAndClearsMixer },
+    { name: 'testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions', fn: testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions },
+    { name: 'testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions', fn: testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions },
+    { name: 'testCloseStopsAndClearsMediaStreamComposer', fn: testCloseStopsAndClearsMediaStreamComposer },
     { name: 'testUpgradeToVideoAppliesSessionMixerToSdkGum', fn: testUpgradeToVideoAppliesSessionMixerToSdkGum },
     { name: 'testSwitchDeviceCameraDefaultPathDoesNotApplyMixer', fn: testSwitchDeviceCameraDefaultPathDoesNotApplyMixer },
     { name: 'testSwitchDeviceCameraWithActiveMixerReusesMixer', fn: testSwitchDeviceCameraWithActiveMixerReusesMixer },
@@ -794,7 +801,7 @@ async function run()
       MockAiNSEngine.destroyCalls = 0;
       MockAiNSEngine.transform = null;
       MockAiNSEngine.replaceAudioTrackTransform = null;
-      if (t.fn === testCloseStopsAndClearsMixer)
+      if (t.fn === testCloseStopsAndClearsMediaStreamComposer)
       {
         MockMixer.stopCalls = 0;
       }

@@ -19,7 +19,6 @@ export interface CallOptions extends AnswerOptions {
   fromUserName?: string;
   fromDisplayName?: string;
   mediaStreamComposer?: import('./RTCSession').MediaStreamComposerOptions;
-  mixer?: import('./RTCSession').MixerOptions;
 }
 
 export interface UAConfiguration {

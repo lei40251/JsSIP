@@ -2087,7 +2087,7 @@ async function call(type, direction, mediaStream)
   if (composerOptions)
   {
     options.mediaStreamComposer = composerOptions;
-    // 兼容旧 SDK 时可回退为 options.mixer，当前示例优先使用最新的 mediaStreamComposer 命名。
+    // 当前示例统一使用 mediaStreamComposer 命名。
   }
 
   // options = {
@@ -2200,7 +2200,7 @@ async function call(type, direction, mediaStream)
 
   // if (mix)
   // {
-  //   options.mediaStream = await mix.getAudioStream();
+  //   options.mediaStream = await mix.getOutput({ type: 'audio' });
   // }
 
   console.log('op: ', options);

@@ -31,12 +31,12 @@ export interface MediaConstraints {
   video?: boolean;
 }
 
-export interface MixerWatermarkOptions {
+export interface MediaStreamComposerWatermarkOptions {
   target?: string;
   [key: string]: any;
 }
 
-export interface MixerOptions {
+export interface MediaStreamComposerOptions {
   width?: number;
   height?: number;
   fps?: number;
@@ -50,12 +50,9 @@ export interface MixerOptions {
   mirror?: boolean;
   sourceMirror?: boolean;
   mirrorWatermarksWithOutput?: boolean;
-  watermarks?: MixerWatermarkOptions[] | MixerWatermarkOptions | null;
+  watermarks?: MediaStreamComposerWatermarkOptions[] | MediaStreamComposerWatermarkOptions | null;
   [key: string]: any;
 }
-
-export interface MediaStreamComposerWatermarkOptions extends MixerWatermarkOptions {}
-export interface MediaStreamComposerOptions extends MixerOptions {}
 
 export interface ExtraHeaders {
   extraHeaders?: string[];
@@ -65,7 +62,6 @@ export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
   mediaStreamComposer?: MediaStreamComposerOptions;
-  mixer?: MixerOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
   rtcAnswerConstraints?: RTCOfferOptions;
@@ -85,7 +81,6 @@ export interface UpgradeToVideoOptions extends ExtraHeaders {
   recvOnly?: boolean;
   useUpdate?: boolean;
   mediaStreamComposer?: MediaStreamComposerOptions;
-  mixer?: MixerOptions;
 }
 
 export interface TerminateOptions extends RejectOptions {
@@ -317,7 +312,6 @@ export class RTCSession extends EventEmitter {
 
   get status(): SessionStatus;
 
-  getMixer(): any | null;
   getMediaStreamComposer(): any | null;
 
   isInProgress(): boolean;

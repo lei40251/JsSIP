@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const assert = require('assert');
 const MediaStreamComposer = require('../lib/MediaStreamComposer');
-const MixerConfig = require('../lib/MediaStreamComposer/Core/MixerConfig');
+const ComposerConfig = require('../lib/MediaStreamComposer/Core/ComposerConfig');
 const WatermarkManager = require('../lib/MediaStreamComposer/Core/WatermarkManager');
 const WorkerRenderer = require('../lib/MediaStreamComposer/Renderers/WorkerRenderer');
 const vm = require('vm');
@@ -833,6 +833,95 @@ async function testRepeatedOutputCallsReuseLiveStream()
   assert.strictEqual(firstVideoTrack.readyState, 'ended');
 }
 
+async function testNewPublicApiStateAndSourceLifecycle()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const firstStream = createStream({ audio: true });
+  const secondStream = createStream({ audio: true });
+
+  assert.strictEqual(mixer.addSource(firstStream, 0), true);
+  assert.strictEqual(mixer.addSource(secondStream, { slot: 1, gain: 0.5 }), true);
+
+  let state = mixer.getState();
+
+  assert.strictEqual(state.sources.length, 2);
+  assert.strictEqual(state.sources[0].slot, 0);
+  assert.strictEqual(state.sources[1].slot, 1);
+  assert.strictEqual(state.config.outputMirror, false);
+  assert.strictEqual(state.config.sourceMirror, false);
+  assert.deepStrictEqual(state.config.sourceMirrorOverrides, {});
+
+  assert.strictEqual(mixer.removeSource(firstStream.id), true);
+  assert.strictEqual(mixer.removeSource(), false);
+
+  state = mixer.getState();
+  assert.strictEqual(state.sources.length, 1);
+  assert.strictEqual(state.sources[0].streamId, secondStream.id);
+
+  mixer.clearSources();
+  assert.strictEqual(mixer.getState().sources.length, 0);
+
+  mixer.stop();
+}
+
+async function testNewPublicApiConfigAndOutputs()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const sourceA = createStream({ audio: true });
+  const sourceB = createStream({ audio: true });
+
+  mixer.addSource(sourceA, 0);
+  mixer.addSource(sourceB, 1);
+
+  const config = await mixer.setConfig({
+    outputMirror               : true,
+    sourceMirror               : true,
+    sourceMirrorOverrides      : { 0: false, 1: true },
+    mirrorWatermarksWithOutput : false,
+    watermarks                 : [
+      { id: 'brand', target: 'output', text: 'CRTC' }
+    ]
+  });
+
+  assert.strictEqual(config.outputMirror, true);
+  assert.strictEqual(config.sourceMirror, true);
+  assert.deepStrictEqual(config.sourceMirrorOverrides, { '0': false, '1': true });
+  assert.strictEqual(config.mirrorWatermarksWithOutput, false);
+  assert.strictEqual(config.watermarks.length, 1);
+
+  let state = mixer.getState();
+
+  assert.strictEqual(state.config.outputMirror, true);
+  assert.strictEqual(state.config.mirrorWatermarksWithOutput, false);
+  assert.deepStrictEqual(state.config.sourceMirrorOverrides, { '0': false, '1': true });
+
+  const videoOutput = await mixer.getOutput({ type: 'video' });
+  const mixedOutput = await mixer.getOutput();
+  const busOutput = await mixer.getOutput({ type: 'audio', slots: [ 0 ] });
+  const isolatedOutput = await mixer.getOutput({ type: 'audio', slots: [ 1 ], isolated: true });
+
+  assert.strictEqual(videoOutput.getVideoTracks().length, 1);
+  assert.strictEqual(mixedOutput.getVideoTracks().length, 1);
+  assert.strictEqual(mixedOutput.getAudioTracks().length, 1);
+  assert.strictEqual(busOutput.getAudioTracks().length, 1);
+  assert.strictEqual(isolatedOutput.getAudioTracks().length, 1);
+
+  assert.strictEqual(mixer.releaseOutput({ type: 'audio', slots: [ 0 ] }), true);
+  assert.strictEqual(mixer.releaseOutput({ type: 'audio', slots: [ 1 ], isolated: true }), true);
+  assert.strictEqual(mixer.releaseOutput({ type: 'mixed' }), false);
+
+  await mixer.setConfig({ clearSourceMirrorOverrides: true, clearWatermarks: true });
+  state = mixer.getState();
+  assert.deepStrictEqual(state.config.sourceMirrorOverrides, {});
+  assert.strictEqual(state.config.watermarks.length, 0);
+
+  mixer.stop();
+}
+
 async function testStopRejectsPublicReuse()
 {
   resetMockState();
@@ -843,9 +932,14 @@ async function testStopRejectsPublicReuse()
   mixer.stop();
 
   assert.throws(() => mixer.appendStream(createStream({ audio: true }), 0), /has been stopped/);
+  assert.throws(() => mixer.addSource(createStream({ audio: true }), 0), /has been stopped/);
+  assert.throws(() => mixer.removeSource('missing'), /has been stopped/);
+  assert.throws(() => mixer.clearSources(), /has been stopped/);
   assert.throws(() => mixer.getVideoStream(), /has been stopped/);
   assert.throws(() => mixer.getSources(), /has been stopped/);
+  assert.throws(() => mixer.getState(), /has been stopped/);
   await assertRejects(() => mixer.getMixedStream(), /has been stopped/);
+  await assertRejects(() => mixer.getOutput(), /has been stopped/);
 }
 
 async function testExternalVideoSrcObjectReconnectsAudio()
@@ -891,8 +985,8 @@ async function testSlotAudioStreamsCreateIndependentBuses()
   const second = await mixer.getAudioStream({ slots: [ 1, 3, 5 ] });
   const firstAgain = await mixer.getAudioStream({ slots: [ 3, 2, 1 ] });
   const context = MockAudioContext.instances[0];
-  const firstBus = mixer._audioMixer._audioBuses.get('1,2,3');
-  const secondBus = mixer._audioMixer._audioBuses.get('1,3,5');
+  const firstBus = mixer._audioComposer._audioBuses.get('1,2,3');
+  const secondBus = mixer._audioComposer._audioBuses.get('1,3,5');
 
   assert.ok(first);
   assert.ok(second);
@@ -1037,9 +1131,9 @@ async function testAudioSourceFansOutThroughMasterGain()
   assert.strictEqual(source.audioSourceNode.connections.length, 1);
   assert.strictEqual(source.audioSourceNode.connections[0], source.masterGainNode);
   assert.strictEqual(source.masterGainNode.connections.length, 2);
-  assert.strictEqual(source.gainNode.connections[0], mixer._audioMixer._compressorNode);
+  assert.strictEqual(source.gainNode.connections[0], mixer._audioComposer._compressorNode);
 
-  const bus = mixer._audioMixer._audioBuses.get('0');
+  const bus = mixer._audioComposer._audioBuses.get('0');
   const busConnection = bus.connections.get(source.id);
 
   assert.ok(busConnection);
@@ -1093,7 +1187,7 @@ async function testBusRefreshMutesRemovedGainWithoutDisconnectingMaster()
 
   const sourceA = mixer._sources.find((source) => source.stream === streamA);
   const masterGain = sourceA.masterGainNode;
-  const bus = mixer._audioMixer._audioBuses.get('0,1');
+  const bus = mixer._audioComposer._audioBuses.get('0,1');
   const busGain = bus.connections.get(sourceA.id).gainNode;
 
   mixer.removeStream(streamA.id);
@@ -1118,7 +1212,7 @@ async function testAudioRefreshIsBatchedIntoSingleMicrotask()
   mixer.appendStream(createStream({ video: false, audio: true }), 0);
   mixer.appendStream(createStream({ video: false, audio: true }), 1);
 
-  const bus = mixer._audioMixer._audioBuses.get('0,1');
+  const bus = mixer._audioComposer._audioBuses.get('0,1');
 
   assert.strictEqual(bus.connections.size, 0);
 
@@ -1375,10 +1469,10 @@ async function testMirrorGlobalAndSlotControls()
   resetMockState();
 
   const mixer = new MediaStreamComposer([], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d',
+    width        : 320,
+    height       : 180,
+    fps          : 15,
+    renderMode   : 'main-2d',
     sourceMirror : true
   });
 
@@ -1434,10 +1528,10 @@ async function testMirrorAutoModeAvoidsWorkerRenderer()
   resetMockState();
 
   const mixer = new MediaStreamComposer([], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'auto',
+    width        : 320,
+    height       : 180,
+    fps          : 15,
+    renderMode   : 'auto',
     sourceMirror : true
   });
 
@@ -1459,10 +1553,10 @@ async function testEnableMirrorFallsBackFromWorkerToMainThread()
   resetMockState();
 
   const mixer = new MediaStreamComposer([], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'auto',
+    width        : 320,
+    height       : 180,
+    fps          : 15,
+    renderMode   : 'auto',
     sourceMirror : false
   });
 
@@ -1489,10 +1583,10 @@ async function testClearSourceMirrorWithoutSlotClearsAllOverrides()
   resetMockState();
 
   const mixer = new MediaStreamComposer([], {
-    width      : 320,
-    height     : 180,
-    fps        : 15,
-    renderMode : 'main-2d',
+    width        : 320,
+    height       : 180,
+    fps          : 15,
+    renderMode   : 'main-2d',
     sourceMirror : true
   });
 
@@ -1882,10 +1976,10 @@ async function testWorkerRendererKeepsEmptyPayload()
   assert.strictEqual(messages[0].transfers.length, 0);
 }
 
-async function testMixerConfigDefaults()
+async function testComposerConfigDefaults()
 {
-  const defaultConfig = MixerConfig.create({});
-  const customConfig = MixerConfig.create({ width: '640', height: 360, fps: '15' });
+  const defaultConfig = ComposerConfig.create({});
+  const customConfig = ComposerConfig.create({ width: '640', height: 360, fps: '15' });
 
   // 默认值：width=1280, height=720, fps=15, renderMode='auto'
   assert.strictEqual(defaultConfig.width, 1280);
@@ -1900,22 +1994,22 @@ async function testMixerConfigDefaults()
   assert.strictEqual(customConfig.renderMode, 'auto');
 }
 
-async function testMixerConfigSourceOptions()
+async function testComposerConfigSourceOptions()
 {
   assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions(2, 1, 0.8),
+    ComposerConfig.normalizeSourceOptions(2, 1, 0.8),
     { slot: 3 }
   );
   assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions({ slot: 0, gain: 0 }, 0, 0.8),
+    ComposerConfig.normalizeSourceOptions({ slot: 0, gain: 0 }, 0, 0.8),
     { slot: 0, gain: 0 }
   );
   assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions({ slot: -2, gain: -1 }, 2, 0.8),
+    ComposerConfig.normalizeSourceOptions({ slot: -2, gain: -1 }, 2, 0.8),
     { slot: 2, gain: 0.8 }
   );
   assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions({ slot: 1, sourceMirror: true }, 0, 0.8),
+    ComposerConfig.normalizeSourceOptions({ slot: 1, sourceMirror: true }, 0, 0.8),
     { slot: 1, sourceMirror: true }
   );
 }
@@ -2142,6 +2236,8 @@ async function run()
     { name: 'testNoAudioDoesNotCreateAudioContext', fn: testNoAudioDoesNotCreateAudioContext },
     { name: 'testAppendAudioSourceInjectsAudioTrack', fn: testAppendAudioSourceInjectsAudioTrack },
     { name: 'testRepeatedOutputCallsReuseLiveStream', fn: testRepeatedOutputCallsReuseLiveStream },
+    { name: 'testNewPublicApiStateAndSourceLifecycle', fn: testNewPublicApiStateAndSourceLifecycle },
+    { name: 'testNewPublicApiConfigAndOutputs', fn: testNewPublicApiConfigAndOutputs },
     { name: 'testStopRejectsPublicReuse', fn: testStopRejectsPublicReuse },
     { name: 'testExternalVideoSrcObjectReconnectsAudio', fn: testExternalVideoSrcObjectReconnectsAudio },
     { name: 'testSlotAudioStreamsCreateIndependentBuses', fn: testSlotAudioStreamsCreateIndependentBuses },
@@ -2174,8 +2270,8 @@ async function run()
     { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
     { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
-    { name: 'testMixerConfigDefaults', fn: testMixerConfigDefaults },
-    { name: 'testMixerConfigSourceOptions', fn: testMixerConfigSourceOptions },
+    { name: 'testComposerConfigDefaults', fn: testComposerConfigDefaults },
+    { name: 'testComposerConfigSourceOptions', fn: testComposerConfigSourceOptions },
     { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
     { name: 'testCaptureStreamActiveSinkIsDisposedOnStop', fn: testCaptureStreamActiveSinkIsDisposedOnStop },
     { name: 'testInsertableVideoStreamPreferredWhenSupported', fn: testInsertableVideoStreamPreferredWhenSupported },
