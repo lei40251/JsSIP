@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026691718
+ * CRTC v2.0.0.2026691739
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -5842,7 +5842,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212183436 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212183478 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -19052,7 +19052,7 @@ var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212183436');
+debug('version %s', '2.0.0.405212183478');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19094,7 +19094,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212183436';
+    return '2.0.0.405212183478';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],49:[function(require,module,exports){
@@ -26578,7 +26578,7 @@ var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
-var Mixer = require('./MediaStreamComposer');
+var MediaStreamComposer = require('./MediaStreamComposer');
 var AiNSEngine = require('./AINoiseSuppression/index.js');
 var logger = new Logger('RTCSession');
 var BFCPUser = BFCPLib.User;
@@ -26678,8 +26678,8 @@ module.exports = class RTCSession extends EventEmitter {
     this._sessionAiNSOptions = null;
     this._aiNSInputStream = null;
     this._mixer = null;
-    // 记录当前送入 mixer 的“原始输入流”（非 mixer 输出流）。
-    // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的 mixer 输出轨。
+    // 记录当前送入 MediaStreamComposer 的“原始输入流”（非合成输出流）。
+    // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的合成输出轨。
     this._mixerInputStream = null;
     this._sessionMixerOptions = null;
 
@@ -26868,6 +26868,18 @@ module.exports = class RTCSession extends EventEmitter {
   getMediaStreamComposer() {
     return this._mixer;
   }
+  _resolveMediaStreamComposerOptions(options = {}) {
+    if (!options || typeof options !== 'object') {
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
+      return options.mediaStreamComposer || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'mixer')) {
+      return options.mixer || null;
+    }
+    return null;
+  }
   isInProgress() {
     switch (this._status) {
       case C.STATUS_NULL:
@@ -27006,8 +27018,8 @@ module.exports = class RTCSession extends EventEmitter {
     logger.debug(`nextConstraints: ${JSON.stringify(nextConstraints)}`);
     return nextConstraints;
   }
-  _buildMixerCtorOptions(stream, mixerOptions) {
-    var options = Object.assign({}, mixerOptions || {});
+  _buildMediaStreamComposerCtorOptions(stream, composerOptions) {
+    var options = Object.assign({}, composerOptions || {});
     var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
     var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
     var widthFromSettings = Number(settings.width);
@@ -27083,12 +27095,12 @@ module.exports = class RTCSession extends EventEmitter {
     if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
       return stream;
     }
-    var mixerCtorOptions = this._buildMixerCtorOptions(stream, mixerOptions);
+    var mixerCtorOptions = this._buildMediaStreamComposerCtorOptions(stream, mixerOptions);
     var mixer = null;
     logger.debug(`mixerCtorOptions: ${JSON.stringify(mixerCtorOptions)}`);
     try {
       this._stopSessionMixer();
-      mixer = new Mixer([stream], mixerCtorOptions);
+      mixer = new MediaStreamComposer([stream], mixerCtorOptions);
       var mixedVideoStream = mixer.getVideoStream();
       var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
       if (!mixedVideoTrack) {
@@ -27139,7 +27151,7 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = options.rtcOfferConstraints || null;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
-    var mixerOptions = options.mixer || null;
+    var mixerOptions = this._resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMixerOptions = mixerOptions;
     this._sessionAiNSOptions = aiNSOptions;
@@ -27526,7 +27538,7 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
-    var mixerOptions = options.mixer || null;
+    var mixerOptions = this._resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMixerOptions = mixerOptions;
     this._sessionAiNSOptions = aiNSOptions;
@@ -27844,8 +27856,8 @@ module.exports = class RTCSession extends EventEmitter {
     if (!done) {
       done = () => {};
     }
-    if (Object.prototype.hasOwnProperty.call(options, 'mixer')) {
-      this._sessionMixerOptions = options.mixer || null;
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer') || Object.prototype.hasOwnProperty.call(options, 'mixer')) {
+      this._sessionMixerOptions = this._resolveMediaStreamComposerOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件

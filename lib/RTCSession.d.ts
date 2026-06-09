@@ -65,6 +65,7 @@ export interface ExtraHeaders {
 export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
+  mediaStreamComposer?: MediaStreamComposerOptions;
   mixer?: MixerOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
@@ -84,6 +85,7 @@ export interface UpgradeToVideoOptions extends ExtraHeaders {
   sendOnly?: boolean;
   recvOnly?: boolean;
   useUpdate?: boolean;
+  mediaStreamComposer?: MediaStreamComposerOptions;
   mixer?: MixerOptions;
 }
 

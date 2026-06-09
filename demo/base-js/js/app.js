@@ -2086,7 +2086,8 @@ async function call(type, direction, mediaStream)
 
   if (composerOptions)
   {
-    options.mixer = composerOptions;
+    options.mediaStreamComposer = composerOptions;
+    // 兼容旧 SDK 时可回退为 options.mixer，当前示例优先使用最新的 mediaStreamComposer 命名。
   }
 
   // options = {

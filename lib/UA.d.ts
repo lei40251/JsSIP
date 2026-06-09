@@ -18,6 +18,7 @@ export interface CallOptions extends AnswerOptions {
   anonymous?: boolean;
   fromUserName?: string;
   fromDisplayName?: string;
+  mediaStreamComposer?: import('./RTCSession').MediaStreamComposerOptions;
   mixer?: import('./RTCSession').MixerOptions;
 }
 
