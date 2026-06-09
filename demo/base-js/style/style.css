@@ -468,11 +468,47 @@ body {
   gap: 0.6rem;
 }
 
+.utility-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
 .tool-row {
   border: 1px solid #e0e8f1;
   border-radius: 5px;
   background: #fafcff;
   padding: 0.5rem;
+}
+
+.tool-row-feature {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.55rem;
+  min-height: 112px;
+  background: linear-gradient(180deg, #fbfdff, #f3f8ff);
+  border-color: #d7e4f2;
+}
+
+.tool-feature-copy {
+  min-width: 0;
+}
+
+.tool-feature-desc {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #708198;
+}
+
+.tool-feature-action {
+  display: flex;
+  align-items: center;
+}
+
+.tool-feature-action .btn {
+  width: 100%;
+  justify-content: center;
 }
 
 .tool-row .input-group {
@@ -799,6 +835,10 @@ body {
   .tool-row .input-group>.btn {
     min-height: 1.89rem;
     padding: 0.324rem 0.54rem;
+  }
+
+  .utility-feature-grid {
+    grid-template-columns: 1fr;
   }
 
   .control-card .form-control,

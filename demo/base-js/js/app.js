@@ -105,8 +105,8 @@ function updateAiNsMonitorButton()
   }
 
   button.innerHTML = aiNsMonitorActive ?
-    '<i class="bi-stop-circle me-1"></i>停止降噪验证' :
-    '<i class="bi-soundwave me-1"></i>开始降噪验证';
+    '<i class="bi-stop-circle me-1"></i>结束验证' :
+    '<i class="bi-soundwave me-1"></i>开始验证';
   button.className = aiNsMonitorActive ? 'btn btn-warning' : 'btn btn-outline-warning';
 }
 
@@ -2970,8 +2970,8 @@ function updateVirtualBackgroundPreviewButton()
   }
 
   button.innerHTML = virtualBackgroundPreviewActive ?
-    '<i class="bi-stop-circle me-1"></i>结束本端演示' :
-    '<i class="bi-person-bounding-box me-1"></i>本端演示虚拟背景';
+    '<i class="bi-stop-circle me-1"></i>结束演示' :
+    '<i class="bi-person-bounding-box me-1"></i>开始演示';
   button.className = virtualBackgroundPreviewActive ? 'btn btn-outline-danger' : 'btn btn-outline-primary';
   button.disabled = false;
 }

@@ -154,12 +154,12 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMediaStreamComposerTextWatermarkSize" type="number" min="8"
-                            placeholder="字号" />
-                          <input class="form-control form-control-color" id="callMediaStreamComposerTextWatermarkColor" type="color"
-                            value="#ffffff" />
-                          <input class="form-control" id="callMediaStreamComposerTextWatermarkOpacity" type="text" inputmode="decimal"
-                            placeholder="透明度(0~1)" />
+                          <input class="form-control" id="callMediaStreamComposerTextWatermarkSize" type="number"
+                            min="8" placeholder="字号" />
+                          <input class="form-control form-control-color" id="callMediaStreamComposerTextWatermarkColor"
+                            type="color" value="#ffffff" />
+                          <input class="form-control" id="callMediaStreamComposerTextWatermarkOpacity" type="text"
+                            inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
                       </div>
                       <div class="sub-panel compact-panel">
@@ -176,10 +176,10 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMediaStreamComposerImageWatermarkWidth" type="number" min="1"
-                            placeholder="宽度" />
-                          <input class="form-control" id="callMediaStreamComposerImageWatermarkHeight" type="number" min="1"
-                            placeholder="高度" />
+                          <input class="form-control" id="callMediaStreamComposerImageWatermarkWidth" type="number"
+                            min="1" placeholder="宽度" />
+                          <input class="form-control" id="callMediaStreamComposerImageWatermarkHeight" type="number"
+                            min="1" placeholder="高度" />
                           <input class="form-control" id="callMediaStreamComposerImageWatermarkOpacity" type="text"
                             inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
@@ -215,8 +215,6 @@
                 <button class="btn btn-primary" id="callNull"><i class="bi-slash-circle me-1"></i>音视频外呼(无设备)</button>
                 <button class="btn btn-warning" id="callNullAudio">音视频外呼(无麦克风)</button>
                 <button class="btn btn-success" id="callNullVideo">音视频外呼(无摄像头)</button>
-                <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
-                    class="bi-person-bounding-box me-1"></i>本端演示虚拟背景</button>
                 <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
               </div>
             </section>
@@ -271,12 +269,7 @@
         </div>
 
         <aside class="col-12 col-xl-3">
-          <div class="panel-card log-card">
-            <div class="card-title">会话日志</div>
-            <pre id="status" class="mb-0"></pre>
-          </div>
-
-          <section class="panel-card control-card mt-2">
+          <section class="panel-card control-card">
             <details class="composer-detail">
               <summary>辅助功能</summary>
               <div class="pt-2">
@@ -298,12 +291,27 @@
                     </div>
                   </div>
 
-                  <div class="tool-row">
-                    <div class="sub-group-title">AI 降噪验证</div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                      <button class="btn btn-outline-warning" id="toggleAiNsMonitor"><i
-                          class="bi-soundwave me-1"></i>开始降噪验证</button>
-                      <div class="small text-muted">抓本地麦克风回放，建议佩戴耳机避免啸叫</div>
+                  <div class="utility-feature-grid">
+                    <div class="tool-row tool-row-feature">
+                      <div class="tool-feature-copy">
+                        <div class="sub-group-title">AI 降噪验证</div>
+                        <div class="tool-feature-desc">本地麦克风回放，需佩戴耳机避免啸叫</div>
+                      </div>
+                      <div class="tool-feature-action">
+                        <button class="btn btn-outline-warning" id="toggleAiNsMonitor"><i
+                            class="bi-soundwave me-1"></i>开始验证</button>
+                      </div>
+                    </div>
+
+                    <div class="tool-row tool-row-feature">
+                      <div class="tool-feature-copy">
+                        <div class="sub-group-title">虚拟背景演示</div>
+                        <div class="tool-feature-desc">本端预览切换效果，便于演示虚拟背景</div>
+                      </div>
+                      <div class="tool-feature-action">
+                        <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
+                            class="bi-person-bounding-box me-1"></i>开始演示</button>
+                      </div>
                     </div>
                   </div>
 
@@ -330,6 +338,11 @@
               </div>
             </details>
           </section>
+
+          <div class="panel-card log-card mt-2">
+            <div class="card-title">会话日志</div>
+            <pre id="status" class="mb-0"></pre>
+          </div>
 
           <section class="panel-card control-card mt-2" id="capture-preview-panel">
             <div class="card-title">截图预览</div>

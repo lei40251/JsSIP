@@ -1249,13 +1249,11 @@ async function run()
       {
         await test.fn();
         passed += 1;
-        console.log(`[AIVirtualBackground] PASS ${test.name}`);
       }
       catch (error)
       {
         failed += 1;
         failures.push({ name: test.name, error });
-        console.error(`[AIVirtualBackground] FAIL ${test.name}: ${error && error.stack ? error.stack : error}`);
       }
     }
   }
@@ -1266,12 +1264,20 @@ async function run()
 
   if (failed > 0)
   {
-    const summary = failures.map((failure) => `${failure.name}: ${failure.error.message}`).join('; ');
-
-    throw new Error(`AIVirtualBackground tests failed (${passed} passed, ${failed} failed): ${summary}`);
+    console.log(`\n  AIVirtualBackground Failures (${failed}):`);
+    for (const failure of failures)
+    {
+      console.log(`    ✗ ${failure.name}`);
+      console.log(`      ${failure.error.message}`);
+    }
   }
 
-  console.log(`[AIVirtualBackground] ${passed} passed`);
+  console.log(`  AIVirtualBackground Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
+
+  if (failed > 0)
+  {
+    throw new Error(`${failed} AIVirtualBackground test(s) failed`);
+  }
 }
 
 module.exports = { run };
