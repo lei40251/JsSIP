@@ -70,11 +70,7 @@ const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
-const AI_VBE_TASKS_ROOT = './assets/tasks';
-const AI_VBE_MODEL_URL = `${AI_VBE_TASKS_ROOT}/selfie_segmenter_landscape.tflite`;
-const AI_VBE_TASKS_MODULE_URL = '../assets/tasks/vision_bundle.mjs';
-const AI_VBE_TASKS_GLOBAL = 'CRTCAiVBEVisionTasks';
-let aiVbeTasksRuntimePromise = null;
+const AI_VBE_TASKS_ROOT = './assets/aivb';
 
 // AI 降噪相关
 let aiNsType = '';
@@ -3071,8 +3067,7 @@ function createVirtualBackgroundEngine()
     return new CRTC.AiVBEEngine({
       video       : aiVbeVideoConfig,
       assetConfig : {
-        baseUrl  : AI_VBE_TASKS_ROOT,
-        modelUrl : AI_VBE_MODEL_URL
+        flatBaseUrl : AI_VBE_TASKS_ROOT
       }
     });
   }
@@ -3083,49 +3078,6 @@ function createVirtualBackgroundEngine()
 function getVirtualBackgroundModelPath()
 {
   return './virtual-background/models/slv.tflite';
-}
-
-async function ensureAiVbeTasksRuntimeLoaded()
-{
-  if (typeof window === 'undefined')
-  {
-    throw new Error('AiVBE requires browser environment');
-  }
-
-  if (window[AI_VBE_TASKS_GLOBAL])
-  {
-    return window[AI_VBE_TASKS_GLOBAL];
-  }
-
-  if (!aiVbeTasksRuntimePromise)
-  {
-    aiVbeTasksRuntimePromise = import(AI_VBE_TASKS_MODULE_URL)
-      .then((module) =>
-      {
-        if (
-          !module ||
-          typeof module.FilesetResolver !== 'function' ||
-          typeof module.ImageSegmenter !== 'function'
-        )
-        {
-          throw new Error('AiVBE tasks runtime exports are invalid');
-        }
-
-        window[AI_VBE_TASKS_GLOBAL] = {
-          FilesetResolver : module.FilesetResolver,
-          ImageSegmenter  : module.ImageSegmenter
-        };
-
-        return window[AI_VBE_TASKS_GLOBAL];
-      })
-      .catch((error) =>
-      {
-        aiVbeTasksRuntimePromise = null;
-        throw error;
-      });
-  }
-
-  return aiVbeTasksRuntimePromise;
 }
 
 async function applyVirtualBackgroundSelection(targetEngine)
@@ -3204,11 +3156,6 @@ async function startVirtualBackgroundPreview()
     throw new Error('请先选择虚拟背景效果');
   }
 
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    await ensureAiVbeTasksRuntimeLoaded();
-  }
-
   virtualBackgroundPreviewInputStream = await navigator.mediaDevices.getUserMedia({
     audio : false,
     video : videoConstraints
@@ -3267,11 +3214,6 @@ async function mediaStreamProcessor(mediastream)
   if (!mediastream.getVideoTracks()[0])
   {
     return mediastream;
-  }
-
-  if (virtualBackgroundEngineType === 'aivbe')
-  {
-    await ensureAiVbeTasksRuntimeLoaded();
   }
 
   localMediaStream = mediastream;

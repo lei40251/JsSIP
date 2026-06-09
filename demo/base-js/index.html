@@ -215,16 +215,16 @@
               </div>
 
               <div class="sub-group-title mt-2">特殊外呼（无特定设备）</div>
-                  <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary" id="callNull"><i class="bi-slash-circle me-1"></i>音视频外呼(无设备)</button>
-                    <button class="btn btn-warning" id="callNullAudio">音视频外呼(无麦克风)</button>
-                    <button class="btn btn-success" id="callNullVideo">音视频外呼(无摄像头)</button>
-                    <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
-                        class="bi-person-bounding-box me-1"></i>本端演示虚拟背景</button>
-                    <button class="btn btn-warning hide" id="callVB"><i
-                        class="bi-person-bounding-box me-1"></i>虚拟背景外呼</button>
-                    <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
-                  </div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" id="callNull"><i class="bi-slash-circle me-1"></i>音视频外呼(无设备)</button>
+                <button class="btn btn-warning" id="callNullAudio">音视频外呼(无麦克风)</button>
+                <button class="btn btn-success" id="callNullVideo">音视频外呼(无摄像头)</button>
+                <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
+                    class="bi-person-bounding-box me-1"></i>本端演示虚拟背景</button>
+                <button class="btn btn-warning hide" id="callVB"><i
+                    class="bi-person-bounding-box me-1"></i>虚拟背景外呼</button>
+                <button class="btn btn-danger ms-auto" id="cancel"><i class="bi-telephone-x"></i> 挂机/取消</button>
+              </div>
             </section>
 
             <section class="panel-card control-card">
@@ -353,6 +353,31 @@
       src="https://pro.vsbc.com/rtc/uat/crtc/1280.mp4" loop muted style="height: 100%"></video>
   </div>
 
+  <!-- <script>
+    /* 对日志的处理 */
+    window.CLog = console;
+    let consoleHolder = window.CLog;
+
+    function debug(bool) {
+      if (!bool) {
+        consoleHolder = window.CLog;
+        window.CLog = {};
+        Object.keys(consoleHolder).forEach(function (key) {
+          window.CLog[key] = function () {
+            // 这里可以写自己方法上传到服务器等
+            // eslint-disable-next-line prefer-rest-params
+            console.log(...arguments);
+          };
+        });
+      }
+      else {
+        window.CLog = consoleHolder;
+      }
+    }
+
+    debug(false);
+    // 结束
+  </script> -->
   <script src="./js/eruda.js"></script>
   <script>eruda.init();</script>
   <script src="./js/jquery-3.3.1.min.js"></script>
