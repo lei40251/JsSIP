@@ -69,7 +69,7 @@ const virtualBackgroundImgs = {
   img1 : './virtual-background/backgrounds/office.png',
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
-const AI_VB_TASKS_ROOT = './assets/ai-vb';
+const AI_VB_TASKS_ROOT = './assets/aivb';
 
 // AI 降噪相关
 let aiNsType = '';
@@ -1937,7 +1937,7 @@ document.querySelector('#useupdate').onchange = function()
 function buildCallMediaStreamComposerOptions()
 {
   const outputMirrorEl = document.getElementById('callMediaStreamComposerOutputMirror');
-  const outputMirrorX = Boolean(outputMirrorEl && outputMirrorEl.checked);
+  const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
   const watermarks = [];
   const text = String((document.getElementById('callMediaStreamComposerTextWatermarkText') || {}).value || '').trim();
 
@@ -2007,16 +2007,16 @@ function buildCallMediaStreamComposerOptions()
     watermarks.push(imageWatermark);
   }
 
-  if (!outputMirrorX && !watermarks.length)
+  if (!outputMirror && !watermarks.length)
   {
     return null;
   }
 
   const composerOptions = {};
 
-  if (outputMirrorX)
+  if (outputMirror)
   {
-    composerOptions.outputMirrorX = true;
+    composerOptions.mirror = true;
   }
 
   if (watermarks.length)

@@ -38,7 +38,7 @@ Object.assign(window.app, {
       height                     : h,
       fps                        : fps,
       renderMode                 : renderMode,
-      outputMirrorX              : ctorOutputMirror && ctorOutputMirror.value === 'on',
+      mirror                     : ctorOutputMirror && ctorOutputMirror.value === 'on',
       mirrorWatermarksWithOutput : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
       watermarks                 : []
     };
@@ -195,27 +195,16 @@ Object.assign(window.app, {
   },
 
   /**
-   * 获取全局镜像状态。
+   * 获取源镜像配置。
    *
-   * @returns {boolean} true 表示全局镜像开启
+   * @param {number} [slot] - 可选槽位编号；传入时返回该槽位状态对象
+   * @returns {Object} 不传 slot 时返回 { global, overrides }；传 slot 时返回 { slot, global, override, effective }
    */
-  getGlobalMirror()
+  getSourceMirror(slot)
   {
-    if (!this.composer || !this.composer.getGlobalMirror) return false;
+    if (!this.composer || !this.composer.getSourceMirror) return slot === undefined ? { global: false, overrides: {} } : null;
 
-    return Boolean(this.composer.getGlobalMirror());
-  },
-
-  /**
-   * 获取槽位镜像覆盖表。
-   *
-   * @returns {Object} 形如 { "0": true, "2": false } 的覆盖快照
-   */
-  getSlotMirrors()
-  {
-    if (!this.composer || !this.composer.getSlotMirrors) return {};
-
-    return this.composer.getSlotMirrors() || {};
+    return slot === undefined ? this.composer.getSourceMirror() : this.composer.getSourceMirror(Number(slot));
   },
 
   /**
@@ -223,11 +212,11 @@ Object.assign(window.app, {
    *
    * @returns {boolean} true 表示最终输出整体镜像开启
    */
-  getOutputMirror()
+  getMirror()
   {
-    if (!this.composer || !this.composer.getOutputMirror) return false;
+    if (!this.composer || !this.composer.getMirror) return false;
 
-    return Boolean(this.composer.getOutputMirror());
+    return Boolean(this.composer.getMirror());
   },
 
   /**
@@ -243,15 +232,24 @@ Object.assign(window.app, {
   },
 
   /**
-   * 设置全局镜像开关。
+   * 设置源镜像。
    *
-   * @param {boolean} enabled - true 开启，false 关闭
+   * @param {number|boolean} slotOrEnabled - 布尔值表示设置全局默认值；数字表示槽位编号
+   * @param {boolean} [enabled] - 传入槽位时表示该槽位覆盖值
    * @returns {boolean} 是否执行成功
    */
-  setGlobalMirror(enabled)
+  setSourceMirror(slotOrEnabled, enabled)
   {
-    if (!this.composer || !this.composer.setGlobalMirror) return false;
-    this.composer.setGlobalMirror(Boolean(enabled));
+    if (!this.composer || !this.composer.setSourceMirror) return false;
+
+    if (typeof slotOrEnabled === 'boolean' && enabled === undefined)
+    {
+      this.composer.setSourceMirror(slotOrEnabled);
+    }
+    else
+    {
+      this.composer.setSourceMirror(Number(slotOrEnabled), enabled);
+    }
 
     return true;
   },
@@ -262,10 +260,10 @@ Object.assign(window.app, {
    * @param {boolean} enabled - true 开启，false 关闭
    * @returns {boolean} 是否执行成功
    */
-  setOutputMirror(enabled)
+  setMirror(enabled)
   {
-    if (!this.composer || !this.composer.setOutputMirror) return false;
-    this.composer.setOutputMirror(Boolean(enabled));
+    if (!this.composer || !this.composer.setMirror) return false;
+    this.composer.setMirror(Boolean(enabled));
 
     return true;
   },
@@ -285,30 +283,23 @@ Object.assign(window.app, {
   },
 
   /**
-   * 设置槽位镜像覆盖。
+   * 清除源镜像覆盖。
    *
-   * @param {number} slot - 槽位编号
-   * @param {boolean} enabled - true 开启，false 关闭
+   * @param {number} [slot] - 不传则清除全部槽位覆盖
    * @returns {boolean} 是否执行成功
    */
-  setSlotMirror(slot, enabled)
+  clearSourceMirror(slot)
   {
-    if (!this.composer || !this.composer.setSlotMirror) return false;
-    this.composer.setSlotMirror(Number(slot), Boolean(enabled));
+    if (!this.composer || !this.composer.clearSourceMirror) return false;
 
-    return true;
-  },
-
-  /**
-   * 清除槽位镜像覆盖（恢复跟随全局）。
-   *
-   * @param {number} slot - 槽位编号
-   * @returns {boolean} 是否执行成功
-   */
-  clearSlotMirror(slot)
-  {
-    if (!this.composer || !this.composer.clearSlotMirror) return false;
-    this.composer.clearSlotMirror(Number(slot));
+    if (slot === undefined)
+    {
+      this.composer.clearSourceMirror();
+    }
+    else
+    {
+      this.composer.clearSourceMirror(Number(slot));
+    }
 
     return true;
   },

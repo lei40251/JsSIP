@@ -86,8 +86,8 @@ const mixer = new CRTC.MediaStreamComposer(
 | `height` | `number` | `720` | 输出视频高度（px），非法值回退 720 |
 | `fps` | `number` | `15` | 输出帧率，非法值回退 15 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色，CSS 颜色格式 |
-| `mirrorX` | `boolean` | `false` | 各路输入源水平镜像（兼容别名 `mirror`） |
-| `outputMirrorX` | `boolean` | `false` | 最终合成画面整体水平镜像 |
+| `sourceMirror` | `boolean` | `false` | 各路输入源默认水平镜像 |
+| `mirror` | `boolean` | `false` | 最终合成画面整体水平镜像 |
 | `mirrorWatermarksWithOutput` | `boolean` | `false` | 输出整体镜像时水印是否跟随镜像 |
 | `watermarks` | `Array<Object>` | `[]` | 初始水印配置（支持文字和图片） |
 
@@ -106,8 +106,8 @@ mixer.appendStream(stream);
 // 方式 2：指定 slot（数字）
 mixer.appendStream(stream, 3);
 
-// 方式 3：配置对象（slot + gain + mirrorX）
-mixer.appendStream(stream, { slot: 2, gain: 0.5, mirrorX: true });
+// 方式 3：配置对象（slot + gain + sourceMirror）
+mixer.appendStream(stream, { slot: 2, gain: 0.5, sourceMirror: true });
 
 // 方式 4：批量添加
 mixer.appendStream([streamA, streamB, streamC]);
@@ -121,7 +121,7 @@ mixer.appendStream([streamA, streamB], 3);
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `videos` | `MediaStream\|HTMLVideoElement\|Array` | 同构造函数；**此参数必传** |
-| `optionsOrSlot` | `number\|Object` | slot 数字或 `{ slot, gain, mirrorX }` 对象 |
+| `optionsOrSlot` | `number\|Object` | slot 数字或 `{ slot, gain, sourceMirror }` 对象 |
 
 | 返回值 | 说明 |
 |--------|------|
@@ -169,8 +169,8 @@ mixer.clearStreams();
 ```js
 const sources = mixer.getSources();
 // [
-//   { id: 'stream-1', streamId: 'abc', slot: 0, gain: 0.8, mirrorX: false, hasAudio: true, hasVideo: true },
-//   { id: 'stream-2', streamId: 'def', slot: 1, gain: 0.5, mirrorX: true,  hasAudio: false, hasVideo: true }
+//   { id: 'stream-1', streamId: 'abc', slot: 0, gain: 0.8, sourceMirror: false, hasAudio: true, hasVideo: true },
+//   { id: 'stream-2', streamId: 'def', slot: 1, gain: 0.5, sourceMirror: true,  hasAudio: false, hasVideo: true }
 // ]
 ```
 
@@ -180,7 +180,7 @@ const sources = mixer.getSources();
 | `streamId` | `string` | MediaStream.id |
 | `slot` | `number` | 网格槽位编号 |
 | `gain` | `number` | 该路音量增益 |
-| `mirrorX` | `boolean` | 该路是否水平镜像 |
+| `sourceMirror` | `boolean` | 该路是否水平镜像 |
 | `hasAudio` | `boolean` | 是否有音频轨 |
 | `hasVideo` | `boolean` | 是否有视频轨 |
 
@@ -383,46 +383,41 @@ const watermarks = mixer.getWatermarks();
 
 ## 7. 镜像 API
 
-### `setGlobalMirror(enabled)` / `getGlobalMirror()`
+### `setSourceMirror(slotOrEnabled, enabled?)` / `getSourceMirror(slot?)` / `clearSourceMirror(slot?)`
 
-设置/获取全局水平镜像。
-
-```js
-// 开启全局镜像
-mixer.setGlobalMirror(true);
-
-// 查询状态
-const isMirrored = mixer.getGlobalMirror(); // true
-```
-
-- `setGlobalMirror(enabled)`: `enabled` — `boolean`
-- `getGlobalMirror()`: 返回 `boolean`
-- 兼容别名: `setMirror(enabled)` = `setGlobalMirror(enabled)`
-
-### `setSlotMirror(slot, enabled)` / `clearSlotMirror(slot)` / `getSlotMirrors()`
-
-设置/清除/查询单个槽位的镜像覆盖。
+统一管理源级镜像默认值与槽位覆盖。
 
 ```js
-// slot 0 开启镜像（覆盖全局设置）
-mixer.setSlotMirror(0, true);
+// 设置全局默认镜像
+mixer.setSourceMirror(true);
 
-// slot 0 恢复跟随全局
-mixer.clearSlotMirror(0);
+// slot 0 单独关闭镜像
+mixer.setSourceMirror(0, false);
 
-// 查询所有槽位覆盖
-const overrides = mixer.getSlotMirrors(); // { "0": true }
+// 查询整体配置
+const sourceMirror = mixer.getSourceMirror();
+// { global: true, overrides: { "0": false } }
+
+// 查询单个槽位
+const slot0 = mixer.getSourceMirror(0);
+// { slot: 0, global: true, override: false, effective: false }
+
+// 清除 slot 0 覆盖，恢复跟随全局
+mixer.clearSourceMirror(0);
+
+// 清除全部槽位覆盖，不影响全局默认值
+mixer.clearSourceMirror();
 ```
 
-### `setOutputMirror(enabled)` / `getOutputMirror()`
+### `setMirror(enabled)` / `getMirror()`
 
 设置/获取最终合成输出的整体镜像。
 
 ```js
 // 最终输出整体镜像
-mixer.setOutputMirror(true);
+mixer.setMirror(true);
 
-const isOutputMirrored = mixer.getOutputMirror(); // true
+const isOutputMirrored = mixer.getMirror(); // true
 ```
 
 ### `setMirrorWatermarksWithOutput(enabled)` / `getMirrorWatermarksWithOutput()`
@@ -520,18 +515,18 @@ mixer.appendStream(stream3, 0);
 const mixer = new CRTC.MediaStreamComposer([localStream, remoteStream], {
   width: 1280,
   height: 720,
-  mirrorX: false // 默认不镜像
+  sourceMirror: false // 默认不镜像
 });
 
 // 仅 slot 0（本地摄像头）镜像
-mixer.setSlotMirror(0, true);
+mixer.setSourceMirror(0, true);
 
 // slot 1（远端）不镜像（跟随全局）
-// getSlotMirrors() → { "0": true }
+// getSourceMirror() → { global: false, overrides: { "0": true } }
 
 // 检查最终镜像状态
-console.log('Global mirror:', mixer.getGlobalMirror());  // false
-console.log('Slot mirrors:', mixer.getSlotMirrors());    // { "0": true }
+console.log('Source mirror:', mixer.getSourceMirror());
+console.log('Slot 0 mirror:', mixer.getSourceMirror(0));
 ```
 
 ### 示例 4：水印管理

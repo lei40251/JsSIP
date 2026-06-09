@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026691739
+ * CRTC v2.0.0.2026691834
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -5842,7 +5842,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212183478 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212183668 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -19052,7 +19052,7 @@ var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212183478');
+debug('version %s', '2.0.0.405212183668');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19094,7 +19094,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212183478';
+    return '2.0.0.405212183668';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],49:[function(require,module,exports){
@@ -20835,8 +20835,8 @@ class MediaStreamComposer {
    *   Worker 尚未渲染完上一帧时是否丢弃当前帧，避免排队导致延迟不断累积。
    * @param {number} [options.maxFrameQueue=1]
    *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
-   * @param {boolean} [options.mirrorX=false]
-   *   是否默认对所有槽位应用水平镜像。兼容别名 options.mirror。
+   * @param {boolean} [options.sourceMirror=false]
+   *   是否默认对所有槽位应用水平镜像。
    */
   constructor(videos = [], options = {}) {
     // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
@@ -21102,11 +21102,11 @@ class MediaStreamComposer {
    * 统一 appendStream() 第二个参数的格式。
    * 支持两种调用方式：
    *   appendStream(stream, 3)            → 数字作为 slot
-   *   appendStream(stream, { slot, gain, mirrorX }) → 对象解构
+   *   appendStream(stream, { slot, gain, sourceMirror }) → 对象解构
    *
    * @param {number|Object} optionsOrSlot - 原始参数
    * @param {number} index - 数组索引，用于批量添加时 slot 递增
-   * @returns {Object} { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
+   * @returns {Object} { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
    */
   _normalizeSourceOptions(optionsOrSlot, index) {
     return MediaStreamComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
@@ -21458,7 +21458,7 @@ class MediaStreamComposer {
    * 支持多种调用方式：
    *   appendStream(stream)          → 自动分配 slot（grid 模式）
    *   appendStream(stream, 3)       → 指定 slot
-   *   appendStream(stream, { slot: 3, gain: 0.5, mirrorX: true })
+   *   appendStream(stream, { slot: 3, gain: 0.5, sourceMirror: true })
    *   appendStream([streamA, ...])  → 批量添加
    *
    * 同 slot 已有源会被新源覆盖。
@@ -21543,7 +21543,7 @@ class MediaStreamComposer {
    * 返回新对象数组，外部修改不影响内部状态。
    *
    * @returns {Array<Object>} 源信息列表：
-   *   { id, streamId, slot, gain, mirrorX, hasAudio, hasVideo }
+   *   { id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
    */
   getSources() {
     this._assertNotDestroyed('getSources()');
@@ -21551,28 +21551,14 @@ class MediaStreamComposer {
     return this._sourceRegistry.getSnapshot();
   }
   setMirror(enabled) {
-    this.setGlobalMirror(enabled);
-  }
-  setGlobalMirror(enabled) {
-    this._assertNotDestroyed('setGlobalMirror()');
-    this._config.mirrorX = Boolean(enabled);
-    logger.debug(`setGlobalMirror(): enabled=${this._config.mirrorX}`);
-    this._refreshRendererPolicyForMirror();
-    this._drawVideosToCanvas(undefined, true);
-  }
-  getGlobalMirror() {
-    this._assertNotDestroyed('getGlobalMirror()');
-    return Boolean(this._config.mirrorX);
-  }
-  setOutputMirror(enabled) {
-    this._assertNotDestroyed('setOutputMirror()');
+    this._assertNotDestroyed('setMirror()');
     this._config.outputMirrorX = Boolean(enabled);
-    logger.debug(`setOutputMirror(): enabled=${this._config.outputMirrorX}`);
+    logger.debug(`setMirror(): enabled=${this._config.outputMirrorX}`);
     this._refreshRendererPolicyForMirror();
     this._drawVideosToCanvas(undefined, true);
   }
-  getOutputMirror() {
-    this._assertNotDestroyed('getOutputMirror()');
+  getMirror() {
+    this._assertNotDestroyed('getMirror()');
     return Boolean(this._config.outputMirrorX);
   }
   setMirrorWatermarksWithOutput(enabled) {
@@ -21585,32 +21571,74 @@ class MediaStreamComposer {
     this._assertNotDestroyed('getMirrorWatermarksWithOutput()');
     return this._config.mirrorWatermarksWithOutput !== false;
   }
-  setSlotMirror(slot, enabled) {
-    this._assertNotDestroyed('setSlotMirror()');
-    var normalizedSlot = this._normalizeSlot(slot, 0);
+  setSourceMirror(slotOrEnabled, enabled) {
+    this._assertNotDestroyed('setSourceMirror()');
+    if (typeof slotOrEnabled === 'boolean' && enabled === undefined) {
+      this._config.mirrorX = slotOrEnabled;
+      logger.debug(`setSourceMirror(): global=${this._config.mirrorX}`);
+      this._refreshRendererPolicyForMirror();
+      this._drawVideosToCanvas(undefined, true);
+      return;
+    }
+    var normalizedSlot = this._normalizeSlot(slotOrEnabled, 0);
     if (normalizedSlot === null) {
       throw new TypeError('Invalid slot.');
     }
     var key = String(normalizedSlot);
     if (enabled === undefined || enabled === null) {
       delete this._slotMirrorXOverrides[key];
-      logger.debug(`setSlotMirror(): cleared slot=${normalizedSlot}`);
+      logger.debug(`setSourceMirror(): cleared slot=${normalizedSlot}`);
     } else {
       this._slotMirrorXOverrides[key] = Boolean(enabled);
-      logger.debug(`setSlotMirror(): slot=${normalizedSlot} enabled=${this._slotMirrorXOverrides[key]}`);
+      logger.debug(`setSourceMirror(): slot=${normalizedSlot} enabled=${this._slotMirrorXOverrides[key]}`);
     }
     this._refreshRendererPolicyForMirror();
     this._drawVideosToCanvas(undefined, true);
   }
-  clearSlotMirror(slot) {
-    this.setSlotMirror(slot, null);
-  }
-  getSlotMirrors() {
-    this._assertNotDestroyed('getSlotMirrors()');
-    return Object.keys(this._slotMirrorXOverrides).reduce((snapshot, slot) => {
-      snapshot[slot] = this._slotMirrorXOverrides[slot];
+  getSourceMirror(slot) {
+    this._assertNotDestroyed('getSourceMirror()');
+    var global = Boolean(this._config.mirrorX);
+    var overrides = Object.keys(this._slotMirrorXOverrides).reduce((snapshot, key) => {
+      snapshot[key] = this._slotMirrorXOverrides[key];
       return snapshot;
     }, {});
+    if (slot === undefined || slot === null) {
+      return {
+        global,
+        overrides
+      };
+    }
+    var normalizedSlot = this._normalizeSlot(slot, 0);
+    if (normalizedSlot === null) {
+      throw new TypeError('Invalid slot.');
+    }
+    var key = String(normalizedSlot);
+    var hasOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorXOverrides, key);
+    var override = hasOverride ? this._slotMirrorXOverrides[key] : null;
+    var effective = global;
+    var source = this._sources.find(item => item && item.slot === normalizedSlot) || null;
+    if (override !== null) {
+      effective = override;
+    } else if (source && typeof source.mirrorX === 'boolean') {
+      effective = source.mirrorX;
+    }
+    return {
+      slot: normalizedSlot,
+      global: global,
+      override: override,
+      effective: Boolean(effective)
+    };
+  }
+  clearSourceMirror(slot) {
+    this._assertNotDestroyed('clearSourceMirror()');
+    if (slot === undefined || slot === null) {
+      this._slotMirrorXOverrides = Object.create(null);
+      logger.debug('clearSourceMirror(): cleared all slot overrides');
+      this._refreshRendererPolicyForMirror();
+      this._drawVideosToCanvas(undefined, true);
+      return;
+    }
+    this.setSourceMirror(slot, null);
   }
 
   /**
@@ -21884,8 +21912,8 @@ var VALID_RENDER_MODES = {
  * @returns {boolean} returns.dropFrameWhenBusy - 忙时是否丢帧
  * @returns {number} returns.maxFrameQueue - 最大帧队列长度
  * @returns {boolean} returns.preserveDrawingBuffer - 是否保留绘图缓冲
- * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像
- * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像
+ * @returns {boolean} returns.mirrorX - 是否默认对所有槽位做水平镜像（公开参数名 sourceMirror）
+ * @returns {boolean} returns.outputMirrorX - 是否对最终合成输出做整体水平镜像（公开参数名 mirror）
  * @returns {boolean} returns.mirrorWatermarksWithOutput - 整体镜像时水印是否一起镜像
  * @returns {boolean} returns.enableInsertable - 是否启用 Insertable 输出；默认关闭
  * @returns {boolean} returns.manualCaptureFrameControl - 是否启用 captureStream(0)+requestFrame 手动出帧；默认开启
@@ -21903,8 +21931,8 @@ exports.create = function (options) {
     dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
     maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
     preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
-    mirrorX: exports.normalizeMirrorX(options.mirrorX, options.mirror, false),
-    outputMirrorX: exports.normalizeMirrorX(options.outputMirrorX, options.outputMirror, false),
+    mirrorX: exports.normalizeMirrorX(options.sourceMirror, undefined, false),
+    outputMirrorX: exports.normalizeMirrorX(options.mirror, undefined, false),
     mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
     enableInsertable: options.enableInsertable === true,
     manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
@@ -21984,8 +22012,8 @@ exports.normalizeGain = function (value, fallback) {
 /**
  * 归一化水平镜像开关。
  *
- * @param {*} primary - 主参数（推荐 mirrorX）
- * @param {*} legacy - 兼容参数（mirror）
+ * @param {*} primary - 主参数
+ * @param {*} legacy - 兼容参数
  * @param {boolean} fallback - 默认值
  * @returns {boolean}
  */
@@ -22008,7 +22036,7 @@ exports.normalizeMirrorX = function (primary, legacy, fallback) {
  * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
  * @param {number} index - 数组索引，批量添加时 slot 递增
  * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, mirrorX: boolean|undefined }
+ * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
  */
 /**
  * 返回最大参与方数限制。
@@ -22028,10 +22056,8 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
     if (typeof optionsOrSlot.gain === 'number') {
       options.gain = exports.normalizeGain(optionsOrSlot.gain, defaultGain);
     }
-    if (typeof optionsOrSlot.mirrorX === 'boolean') {
-      options.mirrorX = optionsOrSlot.mirrorX;
-    } else if (typeof optionsOrSlot.mirror === 'boolean') {
-      options.mirrorX = optionsOrSlot.mirror;
+    if (typeof optionsOrSlot.sourceMirror === 'boolean') {
+      options.sourceMirror = optionsOrSlot.sourceMirror;
     }
   }
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
@@ -23338,7 +23364,7 @@ class SourceRegistry {
    * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
-   * @param {Object} [options={}] - 配置选项 { slot, gain, mirrorX }
+   * @param {Object} [options={}] - 配置选项 { slot, gain, sourceMirror }
    * @returns {Object} 新建的 source 对象
    */
   add(input, options) {
@@ -23450,7 +23476,7 @@ class SourceRegistry {
    * 返回当前所有源的快照。
    * 返回新数组，外部修改不影响内部状态。
    *
-   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, mirrorX, hasAudio, hasVideo }
+   * @returns {Array<Object>} 源信息列表：{ id, streamId, slot, gain, sourceMirror, hasAudio, hasVideo }
    */
   getSnapshot() {
     return this.sources.map(source => {
@@ -23460,7 +23486,7 @@ class SourceRegistry {
         streamId: stream ? stream.id : null,
         slot: source.slot,
         gain: source.gain,
-        mirrorX: Boolean(source.mirrorX),
+        sourceMirror: typeof source.mirrorX === 'boolean' ? source.mirrorX : null,
         hasAudio: this.hasLiveAudioTrack(source),
         hasVideo: this.hasVideoTrack(source)
       };
@@ -23548,7 +23574,7 @@ class SourceRegistry {
    * 创建一个内部 source 对象。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
-   * @param {Object} options - 配置 { slot, gain, mirrorX }
+   * @param {Object} options - 配置 { slot, gain, sourceMirror }
    * @returns {Object} source 对象
    * @throws {TypeError} 无效的 MediaStream
    */
@@ -23575,7 +23601,7 @@ class SourceRegistry {
       video: video,
       slot: typeof options.slot === 'number' ? options.slot : null,
       gain: this._normalizeGain(options.gain, this._getDefaultGain()),
-      mirrorX: typeof options.mirrorX === 'boolean' ? options.mirrorX : null,
+      mirrorX: typeof options.sourceMirror === 'boolean' ? options.sourceMirror : null,
       audioSourceNode: null,
       // WebAudio 源节点（由 AudioMixer 连接时赋值）
       masterGainNode: null,

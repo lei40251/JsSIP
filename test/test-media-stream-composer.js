@@ -1379,7 +1379,7 @@ async function testMirrorGlobalAndSlotControls()
     height     : 180,
     fps        : 15,
     renderMode : 'main-2d',
-    mirrorX    : true
+    sourceMirror : true
   });
 
   mixer.appendStream(createStream(), 0);
@@ -1395,9 +1395,11 @@ async function testMirrorGlobalAndSlotControls()
   });
 
   assert.strictEqual(mirroredOps.length, 1);
-  assert.strictEqual(mixer.getGlobalMirror(), true);
+  assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: {} });
+  assert.strictEqual(mixer.getSources()[0].sourceMirror, null);
+  assert.strictEqual(mixer.getSourceMirror(0).effective, true);
 
-  mixer.setSlotMirror(0, false);
+  mixer.setSourceMirror(0, false);
   mixer._canvas._context2d.operations = [];
   mixer._drawVideosToCanvas(undefined, true);
   outputContext = mixer._canvas._context2d;
@@ -1407,8 +1409,9 @@ async function testMirrorGlobalAndSlotControls()
   });
   assert.strictEqual(mirroredOps.length, 0);
 
-  mixer.setSlotMirror(0, true);
-  assert.deepStrictEqual(mixer.getSlotMirrors(), { '0': true });
+  mixer.setSourceMirror(0, true);
+  assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: { '0': true } });
+  assert.deepStrictEqual(mixer.getSourceMirror(0), { slot: 0, global: true, override: true, effective: true });
 
   mixer._canvas._context2d.operations = [];
   mixer._drawVideosToCanvas(undefined, true);
@@ -1419,11 +1422,11 @@ async function testMirrorGlobalAndSlotControls()
   });
   assert.strictEqual(mirroredOps.length, 1);
 
-  mixer.clearSlotMirror(0);
-  assert.deepStrictEqual(mixer.getSlotMirrors(), {});
+  mixer.clearSourceMirror(0);
+  assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: {} });
 
   mixer.stop();
-  assert.throws(() => mixer.setGlobalMirror(true), /has been stopped/);
+  assert.throws(() => mixer.setSourceMirror(true), /has been stopped/);
 }
 
 async function testMirrorAutoModeAvoidsWorkerRenderer()
@@ -1435,7 +1438,7 @@ async function testMirrorAutoModeAvoidsWorkerRenderer()
     height     : 180,
     fps        : 15,
     renderMode : 'auto',
-    mirrorX    : true
+    sourceMirror : true
   });
 
   mixer.appendStream(createStream(), 0);
@@ -1460,7 +1463,7 @@ async function testEnableMirrorFallsBackFromWorkerToMainThread()
     height     : 180,
     fps        : 15,
     renderMode : 'auto',
-    mirrorX    : false
+    sourceMirror : false
   });
 
   mixer.appendStream(createStream(), 0);
@@ -1470,14 +1473,42 @@ async function testEnableMirrorFallsBackFromWorkerToMainThread()
   assert.strictEqual(MockWorker.instances.length, 1);
   assert.strictEqual(mixer.getRenderInfo().isWorker, true);
 
-  mixer.setGlobalMirror(true);
+  mixer.setSourceMirror(true);
 
   const info = mixer.getRenderInfo();
 
   assert.strictEqual(info.actualMode, 'main-2d');
   assert.strictEqual(info.isWorker, false);
-  assert.strictEqual(mixer.getGlobalMirror(), true);
+  assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: {} });
 
+  mixer.stop();
+}
+
+async function testClearSourceMirrorWithoutSlotClearsAllOverrides()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    sourceMirror : true
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.appendStream(createStream(), 1);
+  mixer.setSourceMirror(0, false);
+  mixer.setSourceMirror(1, true);
+
+  assert.deepStrictEqual(mixer.getSourceMirror(), {
+    global    : true,
+    overrides : { '0': false, '1': true }
+  });
+
+  mixer.clearSourceMirror();
+
+  assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: {} });
   mixer.stop();
 }
 
@@ -1495,8 +1526,8 @@ async function testOutputMirrorFlipsWholeComposedFrame()
   mixer.appendStream(createStream(), 0);
   mixer.getVideoStream();
 
-  mixer.setOutputMirror(true);
-  assert.strictEqual(mixer.getOutputMirror(), true);
+  mixer.setMirror(true);
+  assert.strictEqual(mixer.getMirror(), true);
 
   mixer._canvas._context2d.operations = [];
   mixer._drawVideosToCanvas(undefined, true);
@@ -1510,7 +1541,7 @@ async function testOutputMirrorFlipsWholeComposedFrame()
   assert.strictEqual(mirroredOps.length, 1);
 
   mixer.stop();
-  assert.throws(() => mixer.setOutputMirror(true), /has been stopped/);
+  assert.throws(() => mixer.setMirror(true), /has been stopped/);
 }
 
 async function testOutputMirrorCanDisableWatermarkMirroring()
@@ -1547,7 +1578,7 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
   ]);
 
   mixer.getVideoStream();
-  mixer.setOutputMirror(true);
+  mixer.setMirror(true);
   mixer.setMirrorWatermarksWithOutput(false);
   assert.strictEqual(mixer.getMirrorWatermarksWithOutput(), false);
 
@@ -1884,12 +1915,8 @@ async function testMixerConfigSourceOptions()
     { slot: 2, gain: 0.8 }
   );
   assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions({ slot: 1, mirrorX: true }, 0, 0.8),
-    { slot: 1, mirrorX: true }
-  );
-  assert.deepStrictEqual(
-    MixerConfig.normalizeSourceOptions({ slot: 1, mirror: false }, 0, 0.8),
-    { slot: 1, mirrorX: false }
+    MixerConfig.normalizeSourceOptions({ slot: 1, sourceMirror: true }, 0, 0.8),
+    { slot: 1, sourceMirror: true }
   );
 }
 
@@ -2135,6 +2162,7 @@ async function run()
     { name: 'testMirrorGlobalAndSlotControls', fn: testMirrorGlobalAndSlotControls },
     { name: 'testMirrorAutoModeAvoidsWorkerRenderer', fn: testMirrorAutoModeAvoidsWorkerRenderer },
     { name: 'testEnableMirrorFallsBackFromWorkerToMainThread', fn: testEnableMirrorFallsBackFromWorkerToMainThread },
+    { name: 'testClearSourceMirrorWithoutSlotClearsAllOverrides', fn: testClearSourceMirrorWithoutSlotClearsAllOverrides },
     { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },

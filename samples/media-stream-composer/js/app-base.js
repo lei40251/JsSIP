@@ -412,23 +412,13 @@ const app = {
 
   getCurrentSlotMirrorState()
   {
-    const globalMirror = this.getGlobalMirror();
-    const slotMirrors = this.getSlotMirrors();
+    const sourceMirrorConfig = this.getSourceMirror();
+    const slotState = this.getSourceMirror(this.currentSlot);
     const source = this.getSelectedSource();
-    const slotKey = String(this.currentSlot);
-    const hasOverride = Object.prototype.hasOwnProperty.call(slotMirrors, slotKey);
-    const slotOverride = hasOverride ? Boolean(slotMirrors[slotKey]) : null;
-    const sourceMirror = source && typeof source.mirrorX === 'boolean' ? source.mirrorX : null;
-    let effective = globalMirror;
-
-    if (slotOverride !== null)
-    {
-      effective = slotOverride;
-    }
-    else if (sourceMirror !== null)
-    {
-      effective = sourceMirror;
-    }
+    const globalMirror = Boolean(sourceMirrorConfig && sourceMirrorConfig.global);
+    const slotOverride = slotState ? slotState.override : null;
+    const sourceMirror = source && typeof source.sourceMirror === 'boolean' ? source.sourceMirror : null;
+    const effective = slotState ? slotState.effective : globalMirror;
 
     return {
       globalMirror,
@@ -441,7 +431,7 @@ const app = {
   refreshMirrorDemoUI()
   {
     const mirrorState = this.getCurrentSlotMirrorState();
-    const outputMirror = this.getOutputMirror();
+    const outputMirror = this.getMirror();
     const watermarkMirror = this.getOutputWatermarkMirror();
     const slotText = mirrorState.slotOverride === null ?
       '跟随全局' :
@@ -455,7 +445,7 @@ const app = {
 
     if (this.ui.btnGlobalMirror)
     {
-      this.ui.btnGlobalMirror.innerText = mirrorState.globalMirror ? '关闭全局镜像' : '开启全局镜像';
+      this.ui.btnGlobalMirror.innerText = mirrorState.globalMirror ? '关闭源默认镜像' : '开启源默认镜像';
     }
 
     if (this.ui.btnOutputMirror)
@@ -485,9 +475,10 @@ const app = {
   {
     if (!this.isRunning()) return;
 
-    const next = !this.getGlobalMirror();
+    const sourceMirror = this.getSourceMirror();
+    const next = !(sourceMirror && sourceMirror.global);
 
-    if (!this.setGlobalMirror(next)) return;
+    if (!this.setSourceMirror(next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
@@ -496,9 +487,9 @@ const app = {
   {
     if (!this.isRunning()) return;
 
-    const next = !this.getOutputMirror();
+    const next = !this.getMirror();
 
-    if (!this.setOutputMirror(next)) return;
+    if (!this.setMirror(next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
@@ -523,7 +514,7 @@ const app = {
       !mirrorState.effective :
       !mirrorState.slotOverride;
 
-    if (!this.setSlotMirror(this.currentSlot, next)) return;
+    if (!this.setSourceMirror(this.currentSlot, next)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
@@ -531,7 +522,7 @@ const app = {
   clearCurrentSlotMirror()
   {
     if (!this.isRunning()) return;
-    if (!this.clearSlotMirror(this.currentSlot)) return;
+    if (!this.clearSourceMirror(this.currentSlot)) return;
     this.refreshSelectedSlotSummary();
     this.updateStats();
   },
