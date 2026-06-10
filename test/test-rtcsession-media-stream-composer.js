@@ -648,6 +648,7 @@ async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
   assert.strictEqual(MockAiNSEngine.instances.length, 1);
   assert.strictEqual(MockAiNSEngine.instances[0].options.noiseReductionLevel, 92);
   assert.strictEqual(MockAiNSEngine.instances[0].processCalls[0], sourceStream);
+  assert.strictEqual(session.getAiNoiseSuppression(), MockAiNSEngine.instances[0]);
 }
 
 async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
@@ -715,14 +716,22 @@ async function testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine()
   };
 
   const stream = await session.switchDevice('audio', 'mic-2');
+  const engine = session.getAiNoiseSuppression();
 
   assert.strictEqual(stream, processedStream);
   assert.strictEqual(sender.replaced, replacementAudioTrack);
   assert.strictEqual(session._localMediaStream.getAudioTracks()[0], replacementAudioTrack);
-  assert.strictEqual(session._sessionAiNSEngine.replaceAudioTrackCalls.length, 1);
-  assert.strictEqual(session._sessionAiNSEngine.replaceAudioTrackCalls[0], sourceStream);
-  assert.strictEqual(session._sessionAiNSEngine.processCalls.length, 0);
+  assert.strictEqual(engine.replaceAudioTrackCalls.length, 1);
+  assert.strictEqual(engine.replaceAudioTrackCalls[0], sourceStream);
+  assert.strictEqual(engine.processCalls.length, 0);
   assert.strictEqual(session._aiNSInputStream, sourceStream);
+}
+
+function testGetAiNoiseSuppressionReturnsNullByDefault()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+
+  assert.strictEqual(session.getAiNoiseSuppression(), null);
 }
 
 async function testCloseDestroysSessionAiNoiseSuppression()
@@ -736,7 +745,7 @@ async function testCloseDestroysSessionAiNoiseSuppression()
   await Promise.resolve();
 
   assert.strictEqual(MockAiNSEngine.destroyCalls, 1);
-  assert.strictEqual(session._sessionAiNSEngine, null);
+  assert.strictEqual(session.getAiNoiseSuppression(), null);
 }
 
 async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
@@ -775,6 +784,7 @@ async function run()
     { name: 'testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression', fn: testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression },
     { name: 'testApplyAiNoiseSuppressionSkipsDisabledOptions', fn: testApplyAiNoiseSuppressionSkipsDisabledOptions },
     { name: 'testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine', fn: testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine },
+    { name: 'testGetAiNoiseSuppressionReturnsNullByDefault', fn: testGetAiNoiseSuppressionReturnsNullByDefault },
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];

@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026692255
+ * CRTC v2.0.0.20266101219
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -5808,7 +5808,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":93}],41:[function(require,module,exports){
+},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":94}],41:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -6057,11 +6057,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Socket":81,"./URI":87,"./Utils":88}],42:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Socket":82,"./URI":88,"./Utils":89}],42:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212184510 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212202438 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -6528,7 +6528,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":42,"./Dialog/RequestSender":44,"./Logger":49,"./SIPMessage":80,"./Transactions":84,"./Utils":88}],44:[function(require,module,exports){
+},{"./Constants":42,"./Dialog/RequestSender":44,"./Logger":49,"./SIPMessage":81,"./Transactions":85,"./Utils":89}],44:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -6623,7 +6623,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":42,"../RequestSender":79,"../Transactions":84}],45:[function(require,module,exports){
+},{"../Constants":42,"../RequestSender":80,"../Transactions":85}],45:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -6802,7 +6802,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":49,"./Utils":88}],46:[function(require,module,exports){
+},{"./Logger":49,"./Utils":89}],46:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -19254,7 +19254,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":69,"./URI":87}],48:[function(require,module,exports){
+},{"./NameAddrHeader":69,"./URI":88}],48:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -19271,7 +19271,7 @@ var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212184510');
+debug('version %s', '2.0.0.405212202438');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19313,10 +19313,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212184510';
+    return '2.0.0.405212202438';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],49:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":83,"./UA":87,"./URI":88,"./Utils":89,"./WebSocketInterface":90,"debug":95}],49:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -19418,7 +19418,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":94}],50:[function(require,module,exports){
+},{"debug":95}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26252,7 +26252,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":92}],69:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./URI":88,"./Utils":89,"events":93}],69:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -26341,7 +26341,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":47,"./URI":87}],70:[function(require,module,exports){
+},{"./Grammar":47,"./URI":88}],70:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -26547,7 +26547,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":92}],71:[function(require,module,exports){
+},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./Utils":89,"events":93}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -26801,7 +26801,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":47,"./Logger":49,"./SIPMessage":80}],72:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49,"./SIPMessage":81}],72:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -26831,10 +26831,9 @@ var RTCSession_DTMF = require('./RTCSession/DTMF');
 var RTCSession_Info = require('./RTCSession/Info');
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
+var MediaPipeline = require('./RTCSession/MediaPipeline');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
-var MediaStreamComposer = require('./MediaStreamComposer');
-var AiNSEngine = require('./AINoiseSuppression/index.js');
 var logger = new Logger('RTCSession');
 var BFCPUser = BFCPLib.User;
 var Primitive = BFCPLib.Primitive;
@@ -27066,6 +27065,9 @@ module.exports = class RTCSession extends EventEmitter {
 
     // Custom session empty object for high level use.
     this._data = {};
+    // 媒体采集、预处理、AI 降噪、合成等细节统一收敛到内部组件，
+    // RTCSession 主文件只保留会话编排和对外行为。
+    this._mediaPipeline = new MediaPipeline(this);
 
     // 监听浏览器切后台输出黑屏
     this._initVisibilityChangeHandler();
@@ -27118,27 +27120,7 @@ module.exports = class RTCSession extends EventEmitter {
     return this._status;
   }
   getMediaStreamComposer() {
-    return this._mediaStreamComposer;
-  }
-
-  /**
-   * 解析用户传入的 mediaStreamComposer 配置。
-   *
-   * 从会话选项中提取混流器配置。传 null/false 表示禁用混流。
-   *
-   * @param {Object} [options={}] - 会话选项
-   * @param {Object|null|boolean} [options.mediaStreamComposer] - 混流配置，
-   *   null/false 时禁用混流
-   * @returns {Object|null} 归一化后的混流配置或 null
-   */
-  _resolveMediaStreamComposerOptions(options = {}) {
-    if (!options || typeof options !== 'object') {
-      return null;
-    }
-    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
-      return options.mediaStreamComposer || null;
-    }
-    return null;
+    return this._mediaPipeline.getMediaStreamComposer();
   }
   isInProgress() {
     switch (this._status) {
@@ -27177,381 +27159,6 @@ module.exports = class RTCSession extends EventEmitter {
       video: this._videoMuted
     };
   }
-
-  /**
-   * 预处理媒体流（虚拟背景等）
-   */
-  async _processMediaStream(_stream) {
-    logger.debug('_processMediaStream()');
-    if (!this._mediaStreamProcessor) return _stream;
-    try {
-      var result = await this._mediaStreamProcessor(_stream);
-      return result instanceof MediaStream ? result : _stream;
-    } catch (err) {
-      logger.warn(`${this._id} mediaStreamProcessor error:`, err);
-      return _stream;
-    }
-  }
-
-  /**
-   * 归一化 AI 降噪配置选项。
-   *
-   * 支持多种传入格式：
-   *   - false/null/undefined → 不启用降噪，返回 null
-   *   - true → 启用降噪，使用默认配置，返回 {}
-   *   - 对象 → 使用用户提供的配置；若显式 enabled:false 则返回 null
-   *
-   * @param {boolean|Object|null} aiNSOptions - 原始 AI 降噪配置
-   * @returns {Object|null} 归一化后的配置快照，或 null（不启用）
-   */
-  _normalizeSessionAiNSOptions(aiNSOptions) {
-    if (aiNSOptions === undefined || aiNSOptions === null || aiNSOptions === false) {
-      return null;
-    }
-    if (aiNSOptions === true) {
-      return {};
-    }
-    if (typeof aiNSOptions === 'object' && aiNSOptions.enabled !== false) {
-      return Object.assign({}, aiNSOptions);
-    }
-    return null;
-  }
-
-  /**
-   * 停止会话级 AI 降噪。
-   *
-   * 关闭降噪引擎实例并释放其输入流。流程：
-   *   1. 保存引擎引用和输入流引用，然后置空成员变量
-   *   2. 若引擎可销毁，调用 destroy() 后清理输入流
-   *   3. 若引擎不可销毁（无 destroy 方法），直接清理输入流
-   *
-   * 销毁是异步的（WASM/Worklet 资源释放），但上层不等待结果，
-   * 通过安全关闭输入流避免设备采集流泄漏。
-   */
-  _stopSessionAiNoiseSuppression() {
-    var engine = this._sessionAiNSEngine;
-    var aiNSInputStream = this._aiNSInputStream;
-    this._sessionAiNSEngine = null;
-    this._aiNSInputStream = null;
-    if (!engine || typeof engine.destroy !== 'function') {
-      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
-      return;
-    }
-    Promise.resolve(engine.destroy()).then(() => {
-      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
-    }).catch(error => {
-      logger.warn(`${this._id} destroy session ai noise suppression failed:`, error);
-      this._safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
-    });
-  }
-
-  /**
-   * 对 SDK getusermedia 采集到的流应用 AI 降噪。
-   *
-   * 这是 AI 降噪的主入口，在上层调用链中的位置：
-   *   getUserMedia → _processMediaStream → 
-   *     _applyAiNoiseSuppressionOnSdkGumStream → _applyMediaStreamComposerOnSdkGumStream
-   *
-   * 流程：
-   *   1. 校验输入（非空、有音频轨）
-   *   2. 停止旧的降噪引擎实例（避免残留）
-   *   3. 创建新的 AiNSEngine，调用 process() 建立 AudioContext → Worklet → Destination 音频图
-   *   4. 保存输入流引用（后续用于 switchDevice 时 replaceAudioTrack）
-   *   5. 返回降噪后的 MediaStream
-   *
-   * 失败时：打 warn 日志，停止降噪引擎，返回原始流（降级直通），
-   * 确保通话不受降噪失败影响。
-   *
-   * @param {MediaStream} stream - 原始采集流
-   * @param {Object|boolean|null} aiNSOptions - AI 降噪配置
-   * @returns {Promise<MediaStream>} 降噪后的流（失败时返回原始流）
-   */
-  async _applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) {
-    logger.debug(`applyAiNoiseSuppressionOnSdkGumStream: ${JSON.stringify(aiNSOptions)}`);
-    if (!stream || !(stream instanceof MediaStream)) {
-      return stream;
-    }
-    var normalizedOptions = this._normalizeSessionAiNSOptions(aiNSOptions);
-    if (!normalizedOptions || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
-      return stream;
-    }
-    try {
-      this._stopSessionAiNoiseSuppression();
-      this._sessionAiNSEngine = new AiNSEngine(normalizedOptions);
-      var processedStream = await this._sessionAiNSEngine.process(stream);
-      this._aiNSInputStream = stream;
-      return processedStream instanceof MediaStream ? processedStream : stream;
-    } catch (error) {
-      logger.warn(`${this._id} apply ai noise suppression failed:`, error);
-      this._stopSessionAiNoiseSuppression();
-      return stream;
-    }
-  }
-
-  /**
-   * 替换会话 AI 降噪的输入音轨并重建处理链。
-   *
-   * 用于 switchDevice(audio) 场景：麦克风切换时，不需要销毁整个降噪引擎，
-   * 只需替换输入轨道。流程：
-   *   1. 若引擎尚未创建 → 委托 _applyAiNoiseSuppressionOnSdkGumStream 从头初始化
-   *   2. 若引擎已存在 → 调用 engine.replaceAudioTrack(stream)，保留已有 Worklet 图
-   *   3. 清理旧的输入流引用，更新为新流
-   *
-   * 失败时：停止降噪引擎，回退到重新初始化（_applyAiNoiseSuppressionOnSdkGumStream），
-   * 优先保障音频连通性。
-   *
-   * @param {MediaStream} stream - 新采集的音频/视频流
-   * @param {Object|boolean|null} [aiNSOptions] - AI 降噪配置，默认沿用会话配置
-   * @returns {Promise<MediaStream>} 替换音轨后的降噪流
-   */
-  async _replaceAudioTrackWithSessionAiNoiseSuppression(stream, aiNSOptions = this._sessionAiNSOptions) {
-    var normalizedOptions = this._normalizeSessionAiNSOptions(aiNSOptions);
-    if (!normalizedOptions || !stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
-      return stream;
-    }
-    try {
-      if (!this._sessionAiNSEngine) {
-        return await this._applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
-      }
-      var processedStream = await this._sessionAiNSEngine.replaceAudioTrack(stream);
-      this._safeCloseMediaStream(this._aiNSInputStream, 'close previous ai noise suppression input stream failed');
-      this._aiNSInputStream = stream;
-      return processedStream instanceof MediaStream ? processedStream : stream;
-    } catch (error) {
-      logger.warn(`${this._id} replace audio track with ai noise suppression failed:`, error);
-      this._stopSessionAiNoiseSuppression();
-      return await this._applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
-    }
-  }
-
-  /**
-   * 根据上层注入的处理器标记，微调 getUserMedia 约束。
-   * 例如 AI 降噪场景下，先关闭浏览器原生降噪，再交给自定义处理器。
-   */
-  /**
-   * 根据上层注入的处理器标记，微调 getUserMedia 约束。
-   *
-   * 当启用了 AI 降噪或自定义 mediaStreamProcessor 且该处理器声明了
-   * disableNativeNoiseSuppression 时，在 getUserMedia 的 audio 约束中
-   * 追加 noiseSuppression: false，避免浏览器内置降噪与自定义处理链叠加
-   * 导致双重处理（声音闷、延迟高）。
-   *
-   * @param {Object} constraints - 原始 getUserMedia 约束
-   * @param {Object|null} [aiNSOptions=null] - AI 降噪配置
-   * @returns {Object} 调整后的约束深拷贝
-   */
-  _getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = null) {
-    var nextConstraints = Utils.cloneObject(constraints);
-    if (!nextConstraints) return nextConstraints;
-    if ((this._normalizeSessionAiNSOptions(aiNSOptions) || this._mediaStreamProcessor && this._mediaStreamProcessor.disableNativeNoiseSuppression) && nextConstraints.audio !== false && nextConstraints.audio !== undefined) {
-      nextConstraints.audio = nextConstraints.audio === true ? {
-        noiseSuppression: false
-      } : Object.assign({}, nextConstraints.audio, {
-        noiseSuppression: false
-      });
-    }
-    logger.debug(`nextConstraints: ${JSON.stringify(nextConstraints)}`);
-    return nextConstraints;
-  }
-
-  /**
-   * 构建 MediaStreamComposer 的构造配置。
-   *
-   * 从会话配置和采集流的实际参数中推导输出尺寸和帧率：
-   *   1. 优先使用用户显式指定的 width/height/fps
-   *   2. 未指定时从视频轨的 getSettings() 中提取实际采集参数
-   *   3. 移动端设备自动交换宽高（横竖屏适配），可通过 forceNoSwapWH 禁用
-   *
-   * @param {MediaStream} stream - 送入 composer 的输入流，用于提取视频轨参数
-   * @param {Object} composerOptions - 用户配置的混流选项
-   * @returns {Object} 可直接传入 MediaStreamComposer 构造函数的配置对象
-   */
-  _buildMediaStreamComposerCtorOptions(stream, composerOptions) {
-    var options = Object.assign({}, composerOptions || {});
-    var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
-    var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
-    var widthFromSettings = Number(settings.width);
-    var heightFromSettings = Number(settings.height);
-    var widthFromOptions = Number(options.width);
-    var heightFromOptions = Number(options.height);
-    var frameRate = Number(settings.frameRate);
-    var ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-    var isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-    var forceNoSwapWH = Boolean(options.forceNoSwapWH);
-    delete options.forceNoSwapWH;
-    var normalizedWidth = Number.isFinite(widthFromOptions) && widthFromOptions > 0 ? widthFromOptions : widthFromSettings;
-    var normalizedHeight = Number.isFinite(heightFromOptions) && heightFromOptions > 0 ? heightFromOptions : heightFromSettings;
-    if (isMobileDevice && !forceNoSwapWH && Number.isFinite(normalizedWidth) && Number.isFinite(normalizedHeight) && normalizedWidth > 0 && normalizedHeight > 0) {
-      [normalizedWidth, normalizedHeight] = [normalizedHeight, normalizedWidth];
-    }
-    if (Number.isFinite(normalizedWidth) && normalizedWidth > 0) {
-      options.width = Math.floor(normalizedWidth);
-    }
-    if (Number.isFinite(normalizedHeight) && normalizedHeight > 0) {
-      options.height = Math.floor(normalizedHeight);
-    }
-    if (options.fps === undefined && Number.isFinite(frameRate) && frameRate > 0) {
-      options.fps = Math.floor(frameRate);
-    }
-    return options;
-  }
-
-  /**
-   * 停止会话级 MediaStreamComposer 实例。
-   *
-   * 在通话结束（close）、重新初始化混流或混流失败时调用。
-   * 清理步骤：
-   *   1. 保存 composer 输入流引用
-   *   2. 调用 composer.stop() → 停止渲染循环、关闭 AudioContext、停止 captureStream tracks
-   *   3. 安全关闭 composer 的原始输入流（避免设备采集流悬挂，占用摄像头/麦克风）
-   *   4. 置空 composer 和输入流引用
-   *
-   * 注意：composer.stop() 只释放 composer 内部资源，不会主动 stop 外部传入的源流。
-   * RTCSession 需要显式关闭这路输入流以确保设备资源彻底释放。
-   */
-  _stopSessionMediaStreamComposer() {
-    var composerInputStream = this._mediaStreamComposerInputStream;
-    if (!this._mediaStreamComposer) {
-      this._mediaStreamComposer = null;
-      // 即使 composer 实例已不在，也要尝试释放之前送入 composer 的原始输入流，
-      // 避免设备采集流悬挂，导致挂断后仍占用摄像头/麦克风。
-      this._safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
-      this._mediaStreamComposerInputStream = null;
-      return;
-    }
-    this._safeStopMediaStreamComposer(this._mediaStreamComposer, 'stop composer failed');
-    // MediaStreamComposer.stop() 只负责释放 composer 内部资源，不会主动 stop 外部传入的源流。
-    // RTCSession 在结束通话时需要显式释放这路输入流，避免设备无法彻底关闭。
-    this._safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
-    this._mediaStreamComposer = null;
-    // composer 已销毁，输入流引用必须同步释放，防止悬挂引用。
-    this._mediaStreamComposerInputStream = null;
-  }
-  _safeStopMediaStreamComposer(composer, message) {
-    if (!composer) {
-      return;
-    }
-    try {
-      if (typeof composer.stop === 'function') {
-        composer.stop();
-      }
-    } catch (error) {
-      logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
-    }
-  }
-  _safeCloseMediaStream(stream, message) {
-    if (!stream) {
-      return;
-    }
-    try {
-      Utils.closeMediaStream(stream);
-    } catch (error) {
-      logger.warn(`${this._id} ${message}: ${error && error.message ? error.message : error}`);
-    }
-  }
-
-  /**
-   * 对 SDK getusermedia 采集到的流应用混流合成（MediaStreamComposer）。
-   *
-   * 这是混流的主入口，在整个采集管线中的位置（最后一步）：
-   *   getUserMedia → _processMediaStream → 
-   *      _applyAiNoiseSuppressionOnSdkGumStream → _applyMediaStreamComposerOnSdkGumStream
-   *
-   * 即：原始采集 → 虚拟背景预处理 → AI 降噪 → 混流合成 → 送入 RTC 连接。
-   *
-   * 流程：
-   *   1. 校验输入（非空、有视频轨），无视频轨时不需要混流，原样返回
-   *   2. 停止旧的 composer 实例（避免残留）
-   *   3. 创建新 MediaStreamComposer，以当前流为输入源
-   *   4. 获取 composer 的 video 输出 → 替换视频轨
-   *   5. 保留原始音频轨，与合成视频轨合并为新的 mixedStream
-   *   6. 保存 composer 实例和输入流引用（供 switchDevice 使用）
-   *
-   * 混合流的组成：
-   *   - 视频轨：composer 合成输出（多路画面、布局、水印）
-   *   - 音频轨：原始采集的音频轨（不做混音，混音由 AudioComposer 独立管理）
-   *
-   * 失败时：打 warn 日志，停止 composer，返回原始流（降级直通）。
-   *
-   * @param {MediaStream} stream - 预处理后的采集流（已过虚拟背景 + AI 降噪）
-   * @param {Object|null} composerOptions - 混流配置
-   * @returns {Promise<MediaStream>} 混流合成后的流（失败时返回原始流）
-   */
-  async _applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) {
-    logger.debug(`applyMediaStreamComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
-    if (!stream || !composerOptions || !(stream instanceof MediaStream)) {
-      return stream;
-    }
-    if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
-      return stream;
-    }
-    var composerCtorOptions = this._buildMediaStreamComposerCtorOptions(stream, composerOptions);
-    var composer = null;
-    logger.debug(`composerCtorOptions: ${JSON.stringify(composerCtorOptions)}`);
-    try {
-      this._stopSessionMediaStreamComposer();
-      composer = new MediaStreamComposer([stream], composerCtorOptions);
-      var mixedVideoStream = await composer.getOutput({
-        type: 'video'
-      });
-      var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
-      if (!mixedVideoTrack) {
-        throw new Error('composer output has no video track');
-      }
-      var mixedStream = new MediaStream();
-      stream.getAudioTracks && stream.getAudioTracks().forEach(track => {
-        mixedStream.addTrack(track, mixedStream);
-      });
-      mixedVideoTrack.contentHint = 'detail';
-      mixedStream.addTrack(mixedVideoTrack, mixedStream);
-      this._mediaStreamComposer = composer;
-      // 记录本次送入 composer 的输入源，供 switchDevice(camera) 在 composer 场景下做“输入替换”。
-      this._mediaStreamComposerInputStream = stream;
-      return mixedStream;
-    } catch (error) {
-      logger.warn(`${this._id} apply composer failed:`, error);
-      this._safeStopMediaStreamComposer(composer, 'composer stop after apply failure failed');
-      this._mediaStreamComposer = null;
-      // 创建失败时清空输入流引用，避免后续分支判断使用到无效状态。
-      this._mediaStreamComposerInputStream = null;
-      return stream;
-    }
-  }
-
-  /**
-   * 完整的 SDK getusermedia 采集管线。
-   *
-   * 这是 RTCSession 内部统一的媒体采集入口，按顺序经过以下处理阶段：
-   *
-   *   ┌─────────────────────────────────────────────────────────────┐
-   *   │ 1. getUserMedia(constraints)                                │
-   *   │    └─ _getGumConstraintsWithProcessorFlags: 关闭浏览器自带降噪 │
-   *   │                                                             │
-   *   │ 2. _processMediaStream(stream)                              │
-   *   │    └─ 用户注入的 mediaStreamProcessor（如虚拟背景）             │
-   *   │                                                             │
-   *   │ 3. _applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) │
-   *   │    └─ AI 降噪：AudioContext → WorkletNode → Destination       │
-   *   │                                                             │
-   *   │ 4. _applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) │
-   *   │    └─ 混流合成：Canvas 渲染 → captureStream 输出               │
-   *   └─────────────────────────────────────────────────────────────┘
-   *
-   * 每一阶段失败都会保留前一阶段的输出作为降级，不会阻断通话建立。
-   *
-   * @param {Object} constraints - getUserMedia 媒体约束
-   * @param {Object|null} composerOptions - 混流配置
-   * @param {Object|boolean|null} [aiNSOptions] - AI 降噪配置（默认沿用会话级配置）
-   * @returns {Promise<MediaStream>} 经过完整管线处理后的 MediaStream
-   */
-  async _getUserMediaWithSessionPipeline(constraints, composerOptions, aiNSOptions = this._sessionAiNSOptions) {
-    // 统一在取流前应用处理器声明的约束修正，避免上层各处重复拼装 mediaConstraints。
-    var gumConstraints = this._getGumConstraintsWithProcessorFlags(constraints, aiNSOptions);
-    var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
-    var processedStream = await this._processMediaStream(stream);
-    var aiNoiseSuppressedStream = await this._applyAiNoiseSuppressionOnSdkGumStream(processedStream, aiNSOptions);
-    return await this._applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
-  }
   isOnHold() {
     return {
       local: this._localHold,
@@ -27570,12 +27177,12 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = options.rtcOfferConstraints || null;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
-    var composerOptions = this._resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
-    this._stopSessionAiNoiseSuppression();
+    this._mediaPipeline.stopSessionAiNoiseSuppression();
     this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
       audio: false,
       video: false
@@ -27737,7 +27344,9 @@ module.exports = class RTCSession extends EventEmitter {
         }
         logger.debug(`${this._id} currMediaConstraints: `, JSON.stringify(currMediaConstraints));
         if (currMediaConstraints.audio || currMediaConstraints.video) {
-          var tStream = await this._getUserMediaWithSessionPipeline(currMediaConstraints, composerOptions).catch(error => {
+          // 本地设备采集统一走媒体管线，确保虚拟背景、AI 降噪、
+          // MediaStreamComposer 的执行顺序在各入口保持一致。
+          var tStream = await this._mediaPipeline.getUserMediaWithSessionPipeline(currMediaConstraints, composerOptions).catch(error => {
             if (this._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
             }
@@ -27957,7 +27566,7 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
-    var composerOptions = this._resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
     this._syncMediaStreamComposerCompatAliases();
@@ -28116,7 +27725,7 @@ module.exports = class RTCSession extends EventEmitter {
         if (!mediaConstraints.video && mediaStream && mediaStream.getVideoTracks().length === 0) {
           this._localToAudio = true;
         }
-        var mStream = await this._getUserMediaWithSessionPipeline(mediaConstraints, composerOptions).catch(error => {
+        var mStream = await this._mediaPipeline.getUserMediaWithSessionPipeline(mediaConstraints, composerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -28277,7 +27886,7 @@ module.exports = class RTCSession extends EventEmitter {
       done = () => {};
     }
     if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
-      this._sessionMediaStreamComposerOptions = this._resolveMediaStreamComposerOptions(options);
+      this._sessionMediaStreamComposerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件
@@ -28340,7 +27949,7 @@ module.exports = class RTCSession extends EventEmitter {
         stream = videoStream;
         this._customMediaStream = true;
       } else {
-        stream = await this._getUserMediaWithSessionPipeline({
+        stream = await this._mediaPipeline.getUserMediaWithSessionPipeline({
           video: videoConstraints
         }, composerOptions).catch(error => {
           throw error;
@@ -28507,7 +28116,7 @@ module.exports = class RTCSession extends EventEmitter {
    *   switchDevice('audio'):
    *   ┌────────────────────────────────────────────────────────────┐
    *   │ 1. getUserMedia 获取新麦克风流                             │
-   *   │ 2. _replaceAudioTrackWithSessionAiNoiseSuppression(stream)  │
+   *   │ 2. _mediaPipeline.replaceAudioTrackWithSessionAiNoiseSuppression(stream) │
    *   │    └─ 引擎已存在 → replaceAudioTrack 替换输入音轨           │
    *   │    └─ 引擎不存在 → 降级为从头初始化                        │
    *   │ 3. 更新 localMediaStream 中的音轨                           │
@@ -28664,7 +28273,7 @@ module.exports = class RTCSession extends EventEmitter {
         // 这里显式不走 _getUserMediaWithSessionPipeline，避免默认路径隐式重建 composer。
         var getProcessedStream = async () => {
           return await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
-            return await this._processMediaStream(mediastream);
+            return await this._mediaPipeline.processMediaStream(mediastream);
           }).catch(error => {
             this._logEventError('error', 'getusermediafailed', error);
             this.emit('getusermediafailed', error);
@@ -28725,13 +28334,13 @@ module.exports = class RTCSession extends EventEmitter {
 
           // composer 分支关键点：先停“旧输入 videoTrack”，而不是 sender 上的 composer 输出轨。
           oldInputVideoTrack && oldInputVideoTrack.stop();
-          var _stream2 = normalizeStream(await getProcessedStream());
-          var newVideoTrack = _stream2.getVideoTracks && _stream2.getVideoTracks()[0];
+          var _stream = normalizeStream(await getProcessedStream());
+          var newVideoTrack = _stream.getVideoTracks && _stream.getVideoTracks()[0];
           if (!newVideoTrack) {
             throw new Error('switchDevice composer branch has no video track');
           }
           var newInputStream = new MediaStream();
-          _stream2.getAudioTracks && _stream2.getAudioTracks().forEach(track => {
+          _stream.getAudioTracks && _stream.getAudioTracks().forEach(track => {
             newInputStream.addTrack(track, newInputStream);
           });
           newInputStream.addTrack(newVideoTrack, newInputStream);
@@ -28789,13 +28398,14 @@ module.exports = class RTCSession extends EventEmitter {
         oldAiNSInputTrack && oldAiNSInputTrack.stop();
         this._localMediaStreamLocallyGenerated = true;
         _constraints.audio = audioConstraints;
-        return navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags(_constraints)).catch(error => {
+        return navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags(_constraints)).catch(error => {
           this._logEventError('error', 'getusermediafailed', error);
           this.emit('getusermediafailed', error);
           throw new Error('getUserMedia() failed');
         });
       }).then(async stream => {
-        stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
+        // 切换麦克风时优先复用现有 AI 降噪引擎，避免每次切设备都重建整条音频处理链。
+        stream = await this._mediaPipeline.replaceAudioTrackWithSessionAiNoiseSuppression(stream);
         try {
           this._localMediaStream.removeTrack(this._localMediaStream.getAudioTracks()[0]);
         } catch (error) {
@@ -29875,18 +29485,18 @@ module.exports = class RTCSession extends EventEmitter {
      * 释放媒体管线资源。
      *
      * 清理顺序（与初始化逆序）：
-     *   1. _stopSessionMediaStreamComposer()
+     *   1. _mediaPipeline.stopSessionMediaStreamComposer()
      *      └─ composer.stop() → 停止渲染循环、关闭 AudioContext、
      *         停止 captureStream tracks
-     *   2. _stopSessionAiNoiseSuppression()
+     *   2. _mediaPipeline.stopSessionAiNoiseSuppression()
      *      └─ engine.destroy() → 关闭 WorkletNode、释放 WASM 资源、
      *         关闭 AudioContext
      *   3. 置空配置引用
      *
      * 这两个 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
      */
-    this._stopSessionMediaStreamComposer();
-    this._stopSessionAiNoiseSuppression();
+    this._mediaPipeline.stopSessionMediaStreamComposer();
+    this._mediaPipeline.stopSessionAiNoiseSuppression();
     this._sessionMediaStreamComposerOptions = null;
     this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
@@ -30927,7 +30537,7 @@ module.exports = class RTCSession extends EventEmitter {
           Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS);
         }
         logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-        return this._getUserMediaWithSessionPipeline(videoConstraints, this._sessionMediaStreamComposerOptions).catch(error => {
+        return this._mediaPipeline.getUserMediaWithSessionPipeline(videoConstraints, this._sessionMediaStreamComposerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -31454,11 +31064,11 @@ module.exports = class RTCSession extends EventEmitter {
 
             // 兼容安卓微信Bug
             if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-              navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
+              navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags({
                 audio: this._inviteMediaConstraints.audio || true,
                 video: false
               })).then(async stream => {
-                stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
+                stream = await this._mediaPipeline.replaceAudioTrackWithSessionAiNoiseSuppression(stream);
                 var sender = this._connection.getSenders().find(s => {
                   return s.track.kind == 'audio';
                 });
@@ -31542,11 +31152,11 @@ module.exports = class RTCSession extends EventEmitter {
               // 兼容安卓微信Bug及iOS蓝牙问题
               var mics = await Utils.getMicrophones();
               if (this._replaceAudioTrack && navigator.userAgent.indexOf('WeChat') != -1) {
-                navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
+                navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags({
                   audio: this._inviteMediaConstraints.audio || true,
                   video: false
                 })).then(async stream => {
-                  stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
+                  stream = await this._mediaPipeline.replaceAudioTrackWithSessionAiNoiseSuppression(stream);
                   var sender = this._connection.getSenders().find(s => {
                     return s.track.kind == 'audio';
                   });
@@ -32535,11 +32145,11 @@ module.exports = class RTCSession extends EventEmitter {
    */
   _replaceAudioToMic() {
     // 获取麦克风流，成功后替换canvas视频，失败后重新获取麦克风媒体并替换
-    navigator.mediaDevices.getUserMedia(this._getGumConstraintsWithProcessorFlags({
+    navigator.mediaDevices.getUserMedia(this._mediaPipeline.getGumConstraintsWithProcessorFlags({
       audio: this._inviteMediaConstraints.audio || true,
       video: false
     })).then(async stream => {
-      stream = await this._replaceAudioTrackWithSessionAiNoiseSuppression(stream);
+      stream = await this._mediaPipeline.replaceAudioTrackWithSessionAiNoiseSuppression(stream);
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'audio') {
           // 保持媒体的muted状态
@@ -32606,7 +32216,8 @@ module.exports = class RTCSession extends EventEmitter {
    */
   _replaceCanvasToVideo() {
     // 获取摄像头流，成功后替换canvas视频，失败后重新获取摄像头媒体并替换
-    this._getUserMediaWithSessionPipeline({
+    // 摄像头恢复与普通取流保持同一条处理链，避免恢复后绕过虚拟背景/AI 降噪/合成配置。
+    this._mediaPipeline.getUserMediaWithSessionPipeline({
       audio: false,
       video: this._inviteMediaConstraints.video || true
     }, this._sessionMediaStreamComposerOptions).then(stream => {
@@ -33147,7 +32758,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./AINoiseSuppression/index.js":5,"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./MediaStreamComposer":67,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":93,"events":92,"sdp-transform":101}],74:[function(require,module,exports){
+},{"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/MediaPipeline":76,"./RTCSession/ReferNotifier":77,"./RTCSession/ReferSubscriber":78,"./RequestSender":80,"./SIPMessage":81,"./Timers":84,"./Transactions":85,"./URI":88,"./Utils":89,"buffer":94,"events":93,"sdp-transform":102}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33286,7 +32897,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":88,"events":92}],75:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":89,"events":93}],75:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33367,7 +32978,532 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Exceptions":46,"../Utils":88,"events":92}],76:[function(require,module,exports){
+},{"../Constants":42,"../Exceptions":46,"../Utils":89,"events":93}],76:[function(require,module,exports){
+"use strict";
+
+var Logger = require('../Logger');
+var Utils = require('../Utils');
+var logger = new Logger('RTCSession');
+
+/**
+ * 延迟获取依赖，避免在测试进程里过早缓存真实实现。
+ *
+ * gulp 会把多组测试放在同一个 Node 进程中串行执行，如果这里在模块顶层直接 require，
+ * 前面的测试一旦提前加载 RTCSession/MediaPipeline，后续测试再写 require.cache mock
+ * 就接管不到了，最终会出现“单测单跑通过、整套 gulp 失败”的问题。
+ */
+function getMediaStreamComposerCtor() {
+  return require('../MediaStreamComposer');
+}
+function getAiNSEngineCtor() {
+  return require('../AINoiseSuppression/index.js');
+}
+
+/**
+ * MediaPipeline — RTCSession 的媒体处理管线。
+ *
+ * ## 职责
+ *
+ * MediaPipeline 把会话中所有媒体加工步骤收敛到一个类里，按固定顺序编排：
+ *
+ * ```
+ * getUserMedia 原始流
+ *   → processMediaStream (外部注入预处理, 如虚拟背景)
+ *     → applyAiNoiseSuppressionOnSdkGumStream (AI 降噪)
+ *       → applyMediaStreamComposerOnSdkGumStream (视频合成/镜像等)
+ *         → 最终发送流
+ * ```
+ *
+ * 同时负责：
+ * - AI 降噪引擎（AiNSEngine）的创建、复用、销毁；
+ * - MediaStreamComposer 的创建、输入切换、销毁；
+ * - GUM 约束修正（关闭浏览器原生降噪，避免双重处理）；
+ * - 移动端宽高交换等平台适配。
+ *
+ * ## 设计原则
+ *
+ * 1. **只持有 session 引用，不复制状态。**
+ *    管线直接读写 `RTCSession` 实例上的 `_sessionAiNSEngine` / `_mediaStreamComposer`
+ *    等字段，避免单独设计状态同步层。
+ *
+ * 2. **任何加工失败都降级为透传原流。**
+ *    降噪崩溃、composer 异常都不应阻断通话建立——catch 后返回原 `MediaStream`。
+ *
+ * 3. **停旧再启新，防止资源泄漏。**
+ *    每次创建新引擎 / 新 composer 前都先调用对应的 `stop*` 方法清理旧实例。
+ *
+ * @class MediaPipeline
+ */
+module.exports = class MediaPipeline {
+  /**
+   * @param {Object} session — RTCSession 实例引用。
+   *        管线不复制 session 的任何字段，需要时直接读/写 `this._session.xxx`。
+   */
+  constructor(session) {
+    // 这里不复制 session 状态，只持有引用。
+    // 这样媒体管线能直接读写 RTCSession 当前会话态，同时避免再次设计状态同步层。
+    this._session = session;
+  }
+
+  /**
+   * 获取当前会话的 MediaStreamComposer 实例（可能为 null）。
+   * @returns {MediaStreamComposer|null}
+   */
+  getMediaStreamComposer() {
+    return this._session._mediaStreamComposer;
+  }
+
+  /**
+   * 从 RTCSession 的入参 `options` 中提取 `mediaStreamComposer` 配置。
+   *
+   * 这里只做字段提取，不做配置归一化或默认值合并，保持 RTCSession 现有入参语义不变。
+   *
+   * @param {Object} [options={}] — 会话创建/更新时传入的选项对象。
+   * @returns {Object|null} — 提取到的 composer 配置，或 null 表示不启用 composer。
+   */
+  resolveMediaStreamComposerOptions(options = {}) {
+    // 这里只负责从会话选项中提取 composer 配置，不做更激进的配置归一化，
+    // 保持 RTCSession 现有入参语义不变。
+    if (!options || typeof options !== 'object') {
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
+      return options.mediaStreamComposer || null;
+    }
+    return null;
+  }
+
+  /**
+   * 执行外部注入的媒体流预处理（如虚拟背景、美颜等）。
+   *
+   * `_mediaStreamProcessor` 是外部通过 `RTCSession` 注入的处理函数，
+   * 签名为 `(MediaStream) => Promise<MediaStream>`。
+   *
+   * **失败降级策略：** 处理器抛异常时日志告警并返回原流，不阻断通话建立。
+   *
+   * @param {MediaStream} stream — 原始 getUserMedia 流。
+   * @returns {Promise<MediaStream>} — 处理后的流（或原流，如果无处理器/处理失败）。
+   */
+  async processMediaStream(stream) {
+    var session = this._session;
+    logger.debug('_processMediaStream()');
+    // mediaStreamProcessor 是外部注入能力，可能是虚拟背景或其他视频预处理。
+    // 失败时必须降级回原流，不能因为处理器异常影响通话建立。
+    if (!session._mediaStreamProcessor) {
+      return stream;
+    }
+    try {
+      var processedStream = await session._mediaStreamProcessor(stream);
+      return processedStream instanceof MediaStream ? processedStream : stream;
+    } catch (error) {
+      logger.warn(`${session._id} mediaStreamProcessor error:`, error);
+      return stream;
+    }
+  }
+
+  /**
+   * 规范化 AI 降噪选项，统一各种入参形式为 `Object | null`。
+   *
+   * | 入参                      | 返回值    | 含义                   |
+   * |---------------------------|-----------|------------------------|
+   * | `undefined` / `null` / `false` | `null`    | 不启用 AI 降噪         |
+   * | `true`                    | `{}`      | 启用，使用默认配置     |
+   * | `{ enabled: false }`      | `null`    | 显式禁用               |
+   * | `{ ... }` (其他对象)       | 浅拷贝副本 | 启用，使用传入配置     |
+   *
+   * @param {boolean|Object|undefined|null} aiNSOptions — AI 降噪原始选项。
+   * @returns {Object|null} — 规范化后的选项对象，或 null 表示不启用。
+   */
+  normalizeSessionAiNSOptions(aiNSOptions) {
+    if (aiNSOptions === undefined || aiNSOptions === null || aiNSOptions === false) {
+      return null;
+    }
+    if (aiNSOptions === true) {
+      return {};
+    }
+    if (typeof aiNSOptions === 'object' && aiNSOptions.enabled !== false) {
+      return Object.assign({}, aiNSOptions);
+    }
+    return null;
+  }
+
+  /**
+   * 停止当前会话的 AI 降噪引擎并释放相关资源。
+   *
+   * 执行顺序：
+   * 1. 立即置空 session 上的引擎/输入流引用（上层可立即进入"已停止"状态）；
+   * 2. 异步调用 `engine.destroy()` 释放底层 WASM/Worker 资源；
+   * 3. 关闭输入流的所有 track。
+   *
+   * **注意：** 先断引用再异步销毁，避免并发路径（如快速切设备）读到旧引擎实例
+   * 并重复操作。
+   */
+  stopSessionAiNoiseSuppression() {
+    var session = this._session;
+    var engine = session._sessionAiNSEngine;
+    var aiNSInputStream = session._aiNSInputStream;
+
+    // 先断开 session 上的引用，再异步销毁底层资源。
+    // 这样上层可以立即进入"已停止"状态，避免并发路径重复操作旧实例。
+    session._sessionAiNSEngine = null;
+    session._aiNSInputStream = null;
+    if (!engine || typeof engine.destroy !== 'function') {
+      this.safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+      return;
+    }
+    Promise.resolve(engine.destroy()).then(() => {
+      this.safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+    }).catch(error => {
+      logger.warn(`${session._id} destroy session ai noise suppression failed:`, error);
+      this.safeCloseMediaStream(aiNSInputStream, 'close ai noise suppression input stream failed');
+    });
+  }
+
+  /**
+   * 对 getUserMedia 原始流执行 AI 降噪处理（完整初始化路径）。
+   *
+   * 内部流程：
+   * 1. 规范化选项 → 无音轨或不启用则直接透传；
+   * 2. 停止旧引擎（如果存在）；
+   * 3. 创建新的 `AiNSEngine` 实例；
+   * 4. 调用 `engine.process(stream)` 得到降噪后流；
+   * 5. 记录输入流引用（用于后续 replaceAudioTrack 场景）。
+   *
+   * **失败降级：** catch 后停止引擎、返回原流。
+   *
+   * @param {MediaStream} stream — 待降噪的媒体流。
+   * @param {boolean|Object} aiNSOptions — AI 降噪配置。
+   * @returns {Promise<MediaStream>} — 降噪后的流（或原流，如果无音轨/处理失败）。
+   */
+  async applyAiNoiseSuppressionOnSdkGumStream(stream, aiNSOptions) {
+    var session = this._session;
+    logger.debug(`applyAiNoiseSuppressionOnSdkGumStream: ${JSON.stringify(aiNSOptions)}`);
+    if (!stream || !(stream instanceof MediaStream)) {
+      return stream;
+    }
+    var normalizedOptions = this.normalizeSessionAiNSOptions(aiNSOptions);
+
+    // 没有音轨时不进入 AI 降噪，直接透传。
+    if (!normalizedOptions || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
+      return stream;
+    }
+    try {
+      this.stopSessionAiNoiseSuppression();
+      var AiNSEngine = getAiNSEngineCtor();
+      session._sessionAiNSEngine = new AiNSEngine(normalizedOptions);
+      var processedStream = await session._sessionAiNSEngine.process(stream);
+      session._aiNSInputStream = stream;
+      return processedStream instanceof MediaStream ? processedStream : stream;
+    } catch (error) {
+      logger.warn(`${session._id} apply ai noise suppression failed:`, error);
+      this.stopSessionAiNoiseSuppression();
+      return stream;
+    }
+  }
+
+  /**
+   * 在已存在 AI 降噪引擎的情况下替换输入音轨（轻量路径）。
+   *
+   * 与 {@link applyAiNoiseSuppressionOnSdkGumStream} 的区别：
+   * - 完整路径：新建引擎 → `engine.process(stream)`；
+   * - 轻量路径：复用现有引擎 → `engine.replaceAudioTrack(stream)`，
+   *   避免重新初始化 WASM 的开销（典型场景：通话中切换麦克风）。
+   *
+   * **降级链：**
+   * - 引擎不存在 → 退化为完整初始化路径；
+   * - replaceAudioTrack 失败 → 停止旧引擎 → 退化为完整初始化路径。
+   *
+   * @param {MediaStream} stream — 新音轨所在的媒体流。
+   * @param {boolean|Object} [aiNSOptions=this._session._sessionAiNSOptions] — AI 降噪配置，
+   *        默认使用会话当前配置。
+   * @returns {Promise<MediaStream>} — 降噪后的流。
+   */
+  async replaceAudioTrackWithSessionAiNoiseSuppression(stream, aiNSOptions = this._session._sessionAiNSOptions) {
+    var session = this._session;
+    var normalizedOptions = this.normalizeSessionAiNSOptions(aiNSOptions);
+    if (!normalizedOptions || !stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
+      return stream;
+    }
+    try {
+      if (!session._sessionAiNSEngine) {
+        // 还没有引擎时，退化为完整初始化路径，保证行为一致。
+        return await this.applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
+      }
+      var processedStream = await session._sessionAiNSEngine.replaceAudioTrack(stream);
+      this.safeCloseMediaStream(session._aiNSInputStream, 'close previous ai noise suppression input stream failed');
+      session._aiNSInputStream = stream;
+      return processedStream instanceof MediaStream ? processedStream : stream;
+    } catch (error) {
+      logger.warn(`${session._id} replace audio track with ai noise suppression failed:`, error);
+      this.stopSessionAiNoiseSuppression();
+      return await this.applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
+    }
+  }
+
+  /**
+   * 修正 getUserMedia 约束，关闭浏览器原生降噪以避免双重处理。
+   *
+   * 当启用了自定义处理链路（AI 降噪 或 外部 mediaStreamProcessor 且要求关闭原生降噪）时，
+   * 显式设置 `noiseSuppression: false`，避免浏览器原生降噪 + 自定义降噪同时生效
+   * 导致声音发闷或延迟增大。
+   *
+   * **注意：** 仅当 `constraints.audio !== false` 且 `!== undefined` 时才修改 audio 约束，
+   * 纯视频请求不受影响。
+   *
+   * @param {Object|boolean} constraints — 原始 getUserMedia 约束。
+   * @param {boolean|Object|null} [aiNSOptions=null] — AI 降噪选项。
+   * @returns {Object|boolean} — 修正后的约束（新对象，不修改原对象）。
+   */
+  getGumConstraintsWithProcessorFlags(constraints, aiNSOptions = null) {
+    var session = this._session;
+    var nextConstraints = Utils.cloneObject(constraints);
+    if (!nextConstraints) {
+      return nextConstraints;
+    }
+    if ((this.normalizeSessionAiNSOptions(aiNSOptions) || session._mediaStreamProcessor && session._mediaStreamProcessor.disableNativeNoiseSuppression) && nextConstraints.audio !== false && nextConstraints.audio !== undefined) {
+      // 自定义处理链接管降噪时，显式关闭浏览器原生 noiseSuppression，
+      // 避免双重处理导致声音发闷或延迟增大。
+      nextConstraints.audio = nextConstraints.audio === true ? {
+        noiseSuppression: false
+      } : Object.assign({}, nextConstraints.audio, {
+        noiseSuppression: false
+      });
+    }
+    logger.debug(`nextConstraints: ${JSON.stringify(nextConstraints)}`);
+    return nextConstraints;
+  }
+
+  /**
+   * 构建 MediaStreamComposer 构造选项，从视频轨设置中推导宽高/帧率。
+   *
+   * 推导优先级：
+   * 1. 用户显式传入的 `width` / `height`（`composerOptions`）；
+   * 2. 视频轨 `getSettings()` 返回的实际分辨率；
+   * 3. `fps` 同理：用户传入 > 视频轨 frameRate。
+   *
+   * ## 移动端宽高交换
+   *
+   * 移动端（Android/iPhone/iPad）默认交换宽高，原因：
+   * - 移动端前置摄像头通常以竖屏分辨率上报（如 480×640），
+   *   但 composer 内部按横屏坐标系（width=水平, height=垂直）处理；
+   * - 交换后保证输出画面方向正确。
+   *
+   * 可通过设置 `forceNoSwapWH: true` 禁用此行为（非移动端或特殊场景）。
+   *
+   * **注意：** `forceNoSwapWH` 仅用于推导，不会下传到 composer 构造参数中。
+   *
+   * @param {MediaStream} stream — 源媒体流（用于提取视频轨设置）。
+   * @param {Object} [composerOptions={}] — 用户传入的 composer 配置。
+   * @param {number} [composerOptions.width] — 期望输出宽度。
+   * @param {number} [composerOptions.height] — 期望输出高度。
+   * @param {number} [composerOptions.fps] — 期望输出帧率。
+   * @param {boolean} [composerOptions.forceNoSwapWH] — 是否禁用移动端宽高交换。
+   * @returns {Object} — MediaStreamComposer 的构造选项。
+   */
+  buildMediaStreamComposerCtorOptions(stream, composerOptions) {
+    var options = Object.assign({}, composerOptions || {});
+    var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+    var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
+    var widthFromSettings = Number(settings.width);
+    var heightFromSettings = Number(settings.height);
+    var widthFromOptions = Number(options.width);
+    var heightFromOptions = Number(options.height);
+    var frameRate = Number(settings.frameRate);
+    var userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    var isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+    var forceNoSwapWH = Boolean(options.forceNoSwapWH);
+
+    // forceNoSwapWH 只作为 RTCSession 侧推导参数使用，不传给 composer 本身。
+    delete options.forceNoSwapWH;
+    var normalizedWidth = Number.isFinite(widthFromOptions) && widthFromOptions > 0 ? widthFromOptions : widthFromSettings;
+    var normalizedHeight = Number.isFinite(heightFromOptions) && heightFromOptions > 0 ? heightFromOptions : heightFromSettings;
+    if (isMobileDevice && !forceNoSwapWH && Number.isFinite(normalizedWidth) && Number.isFinite(normalizedHeight) && normalizedWidth > 0 && normalizedHeight > 0) {
+      [normalizedWidth, normalizedHeight] = [normalizedHeight, normalizedWidth];
+    }
+    if (Number.isFinite(normalizedWidth) && normalizedWidth > 0) {
+      options.width = Math.floor(normalizedWidth);
+    }
+    if (Number.isFinite(normalizedHeight) && normalizedHeight > 0) {
+      options.height = Math.floor(normalizedHeight);
+    }
+    if (options.fps === undefined && Number.isFinite(frameRate) && frameRate > 0) {
+      options.fps = Math.floor(frameRate);
+    }
+    return options;
+  }
+
+  /**
+   * 停止当前会话的 MediaStreamComposer 并释放相关资源。
+   *
+   * 执行顺序：
+   * 1. 调用 `composer.stop()` 释放内部渲染资源（Canvas/WebGL 上下文等）；
+   * 2. 关闭 composer 输入流的所有 track；
+   * 3. 置空 session 上的 composer/inputStream 引用。
+   *
+   * **注意：** `composer.stop()` 只释放内部资源，外部输入流仍需显式关闭。
+   */
+  stopSessionMediaStreamComposer() {
+    var session = this._session;
+    var composerInputStream = session._mediaStreamComposerInputStream;
+    if (!session._mediaStreamComposer) {
+      session._mediaStreamComposer = null;
+      this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+      session._mediaStreamComposerInputStream = null;
+      return;
+    }
+
+    // composer.stop() 只释放内部渲染资源，外部输入流仍需 RTCSession 显式关闭。
+    this.safeStopMediaStreamComposer(session._mediaStreamComposer, 'stop composer failed');
+    this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+    session._mediaStreamComposer = null;
+    session._mediaStreamComposerInputStream = null;
+  }
+
+  /**
+   * 安全停止 MediaStreamComposer（静默吞掉异常）。
+   *
+   * @param {MediaStreamComposer|null} composer — composer 实例。
+   * @param {string} message — 失败时的日志前缀。
+   */
+  safeStopMediaStreamComposer(composer, message) {
+    var session = this._session;
+    if (!composer) {
+      return;
+    }
+    try {
+      if (typeof composer.stop === 'function') {
+        composer.stop();
+      }
+    } catch (error) {
+      logger.warn(`${session._id} ${message}: ${error && error.message ? error.message : error}`);
+    }
+  }
+
+  /**
+   * 安全关闭 MediaStream（停止所有 track 并释放）。
+   *
+   * @param {MediaStream|null} stream — 待关闭的媒体流。
+   * @param {string} message — 失败时的日志前缀。
+   */
+  safeCloseMediaStream(stream, message) {
+    var session = this._session;
+    if (!stream) {
+      return;
+    }
+    try {
+      Utils.closeMediaStream(stream);
+    } catch (error) {
+      logger.warn(`${session._id} ${message}: ${error && error.message ? error.message : error}`);
+    }
+  }
+
+  /**
+   * 对 getUserMedia 原始流执行 MediaStreamComposer 视频合成。
+   *
+   * 内部流程：
+   * 1. 调用 {@link buildMediaStreamComposerCtorOptions} 推导构造参数；
+   * 2. 停止旧 composer（如果存在）；
+   * 3. 创建新的 `MediaStreamComposer` 实例；
+   * 4. 获取合成后的视频轨；
+   * 5. **仅替换视频轨**，保留原始音轨不变——音频混音职责不属于 MediaStreamComposer。
+   *
+   * **失败降级：** catch 后清理 composer、返回原流。
+   *
+   * @param {MediaStream} stream — 源媒体流。
+   * @param {Object} composerOptions — composer 配置。
+   * @returns {Promise<MediaStream>} — 合成后的流（视频轨替换为 composer 输出 + 原始音轨），
+   *          或原流（如果无视频轨/处理失败）。
+   */
+  async applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) {
+    var session = this._session;
+    logger.debug(`applyMediaStreamComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
+    if (!stream || !composerOptions || !(stream instanceof MediaStream)) {
+      return stream;
+    }
+    if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
+      return stream;
+    }
+    var composerCtorOptions = this.buildMediaStreamComposerCtorOptions(stream, composerOptions);
+    var composer = null;
+    logger.debug(`composerCtorOptions: ${JSON.stringify(composerCtorOptions)}`);
+    try {
+      this.stopSessionMediaStreamComposer();
+      var MediaStreamComposer = getMediaStreamComposerCtor();
+      composer = new MediaStreamComposer([stream], composerCtorOptions);
+      var mixedVideoStream = await composer.getOutput({
+        type: 'video'
+      });
+      var mixedVideoTrack = mixedVideoStream && mixedVideoStream.getVideoTracks ? mixedVideoStream.getVideoTracks()[0] : null;
+      if (!mixedVideoTrack) {
+        throw new Error('composer output has no video track');
+      }
+      var mixedStream = new MediaStream();
+
+      // 保留原始音轨，只替换视频轨为 composer 输出轨。
+      // 这样不会把音频混音职责错误地耦合到 MediaStreamComposer。
+      stream.getAudioTracks && stream.getAudioTracks().forEach(track => {
+        mixedStream.addTrack(track, mixedStream);
+      });
+      mixedVideoTrack.contentHint = 'detail';
+      mixedStream.addTrack(mixedVideoTrack, mixedStream);
+      session._mediaStreamComposer = composer;
+      session._mediaStreamComposerInputStream = stream;
+      return mixedStream;
+    } catch (error) {
+      logger.warn(`${session._id} apply composer failed:`, error);
+      this.safeStopMediaStreamComposer(composer, 'composer stop after apply failure failed');
+      session._mediaStreamComposer = null;
+      session._mediaStreamComposerInputStream = null;
+      return stream;
+    }
+  }
+
+  /**
+   * 媒体管线统一入口：按固定顺序执行完整的媒体处理链路。
+   *
+   * ## 处理顺序
+   *
+   * ```
+   * ┌─────────────────────────────────────────────────────────────┐
+   * │ 1. getGumConstraintsWithProcessorFlags(constraints, aiNS)    │
+   * │    └─ 修正 GUM 约束（关闭浏览器原生降噪避免双重处理）       │
+   * │                                                             │
+   * │ 2. navigator.mediaDevices.getUserMedia(gumConstraints)       │
+   * │    └─ 获取原始媒体流                                        │
+   * │                                                             │
+   * │ 3. processMediaStream(stream)                               │
+   * │    └─ 外部注入预处理（虚拟背景/美颜等）                     │
+   * │                                                             │
+   * │ 4. applyAiNoiseSuppressionOnSdkGumStream(stream, aiNS)       │
+   * │    └─ AI 降噪处理                                           │
+   * │                                                             │
+   * │ 5. applyMediaStreamComposerOnSdkGumStream(stream, composer)  │
+   * │    └─ 视频合成（镜像/画中画/虚拟背景等）                    │
+   * └─────────────────────────────────────────────────────────────┘
+   * ```
+   *
+   * 每一步失败都降级透传原流，不会阻断整体管线。
+   *
+   * @param {Object|boolean} constraints — getUserMedia 约束。
+   * @param {Object} composerOptions — MediaStreamComposer 配置。
+   * @param {boolean|Object} [aiNSOptions=this._session._sessionAiNSOptions] — AI 降噪配置，
+   *        默认使用会话当前配置。
+   * @returns {Promise<MediaStream>} — 经过完整管线处理的最终媒体流。
+   */
+  async getUserMediaWithSessionPipeline(constraints, composerOptions, aiNSOptions = this._session._sessionAiNSOptions) {
+    // 统一入口顺序：
+    // 1. 修正 GUM 约束
+    // 2. 执行外部注入预处理
+    // 3. 执行 AI 降噪
+    // 4. 执行 MediaStreamComposer 合成
+    var gumConstraints = this.getGumConstraintsWithProcessorFlags(constraints, aiNSOptions);
+    var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
+    var processedStream = await this.processMediaStream(stream);
+    var aiNoiseSuppressedStream = await this.applyAiNoiseSuppressionOnSdkGumStream(processedStream, aiNSOptions);
+    return await this.applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
+  }
+};
+},{"../AINoiseSuppression/index.js":5,"../Logger":49,"../MediaStreamComposer":67,"../Utils":89}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -33414,7 +33550,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":42,"../Logger":49}],77:[function(require,module,exports){
+},{"../Constants":42,"../Logger":49}],78:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33538,7 +33674,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":88,"events":92}],78:[function(require,module,exports){
+},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":89,"events":93}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -33836,7 +33972,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":42,"./Logger":49,"./RequestSender":79,"./SIPMessage":80,"./Utils":88}],79:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./Utils":89}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -33975,7 +34111,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":42,"./DigestAuthentication":45,"./Logger":49,"./Transactions":84}],80:[function(require,module,exports){
+},{"./Constants":42,"./DigestAuthentication":45,"./Logger":49,"./Transactions":85}],81:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -34547,7 +34683,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":88,"sdp-transform":101}],81:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":89,"sdp-transform":102}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34615,7 +34751,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":47,"./Logger":49,"./Utils":88}],82:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49,"./Utils":89}],83:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -35021,7 +35157,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":42,"./Logger":49,"./Utils":88,"events":92}],83:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./Utils":89,"events":93}],84:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -35042,7 +35178,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35632,7 +35768,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Timers":83,"events":92}],85:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":81,"./Timers":84,"events":93}],86:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -36005,7 +36141,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":42,"./Logger":49,"./Socket":81,"./Utils":88}],86:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./Socket":82,"./Utils":89}],87:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -37065,7 +37201,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":68,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":90,"events":92,"jsencrypt":97}],87:[function(require,module,exports){
+},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":68,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":79,"./SIPMessage":81,"./Transactions":85,"./Transport":86,"./URI":88,"./Utils":89,"./sanityCheck":91,"events":93,"jsencrypt":98}],88:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -37237,7 +37373,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":42,"./Grammar":47,"./Utils":88}],88:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./Utils":89}],89:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -39103,7 +39239,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":42,"./Grammar":47,"./URI":87}],89:[function(require,module,exports){
+},{"./Constants":42,"./Grammar":47,"./URI":88}],90:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39222,7 +39358,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":47,"./Logger":49}],90:[function(require,module,exports){
+},{"./Grammar":47,"./Logger":49}],91:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39415,7 +39551,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":42,"./Logger":49,"./SIPMessage":80,"./Utils":88}],91:[function(require,module,exports){
+},{"./Constants":42,"./Logger":49,"./SIPMessage":81,"./Utils":89}],92:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -39567,7 +39703,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -40092,7 +40228,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -41873,7 +42009,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":91,"buffer":93,"ieee754":96}],94:[function(require,module,exports){
+},{"base64-js":92,"buffer":94,"ieee754":97}],95:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -42149,7 +42285,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":95,"_process":99}],95:[function(require,module,exports){
+},{"./common":96,"_process":100}],96:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -42443,7 +42579,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":98}],96:[function(require,module,exports){
+},{"ms":99}],97:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -42530,7 +42666,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -47921,7 +48057,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -48085,7 +48221,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],99:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -48271,7 +48407,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -48767,7 +48903,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -48782,7 +48918,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":100,"./parser":102,"./writer":103}],102:[function(require,module,exports){
+},{"./grammar":101,"./parser":103,"./writer":104}],103:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -48908,7 +49044,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":100}],103:[function(require,module,exports){
+},{"./grammar":101}],104:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -49024,5 +49160,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":100}]},{},[48])(48)
+},{"./grammar":101}]},{},[48])(48)
 });

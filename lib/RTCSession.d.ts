@@ -314,6 +314,8 @@ export class RTCSession extends EventEmitter {
 
   getMediaStreamComposer(): any | null;
 
+  getAiNoiseSuppression(): any | null;
+
   isInProgress(): boolean;
 
   isEstablished(): boolean;

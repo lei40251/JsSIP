@@ -115,6 +115,25 @@ function getAiNsMonitorAudio()
   return document.querySelector('#aiNoiseMonitorAudio');
 }
 
+function applyAiNsLevelToCurrentCall(level)
+{
+  if (aiNsType !== 'AiNS' || !rtcSession || typeof rtcSession.getAiNoiseSuppression !== 'function')
+  {
+    return false;
+  }
+
+  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+
+  if (!aiNsEngine || typeof aiNsEngine.setSuppressionLevel !== 'function')
+  {
+    return false;
+  }
+
+  aiNsEngine.setSuppressionLevel(level);
+
+  return true;
+}
+
 // 本地验证链路与正式通话链路分开管理，避免相互影响。
 async function stopAiNsMonitor()
 {
@@ -2896,11 +2915,20 @@ document.querySelector('#aiNoiseSuppression').addEventListener('change', functio
 
 document.querySelector('#aiNoiseReductionLevel').addEventListener('change', function()
 {
-  this.value = normalizeAiNsReductionLevel(this.value);
+  const nextLevel = normalizeAiNsReductionLevel(this.value);
+
+  this.value = nextLevel;
 
   if (aiNsType === 'AiNS')
   {
-    setStatus(`AI 降噪强度已设为 ${this.value}，将在下一次呼叫/接听时生效`);
+    if (applyAiNsLevelToCurrentCall(nextLevel))
+    {
+      setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
+    }
+    else
+    {
+      setStatus(`AI 降噪强度已设为 ${nextLevel}，将在下一次呼叫/接听时生效`);
+    }
   }
 
   applyAiNsMonitorState(false);
