@@ -2049,11 +2049,6 @@ function buildCallMediaStreamComposerOptions(options = {})
     ];
   }
 
-  if (outputMirror || aiVirtualBackground)
-  {
-    composerOptions.renderMode = 'main-2d';
-  }
-
   if (!includeDisabledState && !outputMirror && !watermarks.length && !aiVirtualBackground)
   {
     return null;
@@ -3054,6 +3049,8 @@ function buildSelectedAiVirtualBackgroundOptions()
 
   const aiVirtualBackground = {
     enabled      : true,
+    startupDelayMs : 0,
+    maxRuntimeFps  : Math.min(Number(videoConstraints.frameRate) || 15, 15),
     assetConfig  : Object.assign({}, AI_VB_ASSET_CONFIG),
     segmentation : {
       delegate  : 'GPU',
@@ -3061,8 +3058,8 @@ function buildSelectedAiVirtualBackgroundOptions()
     },
     video : {
       height          : videoConstraints.height,
-      processingScale : 0.35,
-      targetFps       : Math.min(Number(videoConstraints.frameRate) || 15, 12),
+      processingScale : 0.5,
+      targetFps       : Math.min(Number(videoConstraints.frameRate) || 15, 15),
       width           : videoConstraints.width
     }
   }; 

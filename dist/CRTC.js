@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026610225
+ * CRTC v2.0.0.2026610232
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4162,7 +4162,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212204410 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212204604 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17371,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212204410');
+debug('version %s', '2.0.0.405212204604');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17411,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212204410';
+    return '2.0.0.405212204604';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -20650,6 +20650,7 @@ class MediaStreamComposer {
       logger: logger
     });
     this._config.aiVirtualBackgroundManager = this._sourceAiVBManager;
+    this._config.hasSourceAiVirtualBackground = false;
     this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX || this._config.outputMirrorX);
     this._slotMirrorXOverrides = Object.create(null);
     this._domAdapter = new ComposerDomAdapter({
@@ -20894,10 +20895,13 @@ class MediaStreamComposer {
     return false;
   }
   _refreshRendererPolicyForEffects() {
+    var hasSourceAiVirtualBackground = this._hasSourceAiVirtualBackgroundEnabled();
     var shouldForceMain2D = this._requiresMain2DRenderer();
-    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled() || this._hasSourceAiVirtualBackgroundEnabled() || shouldForceMain2D;
+    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled() || shouldForceMain2D;
     var previousPolicy = this._config.forceMainThreadRenderer;
     var previousMain2DPolicy = this._config.forceMain2DRenderer;
+    var previousAiVBPolicy = this._config.hasSourceAiVirtualBackground;
+    this._config.hasSourceAiVirtualBackground = hasSourceAiVirtualBackground;
     this._config.forceMainThreadRenderer = shouldForceMainThread;
     this._config.forceMain2DRenderer = shouldForceMain2D;
     if (previousPolicy !== shouldForceMainThread) {
@@ -20906,10 +20910,20 @@ class MediaStreamComposer {
     if (previousMain2DPolicy !== shouldForceMain2D) {
       logger.debug(`Effect renderer policy updated: forceMain2D=${shouldForceMain2D}`);
     }
-    if (!shouldForceMainThread || !this._renderer || !this._renderer.getInfo) {
+    if (previousAiVBPolicy !== hasSourceAiVirtualBackground) {
+      logger.debug(`Effect renderer policy updated: hasSourceAiVirtualBackground=${hasSourceAiVirtualBackground}`);
+    }
+    if (!this._renderer || !this._renderer.getInfo) {
       return;
     }
     var info = this._renderer.getInfo();
+    if (hasSourceAiVirtualBackground && !shouldForceMainThread && !info.isWorker) {
+      this._fallbackRendererToWorker2D('Active source AI virtual background runs in worker renderer');
+      return;
+    }
+    if (!shouldForceMainThread) {
+      return;
+    }
     if (shouldForceMain2D && info.actualMode !== 'main-2d') {
       this._fallbackRendererToMain2D('Active source AI virtual background requires main-thread Canvas2D');
       return;
@@ -20959,6 +20973,10 @@ class MediaStreamComposer {
   _fallbackRendererToMainThread(reason) {
     logger.warn(`Fallback to main-thread renderer requested: ${reason}`);
     return this._renderLoop.fallbackRendererToMainThread(reason);
+  }
+  _fallbackRendererToWorker2D(reason) {
+    logger.warn(`Fallback to worker-2d renderer requested: ${reason}`);
+    return this._renderLoop.fallbackRendererToWorker2D(reason);
   }
 
   /**
@@ -22603,13 +22621,20 @@ class RenderLoop {
       this._renderer.destroy();
     }
     if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
-      var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
-      if (mainWebGL2) {
-        return true;
-      }
-      var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
-      if (worker2D) {
-        return true;
+      if (this._config.hasSourceAiVirtualBackground === true) {
+        var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
+        if (worker2D) {
+          return true;
+        }
+      } else {
+        var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
+        if (mainWebGL2) {
+          return true;
+        }
+        var _worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
+        if (_worker2D) {
+          return true;
+        }
       }
     }
     return this.fallbackRendererToMain2D(reason, currentInfo);
@@ -22650,13 +22675,23 @@ class RenderLoop {
     if (this._renderer && this._renderer.destroy) {
       this._renderer.destroy();
     }
-    if (this._config.forceMain2DRenderer !== true && currentInfo.actualMode !== 'worker-2d') {
+    if (this._config.forceMain2DRenderer !== true && this._config.hasSourceAiVirtualBackground !== true && currentInfo.actualMode !== 'worker-2d') {
       var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
       if (mainWebGL2) {
         return true;
       }
     }
     return this.fallbackRendererToMain2D(reason, currentInfo);
+  }
+  fallbackRendererToWorker2D(reason, info) {
+    var currentInfo = info || (this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {});
+    if (currentInfo.actualMode === 'worker-2d' || currentInfo.actualMode === 'worker-init') {
+      return false;
+    }
+    if (this._renderer && this._renderer.destroy) {
+      this._renderer.destroy();
+    }
+    return this._tryFallbackToWorker2D(currentInfo, reason);
   }
   _tryFallbackToMainWebGL2(currentInfo, reason) {
     try {
@@ -25075,6 +25110,7 @@ exports.createRenderer = function (canvas, config, hooks) {
   var mode = config.renderMode || 'auto';
   var forceMainThread = config.forceMainThreadRenderer === true;
   var forceMain2D = config.forceMain2DRenderer === true;
+  var hasSourceAiVirtualBackground = config.hasSourceAiVirtualBackground === true;
   var errors = [];
   hooks = hooks || {};
   if (forceMain2D) {
@@ -25104,9 +25140,9 @@ exports.createRenderer = function (canvas, config, hooks) {
 
   // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
   // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
-  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto')) {
+  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto' || hasSourceAiVirtualBackground && mode === 'main-webgl2')) {
     try {
-      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
+      var workerMode = mode === 'auto' || hasSourceAiVirtualBackground && mode === 'main-webgl2' ? hasSourceAiVirtualBackground ? 'worker-2d' : 'worker-webgl2' : mode;
       var workerConfig = Object.assign({}, config, {
         renderMode: workerMode
       });
@@ -25129,7 +25165,7 @@ exports.createRenderer = function (canvas, config, hooks) {
   }
 
   // 尝试主线程 WebGL2
-  if (mode === 'main-webgl2' || mode === 'auto') {
+  if (!hasSourceAiVirtualBackground && (mode === 'main-webgl2' || mode === 'auto')) {
     try {
       var _renderer2 = new MainWebGL2Renderer(config, {
         requestedMode: mode,
@@ -25159,6 +25195,9 @@ exports.createRenderer = function (canvas, config, hooks) {
  */
 function createMainFallback(canvas, config, requestedMode, reason) {
   if (config.forceMain2DRenderer === true) {
+    return createMain2D(canvas, config, true, reason);
+  }
+  if (config.hasSourceAiVirtualBackground === true) {
     return createMain2D(canvas, config, true, reason);
   }
   if (requestedMode !== 'worker-2d') {
@@ -25619,6 +25658,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
           id: item.id,
           draw: item.draw,
           mirrorX: Boolean(item.mirrorX),
+          aiVirtualBackground: this._normalizeWorkerAiVirtualBackgroundConfig(item.aiVirtualBackground),
           frame
         });
         transfers.push(frame);
@@ -25725,6 +25765,44 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       return new VideoFrameConstructor(image);
     }
     throw new Error('Watermark frame extraction is unavailable');
+  }
+  _normalizeWorkerAiVirtualBackgroundConfig(config) {
+    if (!config || typeof config !== 'object') {
+      return null;
+    }
+    var normalized = JSON.parse(JSON.stringify(config));
+    if (typeof normalized.imageUrl === 'string') {
+      normalized.imageUrl = this._toAbsoluteUrl(normalized.imageUrl);
+    }
+    if (typeof normalized.modelPath === 'string') {
+      normalized.modelPath = this._toAbsoluteUrl(normalized.modelPath);
+    }
+    if (normalized.assetConfig && typeof normalized.assetConfig === 'object') {
+      if (typeof normalized.assetConfig.moduleUrl === 'string') {
+        normalized.assetConfig.moduleUrl = this._toAbsoluteUrl(normalized.assetConfig.moduleUrl);
+      }
+      if (typeof normalized.assetConfig.wasmBaseUrl === 'string') {
+        normalized.assetConfig.wasmBaseUrl = this._toAbsoluteUrl(normalized.assetConfig.wasmBaseUrl);
+      }
+      if (typeof normalized.assetConfig.modelUrl === 'string') {
+        normalized.assetConfig.modelUrl = this._toAbsoluteUrl(normalized.assetConfig.modelUrl);
+      }
+    }
+    return normalized;
+  }
+  _toAbsoluteUrl(url) {
+    if (typeof url !== 'string' || !url.trim()) {
+      return url;
+    }
+    try {
+      if (typeof document !== 'undefined' && document && document.baseURI) {
+        return new URL(url, document.baseURI).toString();
+      }
+      if (typeof location !== 'undefined' && location && location.href) {
+        return new URL(url, location.href).toString();
+      }
+    } catch (error) {}
+    return url;
   }
 
   /**
@@ -25968,24 +26046,1250 @@ exports.createVideoTexture = function (gl) {
  * workerScript — Worker 内联脚本生成器
  *
  * 生成一个自包含的 WebWorker 渲染脚本源码字符串。
- * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker，
- * 无需额外部署 Worker 脚本文件。
+ * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker。
  *
- * Worker 内部支持两种渲染模式：
- *   - worker-webgl2: WebGL2 + OffscreenCanvas，GPU 加速
- *   - worker-2d: Canvas2D + OffscreenCanvas，兼容兜底
- *
- * 消息协议：
- *   - init(type, canvas, requestedMode, ...) → ready/failed
- *   - render(type, payload) → rendered/renderError
- *   - removeSource(type, id) → 无回复
- *   - destroy(type) → 无回复
+ * Worker 内部支持：
+ *   - worker-webgl2: OffscreenCanvas + WebGL2 输出
+ *   - worker-2d: OffscreenCanvas + Canvas2D 输出
+ *   - source-level AI virtual background: MediaPipe + OffscreenCanvas 全部留在 Worker
  *
  * @module workerScript
  */
 exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
-  return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
+  return `
+var canvas = null;
+var ctx = null;
+var gl = null;
+var program = null;
+var positionBuffer = null;
+var texCoordBuffer = null;
+var textures = {};
+var watermarkTextures = {};
+var actualMode = 'unknown';
+var requestedMode = 'auto';
+var width = 0;
+var height = 0;
+var backgroundColor = '#000';
+var opacityLocation = null;
+var aivbSourceStates = Object.create(null);
+var aivbRuntimeStates = Object.create(null);
+var aivbModulePromises = Object.create(null);
+var aivbBackgroundStates = Object.create(null);
+var VERTEX_SHADER = "#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n";
+var FRAGMENT_SHADER = "#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";
+
+function now()
+{
+  return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ?
+    performance.now() :
+    Date.now();
+}
+
+function clamp(value, min, max)
+{
+  return Math.min(max, Math.max(min, value));
+}
+
+function hasAiVirtualBackground(item)
+{
+  return Boolean(item &&
+    item.aiVirtualBackground &&
+    item.aiVirtualBackground.enabled !== false &&
+    item.aiVirtualBackground.mode &&
+    item.aiVirtualBackground.mode !== 'none');
+}
+
+function getFrameWidth(frame)
+{
+  return (frame && (frame.displayWidth || frame.codedWidth || frame.width)) || 0;
+}
+
+function getFrameHeight(frame)
+{
+  return (frame && (frame.displayHeight || frame.codedHeight || frame.height)) || 0;
+}
+
+function ensureCanvasSize(surface, targetWidth, targetHeight)
+{
+  var nextWidth = Math.max(1, Math.round(targetWidth || 1));
+  var nextHeight = Math.max(1, Math.round(targetHeight || 1));
+
+  if (!surface.canvas)
+  {
+    surface.canvas = new OffscreenCanvas(nextWidth, nextHeight);
+    surface.context = surface.canvas.getContext('2d');
+  }
+
+  if (!surface.context)
+  {
+    return null;
+  }
+
+  if (surface.canvas.width !== nextWidth)
+  {
+    surface.canvas.width = nextWidth;
+  }
+
+  if (surface.canvas.height !== nextHeight)
+  {
+    surface.canvas.height = nextHeight;
+  }
+
+  return surface;
+}
+
+function getSourceState(id)
+{
+  if (!aivbSourceStates[id])
+  {
+    aivbSourceStates[id] = {
+      configKey                  : '',
+      latestMask                 : null,
+      renderedSinceSegmentation  : 0,
+      lastSegmentationScheduledAt: 0,
+      runtimeAllowedAt           : 0,
+      segmentationSurface        : { canvas: null, context: null },
+      maskSurface                : { canvas: null, context: null, imageData: null },
+      foregroundSurface          : { canvas: null, context: null },
+      outputSurface              : { canvas: null, context: null }
+    };
+  }
+
+  return aivbSourceStates[id];
+}
+
+function createConfigKey(config)
+{
+  return JSON.stringify({
+    mode            : config.mode || '',
+    imageUrl        : config.imageUrl || '',
+    backgroundColor : config.backgroundColor || '',
+    blurRadius      : Number(config.blurRadius) || 0,
+    modelPath       : config.modelPath || '',
+    runtimeEnabled  : config.runtimeEnabled !== false,
+    startupDelayMs  : Number(config.startupDelayMs) || 0,
+    maxRuntimeFps   : Number(config.maxRuntimeFps) || 0,
+    video           : config.video || {},
+    segmentation    : config.segmentation || {},
+    assetConfig     : config.assetConfig || {}
+  });
+}
+
+function resetSourceStateForConfig(state, config)
+{
+  state.latestMask = null;
+  state.renderedSinceSegmentation = 0;
+  state.lastSegmentationScheduledAt = 0;
+  state.runtimeAllowedAt = now() + Math.max(0, Number(config.startupDelayMs) || 0);
+}
+
+function resolveAiVBState(id, config)
+{
+  var state = getSourceState(id);
+  var configKey = createConfigKey(config);
+
+  if (state.configKey !== configKey)
+  {
+    state.configKey = configKey;
+    resetSourceStateForConfig(state, config);
+  }
+
+  return state;
+}
+
+async function loadVisionTasksModule(moduleUrl)
+{
+  if (!moduleUrl)
+  {
+    throw new Error('AIVirtualBackground moduleUrl is required');
+  }
+
+  if (!aivbModulePromises[moduleUrl])
+  {
+    aivbModulePromises[moduleUrl] = import(moduleUrl)
+      .then(function(module)
+      {
+        if (!module || !module.FilesetResolver || !module.ImageSegmenter)
+        {
+          throw new Error('MediaPipe Tasks module is missing exports');
+        }
+
+        return module;
+      });
+  }
+
+  return aivbModulePromises[moduleUrl];
+}
+
+function getRuntimeKey(config)
+{
+  return JSON.stringify({
+    moduleUrl   : config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '',
+    wasmBaseUrl : config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '',
+    modelUrl    : config.modelPath || (config.assetConfig && config.assetConfig.modelUrl) || '',
+    delegate    : config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU'
+  });
+}
+
+function resolvePersonMaskIndex(labels, maskCount)
+{
+  for (var index = 0; index < labels.length; index += 1)
+  {
+    if (typeof labels[index] === 'string' && /person/i.test(labels[index]))
+    {
+      return index;
+    }
+  }
+
+  if (maskCount > 1)
+  {
+    return maskCount - 1;
+  }
+
+  return 0;
+}
+
+async function ensureSegmenterRuntime(config)
+{
+  var runtimeKey = getRuntimeKey(config);
+  var runtimeState = aivbRuntimeStates[runtimeKey];
+
+  if (!runtimeState)
+  {
+    runtimeState = {
+      segmenter   : null,
+      labels      : [],
+      ready       : false,
+      initializing: null
+    };
+    aivbRuntimeStates[runtimeKey] = runtimeState;
+  }
+
+  if (runtimeState.ready && runtimeState.segmenter)
+  {
+    return runtimeState;
+  }
+
+  if (!runtimeState.initializing)
+  {
+    runtimeState.initializing = (async function()
+    {
+      var moduleUrl = config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '';
+      var wasmBaseUrl = config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '';
+      var modelUrl = config.modelPath || (config.assetConfig && config.assetConfig.modelUrl) || '';
+      var delegate = config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU';
+      var tasksModule = await loadVisionTasksModule(moduleUrl);
+      var vision = await tasksModule.FilesetResolver.forVisionTasks(wasmBaseUrl);
+      var segmenter = await tasksModule.ImageSegmenter.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: modelUrl,
+          delegate: delegate
+        },
+        runningMode: 'VIDEO',
+        outputCategoryMask: false,
+        outputConfidenceMasks: true
+      });
+
+      runtimeState.segmenter = segmenter;
+      runtimeState.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
+      runtimeState.ready = true;
+    })()
+      .finally(function()
+      {
+        runtimeState.initializing = null;
+      });
+  }
+
+  await runtimeState.initializing;
+
+  return runtimeState;
+}
+
+function closeSegmentationResult(result)
+{
+  if (result && typeof result.close === 'function')
+  {
+    result.close();
+    return;
+  }
+
+  if (result && Array.isArray(result.confidenceMasks))
+  {
+    result.confidenceMasks.forEach(function(mask)
+    {
+      if (mask && typeof mask.close === 'function')
+      {
+        mask.close();
+      }
+    });
+  }
+
+  if (result && result.categoryMask && typeof result.categoryMask.close === 'function')
+  {
+    result.categoryMask.close();
+  }
+}
+
+function resolveMaskValues(mask)
+{
+  if (!mask)
+  {
+    throw new Error('ImageSegmenter mask is required');
+  }
+
+  if (typeof mask.getAsFloat32Array === 'function')
+  {
+    return mask.getAsFloat32Array();
+  }
+
+  if (typeof mask.getAsUint8Array === 'function')
+  {
+    var categoryValues = mask.getAsUint8Array();
+    var floatValues = new Float32Array(categoryValues.length);
+
+    for (var index = 0; index < categoryValues.length; index += 1)
+    {
+      floatValues[index] = categoryValues[index] > 0 ? 1 : 0;
+    }
+
+    return floatValues;
+  }
+
+  throw new Error('Unsupported ImageSegmenter mask format');
+}
+
+function createMaskCanvas(sourceState, runtimeState, result)
+{
+  var mask = null;
+
+  if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0)
+  {
+    var personMaskIndex = resolvePersonMaskIndex(runtimeState.labels || [], result.confidenceMasks.length);
+
+    mask = result.confidenceMasks[personMaskIndex];
+  }
+  else if (result && result.categoryMask)
+  {
+    mask = result.categoryMask;
+  }
+
+  if (!mask)
+  {
+    throw new Error('ImageSegmenter did not return a supported mask output');
+  }
+
+  var maskWidth = mask.width || 0;
+  var maskHeight = mask.height || 0;
+  var maskSurface = ensureCanvasSize(sourceState.maskSurface, maskWidth, maskHeight);
+
+  if (!maskSurface || !maskSurface.context)
+  {
+    throw new Error('Unable to create segmentation mask canvas');
+  }
+
+  if (
+    !sourceState.maskSurface.imageData ||
+    sourceState.maskSurface.canvas.width !== maskWidth ||
+    sourceState.maskSurface.canvas.height !== maskHeight
+  )
+  {
+    sourceState.maskSurface.imageData = maskSurface.context.createImageData(maskWidth, maskHeight);
+  }
+
+  var confidenceValues = resolveMaskValues(mask);
+  var imageData = sourceState.maskSurface.imageData.data;
+  var offset = 0;
+
+  for (var index = 0; index < confidenceValues.length; index += 1)
+  {
+    var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[index] * 255)));
+
+    imageData[offset] = 0;
+    imageData[offset + 1] = 0;
+    imageData[offset + 2] = 0;
+    imageData[offset + 3] = alpha;
+    offset += 4;
+  }
+
+  maskSurface.context.putImageData(sourceState.maskSurface.imageData, 0, 0);
+
+  return maskSurface.canvas;
+}
+
+function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX)
+{
+  if (!targetContext || !surface)
+  {
+    return;
+  }
+
+  if (!mirrorX)
+  {
+    targetContext.drawImage(surface, x, y, drawWidth, drawHeight);
+    return;
+  }
+
+  targetContext.save();
+  targetContext.translate(x + drawWidth, y);
+  targetContext.scale(-1, 1);
+  targetContext.drawImage(surface, 0, 0, drawWidth, drawHeight);
+  targetContext.restore();
+}
+
+function drawCoverSurface(targetContext, surface, drawWidth, drawHeight)
+{
+  var imageWidth = (surface && (surface.displayWidth || surface.naturalWidth || surface.videoWidth || surface.width)) || 0;
+  var imageHeight = (surface && (surface.displayHeight || surface.naturalHeight || surface.videoHeight || surface.height)) || 0;
+
+  if (!imageWidth || !imageHeight)
+  {
+    return false;
+  }
+
+  var imageAspect = imageWidth / imageHeight;
+  var drawAspect = drawWidth / drawHeight;
+  var sourceWidth = imageWidth;
+  var sourceHeight = imageHeight;
+  var sourceX = 0;
+  var sourceY = 0;
+
+  if (imageAspect > drawAspect)
+  {
+    sourceWidth = imageHeight * drawAspect;
+    sourceX = (imageWidth - sourceWidth) / 2;
+  }
+  else
+  {
+    sourceHeight = imageWidth / drawAspect;
+    sourceY = (imageHeight - sourceHeight) / 2;
+  }
+
+  targetContext.drawImage(
+    surface,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    drawWidth,
+    drawHeight
+  );
+
+  return true;
+}
+
+async function ensureBackgroundImage(url)
+{
+  if (!url)
+  {
+    return null;
+  }
+
+  var backgroundState = aivbBackgroundStates[url];
+
+  if (!backgroundState)
+  {
+    backgroundState = {
+      bitmap: null,
+      promise: null,
+      error: ''
+    };
+    aivbBackgroundStates[url] = backgroundState;
+  }
+
+  if (backgroundState.bitmap)
+  {
+    return backgroundState.bitmap;
+  }
+
+  if (!backgroundState.promise)
+  {
+    backgroundState.promise = fetch(url)
+      .then(function(response)
+      {
+        if (!response.ok)
+        {
+          throw new Error('Failed to load background image: ' + response.status);
+        }
+
+        return response.blob();
+      })
+      .then(function(blob)
+      {
+        return createImageBitmap(blob);
+      })
+      .then(function(bitmap)
+      {
+        backgroundState.bitmap = bitmap;
+        backgroundState.error = '';
+        backgroundState.promise = null;
+
+        return bitmap;
+      })
+      .catch(function(error)
+      {
+        backgroundState.promise = null;
+        backgroundState.error = error && error.message ? error.message : String(error);
+
+        return null;
+      });
+  }
+
+  return backgroundState.promise;
+}
+
+function canRunSegmentation(sourceState, config)
+{
+  var fps = Number(config.maxRuntimeFps);
+  var minInterval = fps > 0 ? 1000 / fps : 200;
+
+  if (!sourceState.lastSegmentationScheduledAt)
+  {
+    return true;
+  }
+
+  return now() - sourceState.lastSegmentationScheduledAt >= minInterval;
+}
+
+function shouldUpdateMask(sourceState, config)
+{
+  var frameSkip = config && config.segmentation ? Number(config.segmentation.frameSkip) : 0;
+
+  if (!sourceState.latestMask)
+  {
+    return true;
+  }
+
+  if (!Number.isFinite(frameSkip) || frameSkip <= 0)
+  {
+    return true;
+  }
+
+  return sourceState.renderedSinceSegmentation >= frameSkip;
+}
+
+function buildSegmentationInput(sourceState, frame, config)
+{
+  var frameWidth = getFrameWidth(frame);
+  var frameHeight = getFrameHeight(frame);
+  var processingScale = config && config.video ? Number(config.video.processingScale) : 1;
+  var scale = Number.isFinite(processingScale) ? clamp(processingScale, 0.1, 1) : 1;
+  var targetWidth = Math.max(1, Math.round(frameWidth * scale));
+  var targetHeight = Math.max(1, Math.round(frameHeight * scale));
+  var segmentationSurface = ensureCanvasSize(sourceState.segmentationSurface, targetWidth, targetHeight);
+
+  if (!segmentationSurface || !segmentationSurface.context)
+  {
+    return null;
+  }
+
+  segmentationSurface.context.clearRect(0, 0, targetWidth, targetHeight);
+  segmentationSurface.context.drawImage(frame, 0, 0, targetWidth, targetHeight);
+
+  return segmentationSurface.canvas;
+}
+
+async function runSegmentation(sourceState, runtimeState, input)
+{
+  return new Promise(function(resolve, reject)
+  {
+    try
+    {
+      runtimeState.segmenter.segmentForVideo(input, now(), function(result)
+      {
+        try
+        {
+          resolve(createMaskCanvas(sourceState, runtimeState, result));
+        }
+        catch (error)
+        {
+          reject(error);
+        }
+        finally
+        {
+          closeSegmentationResult(result);
+        }
+      });
+    }
+    catch (error)
+    {
+      reject(error);
+    }
+  });
+}
+
+async function ensureLatestMask(item)
+{
+  var config = item.aiVirtualBackground;
+  var sourceState = resolveAiVBState(item.id, config);
+
+  if (config.runtimeEnabled === false)
+  {
+    return sourceState.latestMask;
+  }
+
+  if (now() < sourceState.runtimeAllowedAt)
+  {
+    return sourceState.latestMask;
+  }
+
+  if (!shouldUpdateMask(sourceState, config) || !canRunSegmentation(sourceState, config))
+  {
+    return sourceState.latestMask;
+  }
+
+  sourceState.lastSegmentationScheduledAt = now();
+
+  var runtimeState = await ensureSegmenterRuntime(config);
+  var input = buildSegmentationInput(sourceState, item.frame, config);
+
+  if (!runtimeState || !runtimeState.segmenter || !input)
+  {
+    return sourceState.latestMask;
+  }
+
+  sourceState.latestMask = await runSegmentation(sourceState, runtimeState, input);
+  sourceState.renderedSinceSegmentation = 0;
+
+  return sourceState.latestMask;
+}
+
+async function getRenderableSurface(item)
+{
+  if (!hasAiVirtualBackground(item))
+  {
+    return item.frame;
+  }
+
+  var sourceState = resolveAiVBState(item.id, item.aiVirtualBackground);
+  var mask = await ensureLatestMask(item);
+  var drawWidth = Math.max(1, Math.round(item.draw && item.draw.width ? item.draw.width : getFrameWidth(item.frame)));
+  var drawHeight = Math.max(1, Math.round(item.draw && item.draw.height ? item.draw.height : getFrameHeight(item.frame)));
+  var foregroundSurface = ensureCanvasSize(sourceState.foregroundSurface, drawWidth, drawHeight);
+  var outputSurface = ensureCanvasSize(sourceState.outputSurface, drawWidth, drawHeight);
+
+  if (!foregroundSurface || !foregroundSurface.context || !outputSurface || !outputSurface.context)
+  {
+    return item.frame;
+  }
+
+  if (!mask)
+  {
+    return item.frame;
+  }
+
+  foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
+  drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX));
+  foregroundSurface.context.globalCompositeOperation = 'destination-in';
+  foregroundSurface.context.drawImage(mask, 0, 0, drawWidth, drawHeight);
+  foregroundSurface.context.globalCompositeOperation = 'source-over';
+
+  outputSurface.context.clearRect(0, 0, drawWidth, drawHeight);
+
+  if (item.aiVirtualBackground.mode === 'blur')
+  {
+    outputSurface.context.save();
+    outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
+    drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX));
+    outputSurface.context.restore();
+  }
+  else if (item.aiVirtualBackground.mode === 'image')
+  {
+    var backgroundImage = await ensureBackgroundImage(item.aiVirtualBackground.imageUrl || '');
+
+    if (!backgroundImage || !drawCoverSurface(outputSurface.context, backgroundImage, drawWidth, drawHeight))
+    {
+      return item.frame;
+    }
+  }
+  else if (item.aiVirtualBackground.mode === 'color')
+  {
+    outputSurface.context.fillStyle = item.aiVirtualBackground.backgroundColor || '#00ff00';
+    outputSurface.context.fillRect(0, 0, drawWidth, drawHeight);
+  }
+  else
+  {
+    return item.frame;
+  }
+
+  outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, drawWidth, drawHeight);
+  sourceState.renderedSinceSegmentation += 1;
+
+  return outputSurface.canvas;
+}
+
+async function init(message)
+{
+  canvas = message.canvas;
+  requestedMode = message.requestedMode || 'auto';
+  width = message.width || canvas.width || 1;
+  height = message.height || canvas.height || 1;
+  backgroundColor = message.backgroundColor || '#000';
+  canvas.width = width;
+  canvas.height = height;
+
+  if (requestedMode === 'worker-webgl2' || requestedMode === 'auto')
+  {
+    try
+    {
+      initWebGL2();
+      actualMode = 'worker-webgl2';
+      postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: true, reason: '' });
+
+      return;
+    }
+    catch (error)
+    {
+      destroyWebGL2();
+
+      if (requestedMode === 'worker-webgl2')
+      {
+        postMessage({ type: 'failed', reason: error.message || String(error) });
+        return;
+      }
+    }
+  }
+
+  try
+  {
+    initCanvas2D();
+    actualMode = 'worker-2d';
+    postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: false, reason: '' });
+  }
+  catch (error)
+  {
+    postMessage({ type: 'failed', reason: error.message || String(error) });
+  }
+}
+
+function initWebGL2()
+{
+  gl = canvas.getContext('webgl2', {
+    alpha: false,
+    antialias: false,
+    preserveDrawingBuffer: false,
+    powerPreference: 'high-performance'
+  });
+
+  if (!gl)
+  {
+    throw new Error('Worker WebGL2 context is not available');
+  }
+
+  var vertexShader = compileShader(gl.VERTEX_SHADER, VERTEX_SHADER);
+  var fragmentShader = compileShader(gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+
+  program = createProgram(vertexShader, fragmentShader);
+  gl.deleteShader(vertexShader);
+  gl.deleteShader(fragmentShader);
+
+  positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1, -1, 1, -1, -1, 1, 1, 1 ]), gl.STATIC_DRAW);
+
+  texCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 0, 0, 1, 0, 0, 1, 1, 1 ]), gl.STATIC_DRAW);
+
+  gl.useProgram(program);
+  enableAttribute('a_position', positionBuffer);
+  enableAttribute('a_texCoord', texCoordBuffer);
+  gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
+  opacityLocation = gl.getUniformLocation(program, 'u_opacity');
+  gl.uniform1f(opacityLocation, 1);
+}
+
+function initCanvas2D()
+{
+  ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
+
+  if (!ctx)
+  {
+    throw new Error('Worker Canvas2D context is not available');
+  }
+}
+
+async function render(payload)
+{
+  var bitmap = null;
+
+  try
+  {
+    width = payload.width || width;
+    height = payload.height || height;
+    backgroundColor = payload.backgroundColor || backgroundColor;
+
+    if (canvas.width !== width)
+    {
+      canvas.width = width;
+    }
+
+    if (canvas.height !== height)
+    {
+      canvas.height = height;
+    }
+
+    if (actualMode === 'worker-webgl2')
+    {
+      await renderWebGL2(payload);
+    }
+    else if (actualMode === 'worker-2d')
+    {
+      await renderCanvas2D(payload);
+    }
+
+    if (!canvas.transferToImageBitmap)
+    {
+      postMessage({ type: 'renderError', reason: 'OffscreenCanvas.transferToImageBitmap is not available' });
+      return;
+    }
+
+    bitmap = canvas.transferToImageBitmap();
+    postMessage({ type: 'rendered', bitmap: bitmap }, [ bitmap ]);
+    bitmap = null;
+  }
+  catch (error)
+  {
+    if (bitmap && typeof bitmap.close === 'function')
+    {
+      bitmap.close();
+    }
+
+    postMessage({ type: 'renderError', reason: error && error.message ? error.message : String(error) });
+  }
+  finally
+  {
+    closeFrames(payload.items || []);
+    closeFrames(payload.sourceWatermarks || []);
+    closeFrames(payload.outputWatermarks || []);
+  }
+}
+
+async function renderWebGL2(payload)
+{
+  var color = parseColor(payload.backgroundColor || '#000');
+  var items = payload.items || [];
+
+  gl.useProgram(program);
+  gl.clearColor(color[0], color[1], color[2], color[3]);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.disable(gl.BLEND);
+
+  for (var index = 0; index < items.length; index += 1)
+  {
+    var item = items[index];
+
+    if (!item.frame || !item.draw)
+    {
+      continue;
+    }
+
+    var surface = await getRenderableSurface(item);
+    var texture = getTexture(item.id);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
+    gl.uniform1f(opacityLocation, 1);
+    drawRect(item.draw);
+  }
+
+  drawWatermarksWebGL2(payload.sourceWatermarks || []);
+  drawWatermarksWebGL2(payload.outputWatermarks || []);
+  gl.flush();
+}
+
+function drawWatermarksWebGL2(watermarks)
+{
+  if (!watermarks.length)
+  {
+    return;
+  }
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  watermarks.forEach(function(watermark)
+  {
+    if (!watermark.frame || !watermark.draw)
+    {
+      return;
+    }
+
+    var texture = getWatermarkTexture(watermark.id);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.frame);
+    gl.uniform1f(opacityLocation, typeof watermark.opacity === 'number' ? clamp(watermark.opacity, 0, 1) : 1);
+    drawRect(watermark.draw);
+  });
+
+  gl.disable(gl.BLEND);
+}
+
+function drawRect(draw)
+{
+  var left = Math.round(draw.x);
+  var top = Math.round(height - draw.y - draw.height);
+  var drawWidth = Math.round(draw.width);
+  var drawHeight = Math.round(draw.height);
+
+  if (drawWidth <= 0 || drawHeight <= 0)
+  {
+    return;
+  }
+
+  gl.viewport(left, top, drawWidth, drawHeight);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+async function renderCanvas2D(payload)
+{
+  var items = payload.items || [];
+
+  ctx.fillStyle = payload.backgroundColor || '#000';
+  ctx.fillRect(0, 0, width, height);
+
+  for (var index = 0; index < items.length; index += 1)
+  {
+    var item = items[index];
+
+    if (!item.frame || !item.draw)
+    {
+      continue;
+    }
+
+    var surface = await getRenderableSurface(item);
+
+    ctx.drawImage(surface, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
+  }
+
+  drawWatermarksCanvas2D(payload.sourceWatermarks || []);
+  drawWatermarksCanvas2D(payload.outputWatermarks || []);
+}
+
+function drawWatermarksCanvas2D(watermarks)
+{
+  watermarks.forEach(function(watermark)
+  {
+    if (!watermark.frame || !watermark.draw)
+    {
+      return;
+    }
+
+    var previousAlpha = ctx.globalAlpha;
+
+    ctx.globalAlpha = typeof watermark.opacity === 'number' ? watermark.opacity : 1;
+    ctx.drawImage(watermark.frame, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
+    ctx.globalAlpha = previousAlpha;
+  });
+}
+
+function compileShader(type, source)
+{
+  var shader = gl.createShader(type);
+
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+  {
+    var shaderError = gl.getShaderInfoLog(shader);
+
+    gl.deleteShader(shader);
+    throw new Error('Could not compile shader: ' + shaderError);
+  }
+
+  return shader;
+}
+
+function createProgram(vertexShader, fragmentShader)
+{
+  var programObject = gl.createProgram();
+
+  gl.attachShader(programObject, vertexShader);
+  gl.attachShader(programObject, fragmentShader);
+  gl.linkProgram(programObject);
+
+  if (!gl.getProgramParameter(programObject, gl.LINK_STATUS))
+  {
+    var programError = gl.getProgramInfoLog(programObject);
+
+    gl.deleteProgram(programObject);
+    throw new Error('Could not link WebGL program: ' + programError);
+  }
+
+  return programObject;
+}
+
+function enableAttribute(name, buffer)
+{
+  var location = gl.getAttribLocation(program, name);
+
+  gl.enableVertexAttribArray(location);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+}
+
+function getTexture(id)
+{
+  if (!textures[id])
+  {
+    textures[id] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, textures[id]);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  }
+
+  return textures[id];
+}
+
+function getWatermarkTexture(id)
+{
+  if (!watermarkTextures[id])
+  {
+    watermarkTextures[id] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, watermarkTextures[id]);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  }
+
+  return watermarkTextures[id];
+}
+
+function removeSource(id)
+{
+  if (gl && textures[id])
+  {
+    gl.deleteTexture(textures[id]);
+  }
+
+  delete textures[id];
+  delete aivbSourceStates[id];
+}
+
+function closeFrames(items)
+{
+  items.forEach(function(item)
+  {
+    if (item.frame && typeof item.frame.close === 'function')
+    {
+      item.frame.close();
+    }
+  });
+}
+
+function closeBackgroundBitmaps()
+{
+  Object.keys(aivbBackgroundStates).forEach(function(key)
+  {
+    var state = aivbBackgroundStates[key];
+
+    if (state && state.bitmap && typeof state.bitmap.close === 'function')
+    {
+      state.bitmap.close();
+    }
+  });
+
+  aivbBackgroundStates = Object.create(null);
+}
+
+async function destroy()
+{
+  var runtimeKeys = Object.keys(aivbRuntimeStates);
+
+  closeBackgroundBitmaps();
+  destroyWebGL2();
+  ctx = null;
+  canvas = null;
+  aivbSourceStates = Object.create(null);
+
+  for (var index = 0; index < runtimeKeys.length; index += 1)
+  {
+    var runtimeState = aivbRuntimeStates[runtimeKeys[index]];
+
+    if (runtimeState && runtimeState.segmenter && typeof runtimeState.segmenter.close === 'function')
+    {
+      try
+      {
+        await runtimeState.segmenter.close();
+      }
+      catch (error)
+      {}
+    }
+  }
+
+  aivbRuntimeStates = Object.create(null);
+}
+
+function destroyWebGL2()
+{
+  if (!gl)
+  {
+    return;
+  }
+
+  Object.keys(textures).forEach(function(key)
+  {
+    gl.deleteTexture(textures[key]);
+  });
+  textures = {};
+
+  Object.keys(watermarkTextures).forEach(function(key)
+  {
+    gl.deleteTexture(watermarkTextures[key]);
+  });
+  watermarkTextures = {};
+
+  if (positionBuffer)
+  {
+    gl.deleteBuffer(positionBuffer);
+  }
+
+  if (texCoordBuffer)
+  {
+    gl.deleteBuffer(texCoordBuffer);
+  }
+
+  if (program)
+  {
+    gl.deleteProgram(program);
+  }
+
+  var loseContext = gl.getExtension('WEBGL_lose_context');
+
+  if (loseContext)
+  {
+    loseContext.loseContext();
+  }
+
+  gl = null;
+  program = null;
+  positionBuffer = null;
+  texCoordBuffer = null;
+  opacityLocation = null;
+}
+
+function parseColor(value)
+{
+  if (!value || typeof value !== 'string')
+  {
+    return [ 0, 0, 0, 1 ];
+  }
+
+  var normalized = value.trim();
+
+  if (normalized[0] === '#')
+  {
+    return parseHexColor(normalized);
+  }
+
+  if (normalized.indexOf('rgb') === 0)
+  {
+    return parseRgbColor(normalized);
+  }
+
+  return [ 0, 0, 0, 1 ];
+}
+
+function parseHexColor(value)
+{
+  var hex = value.slice(1);
+
+  if (hex.length === 3)
+  {
+    hex = hex.split('').map(function(char)
+    {
+      return char + char;
+    }).join('');
+  }
+
+  if (hex.length !== 6)
+  {
+    return [ 0, 0, 0, 1 ];
+  }
+
+  var parsed = parseInt(hex, 16);
+
+  if (!isFinite(parsed))
+  {
+    return [ 0, 0, 0, 1 ];
+  }
+
+  return [
+    ((parsed >> 16) & 255) / 255,
+    ((parsed >> 8) & 255) / 255,
+    (parsed & 255) / 255,
+    1
+  ];
+}
+
+function parseRgbColor(value)
+{
+  var match = value.match(/rgba?\\\\(([^)]+)\\\\)/i);
+
+  if (!match)
+  {
+    return [ 0, 0, 0, 1 ];
+  }
+
+  var parts = match[1].split(',').map(function(part)
+  {
+    return Number(part.trim());
+  });
+
+  if (parts.length < 3 || parts.some(function(part)
+  {
+    return !isFinite(part);
+  }))
+  {
+    return [ 0, 0, 0, 1 ];
+  }
+
+  return [
+    clamp(parts[0] / 255, 0, 1),
+    clamp(parts[1] / 255, 0, 1),
+    clamp(parts[2] / 255, 0, 1),
+    clamp(parts.length > 3 ? parts[3] : 1, 0, 1)
+  ];
+}
+
+self.onmessage = function(event)
+{
+  var data = event.data || {};
+
+  if (data.type === 'init')
+  {
+    init(data);
+    return;
+  }
+
+  if (data.type === 'render')
+  {
+    render(data.payload || {});
+    return;
+  }
+
+  if (data.type === 'removeSource')
+  {
+    removeSource(data.id);
+    return;
+  }
+
+  if (data.type === 'destroy')
+  {
+    destroy();
+  }
+};
+`;
 };
 },{}],66:[function(require,module,exports){
 "use strict";

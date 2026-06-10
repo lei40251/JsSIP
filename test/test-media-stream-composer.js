@@ -1854,12 +1854,14 @@ async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
   assert.ok(source);
   assert.strictEqual(source.aiVirtualBackground.mode, 'color');
   assert.strictEqual(source.aiVirtualBackground.backgroundColor, '#123456');
-  assert.strictEqual(mixer._config.forceMainThreadRenderer, true);
+  assert.strictEqual(mixer._config.hasSourceAiVirtualBackground, true);
+  assert.strictEqual(mixer._config.forceMainThreadRenderer, false);
   assert.strictEqual(mixer._config.forceMain2DRenderer, false);
 
   mixer.getVideoStream();
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
 
   mixer.stop();
 }
@@ -1894,7 +1896,7 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
   mixer.stop();
 }
 
-async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2()
+async function testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1917,12 +1919,13 @@ async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2()
     blurRadius : 8
   });
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
 
   mixer.stop();
 }
 
-async function testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2()
+async function testSetSourceAiVirtualBackgroundKeepsWorkerRenderer()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1946,13 +1949,13 @@ async function testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2()
     imageUrl : 'background.png'
   });
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
-  assert.strictEqual(mixer.getRenderInfo().isWorker, false);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
 
   mixer.stop();
 }
 
-async function testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime()
+async function testMainWebGL2AiVirtualBackgroundStartsInWorker()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1986,7 +1989,8 @@ async function testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime()
   mixer.getVideoStream();
   mixer._drawVideosToCanvas(undefined, true);
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
   assert.strictEqual(getRenderableStateCalls, 0);
 
   mixer.stop();
@@ -2605,9 +2609,9 @@ async function run()
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
-    { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2 },
-    { name: 'testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2', fn: testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2 },
-    { name: 'testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime', fn: testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime },
+    { name: 'testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker', fn: testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker },
+    { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },
+    { name: 'testMainWebGL2AiVirtualBackgroundStartsInWorker', fn: testMainWebGL2AiVirtualBackgroundStartsInWorker },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
     { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },
