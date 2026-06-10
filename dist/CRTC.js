@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026611017
+ * CRTC v2.0.0.2026611042
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4162,7 +4162,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212220034 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212220084 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17371,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212220034');
+debug('version %s', '2.0.0.405212220084');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17411,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212220034';
+    return '2.0.0.405212220084';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -20917,10 +20917,6 @@ class MediaStreamComposer {
       return;
     }
     var info = this._renderer.getInfo();
-    if (hasSourceAiVirtualBackground && !shouldForceMainThread && !info.isWorker) {
-      this._fallbackRendererToWorker2D('Active source AI virtual background runs in worker renderer');
-      return;
-    }
     if (!shouldForceMainThread) {
       return;
     }
@@ -24780,6 +24776,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
 
     /** @type {*} shader 中透明度 uniform 的 location */
     this._opacityLocation = null;
+    this._aiVirtualBackgroundManager = config && config.aiVirtualBackgroundManager ? config.aiVirtualBackgroundManager : null;
   }
 
   /**
@@ -24898,10 +24895,13 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
         return;
       }
       var texture = this._getTexture(item.id);
+      var surface = this._resolveItemSurface(item, payload.outputMirrorX, payload.width);
+      var drawItem = surface && surface.item ? surface.item : item;
+      var inputSurface = surface && surface.surface ? surface.surface : item.video;
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, item.video);
-      this._drawItem(item, payload.height, payload.outputMirrorX, payload.width);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, inputSurface);
+      this._drawItem(drawItem, payload.height, payload.outputMirrorX, payload.width);
     });
     var sourceWatermarkMirrorX = payload.outputMirrorX;
     var outputWatermarkMirrorX = payload.mirrorWatermarksWithOutput === false ? false : payload.outputMirrorX;
@@ -24959,6 +24959,155 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     gl.uniform1f(this._opacityLocation, opacity);
     gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  _resolveItemSurface(item, outputMirrorX, canvasWidth) {
+    if (!item || !item.aiVirtualBackground || !item.source || !this._aiVirtualBackgroundManager) {
+      return {
+        surface: item ? item.video : null,
+        item: item
+      };
+    }
+    var effect = this._aiVirtualBackgroundManager.getRenderableState(item.source, item.video);
+    if (!effect || !effect.config || effect.config.mode === 'none') {
+      return {
+        surface: item.video,
+        item: item
+      };
+    }
+    var draw = this._resolveDrawRect(item.draw, outputMirrorX, canvasWidth);
+    var effectiveMirrorX = Boolean(item.mirrorX) !== Boolean(outputMirrorX);
+    var composedSurface = this._composeAiVirtualBackgroundSurface(item, effect, draw, effectiveMirrorX);
+    if (!composedSurface) {
+      return {
+        surface: item.video,
+        item: item
+      };
+    }
+    return {
+      surface: composedSurface,
+      item: Object.assign({}, item, {
+        draw: draw,
+        mirrorX: false
+      })
+    };
+  }
+  _composeAiVirtualBackgroundSurface(item, effect, draw, mirrorX) {
+    if (!item || !item.video || !effect || !effect.config || !draw) {
+      return null;
+    }
+    var mask = effect.latestMask;
+    if (!mask) {
+      return null;
+    }
+    var foregroundSurface = this._ensureWorkSurface(effect.state, 'foreground', draw.width, draw.height);
+    var outputSurface = this._ensureWorkSurface(effect.state, 'output', draw.width, draw.height);
+    if (!foregroundSurface || !foregroundSurface.context || !outputSurface || !outputSurface.context) {
+      return null;
+    }
+    foregroundSurface.context.clearRect(0, 0, foregroundSurface.canvas.width, foregroundSurface.canvas.height);
+    this._drawSurfaceToContext(foregroundSurface.context, item.video, {
+      x: 0,
+      y: 0,
+      width: foregroundSurface.canvas.width,
+      height: foregroundSurface.canvas.height
+    }, mirrorX);
+    foregroundSurface.context.globalCompositeOperation = 'destination-in';
+    foregroundSurface.context.drawImage(mask, 0, 0, foregroundSurface.canvas.width, foregroundSurface.canvas.height);
+    foregroundSurface.context.globalCompositeOperation = 'source-over';
+    outputSurface.context.clearRect(0, 0, outputSurface.canvas.width, outputSurface.canvas.height);
+    if (effect.config.mode === 'blur') {
+      outputSurface.context.save();
+      outputSurface.context.filter = `blur(${effect.config.blurRadius}px)`;
+      this._drawSurfaceToContext(outputSurface.context, item.video, {
+        x: 0,
+        y: 0,
+        width: outputSurface.canvas.width,
+        height: outputSurface.canvas.height
+      }, mirrorX);
+      outputSurface.context.restore();
+    } else if (effect.config.mode === 'image') {
+      if (!effect.backgroundImage || !this._drawCoverSurfaceToContext(outputSurface.context, effect.backgroundImage, {
+        x: 0,
+        y: 0,
+        width: outputSurface.canvas.width,
+        height: outputSurface.canvas.height
+      })) {
+        return null;
+      }
+    } else if (effect.config.mode === 'color') {
+      outputSurface.context.fillStyle = effect.config.backgroundColor || '#00ff00';
+      outputSurface.context.fillRect(0, 0, outputSurface.canvas.width, outputSurface.canvas.height);
+    } else {
+      return null;
+    }
+    outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, outputSurface.canvas.width, outputSurface.canvas.height);
+    this._aiVirtualBackgroundManager.noteFrameRendered(item.source, true);
+    return outputSurface.canvas;
+  }
+  _ensureWorkSurface(state, key, width, height) {
+    if (!state || typeof document === 'undefined') {
+      return null;
+    }
+    var canvasKey = `${key}Canvas`;
+    var contextKey = `${key}Context`;
+    if (!state[canvasKey]) {
+      state[canvasKey] = document.createElement('canvas');
+      state[contextKey] = state[canvasKey].getContext('2d');
+    }
+    if (!state[contextKey]) {
+      return null;
+    }
+    var targetWidth = Math.max(1, Math.round(width));
+    var targetHeight = Math.max(1, Math.round(height));
+    if (state[canvasKey].width !== targetWidth) {
+      state[canvasKey].width = targetWidth;
+    }
+    if (state[canvasKey].height !== targetHeight) {
+      state[canvasKey].height = targetHeight;
+    }
+    return {
+      canvas: state[canvasKey],
+      context: state[contextKey]
+    };
+  }
+  _drawSurfaceToContext(context, surface, draw, mirrorX) {
+    if (!context || !surface || !draw) {
+      return;
+    }
+    if (!mirrorX) {
+      context.drawImage(surface, draw.x, draw.y, draw.width, draw.height);
+      return;
+    }
+    context.save();
+    context.translate(draw.x + draw.width, draw.y);
+    context.scale(-1, 1);
+    context.drawImage(surface, 0, 0, draw.width, draw.height);
+    context.restore();
+  }
+  _drawCoverSurfaceToContext(context, surface, draw) {
+    if (!context || !surface || !draw) {
+      return false;
+    }
+    var imageWidth = surface.naturalWidth || surface.videoWidth || surface.width;
+    var imageHeight = surface.naturalHeight || surface.videoHeight || surface.height;
+    if (!imageWidth || !imageHeight) {
+      return false;
+    }
+    var imageAspect = imageWidth / imageHeight;
+    var drawAspect = draw.width / draw.height;
+    var sourceWidth = imageWidth;
+    var sourceHeight = imageHeight;
+    var sourceX = 0;
+    var sourceY = 0;
+    if (imageAspect > drawAspect) {
+      sourceWidth = imageHeight * drawAspect;
+      sourceX = (imageWidth - sourceWidth) / 2;
+    } else {
+      sourceHeight = imageWidth / drawAspect;
+      sourceY = (imageHeight - sourceHeight) / 2;
+    }
+    context.drawImage(surface, sourceX, sourceY, sourceWidth, sourceHeight, draw.x, draw.y, draw.width, draw.height);
+    return true;
   }
   _resolveDrawRect(draw, outputMirrorX, outputWidth) {
     if (!outputMirrorX) {
@@ -25093,6 +25242,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._program = null;
     this._canvas = null;
     this._activeMirrorX = null;
+    this._aiVirtualBackgroundManager = null;
   }
 };
 },{"./BaseRenderer":58,"./helpers/color":63,"./helpers/gl":64}],61:[function(require,module,exports){
@@ -25133,7 +25283,6 @@ exports.createRenderer = function (canvas, config, hooks) {
   var mode = config.renderMode || 'auto';
   var forceMainThread = config.forceMainThreadRenderer === true;
   var forceMain2D = config.forceMain2DRenderer === true;
-  var hasSourceAiVirtualBackground = config.hasSourceAiVirtualBackground === true;
   var errors = [];
   hooks = hooks || {};
   if (forceMain2D) {
@@ -25163,9 +25312,9 @@ exports.createRenderer = function (canvas, config, hooks) {
 
   // 尝试 Worker 渲染路径。auto 初始化阶段只尝试 worker-webgl2；
   // 如果异步失败，RenderLoop 会继续按 main-webgl2 -> worker-2d -> main-2d 降级。
-  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto' || hasSourceAiVirtualBackground && mode === 'main-webgl2')) {
+  if (!forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d' || mode === 'auto')) {
     try {
-      var workerMode = mode === 'auto' || hasSourceAiVirtualBackground && mode === 'main-webgl2' ? hasSourceAiVirtualBackground ? 'worker-2d' : 'worker-webgl2' : mode;
+      var workerMode = mode === 'auto' ? 'worker-webgl2' : mode;
       var workerConfig = Object.assign({}, config, {
         renderMode: workerMode
       });
@@ -25188,7 +25337,7 @@ exports.createRenderer = function (canvas, config, hooks) {
   }
 
   // 尝试主线程 WebGL2
-  if (!hasSourceAiVirtualBackground && (mode === 'main-webgl2' || mode === 'auto')) {
+  if (mode === 'main-webgl2' || mode === 'auto') {
     try {
       var _renderer2 = new MainWebGL2Renderer(config, {
         requestedMode: mode,
@@ -25218,9 +25367,6 @@ exports.createRenderer = function (canvas, config, hooks) {
  */
 function createMainFallback(canvas, config, requestedMode, reason) {
   if (config.forceMain2DRenderer === true) {
-    return createMain2D(canvas, config, true, reason);
-  }
-  if (config.hasSourceAiVirtualBackground === true) {
     return createMain2D(canvas, config, true, reason);
   }
   if (requestedMode !== 'worker-2d') {
@@ -25321,7 +25467,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
     this._outputContext = null;
 
-    /** @type {boolean} 是否优先将 Worker 返回帧直接交给 Insertable 输出 */
+    /** @type {boolean} 是否允许将 Worker 返回帧直接交给 Insertable 输出 */
     this._preferDirectFrameSource = Boolean(this._config && this._config.enableInsertable);
 
     /** @type {Worker|null} WebWorker 实例 */
@@ -25470,7 +25616,8 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       var presentedTimestamp = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
       var frameSource = null;
       var frameSourceConsumed = false;
-      if (data.bitmap && this._preferDirectFrameSource) {
+      var canUseDirectFrameSource = this._canUseDirectFrameSource();
+      if (data.bitmap && canUseDirectFrameSource) {
         frameSource = data.bitmap;
         frameSourceConsumed = true;
       }
@@ -25544,6 +25691,15 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     this._outputContext.fillStyle = this._config.backgroundColor || '#000';
     this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
     this._outputContext.imageSmoothingEnabled = true;
+    return true;
+  }
+  _canUseDirectFrameSource() {
+    if (!this._preferDirectFrameSource) {
+      return false;
+    }
+    if (this._info && this._info.actualMode === 'worker-webgl2' && this._config && this._config.hasSourceAiVirtualBackground === true) {
+      return false;
+    }
     return true;
   }
 
@@ -28437,19 +28593,11 @@ module.exports = class RTCSession extends EventEmitter {
       return null;
     }
     var composer = this.getMediaStreamComposer();
-    var shouldRecreateComposerForEffectRouteChange = Boolean(composer && typeof composer.getRenderInfo === 'function' && this._sessionMediaStreamComposerOptions && this._sessionMediaStreamComposerOptions.sources instanceof Array && this._sessionMediaStreamComposerOptions.sources.some(item => item && item.aiVirtualBackground) && (() => {
-      try {
-        var renderInfo = composer.getRenderInfo() || {};
-        return renderInfo.isWorker !== true && renderInfo.actualMode === 'main-webgl2';
-      } catch (error) {
-        return false;
-      }
-    })());
-    if (!composer || typeof composer.setConfig !== 'function' || shouldRecreateComposerForEffectRouteChange) {
+    if (!composer || typeof composer.setConfig !== 'function') {
       var sender = this._connection && typeof this._connection.getSenders === 'function' ? this._connection.getSenders().find(item => item && item.track && item.track.kind === 'video') : null;
       var composerInputStream = this._mediaStreamComposerInputStream;
       var currentLocalVideoTrack = sender && sender.track ? sender.track : this._localMediaStream && this._localMediaStream.getVideoTracks ? this._localMediaStream.getVideoTracks()[0] : null;
-      var rebuildFromComposerInputStream = Boolean(shouldRecreateComposerForEffectRouteChange && composerInputStream && composerInputStream.getVideoTracks && composerInputStream.getVideoTracks().length > 0);
+      var rebuildFromComposerInputStream = Boolean(composerInputStream && composerInputStream.getVideoTracks && composerInputStream.getVideoTracks().length > 0);
       if (!rebuildFromComposerInputStream && !currentLocalVideoTrack) {
         return null;
       }

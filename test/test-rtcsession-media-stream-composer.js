@@ -1239,7 +1239,7 @@ async function testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack(
   assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 8);
 }
 
-async function testUpdateMediaStreamComposerRecreatesComposerWhenAiVBNeedsWorkerRoute()
+async function testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
@@ -1284,14 +1284,14 @@ async function testUpdateMediaStreamComposerRecreatesComposerWhenAiVBNeedsWorker
     ]
   });
 
-  assert.strictEqual(MockMixer.instances.length, 2);
-  assert.strictEqual(firstComposer.stopped, true);
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(firstComposer.stopped, false);
   assert.strictEqual(sourceVideoTrack.readyState, 'live');
   assert.strictEqual(sourceAudioTrack.readyState, 'live');
-  assert.strictEqual(MockMixer.instances[1].streams[0], sourceStream);
-  assert.strictEqual(MockMixer.instances[1].options.sources[0].aiVirtualBackground.blurRadius, 10);
-  assert.strictEqual(sender.replaced, MockMixer.instances[1].outputTrack);
-  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[1].outputTrack);
+  assert.strictEqual(MockMixer.instances[0].streams[0], sourceStream);
+  assert.strictEqual(firstComposer.getSourceAiVirtualBackground(0).blurRadius, 10);
+  assert.strictEqual(sender.replaced, undefined);
+  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], outputVideoTrack);
   assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 10);
 }
 
@@ -1344,7 +1344,7 @@ async function run()
     { name: 'testUpdateMediaStreamComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaStreamComposerUpdatesPrimarySourceEffects },
     { name: 'testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground', fn: testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground },
     { name: 'testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack },
-    { name: 'testUpdateMediaStreamComposerRecreatesComposerWhenAiVBNeedsWorkerRoute', fn: testUpdateMediaStreamComposerRecreatesComposerWhenAiVBNeedsWorkerRoute },
+    { name: 'testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB', fn: testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 

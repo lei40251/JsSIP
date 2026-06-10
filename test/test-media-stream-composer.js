@@ -1896,7 +1896,7 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
   mixer.stop();
 }
 
-async function testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker()
+async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1919,8 +1919,8 @@ async function testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker()
     blurRadius : 8
   });
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
-  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, false);
 
   mixer.stop();
 }
@@ -1955,7 +1955,7 @@ async function testSetSourceAiVirtualBackgroundKeepsWorkerRenderer()
   mixer.stop();
 }
 
-async function testMainWebGL2AiVirtualBackgroundStartsInWorker()
+async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1989,9 +1989,9 @@ async function testMainWebGL2AiVirtualBackgroundStartsInWorker()
   mixer.getVideoStream();
   mixer._drawVideosToCanvas(undefined, true);
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
-  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
-  assert.strictEqual(getRenderableStateCalls, 0);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, false);
+  assert.strictEqual(getRenderableStateCalls > 0, true);
 
   mixer.stop();
 }
@@ -2356,6 +2356,48 @@ async function testWorkerRendererPassesBitmapToInsertableFrameCallback()
   assert.notStrictEqual(bitmap.closed, true);
 }
 
+async function testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath()
+{
+  resetMockState();
+  const renderer = new WorkerRenderer({
+    backgroundColor              : '#000',
+    maxFrameQueue                : 1,
+    enableInsertable             : true,
+    hasSourceAiVirtualBackground : true
+  }, {
+    actualMode : 'worker-webgl2',
+    isWorker   : true,
+    isWebGL2   : true
+  });
+  const canvas = new MockCanvasElement();
+  const received = [];
+  const bitmap = {
+    width  : 320,
+    height : 180,
+    close  : function()
+    {
+      bitmap.closed = true;
+    }
+  };
+
+  renderer._canvas = canvas;
+  renderer._outputContext = canvas.getContext('2d');
+  renderer.setFramePresentedCallback((frameCtx) => received.push(frameCtx));
+
+  renderer._handleWorkerMessage({
+    data : {
+      type   : 'rendered',
+      bitmap : bitmap
+    }
+  });
+
+  assert.strictEqual(received.length, 1);
+  assert.strictEqual(received[0].canvas, canvas);
+  assert.strictEqual(received[0].frameSource, null);
+  assert.strictEqual(received[0].frameSourceConsumed, false);
+  assert.strictEqual(bitmap.closed, true);
+}
+
 async function testComposerConfigDefaults()
 {
   const defaultConfig = ComposerConfig.create({});
@@ -2646,9 +2688,9 @@ async function run()
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
-    { name: 'testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker', fn: testSetSourceAiVirtualBackgroundReroutesMainWebGL2ToWorker },
+    { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer },
     { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },
-    { name: 'testMainWebGL2AiVirtualBackgroundStartsInWorker', fn: testMainWebGL2AiVirtualBackgroundStartsInWorker },
+    { name: 'testMainWebGL2AiVirtualBackgroundUsesMainThreadManager', fn: testMainWebGL2AiVirtualBackgroundUsesMainThreadManager },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
     { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },
@@ -2660,6 +2702,7 @@ async function run()
     { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
     { name: 'testWorkerRendererPassesBitmapToInsertableFrameCallback', fn: testWorkerRendererPassesBitmapToInsertableFrameCallback },
+    { name: 'testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath', fn: testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath },
     { name: 'testComposerConfigDefaults', fn: testComposerConfigDefaults },
     { name: 'testComposerConfigSourceOptions', fn: testComposerConfigSourceOptions },
     { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
