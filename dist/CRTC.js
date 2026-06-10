@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266101355
+ * CRTC v2.0.0.20266101818
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -183,7 +183,7 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   return Object.keys(normalized).length > 0 ? normalized : null;
 };
-},{"../Logger":49}],2:[function(require,module,exports){
+},{"../Logger":44}],2:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -391,7 +391,7 @@ module.exports = class AiNSCore {
     }
   }
 };
-},{"../Logger":49,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
+},{"../Logger":44,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -729,7 +729,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
   }
 };
-},{"../Logger":49,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
+},{"../Logger":44,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
 "use strict";
 
 /**
@@ -1379,1906 +1379,7 @@ class AiNSEngine {
   }
 }
 module.exports = AiNSEngine;
-},{"../Logger":49,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
-"use strict";
-
-/**
- * AiVBAssetLoader —— 通过向 document 注入 <script type="module"> 标签，
- * 动态加载 MediaPipe Tasks Vision 运行时。
- *
- * 核心行为：
- *   - 每个唯一的 moduleUrl 只对应一个 script 标签。如果标签已存在（由其他
- *     AIVirtualBackground 实例或之前的加载创建），则等待它完成，而不是注入重复标签。
- *   - 运行时全局变量（FilesetResolver、ImageSegmenter）暴露在
- *     `window.CRTCAiVBVisionTasks` 上。
- *   - 加载 Promise 按 moduleUrl 全局去重，因此并发的 AIVirtualBackground 实例不会触发重复请求。
- *
- * @module AiVBAssetLoader
- */
-
-var Logger = require('../Logger');
-var Config = require('./AiVBConfig');
-var logger = new Logger('AiVBAssetLoader');
-
-/** window 上存储 MediaPipe Tasks 全局变量的键名 */
-var TASKS_GLOBAL = 'CRTCAiVBVisionTasks';
-
-/** 注入的 script 加载完成后设置的 data 属性，值为 'true' */
-var SCRIPT_READY_ATTR = 'data-aivb-ready';
-
-/** 注入的 script 加载失败后设置的 data 属性，值为 'true' */
-var SCRIPT_ERROR_ATTR = 'data-aivb-error';
-
-/** 等待已存在的 script 标签完成加载的最大时间（毫秒） */
-var SCRIPT_WAIT_TIMEOUT_MS = 15000;
-
-/** 轮询模块脚本执行结果的间隔（毫秒） */
-var SCRIPT_POLL_INTERVAL_MS = 50;
-
-/**
- * 全局去重表：moduleUrl → Promise<void>。
- *
- * 每个 moduleUrl 同一时间只有一个加载在进行；后续调用方等待同一个 Promise。
- *
- * @type {Object.<string, Promise<void>>}
- */
-var TASKS_LOAD_PROMISES = {};
-module.exports = class AiVBAssetLoader {
-  /**
-   * @param {Object} [assetConfig] — 原始资源配置（参见 AiVBConfig.normalizeAssetConfig）
-   */
-  constructor(assetConfig) {
-    /** @type {Object} 归一化后的资源配置，包含解析完成的 URL */
-    this.assetConfig = Config.normalizeAssetConfig(assetConfig);
-  }
-
-  /**
-   * 返回 MediaPipe FilesetResolver 和 ImageSegmenter 工厂所需的运行时选项。
-   *
-   * @param {string} [modelPath] — 可选的按实例覆盖的模型 URL
-   * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
-   */
-  getRuntimeOptions(modelPath) {
-    return {
-      moduleUrl: this.assetConfig.moduleUrl,
-      wasmBaseUrl: this.assetConfig.wasmBaseUrl,
-      modelUrl: this.resolveModelUrl(modelPath)
-    };
-  }
-
-  /**
-   * 解析模型 URL：显式传入的 modelPath 优先，否则使用配置的默认值。
-   *
-   * @private
-   * @param {string} [modelPath]
-   * @returns {string}
-   */
-  resolveModelUrl(modelPath) {
-    if (typeof modelPath === 'string' && modelPath.trim()) {
-      return modelPath.trim();
-    }
-    return this.assetConfig.modelUrl;
-  }
-
-  /**
-   * 确保 MediaPipe Tasks Vision 运行时已加载并在 `window[TASKS_GLOBAL]` 上可用。
-   *
-   * 若已加载则立即返回。否则注入 <script type="module"> 标签（或等待已有的标签完成）。
-   *
-   * @returns {Promise<{ FilesetResolver: Object, ImageSegmenter: Object }>}
-   *   Tasks 全局命名空间
-   * @throws {Error} 如果不在浏览器环境中运行
-   */
-  async ensureTasksLoaded() {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      throw new Error('AIVirtualBackground requires browser environment');
-    }
-
-    // 已加载 —— 立即返回
-    if (window[TASKS_GLOBAL]) {
-      return window[TASKS_GLOBAL];
-    }
-    var moduleUrl = this.assetConfig.moduleUrl;
-
-    // 其他调用方正在加载此 moduleUrl —— 等待它完成
-    if (TASKS_LOAD_PROMISES[moduleUrl]) {
-      await TASKS_LOAD_PROMISES[moduleUrl];
-      return window[TASKS_GLOBAL];
-    }
-    TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl);
-    try {
-      await TASKS_LOAD_PROMISES[moduleUrl];
-    } finally {
-      delete TASKS_LOAD_PROMISES[moduleUrl];
-    }
-    logger.debug(`Loaded MediaPipe Tasks runtime: ${moduleUrl}`);
-    return window[TASKS_GLOBAL];
-  }
-
-  /**
-   * 注入 <script type="module"> 标签，从给定 moduleUrl 导入 FilesetResolver
-   * 和 ImageSegmenter，并将其暴露在 `window[TASKS_GLOBAL]` 上。
-   *
-   * 如果 DOM 中已存在此 moduleUrl 的 script 标签，则委托给 `waitForExistingScript`
-   * 而不是注入重复标签。
-   *
-   * @private
-   * @param {string} moduleUrl — MediaPipe Tasks Vision ESM 包的 URL
-   * @returns {Promise<void>}
-   */
-  async loadTasksRuntime(moduleUrl) {
-    var selector = `script[data-aivb-module="${moduleUrl}"]`;
-    var existingScript = document.querySelector(selector);
-    if (existingScript) {
-      await this.waitForExistingScript(existingScript, moduleUrl);
-      return window[TASKS_GLOBAL];
-    }
-    await new Promise((resolve, reject) => {
-      var script = document.createElement('script');
-      var timeoutId = null;
-      var intervalId = null;
-      function cleanup() {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-        if (intervalId) {
-          window.clearInterval(intervalId);
-        }
-        script.onerror = null;
-      }
-      script.type = 'module';
-      script.async = true;
-      script.setAttribute('data-aivb-module', moduleUrl);
-
-      // 内联 ESM import —— 无需单独的 JS 文件
-      script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
-        window.${TASKS_GLOBAL} = { FilesetResolver, ImageSegmenter };`;
-      script.onerror = () => {
-        cleanup();
-        script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
-        reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
-      };
-      document.head.appendChild(script);
-      intervalId = window.setInterval(() => {
-        if (window[TASKS_GLOBAL]) {
-          cleanup();
-          script.setAttribute(SCRIPT_READY_ATTR, 'true');
-          script.removeAttribute(SCRIPT_ERROR_ATTR);
-          resolve();
-        }
-      }, SCRIPT_POLL_INTERVAL_MS);
-      timeoutId = window.setTimeout(() => {
-        cleanup();
-        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
-      }, SCRIPT_WAIT_TIMEOUT_MS);
-    });
-  }
-
-  /**
-   * 等待由其他 AIVirtualBackground 实例（或之前的页面加载）注入的 script 标签完成加载。
-   *
-   * 处理三种情况：
-   *   1. 全局变量已设置 → 立即返回
-   *   2. script 之前加载失败 → 立即抛出
-   *   3. script 仍在加载中 → 绑定 load/error 事件监听并等待（带超时）
-   *
-   * @private
-   * @param {HTMLScriptElement} script — DOM 中已存在的 script 元素
-   * @param {string} moduleUrl — 模块 URL（用于错误消息）
-   * @returns {Promise<void>}
-   * @throws {Error} 如果 script 加载失败或超时
-   */
-  async waitForExistingScript(script, moduleUrl) {
-    // 情况 1：全局变量已可用
-    if (window[TASKS_GLOBAL]) {
-      return;
-    }
-
-    // 情况 2：已有的 script 已加载失败
-    if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
-      throw new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`);
-    }
-
-    // 边缘情况：script 标记为就绪但全局变量缺失
-    if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
-      if (window[TASKS_GLOBAL]) {
-        return;
-      }
-      throw new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`);
-    }
-
-    // 情况 3：script 仍在加载中 —— 轮询全局变量 / 状态属性
-    await new Promise((resolve, reject) => {
-      var timeoutId = null;
-      var intervalId = null;
-      function cleanup() {
-        if (timeoutId) {
-          window.clearTimeout(timeoutId);
-        }
-        if (intervalId) {
-          window.clearInterval(intervalId);
-        }
-      }
-      intervalId = window.setInterval(() => {
-        if (window[TASKS_GLOBAL] || script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
-          cleanup();
-          resolve();
-          return;
-        }
-        if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
-          cleanup();
-          reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
-        }
-      }, SCRIPT_POLL_INTERVAL_MS);
-      timeoutId = window.setTimeout(() => {
-        cleanup();
-        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
-      }, SCRIPT_WAIT_TIMEOUT_MS);
-    });
-  }
-};
-},{"../Logger":49,"./AiVBConfig":7}],7:[function(require,module,exports){
-"use strict";
-
-/**
- * AiVBConfig —— AIVirtualBackground 引擎的配置归一化模块。
- *
- * 将用户提供的选项与安全默认值合并，校验已知 key，
- * 并尽早拒绝未知选项以捕获拼写错误 / 误配置。
- *
- * 以函数集合形式导出（而非类），以便 AIVirtualBackground 和 AiVBAssetLoader
- * 无需实例化即可使用。
- *
- * @module AiVBConfig
- */
-
-var Logger = require('../Logger');
-var logger = new Logger('AiVBConfig');
-
-/** MediaPipe 推理允许的 delegate 值 */
-var SUPPORTED_DELEGATES = new Set(['CPU', 'GPU']);
-
-/** `video` 选项块下已识别的 key */
-var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror', 'processingScale'];
-
-/** `segmentation` 选项块下已识别的 key */
-var SEGMENTATION_OPTION_KEYS = ['delegate', 'frameSkip'];
-
-/** `postProcessing` 选项块下已识别的 key */
-var POST_PROCESSING_OPTION_KEYS = ['blurRadius', 'maxBlurRadius'];
-
-/** `assetConfig` 选项块下已识别的 key */
-var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
-
-// ---------------------------------------------------------------------------
-// 默认值
-// ---------------------------------------------------------------------------
-
-/** @type {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }} */
-var DEFAULT_VIDEO = {
-  width: 1280,
-  height: 720,
-  targetFps: 15,
-  mirror: false,
-  processingScale: 0.5
-};
-
-/** @type {{ delegate: 'CPU'|'GPU', frameSkip: number }} */
-var DEFAULT_SEGMENTATION = {
-  delegate: 'GPU',
-  frameSkip: 1
-};
-
-/** @type {{ blurRadius: number, maxBlurRadius: number }} */
-var DEFAULT_POST_PROCESSING = {
-  blurRadius: 20,
-  maxBlurRadius: 12
-};
-
-/** MediaPipe Tasks Vision 默认 CDN URL（jsDelivr） */
-var DEFAULT_TASKS_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2';
-var DEFAULT_TASKS_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm';
-
-/** 默认 selfie-segmenter landscape 模型（Google Cloud Storage） */
-var DEFAULT_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite';
-
-// ---------------------------------------------------------------------------
-// 顶层工厂函数
-// ---------------------------------------------------------------------------
-
-/**
- * 创建完全归一化的 AIVirtualBackground 配置对象。
- *
- * @param {Object} [options={}] — 用户提供的原始选项
- * @param {Object} [options.video] — 视频流设置
- * @param {Object} [options.segmentation] — 分割设置
- * @param {Object} [options.postProcessing] — 后处理设置
- * @param {Object} [options.assetConfig] — CDN / 路径覆盖
- * @returns {{ video: Object, segmentation: Object, postProcessing: Object, assetConfig: Object }}
- */
-exports.create = function (options = {}) {
-  var assetConfig = exports.normalizeAssetConfig(options.assetConfig);
-  var config = {
-    video: exports.normalizeVideo(options.video),
-    segmentation: exports.normalizeSegmentation(options.segmentation),
-    postProcessing: exports.normalizePostProcessing(options.postProcessing),
-    assetConfig
-  };
-  logger.debug(`Config created: ${JSON.stringify(config)}`);
-  return config;
-};
-
-// ---------------------------------------------------------------------------
-// 各段归一化函数
-// ---------------------------------------------------------------------------
-
-/**
- * 归一化 `video` 选项块。
- *
- * 接受部分对象；缺失的 key 回退到 DEFAULT_VIDEO。
- * 未知 key 会导致立即抛出错误。
- *
- * @param {Object} [video] — 原始视频选项
- * @returns {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }}
- * @throws {Error} 如果存在未知 key
- */
-exports.normalizeVideo = function (video) {
-  var normalized = Object.assign({}, DEFAULT_VIDEO);
-  if (!video || typeof video !== 'object') {
-    return normalized;
-  }
-  assertKnownKeys('video', video, VIDEO_OPTION_KEYS);
-  if (Number.isFinite(Number(video.width)) && Number(video.width) > 0) {
-    normalized.width = Math.floor(Number(video.width));
-  }
-  if (Number.isFinite(Number(video.height)) && Number(video.height) > 0) {
-    normalized.height = Math.floor(Number(video.height));
-  }
-  if (Number.isFinite(Number(video.targetFps)) && Number(video.targetFps) > 0) {
-    normalized.targetFps = clampNumber(video.targetFps, 1, 60, DEFAULT_VIDEO.targetFps);
-  }
-  if (typeof video.mirror === 'boolean') {
-    normalized.mirror = video.mirror;
-  }
-  if (Number.isFinite(Number(video.processingScale))) {
-    normalized.processingScale = clampNumber(video.processingScale, 0.1, 1, DEFAULT_VIDEO.processingScale);
-  }
-  return normalized;
-};
-
-/**
- * 归一化 `segmentation` 选项块。
- *
- * @param {Object} [segmentation] — 原始分割选项
- * @returns {{ delegate: 'CPU'|'GPU', frameSkip: number }}
- * @throws {Error} 如果存在未知 key
- */
-exports.normalizeSegmentation = function (segmentation) {
-  var normalized = Object.assign({}, DEFAULT_SEGMENTATION);
-  if (!segmentation || typeof segmentation !== 'object') {
-    return normalized;
-  }
-  assertKnownKeys('segmentation', segmentation, SEGMENTATION_OPTION_KEYS);
-  if (typeof segmentation.delegate === 'string' && segmentation.delegate.trim()) {
-    var delegate = segmentation.delegate.trim().toUpperCase();
-    if (SUPPORTED_DELEGATES.has(delegate)) {
-      normalized.delegate = delegate;
-    }
-  }
-  if (Number.isFinite(Number(segmentation.frameSkip))) {
-    normalized.frameSkip = Math.floor(clampNumber(segmentation.frameSkip, 0, 120, DEFAULT_SEGMENTATION.frameSkip));
-  }
-  return normalized;
-};
-
-/**
- * 归一化 `postProcessing` 选项块。
- *
- * @param {Object} [postProcessing] — 原始后处理选项
- * @returns {{ blurRadius: number, maxBlurRadius: number }} — 钳位到 [0, 100]
- * @throws {Error} 如果存在未知 key
- */
-exports.normalizePostProcessing = function (postProcessing) {
-  var normalized = Object.assign({}, DEFAULT_POST_PROCESSING);
-  if (!postProcessing || typeof postProcessing !== 'object') {
-    return normalized;
-  }
-  assertKnownKeys('postProcessing', postProcessing, POST_PROCESSING_OPTION_KEYS);
-  normalized.maxBlurRadius = clampNumber(postProcessing.maxBlurRadius, 0, 100, DEFAULT_POST_PROCESSING.maxBlurRadius);
-  normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, normalized.maxBlurRadius, Math.min(DEFAULT_POST_PROCESSING.blurRadius, normalized.maxBlurRadius));
-  return normalized;
-};
-
-/**
- * 归一化 `assetConfig` 选项块。
- *
- * URL 解析优先级（从高到低）：
- *   1. 显式的 `moduleUrl` / `wasmBaseUrl` / `modelUrl`
- *   2. `cdnUrl` 或 `baseUrl`（自动推导传统 tasks 目录的 module + wasm 路径）
- *   3. `flatBaseUrl`（自动推导扁平 aivb 目录的 vision.js + wasm + model 路径）
- *   4. 硬编码的 jsDelivr + Google Cloud Storage 默认值
- *
- * @param {Object} [assetConfig] — 原始资源配置
- * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
- * @throws {Error} 如果存在未知 key
- */
-exports.normalizeAssetConfig = function (assetConfig) {
-  var normalized = {
-    moduleUrl: DEFAULT_TASKS_MODULE_URL,
-    wasmBaseUrl: DEFAULT_TASKS_WASM_BASE_URL,
-    modelUrl: DEFAULT_MODEL_URL
-  };
-  if (!assetConfig || typeof assetConfig !== 'object') {
-    return normalized;
-  }
-  assertKnownKeys('assetConfig', assetConfig, ASSET_CONFIG_OPTION_KEYS);
-
-  // 便捷方式：从单个 cdnUrl / baseUrl 推导 module 和 wasm URL
-  if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
-    var baseUrl = assetConfig.cdnUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${baseUrl}/vision_bundle.mjs`;
-    normalized.wasmBaseUrl = `${baseUrl}/wasm`;
-  } else if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
-    var _baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${_baseUrl}/vision_bundle.mjs`;
-    normalized.wasmBaseUrl = `${_baseUrl}/wasm`;
-  } else if (typeof assetConfig.flatBaseUrl === 'string' && assetConfig.flatBaseUrl.trim()) {
-    var _baseUrl2 = assetConfig.flatBaseUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${_baseUrl2}/vision.js`;
-    normalized.wasmBaseUrl = _baseUrl2;
-    normalized.modelUrl = `${_baseUrl2}/selfie_segmenter_landscape.tflite`;
-  }
-
-  // 显式的逐项 URL 覆盖具有最高优先级
-  if (typeof assetConfig.moduleUrl === 'string' && assetConfig.moduleUrl.trim()) {
-    normalized.moduleUrl = assetConfig.moduleUrl.trim();
-  }
-  if (typeof assetConfig.wasmBaseUrl === 'string' && assetConfig.wasmBaseUrl.trim()) {
-    normalized.wasmBaseUrl = assetConfig.wasmBaseUrl.trim().replace(/\/$/, '');
-  }
-  if (typeof assetConfig.modelUrl === 'string' && assetConfig.modelUrl.trim()) {
-    normalized.modelUrl = assetConfig.modelUrl.trim();
-  }
-  return normalized;
-};
-
-// ---------------------------------------------------------------------------
-// 内部辅助函数
-// ---------------------------------------------------------------------------
-
-/**
- * 将数值钳位到 [min, max] 范围。如果值无法转换为有限数值，则返回 fallback。
- *
- * @param {*} value
- * @param {number} min
- * @param {number} max
- * @param {number} fallback
- * @returns {number}
- */
-function clampNumber(value, min, max, fallback) {
-  var numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, numericValue));
-}
-
-/**
- * 验证选项对象仅包含已识别的 key，若发现未知 key 则抛出错误。
- *
- * 此函数充当拼写错误的早期预警（例如使用了 `blur_radius` 而非 `blurRadius`）。
- *
- * @param {string} sectionName — 人类可读的配置段名称（用于错误消息）
- * @param {Object} value — 原始选项对象
- * @param {string[]} allowedKeys — 已识别 key 的白名单
- * @throws {Error} 如果 `value` 包含不在 `allowedKeys` 中的 key
- */
-function assertKnownKeys(sectionName, value, allowedKeys) {
-  var allowedKeySet = new Set(allowedKeys);
-  var unknownKeys = Object.keys(value).filter(key => !allowedKeySet.has(key));
-  if (unknownKeys.length > 0) {
-    throw new Error(`Unsupported AIVirtualBackground ${sectionName} option(s): ${unknownKeys.join(', ')}`);
-  }
-}
-},{"../Logger":49}],8:[function(require,module,exports){
-"use strict";
-
-/**
- * Canvas2DPipeline —— 基于 Canvas2D 的快速合成管线，用于虚拟背景效果。
- *
- * 使用一个离屏 <canvas> 做人像遮罩，目标 canvas 做最终合成。
- * 无需 WebGL —— 所有支持 Canvas2D 的环境均可工作。
- *
- * 支持的合成模式：
- *   - 'none'  — 直接绘制视频帧，不做背景替换
- *   - 'blur'  — 模糊原始背景，再将人像叠加在上层
- *   - 'image' — 用 cover-fit 图片替换背景
- *   - 'color' — 用纯色填充背景
- *
- * @module Canvas2DPipeline
- */
-
-/**
- * 构建 Canvas2D 渲染管线。
- *
- * 返回的管线对象在 init 后长期复用，通过 updateState 更新模式和资源，
- * 避免每次切换背景都销毁再重建。
- *
- * @param {Object} options
- * @param {HTMLCanvasElement} options.canvas — 目标输出 canvas
- * @param {HTMLVideoElement} options.videoElement — 源视频元素
- * @param {HTMLImageElement} [options.backgroundImage] — 背景图片（'image' 模式使用）
- * @param {string} [options.backgroundColor='#00ff00'] — 'color' 模式使用的 CSS 颜色
- * @param {'none'|'blur'|'image'|'color'} options.mode — 合成模式
- * @param {boolean} [options.mirror=false] — 是否水平镜像输出
- * @param {Object} options.segmenterRuntime — MediaPipe 分割器实例（需暴露 segmentForVideo(videoEl) 方法）
- * @param {number} [options.blurRadius=20] — 高斯模糊半径
- * @param {number} [options.maxBlurRadius=12] — 高斯模糊半径上限
- * @param {number} [options.processingScale=0.5] — 分割输入缩放比例
- * @param {number} [options.frameSkip=1] — 分割降频参数，0 表示每帧都做
- * @param {Object} [options.metrics] — 可选的指标回调
- * @returns {Object} 管线句柄
- * @throws {Error} 如果无法从 canvas 获取 2D 上下文
- */
-function buildCanvas2DPipeline(options) {
-  var {
-    canvas,
-    videoElement,
-    backgroundImage,
-    backgroundColor,
-    mode,
-    mirror,
-    segmenterRuntime,
-    blurRadius,
-    maxBlurRadius,
-    processingScale,
-    frameSkip,
-    metrics
-  } = options;
-  var context = canvas.getContext('2d');
-  if (!context) {
-    throw new Error('2D canvas not supported');
-  }
-  var personCanvas = document.createElement('canvas');
-  var personContext = personCanvas.getContext('2d');
-  if (!personContext) {
-    throw new Error('Unable to create person mask canvas');
-  }
-  var segmentationCanvas = document.createElement('canvas');
-  var segmentationContext = segmentationCanvas.getContext('2d');
-  if (!segmentationContext) {
-    throw new Error('Unable to create segmentation input canvas');
-  }
-  personCanvas.width = canvas.width;
-  personCanvas.height = canvas.height;
-
-  /** @type {Object} 可变的管线状态 */
-  var state = {
-    backgroundImage: backgroundImage || null,
-    backgroundColor: backgroundColor || '#00ff00',
-    blurRadius: clampBlurRadius(blurRadius, maxBlurRadius),
-    frameSkip: normalizeFrameSkip(frameSkip),
-    maxBlurRadius: normalizeMaxBlurRadius(maxBlurRadius),
-    mirror: Boolean(mirror),
-    mode: mode || 'none',
-    processingScale: normalizeProcessingScale(processingScale)
-  };
-
-  /** @type {HTMLCanvasElement|null} 上一帧可复用的分割遮罩 */
-  var lastSegmentationMask = null;
-
-  /** @type {number} 自上次新分割以来已输出的帧数 */
-  var renderedSinceSegmentation = 0;
-
-  /** @type {boolean} 最近一帧是否复用了旧遮罩 */
-  var lastMaskReused = false;
-  resizeWorkingCanvases();
-
-  /**
-   * 执行一帧渲染。
-   *
-   * 完整的每帧合成流程（按顺序）：
-   *
-   *   1. 'none' 模式 → 直接绘制视频帧到目标 canvas，跳过后续步骤
-   *   2. 分割决策：首帧/无缓存 → 必须分割；按 frameSkip 降频复用
-   *   3. 获取人像遮罩：MediaPipe segmentForVideo → confidenceMask → alpha canvas
-   *   4. 提取人像到 personCanvas：destination-in 合成保留人物区域
-   *   5. 绘制背景层：'blur'→模糊视频帧 / 'image'→cover-fit 图片 / 'color'→纯色填充
-   *   6. 合成人像层：ctx.drawImage(personCanvas) 将人像叠加到背景上
-   *
-   * @returns {Promise<void>}
-   */
-  async function render() {
-    var renderStartAt = getNow();
-    ensureCanvasSizes();
-    if (state.mode === 'none') {
-      clearCanvas(context, canvas);
-      drawVideoFrame(context, videoElement, canvas, state.mirror);
-      renderedSinceSegmentation += 1;
-      lastMaskReused = false;
-      emitMetric('onRenderComplete', {
-        renderDurationMs: getNow() - renderStartAt,
-        reusedMask: false,
-        segmentationDurationMs: 0,
-        segmentationRan: false,
-        segmentationMask: null
-      });
-      return;
-    }
-    var segmentationDecision = shouldRunSegmentation();
-    var segmentationMask = lastSegmentationMask;
-    var segmentationRan = false;
-    var segmentationDurationMs = 0;
-    if (segmentationDecision.run) {
-      var segmentationStartAt = getNow();
-      segmentationMask = await getSegmentationMask();
-      segmentationRan = true;
-      segmentationDurationMs = getNow() - segmentationStartAt;
-      lastSegmentationMask = segmentationMask;
-      renderedSinceSegmentation = 0;
-      lastMaskReused = false;
-    } else {
-      renderedSinceSegmentation += 1;
-      lastMaskReused = true;
-    }
-    if (!segmentationMask) {
-      throw new Error('MediaPipe segmentation did not return segmentationMask');
-    }
-    clearCanvas(personContext, personCanvas);
-    drawVideoFrame(personContext, videoElement, personCanvas, state.mirror);
-    personContext.globalCompositeOperation = 'destination-in';
-    drawVideoFrame(personContext, segmentationMask, personCanvas, state.mirror);
-    personContext.globalCompositeOperation = 'source-over';
-    clearCanvas(context, canvas);
-    if (state.mode === 'blur') {
-      context.save();
-      context.filter = `blur(${state.blurRadius}px)`;
-      drawVideoFrame(context, videoElement, canvas, state.mirror);
-      context.restore();
-    } else if (state.mode === 'image') {
-      drawCoverImage(context, state.backgroundImage, canvas);
-    } else if (state.mode === 'color') {
-      context.fillStyle = state.backgroundColor;
-      context.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    context.drawImage(personCanvas, 0, 0, canvas.width, canvas.height);
-    emitMetric('onRenderComplete', {
-      renderDurationMs: getNow() - renderStartAt,
-      reusedMask: lastMaskReused,
-      segmentationDurationMs: segmentationDurationMs,
-      segmentationRan: segmentationRan,
-      segmentationMask: segmentationMask
-    });
-  }
-
-  /**
-   * 更新管线运行状态（部分更新，未传入的字段保持不变）。
-   *
-   * 可热切换的属性：mode、mirror、backgroundImage、backgroundColor、
-   * blurRadius、maxBlurRadius、processingScale、frameSkip。
-   *
-   * 这允许在渲染过程中无缝切换背景类型，无需销毁/重建管线。
-   *
-   * @param {Object} [nextState={}] - 要更新的状态字段
-   */
-  function updateState(nextState = {}) {
-    if (Object.prototype.hasOwnProperty.call(nextState, 'mode') && nextState.mode) {
-      state.mode = nextState.mode;
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'mirror')) {
-      state.mirror = Boolean(nextState.mirror);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'backgroundImage')) {
-      state.backgroundImage = nextState.backgroundImage || null;
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'backgroundColor') && nextState.backgroundColor) {
-      state.backgroundColor = nextState.backgroundColor;
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'maxBlurRadius')) {
-      state.maxBlurRadius = normalizeMaxBlurRadius(nextState.maxBlurRadius);
-      state.blurRadius = clampBlurRadius(state.blurRadius, state.maxBlurRadius);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'blurRadius')) {
-      state.blurRadius = clampBlurRadius(nextState.blurRadius, state.maxBlurRadius);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'processingScale')) {
-      state.processingScale = normalizeProcessingScale(nextState.processingScale);
-      resizeWorkingCanvases();
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'frameSkip')) {
-      state.frameSkip = normalizeFrameSkip(nextState.frameSkip);
-    }
-  }
-  function setMode(nextMode) {
-    updateState({
-      mode: nextMode
-    });
-  }
-  function setBackgroundImage(nextImage) {
-    updateState({
-      backgroundImage: nextImage
-    });
-  }
-  function setBackgroundColor(nextColor) {
-    updateState({
-      backgroundColor: nextColor
-    });
-  }
-  function setBlurRadius(nextBlurRadius) {
-    updateState({
-      blurRadius: nextBlurRadius
-    });
-  }
-  function updateMirror(nextMirror) {
-    updateState({
-      mirror: nextMirror
-    });
-  }
-  function updateEffectConfig(effectConfig = {}) {
-    updateState(effectConfig);
-  }
-  function getState() {
-    return {
-      backgroundImage: state.backgroundImage,
-      backgroundColor: state.backgroundColor,
-      blurRadius: state.blurRadius,
-      frameSkip: state.frameSkip,
-      maxBlurRadius: state.maxBlurRadius,
-      mirror: state.mirror,
-      mode: state.mode,
-      processingScale: state.processingScale
-    };
-  }
-  function cleanUp() {
-    clearCanvas(context, canvas);
-    clearCanvas(personContext, personCanvas);
-    clearCanvas(segmentationContext, segmentationCanvas);
-    lastSegmentationMask = null;
-    renderedSinceSegmentation = 0;
-    lastMaskReused = false;
-  }
-  function ensureCanvasSizes() {
-    if (personCanvas.width !== canvas.width || personCanvas.height !== canvas.height) {
-      personCanvas.width = canvas.width;
-      personCanvas.height = canvas.height;
-    }
-    resizeWorkingCanvases();
-  }
-  function resizeWorkingCanvases() {
-    var width = Math.max(1, Math.round(canvas.width * state.processingScale));
-    var height = Math.max(1, Math.round(canvas.height * state.processingScale));
-    if (segmentationCanvas.width !== width) {
-      segmentationCanvas.width = width;
-    }
-    if (segmentationCanvas.height !== height) {
-      segmentationCanvas.height = height;
-    }
-  }
-  function shouldRunSegmentation() {
-    if (!lastSegmentationMask) {
-      return {
-        run: true
-      };
-    }
-    if (state.frameSkip <= 0) {
-      return {
-        run: true
-      };
-    }
-    if (renderedSinceSegmentation >= state.frameSkip) {
-      return {
-        run: true
-      };
-    }
-    return {
-      run: false
-    };
-  }
-  async function getSegmentationMask() {
-    clearCanvas(segmentationContext, segmentationCanvas);
-    drawVideoFrame(segmentationContext, videoElement, segmentationCanvas, false);
-    var segmentationResult = await segmenterRuntime.segmentForVideo(segmentationCanvas);
-    if (!segmentationResult || !segmentationResult.segmentationMask) {
-      throw new Error('MediaPipe segmentation did not return segmentationMask');
-    }
-    return segmentationResult.segmentationMask;
-  }
-  function emitMetric(method, payload) {
-    if (!metrics || typeof metrics[method] !== 'function') {
-      return;
-    }
-    metrics[method](payload);
-  }
-  return {
-    render,
-    updateState,
-    setMode,
-    setBackgroundImage,
-    setBackgroundColor,
-    setBlurRadius,
-    updateMirror,
-    updateEffectConfig,
-    getState,
-    cleanUp
-  };
-}
-function clearCanvas(context, canvas) {
-  context.clearRect(0, 0, canvas.width, canvas.height);
-}
-function drawVideoFrame(context, videoElement, canvas, mirror) {
-  context.save();
-  if (mirror) {
-    context.translate(canvas.width, 0);
-    context.scale(-1, 1);
-  }
-  context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-  context.restore();
-}
-function drawCoverImage(context, image, canvas) {
-  if (!image) {
-    throw new Error('Background image required for image mode');
-  }
-  var sourceWidth = image.naturalWidth || image.videoWidth || image.width;
-  var sourceHeight = image.naturalHeight || image.videoHeight || image.height;
-  if (!sourceWidth || !sourceHeight) {
-    throw new Error('Background image has invalid dimensions');
-  }
-  var sourceRatio = sourceWidth / sourceHeight;
-  var targetRatio = canvas.width / canvas.height;
-  var cropWidth = sourceWidth;
-  var cropHeight = sourceHeight;
-  var offsetX = 0;
-  var offsetY = 0;
-  if (sourceRatio > targetRatio) {
-    cropWidth = sourceHeight * targetRatio;
-    offsetX = (sourceWidth - cropWidth) / 2;
-  } else {
-    cropHeight = sourceWidth / targetRatio;
-    offsetY = (sourceHeight - cropHeight) / 2;
-  }
-  context.drawImage(image, offsetX, offsetY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-}
-function normalizeProcessingScale(value) {
-  var numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return 0.5;
-  }
-  return Math.min(1, Math.max(0.1, numericValue));
-}
-function normalizeFrameSkip(value) {
-  var numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return 1;
-  }
-  return Math.max(0, Math.floor(numericValue));
-}
-function normalizeMaxBlurRadius(value) {
-  var numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return 12;
-  }
-  return Math.min(100, Math.max(0, numericValue));
-}
-function clampBlurRadius(value, maxBlurRadius) {
-  var numericValue = Number(value);
-  var maxValue = normalizeMaxBlurRadius(maxBlurRadius);
-  if (!Number.isFinite(numericValue)) {
-    return Math.min(20, maxValue);
-  }
-  return Math.min(maxValue, Math.max(0, numericValue));
-}
-function getNow() {
-  if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') {
-    return performance.now();
-  }
-  return Date.now();
-}
-module.exports = {
-  buildCanvas2DPipeline
-};
-},{}],9:[function(require,module,exports){
-"use strict";
-
-/**
- * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
- * 为 AIVirtualBackground 提供人像分割能力。
- *
- * 职责：
- *   - 通过 AiVBAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
- *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
- *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
- *   - 最多排队一个待处理帧，避免背压积累
- *   - 销毁时干净关闭分割器并拒绝所有未完成的 Promise
- *
- * @module MediaPipeSegmenterRuntime
- */
-
-var Logger = require('../Logger');
-var AiVBAssetLoader = require('./AiVBAssetLoader');
-var logger = new Logger('AiVBMediaPipeRuntime');
-
-/** 默认推理后端 —— 'GPU' 以获得最佳性能 */
-var DEFAULT_DELEGATE = 'GPU';
-module.exports = class MediaPipeSegmenterRuntime {
-  /**
-   * @param {Object} [config={}]
-   * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
-   */
-  constructor(config = {}) {
-    /** @type {AiVBAssetLoader} 负责 MediaPipe 的动态脚本加载 */
-    this.assetLoader = new AiVBAssetLoader(config.assetConfig);
-
-    /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
-    this.assetUrls = null;
-
-    /** @type {Object|null} MediaPipe ImageSegmenter 实例 */
-    this.segmenter = null;
-
-    /** @type {boolean} 分割器是否已成功初始化 */
-    this.initialized = false;
-
-    /** @type {Promise|null} 正在进行的初始化 Promise（用于去重，防止并发初始化） */
-    this.initializingPromise = null;
-
-    /** @type {Object|null} 当前正在执行的分割请求 —— { resolve, reject, promise } */
-    this.pendingRequest = null;
-
-    /** @type {Object|null} 排队中的分割请求，当前一个请求完成后立即处理 ——
-     *   { videoElement, resolve, reject, promise } */
-    this.queuedRequest = null;
-
-    /** @type {boolean} 是否已调用 destroy() */
-    this.destroyed = false;
-
-    /** @type {string[]} 分割模型返回的标签列表 */
-    this.labels = [];
-
-    /** @type {number} 'person' 标签在 labels 中的索引 */
-    this.personMaskIndex = 0;
-
-    /** @type {HTMLCanvasElement|null} 复用的离屏 canvas，用于生成 alpha 遮罩 */
-    this.maskCanvas = null;
-
-    /** @type {CanvasRenderingContext2D|null} maskCanvas 的 2D 上下文 */
-    this.maskContext = null;
-
-    /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
-    this.maskImageData = null;
-  }
-
-  // ---------------------------------------------------------------------------
-  // 生命周期
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 初始化 MediaPipe ImageSegmenter。
-   *
-   * 加载 Tasks Vision 运行时（动态 <script> 注入）、解析 WASM 和模型 URL、
-   * 创建分割器并记录标签列表，以便后续定位人物遮罩。
-   *
-   * 可安全地多次调用 —— 已初始化时立即返回，正在初始化时共享同一个 Promise。
-   *
-   * @param {Object} [options={}]
-   * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
-   * @param {'CPU'|'GPU'} [options.delegate='GPU'] — 推理后端
-   * @returns {Promise<void>}
-   * @throws {Error} 如果分割器已被销毁
-   */
-  async initialize(options = {}) {
-    if (this.destroyed) {
-      throw new Error('MediaPipe segmenter destroyed');
-    }
-    if (this.initialized) {
-      return;
-    }
-    if (this.initializingPromise) {
-      return this.initializingPromise;
-    }
-    this.initializingPromise = (async () => {
-      var {
-        FilesetResolver,
-        ImageSegmenter
-      } = await this.assetLoader.ensureTasksLoaded();
-      if (this.destroyed) {
-        throw new Error('MediaPipe segmenter destroyed');
-      }
-      this.assetUrls = this.assetLoader.getRuntimeOptions(options.modelPath);
-      var vision = await FilesetResolver.forVisionTasks(this.assetUrls.wasmBaseUrl);
-      var segmenter = await ImageSegmenter.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: this.assetUrls.modelUrl,
-          delegate: options.delegate === 'CPU' ? 'CPU' : DEFAULT_DELEGATE
-        },
-        runningMode: 'VIDEO',
-        outputCategoryMask: false,
-        outputConfidenceMasks: true
-      });
-      try {
-        if (this.destroyed) {
-          throw new Error('MediaPipe segmenter destroyed');
-        }
-        this.segmenter = segmenter;
-        this.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
-        this.initialized = true;
-        logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
-      } catch (error) {
-        // 尽力关闭刚创建的分割器
-        if (typeof segmenter.close === 'function') {
-          try {
-            await segmenter.close();
-          } catch (closeError) {
-            logger.warn(`Failed to close MediaPipe segmenter after initialize error: ${closeError.message}`);
-          }
-        }
-        this.segmenter = null;
-        this.assetUrls = null;
-        this.initialized = false;
-        this.labels = [];
-        this.personMaskIndex = 0;
-        this.maskCanvas = null;
-        this.maskContext = null;
-        this.maskImageData = null;
-
-        // 拒绝正在等待初始化的请求
-        if (this.pendingRequest) {
-          var pending = this.pendingRequest;
-          this.pendingRequest = null;
-          pending.reject(error);
-        }
-        throw error;
-      }
-    })();
-    try {
-      await this.initializingPromise;
-    } finally {
-      this.initializingPromise = null;
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 分割
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 为给定视频帧排期一次分割。
-   *
-   * 如果已有分割正在进行，最新的帧会被排队（仅保留一帧排队 —— 更早的排队帧会被替换）。
-   * 这样可以在不积压请求的前提下保持管线响应。
-   *
-   * @param {HTMLVideoElement} videoElement — 源视频元素
-   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
-   * @throws {Error} 如果分割器未初始化
-   */
-  async segmentForVideo(videoElement) {
-    if (!this.initialized || !this.segmenter) {
-      throw new Error('MediaPipe segmenter not initialized');
-    }
-    if (this.pendingRequest) {
-      if (!this.queuedRequest) {
-        var resolveQueued;
-        var rejectQueued;
-        var queuedPromise = new Promise((resolve, reject) => {
-          resolveQueued = resolve;
-          rejectQueued = reject;
-        });
-        this.queuedRequest = {
-          videoElement,
-          resolve: resolveQueued,
-          reject: rejectQueued,
-          promise: queuedPromise
-        };
-      } else {
-        // 替换之前的排队帧 —— 只有最新的帧才重要
-        this.queuedRequest.videoElement = videoElement;
-      }
-      logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
-      return this.queuedRequest.promise;
-    }
-    return this.runSegmentation(videoElement);
-  }
-
-  /**
-   * 执行一次分割。
-   *
-   * 调用 MediaPipe 分割器的 VIDEO 模式 API，将置信度遮罩输出转换为基于 canvas 的 alpha 遮罩。
-   *
-   * @private
-   * @param {HTMLVideoElement} videoElement
-   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
-   */
-  async runSegmentation(videoElement) {
-    var resolvePending;
-    var rejectPending;
-    var promise = new Promise((resolve, reject) => {
-      resolvePending = resolve;
-      rejectPending = reject;
-    });
-    this.pendingRequest = {
-      resolve: resolvePending,
-      reject: rejectPending,
-      promise
-    };
-    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
-    try {
-      // MediaPipe VIDEO 模式的分割是基于回调的
-      this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
-        // 防止 destroy() 已将 pendingRequest 置空后的过时回调
-        if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
-          return;
-        }
-        var pending = this.pendingRequest;
-        this.pendingRequest = null;
-        try {
-          pending.resolve({
-            segmentationMask: this.createSegmentationMask(result)
-          });
-        } catch (error) {
-          pending.reject(error);
-        } finally {
-          this.closeSegmentationResult(result);
-          this.processQueuedRequest();
-        }
-      });
-    } catch (error) {
-      var pending = this.pendingRequest;
-      this.pendingRequest = null;
-      pending.reject(error);
-      this.processQueuedRequest();
-    }
-    return promise;
-  }
-
-  /**
-   * 如果有排队请求且没有其他请求正在执行，将其出队并执行。
-   *
-   * @private
-   */
-  processQueuedRequest() {
-    if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
-      return;
-    }
-    var queued = this.queuedRequest;
-    this.queuedRequest = null;
-    this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
-  }
-
-  // ---------------------------------------------------------------------------
-  // 遮罩构建
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 确定哪个置信度遮罩对应"人物"。
-   *
-   * 启发式策略：
-   *   1. 在标签中搜索匹配 /person/i 的项
-   *   2. 若无标签匹配且有多个遮罩，选最后一个（selfie-segmenter 模型的最后一个输出通常是人像）
-   *   3. 兜底使用索引 0
-   *
-   * @param {number} maskCount — 返回的置信度遮罩总数
-   * @returns {number} 从 0 开始的索引
-   */
-  resolvePersonMaskIndex(maskCount) {
-    for (var index = 0; index < this.labels.length; index += 1) {
-      if (typeof this.labels[index] === 'string' && /person/i.test(this.labels[index])) {
-        return index;
-      }
-    }
-    if (maskCount > 1) {
-      return maskCount - 1;
-    }
-    return 0;
-  }
-
-  /**
-   * 从原始分割结果构建基于 canvas 的 alpha 遮罩。
-   *
-   * 遮罩为灰度 canvas，其中：
-   *   - R=G=B=0（黑色）
-   *   - A = round(置信度 × 255)
-   *
-   * 此 canvas 可作为 destination-in 合成的源来使用。
-   *
-   * @private
-   * @param {Object} result — 原始 MediaPipe ImageSegmenterResult
-   * @returns {HTMLCanvasElement} 已绘制 alpha 遮罩的 canvas
-   * @throws {Error} 如果未找到支持的遮罩输出
-   */
-  createSegmentationMask(result) {
-    var mask = this.resolveOutputMask(result);
-    var width = mask.width;
-    var height = mask.height;
-    if (!width || !height) {
-      throw new Error('ImageSegmenter returned invalid categoryMask size');
-    }
-
-    // 懒创建 / 调整复用的遮罩 canvas
-    if (!this.maskCanvas) {
-      this.maskCanvas = document.createElement('canvas');
-      this.maskContext = this.maskCanvas.getContext('2d');
-    }
-    if (!this.maskContext) {
-      throw new Error('Unable to create segmentation mask canvas');
-    }
-    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height || !this.maskImageData) {
-      this.maskCanvas.width = width;
-      this.maskCanvas.height = height;
-      this.maskImageData = this.maskContext.createImageData(width, height);
-    }
-    var confidenceValues = this.readMaskValues(mask);
-    var imageData = this.maskImageData.data;
-    var offset = 0;
-
-    // 将置信度值写入 alpha 通道（R=G=B=0, A=置信度）
-    for (var i = 0; i < confidenceValues.length; i += 1) {
-      var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[i] * 255)));
-      imageData[offset] = 0;
-      imageData[offset + 1] = 0;
-      imageData[offset + 2] = 0;
-      imageData[offset + 3] = alpha;
-      offset += 4;
-    }
-    this.maskContext.putImageData(this.maskImageData, 0, 0);
-    return this.maskCanvas;
-  }
-
-  /**
-   * 从分割结果中解析出要使用的遮罩。
-   *
-   * 优先使用 confidenceMasks[personMaskIndex]（如果可用）；
-   * 回退到 categoryMask（兼容旧模型）。
-   *
-   * @private
-   * @param {Object} result
-   * @returns {Object} 单个遮罩对象（含 width、height 及数据访问方法）
-   * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
-   */
-  resolveOutputMask(result) {
-    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
-      this.personMaskIndex = this.resolvePersonMaskIndex(result.confidenceMasks.length);
-      return result.confidenceMasks[this.personMaskIndex];
-    }
-    if (result && result.categoryMask) {
-      return result.categoryMask;
-    }
-    throw new Error('ImageSegmenter did not return a supported mask output');
-  }
-
-  /**
-   * 从 MediaPipe 遮罩中读取原始置信度值。
-   *
-   * 支持 Float32Array 输出（置信度遮罩）和 Uint8Array 输出（类别遮罩），
-   * 全部归一化为 [0, 1] 范围内的 Float32。
-   *
-   * @private
-   * @param {Object} mask — MediaPipe 遮罩对象
-   * @returns {Float32Array} [0, 1] 范围内的置信度值
-   * @throws {Error} 如果遮罩格式不受支持
-   */
-  readMaskValues(mask) {
-    if (!mask) {
-      throw new Error('ImageSegmenter mask is required');
-    }
-    if (typeof mask.getAsFloat32Array === 'function') {
-      return mask.getAsFloat32Array();
-    }
-    if (typeof mask.getAsUint8Array === 'function') {
-      var categoryValues = mask.getAsUint8Array();
-      var floatValues = new Float32Array(categoryValues.length);
-      for (var i = 0; i < categoryValues.length; i += 1) {
-        floatValues[i] = categoryValues[i] > 0 ? 1 : 0;
-      }
-      return floatValues;
-    }
-    throw new Error('Unsupported ImageSegmenter mask format');
-  }
-
-  /**
-   * 释放分割结果关联的 MediaPipe 资源。
-   *
-   * MediaPipe 结果可能持有 WASM 底层资源，需要显式清理。
-   * 此方法同时关闭结果本身及其子遮罩对象。
-   *
-   * @private
-   * @param {Object} result — MediaPipe ImageSegmenterResult
-   */
-  closeSegmentationResult(result) {
-    if (result && typeof result.close === 'function') {
-      result.close();
-      return;
-    }
-    if (result && Array.isArray(result.confidenceMasks)) {
-      result.confidenceMasks.forEach(mask => {
-        if (mask && typeof mask.close === 'function') {
-          mask.close();
-        }
-      });
-    }
-    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
-      result.categoryMask.close();
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // 销毁
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 销毁分割器：关闭 MediaPipe 实例、拒绝未完成的 Promise、释放所有资源。
-   *
-   * 可安全地多次调用。
-   *
-   * @returns {Promise<void>}
-   */
-  async destroy() {
-    this.destroyed = true;
-
-    // 拒绝正在执行的分割
-    if (this.pendingRequest) {
-      var pending = this.pendingRequest;
-      this.pendingRequest = null;
-      pending.reject(new Error('MediaPipe segmenter destroyed'));
-    }
-
-    // 拒绝排队中的帧
-    if (this.queuedRequest) {
-      var queued = this.queuedRequest;
-      this.queuedRequest = null;
-      queued.reject(new Error('MediaPipe segmenter destroyed'));
-    }
-
-    // 等待初始化完成，以便安全关闭它可能已创建的分割器
-    if (this.initializingPromise) {
-      try {
-        await this.initializingPromise;
-      } catch (error) {
-        logger.debug(`destroy() ignored initialize error: ${error.message}`);
-      }
-    }
-    if (this.segmenter && typeof this.segmenter.close === 'function') {
-      await this.segmenter.close();
-    }
-    this.segmenter = null;
-    this.assetUrls = null;
-    this.initialized = false;
-    this.initializingPromise = null;
-    this.labels = [];
-    this.personMaskIndex = 0;
-    this.maskCanvas = null;
-    this.maskContext = null;
-    this.maskImageData = null;
-  }
-};
-},{"../Logger":49,"./AiVBAssetLoader":6}],10:[function(require,module,exports){
-"use strict";
-
-/**
- * AIVirtualBackground—— 基于 MediaPipe 人像分割的
- * 实时视频虚拟背景引擎。
- *
- * 支持四种背景模式：
- *   - 'none'  — 直通模式，不做背景替换
- *   - 'blur'  — 对原始背景做高斯模糊
- *   - 'image' — 用自定义图片替换背景（cover-fit 裁剪）
- *   - 'color' — 用纯色填充背景
- *
- * @module AIVirtualBackground
- */
-
-var {
-  buildCanvas2DPipeline
-} = require('./Canvas2DPipeline.js');
-var Config = require('./AiVBConfig');
-var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
-var Logger = require('../Logger');
-var logger = new Logger('AIVirtualBackground');
-var PERFORMANCE_LOG_INTERVAL_MS = 5000;
-class AIVirtualBackground {
-  constructor(options = {}) {
-    this.config = Config.create(options);
-    this.pipeline = null;
-    this.segmenterRuntime = new MediaPipeSegmenterRuntime({
-      assetConfig: this.config.assetConfig
-    });
-    this.inputStream = null;
-    this.outputStream = null;
-    this.canvas = null;
-    this.videoEl = null;
-    this.backgroundEl = null;
-    this.isRunning = false;
-    this.animationFrameId = null;
-    this.currentBackgroundKind = 'none';
-    this.lastFrameTime = 0;
-    this.isRendering = false;
-    this.renderPromise = null;
-    this.destroyed = false;
-    this.pipelineRequestId = 0;
-    this.pendingImageLoad = null;
-    this._performanceLogTimer = null;
-    this._performance = this._createPerformanceState();
-  }
-  _createPerformanceState() {
-    return {
-      avgRenderMs: 0,
-      avgSegmentationMs: 0,
-      currentMode: 'none',
-      droppedFrames: 0,
-      frameSkip: this.config.segmentation.frameSkip,
-      lastMaskReused: false,
-      maskReuseRate: 0,
-      maskReusedFrames: 0,
-      processingScale: this.config.video.processingScale,
-      renderedFrames: 0,
-      segmentedFrames: 0,
-      totalRenderMs: 0,
-      totalSegmentationMs: 0
-    };
-  }
-  _resetPerformanceState() {
-    this._performance = this._createPerformanceState();
-  }
-  _cancelPendingImageLoad(reason) {
-    if (!this.pendingImageLoad) {
-      return;
-    }
-    var pending = this.pendingImageLoad;
-    this.pendingImageLoad = null;
-    if (pending.image) {
-      pending.image.onload = null;
-      pending.image.onerror = null;
-      pending.image.src = '';
-    }
-    pending.reject(new Error(reason || 'Background image load cancelled'));
-  }
-  _cleanUpPipeline(options = {}) {
-    if (options.cancelPendingImageLoad !== false) {
-      this._cancelPendingImageLoad('Background image load cancelled');
-    }
-    if (this.pipeline && this.pipeline.cleanUp) {
-      this.pipeline.cleanUp();
-    }
-    this.pipeline = null;
-  }
-  _releaseBackgroundImage() {
-    if (!this.backgroundEl) {
-      return;
-    }
-    this.backgroundEl.onload = null;
-    this.backgroundEl.onerror = null;
-    this.backgroundEl.src = '';
-    this.backgroundEl = null;
-  }
-  _assertInitialized() {
-    if (!this.canvas || !this.videoEl || !this.outputStream || !this.pipeline) {
-      throw new Error('AIVirtualBackground not initialized');
-    }
-  }
-
-  /**
-   * 初始化虚拟背景引擎。
-   *
-   * 完整的初始化管线（按顺序）：
-   *
-   *   1. 加载 MediaPipe 分割模型（selfie-segmenter）
-   *      └─ segmenterRuntime.initialize() → WASM + TFLite 模型
-   *   2. 创建隐藏 <video> 元素
-   *      └─ createVideoElement() → video.srcObject = inputStream
-   *   3. 构建 Canvas2D 渲染管线
-   *      └─ buildCanvas2DPipeline() → 离屏 canvas + 分割输入 canvas
-   *   4. 创建输出流
-   *      └─ canvas.captureStream(fps) → MediaStream 输出
-   *   5. 重置背景为"直通"模式
-   *      └─ clearBackground()
-   *
-   * 调用 start() 后，requestAnimationFrame 循环开始逐帧处理。
-   * 初始化失败时自动销毁已创建的资源。
-   *
-   * @param {Object} [options]
-   * @param {MediaStream} options.inputStream — 原始摄像头采集流
-   * @param {string} [options.modelPath]     — 可选的分割模型 URL 覆盖
-   * @param {HTMLCanvasElement} [options.canvas] — 可选的外部 canvas
-   * @returns {Promise<void>}
-   */
-  async init({
-    inputStream,
-    modelPath,
-    canvas
-  } = {}) {
-    if (!inputStream) {
-      throw new Error('inputStream required');
-    }
-    this.destroyed = false;
-    this.inputStream = inputStream;
-    this.canvas = canvas || document.createElement('canvas');
-    this.canvas.width = this.config.video.width;
-    this.canvas.height = this.config.video.height;
-    this._resetPerformanceState();
-    try {
-      await this.segmenterRuntime.initialize({
-        modelPath,
-        delegate: this.config.segmentation.delegate
-      });
-      await this.createVideoElement();
-      this.createPipeline();
-      this.createOutputStream();
-      this.clearBackground();
-    } catch (error) {
-      await this.destroy();
-      throw error;
-    }
-  }
-  async createVideoElement() {
-    this.videoEl = document.createElement('video');
-    this.videoEl.muted = true;
-    this.videoEl.autoplay = true;
-    this.videoEl.playsInline = true;
-    this.videoEl.srcObject = this.inputStream;
-    await this.videoEl.play();
-  }
-  createPipeline() {
-    this.pipeline = buildCanvas2DPipeline({
-      backgroundColor: '#00ff00',
-      backgroundImage: null,
-      blurRadius: this.config.postProcessing.blurRadius,
-      canvas: this.canvas,
-      frameSkip: this.config.segmentation.frameSkip,
-      maxBlurRadius: this.config.postProcessing.maxBlurRadius,
-      metrics: {
-        onRenderComplete: payload => this._recordRenderMetrics(payload)
-      },
-      mirror: this.config.video.mirror,
-      mode: 'none',
-      processingScale: this.config.video.processingScale,
-      segmenterRuntime: this.segmenterRuntime,
-      videoElement: this.videoEl
-    });
-  }
-  createOutputStream() {
-    this.outputStream = this.canvas.captureStream(this.config.video.targetFps);
-  }
-  getOutputStream() {
-    return this.outputStream;
-  }
-  _recordRenderMetrics(payload = {}) {
-    var renderDurationMs = Number(payload.renderDurationMs) || 0;
-    var segmentationDurationMs = Number(payload.segmentationDurationMs) || 0;
-    this._performance.renderedFrames += 1;
-    this._performance.totalRenderMs += renderDurationMs;
-    this._performance.avgRenderMs = this._performance.totalRenderMs / this._performance.renderedFrames;
-    this._performance.lastMaskReused = Boolean(payload.reusedMask);
-    if (payload.reusedMask) {
-      this._performance.maskReusedFrames += 1;
-    }
-    this._performance.maskReuseRate = this._performance.renderedFrames > 0 ? this._performance.maskReusedFrames / this._performance.renderedFrames : 0;
-    if (payload.segmentationRan) {
-      this._performance.segmentedFrames += 1;
-      this._performance.totalSegmentationMs += segmentationDurationMs;
-      this._performance.avgSegmentationMs = this._performance.totalSegmentationMs / this._performance.segmentedFrames;
-    }
-  }
-
-  /**
-   * 设置虚拟背景模式（统一入口）。
-   *
-   * 四种模式：
-   *   - 'none'  → clearBackground()：直通原始视频帧
-   *   - 'blur'  → setBlurBackground(src)：高斯模糊原始背景
-   *   - 'image' → setBackgroundImage(src)：用自定义图片替换背景
-   *   - 'color' → setSolidColor(src)：用纯色填充背景
-   *
-   * @param {string} type — 'none' | 'blur' | 'image' | 'color'
-   * @param {string|number} [src] — 模式参数（blur 半径 / 图片 URL / 颜色值）
-   * @returns {Promise<void>}
-   */
-  setupPipeline(type, src) {
-    if (type === 'blur') {
-      return this.setBlurBackground(src);
-    }
-    if (type === 'color') {
-      return this.setSolidColor(src);
-    }
-    if (type === 'image') {
-      return this.setBackgroundImage(src);
-    }
-    if (type === 'none') {
-      this.clearBackground();
-      return Promise.resolve();
-    }
-    return Promise.reject(new Error(`Unsupported pipeline type: ${type}`));
-  }
-  _recordDroppedFrame() {
-    this._performance.droppedFrames += 1;
-    if (this._performance.droppedFrames === 1 || this._performance.droppedFrames % 30 === 0) {
-      logger.warn(`Dropped frame: total=${this._performance.droppedFrames} mode=${this.currentBackgroundKind} ` + `fps=${this.config.video.targetFps}`);
-    }
-  }
-  _updatePipelineState(nextState = {}) {
-    if (!this.pipeline) {
-      throw new Error('AIVirtualBackground not initialized');
-    }
-    this.pipeline.updateState(nextState);
-    if (Object.prototype.hasOwnProperty.call(nextState, 'mode') && nextState.mode) {
-      this.currentBackgroundKind = nextState.mode;
-      this._performance.currentMode = nextState.mode;
-      logger.debug(`Background mode changed: ${nextState.mode}`);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'mirror')) {
-      logger.debug(`Mirror changed: ${Boolean(nextState.mirror)}`);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'processingScale')) {
-      this._performance.processingScale = this.config.video.processingScale;
-      logger.debug(`Processing scale changed: ${this.config.video.processingScale}`);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'frameSkip')) {
-      this._performance.frameSkip = this.config.segmentation.frameSkip;
-      logger.debug(`Frame skip changed: ${this.config.segmentation.frameSkip}`);
-    }
-    if (Object.prototype.hasOwnProperty.call(nextState, 'maxBlurRadius')) {
-      logger.debug(`Max blur radius changed: ${this.config.postProcessing.maxBlurRadius}`);
-    }
-  }
-  _startPerformanceLogger() {
-    this._stopPerformanceLogger();
-    this._performanceLogTimer = setInterval(() => {
-      var info = this.getPerformanceInfo();
-      logger.debug(`Perf summary: mode=${info.currentMode} rendered=${info.renderedFrames} ` + `segmented=${info.segmentedFrames} dropped=${info.droppedFrames} ` + `avgRenderMs=${info.avgRenderMs.toFixed(2)} avgSegmentationMs=${info.avgSegmentationMs.toFixed(2)} ` + `maskReuseRate=${info.maskReuseRate.toFixed(2)}`);
-    }, PERFORMANCE_LOG_INTERVAL_MS);
-  }
-  _stopPerformanceLogger() {
-    if (!this._performanceLogTimer) {
-      return;
-    }
-    clearInterval(this._performanceLogTimer);
-    this._performanceLogTimer = null;
-  }
-  getPerformanceInfo() {
-    return {
-      avgRenderMs: this._performance.avgRenderMs,
-      avgSegmentationMs: this._performance.avgSegmentationMs,
-      currentMode: this.currentBackgroundKind,
-      droppedFrames: this._performance.droppedFrames,
-      frameSkip: this.config.segmentation.frameSkip,
-      lastMaskReused: this._performance.lastMaskReused,
-      maskReuseRate: this._performance.maskReuseRate,
-      processingScale: this.config.video.processingScale,
-      renderedFrames: this._performance.renderedFrames,
-      segmentedFrames: this._performance.segmentedFrames
-    };
-  }
-  setMirror(mirror) {
-    this.config.video.mirror = Boolean(mirror);
-    if (this.pipeline) {
-      this._updatePipelineState({
-        mirror: this.config.video.mirror
-      });
-    }
-  }
-
-  /**
-   * 启动渲染循环（requestAnimationFrame）。
-   *
-   * 每帧执行：loop() → pipeline.render() → Canvas2D 合成 → captureStream 输出。
-   *
-   * 帧率由 config.video.targetFps 控制（默认 15fps），
-   * rAF 负责调度，实际合成按目标帧间隔节流。
-   *
-   * 循环会持续运行直到 stop() 被调用或引擎被 destroy()。
-   */
-  start() {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.lastFrameTime = 0;
-    this._startPerformanceLogger();
-    this.loop = this.loop.bind(this);
-    this.animationFrameId = requestAnimationFrame(this.loop);
-  }
-  stop() {
-    this.isRunning = false;
-    this._stopPerformanceLogger();
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-  }
-
-  /**
-   * 单帧渲染回调（rAF）。
-   *
-   * 每帧流程：
-   *   1. 按 targetFps 节流，未达到目标帧间隔时跳过绘制
-   *   2. 防止并发渲染（isRendering 互斥锁），并发时记录丢帧
-   *   3. 调用 pipeline.render() 执行 Canvas2D 合成
-   *   4. canvas 内容由 captureStream 自动输出到 MediaStream
-   *   5. 调度下一帧 rAF
-   *
-   * @param {number} now — performance.now() 传入的高精度时间戳（毫秒）
-   */
-  async loop(now) {
-    if (!this.isRunning) return;
-    var interval = 1000 / this.config.video.targetFps;
-    if (now - this.lastFrameTime >= interval) {
-      this.lastFrameTime = now;
-      if (this.isRendering) {
-        this._recordDroppedFrame();
-        this.animationFrameId = requestAnimationFrame(this.loop);
-        return;
-      }
-      this.isRendering = true;
-      this.renderPromise = (async () => {
-        var pipeline = this.pipeline;
-        try {
-          if (pipeline) {
-            await pipeline.render();
-          }
-        } catch (error) {
-          logger.error(`Render error: ${error.message}`);
-        } finally {
-          this.isRendering = false;
-          this.renderPromise = null;
-        }
-      })();
-      await this.renderPromise;
-    }
-    if (this.isRunning) {
-      this.animationFrameId = requestAnimationFrame(this.loop);
-    }
-  }
-  async setBackgroundImage(url) {
-    this._assertInitialized();
-    var normalizedUrl = typeof url === 'string' ? url.trim() : '';
-    if (!normalizedUrl) {
-      throw new Error('Invalid background image URL');
-    }
-    if (normalizedUrl.toLowerCase() === 'none') {
-      this.clearBackground();
-      return;
-    }
-    var requestId = ++this.pipelineRequestId;
-    this._cancelPendingImageLoad('Background image load cancelled');
-    return new Promise((resolve, reject) => {
-      var backgroundEl = document.createElement('img');
-      var settled = false;
-      var settle = (callback, value) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        if (this.pendingImageLoad && this.pendingImageLoad.image === backgroundEl) {
-          this.pendingImageLoad = null;
-        }
-        backgroundEl.onload = null;
-        backgroundEl.onerror = null;
-        callback(value);
-      };
-      this.pendingImageLoad = {
-        image: backgroundEl,
-        reject: error => settle(reject, error)
-      };
-      backgroundEl.onerror = () => settle(reject, new Error('Failed to load background image'));
-      backgroundEl.onload = () => {
-        try {
-          if (requestId !== this.pipelineRequestId || this.destroyed) {
-            settle(reject, new Error('Background image load cancelled'));
-            return;
-          }
-          this._releaseBackgroundImage();
-          this.backgroundEl = backgroundEl;
-          this._updatePipelineState({
-            backgroundImage: backgroundEl,
-            mode: 'image'
-          });
-          logger.debug(`Background image changed: ${normalizedUrl}`);
-          settle(resolve);
-        } catch (error) {
-          settle(reject, error);
-        }
-      };
-      backgroundEl.src = normalizedUrl;
-    });
-  }
-  clearBackground() {
-    this._assertInitialized();
-    this._cancelPendingImageLoad('Background image load cancelled');
-    this._releaseBackgroundImage();
-    this._updatePipelineState({
-      backgroundImage: null,
-      mode: 'none'
-    });
-  }
-  async setBlurBackground(radius) {
-    this._assertInitialized();
-    var fallbackRadius = Math.min(this.config.postProcessing.blurRadius, this.config.postProcessing.maxBlurRadius);
-    var normalizedRadius = clampNumber(typeof radius === 'number' ? radius : fallbackRadius, 0, this.config.postProcessing.maxBlurRadius, fallbackRadius);
-    this._cancelPendingImageLoad('Background image load cancelled');
-    this._releaseBackgroundImage();
-    this._updatePipelineState({
-      backgroundImage: null,
-      blurRadius: normalizedRadius,
-      mode: 'blur'
-    });
-  }
-  async setSolidColor(color = '#00ff00') {
-    this._assertInitialized();
-    if (!isValidColor(color)) {
-      throw new Error('Invalid color format. Expected #RRGGBB or rgba(r,g,b,a)');
-    }
-    this._cancelPendingImageLoad('Background image load cancelled');
-    this._releaseBackgroundImage();
-    this._updatePipelineState({
-      backgroundColor: color,
-      backgroundImage: null,
-      mode: 'color'
-    });
-  }
-
-  /**
-   * 销毁虚拟背景引擎，释放所有资源。
-   *
-   * 清理顺序：
-   *   1. 停止渲染循环（stop → cancelAnimationFrame）
-   *   2. 等待最后一帧渲染完成（renderPromise）
-   *   3. 取消正在加载的背景图片
-   *   4. 清理渲染管线（cleanUp）
-   *   5. 释放背景图片引用
-   *   6. 清理 video 元素（srcObject = null）
-   *   7. 关闭 MediaPipe 分割器（释放 WASM 资源）
-   *
-   * 可安全地多次调用（destroyed 标记保护）。
-   *
-   * @returns {Promise<void>}
-   */
-  async destroy() {
-    if (this.destroyed && !this.canvas && !this.videoEl && !this.outputStream) {
-      return;
-    }
-    this.destroyed = true;
-    this.stop();
-    if (this.renderPromise) {
-      await this.renderPromise;
-    }
-    this._cancelPendingImageLoad('Background image load cancelled');
-    this._cleanUpPipeline({
-      cancelPendingImageLoad: false
-    });
-    this.currentBackgroundKind = 'none';
-    this._releaseBackgroundImage();
-    if (this.videoEl) {
-      this.videoEl.srcObject = null;
-      this.videoEl.load();
-    }
-    if (this.segmenterRuntime) {
-      await this.segmenterRuntime.destroy();
-    }
-    this.pipeline = null;
-    this.inputStream = null;
-    this.outputStream = null;
-    this.canvas = null;
-    this.videoEl = null;
-    this.backgroundEl = null;
-  }
-}
-function isValidColor(color) {
-  if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
-    return true;
-  }
-  var match = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(,\s*(\d*(?:\.\d+)?)\s*)?\)$/.exec(color);
-  if (!match) {
-    return false;
-  }
-  var red = Number(match[1]);
-  var green = Number(match[2]);
-  var blue = Number(match[3]);
-  var alpha = match[5] === undefined || match[5] === '' ? 1 : Number(match[5]);
-  return red <= 255 && green <= 255 && blue <= 255 && alpha >= 0 && alpha <= 1;
-}
-function clampNumber(value, min, max, fallback) {
-  var numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, numericValue));
-}
-module.exports = AIVirtualBackground;
-},{"../Logger":49,"./AiVBConfig":7,"./Canvas2DPipeline.js":8,"./MediaPipeSegmenterRuntime":9}],11:[function(require,module,exports){
+},{"../Logger":44,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3297,7 +1398,7 @@ var BFCPLib = {
   'AttributeName': AttributeName
 };
 module.exports = BFCPLib;
-},{"./lib/attributes/name.js":19,"./lib/messages/primitive.js":36,"./lib/messages/requestStatusValue.js":37,"./lib/user/user.js":40}],12:[function(require,module,exports){
+},{"./lib/attributes/name.js":14,"./lib/messages/primitive.js":31,"./lib/messages/requestStatusValue.js":32,"./lib/user/user.js":35}],7:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -3467,7 +1568,7 @@ class Attribute {
   }
 }
 module.exports = Attribute;
-},{"../parser/complements.js":38,"./format.js":17,"./type.js":23}],13:[function(require,module,exports){
+},{"../parser/complements.js":33,"./format.js":12,"./type.js":18}],8:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3493,7 +1594,7 @@ class FloorId extends Attribute {
   }
 }
 module.exports = FloorId;
-},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],14:[function(require,module,exports){
+},{"./attribute.js":7,"./format.js":12,"./length.js":13,"./type.js":18}],9:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3519,7 +1620,7 @@ class FloorRequestId extends Attribute {
   }
 }
 module.exports = FloorRequestId;
-},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],15:[function(require,module,exports){
+},{"./attribute.js":7,"./format.js":12,"./length.js":13,"./type.js":18}],10:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3551,7 +1652,7 @@ class FloorRequestInformation extends Attribute {
   }
 }
 module.exports = FloorRequestInformation;
-},{"./attribute.js":12,"./floorRequestStatus.js":16,"./format.js":17,"./length.js":18,"./type.js":23}],16:[function(require,module,exports){
+},{"./attribute.js":7,"./floorRequestStatus.js":11,"./format.js":12,"./length.js":13,"./type.js":18}],11:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -3582,7 +1683,7 @@ class FloorRequestStatus extends Attribute {
   }
 }
 module.exports = FloorRequestStatus;
-},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./requestStatus.js":20,"./type.js":23}],17:[function(require,module,exports){
+},{"./attribute.js":7,"./format.js":12,"./length.js":13,"./requestStatus.js":15,"./type.js":18}],12:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3635,7 +1736,7 @@ class Format {
   }
 }
 module.exports = Format;
-},{}],18:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict";
 
 /**
@@ -3828,7 +1929,7 @@ class Length {
   }
 }
 module.exports = Length;
-},{}],19:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4019,7 +2120,7 @@ class Name {
   }
 }
 module.exports = Name;
-},{}],20:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -4050,7 +2151,7 @@ class RequestStatus extends Attribute {
   }
 }
 module.exports = RequestStatus;
-},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],21:[function(require,module,exports){
+},{"./attribute.js":7,"./format.js":12,"./length.js":13,"./type.js":18}],16:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -4084,7 +2185,7 @@ class SupportedAttributes extends Attribute {
   }
 }
 module.exports = SupportedAttributes;
-},{"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],22:[function(require,module,exports){
+},{"./attribute.js":7,"./format.js":12,"./length.js":13,"./type.js":18}],17:[function(require,module,exports){
 "use strict";
 
 var Attribute = require('./attribute.js');
@@ -4130,7 +2231,7 @@ class SupportedPrimitives extends Attribute {
   }
 }
 module.exports = SupportedPrimitives;
-},{"../messages/primitive.js":36,"./attribute.js":12,"./format.js":17,"./length.js":18,"./type.js":23}],23:[function(require,module,exports){
+},{"../messages/primitive.js":31,"./attribute.js":7,"./format.js":12,"./length.js":13,"./type.js":18}],18:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4323,7 +2424,7 @@ class Type {
   }
 }
 module.exports = Type;
-},{}],24:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 
 var Complements = require('../parser/complements.js');
@@ -4431,7 +2532,7 @@ class CommonHeader {
   }
 }
 module.exports = CommonHeader;
-},{"../parser/complements.js":38}],25:[function(require,module,exports){
+},{"../parser/complements.js":33}],20:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4461,7 +2562,7 @@ class FloorQuery extends Message {
   }
 }
 module.exports = FloorQuery;
-},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],26:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],21:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4491,7 +2592,7 @@ class FloorRelease extends Message {
   }
 }
 module.exports = FloorRelease;
-},{"../attributes/floorRequestId.js":14,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],27:[function(require,module,exports){
+},{"../attributes/floorRequestId.js":9,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],22:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4521,7 +2622,7 @@ class FloorRequest extends Message {
   }
 }
 module.exports = FloorRequest;
-},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],28:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],23:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4553,7 +2654,7 @@ class FloorRequestStatus extends Message {
   }
 }
 module.exports = FloorRequestStatus;
-},{"../attributes/floorRequestInformation.js":15,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],29:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":10,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],24:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4583,7 +2684,7 @@ class FloorRequestStatusAck extends Message {
   }
 }
 module.exports = FloorRequestStatusAck;
-},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],30:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],25:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4615,7 +2716,7 @@ class FloorStatus extends Message {
   }
 }
 module.exports = FloorStatus;
-},{"../attributes/floorRequestInformation.js":15,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],31:[function(require,module,exports){
+},{"../attributes/floorRequestInformation.js":10,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],26:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4645,7 +2746,7 @@ class FloorStatusAck extends Message {
   }
 }
 module.exports = FloorStatusAck;
-},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],32:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],27:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4675,7 +2776,7 @@ class Hello extends Message {
   }
 }
 module.exports = Hello;
-},{"../attributes/floorId.js":13,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],33:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],28:[function(require,module,exports){
 "use strict";
 
 var CommonHeader = require('./commonHeader.js');
@@ -4705,7 +2806,7 @@ class HelloAck extends Message {
   }
 }
 module.exports = HelloAck;
-},{"../attributes/supportedAttributes.js":21,"../attributes/supportedPrimitives.js":22,"./commonHeader.js":24,"./message.js":34,"./payloadLength.js":35,"./primitive.js":36}],34:[function(require,module,exports){
+},{"../attributes/supportedAttributes.js":16,"../attributes/supportedPrimitives.js":17,"./commonHeader.js":19,"./message.js":29,"./payloadLength.js":30,"./primitive.js":31}],29:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4788,7 +2889,7 @@ class Message {
   }
 }
 module.exports = Message;
-},{}],35:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4953,7 +3054,7 @@ class PayloadLength {
   }
 }
 module.exports = PayloadLength;
-},{}],36:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 /**
@@ -5140,7 +3241,7 @@ class Primitive {
   }
 }
 module.exports = Primitive;
-},{}],37:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 
 /**
@@ -5223,7 +3324,7 @@ class RequestStatusValue {
   }
 }
 module.exports = RequestStatusValue;
-},{}],38:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 
 /**
@@ -5268,7 +3369,7 @@ class Complements {
   }
 }
 module.exports = Complements;
-},{}],39:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 
 var FloorRequest = require('../messages/floorRequest.js');
@@ -5546,7 +3647,7 @@ class Parser {
   }
 }
 module.exports = Parser;
-},{"../attributes/floorId.js":13,"../attributes/floorRequestId.js":14,"../attributes/floorRequestInformation.js":15,"../attributes/floorRequestStatus.js":16,"../attributes/requestStatus.js":20,"../attributes/supportedAttributes.js":21,"../attributes/supportedPrimitives.js":22,"../attributes/type.js":23,"../messages/commonHeader.js":24,"../messages/floorQuery.js":25,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../parser/complements.js":38}],40:[function(require,module,exports){
+},{"../attributes/floorId.js":8,"../attributes/floorRequestId.js":9,"../attributes/floorRequestInformation.js":10,"../attributes/floorRequestStatus.js":11,"../attributes/requestStatus.js":15,"../attributes/supportedAttributes.js":16,"../attributes/supportedPrimitives.js":17,"../attributes/type.js":18,"../messages/commonHeader.js":19,"../messages/floorQuery.js":20,"../messages/floorRelease.js":21,"../messages/floorRequest.js":22,"../messages/floorRequestStatus.js":23,"../messages/floorRequestStatusAck.js":24,"../messages/floorStatus.js":25,"../messages/floorStatusAck.js":26,"../messages/hello.js":27,"../messages/helloAck.js":28,"../messages/primitive.js":31,"../parser/complements.js":33}],35:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -5808,7 +3909,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../attributes/name.js":19,"../messages/floorRelease.js":26,"../messages/floorRequest.js":27,"../messages/floorRequestStatus.js":28,"../messages/floorRequestStatusAck.js":29,"../messages/floorStatus.js":30,"../messages/floorStatusAck.js":31,"../messages/hello.js":32,"../messages/helloAck.js":33,"../messages/primitive.js":36,"../messages/requestStatusValue.js":37,"../parser/parser.js":39,"buffer":94}],41:[function(require,module,exports){
+},{"../attributes/name.js":14,"../messages/floorRelease.js":21,"../messages/floorRequest.js":22,"../messages/floorRequestStatus.js":23,"../messages/floorRequestStatusAck.js":24,"../messages/floorStatus.js":25,"../messages/floorStatusAck.js":26,"../messages/hello.js":27,"../messages/helloAck.js":28,"../messages/primitive.js":31,"../messages/requestStatusValue.js":32,"../parser/parser.js":34,"buffer":93}],36:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -6057,11 +4158,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Grammar":47,"./Socket":82,"./URI":88,"./Utils":89}],42:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./Socket":81,"./URI":87,"./Utils":88}],37:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212202710 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212203636 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -6289,7 +4390,7 @@ module.exports = {
   CONNECTION_RECOVERY_MAX_INTERVAL: 30,
   CONNECTION_RECOVERY_MIN_INTERVAL: 2
 };
-},{}],43:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -6528,7 +4629,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":42,"./Dialog/RequestSender":44,"./Logger":49,"./SIPMessage":81,"./Transactions":85,"./Utils":89}],44:[function(require,module,exports){
+},{"./Constants":37,"./Dialog/RequestSender":39,"./Logger":44,"./SIPMessage":80,"./Transactions":84,"./Utils":88}],39:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -6623,7 +4724,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":42,"../RequestSender":80,"../Transactions":85}],45:[function(require,module,exports){
+},{"../Constants":37,"../RequestSender":79,"../Transactions":84}],40:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -6802,7 +4903,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":49,"./Utils":89}],46:[function(require,module,exports){
+},{"./Logger":44,"./Utils":88}],41:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -6846,7 +4947,7 @@ module.exports = {
   NotSupportedError,
   NotReadyError
 };
-},{}],47:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 "use strict";
 
 module.exports = function () {
@@ -19254,7 +17355,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":69,"./URI":88}],48:[function(require,module,exports){
+},{"./NameAddrHeader":68,"./URI":87}],43:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -19269,9 +17370,8 @@ var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
-var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212202710');
+debug('version %s', '2.0.0.405212203636');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19302,8 +17402,6 @@ module.exports = {
   WebSocketInterface,
   MediaStreamComposer,
   Mixer: MediaStreamComposer,
-  VirtualBackground: AIVirtualBackground,
-  AiVBEngine: AIVirtualBackground,
   AiNSEngine: AINoiseSuppression,
   Grammar,
   getStats,
@@ -19313,10 +17411,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212202710';
+    return '2.0.0.405212203636';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":83,"./UA":87,"./URI":88,"./Utils":89,"./WebSocketInterface":90,"debug":95}],49:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -19418,7 +17516,1000 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":95}],50:[function(require,module,exports){
+},{"debug":94}],45:[function(require,module,exports){
+"use strict";
+
+/**
+ * AiVBAssetLoader —— 通过向 document 注入 <script type="module"> 标签，
+ * 动态加载 MediaPipe Tasks Vision 运行时。
+ *
+ * 核心行为：
+ *   - 每个唯一的 moduleUrl 只对应一个 script 标签。如果标签已存在（由其他
+ *     AIVirtualBackground 实例或之前的加载创建），则等待它完成，而不是注入重复标签。
+ *   - 运行时全局变量（FilesetResolver、ImageSegmenter）暴露在
+ *     `window.CRTCAiVBVisionTasks` 上。
+ *   - 加载 Promise 按 moduleUrl 全局去重，因此并发的 AIVirtualBackground 实例不会触发重复请求。
+ *
+ * @module AiVBAssetLoader
+ */
+
+var Logger = require('../../Logger');
+var Config = require('./AiVBConfig');
+var logger = new Logger('AiVBAssetLoader');
+
+/** window 上存储 MediaPipe Tasks 全局变量的键名 */
+var TASKS_GLOBAL = 'CRTCAiVBVisionTasks';
+
+/** 注入的 script 加载完成后设置的 data 属性，值为 'true' */
+var SCRIPT_READY_ATTR = 'data-aivb-ready';
+
+/** 注入的 script 加载失败后设置的 data 属性，值为 'true' */
+var SCRIPT_ERROR_ATTR = 'data-aivb-error';
+
+/** 等待已存在的 script 标签完成加载的最大时间（毫秒） */
+var SCRIPT_WAIT_TIMEOUT_MS = 15000;
+
+/** 轮询模块脚本执行结果的间隔（毫秒） */
+var SCRIPT_POLL_INTERVAL_MS = 50;
+
+/**
+ * 全局去重表：moduleUrl → Promise<void>。
+ *
+ * 每个 moduleUrl 同一时间只有一个加载在进行；后续调用方等待同一个 Promise。
+ *
+ * @type {Object.<string, Promise<void>>}
+ */
+var TASKS_LOAD_PROMISES = {};
+module.exports = class AiVBAssetLoader {
+  /**
+   * @param {Object} [assetConfig] — 原始资源配置（参见 AiVBConfig.normalizeAssetConfig）
+   */
+  constructor(assetConfig) {
+    /** @type {Object} 归一化后的资源配置，包含解析完成的 URL */
+    this.assetConfig = Config.normalizeAssetConfig(assetConfig);
+  }
+
+  /**
+   * 返回 MediaPipe FilesetResolver 和 ImageSegmenter 工厂所需的运行时选项。
+   *
+   * @param {string} [modelPath] — 可选的按实例覆盖的模型 URL
+   * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
+   */
+  getRuntimeOptions(modelPath) {
+    return {
+      moduleUrl: this.assetConfig.moduleUrl,
+      wasmBaseUrl: this.assetConfig.wasmBaseUrl,
+      modelUrl: this.resolveModelUrl(modelPath)
+    };
+  }
+
+  /**
+   * 解析模型 URL：显式传入的 modelPath 优先，否则使用配置的默认值。
+   *
+   * @private
+   * @param {string} [modelPath]
+   * @returns {string}
+   */
+  resolveModelUrl(modelPath) {
+    if (typeof modelPath === 'string' && modelPath.trim()) {
+      return modelPath.trim();
+    }
+    return this.assetConfig.modelUrl;
+  }
+
+  /**
+   * 确保 MediaPipe Tasks Vision 运行时已加载并在 `window[TASKS_GLOBAL]` 上可用。
+   *
+   * 若已加载则立即返回。否则注入 <script type="module"> 标签（或等待已有的标签完成）。
+   *
+   * @returns {Promise<{ FilesetResolver: Object, ImageSegmenter: Object }>}
+   *   Tasks 全局命名空间
+   * @throws {Error} 如果不在浏览器环境中运行
+   */
+  async ensureTasksLoaded() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      throw new Error('AIVirtualBackground requires browser environment');
+    }
+
+    // 已加载 —— 立即返回
+    if (window[TASKS_GLOBAL]) {
+      return window[TASKS_GLOBAL];
+    }
+    var moduleUrl = this.assetConfig.moduleUrl;
+
+    // 其他调用方正在加载此 moduleUrl —— 等待它完成
+    if (TASKS_LOAD_PROMISES[moduleUrl]) {
+      await TASKS_LOAD_PROMISES[moduleUrl];
+      return window[TASKS_GLOBAL];
+    }
+    TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl);
+    try {
+      await TASKS_LOAD_PROMISES[moduleUrl];
+    } finally {
+      delete TASKS_LOAD_PROMISES[moduleUrl];
+    }
+    logger.debug(`Loaded MediaPipe Tasks runtime: ${moduleUrl}`);
+    return window[TASKS_GLOBAL];
+  }
+
+  /**
+   * 注入 <script type="module"> 标签，从给定 moduleUrl 导入 FilesetResolver
+   * 和 ImageSegmenter，并将其暴露在 `window[TASKS_GLOBAL]` 上。
+   *
+   * 如果 DOM 中已存在此 moduleUrl 的 script 标签，则委托给 `waitForExistingScript`
+   * 而不是注入重复标签。
+   *
+   * @private
+   * @param {string} moduleUrl — MediaPipe Tasks Vision ESM 包的 URL
+   * @returns {Promise<void>}
+   */
+  async loadTasksRuntime(moduleUrl) {
+    var selector = `script[data-aivb-module="${moduleUrl}"]`;
+    var existingScript = document.querySelector(selector);
+    if (existingScript) {
+      await this.waitForExistingScript(existingScript, moduleUrl);
+      return window[TASKS_GLOBAL];
+    }
+    await new Promise((resolve, reject) => {
+      var script = document.createElement('script');
+      var timeoutId = null;
+      var intervalId = null;
+      function cleanup() {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+        if (intervalId) {
+          window.clearInterval(intervalId);
+        }
+        script.onerror = null;
+      }
+      script.type = 'module';
+      script.async = true;
+      script.setAttribute('data-aivb-module', moduleUrl);
+
+      // 内联 ESM import —— 无需单独的 JS 文件
+      script.textContent = `import { FilesetResolver, ImageSegmenter } from '${moduleUrl}';
+        window.${TASKS_GLOBAL} = { FilesetResolver, ImageSegmenter };`;
+      script.onerror = () => {
+        cleanup();
+        script.setAttribute(SCRIPT_ERROR_ATTR, 'true');
+        reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
+      };
+      document.head.appendChild(script);
+      intervalId = window.setInterval(() => {
+        if (window[TASKS_GLOBAL]) {
+          cleanup();
+          script.setAttribute(SCRIPT_READY_ATTR, 'true');
+          script.removeAttribute(SCRIPT_ERROR_ATTR);
+          resolve();
+        }
+      }, SCRIPT_POLL_INTERVAL_MS);
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
+      }, SCRIPT_WAIT_TIMEOUT_MS);
+    });
+  }
+
+  /**
+   * 等待由其他 AIVirtualBackground 实例（或之前的页面加载）注入的 script 标签完成加载。
+   *
+   * 处理三种情况：
+   *   1. 全局变量已设置 → 立即返回
+   *   2. script 之前加载失败 → 立即抛出
+   *   3. script 仍在加载中 → 绑定 load/error 事件监听并等待（带超时）
+   *
+   * @private
+   * @param {HTMLScriptElement} script — DOM 中已存在的 script 元素
+   * @param {string} moduleUrl — 模块 URL（用于错误消息）
+   * @returns {Promise<void>}
+   * @throws {Error} 如果 script 加载失败或超时
+   */
+  async waitForExistingScript(script, moduleUrl) {
+    // 情况 1：全局变量已可用
+    if (window[TASKS_GLOBAL]) {
+      return;
+    }
+
+    // 情况 2：已有的 script 已加载失败
+    if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
+      throw new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`);
+    }
+
+    // 边缘情况：script 标记为就绪但全局变量缺失
+    if (script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+      if (window[TASKS_GLOBAL]) {
+        return;
+      }
+      throw new Error(`MediaPipe Tasks runtime loaded but global not found: ${moduleUrl}`);
+    }
+
+    // 情况 3：script 仍在加载中 —— 轮询全局变量 / 状态属性
+    await new Promise((resolve, reject) => {
+      var timeoutId = null;
+      var intervalId = null;
+      function cleanup() {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
+        if (intervalId) {
+          window.clearInterval(intervalId);
+        }
+      }
+      intervalId = window.setInterval(() => {
+        if (window[TASKS_GLOBAL] || script.getAttribute(SCRIPT_READY_ATTR) === 'true') {
+          cleanup();
+          resolve();
+          return;
+        }
+        if (script.getAttribute(SCRIPT_ERROR_ATTR) === 'true') {
+          cleanup();
+          reject(new Error(`Failed to load MediaPipe Tasks runtime: ${moduleUrl}`));
+        }
+      }, SCRIPT_POLL_INTERVAL_MS);
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timed out waiting for MediaPipe Tasks runtime: ${moduleUrl}`));
+      }, SCRIPT_WAIT_TIMEOUT_MS);
+    });
+  }
+};
+},{"../../Logger":44,"./AiVBConfig":46}],46:[function(require,module,exports){
+"use strict";
+
+/**
+ * AiVBConfig —— AIVirtualBackground 引擎的配置归一化模块。
+ *
+ * 将用户提供的选项与安全默认值合并，校验已知 key，
+ * 并尽早拒绝未知选项以捕获拼写错误 / 误配置。
+ *
+ * 以函数集合形式导出（而非类），以便 AIVirtualBackground 和 AiVBAssetLoader
+ * 无需实例化即可使用。
+ *
+ * @module AiVBConfig
+ */
+
+var Logger = require('../../Logger');
+var logger = new Logger('AiVBConfig');
+
+/** MediaPipe 推理允许的 delegate 值 */
+var SUPPORTED_DELEGATES = new Set(['CPU', 'GPU']);
+
+/** `video` 选项块下已识别的 key */
+var VIDEO_OPTION_KEYS = ['width', 'height', 'targetFps', 'mirror', 'processingScale'];
+
+/** `segmentation` 选项块下已识别的 key */
+var SEGMENTATION_OPTION_KEYS = ['delegate', 'frameSkip'];
+
+/** `postProcessing` 选项块下已识别的 key */
+var POST_PROCESSING_OPTION_KEYS = ['blurRadius', 'maxBlurRadius'];
+
+/** `assetConfig` 选项块下已识别的 key */
+var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
+
+// ---------------------------------------------------------------------------
+// 默认值
+// ---------------------------------------------------------------------------
+
+/** @type {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }} */
+var DEFAULT_VIDEO = {
+  width: 1280,
+  height: 720,
+  targetFps: 15,
+  mirror: false,
+  processingScale: 0.5
+};
+
+/** @type {{ delegate: 'CPU'|'GPU', frameSkip: number }} */
+var DEFAULT_SEGMENTATION = {
+  delegate: 'GPU',
+  frameSkip: 1
+};
+
+/** @type {{ blurRadius: number, maxBlurRadius: number }} */
+var DEFAULT_POST_PROCESSING = {
+  blurRadius: 20,
+  maxBlurRadius: 12
+};
+
+/** MediaPipe Tasks Vision 默认 CDN URL（jsDelivr） */
+var DEFAULT_TASKS_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2';
+var DEFAULT_TASKS_WASM_BASE_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm';
+
+/** 默认 selfie-segmenter landscape 模型（Google Cloud Storage） */
+var DEFAULT_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter_landscape/float16/latest/selfie_segmenter_landscape.tflite';
+
+// ---------------------------------------------------------------------------
+// 顶层工厂函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 创建完全归一化的 AIVirtualBackground 配置对象。
+ *
+ * @param {Object} [options={}] — 用户提供的原始选项
+ * @param {Object} [options.video] — 视频流设置
+ * @param {Object} [options.segmentation] — 分割设置
+ * @param {Object} [options.postProcessing] — 后处理设置
+ * @param {Object} [options.assetConfig] — CDN / 路径覆盖
+ * @returns {{ video: Object, segmentation: Object, postProcessing: Object, assetConfig: Object }}
+ */
+exports.create = function (options = {}) {
+  var assetConfig = exports.normalizeAssetConfig(options.assetConfig);
+  var config = {
+    video: exports.normalizeVideo(options.video),
+    segmentation: exports.normalizeSegmentation(options.segmentation),
+    postProcessing: exports.normalizePostProcessing(options.postProcessing),
+    assetConfig
+  };
+  logger.debug(`Config created: ${JSON.stringify(config)}`);
+  return config;
+};
+
+// ---------------------------------------------------------------------------
+// 各段归一化函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 归一化 `video` 选项块。
+ *
+ * 接受部分对象；缺失的 key 回退到 DEFAULT_VIDEO。
+ * 未知 key 会导致立即抛出错误。
+ *
+ * @param {Object} [video] — 原始视频选项
+ * @returns {{ width: number, height: number, targetFps: number, mirror: boolean, processingScale: number }}
+ * @throws {Error} 如果存在未知 key
+ */
+exports.normalizeVideo = function (video) {
+  var normalized = Object.assign({}, DEFAULT_VIDEO);
+  if (!video || typeof video !== 'object') {
+    return normalized;
+  }
+  assertKnownKeys('video', video, VIDEO_OPTION_KEYS);
+  if (Number.isFinite(Number(video.width)) && Number(video.width) > 0) {
+    normalized.width = Math.floor(Number(video.width));
+  }
+  if (Number.isFinite(Number(video.height)) && Number(video.height) > 0) {
+    normalized.height = Math.floor(Number(video.height));
+  }
+  if (Number.isFinite(Number(video.targetFps)) && Number(video.targetFps) > 0) {
+    normalized.targetFps = clampNumber(video.targetFps, 1, 60, DEFAULT_VIDEO.targetFps);
+  }
+  if (typeof video.mirror === 'boolean') {
+    normalized.mirror = video.mirror;
+  }
+  if (Number.isFinite(Number(video.processingScale))) {
+    normalized.processingScale = clampNumber(video.processingScale, 0.1, 1, DEFAULT_VIDEO.processingScale);
+  }
+  return normalized;
+};
+
+/**
+ * 归一化 `segmentation` 选项块。
+ *
+ * @param {Object} [segmentation] — 原始分割选项
+ * @returns {{ delegate: 'CPU'|'GPU', frameSkip: number }}
+ * @throws {Error} 如果存在未知 key
+ */
+exports.normalizeSegmentation = function (segmentation) {
+  var normalized = Object.assign({}, DEFAULT_SEGMENTATION);
+  if (!segmentation || typeof segmentation !== 'object') {
+    return normalized;
+  }
+  assertKnownKeys('segmentation', segmentation, SEGMENTATION_OPTION_KEYS);
+  if (typeof segmentation.delegate === 'string' && segmentation.delegate.trim()) {
+    var delegate = segmentation.delegate.trim().toUpperCase();
+    if (SUPPORTED_DELEGATES.has(delegate)) {
+      normalized.delegate = delegate;
+    }
+  }
+  if (Number.isFinite(Number(segmentation.frameSkip))) {
+    normalized.frameSkip = Math.floor(clampNumber(segmentation.frameSkip, 0, 120, DEFAULT_SEGMENTATION.frameSkip));
+  }
+  return normalized;
+};
+
+/**
+ * 归一化 `postProcessing` 选项块。
+ *
+ * @param {Object} [postProcessing] — 原始后处理选项
+ * @returns {{ blurRadius: number, maxBlurRadius: number }} — 钳位到 [0, 100]
+ * @throws {Error} 如果存在未知 key
+ */
+exports.normalizePostProcessing = function (postProcessing) {
+  var normalized = Object.assign({}, DEFAULT_POST_PROCESSING);
+  if (!postProcessing || typeof postProcessing !== 'object') {
+    return normalized;
+  }
+  assertKnownKeys('postProcessing', postProcessing, POST_PROCESSING_OPTION_KEYS);
+  normalized.maxBlurRadius = clampNumber(postProcessing.maxBlurRadius, 0, 100, DEFAULT_POST_PROCESSING.maxBlurRadius);
+  normalized.blurRadius = clampNumber(postProcessing.blurRadius, 0, normalized.maxBlurRadius, Math.min(DEFAULT_POST_PROCESSING.blurRadius, normalized.maxBlurRadius));
+  return normalized;
+};
+
+/**
+ * 归一化 `assetConfig` 选项块。
+ *
+ * URL 解析优先级（从高到低）：
+ *   1. 显式的 `moduleUrl` / `wasmBaseUrl` / `modelUrl`
+ *   2. `cdnUrl` 或 `baseUrl`（自动推导传统 tasks 目录的 module + wasm 路径）
+ *   3. `flatBaseUrl`（自动推导扁平 aivb 目录的 vision.js + wasm + model 路径）
+ *   4. 硬编码的 jsDelivr + Google Cloud Storage 默认值
+ *
+ * @param {Object} [assetConfig] — 原始资源配置
+ * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
+ * @throws {Error} 如果存在未知 key
+ */
+exports.normalizeAssetConfig = function (assetConfig) {
+  var normalized = {
+    moduleUrl: DEFAULT_TASKS_MODULE_URL,
+    wasmBaseUrl: DEFAULT_TASKS_WASM_BASE_URL,
+    modelUrl: DEFAULT_MODEL_URL
+  };
+  if (!assetConfig || typeof assetConfig !== 'object') {
+    return normalized;
+  }
+  assertKnownKeys('assetConfig', assetConfig, ASSET_CONFIG_OPTION_KEYS);
+
+  // 便捷方式：从单个 cdnUrl / baseUrl 推导 module 和 wasm URL
+  if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
+    var baseUrl = assetConfig.cdnUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${baseUrl}/vision_bundle.mjs`;
+    normalized.wasmBaseUrl = `${baseUrl}/wasm`;
+  } else if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
+    var _baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${_baseUrl}/vision_bundle.mjs`;
+    normalized.wasmBaseUrl = `${_baseUrl}/wasm`;
+  } else if (typeof assetConfig.flatBaseUrl === 'string' && assetConfig.flatBaseUrl.trim()) {
+    var _baseUrl2 = assetConfig.flatBaseUrl.trim().replace(/\/$/, '');
+    normalized.moduleUrl = `${_baseUrl2}/vision.js`;
+    normalized.wasmBaseUrl = _baseUrl2;
+    normalized.modelUrl = `${_baseUrl2}/selfie_segmenter_landscape.tflite`;
+  }
+
+  // 显式的逐项 URL 覆盖具有最高优先级
+  if (typeof assetConfig.moduleUrl === 'string' && assetConfig.moduleUrl.trim()) {
+    normalized.moduleUrl = assetConfig.moduleUrl.trim();
+  }
+  if (typeof assetConfig.wasmBaseUrl === 'string' && assetConfig.wasmBaseUrl.trim()) {
+    normalized.wasmBaseUrl = assetConfig.wasmBaseUrl.trim().replace(/\/$/, '');
+  }
+  if (typeof assetConfig.modelUrl === 'string' && assetConfig.modelUrl.trim()) {
+    normalized.modelUrl = assetConfig.modelUrl.trim();
+  }
+  return normalized;
+};
+
+// ---------------------------------------------------------------------------
+// 内部辅助函数
+// ---------------------------------------------------------------------------
+
+/**
+ * 将数值钳位到 [min, max] 范围。如果值无法转换为有限数值，则返回 fallback。
+ *
+ * @param {*} value
+ * @param {number} min
+ * @param {number} max
+ * @param {number} fallback
+ * @returns {number}
+ */
+function clampNumber(value, min, max, fallback) {
+  var numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numericValue));
+}
+
+/**
+ * 验证选项对象仅包含已识别的 key，若发现未知 key 则抛出错误。
+ *
+ * 此函数充当拼写错误的早期预警（例如使用了 `blur_radius` 而非 `blurRadius`）。
+ *
+ * @param {string} sectionName — 人类可读的配置段名称（用于错误消息）
+ * @param {Object} value — 原始选项对象
+ * @param {string[]} allowedKeys — 已识别 key 的白名单
+ * @throws {Error} 如果 `value` 包含不在 `allowedKeys` 中的 key
+ */
+function assertKnownKeys(sectionName, value, allowedKeys) {
+  var allowedKeySet = new Set(allowedKeys);
+  var unknownKeys = Object.keys(value).filter(key => !allowedKeySet.has(key));
+  if (unknownKeys.length > 0) {
+    throw new Error(`Unsupported AIVirtualBackground ${sectionName} option(s): ${unknownKeys.join(', ')}`);
+  }
+}
+},{"../../Logger":44}],47:[function(require,module,exports){
+"use strict";
+
+/**
+ * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
+ * 为 AIVirtualBackground 提供人像分割能力。
+ *
+ * 职责：
+ *   - 通过 AiVBAssetLoader 懒加载 MediaPipe Tasks Vision 运行时
+ *   - 使用 selfie-segmenter 模型初始化 ImageSegmenter
+ *   - 执行逐帧分割并返回基于 canvas 的 alpha 遮罩
+ *   - 最多排队一个待处理帧，避免背压积累
+ *   - 销毁时干净关闭分割器并拒绝所有未完成的 Promise
+ *
+ * @module MediaPipeSegmenterRuntime
+ */
+
+var Logger = require('../../Logger');
+var AiVBAssetLoader = require('./AiVBAssetLoader');
+var logger = new Logger('AiVBMediaPipeRuntime');
+
+/** 默认推理后端 —— 'GPU' 以获得最佳性能 */
+var DEFAULT_DELEGATE = 'GPU';
+function normalizeDelegate(delegate) {
+  return delegate === 'CPU' ? 'CPU' : DEFAULT_DELEGATE;
+}
+module.exports = class MediaPipeSegmenterRuntime {
+  /**
+   * @param {Object} [config={}]
+   * @param {Object} [config.assetConfig] — MediaPipe 运行时包和模型文件的 CDN / 路径覆盖
+   */
+  constructor(config = {}) {
+    /** @type {AiVBAssetLoader} 负责 MediaPipe 的动态脚本加载 */
+    this.assetLoader = new AiVBAssetLoader(config.assetConfig);
+
+    /** @type {Object|null} 解析后的资源 URL —— { moduleUrl, wasmBaseUrl, modelUrl } */
+    this.assetUrls = null;
+
+    /** @type {Object|null} MediaPipe ImageSegmenter 实例 */
+    this.segmenter = null;
+
+    /** @type {boolean} 分割器是否已成功初始化 */
+    this.initialized = false;
+
+    /** @type {Promise|null} 正在进行的初始化 Promise（用于去重，防止并发初始化） */
+    this.initializingPromise = null;
+
+    /** @type {Object|null} 当前正在执行的分割请求 —— { resolve, reject, promise } */
+    this.pendingRequest = null;
+
+    /** @type {Object|null} 排队中的分割请求，当前一个请求完成后立即处理 ——
+     *   { videoElement, resolve, reject, promise } */
+    this.queuedRequest = null;
+
+    /** @type {boolean} 是否已调用 destroy() */
+    this.destroyed = false;
+
+    /** @type {string[]} 分割模型返回的标签列表 */
+    this.labels = [];
+
+    /** @type {number} 'person' 标签在 labels 中的索引 */
+    this.personMaskIndex = 0;
+
+    /** @type {HTMLCanvasElement|null} 复用的离屏 canvas，用于生成 alpha 遮罩 */
+    this.maskCanvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} maskCanvas 的 2D 上下文 */
+    this.maskContext = null;
+
+    /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
+    this.maskImageData = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 生命周期
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 初始化 MediaPipe ImageSegmenter。
+   *
+   * 加载 Tasks Vision 运行时（动态 <script> 注入）、解析 WASM 和模型 URL、
+   * 创建分割器并记录标签列表，以便后续定位人物遮罩。
+   *
+   * 可安全地多次调用 —— 已初始化时立即返回，正在初始化时共享同一个 Promise。
+   *
+   * @param {Object} [options={}]
+   * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
+   * @param {'CPU'|'GPU'} [options.delegate='GPU'] — 推理后端
+   * @returns {Promise<void>}
+   * @throws {Error} 如果分割器已被销毁
+   */
+  async initialize(options = {}) {
+    if (this.destroyed) {
+      throw new Error('MediaPipe segmenter destroyed');
+    }
+    if (this.initialized) {
+      return;
+    }
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
+    this.initializingPromise = (async () => {
+      var {
+        FilesetResolver,
+        ImageSegmenter
+      } = await this.assetLoader.ensureTasksLoaded();
+      if (this.destroyed) {
+        throw new Error('MediaPipe segmenter destroyed');
+      }
+      this.assetUrls = this.assetLoader.getRuntimeOptions(options.modelPath);
+      var vision = await FilesetResolver.forVisionTasks(this.assetUrls.wasmBaseUrl);
+      var requestedDelegate = normalizeDelegate(options.delegate);
+      var segmenter = await this.createSegmenterWithFallback(ImageSegmenter, vision, requestedDelegate);
+      try {
+        if (this.destroyed) {
+          throw new Error('MediaPipe segmenter destroyed');
+        }
+        this.segmenter = segmenter;
+        this.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
+        this.initialized = true;
+        logger.debug(`initialize() complete: ${JSON.stringify(this.assetUrls)}`);
+      } catch (error) {
+        // 尽力关闭刚创建的分割器
+        if (typeof segmenter.close === 'function') {
+          try {
+            await segmenter.close();
+          } catch (closeError) {
+            logger.warn(`Failed to close MediaPipe segmenter after initialize error: ${closeError.message}`);
+          }
+        }
+        this.segmenter = null;
+        this.assetUrls = null;
+        this.initialized = false;
+        this.labels = [];
+        this.personMaskIndex = 0;
+        this.maskCanvas = null;
+        this.maskContext = null;
+        this.maskImageData = null;
+
+        // 拒绝正在等待初始化的请求
+        if (this.pendingRequest) {
+          var pending = this.pendingRequest;
+          this.pendingRequest = null;
+          pending.reject(error);
+        }
+        throw error;
+      }
+    })();
+    try {
+      await this.initializingPromise;
+    } finally {
+      this.initializingPromise = null;
+    }
+  }
+  async createSegmenterWithFallback(ImageSegmenter, vision, requestedDelegate) {
+    var delegates = requestedDelegate === 'CPU' ? ['CPU'] : [requestedDelegate, 'CPU'];
+    var lastError = null;
+    for (var index = 0; index < delegates.length; index += 1) {
+      var delegate = delegates[index];
+      try {
+        return await ImageSegmenter.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: this.assetUrls.modelUrl,
+            delegate: delegate
+          },
+          runningMode: 'VIDEO',
+          outputCategoryMask: false,
+          outputConfidenceMasks: true
+        });
+      } catch (error) {
+        lastError = error;
+        if (index < delegates.length - 1) {
+          logger.warn(`ImageSegmenter init failed with delegate ${delegate}, retrying with ${delegates[index + 1]}: ${error && error.message ? error.message : error}`);
+        }
+      }
+    }
+    throw lastError || new Error('Failed to initialize MediaPipe ImageSegmenter');
+  }
+
+  // ---------------------------------------------------------------------------
+  // 分割
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 为给定视频帧排期一次分割。
+   *
+   * 如果已有分割正在进行，最新的帧会被排队（仅保留一帧排队 —— 更早的排队帧会被替换）。
+   * 这样可以在不积压请求的前提下保持管线响应。
+   *
+   * @param {HTMLVideoElement} videoElement — 源视频元素
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
+   * @throws {Error} 如果分割器未初始化
+   */
+  async segmentForVideo(videoElement) {
+    if (!this.initialized || !this.segmenter) {
+      throw new Error('MediaPipe segmenter not initialized');
+    }
+    if (this.pendingRequest) {
+      if (!this.queuedRequest) {
+        var resolveQueued;
+        var rejectQueued;
+        var queuedPromise = new Promise((resolve, reject) => {
+          resolveQueued = resolve;
+          rejectQueued = reject;
+        });
+        this.queuedRequest = {
+          videoElement,
+          resolve: resolveQueued,
+          reject: rejectQueued,
+          promise: queuedPromise
+        };
+      } else {
+        // 替换之前的排队帧 —— 只有最新的帧才重要
+        this.queuedRequest.videoElement = videoElement;
+      }
+      logger.debug('segmentForVideo() queued latest frame while previous segmentation is pending');
+      return this.queuedRequest.promise;
+    }
+    return this.runSegmentation(videoElement);
+  }
+
+  /**
+   * 执行一次分割。
+   *
+   * 调用 MediaPipe 分割器的 VIDEO 模式 API，将置信度遮罩输出转换为基于 canvas 的 alpha 遮罩。
+   *
+   * @private
+   * @param {HTMLVideoElement} videoElement
+   * @returns {Promise<{ segmentationMask: HTMLCanvasElement }>}
+   */
+  async runSegmentation(videoElement) {
+    var resolvePending;
+    var rejectPending;
+    var promise = new Promise((resolve, reject) => {
+      resolvePending = resolve;
+      rejectPending = reject;
+    });
+    this.pendingRequest = {
+      resolve: resolvePending,
+      reject: rejectPending,
+      promise
+    };
+    var timestampMs = typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
+    try {
+      // MediaPipe VIDEO 模式的分割是基于回调的
+      this.segmenter.segmentForVideo(videoElement, timestampMs, result => {
+        // 防止 destroy() 已将 pendingRequest 置空后的过时回调
+        if (!this.pendingRequest || this.pendingRequest.promise !== promise) {
+          return;
+        }
+        var pending = this.pendingRequest;
+        this.pendingRequest = null;
+        try {
+          pending.resolve({
+            segmentationMask: this.createSegmentationMask(result)
+          });
+        } catch (error) {
+          pending.reject(error);
+        } finally {
+          this.closeSegmentationResult(result);
+          this.processQueuedRequest();
+        }
+      });
+    } catch (error) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(error);
+      this.processQueuedRequest();
+    }
+    return promise;
+  }
+
+  /**
+   * 如果有排队请求且没有其他请求正在执行，将其出队并执行。
+   *
+   * @private
+   */
+  processQueuedRequest() {
+    if (!this.queuedRequest || this.pendingRequest || this.destroyed) {
+      return;
+    }
+    var queued = this.queuedRequest;
+    this.queuedRequest = null;
+    this.runSegmentation(queued.videoElement).then(queued.resolve).catch(queued.reject);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 遮罩构建
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 确定哪个置信度遮罩对应"人物"。
+   *
+   * 启发式策略：
+   *   1. 在标签中搜索匹配 /person/i 的项
+   *   2. 若无标签匹配且有多个遮罩，选最后一个（selfie-segmenter 模型的最后一个输出通常是人像）
+   *   3. 兜底使用索引 0
+   *
+   * @param {number} maskCount — 返回的置信度遮罩总数
+   * @returns {number} 从 0 开始的索引
+   */
+  resolvePersonMaskIndex(maskCount) {
+    for (var index = 0; index < this.labels.length; index += 1) {
+      if (typeof this.labels[index] === 'string' && /person/i.test(this.labels[index])) {
+        return index;
+      }
+    }
+    if (maskCount > 1) {
+      return maskCount - 1;
+    }
+    return 0;
+  }
+
+  /**
+   * 从原始分割结果构建基于 canvas 的 alpha 遮罩。
+   *
+   * 遮罩为灰度 canvas，其中：
+   *   - R=G=B=0（黑色）
+   *   - A = round(置信度 × 255)
+   *
+   * 此 canvas 可作为 destination-in 合成的源来使用。
+   *
+   * @private
+   * @param {Object} result — 原始 MediaPipe ImageSegmenterResult
+   * @returns {HTMLCanvasElement} 已绘制 alpha 遮罩的 canvas
+   * @throws {Error} 如果未找到支持的遮罩输出
+   */
+  createSegmentationMask(result) {
+    var mask = this.resolveOutputMask(result);
+    var width = mask.width;
+    var height = mask.height;
+    if (!width || !height) {
+      throw new Error('ImageSegmenter returned invalid categoryMask size');
+    }
+
+    // 懒创建 / 调整复用的遮罩 canvas
+    if (!this.maskCanvas) {
+      this.maskCanvas = document.createElement('canvas');
+      this.maskContext = this.maskCanvas.getContext('2d');
+    }
+    if (!this.maskContext) {
+      throw new Error('Unable to create segmentation mask canvas');
+    }
+    if (this.maskCanvas.width !== width || this.maskCanvas.height !== height || !this.maskImageData) {
+      this.maskCanvas.width = width;
+      this.maskCanvas.height = height;
+      this.maskImageData = this.maskContext.createImageData(width, height);
+    }
+    var confidenceValues = this.readMaskValues(mask);
+    var imageData = this.maskImageData.data;
+    var offset = 0;
+
+    // 将置信度值写入 alpha 通道（R=G=B=0, A=置信度）
+    for (var i = 0; i < confidenceValues.length; i += 1) {
+      var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[i] * 255)));
+      imageData[offset] = 0;
+      imageData[offset + 1] = 0;
+      imageData[offset + 2] = 0;
+      imageData[offset + 3] = alpha;
+      offset += 4;
+    }
+    this.maskContext.putImageData(this.maskImageData, 0, 0);
+    return this.maskCanvas;
+  }
+
+  /**
+   * 从分割结果中解析出要使用的遮罩。
+   *
+   * 优先使用 confidenceMasks[personMaskIndex]（如果可用）；
+   * 回退到 categoryMask（兼容旧模型）。
+   *
+   * @private
+   * @param {Object} result
+   * @returns {Object} 单个遮罩对象（含 width、height 及数据访问方法）
+   * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
+   */
+  resolveOutputMask(result) {
+    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
+      this.personMaskIndex = this.resolvePersonMaskIndex(result.confidenceMasks.length);
+      return result.confidenceMasks[this.personMaskIndex];
+    }
+    if (result && result.categoryMask) {
+      return result.categoryMask;
+    }
+    throw new Error('ImageSegmenter did not return a supported mask output');
+  }
+
+  /**
+   * 从 MediaPipe 遮罩中读取原始置信度值。
+   *
+   * 支持 Float32Array 输出（置信度遮罩）和 Uint8Array 输出（类别遮罩），
+   * 全部归一化为 [0, 1] 范围内的 Float32。
+   *
+   * @private
+   * @param {Object} mask — MediaPipe 遮罩对象
+   * @returns {Float32Array} [0, 1] 范围内的置信度值
+   * @throws {Error} 如果遮罩格式不受支持
+   */
+  readMaskValues(mask) {
+    if (!mask) {
+      throw new Error('ImageSegmenter mask is required');
+    }
+    if (typeof mask.getAsFloat32Array === 'function') {
+      return mask.getAsFloat32Array();
+    }
+    if (typeof mask.getAsUint8Array === 'function') {
+      var categoryValues = mask.getAsUint8Array();
+      var floatValues = new Float32Array(categoryValues.length);
+      for (var i = 0; i < categoryValues.length; i += 1) {
+        floatValues[i] = categoryValues[i] > 0 ? 1 : 0;
+      }
+      return floatValues;
+    }
+    throw new Error('Unsupported ImageSegmenter mask format');
+  }
+
+  /**
+   * 释放分割结果关联的 MediaPipe 资源。
+   *
+   * MediaPipe 结果可能持有 WASM 底层资源，需要显式清理。
+   * 此方法同时关闭结果本身及其子遮罩对象。
+   *
+   * @private
+   * @param {Object} result — MediaPipe ImageSegmenterResult
+   */
+  closeSegmentationResult(result) {
+    if (result && typeof result.close === 'function') {
+      result.close();
+      return;
+    }
+    if (result && Array.isArray(result.confidenceMasks)) {
+      result.confidenceMasks.forEach(mask => {
+        if (mask && typeof mask.close === 'function') {
+          mask.close();
+        }
+      });
+    }
+    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
+      result.categoryMask.close();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 销毁
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 销毁分割器：关闭 MediaPipe 实例、拒绝未完成的 Promise、释放所有资源。
+   *
+   * 可安全地多次调用。
+   *
+   * @returns {Promise<void>}
+   */
+  async destroy() {
+    this.destroyed = true;
+
+    // 拒绝正在执行的分割
+    if (this.pendingRequest) {
+      var pending = this.pendingRequest;
+      this.pendingRequest = null;
+      pending.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+
+    // 拒绝排队中的帧
+    if (this.queuedRequest) {
+      var queued = this.queuedRequest;
+      this.queuedRequest = null;
+      queued.reject(new Error('MediaPipe segmenter destroyed'));
+    }
+
+    // 等待初始化完成，以便安全关闭它可能已创建的分割器
+    if (this.initializingPromise) {
+      try {
+        await this.initializingPromise;
+      } catch (error) {
+        logger.debug(`destroy() ignored initialize error: ${error.message}`);
+      }
+    }
+    if (this.segmenter && typeof this.segmenter.close === 'function') {
+      await this.segmenter.close();
+    }
+    this.segmenter = null;
+    this.assetUrls = null;
+    this.initialized = false;
+    this.initializingPromise = null;
+    this.labels = [];
+    this.personMaskIndex = 0;
+    this.maskCanvas = null;
+    this.maskContext = null;
+    this.maskImageData = null;
+  }
+};
+},{"../../Logger":44,"./AiVBAssetLoader":45}],48:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20629,7 +19720,7 @@ class AudioComposer {
   }
 }
 module.exports = AudioComposer;
-},{}],51:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20799,7 +19890,7 @@ exports.normalizeMirrorX = function (primary, legacy, fallback) {
  * @param {number|Object} optionsOrSlot - 原始参数（数字或对象）
  * @param {number} index - 数组索引，批量添加时 slot 递增
  * @param {number} defaultGain - 未指定 gain 时使用的默认值
- * @returns {Object} 归一化后的源配置 { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
+ * @returns {Object} 归一化后的源配置
  */
 /**
  * 返回最大参与方数限制。
@@ -20822,11 +19913,14 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
     if (typeof optionsOrSlot.sourceMirror === 'boolean') {
       options.sourceMirror = optionsOrSlot.sourceMirror;
     }
+    if (Object.prototype.hasOwnProperty.call(optionsOrSlot, 'aiVirtualBackground')) {
+      options.aiVirtualBackground = optionsOrSlot.aiVirtualBackground;
+    }
   }
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../../Logger":49}],52:[function(require,module,exports){
+},{"../../Logger":44}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20968,7 +20062,7 @@ class ComposerDomAdapter {
   }
 }
 module.exports = ComposerDomAdapter;
-},{}],53:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21053,7 +20147,9 @@ class LayoutEngine {
             streamId: this._getSourceStreamId(source),
             slot: slot,
             video: source.video,
+            source: source,
             mirrorX: mirrorX,
+            aiVirtualBackground: source.aiVirtualBackground || null,
             draw: draw
           });
         }
@@ -21067,7 +20163,9 @@ class LayoutEngine {
             streamId: this._getSourceStreamId(source),
             slot: slot,
             video: placeholder,
+            source: source,
             mirrorX: _mirrorX,
+            aiVirtualBackground: source.aiVirtualBackground || null,
             draw: {
               x: targetX,
               y: targetY,
@@ -21319,7 +20417,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],54:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../../Logger');
@@ -21330,6 +20428,7 @@ var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
 var MediaStreamComposerConfig = require('./ComposerConfig');
 var ComposerDomAdapter = require('./ComposerDomAdapter');
+var SourceAiVBManager = require('./SourceAiVBManager');
 var WatermarkManager = require('./WatermarkManager');
 var logger = new Logger('MediaStreamComposer');
 var lastRenderInfoLogSignature = '';
@@ -21379,6 +20478,9 @@ class MediaStreamComposer {
    *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
    * @param {boolean} [options.sourceMirror=false]
    *   是否默认对所有槽位应用水平镜像。
+  * @param {Object[]} [options.sources]
+  *   与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、
+  *   `aiVirtualBackground` 等。
    */
   constructor(videos = [], options = {}) {
     // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
@@ -21415,6 +20517,7 @@ class MediaStreamComposer {
     this._audioComposer = null;
     this._outputStreamManager = null;
     this._domAdapter = null;
+    this._sourceAiVBManager = null;
     this._watermarkManager = null;
 
     // -----------------------------------------------------------------------
@@ -21431,6 +20534,10 @@ class MediaStreamComposer {
      * @property {string}      renderMode      - 渲染后端选择
      */
     this._config = config;
+    this._sourceAiVBManager = new SourceAiVBManager({
+      logger: logger
+    });
+    this._config.aiVirtualBackgroundManager = this._sourceAiVBManager;
     this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX || this._config.outputMirrorX);
     this._slotMirrorXOverrides = Object.create(null);
     this._domAdapter = new ComposerDomAdapter({
@@ -21475,6 +20582,7 @@ class MediaStreamComposer {
       createVideoElement: this._mediaStreamToVideoElement.bind(this),
       onBeforeRemove: source => this._disconnectAudio(source),
       onAfterRemove: source => {
+        this._sourceAiVBManager.removeSource(source);
         if (this._renderer) {
           this._renderLoop.removeSource(source.id);
         }
@@ -21583,7 +20691,7 @@ class MediaStreamComposer {
     });
 
     // -- 将初始传入的源加入混流 --
-    this.appendStream(videos);
+    this.appendStream(videos, this._normalizeInitialSourceOptionsList(options, videos.length));
   }
 
   // =========================================================================
@@ -21625,7 +20733,24 @@ class MediaStreamComposer {
    * @returns {Object} { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
    */
   _normalizeSourceOptions(optionsOrSlot, index) {
-    return MediaStreamComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+    var normalized = MediaStreamComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+    if (Object.prototype.hasOwnProperty.call(normalized, 'aiVirtualBackground')) {
+      normalized.aiVirtualBackground = this._sourceAiVBManager.normalizeInput(normalized.aiVirtualBackground);
+    }
+    return normalized;
+  }
+  _normalizeInitialSourceOptionsList(options, sourceCount) {
+    var normalizedCount = Math.max(0, Number(sourceCount) || 0);
+    var normalizedList = [];
+    var sourceList = options && options.sources instanceof Array ? options.sources : null;
+    for (var index = 0; index < normalizedCount; index++) {
+      if (sourceList && sourceList[index] && typeof sourceList[index] === 'object') {
+        normalizedList.push(sourceList[index]);
+        continue;
+      }
+      normalizedList.push(undefined);
+    }
+    return normalizedList;
   }
   _resolveMirrorX(source, slot) {
     var key = String(slot);
@@ -21650,21 +20775,37 @@ class MediaStreamComposer {
     }
     return this._sources.some(source => source && source.mirrorX === true);
   }
-  _refreshRendererPolicyForMirror() {
-    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled();
+  _hasSourceAiVirtualBackgroundEnabled() {
+    return this._sources.some(source => this._sourceAiVBManager.hasEnabledEffect(source));
+  }
+  _requiresMain2DRenderer() {
+    return this._hasSourceAiVirtualBackgroundEnabled();
+  }
+  _refreshRendererPolicyForEffects() {
+    var shouldForceMain2D = this._requiresMain2DRenderer();
+    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled() || shouldForceMain2D;
     var previousPolicy = this._config.forceMainThreadRenderer;
+    var previousMain2DPolicy = this._config.forceMain2DRenderer;
     this._config.forceMainThreadRenderer = shouldForceMainThread;
+    this._config.forceMain2DRenderer = shouldForceMain2D;
     if (previousPolicy !== shouldForceMainThread) {
-      logger.debug(`Mirror renderer policy updated: forceMainThread=${shouldForceMainThread}`);
+      logger.debug(`Effect renderer policy updated: forceMainThread=${shouldForceMainThread}`);
+    }
+    if (previousMain2DPolicy !== shouldForceMain2D) {
+      logger.debug(`Effect renderer policy updated: forceMain2D=${shouldForceMain2D}`);
     }
     if (!shouldForceMainThread || !this._renderer || !this._renderer.getInfo) {
       return;
     }
     var info = this._renderer.getInfo();
+    if (shouldForceMain2D && info.actualMode !== 'main-2d') {
+      this._fallbackRendererToMain2D('Active source AI virtual background requires main-thread Canvas2D');
+      return;
+    }
     if (!info.isWorker) {
       return;
     }
-    this._fallbackRendererToMain2D('Mirror currently requires a main-thread renderer');
+    this._fallbackRendererToMain2D('Active source/output effects require a main-thread renderer');
   }
 
   /**
@@ -22043,15 +21184,16 @@ class MediaStreamComposer {
       videos = videos.slice(0, available);
     }
     var appended = false;
+    var sourceOptionsList = optionsOrSlot instanceof Array ? optionsOrSlot : null;
     videos.forEach((video, index) => {
-      var sourceOptions = this._normalizeSourceOptions(optionsOrSlot, index);
+      var sourceOptions = this._normalizeSourceOptions(sourceOptionsList ? sourceOptionsList[index] : optionsOrSlot, sourceOptionsList ? 0 : index);
       this._sourceRegistry.add(video, sourceOptions);
       appended = true;
       if (this._audioComposer.hasAudioContext || this._audioComposer.requested) {
         this._scheduleAudioRefresh();
       }
     });
-    this._refreshRendererPolicyForMirror();
+    this._refreshRendererPolicyForEffects();
     this._renderLoop.start();
     logger.debug(`addSource complete: appended=${appended} totalSources=${this._sources.length}`);
     return appended;
@@ -22117,7 +21259,7 @@ class MediaStreamComposer {
       needsForceRender = true;
     }
     if (needsMirrorPolicyRefresh) {
-      this._refreshRendererPolicyForMirror();
+      this._refreshRendererPolicyForEffects();
     }
     if (needsForceRender) {
       this._drawVideosToCanvas(undefined, true);
@@ -22212,6 +21354,24 @@ class MediaStreamComposer {
   getSources() {
     return this.getState().sources;
   }
+  setSourceAiVirtualBackground(slotOrTarget, options) {
+    this._assertNotDestroyed('setSourceAiVirtualBackground()');
+    var source = this._resolveSourceForEffectUpdate(slotOrTarget);
+    this._sourceAiVBManager.setSourceConfig(source, options);
+    this._refreshRendererPolicyForEffects();
+    this._drawVideosToCanvas(undefined, true);
+    return this._sourceAiVBManager.getSourceConfig(source);
+  }
+  getSourceAiVirtualBackground(slotOrTarget) {
+    this._assertNotDestroyed('getSourceAiVirtualBackground()');
+    return this._sourceAiVBManager.getSourceConfig(this._resolveSourceForEffectUpdate(slotOrTarget));
+  }
+  clearSourceAiVirtualBackground(slotOrTarget) {
+    this._assertNotDestroyed('clearSourceAiVirtualBackground()');
+    this._sourceAiVBManager.clearSourceConfig(this._resolveSourceForEffectUpdate(slotOrTarget));
+    this._refreshRendererPolicyForEffects();
+    this._drawVideosToCanvas(undefined, true);
+  }
   setMirror(enabled) {
     this._assertNotDestroyed('setMirror()');
     this.setConfig({
@@ -22261,6 +21421,13 @@ class MediaStreamComposer {
         [slot]: null
       }
     });
+  }
+  _resolveSourceForEffectUpdate(slotOrTarget) {
+    var source = typeof slotOrTarget === 'number' ? this._sources.find(item => item && item.slot === slotOrTarget) || null : this._findSource(slotOrTarget);
+    if (!source) {
+      throw new TypeError('Invalid source target.');
+    }
+    return source;
   }
 
   /**
@@ -22434,7 +21601,7 @@ class MediaStreamComposer {
   }
 }
 module.exports = MediaStreamComposer;
-},{"../../Logger":49,"./AudioComposer":50,"./ComposerConfig":51,"./ComposerDomAdapter":52,"./LayoutEngine":53,"./OutputStreamManager":55,"./RenderLoop":56,"./SourceRegistry":57,"./WatermarkManager":58}],55:[function(require,module,exports){
+},{"../../Logger":44,"./AudioComposer":48,"./ComposerConfig":49,"./ComposerDomAdapter":50,"./LayoutEngine":51,"./OutputStreamManager":53,"./RenderLoop":54,"./SourceAiVBManager":55,"./SourceRegistry":56,"./WatermarkManager":57}],53:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -23045,7 +22212,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],56:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23341,9 +22508,6 @@ class RenderLoop {
     if (currentInfo.actualMode === 'main-2d') {
       return false;
     }
-    if (!info && !currentInfo.isWorker && currentInfo.actualMode !== 'worker-failed') {
-      return false;
-    }
     if (!info && this._renderer && this._renderer.destroy) {
       this._renderer.destroy();
     }
@@ -23544,7 +22708,354 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../Renderers/MainCanvas2DRenderer":60,"../Renderers/MainWebGL2Renderer":61,"../Renderers/RendererFactory":62,"../Renderers/WorkerRenderer":63}],57:[function(require,module,exports){
+},{"../Renderers/MainCanvas2DRenderer":59,"../Renderers/MainWebGL2Renderer":60,"../Renderers/RendererFactory":61,"../Renderers/WorkerRenderer":62}],55:[function(require,module,exports){
+"use strict";
+
+var AiVBConfig = require('../AIVirtualBackground/AiVBConfig');
+var MediaPipeSegmenterRuntime = require('../AIVirtualBackground/MediaPipeSegmenterRuntime');
+function cloneObject(input) {
+  return input && typeof input === 'object' ? Object.assign({}, input) : {};
+}
+function resolveMode(options) {
+  var rawMode = typeof options.mode === 'string' ? options.mode.trim().toLowerCase() : '';
+  if (rawMode) {
+    return rawMode;
+  }
+  if (typeof options.imageUrl === 'string') {
+    return 'image';
+  }
+  if (typeof options.color === 'string') {
+    return 'color';
+  }
+  if (Number.isFinite(Number(options.blurRadius))) {
+    return 'blur';
+  }
+  return 'none';
+}
+function normalizeModeValue(mode, options) {
+  switch (mode) {
+    case 'image':
+      return typeof options.imageUrl === 'string' && options.imageUrl.trim() ? options.imageUrl.trim() : null;
+    case 'color':
+      return typeof options.color === 'string' && options.color.trim() ? options.color.trim() : null;
+    case 'blur':
+      return Number.isFinite(Number(options.blurRadius)) ? Number(options.blurRadius) : null;
+    default:
+      return null;
+  }
+}
+function normalizeConfig(input) {
+  if (input === undefined || input === null || input === false) {
+    return null;
+  }
+  var options = input === true ? {} : cloneObject(input);
+  if (options.enabled === false) {
+    return null;
+  }
+  var mode = resolveMode(options);
+  var video = AiVBConfig.normalizeVideo(options.video);
+  var segmentation = AiVBConfig.normalizeSegmentation(options.segmentation);
+  var postProcessing = AiVBConfig.normalizePostProcessing(options.postProcessing);
+  var assetConfig = AiVBConfig.normalizeAssetConfig(options.assetConfig);
+  var value = normalizeModeValue(mode, options);
+  if (mode === 'blur' && Number.isFinite(value)) {
+    postProcessing.blurRadius = Math.max(0, Math.min(postProcessing.maxBlurRadius, value));
+  }
+  return {
+    enabled: true,
+    mode: mode,
+    imageUrl: mode === 'image' && typeof value === 'string' ? value : null,
+    backgroundColor: mode === 'color' && typeof value === 'string' ? value : null,
+    blurRadius: mode === 'blur' && Number.isFinite(value) ? value : postProcessing.blurRadius,
+    modelPath: typeof options.modelPath === 'string' && options.modelPath.trim() ? options.modelPath.trim() : null,
+    video: video,
+    segmentation: segmentation,
+    postProcessing: postProcessing,
+    assetConfig: assetConfig
+  };
+}
+function cloneConfigSnapshot(config) {
+  if (!config) {
+    return null;
+  }
+  return {
+    enabled: config.enabled !== false,
+    mode: config.mode,
+    imageUrl: config.imageUrl,
+    backgroundColor: config.backgroundColor,
+    blurRadius: config.blurRadius,
+    modelPath: config.modelPath,
+    video: cloneObject(config.video),
+    segmentation: cloneObject(config.segmentation),
+    postProcessing: cloneObject(config.postProcessing),
+    assetConfig: cloneObject(config.assetConfig)
+  };
+}
+function isEffectEnabled(config) {
+  return Boolean(config && config.enabled !== false && config.mode && config.mode !== 'none');
+}
+module.exports = class SourceAiVBManager {
+  constructor(options = {}) {
+    this._logger = options.logger || null;
+  }
+  normalizeInput(input) {
+    return normalizeConfig(input);
+  }
+  setSourceConfig(source, input) {
+    if (!source) {
+      return null;
+    }
+    var config = normalizeConfig(input);
+    source.aiVirtualBackground = config;
+    if (!isEffectEnabled(config)) {
+      this.removeSource(source);
+      return null;
+    }
+    var state = this._ensureState(source);
+    state.config = config;
+    if (state.backgroundImageUrl !== config.imageUrl) {
+      state.backgroundImageRequestId += 1;
+      state.backgroundImageUrl = config.imageUrl;
+      state.backgroundImageStatus = 'idle';
+      state.backgroundImageError = '';
+      state.backgroundImagePendingUrl = null;
+      state.loadingImage = false;
+    }
+    return cloneConfigSnapshot(config);
+  }
+  getSourceConfig(source) {
+    return cloneConfigSnapshot(source && source.aiVirtualBackground);
+  }
+  clearSourceConfig(source) {
+    if (!source) {
+      return;
+    }
+    source.aiVirtualBackground = null;
+    this.removeSource(source);
+  }
+  hasEnabledEffect(source) {
+    return isEffectEnabled(source && source.aiVirtualBackground);
+  }
+  getRenderableState(source, videoElement) {
+    if (!source || !this.hasEnabledEffect(source)) {
+      return null;
+    }
+    var state = this._ensureState(source);
+    var config = source.aiVirtualBackground;
+    state.config = config;
+    this._ensureRuntime(state);
+    this._ensureBackgroundImage(state);
+    this._scheduleSegmentation(state, videoElement);
+    return {
+      config: config,
+      latestMask: state.latestMask,
+      backgroundImage: state.backgroundImage,
+      state: state
+    };
+  }
+  noteFrameRendered(source, usedMask) {
+    var state = source && source.__aiVirtualBackgroundState;
+    if (!state || !usedMask) {
+      return;
+    }
+    state.renderedSinceSegmentation += 1;
+  }
+  removeSource(source) {
+    var state = source && source.__aiVirtualBackgroundState;
+    if (!state) {
+      return;
+    }
+    source.__aiVirtualBackgroundState = null;
+    if (state.runtime && typeof state.runtime.destroy === 'function') {
+      Promise.resolve(state.runtime.destroy()).catch(() => {});
+    }
+  }
+  _ensureState(source) {
+    if (source.__aiVirtualBackgroundState) {
+      return source.__aiVirtualBackgroundState;
+    }
+    source.__aiVirtualBackgroundState = {
+      config: source.aiVirtualBackground,
+      runtime: null,
+      runtimeReady: false,
+      runtimeInitializing: false,
+      runtimeInitError: '',
+      pendingSegmentation: false,
+      latestMask: null,
+      renderedSinceSegmentation: 0,
+      backgroundImageUrl: null,
+      backgroundImageLoadedUrl: null,
+      backgroundImagePendingUrl: null,
+      backgroundImage: null,
+      backgroundImageStatus: 'idle',
+      backgroundImageError: '',
+      backgroundImageRequestId: 0,
+      loadingImage: false,
+      segmentationCanvas: null,
+      segmentationContext: null,
+      workCanvas: null,
+      workContext: null
+    };
+    return source.__aiVirtualBackgroundState;
+  }
+  _ensureRuntime(state) {
+    if (!state || !state.config || !isEffectEnabled(state.config)) {
+      return;
+    }
+    if (state.runtimeReady || state.runtimeInitializing) {
+      return;
+    }
+    state.runtime = state.runtime || new MediaPipeSegmenterRuntime({
+      assetConfig: state.config.assetConfig
+    });
+    state.runtimeInitializing = true;
+    state.runtimeInitError = '';
+    state.runtime.initialize({
+      modelPath: state.config.modelPath,
+      delegate: state.config.segmentation.delegate
+    }).then(() => {
+      state.runtimeReady = true;
+    }).catch(error => {
+      state.runtimeInitError = error && error.message ? error.message : String(error);
+      if (this._logger) {
+        this._logger.warn(`AiVB runtime init failed: ${state.runtimeInitError}`);
+      }
+    }).finally(() => {
+      state.runtimeInitializing = false;
+    });
+  }
+  _ensureBackgroundImage(state) {
+    if (!state || !state.config || state.config.mode !== 'image') {
+      return;
+    }
+    if (!state.config.imageUrl) {
+      state.backgroundImage = null;
+      state.backgroundImageLoadedUrl = null;
+      state.backgroundImagePendingUrl = null;
+      state.backgroundImageStatus = 'idle';
+      state.backgroundImageError = '';
+      state.loadingImage = false;
+      return;
+    }
+    if (state.backgroundImage && state.backgroundImageLoadedUrl === state.config.imageUrl) {
+      return;
+    }
+    if (state.loadingImage && state.backgroundImagePendingUrl === state.config.imageUrl) {
+      return;
+    }
+    if (state.backgroundImageStatus === 'error' && state.backgroundImagePendingUrl === state.config.imageUrl) {
+      return;
+    }
+    var image = this._createImageElement();
+    var requestId = state.backgroundImageRequestId + 1;
+    var imageUrl = state.config.imageUrl;
+    if (!image) {
+      state.backgroundImageStatus = 'error';
+      state.backgroundImageError = 'Image element is unavailable';
+      return;
+    }
+    state.backgroundImageRequestId = requestId;
+    state.loadingImage = true;
+    state.backgroundImageStatus = 'loading';
+    state.backgroundImagePendingUrl = imageUrl;
+    state.backgroundImageError = '';
+    image.onload = () => {
+      if (state.backgroundImageRequestId !== requestId) {
+        return;
+      }
+      state.loadingImage = false;
+      state.backgroundImage = image;
+      state.backgroundImageLoadedUrl = imageUrl;
+      state.backgroundImagePendingUrl = null;
+      state.backgroundImageStatus = 'ready';
+      state.backgroundImageError = '';
+    };
+    image.onerror = () => {
+      if (state.backgroundImageRequestId !== requestId) {
+        return;
+      }
+      state.loadingImage = false;
+      state.backgroundImagePendingUrl = null;
+      state.backgroundImageStatus = 'error';
+      state.backgroundImageError = 'Failed to load background image';
+    };
+    image.src = imageUrl;
+  }
+  _createImageElement() {
+    var image = null;
+    if (typeof Image !== 'undefined') {
+      image = new Image();
+    } else if (typeof document !== 'undefined' && document && typeof document.createElement === 'function') {
+      try {
+        image = document.createElement('img');
+      } catch (error) {}
+    }
+    if (image) {
+      try {
+        image.crossOrigin = 'anonymous';
+      } catch (error) {}
+      return image;
+    }
+    return null;
+  }
+  _scheduleSegmentation(state, videoElement) {
+    if (!state || !state.runtimeReady || state.pendingSegmentation || !state.runtime || !videoElement || videoElement.readyState < 2) {
+      return;
+    }
+    var frameSkip = state.config && state.config.segmentation ? state.config.segmentation.frameSkip : 1;
+    var shouldRun = !state.latestMask || frameSkip <= 0 || state.renderedSinceSegmentation >= frameSkip;
+    if (!shouldRun) {
+      return;
+    }
+    state.pendingSegmentation = true;
+    var segmentationInput = this._getSegmentationInput(state, videoElement);
+    state.runtime.segmentForVideo(segmentationInput || videoElement).then(result => {
+      if (!result || !result.segmentationMask) {
+        return;
+      }
+      state.latestMask = result.segmentationMask;
+      state.renderedSinceSegmentation = 0;
+    }).catch(error => {
+      if (this._logger) {
+        this._logger.warn(`AiVB segmentation failed: ${error && error.message ? error.message : String(error)}`);
+      }
+    }).finally(() => {
+      state.pendingSegmentation = false;
+    });
+  }
+  _getSegmentationInput(state, videoElement) {
+    if (!state || !videoElement || typeof document === 'undefined') {
+      return null;
+    }
+    var configVideo = state.config && state.config.video ? state.config.video : {};
+    var sourceWidth = Number(videoElement.videoWidth) || Number(configVideo.width) || 0;
+    var sourceHeight = Number(videoElement.videoHeight) || Number(configVideo.height) || 0;
+    var processingScale = Number(configVideo.processingScale);
+    if (!sourceWidth || !sourceHeight) {
+      return null;
+    }
+    var scale = Number.isFinite(processingScale) ? Math.max(0.1, Math.min(1, processingScale)) : 1;
+    var width = Math.max(1, Math.round(sourceWidth * scale));
+    var height = Math.max(1, Math.round(sourceHeight * scale));
+    if (!state.segmentationCanvas) {
+      state.segmentationCanvas = document.createElement('canvas');
+      state.segmentationContext = state.segmentationCanvas.getContext('2d');
+    }
+    if (!state.segmentationContext) {
+      return null;
+    }
+    if (state.segmentationCanvas.width !== width) {
+      state.segmentationCanvas.width = width;
+    }
+    if (state.segmentationCanvas.height !== height) {
+      state.segmentationCanvas.height = height;
+    }
+    state.segmentationContext.clearRect(0, 0, width, height);
+    state.segmentationContext.drawImage(videoElement, 0, 0, width, height);
+    return state.segmentationCanvas;
+  }
+};
+},{"../AIVirtualBackground/AiVBConfig":46,"../AIVirtualBackground/MediaPipeSegmenterRuntime":47}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23593,7 +23104,7 @@ class SourceRegistry {
    * 如果新源的 slot 已被占用，旧源会被替换（先移除旧源再添加新源）。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 输入源
-   * @param {Object} [options={}] - 配置选项 { slot, gain, sourceMirror }
+   * @param {Object} [options={}] - 配置选项 { slot, gain, sourceMirror, aiVirtualBackground }
    * @returns {Object} 新建的 source 对象
    */
   add(input, options) {
@@ -23716,6 +23227,7 @@ class SourceRegistry {
         slot: source.slot,
         gain: source.gain,
         sourceMirror: typeof source.mirrorX === 'boolean' ? source.mirrorX : null,
+        aiVirtualBackground: source.aiVirtualBackground || null,
         hasAudio: this.hasLiveAudioTrack(source),
         hasVideo: this.hasVideoTrack(source)
       };
@@ -23803,7 +23315,7 @@ class SourceRegistry {
    * 创建一个内部 source 对象。
    *
    * @param {MediaStream|HTMLVideoElement|Object} input - 原始输入
-   * @param {Object} options - 配置 { slot, gain, sourceMirror }
+   * @param {Object} options - 配置 { slot, gain, sourceMirror, aiVirtualBackground }
    * @returns {Object} source 对象
    * @throws {TypeError} 无效的 MediaStream
    */
@@ -23831,6 +23343,7 @@ class SourceRegistry {
       slot: typeof options.slot === 'number' ? options.slot : null,
       gain: this._normalizeGain(options.gain, this._getDefaultGain()),
       mirrorX: typeof options.sourceMirror === 'boolean' ? options.sourceMirror : null,
+      aiVirtualBackground: options.aiVirtualBackground || null,
       audioSourceNode: null,
       // WebAudio 源节点（由 AudioComposer 连接时赋值）
       masterGainNode: null,
@@ -23912,7 +23425,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],58:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24374,7 +23887,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],59:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24515,7 +24028,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],60:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24549,6 +24062,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
 
     /** @type {CanvasRenderingContext2D|null} Canvas2D 上下文 */
     this._context = null;
+    this._aiVirtualBackgroundManager = config && config.aiVirtualBackgroundManager ? config.aiVirtualBackgroundManager : null;
   }
 
   /**
@@ -24613,6 +24127,10 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
       if (!item.video || item.video.readyState < 2) {
         return;
       }
+      if (item.aiVirtualBackground && this._aiVirtualBackgroundManager) {
+        this._drawAiVirtualBackgroundItem(item, payload.outputMirrorX, payload.width);
+        return;
+      }
       this._drawItem(item, payload.outputMirrorX, payload.width);
     });
     var sourceWatermarkMirrorX = payload.outputMirrorX;
@@ -24655,6 +24173,82 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     var effectiveMirrorX = Boolean(item.mirrorX) !== Boolean(outputMirrorX);
     this._drawSurface(item.video, draw, effectiveMirrorX);
   }
+  _drawAiVirtualBackgroundItem(item, outputMirrorX, canvasWidth) {
+    if (!item || !item.source || !this._aiVirtualBackgroundManager) {
+      this._drawItem(item, outputMirrorX, canvasWidth);
+      return;
+    }
+    var effect = this._aiVirtualBackgroundManager.getRenderableState(item.source, item.video);
+    if (!effect || !effect.config || effect.config.mode === 'none') {
+      this._drawItem(item, outputMirrorX, canvasWidth);
+      return;
+    }
+    var draw = this._resolveDrawRect(item.draw, outputMirrorX, canvasWidth);
+    var effectiveMirrorX = Boolean(item.mirrorX) !== Boolean(outputMirrorX);
+    var mask = effect.latestMask;
+    if (!draw || !mask) {
+      this._drawItem(item, outputMirrorX, canvasWidth);
+      return;
+    }
+    var work = this._ensureWorkSurface(effect.state, draw.width, draw.height);
+    if (!work || !work.context) {
+      this._drawItem(item, outputMirrorX, canvasWidth);
+      return;
+    }
+    work.context.clearRect(0, 0, work.canvas.width, work.canvas.height);
+    this._drawSurfaceToContext(work.context, item.video, {
+      x: 0,
+      y: 0,
+      width: work.canvas.width,
+      height: work.canvas.height
+    }, effectiveMirrorX);
+    work.context.globalCompositeOperation = 'destination-in';
+    this._drawSurfaceToContext(work.context, mask, {
+      x: 0,
+      y: 0,
+      width: work.canvas.width,
+      height: work.canvas.height
+    }, effectiveMirrorX);
+    work.context.globalCompositeOperation = 'source-over';
+    if (effect.config.mode === 'blur') {
+      this._context.save();
+      this._context.filter = `blur(${effect.config.blurRadius}px)`;
+      this._drawSurface(item.video, draw, effectiveMirrorX);
+      this._context.restore();
+    } else if (effect.config.mode === 'image') {
+      if (!effect.backgroundImage || !this._drawCoverSurface(effect.backgroundImage, draw)) {
+        this._drawItem(item, outputMirrorX, canvasWidth);
+        return;
+      }
+    } else if (effect.config.mode === 'color') {
+      this._context.fillStyle = effect.config.backgroundColor || '#00ff00';
+      this._context.fillRect(draw.x, draw.y, draw.width, draw.height);
+    }
+    this._context.drawImage(work.canvas, draw.x, draw.y, draw.width, draw.height);
+    this._aiVirtualBackgroundManager.noteFrameRendered(item.source, true);
+  }
+  _ensureWorkSurface(state, width, height) {
+    if (!state) {
+      return null;
+    }
+    if (!state.workCanvas) {
+      state.workCanvas = document.createElement('canvas');
+      state.workContext = state.workCanvas.getContext('2d');
+    }
+    if (!state.workContext) {
+      return null;
+    }
+    if (state.workCanvas.width !== Math.max(1, Math.round(width))) {
+      state.workCanvas.width = Math.max(1, Math.round(width));
+    }
+    if (state.workCanvas.height !== Math.max(1, Math.round(height))) {
+      state.workCanvas.height = Math.max(1, Math.round(height));
+    }
+    return {
+      canvas: state.workCanvas,
+      context: state.workContext
+    };
+  }
   _drawSurface(surface, draw, mirrorX) {
     if (!surface || !draw) {
       return;
@@ -24668,6 +24262,42 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._context.scale(-1, 1);
     this._context.drawImage(surface, 0, 0, draw.width, draw.height);
     this._context.restore();
+  }
+  _drawSurfaceToContext(context, surface, draw, mirrorX) {
+    if (!context || !surface || !draw) {
+      return;
+    }
+    if (!mirrorX) {
+      context.drawImage(surface, draw.x, draw.y, draw.width, draw.height);
+      return;
+    }
+    context.save();
+    context.translate(draw.x + draw.width, draw.y);
+    context.scale(-1, 1);
+    context.drawImage(surface, 0, 0, draw.width, draw.height);
+    context.restore();
+  }
+  _drawCoverSurface(surface, draw) {
+    var imageWidth = surface.naturalWidth || surface.videoWidth || surface.width;
+    var imageHeight = surface.naturalHeight || surface.videoHeight || surface.height;
+    if (!imageWidth || !imageHeight) {
+      return false;
+    }
+    var imageAspect = imageWidth / imageHeight;
+    var drawAspect = draw.width / draw.height;
+    var sourceWidth = imageWidth;
+    var sourceHeight = imageHeight;
+    var sourceX = 0;
+    var sourceY = 0;
+    if (imageAspect > drawAspect) {
+      sourceWidth = imageHeight * drawAspect;
+      sourceX = (imageWidth - sourceWidth) / 2;
+    } else {
+      sourceHeight = imageWidth / drawAspect;
+      sourceY = (imageHeight - sourceHeight) / 2;
+    }
+    this._context.drawImage(surface, sourceX, sourceY, sourceWidth, sourceHeight, draw.x, draw.y, draw.width, draw.height);
+    return true;
   }
   _resolveDrawRect(draw, outputMirrorX, canvasWidth) {
     if (!draw) {
@@ -24695,7 +24325,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":59}],61:[function(require,module,exports){
+},{"./BaseRenderer":58}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25089,7 +24719,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._activeMirrorX = null;
   }
 };
-},{"./BaseRenderer":59,"./helpers/color":64,"./helpers/gl":65}],62:[function(require,module,exports){
+},{"./BaseRenderer":58,"./helpers/color":63,"./helpers/gl":64}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25126,13 +24756,17 @@ var WorkerRenderer = require('./WorkerRenderer');
 exports.createRenderer = function (canvas, config, hooks) {
   var mode = config.renderMode || 'auto';
   var forceMainThread = config.forceMainThreadRenderer === true;
+  var forceMain2D = config.forceMain2DRenderer === true;
   var errors = [];
   hooks = hooks || {};
+  if (forceMain2D) {
+    return createMain2D(canvas, config, true, 'Active source AI virtual background requires main-thread Canvas2D');
+  }
   if (mode === 'main-2d') {
     return createMain2D(canvas, config, false, '');
   }
   if (forceMainThread && (mode === 'worker-webgl2' || mode === 'worker-2d')) {
-    return createMainFallback(canvas, config, mode, 'Mirror currently requires a main-thread renderer');
+    return createMainFallback(canvas, config, mode, 'Active source/output effects require a main-thread renderer');
   }
 
   // Safari/WKWebView: Worker WebGL2 支持有限，直接走主线程 WebGL2
@@ -25206,6 +24840,9 @@ exports.createRenderer = function (canvas, config, hooks) {
  * @returns {BaseRenderer}
  */
 function createMainFallback(canvas, config, requestedMode, reason) {
+  if (config.forceMain2DRenderer === true) {
+    return createMain2D(canvas, config, true, reason);
+  }
   if (requestedMode !== 'worker-2d') {
     try {
       var renderer = new MainWebGL2Renderer(config, {
@@ -25256,7 +24893,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":60,"./MainWebGL2Renderer":61,"./WorkerRenderer":63}],63:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":59,"./MainWebGL2Renderer":60,"./WorkerRenderer":62}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25838,7 +25475,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":59,"./workerScript":66}],64:[function(require,module,exports){
+},{"./BaseRenderer":58,"./workerScript":65}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25931,7 +25568,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],65:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26006,7 +25643,7 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],66:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26032,14 +25669,14 @@ exports.createWorkerScript = function () {
   // eslint-disable-next-line quotes
   return `var canvas=null,ctx=null,gl=null,program=null,positionBuffer=null,texCoordBuffer=null,textures={},watermarkTextures={},actualMode="unknown",requestedMode="auto",width=0,height=0,backgroundColor="#000",opacityLocation=null,VERTEX_SHADER="#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n",FRAGMENT_SHADER="#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";function init(e){canvas=e.canvas,requestedMode=e.requestedMode||"auto",width=e.width||canvas.width||1,height=e.height||canvas.height||1,backgroundColor=e.backgroundColor||"#000",canvas.width=width,canvas.height=height;if("worker-webgl2"===requestedMode||"auto"===requestedMode)try{return initWebGL2(),actualMode="worker-webgl2",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!0,reason:""})}catch(r){return destroyWebGL2(),void postMessage({type:"failed",reason:r.message||String(r)})}if("worker-2d"===requestedMode)try{return initCanvas2D(),actualMode="worker-2d",void postMessage({type:"ready",actualMode:actualMode,isWebGL2:!1,reason:""})}catch(e){return void postMessage({type:"failed",reason:e.message||String(e)})}postMessage({type:"failed",reason:"Unsupported worker render mode: "+requestedMode})}function initWebGL2(){if(!(gl=canvas.getContext("webgl2",{alpha:!1,antialias:!1,preserveDrawingBuffer:!1,powerPreference:"high-performance"})))throw new Error("Worker WebGL2 context is not available");var e=compileShader(gl.VERTEX_SHADER,VERTEX_SHADER),r=compileShader(gl.FRAGMENT_SHADER,FRAGMENT_SHADER);program=createProgram(e,r),gl.deleteShader(e),gl.deleteShader(r),positionBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,positionBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW),texCoordBuffer=gl.createBuffer(),gl.bindBuffer(gl.ARRAY_BUFFER,texCoordBuffer),gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW),gl.useProgram(program),enableAttribute("a_position",positionBuffer),enableAttribute("a_texCoord",texCoordBuffer),gl.uniform1i(gl.getUniformLocation(program,"u_texture"),0),opacityLocation=gl.getUniformLocation(program,"u_opacity"),gl.uniform1f(opacityLocation,1)}function initCanvas2D(){if(!(ctx=canvas.getContext("2d",{alpha:!1})||canvas.getContext("2d")))throw new Error("Worker Canvas2D context is not available")}function render(e){var r=null;e.items;try{width=e.width||width,height=e.height||height,backgroundColor=e.backgroundColor||backgroundColor,canvas.width!==width&&(canvas.width=width),canvas.height!==height&&(canvas.height=height),"worker-webgl2"===actualMode?renderWebGL2(e):"worker-2d"===actualMode&&renderCanvas2D(e),canvas.transferToImageBitmap?(r=canvas.transferToImageBitmap(),postMessage({type:"rendered",bitmap:r},[r]),r=null):postMessage({type:"renderError",reason:"OffscreenCanvas.transferToImageBitmap is not available"})}catch(e){r&&r.close&&r.close(),postMessage({type:"renderError",reason:e.message||String(e)})}finally{closeFrames(e.items||[]),closeFrames(e.sourceWatermarks||[]),closeFrames(e.outputWatermarks||[])}}function renderWebGL2(e){var r=parseColor(e.backgroundColor||"#000"),t=e.items||[];gl.useProgram(program),gl.clearColor(r[0],r[1],r[2],r[3]),gl.clear(gl.COLOR_BUFFER_BIT),gl.activeTexture(gl.TEXTURE0),gl.disable(gl.BLEND),t.forEach(function(e){if(e.frame&&e.draw){var r=getTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,1),drawRect(e.draw)}}),drawWatermarksWebGL2(e.sourceWatermarks||[]),drawWatermarksWebGL2(e.outputWatermarks||[]),gl.flush()}function drawWatermarksWebGL2(e){e.length&&(gl.enable(gl.BLEND),gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA),e.forEach(function(e){if(e.frame&&e.draw){var r=getWatermarkTexture(e.id);gl.bindTexture(gl.TEXTURE_2D,r),gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,!0),gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,e.frame),gl.uniform1f(opacityLocation,"number"==typeof e.opacity?Math.min(1,Math.max(0,e.opacity)):1),drawRect(e.draw)}}),gl.disable(gl.BLEND))}function drawRect(e){var r=Math.round(e.x),t=Math.round(height-e.y-e.height),a=Math.round(e.width),o=Math.round(e.height);a<=0||o<=0||(gl.viewport(r,t,a,o),gl.drawArrays(gl.TRIANGLE_STRIP,0,4))}function renderCanvas2D(e){var r=e.items||[];ctx.fillStyle=e.backgroundColor||"#000",ctx.fillRect(0,0,width,height),r.forEach(function(e){e.frame&&e.draw&&ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height)}),drawWatermarksCanvas2D(e.sourceWatermarks||[]),drawWatermarksCanvas2D(e.outputWatermarks||[])}function drawWatermarksCanvas2D(e){e.forEach(function(e){if(e.frame&&e.draw){var r=ctx.globalAlpha;ctx.globalAlpha="number"==typeof e.opacity?e.opacity:1,ctx.drawImage(e.frame,e.draw.x,e.draw.y,e.draw.width,e.draw.height),ctx.globalAlpha=r}})}function compileShader(e,r){var t=gl.createShader(e);if(gl.shaderSource(t,r),gl.compileShader(t),!gl.getShaderParameter(t,gl.COMPILE_STATUS)){var a=gl.getShaderInfoLog(t);throw gl.deleteShader(t),new Error("Could not compile shader: "+a)}return t}function createProgram(e,r){var t=gl.createProgram();if(gl.attachShader(t,e),gl.attachShader(t,r),gl.linkProgram(t),!gl.getProgramParameter(t,gl.LINK_STATUS)){var a=gl.getProgramInfoLog(t);throw gl.deleteProgram(t),new Error("Could not link WebGL program: "+a)}return t}function enableAttribute(e,r){var t=gl.getAttribLocation(program,e);gl.enableVertexAttribArray(t),gl.bindBuffer(gl.ARRAY_BUFFER,r),gl.vertexAttribPointer(t,2,gl.FLOAT,!1,0,0)}function getTexture(e){return textures[e]||(textures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,textures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),textures[e]}function getWatermarkTexture(e){return watermarkTextures[e]||(watermarkTextures[e]=gl.createTexture(),gl.bindTexture(gl.TEXTURE_2D,watermarkTextures[e]),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR),gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR)),watermarkTextures[e]}function removeSource(e){gl&&textures[e]&&gl.deleteTexture(textures[e]),delete textures[e]}function closeFrames(e){e.forEach(function(e){e.frame&&e.frame.close&&e.frame.close()})}function destroy(){destroyWebGL2(),ctx=null,canvas=null}function destroyWebGL2(){if(gl){Object.keys(textures).forEach(function(e){gl.deleteTexture(textures[e])}),textures={},Object.keys(watermarkTextures).forEach(function(e){gl.deleteTexture(watermarkTextures[e])}),watermarkTextures={},positionBuffer&&gl.deleteBuffer(positionBuffer),texCoordBuffer&&gl.deleteBuffer(texCoordBuffer),program&&gl.deleteProgram(program);var e=gl.getExtension("WEBGL_lose_context");e&&e.loseContext(),gl=null,program=null,positionBuffer=null,texCoordBuffer=null,opacityLocation=null}}function parseColor(e){if(!e||"string"!=typeof e)return[0,0,0,1];var r=e.trim();return"#"===r[0]?parseHexColor(r):0===r.indexOf("rgb")?parseRgbColor(r):[0,0,0,1]}function parseHexColor(e){var r=e.slice(1);if(3===r.length&&(r=r.split("").map(function(e){return e+e}).join("")),6!==r.length)return[0,0,0,1];var t=parseInt(r,16);return isFinite(t)?[(t>>16&255)/255,(t>>8&255)/255,(255&t)/255,1]:[0,0,0,1]}function parseRgbColor(e){var r=e.match(/rgba?\\\\(([^)]+)\\\\)/i);if(!r)return[0,0,0,1];var t=r[1].split(",").map(function(e){return Number(e.trim())});return t.length<3||t.some(function(e){return!isFinite(e)})?[0,0,0,1]:[clamp(t[0]/255,0,1),clamp(t[1]/255,0,1),clamp(t[2]/255,0,1),clamp(t.length>3?t[3]:1,0,1)]}function clamp(e,r,t){return Math.min(t,Math.max(r,e))}self.onmessage=function(e){var r=e.data||{};"init"===r.type?init(r):"render"===r.type?render(r.payload||{}):"removeSource"===r.type?removeSource(r.id):"destroy"===r.type&&destroy()};`;
 };
-},{}],67:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 
 /**
  * MediaStreamComposer public entry point.
  */
 module.exports = require('./Core/MediaStreamComposer');
-},{"./Core/MediaStreamComposer":54}],68:[function(require,module,exports){
+},{"./Core/MediaStreamComposer":52}],67:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -26252,7 +25889,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./URI":88,"./Utils":89,"events":93}],69:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":92}],68:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -26341,7 +25978,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":47,"./URI":88}],70:[function(require,module,exports){
+},{"./Grammar":42,"./URI":87}],69:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -26547,7 +26184,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":42,"./Exceptions":46,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./Utils":89,"events":93}],71:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":92}],70:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -26801,7 +26438,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":47,"./Logger":49,"./SIPMessage":81}],72:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44,"./SIPMessage":80}],71:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -26810,7 +26447,7 @@ var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71,
 // const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
 
 module.exports = pk;
-},{}],73:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -26928,9 +26565,6 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
-    this._sessionAiVBEngine = null;
-    this._sessionAiVBOptions = null;
-    this._aiVBInputStream = null;
     this._sessionAiNSEngine = null;
     this._sessionAiNSOptions = null;
     this._aiNSInputStream = null;
@@ -27131,8 +26765,86 @@ module.exports = class RTCSession extends EventEmitter {
   getAiVirtualBackground() {
     return this._mediaPipeline.getAiVirtualBackground();
   }
-  getAiVBEngine() {
-    return this.getAiVirtualBackground();
+  async updateMediaStreamComposer(options) {
+    if (options === null) {
+      this._sessionMediaStreamComposerOptions = null;
+      this._mediaPipeline.stopSessionMediaStreamComposer();
+      return null;
+    }
+    var resolvedOptions = this._mediaPipeline.resolveMediaStreamComposerOptions({
+      mediaStreamComposer: options
+    });
+    this._sessionMediaStreamComposerOptions = resolvedOptions;
+    if (!resolvedOptions) {
+      this._mediaPipeline.stopSessionMediaStreamComposer();
+      return null;
+    }
+    var composer = this.getMediaStreamComposer();
+    if (!composer || typeof composer.setConfig !== 'function') {
+      var sender = this._connection && typeof this._connection.getSenders === 'function' ? this._connection.getSenders().find(item => item && item.track && item.track.kind === 'video') : null;
+      var currentLocalVideoTrack = sender && sender.track ? sender.track : this._localMediaStream && this._localMediaStream.getVideoTracks ? this._localMediaStream.getVideoTracks()[0] : null;
+      if (!currentLocalVideoTrack) {
+        return null;
+      }
+      var currentLocalVideoStream = new MediaStream();
+      currentLocalVideoStream.addTrack(currentLocalVideoTrack, currentLocalVideoStream);
+      var mixedStream = await this._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(currentLocalVideoStream, resolvedOptions);
+      var mixedVideoTrack = mixedStream && mixedStream.getVideoTracks ? mixedStream.getVideoTracks()[0] : null;
+      if (!mixedVideoTrack) {
+        return null;
+      }
+      if (this._localMediaStream && typeof this._localMediaStream.removeTrack === 'function') {
+        try {
+          var previousVideoTrack = this._localMediaStream.getVideoTracks && this._localMediaStream.getVideoTracks()[0];
+          previousVideoTrack && this._localMediaStream.removeTrack(previousVideoTrack);
+        } catch (error) {}
+        this._localMediaStream.addTrack(mixedVideoTrack);
+      } else {
+        this._localMediaStream = mixedStream;
+      }
+      if (sender && typeof sender.replaceTrack === 'function') {
+        await sender.replaceTrack(mixedVideoTrack);
+      }
+      return this.getMediaStreamComposer() ? this.getMediaStreamComposer().getState() : null;
+    }
+    var patch = Object.assign({}, resolvedOptions);
+    if (Object.prototype.hasOwnProperty.call(patch, 'mirror')) {
+      patch.outputMirror = patch.mirror;
+      delete patch.mirror;
+    }
+    delete patch.width;
+    delete patch.height;
+    delete patch.fps;
+    delete patch.renderMode;
+    delete patch.workerUrl;
+    delete patch.dropFrameWhenBusy;
+    delete patch.maxFrameQueue;
+    delete patch.preserveDrawingBuffer;
+    delete patch.backgroundColor;
+    delete patch.audioGain;
+    delete patch.enableInsertable;
+    delete patch.manualCaptureFrameControl;
+    delete patch.forceNoSwapWH;
+    delete patch.sources;
+    await composer.setConfig(patch);
+    if (resolvedOptions.sources instanceof Array && resolvedOptions.sources.length > 0) {
+      resolvedOptions.sources.forEach((sourceOptions, index) => {
+        if (!sourceOptions || typeof sourceOptions !== 'object') {
+          return;
+        }
+        if (typeof sourceOptions.sourceMirror === 'boolean') {
+          composer.setSourceMirror(index, sourceOptions.sourceMirror);
+        }
+        if (Object.prototype.hasOwnProperty.call(sourceOptions, 'aiVirtualBackground')) {
+          if (sourceOptions.aiVirtualBackground) {
+            composer.setSourceAiVirtualBackground(index, sourceOptions.aiVirtualBackground);
+          } else {
+            composer.clearSourceAiVirtualBackground(index);
+          }
+        }
+      });
+    }
+    return composer.getState();
   }
   isInProgress() {
     switch (this._status) {
@@ -27190,13 +26902,10 @@ module.exports = class RTCSession extends EventEmitter {
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
     var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
-    var aiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
-    this._sessionAiVBOptions = aiVBOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
-    this._mediaPipeline.stopSessionAiVirtualBackground();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
     this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
       audio: false,
@@ -27582,13 +27291,10 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
     var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
-    var aiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
-    this._sessionAiVBOptions = aiVBOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
-    this._mediaPipeline.stopSessionAiVirtualBackground();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
 
     // 是否启用BFCP
@@ -27905,9 +27611,6 @@ module.exports = class RTCSession extends EventEmitter {
     }
     if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
       this._sessionMediaStreamComposerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
-    }
-    if (Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground') || Object.prototype.hasOwnProperty.call(options, 'aiVB')) {
-      this._sessionAiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件
@@ -28289,10 +27992,16 @@ module.exports = class RTCSession extends EventEmitter {
 
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
+        var sessionComposerOptions = this._sessionMediaStreamComposerOptions;
+        var sessionAiNSOptions = this._sessionAiNSOptions;
 
         // 统一媒体获取 + 预处理入口（虚拟背景等），默认流和 composer 流共用。
-        // 这里显式不走 _getUserMediaWithSessionPipeline，避免默认路径隐式重建 composer。
         var getProcessedStream = async () => {
+          if (!useComposerBranch && sessionComposerOptions) {
+            return await this._mediaPipeline.getUserMediaWithSessionPipeline({
+              video: videoConstraints
+            }, sessionComposerOptions, sessionAiNSOptions);
+          }
           return await navigator.mediaDevices.getUserMedia(videoConstraints).then(async mediastream => {
             return await this._mediaPipeline.processMediaStream(mediastream);
           }).catch(error => {
@@ -28365,10 +28074,29 @@ module.exports = class RTCSession extends EventEmitter {
             newInputStream.addTrack(track, newInputStream);
           });
           newInputStream.addTrack(newVideoTrack, newInputStream);
+          var sourceOptions = {
+            slot: 0
+          };
+          if (typeof currentComposer.getSourceAiVirtualBackground === 'function') {
+            try {
+              var aiVirtualBackground = currentComposer.getSourceAiVirtualBackground(0);
+              if (aiVirtualBackground) {
+                sourceOptions.aiVirtualBackground = aiVirtualBackground;
+              }
+            } catch (error) {}
+          }
+          if (typeof currentComposer.getSourceMirror === 'function') {
+            try {
+              var mirrorState = currentComposer.getSourceMirror(0);
+              if (mirrorState && typeof mirrorState.effective === 'boolean') {
+                sourceOptions.sourceMirror = mirrorState.effective;
+              }
+            } catch (error) {}
+          }
 
           // 在同一个 composer 内完成输入替换，避免重建 composer 带来的状态抖动。
           currentComposer.removeSource(oldInputStream);
-          currentComposer.addSource(newInputStream);
+          currentComposer.addSource(newInputStream, sourceOptions);
           // 记录最新输入流，供下次 switchDevice 继续替换。
           this._mediaStreamComposerInputStream = newInputStream;
           var mixedVideoStream = await currentComposer.getOutput({
@@ -29512,17 +29240,13 @@ module.exports = class RTCSession extends EventEmitter {
      *   2. _mediaPipeline.stopSessionAiNoiseSuppression()
      *      └─ engine.destroy() → 关闭 WorkletNode、释放 WASM 资源、
      *         关闭 AudioContext
-     *   3. _mediaPipeline.stopSessionAiVirtualBackground()
-     *      └─ destroy() → 停止分割渲染循环、释放 MediaPipe / canvas 资源
-     *   4. 置空配置引用
+     *   3. 置空配置引用
      *
-     * 这三个 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
+     * 这些 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
      */
     this._mediaPipeline.stopSessionMediaStreamComposer();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
-    this._mediaPipeline.stopSessionAiVirtualBackground();
     this._sessionMediaStreamComposerOptions = null;
-    this._sessionAiVBOptions = null;
     this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
@@ -32783,7 +32507,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./BFCP/index":11,"./Constants":42,"./Dialog":43,"./Exceptions":46,"./Logger":49,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/MediaPipeline":76,"./RTCSession/ReferNotifier":77,"./RTCSession/ReferSubscriber":78,"./RequestSender":80,"./SIPMessage":81,"./Timers":84,"./Transactions":85,"./URI":88,"./Utils":89,"buffer":94,"events":93,"sdp-transform":102}],74:[function(require,module,exports){
+},{"./BFCP/index":6,"./Constants":37,"./Dialog":38,"./Exceptions":41,"./Logger":44,"./RTCSession/DTMF":73,"./RTCSession/Info":74,"./RTCSession/MediaPipeline":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":93,"events":92,"sdp-transform":101}],73:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -32922,7 +32646,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":42,"../Exceptions":46,"../Logger":49,"../Utils":89,"events":93}],75:[function(require,module,exports){
+},{"../Constants":37,"../Exceptions":41,"../Logger":44,"../Utils":88,"events":92}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33003,7 +32727,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Exceptions":46,"../Utils":89,"events":93}],76:[function(require,module,exports){
+},{"../Constants":37,"../Exceptions":41,"../Utils":88,"events":92}],75:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -33023,8 +32747,21 @@ function getMediaStreamComposerCtor() {
 function getAiNSEngineCtor() {
   return require('../AINoiseSuppression/index.js');
 }
-function getAiVirtualBackgroundCtor() {
-  return require('../AIVirtualBackground/index.js');
+function clonePlainObject(input) {
+  return input && typeof input === 'object' ? Object.assign({}, input) : {};
+}
+function normalizeComposerSourceList(composerOptions) {
+  var list = composerOptions && composerOptions.sources;
+  if (!list) {
+    return [];
+  }
+  if (list instanceof Array) {
+    return list.filter(item => item && typeof item === 'object').map(item => clonePlainObject(item));
+  }
+  if (typeof list === 'object') {
+    return [clonePlainObject(list)];
+  }
+  return [];
 }
 
 /**
@@ -33036,9 +32773,9 @@ function getAiVirtualBackgroundCtor() {
  *
  * ```
  * getUserMedia 原始流
- *   → processMediaStream (外部注入预处理 → AiVB)
+ *   → processMediaStream (外部注入预处理)
  *     → applyAiNoiseSuppressionOnSdkGumStream (AI 降噪)
- *       → applyMediaStreamComposerOnSdkGumStream (视频合成/镜像等)
+ *       → applyMediaStreamComposerOnSdkGumStream (视频合成/镜像/AiVB 等)
  *         → 最终发送流
  * ```
  *
@@ -33088,13 +32825,17 @@ module.exports = class MediaPipeline {
   getAiNoiseSuppression() {
     return this._session._sessionAiNSEngine;
   }
-
-  /**
-   * 获取当前会话的 AiVB 引擎实例（可能为 null）。
-   * @returns {AIVirtualBackground|null}
-   */
   getAiVirtualBackground() {
-    return this._session._sessionAiVBEngine;
+    var session = this._session;
+    var composer = session._mediaStreamComposer;
+    if (composer && typeof composer.getSourceAiVirtualBackground === 'function') {
+      try {
+        return composer.getSourceAiVirtualBackground(0);
+      } catch (error) {}
+    }
+    var sources = normalizeComposerSourceList(session._sessionMediaStreamComposerOptions);
+    var sourceOptions = sources[0] || null;
+    return sourceOptions && sourceOptions.aiVirtualBackground ? sourceOptions.aiVirtualBackground : null;
   }
 
   /**
@@ -33112,61 +32853,47 @@ module.exports = class MediaPipeline {
       return null;
     }
     if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
-      return options.mediaStreamComposer || null;
+      var composerOptions = options.mediaStreamComposer || null;
+      if (!composerOptions || typeof composerOptions !== 'object') {
+        return composerOptions;
+      }
+      var normalized = Object.assign({}, composerOptions);
+      var normalizedSources = normalizeComposerSourceList(composerOptions);
+      if (normalizedSources.length > 0) {
+        normalized.sources = normalizedSources;
+      }
+      return normalized;
     }
     return null;
   }
 
   /**
-   * 从 RTCSession 入参中提取 AiVB 配置。
-   *
-   * 主参数名使用 `aiVirtualBackground`，同时兼容短别名 `aiVB`。
-   *
-   * @param {Object} [options={}]
-   * @returns {Object|boolean|null}
-   */
-  resolveAiVirtualBackgroundOptions(options = {}) {
-    if (!options || typeof options !== 'object') {
-      return null;
-    }
-    if (Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground')) {
-      return options.aiVirtualBackground || null;
-    }
-    if (Object.prototype.hasOwnProperty.call(options, 'aiVB')) {
-      return options.aiVB || null;
-    }
-    return null;
-  }
-
-  /**
-   * 执行外部注入预处理，并按会话配置应用 AiVB。
+   * 执行外部注入预处理。
    *
    * `_mediaStreamProcessor` 是外部通过 `RTCSession` 注入的处理函数，
-   * 签名为 `(MediaStream) => Promise<MediaStream>`；AiVB 则是 RTCSession 的一等会话能力。
+   * 签名为 `(MediaStream) => Promise<MediaStream>`。
    *
    * **失败降级策略：** 处理器抛异常时日志告警并返回原流，不阻断通话建立。
    *
    * @param {MediaStream} stream — 原始 getUserMedia 流。
-   * @param {boolean|Object|null} [aiVBOptions=this._session._sessionAiVBOptions] — AiVB 配置。
    * @returns {Promise<MediaStream>} — 处理后的流（或原流，如果无处理器/处理失败）。
    */
-  async processMediaStream(stream, aiVBOptions = this._session._sessionAiVBOptions) {
+  async processMediaStream(stream) {
     var session = this._session;
     logger.debug('_processMediaStream()');
-    var processedStream = stream;
 
     // mediaStreamProcessor 是外部注入能力，可能是美颜或其他视频预处理。
     // 失败时必须降级回原流，不能因为处理器异常影响通话建立。
     if (!session._mediaStreamProcessor) {
-      return await this.applyAiVirtualBackgroundOnSdkGumStream(processedStream, aiVBOptions);
+      return stream;
     }
     try {
       var nextStream = await session._mediaStreamProcessor(stream);
-      processedStream = nextStream instanceof MediaStream ? nextStream : stream;
+      return nextStream instanceof MediaStream ? nextStream : stream;
     } catch (error) {
       logger.warn(`${session._id} mediaStreamProcessor error:`, error);
     }
-    return await this.applyAiVirtualBackgroundOnSdkGumStream(processedStream, aiVBOptions);
+    return stream;
   }
 
   /**
@@ -33193,141 +32920,6 @@ module.exports = class MediaPipeline {
       return Object.assign({}, aiNSOptions);
     }
     return null;
-  }
-
-  /**
-   * 规范化 AiVB 选项，统一各种入参形式为 `Object | null`。
-   *
-   * @param {boolean|Object|undefined|null} aiVBOptions
-   * @returns {Object|null}
-   */
-  normalizeSessionAiVBOptions(aiVBOptions) {
-    if (aiVBOptions === undefined || aiVBOptions === null || aiVBOptions === false) {
-      return null;
-    }
-    if (aiVBOptions === true) {
-      return {};
-    }
-    if (typeof aiVBOptions === 'object' && aiVBOptions.enabled !== false) {
-      return Object.assign({}, aiVBOptions);
-    }
-    return null;
-  }
-  buildAiVirtualBackgroundCtorOptions(aiVBOptions = {}) {
-    var ctorOptions = {};
-    var sections = ['video', 'segmentation', 'postProcessing', 'assetConfig'];
-    sections.forEach(key => {
-      if (aiVBOptions[key] && typeof aiVBOptions[key] === 'object') {
-        ctorOptions[key] = Object.assign({}, aiVBOptions[key]);
-      }
-    });
-    return ctorOptions;
-  }
-  resolveAiVirtualBackgroundSetup(aiVBOptions = {}) {
-    var setup = {
-      mode: 'none',
-      value: undefined
-    };
-    var rawMode = typeof aiVBOptions.mode === 'string' ? aiVBOptions.mode.trim().toLowerCase() : '';
-    var sourceValue = aiVBOptions.source;
-    if (rawMode) {
-      setup.mode = rawMode;
-    } else if (typeof aiVBOptions.imageUrl === 'string' || typeof aiVBOptions.backgroundImageUrl === 'string') {
-      setup.mode = 'image';
-    } else if (typeof aiVBOptions.color === 'string' || typeof aiVBOptions.backgroundColor === 'string') {
-      setup.mode = 'color';
-    } else if (Number.isFinite(Number(aiVBOptions.blurRadius))) {
-      setup.mode = 'blur';
-    }
-    switch (setup.mode) {
-      case 'none':
-        return setup;
-      case 'blur':
-        setup.value = Number.isFinite(Number(aiVBOptions.blurRadius)) ? Number(aiVBOptions.blurRadius) : sourceValue;
-        return setup;
-      case 'image':
-        setup.value = typeof aiVBOptions.imageUrl === 'string' && aiVBOptions.imageUrl.trim() ? aiVBOptions.imageUrl.trim() : typeof aiVBOptions.backgroundImageUrl === 'string' && aiVBOptions.backgroundImageUrl.trim() ? aiVBOptions.backgroundImageUrl.trim() : sourceValue;
-        return setup;
-      case 'color':
-        setup.value = typeof aiVBOptions.color === 'string' && aiVBOptions.color.trim() ? aiVBOptions.color.trim() : typeof aiVBOptions.backgroundColor === 'string' && aiVBOptions.backgroundColor.trim() ? aiVBOptions.backgroundColor.trim() : sourceValue;
-        return setup;
-      default:
-        throw new Error(`Unsupported AiVB mode: ${setup.mode}`);
-    }
-  }
-  async configureAiVirtualBackground(engine, aiVBOptions = {}) {
-    var setup = this.resolveAiVirtualBackgroundSetup(aiVBOptions);
-    switch (setup.mode) {
-      case 'none':
-        engine.clearBackground();
-        return;
-      case 'blur':
-        await engine.setBlurBackground(setup.value);
-        return;
-      case 'image':
-        await engine.setBackgroundImage(setup.value);
-        return;
-      case 'color':
-        await engine.setSolidColor(setup.value);
-        return;
-      default:
-        throw new Error(`Unsupported AiVB mode: ${setup.mode}`);
-    }
-  }
-  stopSessionAiVirtualBackground() {
-    var session = this._session;
-    var engine = session._sessionAiVBEngine;
-    var aiVBInputStream = session._aiVBInputStream;
-    session._sessionAiVBEngine = null;
-    session._aiVBInputStream = null;
-    if (!engine || typeof engine.destroy !== 'function') {
-      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
-      return;
-    }
-    Promise.resolve(engine.destroy()).then(() => {
-      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
-    }).catch(error => {
-      logger.warn(`${session._id} destroy session ai virtual background failed:`, error);
-      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
-    });
-  }
-  async applyAiVirtualBackgroundOnSdkGumStream(stream, aiVBOptions) {
-    var session = this._session;
-    logger.debug(`applyAiVirtualBackgroundOnSdkGumStream: ${JSON.stringify(aiVBOptions)}`);
-    if (!stream || !(stream instanceof MediaStream)) {
-      return stream;
-    }
-    var normalizedOptions = this.normalizeSessionAiVBOptions(aiVBOptions);
-    if (!normalizedOptions || !stream.getVideoTracks || stream.getVideoTracks().length === 0) {
-      return stream;
-    }
-    try {
-      this.stopSessionAiVirtualBackground();
-      var AIVirtualBackground = getAiVirtualBackgroundCtor();
-      session._sessionAiVBEngine = new AIVirtualBackground(this.buildAiVirtualBackgroundCtorOptions(normalizedOptions));
-      await session._sessionAiVBEngine.init({
-        canvas: normalizedOptions.canvas,
-        inputStream: stream,
-        modelPath: normalizedOptions.modelPath
-      });
-      session._sessionAiVBEngine.start();
-      await this.configureAiVirtualBackground(session._sessionAiVBEngine, normalizedOptions);
-      var processedStream = session._sessionAiVBEngine.getOutputStream();
-      if (!(processedStream instanceof MediaStream)) {
-        throw new Error('AiVB output stream invalid');
-      }
-      if (stream.getAudioTracks && processedStream.getAudioTracks && processedStream.getAudioTracks().length === 0) {
-        stream.getAudioTracks().forEach(track => {
-          processedStream.addTrack(track, processedStream);
-        });
-      }
-      session._aiVBInputStream = stream;
-      return processedStream;
-    } catch (error) {
-      logger.warn(`${session._id} apply ai virtual background failed:`, error);
-      this.stopSessionAiVirtualBackground();
-      return stream;
-    }
   }
 
   /**
@@ -33675,13 +33267,13 @@ module.exports = class MediaPipeline {
    * │    └─ 获取原始媒体流                                        │
    * │                                                             │
    * │ 3. processMediaStream(stream)                               │
-   * │    └─ 外部注入预处理 → AiVB                                 │
+   * │    └─ 外部注入预处理                                        │
    * │                                                             │
    * │ 4. applyAiNoiseSuppressionOnSdkGumStream(stream, aiNS)       │
    * │    └─ AI 降噪处理                                           │
    * │                                                             │
    * │ 5. applyMediaStreamComposerOnSdkGumStream(stream, composer)  │
-   * │    └─ 视频合成（镜像/画中画/虚拟背景等）                    │
+   * │    └─ 视频合成（镜像/画中画/AiVB 等）                       │
    * └─────────────────────────────────────────────────────────────┘
    * ```
    *
@@ -33706,7 +33298,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression/index.js":5,"../AIVirtualBackground/index.js":10,"../Logger":49,"../MediaStreamComposer":67,"../Utils":89}],77:[function(require,module,exports){
+},{"../AINoiseSuppression/index.js":5,"../Logger":44,"../MediaStreamComposer":66,"../Utils":88}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -33753,7 +33345,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":42,"../Logger":49}],78:[function(require,module,exports){
+},{"../Constants":37,"../Logger":44}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -33877,7 +33469,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":42,"../Grammar":47,"../Logger":49,"../Utils":89,"events":93}],79:[function(require,module,exports){
+},{"../Constants":37,"../Grammar":42,"../Logger":44,"../Utils":88,"events":92}],78:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34175,7 +33767,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":42,"./Logger":49,"./RequestSender":80,"./SIPMessage":81,"./Utils":89}],80:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./Utils":88}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34314,7 +33906,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":42,"./DigestAuthentication":45,"./Logger":49,"./Transactions":85}],81:[function(require,module,exports){
+},{"./Constants":37,"./DigestAuthentication":40,"./Logger":44,"./Transactions":84}],80:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -34886,7 +34478,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":42,"./Grammar":47,"./Logger":49,"./NameAddrHeader":69,"./Utils":89,"sdp-transform":102}],82:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./Logger":44,"./NameAddrHeader":68,"./Utils":88,"sdp-transform":101}],81:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -34954,7 +34546,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":47,"./Logger":49,"./Utils":89}],83:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44,"./Utils":88}],82:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -35360,7 +34952,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":42,"./Logger":49,"./Utils":89,"events":93}],84:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./Utils":88,"events":92}],83:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -35381,7 +34973,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],85:[function(require,module,exports){
+},{}],84:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35971,7 +35563,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":42,"./Logger":49,"./SIPMessage":81,"./Timers":84,"events":93}],86:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./SIPMessage":80,"./Timers":83,"events":92}],85:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -36344,7 +35936,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":42,"./Logger":49,"./Socket":82,"./Utils":89}],87:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./Socket":81,"./Utils":88}],86:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -37404,7 +36996,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":41,"./Constants":42,"./Exceptions":46,"./Logger":49,"./Message":68,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":79,"./SIPMessage":81,"./Transactions":85,"./Transport":86,"./URI":88,"./Utils":89,"./sanityCheck":91,"events":93,"jsencrypt":98}],88:[function(require,module,exports){
+},{"./Config":36,"./Constants":37,"./Exceptions":41,"./Logger":44,"./Message":67,"./Options":69,"./Parser":70,"./Pk":71,"./RTCSession":72,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":90,"events":92,"jsencrypt":97}],87:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -37576,7 +37168,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":42,"./Grammar":47,"./Utils":89}],89:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./Utils":88}],88:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -39442,7 +39034,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":42,"./Grammar":47,"./URI":88}],90:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./URI":87}],89:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39561,7 +39153,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":47,"./Logger":49}],91:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44}],90:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -39754,7 +39346,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":42,"./Logger":49,"./SIPMessage":81,"./Utils":89}],92:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./SIPMessage":80,"./Utils":88}],91:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -39906,7 +39498,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],93:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -40431,7 +40023,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],94:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -42212,7 +41804,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":92,"buffer":94,"ieee754":97}],95:[function(require,module,exports){
+},{"base64-js":91,"buffer":93,"ieee754":96}],94:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -42488,7 +42080,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
-},{"./common":96,"_process":100}],96:[function(require,module,exports){
+},{"./common":95,"_process":99}],95:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -42782,7 +42374,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":99}],97:[function(require,module,exports){
+},{"ms":98}],96:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -42869,7 +42461,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],98:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -48260,7 +47852,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],99:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -48424,7 +48016,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],100:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -48610,7 +48202,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],101:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -49106,7 +48698,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],102:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -49121,7 +48713,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":101,"./parser":103,"./writer":104}],103:[function(require,module,exports){
+},{"./grammar":100,"./parser":102,"./writer":103}],102:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -49247,7 +48839,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":101}],104:[function(require,module,exports){
+},{"./grammar":100}],103:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -49363,5 +48955,5 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":101}]},{},[48])(48)
+},{"./grammar":100}]},{},[43])(43)
 });

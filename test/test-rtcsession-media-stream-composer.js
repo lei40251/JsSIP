@@ -71,6 +71,28 @@ class MockMixer
   {
     this.streams = streams;
     this.options = options;
+
+    const primarySourceOptions = options && options.sources && options.sources[0] ?
+      options.sources[0] :
+      null;
+
+    this.sourceAiVirtualBackground = options &&
+      primarySourceOptions &&
+      primarySourceOptions.aiVirtualBackground ?
+      primarySourceOptions.aiVirtualBackground :
+      null;
+    this.sourceMirrorState = primarySourceOptions && typeof primarySourceOptions.sourceMirror === 'boolean' ?
+      primarySourceOptions.sourceMirror :
+      false;
+    this.configState = {
+      outputMirror               : Boolean(options && options.mirror),
+      sourceMirror               : Boolean(options && options.sourceMirror),
+      sourceMirrorOverrides      : {},
+      mirrorWatermarksWithOutput : options && Object.prototype.hasOwnProperty.call(options, 'mirrorWatermarksWithOutput') ?
+        Boolean(options.mirrorWatermarksWithOutput) :
+        true,
+      watermarks : options && options.watermarks ? [].concat(options.watermarks) : []
+    };
     this.stopped = false;
     this.outputTrack = new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 24 });
     MockMixer.instances.push(this);
@@ -93,14 +115,105 @@ class MockMixer
     }
   }
 
-  addSource(stream)
+  addSource(stream, options)
   {
     this.appended = stream;
+    this.appendedOptions = options || null;
+    if (options && Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground'))
+    {
+      this.sourceAiVirtualBackground = options.aiVirtualBackground;
+    }
+    if (options && typeof options.sourceMirror === 'boolean')
+    {
+      this.sourceMirrorState = options.sourceMirror;
+    }
     MockMixer.appendCalls.push(stream);
+    MockMixer.appendOptionCalls.push(options || null);
     if (MockMixer.throwOnAppend)
     {
       throw new Error('append failed');
     }
+  }
+
+  getSourceAiVirtualBackground()
+  {
+    return this.sourceAiVirtualBackground;
+  }
+
+  setSourceAiVirtualBackground(slotOrTarget, options)
+  {
+    this.sourceAiVirtualBackground = options;
+
+    return this.sourceAiVirtualBackground;
+  }
+
+  clearSourceAiVirtualBackground()
+  {
+    this.sourceAiVirtualBackground = null;
+  }
+
+  getSourceMirror(slot)
+  {
+    return {
+      slot      : slot,
+      global    : false,
+      override  : null,
+      effective : Boolean(this.sourceMirrorState)
+    };
+  }
+
+  setSourceMirror(slotOrEnabled, enabled)
+  {
+    if (typeof slotOrEnabled === 'boolean' && enabled === undefined)
+    {
+      this.configState.sourceMirror = slotOrEnabled;
+      this.sourceMirrorState = slotOrEnabled;
+
+      return;
+    }
+
+    this.configState.sourceMirrorOverrides[String(slotOrEnabled)] = Boolean(enabled);
+    this.sourceMirrorState = Boolean(enabled);
+  }
+
+  async setConfig(patch)
+  {
+    if (Object.prototype.hasOwnProperty.call(patch, 'outputMirror'))
+    {
+      this.configState.outputMirror = Boolean(patch.outputMirror);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'mirrorWatermarksWithOutput'))
+    {
+      this.configState.mirrorWatermarksWithOutput = Boolean(patch.mirrorWatermarksWithOutput);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'watermarks'))
+    {
+      this.configState.watermarks = patch.watermarks ? [].concat(patch.watermarks) : [];
+    }
+
+    return this.getState().config;
+  }
+
+  getState()
+  {
+    return {
+      sources : [
+        {
+          slot                : 0,
+          sourceMirror        : this.sourceMirrorState,
+          aiVirtualBackground : this.sourceAiVirtualBackground
+        }
+      ],
+      config : {
+        outputMirror               : this.configState.outputMirror,
+        sourceMirror               : this.configState.sourceMirror,
+        sourceMirrorOverrides      : Object.assign({}, this.configState.sourceMirrorOverrides),
+        mirrorWatermarksWithOutput : this.configState.mirrorWatermarksWithOutput,
+        watermarks                 : this.configState.watermarks.slice()
+      }
+    };
   }
 
   stop()
@@ -114,6 +227,7 @@ MockMixer.instances = [];
 MockMixer.stopCalls = 0;
 MockMixer.removeCalls = [];
 MockMixer.appendCalls = [];
+MockMixer.appendOptionCalls = [];
 MockMixer.throwOnRemove = false;
 MockMixer.throwOnAppend = false;
 
@@ -164,74 +278,6 @@ MockAiNSEngine.destroyCalls = 0;
 MockAiNSEngine.transform = null;
 MockAiNSEngine.replaceAudioTrackTransform = null;
 
-class MockAiVBEngine
-{
-  constructor(options)
-  {
-    this.options = options;
-    this.initCalls = [];
-    this.setBlurBackgroundCalls = [];
-    this.setBackgroundImageCalls = [];
-    this.setSolidColorCalls = [];
-    this.clearBackgroundCalls = 0;
-    this.destroyed = false;
-    this.started = false;
-    this.outputTrack = new MockMediaStreamTrack('video', { width: 960, height: 540, frameRate: 24 });
-    this.outputStream = new MockMediaStream([ this.outputTrack ]);
-    MockAiVBEngine.instances.push(this);
-  }
-
-  async init(options = {})
-  {
-    this.initCalls.push(options);
-
-    if (MockAiVBEngine.outputFactory)
-    {
-      this.outputStream = MockAiVBEngine.outputFactory(options, this) || this.outputStream;
-    }
-  }
-
-  start()
-  {
-    this.started = true;
-  }
-
-  getOutputStream()
-  {
-    return this.outputStream;
-  }
-
-  clearBackground()
-  {
-    this.clearBackgroundCalls += 1;
-  }
-
-  async setBlurBackground(value)
-  {
-    this.setBlurBackgroundCalls.push(value);
-  }
-
-  async setBackgroundImage(value)
-  {
-    this.setBackgroundImageCalls.push(value);
-  }
-
-  async setSolidColor(value)
-  {
-    this.setSolidColorCalls.push(value);
-  }
-
-  async destroy()
-  {
-    this.destroyed = true;
-    MockAiVBEngine.destroyCalls += 1;
-  }
-}
-
-MockAiVBEngine.instances = [];
-MockAiVBEngine.destroyCalls = 0;
-MockAiVBEngine.outputFactory = null;
-
 function createMockUA()
 {
   return {
@@ -279,11 +325,9 @@ function loadRTCSessionWithMockMixer()
 {
   const mixerPath = require.resolve('../lib/MediaStreamComposer');
   const aiNSPath = require.resolve('../lib/AINoiseSuppression/index.js');
-  const aiVBPath = require.resolve('../lib/AIVirtualBackground/index.js');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
   const aiNSCache = require.cache[aiNSPath];
-  const aiVBCache = require.cache[aiVBPath];
   const rtcCache = require.cache[rtcSessionPath];
 
   require.cache[mixerPath] = {
@@ -297,12 +341,6 @@ function loadRTCSessionWithMockMixer()
     filename : aiNSPath,
     loaded   : true,
     exports  : MockAiNSEngine
-  };
-  require.cache[aiVBPath] = {
-    id       : aiVBPath,
-    filename : aiVBPath,
-    loaded   : true,
-    exports  : MockAiVBEngine
   };
   delete require.cache[rtcSessionPath];
 
@@ -324,15 +362,6 @@ function loadRTCSessionWithMockMixer()
     else
     {
       delete require.cache[aiNSPath];
-    }
-
-    if (aiVBCache)
-    {
-      require.cache[aiVBPath] = aiVBCache;
-    }
-    else
-    {
-      delete require.cache[aiVBPath];
     }
 
     if (rtcCache)
@@ -457,10 +486,10 @@ async function testUpgradeToVideoAppliesSessionMixerToSdkGum()
   assert.strictEqual(senderState.replaced, MockMixer.instances[0].outputTrack);
 }
 
-async function testSwitchDeviceCameraDefaultPathDoesNotApplyMixer()
+async function testSwitchDeviceCameraDefaultPathAppliesSessionMixer()
 {
-  // 目标：默认分支（即使 session 配了 mixer options，但当前没有 active mixer）不应重建/应用 mixer。
-  // 预期：sender 直接替换为新摄像头 track，MockMixer 不产生新实例。
+  // 目标：默认分支在 session 配了 composer options 时，应重新走完整媒体管线。
+  // 预期：sender 替换为 composer 输出轨，新的 composer 实例会被创建。
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const oldVideoTrack = new MockMediaStreamTrack('video');
   const newVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
@@ -491,9 +520,10 @@ async function testSwitchDeviceCameraDefaultPathDoesNotApplyMixer()
 
   await session.switchDevice('camera', 'user');
 
-  assert.strictEqual(MockMixer.instances.length, 0);
-  assert.strictEqual(sender.replaced, newVideoTrack);
-  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], newVideoTrack);
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.mirror, true);
+  assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
+  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
 }
 
 async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
@@ -743,24 +773,68 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
 
-  session._sessionAiVBOptions = {
-    enabled    : true,
-    mode       : 'blur',
-    blurRadius : 18,
-    video      : { targetFps: 24 }
-  };
+  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
+    mediaStreamComposer : {
+      sources : [
+        {
+          aiVirtualBackground : {
+            enabled    : true,
+            mode       : 'blur',
+            blurRadius : 18,
+            video      : { width: 640, height: 360, processingScale: 0.5 }
+          }
+        }
+      ]
+    }
+  });
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(sourceStream);
 
-  const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline({ audio: true, video: true }, null);
-  const engine = session.getAiVirtualBackground();
+  const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline(
+    { audio: true, video: true },
+    session._sessionMediaStreamComposerOptions
+  );
+  const effect = session.getAiVirtualBackground();
 
-  assert.strictEqual(MockAiVBEngine.instances.length, 1);
-  assert.strictEqual(engine, MockAiVBEngine.instances[0]);
-  assert.strictEqual(engine.options.video.targetFps, 24);
-  assert.strictEqual(engine.initCalls[0].inputStream, sourceStream);
-  assert.strictEqual(engine.started, true);
-  assert.strictEqual(engine.setBlurBackgroundCalls[0], 18);
-  assert.strictEqual(stream.getVideoTracks()[0], engine.outputTrack);
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.mode, 'blur');
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.blurRadius, 18);
+  assert.strictEqual(effect.mode, 'blur');
+  assert.strictEqual(effect.blurRadius, 18);
+  assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
+  assert.strictEqual(stream.getAudioTracks()[0], sourceAudio);
+}
+
+async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceVideo = new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 24 });
+  const sourceAudio = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
+
+  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
+    mediaStreamComposer : {
+      sources : [
+        {
+          aiVirtualBackground : {
+            enabled  : true,
+            mode     : 'image',
+            imageUrl : 'https://example.com/bg-a.png'
+          }
+        }
+      ]
+    }
+  });
+  global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(sourceStream);
+
+  const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline(
+    { audio: true, video: true },
+    session._sessionMediaStreamComposerOptions
+  );
+
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.imageUrl, 'https://example.com/bg-a.png');
+  assert.strictEqual(session.getAiVirtualBackground().imageUrl, 'https://example.com/bg-a.png');
+  assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
   assert.strictEqual(stream.getAudioTracks()[0], sourceAudio);
 }
 
@@ -862,20 +936,28 @@ async function testSwitchDeviceCameraAppliesSessionAiVirtualBackground()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldVideoTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionAiVBOptions = {
-    enabled  : true,
-    mode     : 'image',
-    imageUrl : 'https://example.com/bg.png'
-  };
+  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
+    mediaStreamComposer : {
+      sources : [
+        {
+          aiVirtualBackground : {
+            enabled  : true,
+            mode     : 'image',
+            imageUrl : 'https://example.com/bg.png'
+          }
+        }
+      ]
+    }
+  });
   global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ newVideoTrack ]));
 
   await session.switchDevice('camera', 'user');
 
-  assert.strictEqual(MockAiVBEngine.instances.length, 1);
-  assert.strictEqual(MockAiVBEngine.instances[0].setBackgroundImageCalls[0], 'https://example.com/bg.png');
-  assert.strictEqual(sender.replaced, MockAiVBEngine.instances[0].outputTrack);
-  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockAiVBEngine.instances[0].outputTrack);
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.imageUrl, 'https://example.com/bg.png');
+  assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
+  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
 }
 
 function testGetAiNoiseSuppressionReturnsNullByDefault()
@@ -890,7 +972,6 @@ function testGetAiVirtualBackgroundReturnsNullByDefault()
   const session = new (require('../lib/RTCSession'))(createMockUA());
 
   assert.strictEqual(session.getAiVirtualBackground(), null);
-  assert.strictEqual(session.getAiVBEngine(), null);
 }
 
 async function testCloseDestroysSessionAiNoiseSuppression()
@@ -907,29 +988,35 @@ async function testCloseDestroysSessionAiNoiseSuppression()
   assert.strictEqual(session.getAiNoiseSuppression(), null);
 }
 
-async function testCloseDestroysSessionAiVirtualBackground()
+async function testCloseStopsSessionComposerWithAiVirtualBackground()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceVideo = new MockMediaStreamTrack('video');
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
 
-  await session._mediaPipeline.applyAiVirtualBackgroundOnSdkGumStream(sourceStream, {
-    enabled : true,
-    mode    : 'color',
-    color   : '#123456'
+  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+    sources : [
+      {
+        aiVirtualBackground : {
+          enabled : true,
+          mode    : 'color',
+          color   : '#123456'
+        }
+      }
+    ]
   });
 
   session._close();
   await Promise.resolve();
 
-  assert.strictEqual(MockAiVBEngine.destroyCalls, 1);
+  assert.strictEqual(MockMixer.stopCalls, 1);
   assert.strictEqual(session.getAiVirtualBackground(), null);
   assert.strictEqual(sourceVideo.readyState, 'ended');
   assert.strictEqual(sourceAudio.readyState, 'ended');
 }
 
-async function testUpgradeToVideoAcceptsAiVBAliasOptions()
+async function testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const localAudioTrack = new MockMediaStreamTrack('audio');
@@ -961,17 +1048,185 @@ async function testUpgradeToVideoAcceptsAiVBAliasOptions()
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ capturedVideoTrack ]));
 
   await session.upgradeToVideo({
-    aiVB : {
-      enabled : true,
-      mode    : 'color',
-      color   : '#abcdef'
+    mediaStreamComposer : {
+      sources : [
+        {
+          aiVirtualBackground : {
+            enabled : true,
+            mode    : 'color',
+            color   : '#abcdef'
+          }
+        }
+      ]
     }
   }, () => {});
 
-  assert.strictEqual(session._sessionAiVBOptions.mode, 'color');
-  assert.strictEqual(MockAiVBEngine.instances.length, 1);
-  assert.strictEqual(MockAiVBEngine.instances[0].setSolidColorCalls[0], '#abcdef');
-  assert.strictEqual(senderState.replaced, MockAiVBEngine.instances[0].outputTrack);
+  assert.strictEqual(session._sessionMediaStreamComposerOptions.sources[0].aiVirtualBackground.mode, 'color');
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.color, '#abcdef');
+  assert.strictEqual(senderState.replaced, MockMixer.instances[0].outputTrack);
+}
+
+function testResolveMediaStreamComposerOptionsUsesSourcesOnly()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const resolved = session._mediaPipeline.resolveMediaStreamComposerOptions({
+    mediaStreamComposer : {
+      mirror  : true,
+      sources : [
+        {
+          sourceMirror        : true,
+          aiVirtualBackground : {
+            enabled    : true,
+            mode       : 'blur',
+            blurRadius : 12
+          }
+        }
+      ]
+    }
+  });
+
+  assert.strictEqual(resolved.mirror, true);
+  assert.strictEqual(resolved.sources.length, 1);
+  assert.strictEqual(resolved.sources[0].sourceMirror, true);
+  assert.strictEqual(resolved.sources[0].aiVirtualBackground.blurRadius, 12);
+  assert.strictEqual(Object.prototype.hasOwnProperty.call(resolved, 'sourceOptions'), false);
+}
+
+async function testUpdateMediaStreamComposerUpdatesConfigPatch()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
+
+  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+    mirror     : false,
+    watermarks : []
+  });
+
+  const state = await session.updateMediaStreamComposer({
+    mirror                     : true,
+    mirrorWatermarksWithOutput : false,
+    watermarks                 : [
+      { id: 'wm1', target: 'output', type: 'text', text: 'live' }
+    ]
+  });
+
+  assert.strictEqual(state.config.outputMirror, true);
+  assert.strictEqual(state.config.mirrorWatermarksWithOutput, false);
+  assert.strictEqual(state.config.watermarks.length, 1);
+  assert.strictEqual(state.config.watermarks[0].id, 'wm1');
+}
+
+async function testUpdateMediaStreamComposerUpdatesPrimarySourceEffects()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
+
+  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+    sources : [
+      {
+        aiVirtualBackground : {
+          enabled    : true,
+          mode       : 'blur',
+          blurRadius : 6
+        }
+      }
+    ]
+  });
+
+  const state = await session.updateMediaStreamComposer({
+    sources : [
+      {
+        sourceMirror        : true,
+        aiVirtualBackground : {
+          enabled : true,
+          mode    : 'color',
+          color   : '#456789'
+        }
+      }
+    ]
+  });
+
+  assert.strictEqual(state.sources[0].aiVirtualBackground.color, '#456789');
+  assert.strictEqual(state.sources[0].sourceMirror, true);
+  assert.strictEqual(session.getAiVirtualBackground().color, '#456789');
+}
+
+async function testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
+
+  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+    mirror  : true,
+    sources : [
+      {
+        aiVirtualBackground : {
+          enabled    : true,
+          mode       : 'blur',
+          blurRadius : 6
+        }
+      }
+    ]
+  });
+
+  const state = await session.updateMediaStreamComposer({
+    mirror     : false,
+    watermarks : [
+      { id: 'wm-clear-aivb', target: 'output', type: 'text', text: 'live' }
+    ],
+    sources : [
+      {
+        aiVirtualBackground : null
+      }
+    ]
+  });
+
+  assert.strictEqual(state.config.outputMirror, false);
+  assert.strictEqual(state.config.watermarks.length, 1);
+  assert.strictEqual(state.sources[0].aiVirtualBackground, null);
+  assert.strictEqual(session.getAiVirtualBackground(), null);
+}
+
+async function testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const localAudioTrack = new MockMediaStreamTrack('audio');
+  const localVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
+  const sender = {
+    track        : localVideoTrack,
+    replaceTrack : async function(track)
+    {
+      this.replaced = track;
+      this.track = track;
+    }
+  };
+
+  session._connection = {
+    getSenders : () => [ sender ]
+  };
+  session._localMediaStream = new MockMediaStream([ localAudioTrack, localVideoTrack ]);
+
+  const state = await session.updateMediaStreamComposer({
+    mirror  : true,
+    sources : [
+      {
+        aiVirtualBackground : {
+          enabled    : true,
+          mode       : 'blur',
+          blurRadius : 8
+        }
+      }
+    ]
+  });
+
+  assert.strictEqual(MockMixer.instances.length, 1);
+  assert.strictEqual(MockMixer.instances[0].options.mirror, true);
+  assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.blurRadius, 8);
+  assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
+  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
+  assert.strictEqual(state.config.outputMirror, true);
+  assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 8);
 }
 
 async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
@@ -1001,13 +1256,14 @@ async function run()
     { name: 'testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions', fn: testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions },
     { name: 'testCloseStopsAndClearsMediaStreamComposer', fn: testCloseStopsAndClearsMediaStreamComposer },
     { name: 'testUpgradeToVideoAppliesSessionMixerToSdkGum', fn: testUpgradeToVideoAppliesSessionMixerToSdkGum },
-    { name: 'testSwitchDeviceCameraDefaultPathDoesNotApplyMixer', fn: testSwitchDeviceCameraDefaultPathDoesNotApplyMixer },
+    { name: 'testSwitchDeviceCameraDefaultPathAppliesSessionMixer', fn: testSwitchDeviceCameraDefaultPathAppliesSessionMixer },
     { name: 'testSwitchDeviceCameraWithActiveMixerReusesMixer', fn: testSwitchDeviceCameraWithActiveMixerReusesMixer },
     { name: 'testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum', fn: testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum },
     { name: 'testSwitchDeviceCameraMixerBranchFallbackToDefault', fn: testSwitchDeviceCameraMixerBranchFallbackToDefault },
     { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum },
     { name: 'testGetUserMediaPipelineAppliesSessionAiNoiseSuppression', fn: testGetUserMediaPipelineAppliesSessionAiNoiseSuppression },
     { name: 'testGetUserMediaPipelineAppliesSessionAiVirtualBackground', fn: testGetUserMediaPipelineAppliesSessionAiVirtualBackground },
+    { name: 'testGetUserMediaPipelineAcceptsComposerSourcesArray', fn: testGetUserMediaPipelineAcceptsComposerSourcesArray },
     { name: 'testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression', fn: testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression },
     { name: 'testApplyAiNoiseSuppressionSkipsDisabledOptions', fn: testApplyAiNoiseSuppressionSkipsDisabledOptions },
     { name: 'testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine', fn: testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine },
@@ -1015,8 +1271,13 @@ async function run()
     { name: 'testGetAiNoiseSuppressionReturnsNullByDefault', fn: testGetAiNoiseSuppressionReturnsNullByDefault },
     { name: 'testGetAiVirtualBackgroundReturnsNullByDefault', fn: testGetAiVirtualBackgroundReturnsNullByDefault },
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
-    { name: 'testCloseDestroysSessionAiVirtualBackground', fn: testCloseDestroysSessionAiVirtualBackground },
-    { name: 'testUpgradeToVideoAcceptsAiVBAliasOptions', fn: testUpgradeToVideoAcceptsAiVBAliasOptions },
+    { name: 'testCloseStopsSessionComposerWithAiVirtualBackground', fn: testCloseStopsSessionComposerWithAiVirtualBackground },
+    { name: 'testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions', fn: testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions },
+    { name: 'testResolveMediaStreamComposerOptionsUsesSourcesOnly', fn: testResolveMediaStreamComposerOptionsUsesSourcesOnly },
+    { name: 'testUpdateMediaStreamComposerUpdatesConfigPatch', fn: testUpdateMediaStreamComposerUpdatesConfigPatch },
+    { name: 'testUpdateMediaStreamComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaStreamComposerUpdatesPrimarySourceEffects },
+    { name: 'testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground', fn: testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground },
+    { name: 'testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 
@@ -1026,32 +1287,25 @@ async function run()
     MockMixer.stopCalls = 0;
     MockMixer.removeCalls = [];
     MockMixer.appendCalls = [];
+    MockMixer.appendOptionCalls = [];
     MockMixer.throwOnRemove = false;
     MockMixer.throwOnAppend = false;
     MockAiNSEngine.instances = [];
     MockAiNSEngine.destroyCalls = 0;
     MockAiNSEngine.transform = null;
     MockAiNSEngine.replaceAudioTrackTransform = null;
-    MockAiVBEngine.instances = [];
-    MockAiVBEngine.destroyCalls = 0;
-    MockAiVBEngine.outputFactory = null;
 
     for (const t of TESTS)
     {
       MockMixer.instances = [];
+      MockMixer.stopCalls = 0;
       MockMixer.removeCalls = [];
       MockMixer.appendCalls = [];
+      MockMixer.appendOptionCalls = [];
       MockAiNSEngine.instances = [];
       MockAiNSEngine.destroyCalls = 0;
       MockAiNSEngine.transform = null;
       MockAiNSEngine.replaceAudioTrackTransform = null;
-      MockAiVBEngine.instances = [];
-      MockAiVBEngine.destroyCalls = 0;
-      MockAiVBEngine.outputFactory = null;
-      if (t.fn === testCloseStopsAndClearsMediaStreamComposer)
-      {
-        MockMixer.stopCalls = 0;
-      }
       try
       {
         await t.fn();

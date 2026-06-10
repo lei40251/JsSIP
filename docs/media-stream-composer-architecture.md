@@ -4,6 +4,8 @@
 
 `MediaStreamComposer` 是一个多路音视频混流器，将多个 `MediaStream` / `HTMLMediaElement` 合并为一个输出 `MediaStream`，可直接给 `RTCPeerConnection`、本地预览或录制链路使用。
 
+镜像语义上，这个模块只处理“源级镜像”“合成输出镜像”“输出级水印是否跟随镜像”三件事，不负责页面层本地预览的 CSS 镜像。
+
 这一版对外 API 已经收敛为 8 个主方法：
 
 - `addSource()`
@@ -21,16 +23,18 @@
 
 1. 入口在 [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)。
 2. 输入源由 `SourceRegistry` 管理。
-3. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
-4. 音频输出由 `AudioMixer` 处理。
-5. 输出流由 `OutputStreamManager` 统一产出。
-6. 水印由 `WatermarkManager` 管理。
+3. 源级虚拟背景由 `SourceAiVBManager` 和 `AIVirtualBackground/` 子模块处理。
+4. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
+5. 音频输出由 `AudioMixer` 处理。
+6. 输出流由 `OutputStreamManager` 统一产出。
+7. 水印由 `WatermarkManager` 管理。
 
 ### 模块职责总览
 
 ```
 MediaStreamComposer 是总调度：
   SourceRegistry 管输入源
+  SourceAiVBManager 管源级虚拟背景
   LayoutEngine 计算布局和镜像后的绘制信息
   RenderLoop 负责何时渲染
   RendererFactory/Renderer 负责怎么画
@@ -70,10 +74,18 @@ lib/
 ├── Mixer.js
 │
 └── MediaStreamComposer/
+    ├── AIVirtualBackground/
+    │   ├── index.js
+    │   ├── AiVBConfig.js
+    │   ├── AiVBAssetLoader.js
+    │   ├── Canvas2DPipeline.js
+    │   └── MediaPipeSegmenterRuntime.js
+    │
     ├── Core/
     │   ├── MediaStreamComposer.js
     │   ├── MixerConfig.js
     │   ├── SourceRegistry.js
+    │   ├── SourceAiVBManager.js
     │   ├── LayoutEngine.js
     │   ├── MixerDomAdapter.js
     │   ├── AudioMixer.js
@@ -172,10 +184,10 @@ async getMixedStream() {
 1. 检查实例是否已 `stop()`
 2. 标准化单个源或数组源
 3. 限制最多 9 路
-4. 归一化 `slot/gain/sourceMirror`
+4. 归一化 `slot/gain/sourceMirror/aiVirtualBackground`
 5. 交给 `SourceRegistry.add()`
 6. 若音频链路已经建立，则异步刷新音频连接
-7. 刷新镜像渲染策略
+7. 刷新镜像 / 效果渲染策略
 8. 启动 `RenderLoop`
 
 调用链：
@@ -185,7 +197,7 @@ addSource()
   ├─ _normalizeSourceOptions()
   ├─ SourceRegistry.add()
   ├─ _scheduleAudioRefresh()   (按需)
-  ├─ _refreshRendererPolicyForMirror()
+  ├─ _refreshRendererPolicyForEffects()
   └─ RenderLoop.start()
 ```
 
@@ -246,6 +258,12 @@ clearStreams()
 3. 计算是否需要刷新镜像渲染策略
 4. 计算是否需要强制重绘
 5. 返回统一配置快照
+
+这里要特别区分：
+
+- `sourceMirror` / `sourceMirrorOverrides` 作用在单路 source 进入布局之前
+- `outputMirror` 作用在最终合成输出
+- `mirrorWatermarksWithOutput` 只影响输出级水印是否跟着 `outputMirror` 一起翻转
 
 调用链：
 

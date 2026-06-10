@@ -6,6 +6,12 @@
 // ============================================================
 Object.assign(window.app, {
 
+  aiVirtualBackgroundAssetsBaseUrl : '../../demo/base-js/assets/aivb',
+  aiVirtualBackgroundImages        : {
+    office : '../../demo/base-js/virtual-background/backgrounds/office.png',
+    sky    : '../../demo/base-js/virtual-background/backgrounds/sky.jpg'
+  },
+
   // ==========================================================
   // 生命周期 — MediaStreamComposer 实例的创建与销毁
   // ==========================================================
@@ -116,6 +122,216 @@ Object.assign(window.app, {
     if (!this.composer) return null;
 
     return this.composer.getState().sources.find((source) => source.slot === this.currentSlot) || null;
+  },
+
+  getLocalStreamItemBySlot(slot)
+  {
+    return this.localStreams.find((item) => item.slot === Number(slot)) || null;
+  },
+
+  getSelectedLocalStreamItem()
+  {
+    return this.getLocalStreamItemBySlot(this.currentSlot);
+  },
+
+  getCurrentSlotAiVirtualBackground()
+  {
+    const source = this.getSelectedSource();
+
+    if (source && source.aiVirtualBackground)
+    {
+      return source.aiVirtualBackground;
+    }
+
+    const item = this.getSelectedLocalStreamItem();
+
+    return item && item.aiVirtualBackground ? item.aiVirtualBackground : null;
+  },
+
+  getAiVirtualBackgroundModeValue(config)
+  {
+    if (!config || !config.mode || config.mode === 'none')
+    {
+      return '';
+    }
+
+    if (config.mode === 'blur')
+    {
+      return 'blur';
+    }
+
+    if (config.mode === 'image')
+    {
+      if (config.imageUrl === this.aiVirtualBackgroundImages.office)
+      {
+        return 'office';
+      }
+
+      if (config.imageUrl === this.aiVirtualBackgroundImages.sky)
+      {
+        return 'sky';
+      }
+    }
+
+    return '';
+  },
+
+  describeAiVirtualBackground(config)
+  {
+    if (!config || !config.mode || config.mode === 'none')
+    {
+      return '无虚拟背景';
+    }
+
+    if (config.mode === 'blur')
+    {
+      return '已启用 · 背景模糊';
+    }
+
+    if (config.mode === 'image')
+    {
+      if (config.imageUrl === this.aiVirtualBackgroundImages.office)
+      {
+        return '已启用 · Office';
+      }
+
+      if (config.imageUrl === this.aiVirtualBackgroundImages.sky)
+      {
+        return '已启用 · Sky';
+      }
+
+      return '已启用 · 图片背景';
+    }
+
+    return `已启用 · ${config.mode}`;
+  },
+
+  buildSelectedSlotAiVirtualBackgroundOptions()
+  {
+    const modeSelect = document.getElementById('slot-aivb-mode');
+    const mode = modeSelect ? String(modeSelect.value || '').trim() : '';
+
+    if (!mode)
+    {
+      return null;
+    }
+
+    const options = {
+      enabled     : true,
+      assetConfig : {
+        flatBaseUrl : this.aiVirtualBackgroundAssetsBaseUrl
+      }
+    };
+    const item = this.getSelectedLocalStreamItem();
+    const track = item && item.stream && item.stream.getVideoTracks ? item.stream.getVideoTracks()[0] : null;
+    const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : null;
+    const width = settings ? Number(settings.width) : NaN;
+    const height = settings ? Number(settings.height) : NaN;
+
+    if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0)
+    {
+      options.video = {
+        width  : Math.round(width),
+        height : Math.round(height)
+      };
+    }
+
+    if (mode === 'blur')
+    {
+      options.mode = 'blur';
+      options.blurRadius = 16;
+
+      return options;
+    }
+
+    const imageUrl = this.aiVirtualBackgroundImages[mode];
+
+    if (!imageUrl)
+    {
+      throw new Error(`Unknown AiVB mode: ${mode}`);
+    }
+
+    options.mode = 'image';
+    options.imageUrl = imageUrl;
+
+    return options;
+  },
+
+  async applySelectedSlotAiVirtualBackground()
+  {
+    if (!this.composer) return false;
+
+    const item = this.getSelectedLocalStreamItem();
+    const source = this.getSelectedSource();
+
+    if (!source || !item || !item.stream || !item.stream.getVideoTracks || item.stream.getVideoTracks().length === 0)
+    {
+      this.showNotification('当前槽位没有可处理的视频源', 'warning');
+
+      return false;
+    }
+
+    const config = this.buildSelectedSlotAiVirtualBackgroundOptions();
+
+    if (!config)
+    {
+      return this.clearSelectedSlotAiVirtualBackground();
+    }
+
+    try
+    {
+      this.composer.setSourceAiVirtualBackground(this.currentSlot, config);
+      item.aiVirtualBackground = this.composer.getSourceAiVirtualBackground(this.currentSlot) || config;
+      this.refreshSelectedSlotSummary();
+      this.updateStats();
+
+      return true;
+    }
+    catch (e)
+    {
+      this.showNotification(`应用虚拟背景失败: ${e.message}`, 'warning');
+      this.refreshSelectedSlotSummary();
+
+      return false;
+    }
+  },
+
+  async clearSelectedSlotAiVirtualBackground()
+  {
+    if (!this.composer) return false;
+
+    const item = this.getSelectedLocalStreamItem();
+    const source = this.getSelectedSource();
+
+    if (item)
+    {
+      item.aiVirtualBackground = null;
+    }
+
+    if (!source)
+    {
+      this.refreshSelectedSlotSummary();
+      this.updateStats();
+
+      return false;
+    }
+
+    try
+    {
+      this.composer.clearSourceAiVirtualBackground(this.currentSlot);
+    }
+    catch (e)
+    {
+      this.showNotification(`清除虚拟背景失败: ${e.message}`, 'warning');
+      this.refreshSelectedSlotSummary();
+
+      return false;
+    }
+
+    this.refreshSelectedSlotSummary();
+    this.updateStats();
+
+    return true;
   },
 
   /**
@@ -723,7 +939,14 @@ Object.assign(window.app, {
     // 按顺序重新添加到 composer，分配连续槽位
     sorted.forEach((item, index) =>
     {
-      this.composer.addSource(item.stream, index);
+      const sourceOptions = { slot: index };
+
+      if (item.aiVirtualBackground)
+      {
+        sourceOptions.aiVirtualBackground = item.aiVirtualBackground;
+      }
+
+      this.composer.addSource(item.stream, sourceOptions);
       item.slot = index;
     });
 
@@ -780,7 +1003,12 @@ Object.assign(window.app, {
     this.composer.addSource(stream, slot);
 
     // 记录本地源列表
-    this.localStreams.push({ stream, slot, label });
+    this.localStreams.push({
+      stream,
+      slot,
+      label,
+      aiVirtualBackground : null
+    });
     // 添加缩略图到界面
     this.addThumb(stream, label, slot);
     this.updateSlotUI();

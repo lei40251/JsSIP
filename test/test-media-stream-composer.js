@@ -1695,6 +1695,141 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
   mixer.stop();
 }
 
+async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto'
+  });
+
+  mixer.appendStream(createStream(), {
+    slot                : 0,
+    aiVirtualBackground : {
+      enabled : true,
+      mode    : 'color',
+      color   : '#123456'
+    }
+  });
+
+  const source = mixer.getSources()[0];
+
+  assert.ok(source);
+  assert.strictEqual(source.aiVirtualBackground.mode, 'color');
+  assert.strictEqual(source.aiVirtualBackground.backgroundColor, '#123456');
+  assert.strictEqual(mixer._config.forceMainThreadRenderer, true);
+  assert.strictEqual(mixer._config.forceMain2DRenderer, true);
+
+  mixer.getVideoStream();
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-2d');
+
+  mixer.stop();
+}
+
+async function testSetSourceAiVirtualBackgroundLifecycle()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+
+  mixer.appendStream(createStream(), 0);
+
+  const config = mixer.setSourceAiVirtualBackground(0, {
+    enabled    : true,
+    mode       : 'blur',
+    blurRadius : 9
+  });
+
+  assert.strictEqual(config.mode, 'blur');
+  assert.strictEqual(config.blurRadius, 9);
+  assert.strictEqual(mixer.getSourceAiVirtualBackground(0).mode, 'blur');
+
+  mixer.clearSourceAiVirtualBackground(0);
+
+  assert.strictEqual(mixer.getSourceAiVirtualBackground(0), null);
+
+  mixer.stop();
+}
+
+async function testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-webgl2'
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+
+  mixer.setSourceAiVirtualBackground(0, {
+    enabled    : true,
+    mode       : 'blur',
+    blurRadius : 8
+  });
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-2d');
+
+  mixer.stop();
+}
+
+async function testInitialSourcesArrayMapsSourceOptionsByIndex()
+{
+  resetMockState();
+
+  const sourceA = createStream();
+  const sourceB = createStream();
+  const mixer = new MediaStreamComposer([ sourceA, sourceB ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d',
+    sources    : [
+      {
+        slot                : 0,
+        sourceMirror        : true,
+        aiVirtualBackground : {
+          enabled    : true,
+          mode       : 'blur',
+          blurRadius : 7
+        }
+      },
+      {
+        slot         : 1,
+        sourceMirror : false
+      }
+    ]
+  });
+
+  const sources = mixer.getSources();
+
+  assert.strictEqual(sources.length, 2);
+  assert.strictEqual(sources[0].slot, 0);
+  assert.strictEqual(sources[0].sourceMirror, true);
+  assert.strictEqual(sources[0].aiVirtualBackground.mode, 'blur');
+  assert.strictEqual(sources[0].aiVirtualBackground.blurRadius, 7);
+  assert.strictEqual(sources[1].slot, 1);
+  assert.strictEqual(sources[1].sourceMirror, false);
+  assert.strictEqual(sources[1].aiVirtualBackground, null);
+
+  mixer.stop();
+}
+
 async function testEmptyInitialRenderDoesNotCreateRenderer()
 {
   resetMockState();
@@ -2261,6 +2396,10 @@ async function run()
     { name: 'testClearSourceMirrorWithoutSlotClearsAllOverrides', fn: testClearSourceMirrorWithoutSlotClearsAllOverrides },
     { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
+    { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
+    { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
+    { name: 'testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D', fn: testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D },
+    { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
     { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },
     { name: 'testAutoRendererFallbackPrefersMainWebGL2', fn: testAutoRendererFallbackPrefersMainWebGL2 },

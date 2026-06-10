@@ -12,9 +12,9 @@
 <body>
     <div class="app-shell container-fluid">
         <header class="app-header mb-2">
-            <div class="d-flex flex-column gap-1">
+            <div class="app-header-row">
                 <h1 class="h5 mb-0">MediaStreamComposer</h1>
-                <div class="text-secondary small">CRTC.MediaStreamComposer SDK 演示 · 输出、槽位、水印、子混音</div>
+                <div class="text-secondary small app-header-subtitle">CRTC.MediaStreamComposer SDK 演示 · 输出、槽位、水印、子混音</div>
             </div>
         </header>
 
@@ -28,6 +28,7 @@
                                 <div class="fw-semibold text-dark">操作目标</div>
                                 <div id="selected-slot-source">无源</div>
                                 <div id="selected-slot-watermark">无槽位水印</div>
+                                <div style="display: none;" id="selected-slot-aivb">无虚拟背景</div>
                                 <div id="selected-slot-mirror">镜像关闭</div>
                             </div>
                         </div>
@@ -423,6 +424,31 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="panel-shell panel-disabled p-2" id="panel-aivb">
+                        <div class="compact-card mb-2">
+                            <div class="status-line mt-0 mb-2" id="aivb-status-line">
+                                当前槽位虚拟背景: 关
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-8">
+                                    <label class="form-label small mb-1" for="slot-aivb-mode">当前槽位虚拟背景</label>
+                                    <select class="form-select" id="slot-aivb-mode">
+                                        <option value="" selected>关闭</option>
+                                        <option value="blur">背景模糊</option>
+                                        <option value="office">Office</option>
+                                        <option value="sky">Sky</option>
+                                    </select>
+                                </div>
+                                <div class="col-4 d-grid gap-2">
+                                    <button class="btn btn-outline-danger"
+                                        data-action="clearSelectedSlotAiVirtualBackground">清除</button>
+                                    <button class="btn btn-outline-primary"
+                                        data-action="applySelectedSlotAiVirtualBackground">应用</button>
                                 </div>
                             </div>
                         </div>

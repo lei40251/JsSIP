@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const assert = require('assert');
-const Config = require('../lib/AIVirtualBackground/AiVBConfig');
+const Config = require('../lib/MediaStreamComposer/AIVirtualBackground/AiVBConfig');
 
 let nextAnimationFrameId = 1;
 let scheduledFrames = {};
@@ -549,7 +549,7 @@ function installBrowserMocks()
 
 function installMockSegmenterRuntime()
 {
-  const runtimePath = require.resolve('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  const runtimePath = require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
   const original = require.cache[runtimePath];
 
   class MockSegmenterRuntime
@@ -598,7 +598,7 @@ function installMockSegmenterRuntime()
     MockSegmenterRuntime,
     restore()
     {
-      delete require.cache[require.resolve('../lib/AIVirtualBackground/index')];
+      delete require.cache[require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/index')];
       if (original)
       {
         require.cache[runtimePath] = original;
@@ -614,7 +614,7 @@ function installMockSegmenterRuntime()
 async function testInitFailureDestroysPartiallyCreatedResources()
 {
   const { MockSegmenterRuntime, restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   MockSegmenterRuntime.failInitialize = true;
@@ -634,7 +634,7 @@ async function testInitFailureDestroysPartiallyCreatedResources()
 async function testPublicMethodsRequireInitialization()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await assert.rejects(() => engine.setBackgroundImage('x'), /not initialized/);
@@ -647,7 +647,7 @@ async function testPublicMethodsRequireInitialization()
 async function testClearBackgroundMirrorTracksSetMirror()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground({
     video : { mirror: true }
   });
@@ -670,7 +670,7 @@ async function testClearBackgroundMirrorTracksSetMirror()
 async function testSetSolidColorRebuildsPipelineWhenSwitchingFromBlur()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -696,7 +696,7 @@ async function testSetSolidColorRebuildsPipelineWhenSwitchingFromBlur()
 async function testDestroyWaitsForActiveRenderBeforeCleaningPipeline()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -743,7 +743,7 @@ async function testDestroyWaitsForActiveRenderBeforeCleaningPipeline()
 async function testPendingBackgroundImageLoadRejectsWhenCancelled()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -768,7 +768,7 @@ async function testPendingBackgroundImageLoadRejectsWhenCancelled()
 async function testStaleBackgroundImageLoadCannotOverwriteNewPipeline()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -793,7 +793,7 @@ async function testStaleBackgroundImageLoadCannotOverwriteNewPipeline()
 async function testSetBackgroundImageTrimsNoneSentinel()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -811,7 +811,7 @@ async function testSetBackgroundImageTrimsNoneSentinel()
 async function testSetSolidColorRejectsOutOfRangeRgb()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -827,7 +827,7 @@ async function testSetSolidColorRejectsOutOfRangeRgb()
 
 async function testMirrorAppliesToSegmentationMask()
 {
-  const { buildCanvas2DPipeline } = require('../lib/AIVirtualBackground/Canvas2DPipeline');
+  const { buildCanvas2DPipeline } = require('../lib/MediaStreamComposer/AIVirtualBackground/Canvas2DPipeline');
   const canvas = new MockCanvas();
   const videoElement = new MockVideoElement();
   const maskCanvas = new MockCanvas();
@@ -865,7 +865,7 @@ async function testMirrorAppliesToSegmentationMask()
 
 async function testPipelineReusesSegmentationMaskAcrossSkippedFrames()
 {
-  const { buildCanvas2DPipeline } = require('../lib/AIVirtualBackground/Canvas2DPipeline');
+  const { buildCanvas2DPipeline } = require('../lib/MediaStreamComposer/AIVirtualBackground/Canvas2DPipeline');
   const canvas = new MockCanvas();
   const videoElement = new MockVideoElement();
   const maskCanvas = new MockCanvas();
@@ -915,7 +915,7 @@ async function testPipelineReusesSegmentationMaskAcrossSkippedFrames()
 
 async function testPipelineUpdateStateDoesNotReplaceInstance()
 {
-  const { buildCanvas2DPipeline } = require('../lib/AIVirtualBackground/Canvas2DPipeline');
+  const { buildCanvas2DPipeline } = require('../lib/MediaStreamComposer/AIVirtualBackground/Canvas2DPipeline');
   const canvas = new MockCanvas();
   const videoElement = new MockVideoElement();
   const image = new MockImageElement();
@@ -964,7 +964,7 @@ async function testPipelineUpdateStateDoesNotReplaceInstance()
 async function testInitBuildsPassthroughPipelineByDefault()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -980,8 +980,8 @@ async function testInitBuildsPassthroughPipelineByDefault()
 
 async function testRuntimeClosesSegmentationResultAfterMaskCopy()
 {
-  delete require.cache[require.resolve('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
   let closeCalls = 0;
   const mask = {
@@ -1017,8 +1017,8 @@ async function testRuntimeClosesSegmentationResultAfterMaskCopy()
 
 async function testRuntimeRejectsMissingMask()
 {
-  delete require.cache[require.resolve('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
 
   assert.throws(() => runtime.readMaskValues(), /mask is required/);
@@ -1026,8 +1026,8 @@ async function testRuntimeRejectsMissingMask()
 
 async function testRuntimeProcessesLatestQueuedFrame()
 {
-  delete require.cache[require.resolve('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
   const callbacks = [];
   const calls = [];
@@ -1078,9 +1078,97 @@ async function testRuntimeProcessesLatestQueuedFrame()
   await runtime.destroy();
 }
 
+async function testRuntimeFallsBackToCpuWhenGpuInitFails()
+{
+  const runtimePath = require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  const loaderPath = require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/AiVBAssetLoader');
+  const originalLoader = require.cache[loaderPath];
+  const createCalls = [];
+
+  class MockAssetLoader
+  {
+    async ensureTasksLoaded()
+    {
+      return {
+        FilesetResolver : {
+          async forVisionTasks()
+          {
+            return {};
+          }
+        },
+        ImageSegmenter : {
+          async createFromOptions(vision, options)
+          {
+            createCalls.push(options.baseOptions.delegate);
+
+            if (options.baseOptions.delegate === 'GPU')
+            {
+              throw new Error('gpu init failed');
+            }
+
+            return {
+              getLabels()
+              {
+                return [ 'background', 'person' ];
+              },
+              async close()
+              {}
+            };
+          }
+        }
+      };
+    }
+
+    getRuntimeOptions()
+    {
+      return {
+        moduleUrl   : './assets/aivb/vision.js',
+        wasmBaseUrl : './assets/aivb',
+        modelUrl    : './assets/aivb/selfie_segmenter_landscape.tflite'
+      };
+    }
+  }
+
+  require.cache[loaderPath] = {
+    id       : loaderPath,
+    filename : loaderPath,
+    loaded   : true,
+    exports  : MockAssetLoader
+  };
+
+  delete require.cache[runtimePath];
+
+  try
+  {
+    const Runtime = require('../lib/MediaStreamComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+    const runtime = new Runtime();
+
+    await runtime.initialize();
+
+    assert.deepStrictEqual(createCalls, [ 'GPU', 'CPU' ]);
+    assert.strictEqual(runtime.initialized, true);
+    assert.deepStrictEqual(runtime.labels, [ 'background', 'person' ]);
+
+    await runtime.destroy();
+  }
+  finally
+  {
+    delete require.cache[runtimePath];
+
+    if (originalLoader)
+    {
+      require.cache[loaderPath] = originalLoader;
+    }
+    else
+    {
+      delete require.cache[loaderPath];
+    }
+  }
+}
+
 async function testAssetLoaderSharesConcurrentRuntimeLoad()
 {
-  const AssetLoader = require('../lib/AIVirtualBackground/AiVBAssetLoader');
+  const AssetLoader = require('../lib/MediaStreamComposer/AIVirtualBackground/AiVBAssetLoader');
   const loaderA = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
   const loaderB = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
 
@@ -1183,7 +1271,7 @@ async function testConfigClampsPostProcessingRanges()
 async function testPerformanceInfoReflectsRenderedFrames()
 {
   const { restore } = installMockSegmenterRuntime();
-  const AIVirtualBackground = require('../lib/AIVirtualBackground');
+  const AIVirtualBackground = require('../lib/MediaStreamComposer/AIVirtualBackground');
   const engine = new AIVirtualBackground();
 
   await engine.init({
@@ -1204,6 +1292,122 @@ async function testPerformanceInfoReflectsRenderedFrames()
 
   await engine.destroy();
   restore();
+}
+
+async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
+{
+  delete require.cache[require.resolve('../lib/MediaStreamComposer/Core/SourceAiVBManager')];
+  const SourceAiVBManager = require('../lib/MediaStreamComposer/Core/SourceAiVBManager');
+  const manager = new SourceAiVBManager();
+  const source = { slot: 0 };
+
+  manager.setSourceConfig(source, {
+    enabled      : true,
+    mode         : 'blur',
+    blurRadius   : 8,
+    video        : { width: 640, height: 480, processingScale: 0.5 },
+    segmentation : { delegate: 'CPU', frameSkip: 0 }
+  });
+
+  const state = source.__aiVirtualBackgroundState;
+  const calls = [];
+
+  state.runtimeReady = true;
+  state.runtime = {
+    async segmentForVideo(input)
+    {
+      const context = input && typeof input.getContext === 'function' ? input.getContext('2d') : null;
+
+      calls.push({
+        width      : input && input.width,
+        height     : input && input.height,
+        operations : context ? context.operations.slice() : []
+      });
+
+      return {
+        segmentationMask : new MockCanvas()
+      };
+    }
+  };
+
+  manager.getRenderableState(source, {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  });
+
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.strictEqual(calls.length, 1);
+  assert.strictEqual(calls[0].width, 320);
+  assert.strictEqual(calls[0].height, 240);
+  assert.strictEqual(calls[0].operations.some((item) => item.type === 'drawImage'), true);
+}
+
+async function testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads()
+{
+  delete require.cache[require.resolve('../lib/MediaStreamComposer/Core/SourceAiVBManager')];
+  const SourceAiVBManager = require('../lib/MediaStreamComposer/Core/SourceAiVBManager');
+  const manager = new SourceAiVBManager();
+  const source = { slot: 0 };
+
+  createdImages = [];
+  MockImageElement.autoLoad = false;
+
+  manager.setSourceConfig(source, {
+    enabled      : true,
+    mode         : 'image',
+    imageUrl     : 'first.png',
+    video        : { width: 640, height: 480, processingScale: 0.5 },
+    segmentation : { delegate: 'CPU', frameSkip: 1 }
+  });
+
+  let renderable = manager.getRenderableState(source, {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  });
+  const firstImage = createdImages[0];
+
+  assert.strictEqual(firstImage.src, 'first.png');
+  assert.strictEqual(renderable.backgroundImage, null);
+
+  firstImage.triggerLoad();
+  renderable = manager.getRenderableState(source, {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  });
+
+  assert.strictEqual(renderable.backgroundImage, firstImage);
+
+  manager.setSourceConfig(source, {
+    enabled      : true,
+    mode         : 'image',
+    imageUrl     : 'second.png',
+    video        : { width: 640, height: 480, processingScale: 0.5 },
+    segmentation : { delegate: 'CPU', frameSkip: 1 }
+  });
+
+  renderable = manager.getRenderableState(source, {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  });
+  const secondImage = createdImages[1];
+
+  assert.strictEqual(secondImage.src, 'second.png');
+  assert.strictEqual(renderable.backgroundImage, firstImage);
+
+  secondImage.triggerLoad();
+  renderable = manager.getRenderableState(source, {
+    readyState  : 2,
+    videoWidth  : 640,
+    videoHeight : 480
+  });
+
+  assert.strictEqual(renderable.backgroundImage, secondImage);
 }
 
 async function run()
@@ -1230,20 +1434,23 @@ async function run()
     { name: 'testRuntimeClosesSegmentationResultAfterMaskCopy', fn: testRuntimeClosesSegmentationResultAfterMaskCopy },
     { name: 'testRuntimeRejectsMissingMask', fn: testRuntimeRejectsMissingMask },
     { name: 'testRuntimeProcessesLatestQueuedFrame', fn: testRuntimeProcessesLatestQueuedFrame },
+    { name: 'testRuntimeFallsBackToCpuWhenGpuInitFails', fn: testRuntimeFallsBackToCpuWhenGpuInitFails },
     { name: 'testAssetLoaderSharesConcurrentRuntimeLoad', fn: testAssetLoaderSharesConcurrentRuntimeLoad },
     { name: 'testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions', fn: testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions },
     { name: 'testConfigNormalizesFlatAivbAssetBaseUrl', fn: testConfigNormalizesFlatAivbAssetBaseUrl },
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges },
-    { name: 'testPerformanceInfoReflectsRenderedFrames', fn: testPerformanceInfoReflectsRenderedFrames }
+    { name: 'testPerformanceInfoReflectsRenderedFrames', fn: testPerformanceInfoReflectsRenderedFrames },
+    { name: 'testSourceAiVBManagerUsesScaledCanvasForSegmentation', fn: testSourceAiVBManagerUsesScaledCanvasForSegmentation },
+    { name: 'testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads', fn: testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads }
   ];
 
   try
   {
     for (const test of TESTS)
     {
-      delete require.cache[require.resolve('../lib/AIVirtualBackground/index')];
+      delete require.cache[require.resolve('../lib/MediaStreamComposer/AIVirtualBackground/index')];
 
       try
       {

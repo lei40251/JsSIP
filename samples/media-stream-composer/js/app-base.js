@@ -35,6 +35,7 @@ const app = {
     audioMonitorRow          : document.getElementById('audio-monitor-row'),
     btnMonitorAudio          : document.getElementById('btn-monitor-audio'),
     panelAddSource           : document.getElementById('panel-add-source'),
+    panelAiVB                : document.getElementById('panel-aivb'),
     panelSubmix              : document.getElementById('panel-submix'),
     panelWatermark           : document.getElementById('panel-watermark'),
     cfgOutRes                : document.getElementById('cfg-out-res'),
@@ -50,13 +51,16 @@ const app = {
     selectedSlotNumber       : document.getElementById('selected-slot-number'),
     selectedSlotSource       : document.getElementById('selected-slot-source'),
     selectedSlotWatermark    : document.getElementById('selected-slot-watermark'),
+    selectedSlotAiVB         : document.getElementById('selected-slot-aivb'),
     selectedSlotMirror       : document.getElementById('selected-slot-mirror'),
     mirrorStatusLine         : document.getElementById('mirror-status-line'),
+    aivbStatusLine           : document.getElementById('aivb-status-line'),
     btnGlobalMirror          : document.getElementById('btn-global-mirror'),
     btnOutputMirror          : document.getElementById('btn-output-mirror'),
     btnOutputWatermarkMirror : document.getElementById('btn-output-watermark-mirror'),
     btnSlotMirror            : document.getElementById('btn-slot-mirror'),
     btnSlotMirrorClear       : document.getElementById('btn-slot-mirror-clear'),
+    slotAiVirtualBackgroundMode : document.getElementById('slot-aivb-mode'),
     wmOutputText             : document.getElementById('wm-output-text'),
     wmOutputTextPosition     : document.getElementById('wm-output-text-position'),
     wmOutputTextX            : document.getElementById('wm-output-text-x'),
@@ -299,6 +303,7 @@ const app = {
   {
     this.setPanelEnabled(this.ui.panelSources, running);
     this.setPanelEnabled(this.ui.panelAddSource, running);
+    this.setPanelEnabled(this.ui.panelAiVB, running);
     this.setPanelEnabled(this.ui.panelSubmix, running);
     this.setOutputConfigLocked(running);
   },
@@ -391,14 +396,24 @@ const app = {
   {
     const source = this.getSelectedSource();
     const hasWatermark = this.hasSlotWatermark(this.currentSlot);
+    const aiVirtualBackground = typeof this.getCurrentSlotAiVirtualBackground === 'function' ?
+      this.getCurrentSlotAiVirtualBackground() :
+      null;
     const mirrorState = this.getCurrentSlotMirrorState();
     const sourceState = source ? `已占用 · ${source.id}` : '无源';
     const watermarkState = hasWatermark ? '已设置 slot 水印' : '无 slot 水印';
+    const aiVirtualBackgroundState = typeof this.describeAiVirtualBackground === 'function' ?
+      this.describeAiVirtualBackground(aiVirtualBackground) :
+      '无虚拟背景';
     const mirrorText = mirrorState.effective ? '镜像开启' : '镜像关闭';
     const slotLabel = this.formatSlotLabel(this.currentSlot);
 
     this.ui.selectedSlotSource.innerText = sourceState;
     this.ui.selectedSlotWatermark.innerText = watermarkState;
+    if (this.ui.selectedSlotAiVB)
+    {
+      this.ui.selectedSlotAiVB.innerText = aiVirtualBackgroundState;
+    }
     if (this.ui.selectedSlotMirror)
     {
       this.ui.selectedSlotMirror.innerText = mirrorText;
@@ -407,6 +422,14 @@ const app = {
     this.ui.wmSlotSourceState.innerText = source ? `源 ${source.id}` : '无源';
     this.ui.wmSlotWatermarkState.innerText = watermarkState;
     this.ui.wmSlotSelect.value = String(this.currentSlot);
+    if (this.ui.aivbStatusLine)
+    {
+      this.ui.aivbStatusLine.innerText = `当前槽位虚拟背景: ${aiVirtualBackgroundState.replace('已启用 · ', '')}`;
+    }
+    if (this.ui.slotAiVirtualBackgroundMode && typeof this.getAiVirtualBackgroundModeValue === 'function')
+    {
+      this.ui.slotAiVirtualBackgroundMode.value = this.getAiVirtualBackgroundModeValue(aiVirtualBackground);
+    }
     this.refreshMirrorDemoUI();
   },
 
@@ -996,6 +1019,7 @@ const app = {
       'cfg-ctor-output-watermark-mirror' : 'off',
       'cfg-in-res'               : 'auto',
       'cfg-in-fps'               : '15',
+      'slot-aivb-mode'           : '',
       'wm-output-text'           : 'CRTC 直播',
       'wm-output-text-position'  : 'bottom-right',
       'wm-output-text-color'     : '#ffffff',

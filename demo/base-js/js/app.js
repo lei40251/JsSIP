@@ -57,10 +57,8 @@ let recorder;
 let incomingCallNotification = null;
 let notificationUnsupportedLogged = false;
 
-// 虚拟背景相关，仅保留 AiVBEngine 方案
+// 虚拟背景相关，统一走 MediaStreamComposer.sources[0].aiVirtualBackground
 let virtualBackgroundType = '';
-let engine;
-let localMediaStream;
 let virtualBackgroundPreviewEngine;
 let virtualBackgroundPreviewInputStream;
 let virtualBackgroundPreviewActive = false;
@@ -70,6 +68,11 @@ const virtualBackgroundImgs = {
   img2 : './virtual-background/backgrounds/sky.jpg'
 };
 const AI_VB_TASKS_ROOT = './assets/aivb';
+const AI_VB_ASSET_CONFIG = {
+  moduleUrl   : `${AI_VB_TASKS_ROOT}/vision.js`,
+  wasmBaseUrl : AI_VB_TASKS_ROOT,
+  modelUrl    : `${AI_VB_TASKS_ROOT}/selfie_segmenter_landscape.tflite`
+};
 
 // AI 降噪相关
 let aiNsType = '';
@@ -960,13 +963,6 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
 
-    engine && engine.stop();
-    if (localMediaStream && localMediaStream.getTracks) 
-    {
-      localMediaStream.getTracks().forEach((track) => track.stop());
-      localMediaStream = null;
-    }
-
     stopAiNsMonitor().catch((error) =>
     {
       console.warn('failed stopAiNsMonitor on ended', error);
@@ -1299,14 +1295,13 @@ ua.on('newRTCSession', function(e)
         },
         video : false
       },
-      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints  : { offerToReceiveAudio: true },
-      extraFeatures        : extraFeatures,
-      // mediaStreamProcessor : buildCallMediaStreamProcessor(),
-      aiVB                 : buildCallAiVBOptions(),
-      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true },
+      extraFeatures       : extraFeatures,
+      mediaStreamComposer : buildCallMediaStreamComposerOptions(),
+      aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
     });
 
     setStatus('audio answer');
@@ -1322,14 +1317,13 @@ ua.on('newRTCSession', function(e)
         audio : true,
         video : videoConstraints
       },
-      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures        : extraFeatures,
-      // mediaStreamProcessor : buildCallMediaStreamProcessor(),
-      aiVB                 : buildCallAiVBOptions(),
-      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
+      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures       : extraFeatures,
+      mediaStreamComposer : buildCallMediaStreamComposerOptions(),
+      aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
     });
 
     setStatus('video answer');
@@ -1955,10 +1949,12 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
-function buildCallMediaStreamComposerOptions()
+function buildCallMediaStreamComposerOptions(options = {})
 {
+  const { includeDisabledState = false } = options;
   const outputMirrorEl = document.getElementById('callMediaStreamComposerOutputMirror');
   const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
+  const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
   const watermarks = [];
   const text = String((document.getElementById('callMediaStreamComposerTextWatermarkText') || {}).value || '').trim();
 
@@ -2028,24 +2024,83 @@ function buildCallMediaStreamComposerOptions()
     watermarks.push(imageWatermark);
   }
 
-  if (!outputMirror && !watermarks.length)
-  {
-    return null;
-  }
-
   const composerOptions = {};
 
-  if (outputMirror)
+  if (includeDisabledState)
+  {
+    composerOptions.mirror = outputMirror;
+  }
+  else if (outputMirror)
   {
     composerOptions.mirror = true;
   }
 
-  if (watermarks.length)
+  if (includeDisabledState || watermarks.length)
   {
     composerOptions.watermarks = watermarks;
   }
 
+  if (includeDisabledState || aiVirtualBackground)
+  {
+    composerOptions.sources = [
+      {
+        aiVirtualBackground : aiVirtualBackground || null
+      }
+    ];
+  }
+
+  if (outputMirror || aiVirtualBackground)
+  {
+    composerOptions.renderMode = 'main-2d';
+  }
+
+  if (!includeDisabledState && !outputMirror && !watermarks.length && !aiVirtualBackground)
+  {
+    return null;
+  }
+
   return composerOptions;
+}
+
+async function applyCurrentComposerSettingsToSession()
+{
+  const sessionComposer = getCurrentSessionComposer();
+  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaStreamComposer === 'function');
+
+  if (!sessionComposer && !canUpdateSessionComposer)
+  {
+    setStatus('当前没有可更新的 MediaStreamComposer');
+
+    return;
+  }
+
+  const composerOptions = buildCallMediaStreamComposerOptions({ includeDisabledState: true });
+
+  try
+  {
+    if (canUpdateSessionComposer)
+    {
+      await rtcSession.updateMediaStreamComposer(composerOptions);
+    }
+    else
+    {
+      const patch = {
+        outputMirror : Boolean(composerOptions.mirror),
+        watermarks   : composerOptions.watermarks || []
+      };
+
+      await sessionComposer.setConfig(patch);
+      applyVirtualBackgroundSelection(sessionComposer);
+    }
+
+    rtcSession && rtcSession.connection && getStreams(rtcSession.connection);
+    setStatus('已应用当前镜像/水印设置到当前通话');
+  }
+  catch (error)
+  {
+    console.warn('applyCurrentComposerSettingsToSession error', error);
+    setStatus(`应用合成设置失败：${error && error.message ? error.message : error}`);
+  }
 }
 
 function readCallMediaStreamComposerOpacity(inputEl)
@@ -2247,8 +2302,7 @@ async function call(type, direction, mediaStream)
       }
     }
 
-    // options.mediaStreamProcessor = buildCallMediaStreamProcessor();
-    options.aiVB = buildCallAiVBOptions();
+    options.mediaStreamComposer = buildCallMediaStreamComposerOptions();
     options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
 
     remoteNo = number;
@@ -2873,29 +2927,42 @@ document.querySelector('#virtualBackground').addEventListener('change', function
 async function handleVirtualBackgroundChange(selectEl)
 {
   virtualBackgroundType = selectEl.options[selectEl.selectedIndex].value;
-  setStatus(`${selectEl.options[selectEl.selectedIndex].innerText}`);
+  if (!virtualBackgroundType)
+  {
+    setStatus('虚拟背景已关闭');
+  }
+  else if (virtualBackgroundType === 'none')
+  {
+    setStatus('虚拟背景已切换为保留人物，不替换背景');
+  }
+  else
+  {
+    setStatus(`虚拟背景已切换为 ${selectEl.options[selectEl.selectedIndex].innerText}`);
+  }
 
-  if (!engine && !virtualBackgroundPreviewEngine)
+  const sessionComposer = getCurrentSessionComposer();
+
+  if (!sessionComposer && !virtualBackgroundPreviewEngine)
   {
     return;
   }
 
   if (!virtualBackgroundType)
   {
-    engine && engine.clearBackground();
-    virtualBackgroundPreviewEngine && virtualBackgroundPreviewEngine.clearBackground();
+    sessionComposer && await applyVirtualBackgroundToCurrentSession();
+    virtualBackgroundPreviewEngine && virtualBackgroundPreviewEngine.clearSourceAiVirtualBackground(0);
 
     return;
   }
 
-  if (engine)
+  if (sessionComposer)
   {
-    await applyVirtualBackgroundSelection(engine);
+    await applyVirtualBackgroundToCurrentSession();
   }
 
   if (virtualBackgroundPreviewEngine)
   {
-    await applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
+    applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
   }
 }
 
@@ -2970,41 +3037,49 @@ document.querySelector('#toggleAiNsMonitor').onclick = async function()
   }
 };
 
+document.querySelector('#applyCurrentComposerSettings').onclick = async function()
+{
+  await applyCurrentComposerSettingsToSession();
+};
+
 /**
  * @returns {Object|null}
  */
-function buildCallAiVBOptions()
+function buildSelectedAiVirtualBackgroundOptions()
 {
   if (!virtualBackgroundType)
   {
     return null;
   }
 
-  const aiVBOptions = {
-    enabled    : true,
-    assetConfig : {
-      flatBaseUrl : AI_VB_TASKS_ROOT
+  const aiVirtualBackground = {
+    enabled      : true,
+    assetConfig  : Object.assign({}, AI_VB_ASSET_CONFIG),
+    segmentation : {
+      delegate  : 'GPU',
+      frameSkip : 2
     },
     video : {
-      height    : videoConstraints.height,
-      mirror    : false,
-      targetFps : videoConstraints.frameRate,
-      width     : videoConstraints.width
+      height          : videoConstraints.height,
+      processingScale : 0.35,
+      targetFps       : Math.min(Number(videoConstraints.frameRate) || 15, 12),
+      width           : videoConstraints.width
     }
   };
 
   if (virtualBackgroundType === 'blur')
   {
-    aiVBOptions.mode = 'blur';
+    aiVirtualBackground.mode = 'blur';
+    aiVirtualBackground.blurRadius = 16;
 
-    return aiVBOptions;
+    return aiVirtualBackground;
   }
 
   if (virtualBackgroundType === 'none')
   {
-    aiVBOptions.mode = 'none';
+    aiVirtualBackground.mode = 'none';
 
-    return aiVBOptions;
+    return aiVirtualBackground;
   }
 
   const backgroundImageUrl = virtualBackgroundImgs[virtualBackgroundType];
@@ -3014,10 +3089,10 @@ function buildCallAiVBOptions()
     throw new Error(`Unknown virtual background type: ${virtualBackgroundType || 'empty'}`);
   }
 
-  aiVBOptions.mode = 'image';
-  aiVBOptions.imageUrl = backgroundImageUrl;
+  aiVirtualBackground.mode = 'image';
+  aiVirtualBackground.imageUrl = backgroundImageUrl;
 
-  return aiVBOptions;
+  return aiVirtualBackground;
 }
 
 function getVirtualBackgroundPreviewButton()
@@ -3067,52 +3142,63 @@ function restoreLocalPreview()
   localVideo.srcObject = null;
 }
 
-function createVirtualBackgroundEngine()
+function getCurrentSessionComposer()
 {
-  const aiVbeVideoConfig = {
-    width     : videoConstraints.width,
-    height    : videoConstraints.height,
-    targetFps : videoConstraints.frameRate,
-    mirror    : false
-  };
+  if (!rtcSession || typeof rtcSession.getMediaStreamComposer !== 'function')
+  {
+    return null;
+  }
 
-  return new CRTC.AiVBEngine({
-    video       : aiVbeVideoConfig,
-    assetConfig : {
-      flatBaseUrl : AI_VB_TASKS_ROOT
-    }
-  });
+  return rtcSession.getMediaStreamComposer();
 }
 
-async function applyVirtualBackgroundSelection(targetEngine)
+function applyVirtualBackgroundSelection(targetComposer)
 {
-  if (!targetEngine)
+  if (!targetComposer)
   {
     return;
   }
 
-  if (virtualBackgroundType === 'blur')
+  const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
+
+  if (!aiVirtualBackground)
   {
-    await targetEngine.setBlurBackground();
+    targetComposer.clearSourceAiVirtualBackground(0);
 
     return;
   }
 
-  if (virtualBackgroundType === 'none')
-  {
-    await targetEngine.setBackgroundImage('none');
+  targetComposer.setSourceAiVirtualBackground(0, aiVirtualBackground);
+}
 
+async function applyVirtualBackgroundToCurrentSession()
+{
+  const sessionComposer = getCurrentSessionComposer();
+  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaStreamComposer === 'function');
+
+  if (!sessionComposer && !canUpdateSessionComposer)
+  {
     return;
   }
 
-  const backgroundImageUrl = virtualBackgroundImgs[virtualBackgroundType];
-
-  if (!backgroundImageUrl)
+  try
   {
-    throw new Error(`Unknown virtual background type: ${virtualBackgroundType || 'empty'}`);
-  }
+    if (canUpdateSessionComposer)
+    {
+      await rtcSession.updateMediaStreamComposer(buildCallMediaStreamComposerOptions({ includeDisabledState: true }));
+    }
+    else
+    {
+      applyVirtualBackgroundSelection(sessionComposer);
+    }
 
-  await targetEngine.setBackgroundImage(backgroundImageUrl);
+    rtcSession && rtcSession.connection && getStreams(rtcSession.connection);
+  }
+  catch (error)
+  {
+    console.warn('applyVirtualBackgroundToCurrentSession error', error);
+    setStatus(`应用虚拟背景失败：${error && error.message ? error.message : error}`);
+  }
 }
 
 async function stopVirtualBackgroundPreview(options = {})
@@ -3123,20 +3209,16 @@ async function stopVirtualBackgroundPreview(options = {})
   virtualBackgroundPreviewActive = false;
   updateVirtualBackgroundPreviewButton();
 
-  if (virtualBackgroundPreviewEngine && typeof virtualBackgroundPreviewEngine.destroy === 'function')
+  if (virtualBackgroundPreviewEngine && typeof virtualBackgroundPreviewEngine.stop === 'function')
   {
     try
     {
-      await virtualBackgroundPreviewEngine.destroy();
+      virtualBackgroundPreviewEngine.stop();
     }
     catch (error)
     {
-      console.warn('stopVirtualBackgroundPreview destroy error', error);
+      console.warn('stopVirtualBackgroundPreview stop error', error);
     }
-  }
-  else if (virtualBackgroundPreviewEngine && typeof virtualBackgroundPreviewEngine.stop === 'function')
-  {
-    virtualBackgroundPreviewEngine.stop();
   }
 
   if (virtualBackgroundPreviewInputStream)
@@ -3165,14 +3247,20 @@ async function startVirtualBackgroundPreview()
     video : videoConstraints
   });
 
-  virtualBackgroundPreviewEngine = createVirtualBackgroundEngine();
-  await virtualBackgroundPreviewEngine.init({
-    inputStream : virtualBackgroundPreviewInputStream
+  virtualBackgroundPreviewEngine = new CRTC.MediaStreamComposer(virtualBackgroundPreviewInputStream, {
+    width   : videoConstraints.width,
+    height  : videoConstraints.height,
+    fps     : videoConstraints.frameRate,
+    sources : [
+      {
+        aiVirtualBackground : buildSelectedAiVirtualBackgroundOptions()
+      }
+    ]
   });
-  virtualBackgroundPreviewEngine.start();
-  await applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
 
-  localVideo.srcObject = virtualBackgroundPreviewEngine.getOutputStream();
+  localVideo.srcObject = await virtualBackgroundPreviewEngine.getOutput({
+    type : 'video'
+  });
   localVideo.play().catch(() => {});
 
   virtualBackgroundPreviewPending = false;
@@ -3198,32 +3286,6 @@ function buildCallAiNoiseSuppressionOptions()
     noiseReductionLevel : getCurrentAiNsLevel(),
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
-}
-
-// 旧版 mediaStreamProcessor 方案，保留仅用于对照新 AiVB 入参接法。
-async function mediaStreamProcessor(mediastream)
-{
-  if (!mediastream.getVideoTracks()[0])
-  {
-    return mediastream;
-  }
-
-  localMediaStream = mediastream;
-
-  const audioTrack = mediastream.getAudioTracks()[0];
-
-  engine = createVirtualBackgroundEngine();
-  await engine.init({
-    inputStream : mediastream
-  });
-  engine.start();
-  await applyVirtualBackgroundSelection(engine);
-  const processedStream = engine.getOutputStream();
-
-  audioTrack && processedStream.addTrack(audioTrack);
-  setStatus('视频增加了虚拟背景');
-  
-  return processedStream;
 }
 
 /**

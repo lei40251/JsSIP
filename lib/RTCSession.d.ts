@@ -31,9 +31,142 @@ export interface MediaConstraints {
   video?: boolean;
 }
 
+export type MediaStreamComposerWatermarkTarget = 'output' | 'source';
+export type MediaStreamComposerWatermarkType = 'text' | 'image';
+export type MediaStreamComposerWatermarkPositionPreset =
+  'top-left' |
+  'top-center' |
+  'top-right' |
+  'center' |
+  'bottom-left' |
+  'bottom-center' |
+  'bottom-right';
+
+export interface MediaStreamComposerWatermarkPoint {
+  x: number;
+  y: number;
+}
+
+export interface MediaStreamComposerWatermarkFilter {
+  id?: string;
+  target?: MediaStreamComposerWatermarkTarget;
+  slot?: number;
+  sourceId?: string;
+  streamId?: string;
+}
+
 export interface MediaStreamComposerWatermarkOptions {
-  target?: string;
+  id?: string;
+  target?: MediaStreamComposerWatermarkTarget;
+  type?: MediaStreamComposerWatermarkType;
+  text?: string;
+  image?: string | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageBitmap;
+  slot?: number;
+  sourceId?: string;
+  streamId?: string;
+  position?: MediaStreamComposerWatermarkPositionPreset | MediaStreamComposerWatermarkPoint;
+  width?: number;
+  height?: number;
+  opacity?: number;
+  font?: string;
+  fontSize?: number;
+  color?: string;
+  backgroundColor?: string;
+  padding?: number;
+  backgroundRadius?: number;
+  borderRadius?: number;
+  margin?: number;
+}
+
+export interface MediaStreamComposerSourceOptions {
+  slot?: number;
+  gain?: number;
+  sourceMirror?: boolean;
+  aiVirtualBackground?: AIVirtualBackgroundOptions | null;
   [key: string]: any;
+}
+
+export interface MediaStreamComposerSourceState {
+  id: string;
+  streamId: string | null;
+  slot: number | null;
+  gain: number;
+  sourceMirror: boolean | null;
+  aiVirtualBackground: AIVirtualBackgroundOptions | null;
+  hasAudio: boolean;
+  hasVideo: boolean;
+}
+
+export interface MediaStreamComposerRenderState {
+  requestedMode: string;
+  actualMode: string;
+  isWorker: boolean;
+  isWebGL2: boolean;
+  isFallback: boolean;
+  reason: string;
+  droppedFrames: number;
+  renderedFrames: number;
+  fps: number | null;
+  width: number | null;
+  height: number | null;
+  outputMode?: string;
+  captureFrameControlMode?: string;
+  insertableActive?: boolean;
+  insertableEnabledByConfig?: boolean;
+  insertableSupported?: boolean;
+  insertableGeneratorType?: string;
+  insertableSupportReason?: string;
+  insertableWriteFailures?: number;
+  insertableHasGeneratorTrack?: boolean;
+  outputHasCapturedStream?: boolean;
+  activeCaptureSinkAttached?: boolean;
+}
+
+export interface MediaStreamComposerAudioState {
+  requested: boolean;
+  status: string;
+  contextState: string | null;
+  sourceCount: number;
+  liveSourceCount: number;
+  connectedSources: number;
+  outputTracks: number;
+  reason: string;
+  lastError: string;
+}
+
+export interface MediaStreamComposerMirrorState {
+  global: boolean;
+  overrides: Record<string, boolean | null>;
+}
+
+export interface MediaStreamComposerSlotMirrorState extends MediaStreamComposerMirrorState {
+  slot: number;
+  override: boolean | null;
+  effective: boolean;
+}
+
+export interface MediaStreamComposerConfigState {
+  /**
+   * 合成输出镜像。会影响实际输出流，不等同于本地 video 标签的 CSS 预览镜像。
+   */
+  outputMirror: boolean;
+  /**
+   * 源级默认镜像。在布局进入输出前，对每一路源做镜像。
+   */
+  sourceMirror: boolean;
+  sourceMirrorOverrides: Record<string, boolean>;
+  /**
+   * 当 outputMirror=true 时，输出级水印是否一起翻转。
+   */
+  mirrorWatermarksWithOutput: boolean;
+  watermarks: MediaStreamComposerWatermarkState[];
+}
+
+export interface MediaStreamComposerState {
+  sources: MediaStreamComposerSourceState[];
+  config: MediaStreamComposerConfigState;
+  render: MediaStreamComposerRenderState;
+  audio: MediaStreamComposerAudioState;
 }
 
 export interface MediaStreamComposerOptions {
@@ -51,14 +184,100 @@ export interface MediaStreamComposerOptions {
   sourceMirror?: boolean;
   mirrorWatermarksWithOutput?: boolean;
   watermarks?: MediaStreamComposerWatermarkOptions[] | MediaStreamComposerWatermarkOptions | null;
+  sources?: MediaStreamComposerSourceOptions[] | null;
   [key: string]: any;
+}
+
+export interface MediaStreamComposerWatermarkState extends MediaStreamComposerWatermarkOptions {
+  target: MediaStreamComposerWatermarkTarget;
+  type: MediaStreamComposerWatermarkType;
+  slot: number | null;
+  sourceId: string | null;
+  streamId: string | null;
+  position: MediaStreamComposerWatermarkPositionPreset | MediaStreamComposerWatermarkPoint;
+  opacity: number;
+  fontSize: number;
+  color: string;
+  backgroundColor: string;
+  padding: number;
+  backgroundRadius: number;
+  margin: number;
+  status: string;
+  reason: string;
+}
+
+export interface MediaStreamComposerOutputRequest {
+  type?: 'mixed' | 'video' | 'audio';
+  slots?: number[];
+  isolated?: boolean;
+}
+
+export interface MediaStreamComposerConfigPatch {
+  outputMirror?: boolean;
+  mirror?: boolean;
+  mirrorWatermarksWithOutput?: boolean;
+  sourceMirror?: boolean;
+  sourceMirrorOverrides?: Record<string, boolean | null>;
+  clearSourceMirrorOverrides?: boolean;
+  watermarks?: MediaStreamComposerWatermarkOptions[] | MediaStreamComposerWatermarkOptions | null;
+  clearWatermarks?: boolean;
+  clearWatermarkFilter?: MediaStreamComposerWatermarkFilter | null;
+  [key: string]: any;
+}
+
+export interface MediaStreamComposerInstance {
+  addSource(
+    videos: MediaStream | HTMLVideoElement | Array<MediaStream | HTMLVideoElement>,
+    optionsOrSlot?: number | MediaStreamComposerSourceOptions
+  ): boolean;
+  appendStream(
+    videos: MediaStream | HTMLVideoElement | Array<MediaStream | HTMLVideoElement>,
+    optionsOrSlot?: number | MediaStreamComposerSourceOptions
+  ): boolean;
+  removeSource(target: MediaStream | HTMLVideoElement | string): boolean;
+  removeStream(target: MediaStream | HTMLVideoElement | string): boolean;
+  clearSources(): void;
+  clearStreams(): void;
+  getState(): MediaStreamComposerState;
+  getSources(): MediaStreamComposerSourceState[];
+  /**
+   * 合成输出镜像，影响实际输出流。
+   */
+  getMirror(): boolean;
+  setMirror(enabled: boolean): void;
+  /**
+   * 源级镜像状态。无 slot 时返回全局与覆盖项；指定 slot 时返回该路生效值。
+   */
+  getSourceMirror(): MediaStreamComposerMirrorState;
+  getSourceMirror(slot: number): MediaStreamComposerSlotMirrorState;
+  setSourceMirror(slotOrEnabled: number | boolean, enabled?: boolean): void;
+  clearSourceMirror(slot?: number): void;
+  getMirrorWatermarksWithOutput(): boolean;
+  setMirrorWatermarksWithOutput(enabled: boolean): void;
+  setWatermarks(
+    watermarks: MediaStreamComposerWatermarkOptions[] | MediaStreamComposerWatermarkOptions | null
+  ): Promise<MediaStreamComposerWatermarkState[]>;
+  clearWatermarks(filter?: MediaStreamComposerWatermarkFilter): void;
+  getWatermarks(): MediaStreamComposerWatermarkState[];
+  setSourceAiVirtualBackground(slotOrTarget: number | string, options: AIVirtualBackgroundOptions | null): void;
+  getSourceAiVirtualBackground(slotOrTarget: number | string): AIVirtualBackgroundOptions | null;
+  clearSourceAiVirtualBackground(slotOrTarget: number | string): void;
+  setConfig(patch: MediaStreamComposerConfigPatch): Promise<MediaStreamComposerConfigState>;
+  getRenderInfo(): MediaStreamComposerRenderState;
+  getAudioInfo(): MediaStreamComposerAudioState;
+  getOutput(options?: MediaStreamComposerOutputRequest | 'mixed' | 'video' | 'audio'): Promise<MediaStream | null>;
+  getMixedStream(): Promise<MediaStream>;
+  getVideoStream(): MediaStream;
+  getAudioStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
+  getIsolatedSubmixAudioStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
+  releaseOutput(options: MediaStreamComposerOutputRequest): boolean;
+  releaseSubmixAudioStream(options?: { slots?: number[]; isolated?: boolean } | number[]): boolean;
+  stop(): void;
 }
 
 export interface AIVirtualBackgroundVideoOptions {
   width?: number;
   height?: number;
-  targetFps?: number;
-  mirror?: boolean;
   processingScale?: number;
 }
 
@@ -84,14 +303,10 @@ export interface AIVirtualBackgroundAssetOptions {
 export interface AIVirtualBackgroundOptions {
   enabled?: boolean;
   mode?: 'none' | 'blur' | 'image' | 'color';
-  source?: string | number;
   imageUrl?: string;
-  backgroundImageUrl?: string;
   color?: string;
-  backgroundColor?: string;
   blurRadius?: number;
   modelPath?: string;
-  canvas?: HTMLCanvasElement;
   video?: AIVirtualBackgroundVideoOptions;
   segmentation?: AIVirtualBackgroundSegmentationOptions;
   postProcessing?: AIVirtualBackgroundPostProcessingOptions;
@@ -107,8 +322,6 @@ export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
   mediaStreamComposer?: MediaStreamComposerOptions;
-  aiVirtualBackground?: boolean | AIVirtualBackgroundOptions;
-  aiVB?: boolean | AIVirtualBackgroundOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
   rtcAnswerConstraints?: RTCOfferOptions;
@@ -128,8 +341,6 @@ export interface UpgradeToVideoOptions extends ExtraHeaders {
   recvOnly?: boolean;
   useUpdate?: boolean;
   mediaStreamComposer?: MediaStreamComposerOptions;
-  aiVirtualBackground?: boolean | AIVirtualBackgroundOptions;
-  aiVB?: boolean | AIVirtualBackgroundOptions;
 }
 
 export interface TerminateOptions extends RejectOptions {
@@ -361,13 +572,13 @@ export class RTCSession extends EventEmitter {
 
   get status(): SessionStatus;
 
-  getMediaStreamComposer(): any | null;
+  getMediaStreamComposer(): MediaStreamComposerInstance | null;
 
   getAiNoiseSuppression(): any | null;
 
   getAiVirtualBackground(): any | null;
 
-  getAiVBEngine(): any | null;
+  updateMediaStreamComposer(options: MediaStreamComposerOptions | null): Promise<MediaStreamComposerState | null>;
 
   isInProgress(): boolean;
 

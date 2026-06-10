@@ -157,6 +157,17 @@ body {
     padding: 0.7rem 0.95rem !important;
 }
 
+.app-header-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+}
+
+.app-header-subtitle {
+    line-height: 1.2;
+}
+
 .preview-toolbar-actions {
     display: flex;
     gap: 0.75rem;

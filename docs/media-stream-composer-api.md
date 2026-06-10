@@ -73,6 +73,24 @@ const composer = new CRTC.MediaStreamComposer(
 );
 ```
 
+给首路源直接挂虚拟背景：
+
+```js
+const composer = new CRTC.MediaStreamComposer(localStream, {
+  width: 1280,
+  height: 720,
+  sources: [
+    {
+      aiVirtualBackground: {
+        enabled: true,
+        mode: 'blur',
+        blurRadius: 16
+      }
+    }
+  ]
+});
+```
+
 #### 参数 `videos`
 
 `MediaStream | HTMLVideoElement | Array<MediaStream|HTMLVideoElement>`
@@ -92,10 +110,18 @@ const composer = new CRTC.MediaStreamComposer(
 | `height` | `number` | `720` | 输出视频高度（px） |
 | `fps` | `number` | `15` | 输出帧率 |
 | `backgroundColor` | `string` | `'#000'` | 画布底色 |
-| `sourceMirror` | `boolean` | `false` | 所有源默认镜像 |
-| `mirror` | `boolean` | `false` | 构造期整体输出镜像 |
-| `mirrorWatermarksWithOutput` | `boolean` | `true` | 输出镜像时水印是否跟随 |
+| `sourceMirror` | `boolean` | `false` | 所有源默认镜像，属于源级处理，发生在布局进入最终输出前 |
+| `mirror` | `boolean` | `false` | 构造期整体输出镜像，影响最终合成输出流，不等同于本地预览 CSS 镜像 |
+| `mirrorWatermarksWithOutput` | `boolean` | `true` | 当整体输出镜像开启时，输出级水印是否跟随一起翻转 |
 | `watermarks` | `Array<Object>` | `[]` | 初始水印配置 |
+| `sources` | `Array<Object> \| null` | `null` | 初始源配置数组，按输入源顺序对应，如 `sourceMirror`、`aiVirtualBackground` |
+
+镜像语义建议按这 4 层理解：
+
+- 本地预览镜像：通常只是页面层 `video` 的 CSS 效果，不属于 `MediaStreamComposer`
+- 源级镜像：`sourceMirror` / `setSourceMirror()`，对某一路输入源做镜像
+- 合成输出镜像：`mirror` / `setMirror()`，对最终输出画面做整体镜像
+- 水印跟随输出镜像：`mirrorWatermarksWithOutput`，仅控制输出级水印是否跟着整体翻转
 
 ---
 
@@ -109,13 +135,21 @@ const composer = new CRTC.MediaStreamComposer(
 composer.addSource(stream);
 composer.addSource(stream, 2);
 composer.addSource(stream, { slot: 1, gain: 0.5, sourceMirror: true });
+composer.addSource(stream, {
+  slot: 0,
+  aiVirtualBackground: {
+    enabled: true,
+    mode: 'blur',
+    blurRadius: 16
+  }
+});
 composer.addSource([streamA, streamB], 3);
 ```
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `videos` | `MediaStream \| HTMLVideoElement \| Array` | 必传 |
-| `optionsOrSlot` | `number \| Object` | `slot` 或 `{ slot, gain, sourceMirror }` |
+| `optionsOrSlot` | `number \| Object` | `slot` 或 `{ slot, gain, sourceMirror, aiVirtualBackground }` |
 
 | 返回值 | 说明 |
 |--------|------|
@@ -130,6 +164,34 @@ composer.addSource([streamA, streamB], 3);
 
 ```js
 composer.appendStream(stream, 2);
+```
+
+### `setSourceAiVirtualBackground(slotOrTarget, options)`
+
+给某一路源开启或更新虚拟背景。
+
+```js
+composer.setSourceAiVirtualBackground(0, {
+  enabled: true,
+  mode: 'image',
+  imageUrl: '/assets/bg.png'
+});
+```
+
+### `getSourceAiVirtualBackground(slotOrTarget)`
+
+读取某一路源当前的虚拟背景配置快照。
+
+```js
+const effect = composer.getSourceAiVirtualBackground(0);
+```
+
+### `clearSourceAiVirtualBackground(slotOrTarget)`
+
+清除某一路源的虚拟背景效果。
+
+```js
+composer.clearSourceAiVirtualBackground(0);
 ```
 
 ### `removeSource(target)`
@@ -209,9 +271,9 @@ await composer.setConfig({
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `outputMirror` | `boolean` | 设置整体输出镜像 |
-| `mirrorWatermarksWithOutput` | `boolean` | 设置水印是否跟随输出镜像 |
-| `sourceMirror` | `boolean` | 设置所有源默认镜像 |
+| `outputMirror` | `boolean` | 设置整体输出镜像，影响最终输出流 |
+| `mirrorWatermarksWithOutput` | `boolean` | 设置输出级水印是否跟随整体输出镜像 |
+| `sourceMirror` | `boolean` | 设置所有源默认镜像，属于源级处理 |
 | `sourceMirrorOverrides` | `Object` | 槽位级镜像覆盖，如 `{ 0: true, 1: null }` |
 | `clearSourceMirrorOverrides` | `boolean` | 清空全部槽位镜像覆盖 |
 | `watermarks` | `Array<Object> \| Object \| null` | 替换全部水印 |
@@ -500,6 +562,18 @@ composer.releaseOutput({
   slots: [0, 1],
   isolated: true
 });
+```
+
+### 示例 5：运行时切换虚拟背景
+
+```js
+composer.setSourceAiVirtualBackground(0, {
+  enabled: true,
+  mode: 'image',
+  imageUrl: '/assets/office.png'
+});
+
+composer.clearSourceAiVirtualBackground(0);
 ```
 
 ---
