@@ -54,6 +54,51 @@ export interface MediaStreamComposerOptions {
   [key: string]: any;
 }
 
+export interface AIVirtualBackgroundVideoOptions {
+  width?: number;
+  height?: number;
+  targetFps?: number;
+  mirror?: boolean;
+  processingScale?: number;
+}
+
+export interface AIVirtualBackgroundSegmentationOptions {
+  delegate?: 'CPU' | 'GPU';
+  frameSkip?: number;
+}
+
+export interface AIVirtualBackgroundPostProcessingOptions {
+  blurRadius?: number;
+  maxBlurRadius?: number;
+}
+
+export interface AIVirtualBackgroundAssetOptions {
+  cdnUrl?: string;
+  baseUrl?: string;
+  flatBaseUrl?: string;
+  moduleUrl?: string;
+  wasmBaseUrl?: string;
+  modelUrl?: string;
+}
+
+export interface AIVirtualBackgroundOptions {
+  enabled?: boolean;
+  mode?: 'none' | 'blur' | 'image' | 'color';
+  source?: string | number;
+  imageUrl?: string;
+  backgroundImageUrl?: string;
+  color?: string;
+  backgroundColor?: string;
+  blurRadius?: number;
+  modelPath?: string;
+  canvas?: HTMLCanvasElement;
+  video?: AIVirtualBackgroundVideoOptions;
+  segmentation?: AIVirtualBackgroundSegmentationOptions;
+  postProcessing?: AIVirtualBackgroundPostProcessingOptions;
+  assetConfig?: AIVirtualBackgroundAssetOptions;
+  [key: string]: any;
+}
+
 export interface ExtraHeaders {
   extraHeaders?: string[];
 }
@@ -62,6 +107,8 @@ export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
   mediaStreamComposer?: MediaStreamComposerOptions;
+  aiVirtualBackground?: boolean | AIVirtualBackgroundOptions;
+  aiVB?: boolean | AIVirtualBackgroundOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
   rtcAnswerConstraints?: RTCOfferOptions;
@@ -81,6 +128,8 @@ export interface UpgradeToVideoOptions extends ExtraHeaders {
   recvOnly?: boolean;
   useUpdate?: boolean;
   mediaStreamComposer?: MediaStreamComposerOptions;
+  aiVirtualBackground?: boolean | AIVirtualBackgroundOptions;
+  aiVB?: boolean | AIVirtualBackgroundOptions;
 }
 
 export interface TerminateOptions extends RejectOptions {
@@ -315,6 +364,10 @@ export class RTCSession extends EventEmitter {
   getMediaStreamComposer(): any | null;
 
   getAiNoiseSuppression(): any | null;
+
+  getAiVirtualBackground(): any | null;
+
+  getAiVBEngine(): any | null;
 
   isInProgress(): boolean;
 

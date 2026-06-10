@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266101219
+ * CRTC v2.0.0.20266101355
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -6061,7 +6061,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212202438 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212202710 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -19271,7 +19271,7 @@ var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AIVirtualBackground = require('./AIVirtualBackground/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212202438');
+debug('version %s', '2.0.0.405212202710');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -19313,7 +19313,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212202438';
+    return '2.0.0.405212202710';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./AIVirtualBackground/index.js":10,"./BFCP":11,"./Constants":42,"./Exceptions":46,"./Grammar":47,"./MediaStreamComposer/index.js":67,"./NameAddrHeader":69,"./Stats":83,"./UA":87,"./URI":88,"./Utils":89,"./WebSocketInterface":90,"debug":95}],49:[function(require,module,exports){
@@ -26928,6 +26928,9 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 预处理媒体流，如虚拟背景等
     this._mediaStreamProcessor = null;
+    this._sessionAiVBEngine = null;
+    this._sessionAiVBOptions = null;
+    this._aiVBInputStream = null;
     this._sessionAiNSEngine = null;
     this._sessionAiNSOptions = null;
     this._aiNSInputStream = null;
@@ -27122,6 +27125,15 @@ module.exports = class RTCSession extends EventEmitter {
   getMediaStreamComposer() {
     return this._mediaPipeline.getMediaStreamComposer();
   }
+  getAiNoiseSuppression() {
+    return this._mediaPipeline.getAiNoiseSuppression();
+  }
+  getAiVirtualBackground() {
+    return this._mediaPipeline.getAiVirtualBackground();
+  }
+  getAiVBEngine() {
+    return this.getAiVirtualBackground();
+  }
   isInProgress() {
     switch (this._status) {
       case C.STATUS_NULL:
@@ -27178,10 +27190,13 @@ module.exports = class RTCSession extends EventEmitter {
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
     var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    var aiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
+    this._sessionAiVBOptions = aiVBOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
+    this._mediaPipeline.stopSessionAiVirtualBackground();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
     this._inviteMediaConstraints = Utils.cloneObject(options.mediaConstraints, {
       audio: false,
@@ -27567,11 +27582,14 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
     var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    var aiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
     this._sessionMediaStreamComposerOptions = composerOptions;
-    this._syncMediaStreamComposerCompatAliases();
+    this._sessionAiVBOptions = aiVBOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
+    this._mediaPipeline.stopSessionAiVirtualBackground();
+    this._mediaPipeline.stopSessionAiNoiseSuppression();
 
     // 是否启用BFCP
     this._enableBFCP = false;
@@ -27887,6 +27905,9 @@ module.exports = class RTCSession extends EventEmitter {
     }
     if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
       this._sessionMediaStreamComposerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground') || Object.prototype.hasOwnProperty.call(options, 'aiVB')) {
+      this._sessionAiVBOptions = this._mediaPipeline.resolveAiVirtualBackgroundOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件
@@ -29491,13 +29512,17 @@ module.exports = class RTCSession extends EventEmitter {
      *   2. _mediaPipeline.stopSessionAiNoiseSuppression()
      *      └─ engine.destroy() → 关闭 WorkletNode、释放 WASM 资源、
      *         关闭 AudioContext
-     *   3. 置空配置引用
+     *   3. _mediaPipeline.stopSessionAiVirtualBackground()
+     *      └─ destroy() → 停止分割渲染循环、释放 MediaPipe / canvas 资源
+     *   4. 置空配置引用
      *
-     * 这两个 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
+     * 这三个 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
      */
     this._mediaPipeline.stopSessionMediaStreamComposer();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
+    this._mediaPipeline.stopSessionAiVirtualBackground();
     this._sessionMediaStreamComposerOptions = null;
+    this._sessionAiVBOptions = null;
     this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
@@ -32998,6 +33023,9 @@ function getMediaStreamComposerCtor() {
 function getAiNSEngineCtor() {
   return require('../AINoiseSuppression/index.js');
 }
+function getAiVirtualBackgroundCtor() {
+  return require('../AIVirtualBackground/index.js');
+}
 
 /**
  * MediaPipeline — RTCSession 的媒体处理管线。
@@ -33008,7 +33036,7 @@ function getAiNSEngineCtor() {
  *
  * ```
  * getUserMedia 原始流
- *   → processMediaStream (外部注入预处理, 如虚拟背景)
+ *   → processMediaStream (外部注入预处理 → AiVB)
  *     → applyAiNoiseSuppressionOnSdkGumStream (AI 降噪)
  *       → applyMediaStreamComposerOnSdkGumStream (视频合成/镜像等)
  *         → 最终发送流
@@ -33054,6 +33082,22 @@ module.exports = class MediaPipeline {
   }
 
   /**
+   * 获取当前会话的 AI 降噪实例（可能为 null）。
+   * @returns {AiNSEngine|null}
+   */
+  getAiNoiseSuppression() {
+    return this._session._sessionAiNSEngine;
+  }
+
+  /**
+   * 获取当前会话的 AiVB 引擎实例（可能为 null）。
+   * @returns {AIVirtualBackground|null}
+   */
+  getAiVirtualBackground() {
+    return this._session._sessionAiVBEngine;
+  }
+
+  /**
    * 从 RTCSession 的入参 `options` 中提取 `mediaStreamComposer` 配置。
    *
    * 这里只做字段提取，不做配置归一化或默认值合并，保持 RTCSession 现有入参语义不变。
@@ -33074,31 +33118,55 @@ module.exports = class MediaPipeline {
   }
 
   /**
-   * 执行外部注入的媒体流预处理（如虚拟背景、美颜等）。
+   * 从 RTCSession 入参中提取 AiVB 配置。
+   *
+   * 主参数名使用 `aiVirtualBackground`，同时兼容短别名 `aiVB`。
+   *
+   * @param {Object} [options={}]
+   * @returns {Object|boolean|null}
+   */
+  resolveAiVirtualBackgroundOptions(options = {}) {
+    if (!options || typeof options !== 'object') {
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'aiVirtualBackground')) {
+      return options.aiVirtualBackground || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(options, 'aiVB')) {
+      return options.aiVB || null;
+    }
+    return null;
+  }
+
+  /**
+   * 执行外部注入预处理，并按会话配置应用 AiVB。
    *
    * `_mediaStreamProcessor` 是外部通过 `RTCSession` 注入的处理函数，
-   * 签名为 `(MediaStream) => Promise<MediaStream>`。
+   * 签名为 `(MediaStream) => Promise<MediaStream>`；AiVB 则是 RTCSession 的一等会话能力。
    *
    * **失败降级策略：** 处理器抛异常时日志告警并返回原流，不阻断通话建立。
    *
    * @param {MediaStream} stream — 原始 getUserMedia 流。
+   * @param {boolean|Object|null} [aiVBOptions=this._session._sessionAiVBOptions] — AiVB 配置。
    * @returns {Promise<MediaStream>} — 处理后的流（或原流，如果无处理器/处理失败）。
    */
-  async processMediaStream(stream) {
+  async processMediaStream(stream, aiVBOptions = this._session._sessionAiVBOptions) {
     var session = this._session;
     logger.debug('_processMediaStream()');
-    // mediaStreamProcessor 是外部注入能力，可能是虚拟背景或其他视频预处理。
+    var processedStream = stream;
+
+    // mediaStreamProcessor 是外部注入能力，可能是美颜或其他视频预处理。
     // 失败时必须降级回原流，不能因为处理器异常影响通话建立。
     if (!session._mediaStreamProcessor) {
-      return stream;
+      return await this.applyAiVirtualBackgroundOnSdkGumStream(processedStream, aiVBOptions);
     }
     try {
-      var processedStream = await session._mediaStreamProcessor(stream);
-      return processedStream instanceof MediaStream ? processedStream : stream;
+      var nextStream = await session._mediaStreamProcessor(stream);
+      processedStream = nextStream instanceof MediaStream ? nextStream : stream;
     } catch (error) {
       logger.warn(`${session._id} mediaStreamProcessor error:`, error);
-      return stream;
     }
+    return await this.applyAiVirtualBackgroundOnSdkGumStream(processedStream, aiVBOptions);
   }
 
   /**
@@ -33125,6 +33193,141 @@ module.exports = class MediaPipeline {
       return Object.assign({}, aiNSOptions);
     }
     return null;
+  }
+
+  /**
+   * 规范化 AiVB 选项，统一各种入参形式为 `Object | null`。
+   *
+   * @param {boolean|Object|undefined|null} aiVBOptions
+   * @returns {Object|null}
+   */
+  normalizeSessionAiVBOptions(aiVBOptions) {
+    if (aiVBOptions === undefined || aiVBOptions === null || aiVBOptions === false) {
+      return null;
+    }
+    if (aiVBOptions === true) {
+      return {};
+    }
+    if (typeof aiVBOptions === 'object' && aiVBOptions.enabled !== false) {
+      return Object.assign({}, aiVBOptions);
+    }
+    return null;
+  }
+  buildAiVirtualBackgroundCtorOptions(aiVBOptions = {}) {
+    var ctorOptions = {};
+    var sections = ['video', 'segmentation', 'postProcessing', 'assetConfig'];
+    sections.forEach(key => {
+      if (aiVBOptions[key] && typeof aiVBOptions[key] === 'object') {
+        ctorOptions[key] = Object.assign({}, aiVBOptions[key]);
+      }
+    });
+    return ctorOptions;
+  }
+  resolveAiVirtualBackgroundSetup(aiVBOptions = {}) {
+    var setup = {
+      mode: 'none',
+      value: undefined
+    };
+    var rawMode = typeof aiVBOptions.mode === 'string' ? aiVBOptions.mode.trim().toLowerCase() : '';
+    var sourceValue = aiVBOptions.source;
+    if (rawMode) {
+      setup.mode = rawMode;
+    } else if (typeof aiVBOptions.imageUrl === 'string' || typeof aiVBOptions.backgroundImageUrl === 'string') {
+      setup.mode = 'image';
+    } else if (typeof aiVBOptions.color === 'string' || typeof aiVBOptions.backgroundColor === 'string') {
+      setup.mode = 'color';
+    } else if (Number.isFinite(Number(aiVBOptions.blurRadius))) {
+      setup.mode = 'blur';
+    }
+    switch (setup.mode) {
+      case 'none':
+        return setup;
+      case 'blur':
+        setup.value = Number.isFinite(Number(aiVBOptions.blurRadius)) ? Number(aiVBOptions.blurRadius) : sourceValue;
+        return setup;
+      case 'image':
+        setup.value = typeof aiVBOptions.imageUrl === 'string' && aiVBOptions.imageUrl.trim() ? aiVBOptions.imageUrl.trim() : typeof aiVBOptions.backgroundImageUrl === 'string' && aiVBOptions.backgroundImageUrl.trim() ? aiVBOptions.backgroundImageUrl.trim() : sourceValue;
+        return setup;
+      case 'color':
+        setup.value = typeof aiVBOptions.color === 'string' && aiVBOptions.color.trim() ? aiVBOptions.color.trim() : typeof aiVBOptions.backgroundColor === 'string' && aiVBOptions.backgroundColor.trim() ? aiVBOptions.backgroundColor.trim() : sourceValue;
+        return setup;
+      default:
+        throw new Error(`Unsupported AiVB mode: ${setup.mode}`);
+    }
+  }
+  async configureAiVirtualBackground(engine, aiVBOptions = {}) {
+    var setup = this.resolveAiVirtualBackgroundSetup(aiVBOptions);
+    switch (setup.mode) {
+      case 'none':
+        engine.clearBackground();
+        return;
+      case 'blur':
+        await engine.setBlurBackground(setup.value);
+        return;
+      case 'image':
+        await engine.setBackgroundImage(setup.value);
+        return;
+      case 'color':
+        await engine.setSolidColor(setup.value);
+        return;
+      default:
+        throw new Error(`Unsupported AiVB mode: ${setup.mode}`);
+    }
+  }
+  stopSessionAiVirtualBackground() {
+    var session = this._session;
+    var engine = session._sessionAiVBEngine;
+    var aiVBInputStream = session._aiVBInputStream;
+    session._sessionAiVBEngine = null;
+    session._aiVBInputStream = null;
+    if (!engine || typeof engine.destroy !== 'function') {
+      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
+      return;
+    }
+    Promise.resolve(engine.destroy()).then(() => {
+      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
+    }).catch(error => {
+      logger.warn(`${session._id} destroy session ai virtual background failed:`, error);
+      this.safeCloseMediaStream(aiVBInputStream, 'close ai virtual background input stream failed');
+    });
+  }
+  async applyAiVirtualBackgroundOnSdkGumStream(stream, aiVBOptions) {
+    var session = this._session;
+    logger.debug(`applyAiVirtualBackgroundOnSdkGumStream: ${JSON.stringify(aiVBOptions)}`);
+    if (!stream || !(stream instanceof MediaStream)) {
+      return stream;
+    }
+    var normalizedOptions = this.normalizeSessionAiVBOptions(aiVBOptions);
+    if (!normalizedOptions || !stream.getVideoTracks || stream.getVideoTracks().length === 0) {
+      return stream;
+    }
+    try {
+      this.stopSessionAiVirtualBackground();
+      var AIVirtualBackground = getAiVirtualBackgroundCtor();
+      session._sessionAiVBEngine = new AIVirtualBackground(this.buildAiVirtualBackgroundCtorOptions(normalizedOptions));
+      await session._sessionAiVBEngine.init({
+        canvas: normalizedOptions.canvas,
+        inputStream: stream,
+        modelPath: normalizedOptions.modelPath
+      });
+      session._sessionAiVBEngine.start();
+      await this.configureAiVirtualBackground(session._sessionAiVBEngine, normalizedOptions);
+      var processedStream = session._sessionAiVBEngine.getOutputStream();
+      if (!(processedStream instanceof MediaStream)) {
+        throw new Error('AiVB output stream invalid');
+      }
+      if (stream.getAudioTracks && processedStream.getAudioTracks && processedStream.getAudioTracks().length === 0) {
+        stream.getAudioTracks().forEach(track => {
+          processedStream.addTrack(track, processedStream);
+        });
+      }
+      session._aiVBInputStream = stream;
+      return processedStream;
+    } catch (error) {
+      logger.warn(`${session._id} apply ai virtual background failed:`, error);
+      this.stopSessionAiVirtualBackground();
+      return stream;
+    }
   }
 
   /**
@@ -33472,7 +33675,7 @@ module.exports = class MediaPipeline {
    * │    └─ 获取原始媒体流                                        │
    * │                                                             │
    * │ 3. processMediaStream(stream)                               │
-   * │    └─ 外部注入预处理（虚拟背景/美颜等）                     │
+   * │    └─ 外部注入预处理 → AiVB                                 │
    * │                                                             │
    * │ 4. applyAiNoiseSuppressionOnSdkGumStream(stream, aiNS)       │
    * │    └─ AI 降噪处理                                           │
@@ -33503,7 +33706,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression/index.js":5,"../Logger":49,"../MediaStreamComposer":67,"../Utils":89}],77:[function(require,module,exports){
+},{"../AINoiseSuppression/index.js":5,"../AIVirtualBackground/index.js":10,"../Logger":49,"../MediaStreamComposer":67,"../Utils":89}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');

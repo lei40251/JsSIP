@@ -1304,7 +1304,8 @@ ua.on('newRTCSession', function(e)
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true },
       extraFeatures        : extraFeatures,
-      mediaStreamProcessor : buildCallMediaStreamProcessor(),
+      // mediaStreamProcessor : buildCallMediaStreamProcessor(),
+      aiVB                 : buildCallAiVBOptions(),
       aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
     });
 
@@ -1326,7 +1327,8 @@ ua.on('newRTCSession', function(e)
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures        : extraFeatures,
-      mediaStreamProcessor : buildCallMediaStreamProcessor(),
+      // mediaStreamProcessor : buildCallMediaStreamProcessor(),
+      aiVB                 : buildCallAiVBOptions(),
       aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
     });
 
@@ -2245,7 +2247,8 @@ async function call(type, direction, mediaStream)
       }
     }
 
-    options.mediaStreamProcessor = buildCallMediaStreamProcessor();
+    // options.mediaStreamProcessor = buildCallMediaStreamProcessor();
+    options.aiVB = buildCallAiVBOptions();
     options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
 
     remoteNo = number;
@@ -2968,11 +2971,53 @@ document.querySelector('#toggleAiNsMonitor').onclick = async function()
 };
 
 /**
- * @returns {Function|null}
+ * @returns {Object|null}
  */
-function buildCallMediaStreamProcessor()
+function buildCallAiVBOptions()
 {
-  return virtualBackgroundType ? mediaStreamProcessor : null;
+  if (!virtualBackgroundType)
+  {
+    return null;
+  }
+
+  const aiVBOptions = {
+    enabled    : true,
+    assetConfig : {
+      flatBaseUrl : AI_VB_TASKS_ROOT
+    },
+    video : {
+      height    : videoConstraints.height,
+      mirror    : false,
+      targetFps : videoConstraints.frameRate,
+      width     : videoConstraints.width
+    }
+  };
+
+  if (virtualBackgroundType === 'blur')
+  {
+    aiVBOptions.mode = 'blur';
+
+    return aiVBOptions;
+  }
+
+  if (virtualBackgroundType === 'none')
+  {
+    aiVBOptions.mode = 'none';
+
+    return aiVBOptions;
+  }
+
+  const backgroundImageUrl = virtualBackgroundImgs[virtualBackgroundType];
+
+  if (!backgroundImageUrl)
+  {
+    throw new Error(`Unknown virtual background type: ${virtualBackgroundType || 'empty'}`);
+  }
+
+  aiVBOptions.mode = 'image';
+  aiVBOptions.imageUrl = backgroundImageUrl;
+
+  return aiVBOptions;
 }
 
 function getVirtualBackgroundPreviewButton()
@@ -3155,7 +3200,7 @@ function buildCallAiNoiseSuppressionOptions()
   };
 }
 
-// 处理视频轨道
+// 旧版 mediaStreamProcessor 方案，保留仅用于对照新 AiVB 入参接法。
 async function mediaStreamProcessor(mediastream)
 {
   if (!mediastream.getVideoTracks()[0])

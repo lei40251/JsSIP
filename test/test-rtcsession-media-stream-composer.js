@@ -164,6 +164,74 @@ MockAiNSEngine.destroyCalls = 0;
 MockAiNSEngine.transform = null;
 MockAiNSEngine.replaceAudioTrackTransform = null;
 
+class MockAiVBEngine
+{
+  constructor(options)
+  {
+    this.options = options;
+    this.initCalls = [];
+    this.setBlurBackgroundCalls = [];
+    this.setBackgroundImageCalls = [];
+    this.setSolidColorCalls = [];
+    this.clearBackgroundCalls = 0;
+    this.destroyed = false;
+    this.started = false;
+    this.outputTrack = new MockMediaStreamTrack('video', { width: 960, height: 540, frameRate: 24 });
+    this.outputStream = new MockMediaStream([ this.outputTrack ]);
+    MockAiVBEngine.instances.push(this);
+  }
+
+  async init(options = {})
+  {
+    this.initCalls.push(options);
+
+    if (MockAiVBEngine.outputFactory)
+    {
+      this.outputStream = MockAiVBEngine.outputFactory(options, this) || this.outputStream;
+    }
+  }
+
+  start()
+  {
+    this.started = true;
+  }
+
+  getOutputStream()
+  {
+    return this.outputStream;
+  }
+
+  clearBackground()
+  {
+    this.clearBackgroundCalls += 1;
+  }
+
+  async setBlurBackground(value)
+  {
+    this.setBlurBackgroundCalls.push(value);
+  }
+
+  async setBackgroundImage(value)
+  {
+    this.setBackgroundImageCalls.push(value);
+  }
+
+  async setSolidColor(value)
+  {
+    this.setSolidColorCalls.push(value);
+  }
+
+  async destroy()
+  {
+    this.destroyed = true;
+    MockAiVBEngine.destroyCalls += 1;
+  }
+}
+
+MockAiVBEngine.instances = [];
+MockAiVBEngine.destroyCalls = 0;
+MockAiVBEngine.outputFactory = null;
+
 function createMockUA()
 {
   return {
@@ -211,9 +279,11 @@ function loadRTCSessionWithMockMixer()
 {
   const mixerPath = require.resolve('../lib/MediaStreamComposer');
   const aiNSPath = require.resolve('../lib/AINoiseSuppression/index.js');
+  const aiVBPath = require.resolve('../lib/AIVirtualBackground/index.js');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
   const aiNSCache = require.cache[aiNSPath];
+  const aiVBCache = require.cache[aiVBPath];
   const rtcCache = require.cache[rtcSessionPath];
 
   require.cache[mixerPath] = {
@@ -227,6 +297,12 @@ function loadRTCSessionWithMockMixer()
     filename : aiNSPath,
     loaded   : true,
     exports  : MockAiNSEngine
+  };
+  require.cache[aiVBPath] = {
+    id       : aiVBPath,
+    filename : aiVBPath,
+    loaded   : true,
+    exports  : MockAiVBEngine
   };
   delete require.cache[rtcSessionPath];
 
@@ -248,6 +324,15 @@ function loadRTCSessionWithMockMixer()
     else
     {
       delete require.cache[aiNSPath];
+    }
+
+    if (aiVBCache)
+    {
+      require.cache[aiVBPath] = aiVBCache;
+    }
+    else
+    {
+      delete require.cache[aiVBPath];
     }
 
     if (rtcCache)
@@ -651,6 +736,34 @@ async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
   assert.strictEqual(session.getAiNoiseSuppression(), MockAiNSEngine.instances[0]);
 }
 
+async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceVideo = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
+  const sourceAudio = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
+
+  session._sessionAiVBOptions = {
+    enabled    : true,
+    mode       : 'blur',
+    blurRadius : 18,
+    video      : { targetFps: 24 }
+  };
+  global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(sourceStream);
+
+  const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline({ audio: true, video: true }, null);
+  const engine = session.getAiVirtualBackground();
+
+  assert.strictEqual(MockAiVBEngine.instances.length, 1);
+  assert.strictEqual(engine, MockAiVBEngine.instances[0]);
+  assert.strictEqual(engine.options.video.targetFps, 24);
+  assert.strictEqual(engine.initCalls[0].inputStream, sourceStream);
+  assert.strictEqual(engine.started, true);
+  assert.strictEqual(engine.setBlurBackgroundCalls[0], 18);
+  assert.strictEqual(stream.getVideoTracks()[0], engine.outputTrack);
+  assert.strictEqual(stream.getAudioTracks()[0], sourceAudio);
+}
+
 async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
@@ -727,11 +840,57 @@ async function testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine()
   assert.strictEqual(session._aiNSInputStream, sourceStream);
 }
 
+async function testSwitchDeviceCameraAppliesSessionAiVirtualBackground()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const oldVideoTrack = new MockMediaStreamTrack('video');
+  const newVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
+  const sender = {
+    track        : oldVideoTrack,
+    replaceTrack : function(track)
+    {
+      this.replaced = track;
+      this.track = track;
+    }
+  };
+
+  session._status = session.C.STATUS_CONFIRMED;
+  session._enableBFCP = false;
+  session._connection = {
+    getSenders : () => [ sender ]
+  };
+  session._localCameras = [ 'cam-a', 'cam-b' ];
+  session._localMediaStream = new MockMediaStream([ oldVideoTrack ]);
+  session._inviteMediaConstraints = { video: {} };
+  session._sessionAiVBOptions = {
+    enabled  : true,
+    mode     : 'image',
+    imageUrl : 'https://example.com/bg.png'
+  };
+  global.navigator.mediaDevices.getSupportedConstraints = () => ({ facingMode: true });
+  global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ newVideoTrack ]));
+
+  await session.switchDevice('camera', 'user');
+
+  assert.strictEqual(MockAiVBEngine.instances.length, 1);
+  assert.strictEqual(MockAiVBEngine.instances[0].setBackgroundImageCalls[0], 'https://example.com/bg.png');
+  assert.strictEqual(sender.replaced, MockAiVBEngine.instances[0].outputTrack);
+  assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockAiVBEngine.instances[0].outputTrack);
+}
+
 function testGetAiNoiseSuppressionReturnsNullByDefault()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
 
   assert.strictEqual(session.getAiNoiseSuppression(), null);
+}
+
+function testGetAiVirtualBackgroundReturnsNullByDefault()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+
+  assert.strictEqual(session.getAiVirtualBackground(), null);
+  assert.strictEqual(session.getAiVBEngine(), null);
 }
 
 async function testCloseDestroysSessionAiNoiseSuppression()
@@ -746,6 +905,73 @@ async function testCloseDestroysSessionAiNoiseSuppression()
 
   assert.strictEqual(MockAiNSEngine.destroyCalls, 1);
   assert.strictEqual(session.getAiNoiseSuppression(), null);
+}
+
+async function testCloseDestroysSessionAiVirtualBackground()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceVideo = new MockMediaStreamTrack('video');
+  const sourceAudio = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
+
+  await session._mediaPipeline.applyAiVirtualBackgroundOnSdkGumStream(sourceStream, {
+    enabled : true,
+    mode    : 'color',
+    color   : '#123456'
+  });
+
+  session._close();
+  await Promise.resolve();
+
+  assert.strictEqual(MockAiVBEngine.destroyCalls, 1);
+  assert.strictEqual(session.getAiVirtualBackground(), null);
+  assert.strictEqual(sourceVideo.readyState, 'ended');
+  assert.strictEqual(sourceAudio.readyState, 'ended');
+}
+
+async function testUpgradeToVideoAcceptsAiVBAliasOptions()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const localAudioTrack = new MockMediaStreamTrack('audio');
+  const capturedVideoTrack = new MockMediaStreamTrack('video');
+  const senderState = { replaced: null };
+  const transceiver = {
+    direction : 'sendrecv',
+    sender    : {
+      replaceTrack : async(track) =>
+      {
+        senderState.replaced = track;
+      }
+    }
+  };
+
+  session._status = session.C.STATUS_CONFIRMED;
+  session._connection = {
+    getTransceivers : () => [],
+    addTransceiver  : () => transceiver
+  };
+  session._localMediaStream = new MockMediaStream([ localAudioTrack ]);
+  session._inviteMediaConstraints = { video: true };
+  session.renegotiate = function(opts, cb)
+  {
+    cb && cb();
+
+    return true;
+  };
+  global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ capturedVideoTrack ]));
+
+  await session.upgradeToVideo({
+    aiVB : {
+      enabled : true,
+      mode    : 'color',
+      color   : '#abcdef'
+    }
+  }, () => {});
+
+  assert.strictEqual(session._sessionAiVBOptions.mode, 'color');
+  assert.strictEqual(MockAiVBEngine.instances.length, 1);
+  assert.strictEqual(MockAiVBEngine.instances[0].setSolidColorCalls[0], '#abcdef');
+  assert.strictEqual(senderState.replaced, MockAiVBEngine.instances[0].outputTrack);
 }
 
 async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
@@ -781,11 +1007,16 @@ async function run()
     { name: 'testSwitchDeviceCameraMixerBranchFallbackToDefault', fn: testSwitchDeviceCameraMixerBranchFallbackToDefault },
     { name: 'testReplaceCanvasToVideoAppliesSessionMixerToSdkGum', fn: testReplaceCanvasToVideoAppliesSessionMixerToSdkGum },
     { name: 'testGetUserMediaPipelineAppliesSessionAiNoiseSuppression', fn: testGetUserMediaPipelineAppliesSessionAiNoiseSuppression },
+    { name: 'testGetUserMediaPipelineAppliesSessionAiVirtualBackground', fn: testGetUserMediaPipelineAppliesSessionAiVirtualBackground },
     { name: 'testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression', fn: testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression },
     { name: 'testApplyAiNoiseSuppressionSkipsDisabledOptions', fn: testApplyAiNoiseSuppressionSkipsDisabledOptions },
     { name: 'testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine', fn: testSwitchDeviceAudioReusesSessionAiNoiseSuppressionEngine },
+    { name: 'testSwitchDeviceCameraAppliesSessionAiVirtualBackground', fn: testSwitchDeviceCameraAppliesSessionAiVirtualBackground },
     { name: 'testGetAiNoiseSuppressionReturnsNullByDefault', fn: testGetAiNoiseSuppressionReturnsNullByDefault },
+    { name: 'testGetAiVirtualBackgroundReturnsNullByDefault', fn: testGetAiVirtualBackgroundReturnsNullByDefault },
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
+    { name: 'testCloseDestroysSessionAiVirtualBackground', fn: testCloseDestroysSessionAiVirtualBackground },
+    { name: 'testUpgradeToVideoAcceptsAiVBAliasOptions', fn: testUpgradeToVideoAcceptsAiVBAliasOptions },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 
@@ -801,6 +1032,9 @@ async function run()
     MockAiNSEngine.destroyCalls = 0;
     MockAiNSEngine.transform = null;
     MockAiNSEngine.replaceAudioTrackTransform = null;
+    MockAiVBEngine.instances = [];
+    MockAiVBEngine.destroyCalls = 0;
+    MockAiVBEngine.outputFactory = null;
 
     for (const t of TESTS)
     {
@@ -811,6 +1045,9 @@ async function run()
       MockAiNSEngine.destroyCalls = 0;
       MockAiNSEngine.transform = null;
       MockAiNSEngine.replaceAudioTrackTransform = null;
+      MockAiVBEngine.instances = [];
+      MockAiVBEngine.destroyCalls = 0;
+      MockAiVBEngine.outputFactory = null;
       if (t.fn === testCloseStopsAndClearsMediaStreamComposer)
       {
         MockMixer.stopCalls = 0;
