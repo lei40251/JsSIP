@@ -393,7 +393,28 @@ gulp.task('lib-es5-del', function(done)
 
 gulp.task('dist-del', function(done)
 {
-  del.sync('./dist/', done());
+  try
+  {
+    del.sync('./dist/');
+  }
+  catch (error)
+  {
+    const code = error && error.code;
+
+    if (code === 'EPERM' || code === 'EBUSY')
+    {
+      log(colors.yellow(`dist-del skipped: ${error.message || String(error)}`));
+      done();
+
+      return;
+    }
+
+    done(error);
+
+    return;
+  }
+
+  done();
 });
 
 gulp.task('devel', gulp.series('grammar'));

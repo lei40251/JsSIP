@@ -2049,6 +2049,11 @@ function buildCallMediaStreamComposerOptions(options = {})
     ];
   }
 
+  if (includeDisabledState || outputMirror || watermarks.length || aiVirtualBackground)
+  {
+    composerOptions.enableInsertable = true;
+  }
+
   if (!includeDisabledState && !outputMirror && !watermarks.length && !aiVirtualBackground)
   {
     return null;
@@ -2636,8 +2641,6 @@ async function updateDevices()
       document.querySelector('#cameras').innerHTML = option;
     });
 
-  checkCameraStatus();
-
   // 移动端不支持切换麦克风
   await CRTC.Utils.getMicrophones()
     .then((microphones) => 
@@ -2661,26 +2664,10 @@ function start()
   // 输出SDK版本号
   setStatus(`${CRTC.version}`);
 
-  // 更新摄像头下拉列表
-  // updateDevices();
-  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(async(mediastream) => 
+  updateDevices()
+    .catch((error) =>
     {
-      await updateDevices();
-
-      mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
-    })
-    .catch(async(error) =>
-    {
-      setStatus(`初始化媒体权限失败: ${error.name || 'unknown'}`);
-      try
-      {
-        await updateDevices();
-      }
-      catch (e)
-      {
-        setStatus(`设备列表加载失败: ${e.name || e.message || 'unknown'}`);
-      }
+      setStatus(`设备列表加载失败: ${error.name || error.message || 'unknown'}`);
     });
 
   // 初始化断网提示相关

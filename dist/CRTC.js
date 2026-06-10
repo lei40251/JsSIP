@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026610232
+ * CRTC v2.0.0.2026611017
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4162,7 +4162,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212204604 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212220034 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17371,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212204604');
+debug('version %s', '2.0.0.405212220034');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17411,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212204604';
+    return '2.0.0.405212220034';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -22108,8 +22108,8 @@ class OutputStreamManager {
     if (this._pendingWrite) {
       var replacedFrame = this._latestPendingFrame;
       this._latestPendingFrame = frameCtx;
-      if (replacedFrame && replacedFrame.frame && replacedFrame.frame.close) {
-        replacedFrame.frame.close();
+      if (replacedFrame) {
+        this._closePresentedFrameSource(replacedFrame.frameSource);
       }
       return;
     }
@@ -22143,10 +22143,10 @@ class OutputStreamManager {
     return nextTimestampUs;
   }
   async _writePresentedFrame(frameCtx) {
-    if (!frameCtx || !frameCtx.canvas || !this._writer) {
+    if (!frameCtx || !frameCtx.canvas && !frameCtx.frameSource || !this._writer) {
       return;
     }
-    var videoFrame = await this._createVideoFrameFromCanvas(frameCtx.canvas, frameCtx.timestamp);
+    var videoFrame = await this._createVideoFrameForPresentedFrame(frameCtx);
     if (!videoFrame) {
       return;
     }
@@ -22159,17 +22159,33 @@ class OutputStreamManager {
       }
     }
   }
-  async _createVideoFrameFromCanvas(canvas, timestamp) {
+  async _createVideoFrameForPresentedFrame(frameCtx) {
+    var frameSource = frameCtx && frameCtx.frameSource;
+    var frameSourceConsumed = Boolean(frameCtx && frameCtx.frameSourceConsumed === true);
+    if (frameSource) {
+      return this._createVideoFrameFromSource(frameSource, frameCtx.timestamp, frameSourceConsumed);
+    }
+    return this._createVideoFrameFromSource(frameCtx && frameCtx.canvas, frameCtx && frameCtx.timestamp, false);
+  }
+  async _createVideoFrameFromSource(source, timestamp, sourceConsumed) {
     var runtime = OutputStreamManager._getGlobalObject();
     var VideoFrameConstructor = runtime.VideoFrame;
     if (!VideoFrameConstructor) {
       throw new Error('VideoFrame constructor is unavailable');
     }
     var timestampUs = this._normalizeTimestampUs(timestamp);
+    if (!source) {
+      return null;
+    }
+    if (sourceConsumed) {
+      return new VideoFrameConstructor(source, {
+        timestamp: timestampUs
+      });
+    }
     if (typeof runtime.createImageBitmap === 'function') {
       var bitmap = null;
       try {
-        bitmap = await runtime.createImageBitmap(canvas);
+        bitmap = await runtime.createImageBitmap(source);
         return new VideoFrameConstructor(bitmap, {
           timestamp: timestampUs
         });
@@ -22179,7 +22195,7 @@ class OutputStreamManager {
         }
       }
     }
-    return new VideoFrameConstructor(canvas, {
+    return new VideoFrameConstructor(source, {
       timestamp: timestampUs
     });
   }
@@ -22288,8 +22304,8 @@ class OutputStreamManager {
     this._pendingWrite = false;
     this._lastTimestampUs = 0;
     this._continuousWriteFailures = 0;
-    if (pendingFrame && pendingFrame.frame && pendingFrame.frame.close) {
-      pendingFrame.frame.close();
+    if (pendingFrame) {
+      this._closePresentedFrameSource(pendingFrame.frameSource);
     }
     if (this._writer) {
       try {
@@ -22307,6 +22323,13 @@ class OutputStreamManager {
     this._writer = null;
     this._generator = null;
     this._generatorTrack = null;
+  }
+  _closePresentedFrameSource(frameSource) {
+    if (frameSource && typeof frameSource.close === 'function') {
+      try {
+        frameSource.close();
+      } catch (error) {}
+    }
   }
 
   /**
@@ -25298,6 +25321,9 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
     this._outputContext = null;
 
+    /** @type {boolean} 是否优先将 Worker 返回帧直接交给 Insertable 输出 */
+    this._preferDirectFrameSource = Boolean(this._config && this._config.enableInsertable);
+
     /** @type {Worker|null} WebWorker 实例 */
     this._worker = null;
 
@@ -25441,6 +25467,13 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       return;
     }
     if (data.type === 'rendered') {
+      var presentedTimestamp = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      var frameSource = null;
+      var frameSourceConsumed = false;
+      if (data.bitmap && this._preferDirectFrameSource) {
+        frameSource = data.bitmap;
+        frameSourceConsumed = true;
+      }
       if (data.bitmap && this._outputContext) {
         // 确保输出 canvas 尺寸与预期一致
         if (this._canvas.width !== this._info.width) {
@@ -25450,7 +25483,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
           this._canvas.height = this._info.height;
         }
         this._outputContext.drawImage(data.bitmap, 0, 0, this._canvas.width, this._canvas.height);
-        if (data.bitmap.close) {
+        if (!frameSourceConsumed && data.bitmap.close) {
           data.bitmap.close();
         }
       }
@@ -25458,7 +25491,9 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       this._info.renderedFrames += 1;
       this._emitFramePresented({
         canvas: this._canvas,
-        timestamp: typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(),
+        frameSource: frameSource,
+        frameSourceConsumed: frameSourceConsumed,
+        timestamp: presentedTimestamp,
         source: this._info.actualMode || 'worker'
       });
       this._flushQueuedPayload();
@@ -28402,15 +28437,29 @@ module.exports = class RTCSession extends EventEmitter {
       return null;
     }
     var composer = this.getMediaStreamComposer();
-    if (!composer || typeof composer.setConfig !== 'function') {
+    var shouldRecreateComposerForEffectRouteChange = Boolean(composer && typeof composer.getRenderInfo === 'function' && this._sessionMediaStreamComposerOptions && this._sessionMediaStreamComposerOptions.sources instanceof Array && this._sessionMediaStreamComposerOptions.sources.some(item => item && item.aiVirtualBackground) && (() => {
+      try {
+        var renderInfo = composer.getRenderInfo() || {};
+        return renderInfo.isWorker !== true && renderInfo.actualMode === 'main-webgl2';
+      } catch (error) {
+        return false;
+      }
+    })());
+    if (!composer || typeof composer.setConfig !== 'function' || shouldRecreateComposerForEffectRouteChange) {
       var sender = this._connection && typeof this._connection.getSenders === 'function' ? this._connection.getSenders().find(item => item && item.track && item.track.kind === 'video') : null;
+      var composerInputStream = this._mediaStreamComposerInputStream;
       var currentLocalVideoTrack = sender && sender.track ? sender.track : this._localMediaStream && this._localMediaStream.getVideoTracks ? this._localMediaStream.getVideoTracks()[0] : null;
-      if (!currentLocalVideoTrack) {
+      var rebuildFromComposerInputStream = Boolean(shouldRecreateComposerForEffectRouteChange && composerInputStream && composerInputStream.getVideoTracks && composerInputStream.getVideoTracks().length > 0);
+      if (!rebuildFromComposerInputStream && !currentLocalVideoTrack) {
         return null;
       }
-      var currentLocalVideoStream = new MediaStream();
-      currentLocalVideoStream.addTrack(currentLocalVideoTrack, currentLocalVideoStream);
-      var mixedStream = await this._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(currentLocalVideoStream, resolvedOptions);
+      var mixedStream = await this._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(rebuildFromComposerInputStream ? composerInputStream : (() => {
+        var currentLocalVideoStream = new MediaStream();
+        currentLocalVideoStream.addTrack(currentLocalVideoTrack, currentLocalVideoStream);
+        return currentLocalVideoStream;
+      })(), resolvedOptions, {
+        preserveExistingComposerInputStream: rebuildFromComposerInputStream
+      });
       var mixedVideoTrack = mixedStream && mixedStream.getVideoTracks ? mixedStream.getVideoTracks()[0] : null;
       if (!mixedVideoTrack) {
         return null;
@@ -34759,19 +34808,25 @@ module.exports = class MediaPipeline {
    *
    * **注意：** `composer.stop()` 只释放内部资源，外部输入流仍需显式关闭。
    */
-  stopSessionMediaStreamComposer() {
+  stopSessionMediaStreamComposer(options) {
+    options = options || {};
     var session = this._session;
     var composerInputStream = session._mediaStreamComposerInputStream;
+    var preserveInputStream = options.preserveInputStream === true;
     if (!session._mediaStreamComposer) {
       session._mediaStreamComposer = null;
-      this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+      if (!preserveInputStream) {
+        this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+      }
       session._mediaStreamComposerInputStream = null;
       return;
     }
 
     // composer.stop() 只释放内部渲染资源，外部输入流仍需 RTCSession 显式关闭。
     this.safeStopMediaStreamComposer(session._mediaStreamComposer, 'stop composer failed');
-    this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+    if (!preserveInputStream) {
+      this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
+    }
     session._mediaStreamComposer = null;
     session._mediaStreamComposerInputStream = null;
   }
@@ -34831,8 +34886,9 @@ module.exports = class MediaPipeline {
    * @returns {Promise<MediaStream>} — 合成后的流（视频轨替换为 composer 输出 + 原始音轨），
    *          或原流（如果无视频轨/处理失败）。
    */
-  async applyMediaStreamComposerOnSdkGumStream(stream, composerOptions) {
+  async applyMediaStreamComposerOnSdkGumStream(stream, composerOptions, runtimeOptions) {
     var session = this._session;
+    var options = runtimeOptions || {};
     logger.debug(`applyMediaStreamComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
     if (!stream || !composerOptions || !(stream instanceof MediaStream)) {
       return stream;
@@ -34844,7 +34900,9 @@ module.exports = class MediaPipeline {
     var composer = null;
     logger.debug(`composerCtorOptions: ${JSON.stringify(composerCtorOptions)}`);
     try {
-      this.stopSessionMediaStreamComposer();
+      this.stopSessionMediaStreamComposer({
+        preserveInputStream: options.preserveExistingComposerInputStream === true
+      });
       var MediaStreamComposer = getMediaStreamComposerCtor();
       composer = new MediaStreamComposer([stream], composerCtorOptions);
       var mixedVideoStream = await composer.getOutput({

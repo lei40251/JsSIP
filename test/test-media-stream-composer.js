@@ -2319,6 +2319,43 @@ async function testWorkerRendererKeepsEmptyPayload()
   assert.strictEqual(messages[0].transfers.length, 0);
 }
 
+async function testWorkerRendererPassesBitmapToInsertableFrameCallback()
+{
+  resetMockState();
+  const renderer = new WorkerRenderer({
+    backgroundColor  : '#000',
+    maxFrameQueue    : 1,
+    enableInsertable : true
+  }, {});
+  const canvas = new MockCanvasElement();
+  const received = [];
+  const bitmap = {
+    width  : 320,
+    height : 180,
+    close  : function()
+    {
+      bitmap.closed = true;
+    }
+  };
+
+  renderer._canvas = canvas;
+  renderer._outputContext = canvas.getContext('2d');
+  renderer.setFramePresentedCallback((frameCtx) => received.push(frameCtx));
+
+  renderer._handleWorkerMessage({
+    data : {
+      type   : 'rendered',
+      bitmap : bitmap
+    }
+  });
+
+  assert.strictEqual(received.length, 1);
+  assert.strictEqual(received[0].canvas, canvas);
+  assert.strictEqual(received[0].frameSource, bitmap);
+  assert.strictEqual(received[0].frameSourceConsumed, true);
+  assert.notStrictEqual(bitmap.closed, true);
+}
+
 async function testComposerConfigDefaults()
 {
   const defaultConfig = ComposerConfig.create({});
@@ -2622,6 +2659,7 @@ async function run()
     { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
     { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
+    { name: 'testWorkerRendererPassesBitmapToInsertableFrameCallback', fn: testWorkerRendererPassesBitmapToInsertableFrameCallback },
     { name: 'testComposerConfigDefaults', fn: testComposerConfigDefaults },
     { name: 'testComposerConfigSourceOptions', fn: testComposerConfigSourceOptions },
     { name: 'testDefaultPrefersCaptureStreamEvenWhenInsertableSupported', fn: testDefaultPrefersCaptureStreamEvenWhenInsertableSupported },
