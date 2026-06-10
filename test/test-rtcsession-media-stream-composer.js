@@ -267,7 +267,7 @@ async function testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions()
   const sourceVideo = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
-  const mixed = await session._applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  const mixed = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
     sourceMirror : true,
     mirror       : true,
     watermarks   : [
@@ -300,8 +300,8 @@ async function testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const audioOnly = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
-  const noOptions = await session._applyMediaStreamComposerOnSdkGumStream(audioOnly, null);
-  const noVideo = await session._applyMediaStreamComposerOnSdkGumStream(audioOnly, { sourceMirror: true });
+  const noOptions = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(audioOnly, null);
+  const noVideo = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(audioOnly, { sourceMirror: true });
 
   assert.strictEqual(noOptions, audioOnly);
   assert.strictEqual(noVideo, audioOnly);
@@ -318,7 +318,7 @@ async function testCloseStopsAndClearsMediaStreamComposer()
     sourceVideoTrack
   ]);
 
-  await session._applyMediaStreamComposerOnSdkGumStream(sourceStream, { mirror: true });
+  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, { mirror: true });
   assert.ok(session.getMediaStreamComposer());
 
   session._close();
@@ -642,7 +642,7 @@ async function testGetUserMediaPipelineAppliesSessionAiNoiseSuppression()
   MockAiNSEngine.transform = () => processedStream;
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(sourceStream);
 
-  const stream = await session._getUserMediaWithSessionPipeline({ audio: true, video: false }, null);
+  const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline({ audio: true, video: false }, null);
 
   assert.strictEqual(stream, processedStream);
   assert.strictEqual(MockAiNSEngine.instances.length, 1);
@@ -656,7 +656,7 @@ async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
 
   session._sessionAiNSOptions = true;
 
-  const constraints = session._getGumConstraintsWithProcessorFlags({
+  const constraints = session._mediaPipeline.getGumConstraintsWithProcessorFlags({
     audio : { deviceId: { exact: 'mic-1' } },
     video : false
   }, session._sessionAiNSOptions);
@@ -670,7 +670,7 @@ async function testApplyAiNoiseSuppressionSkipsDisabledOptions()
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
 
-  const stream = await session._applyAiNoiseSuppressionOnSdkGumStream(sourceStream, { enabled: false });
+  const stream = await session._mediaPipeline.applyAiNoiseSuppressionOnSdkGumStream(sourceStream, { enabled: false });
 
   assert.strictEqual(stream, sourceStream);
   assert.strictEqual(MockAiNSEngine.instances.length, 0);
@@ -730,7 +730,7 @@ async function testCloseDestroysSessionAiNoiseSuppression()
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
 
-  await session._applyAiNoiseSuppressionOnSdkGumStream(sourceStream, true);
+  await session._mediaPipeline.applyAiNoiseSuppressionOnSdkGumStream(sourceStream, true);
 
   session._close();
   await Promise.resolve();
@@ -747,7 +747,7 @@ async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
   session._sessionAiNSOptions = true;
   MockAiNSEngine.transform = () => new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
 
-  const result = await session._processMediaStream(sourceStream);
+  const result = await session._mediaPipeline.processMediaStream(sourceStream);
 
   assert.strictEqual(result, sourceStream);
   assert.strictEqual(MockAiNSEngine.instances.length, 0);
