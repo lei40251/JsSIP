@@ -20,6 +20,34 @@ class MockMediaStreamTrack
     this.enabled = true;
     this.readyState = 'live';
     this.onended = null;
+    this._listeners = {};
+  }
+
+  addEventListener(type, handler)
+  {
+    if (!this._listeners[type])
+    {
+      this._listeners[type] = [];
+    }
+
+    this._listeners[type].push(handler);
+  }
+
+  removeEventListener(type, handler)
+  {
+    if (!this._listeners[type])
+    {
+      return;
+    }
+
+    this._listeners[type] = this._listeners[type].filter((item) => item !== handler);
+  }
+
+  dispatchEvent(event)
+  {
+    const type = event && event.type ? event.type : event;
+
+    (this._listeners[type] || []).slice().forEach((handler) => handler.call(this, event));
   }
 
   stop()
@@ -30,6 +58,8 @@ class MockMediaStreamTrack
     {
       this.onended();
     }
+
+    this.dispatchEvent({ type: 'ended' });
   }
 
   clone()
@@ -325,13 +355,27 @@ class MockAudioNode
     }
   }
 
-  disconnect()
+  disconnect(node)
   {
-    this.connections.forEach((node) =>
+    if (node)
     {
-      if (node && node.inputs)
+      this.connections = this.connections.filter((item) => item !== node);
+
+      if (node.inputs)
       {
         node.inputs = node.inputs.filter((item) => item !== this);
+      }
+
+      this.disconnected = this.connections.length === 0;
+
+      return;
+    }
+
+    this.connections.forEach((nodea) =>
+    {
+      if (nodea && nodea.inputs)
+      {
+        nodea.inputs = nodea.inputs.filter((item) => item !== this);
       }
     });
     this.disconnected = true;
@@ -780,14 +824,14 @@ async function assertRejects(fn, pattern)
   assert.strictEqual(rejected, true);
 }
 
-async function testNoAudioDoesNotCreateAudioContext()
+async function testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext()
 {
   resetMockState();
 
   const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
-  const output = await mixer.getMixedStream();
+  const output = await mixer.getAudioStream();
 
-  assert.strictEqual(output.getAudioTracks().length, 0);
+  assert.strictEqual(output, null);
   assert.strictEqual(MockAudioContext.instances.length, 0);
   assert.strictEqual(mixer.getAudioInfo().status, 'no-source');
 
@@ -800,12 +844,14 @@ async function testAppendAudioSourceInjectsAudioTrack()
 
   const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const output = await mixer.getMixedStream();
+  const audioTrack = output.getAudioTracks()[0];
 
   mixer.appendStream(createStream({ audio: true }), 0);
   await flushAsync();
 
   assert.strictEqual(MockAudioContext.instances.length, 1);
   assert.strictEqual(output.getAudioTracks().length, 1);
+  assert.strictEqual(output.getAudioTracks()[0], audioTrack);
   assert.strictEqual(mixer.getAudioInfo().status, 'mixing');
 
   mixer.stop();
@@ -991,39 +1037,42 @@ async function testSlotAudioStreamsCreateIndependentBuses()
   assert.ok(first);
   assert.ok(second);
   assert.notStrictEqual(second, first);
-  assert.strictEqual(firstAgain, first);
+  assert.notStrictEqual(firstAgain, first);
   assert.strictEqual(first.getAudioTracks().length, 1);
   assert.strictEqual(first.getVideoTracks().length, 0);
   assert.strictEqual(second.getAudioTracks().length, 1);
   assert.strictEqual(second.getVideoTracks().length, 0);
-  assert.strictEqual(context.destinations.length, 2);
-  assert.strictEqual(context.destinations[0].stream, first);
+  assert.strictEqual(context.destinations.length, 3);
+  assert.strictEqual(context.destinations[0].stream.getAudioTracks()[0].readyState, 'ended');
   assert.strictEqual(context.destinations[1].stream, second);
-  assert.strictEqual(context.destinations[0].inputs.length, 1);
+  assert.strictEqual(context.destinations[2].stream, firstAgain);
+  assert.strictEqual(context.destinations[0].inputs.length, 0);
   assert.strictEqual(context.destinations[1].inputs.length, 1);
   assert.strictEqual(context.sources.length, 4);
-  assert.strictEqual(context.destinations[0].inputs[0] instanceof MockDynamicsCompressorNode, true);
+  assert.strictEqual(context.destinations[2].inputs[0] instanceof MockDynamicsCompressorNode, true);
   assert.strictEqual(firstBus.connections.size, 3);
   assert.strictEqual(secondBus.connections.size, 3);
 
   mixer.removeStream(streams[2].id);
   const refreshed = await mixer.getAudioStream({ slots: [ 1, 2, 3 ] });
 
-  assert.strictEqual(refreshed, first);
-  assert.strictEqual(firstBus.connections.size, 2);
+  assert.notStrictEqual(refreshed, firstAgain);
+  const refreshedBus = mixer._audioComposer._audioBuses.get('1,2,3');
+
+  assert.strictEqual(refreshedBus.connections.size, 2);
   assert.strictEqual(secondBus.connections.size, 3);
   assert.strictEqual(context.destinations[1].inputs.length, 1);
   assert.strictEqual(await mixer.getAudioStream({ slots: [] }), null);
   assert.strictEqual(await mixer.getAudioStream({ slots: [ -1, 'x' ] }), null);
 
-  const firstBusGain = context.destinations[0].inputs[0];
+  const firstBusGain = context.destinations[3].inputs[0].inputs[0];
 
   mixer.stop();
   assert.strictEqual(firstBusGain.disconnected, true);
   assert.strictEqual(context.destinations[0].inputs.length, 0);
   assert.strictEqual(context.destinations[1].inputs.length, 0);
   assert.strictEqual(context.closed, true);
-  assert.strictEqual(context.sampleRate, 48000);
+  assert.strictEqual(context.sampleRate, 44100);
 }
 
 async function testDefaultAudioStreamStillMixesAllSources()
@@ -1087,7 +1136,7 @@ async function testDefaultAndSlotAudioShareSourceNodesWithSeparateGains()
   assert.strictEqual(slotCompressor.disconnected, true);
 }
 
-async function testSlotAudioStreamIsStableWhenRequestedBeforeSources()
+async function testSlotAudioStreamRecreatesWhenRequestedBeforeSources()
 {
   resetMockState();
 
@@ -1106,9 +1155,11 @@ async function testSlotAudioStreamIsStableWhenRequestedBeforeSources()
 
   const activeOutput = await mixer.getAudioStream({ slots: [ 0 ] });
 
-  assert.strictEqual(activeOutput, pendingOutput);
-  assert.strictEqual(context.destinations[0].inputs.length, 1);
-  assert.strictEqual(context.destinations[0].inputs[0].inputs.length, 1);
+  assert.notStrictEqual(activeOutput, pendingOutput);
+  assert.strictEqual(context.destinations.length, 2);
+  assert.strictEqual(context.destinations[0].stream.getAudioTracks()[0].readyState, 'ended');
+  assert.strictEqual(context.destinations[1].inputs.length, 1);
+  assert.strictEqual(context.destinations[1].inputs[0].inputs.length, 1);
 
   mixer.stop();
 }
@@ -1222,7 +1273,7 @@ async function testAudioRefreshIsBatchedIntoSingleMicrotask()
   mixer.stop();
 }
 
-async function testDestinationTrackHealthRecreatesSilentBusDestination()
+async function testSlotAudioStreamRecreatesEvenWhenPreviousTrackMuted()
 {
   resetMockState();
 
@@ -1239,9 +1290,9 @@ async function testDestinationTrackHealthRecreatesSilentBusDestination()
 
   const refreshed = await mixer.getAudioStream({ slots: [ 0 ] });
 
-  assert.strictEqual(refreshed, output);
-  assert.strictEqual(context.destinations.length, 1);
-  assert.strictEqual(oldDestination.disconnected, false);
+  assert.notStrictEqual(refreshed, output);
+  assert.strictEqual(context.destinations.length, 2);
+  assert.strictEqual(oldDestination.disconnected, true);
 
   mixer.stop();
 }
@@ -1286,6 +1337,7 @@ async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
   const first = await mixer.getAudioStream({ slots: [ 0, 1 ], isolated: true });
   const second = await mixer.getAudioStream({ slots: [ 2, 3 ], isolated: true });
   const firstAgain = await mixer.getAudioStream({ slots: [ 1, 0 ], isolated: true });
+  const info = mixer.getAudioInfo();
 
   assert.ok(first);
   assert.ok(second);
@@ -1295,6 +1347,9 @@ async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
   assert.strictEqual(second.getVideoTracks().length, 0);
   assert.strictEqual(firstAgain.getVideoTracks().length, 0);
   assert.strictEqual(MockAudioContext.instances.length, 3);
+  assert.strictEqual(info.busCount, 0);
+  assert.strictEqual(info.isolatedSubmixCount, 2);
+  assert.strictEqual(info.isolatedContextRequests, 3);
 
   mixer.stop();
   assert.strictEqual(MockAudioContext.instances[0].closed, true);
@@ -1323,7 +1378,85 @@ async function testReleaseIsolatedSubmixAudioStreamClosesContext()
 
   assert.strictEqual(released, true);
   assert.strictEqual(MockAudioContext.instances[0].closed, true);
+  assert.strictEqual(mixer.getAudioInfo().busCount, 0);
+  assert.strictEqual(mixer.getAudioInfo().isolatedSubmixCount, 0);
   assert.strictEqual(mixer.releaseSubmixAudioStream({ slots: [ 0, 1 ], isolated: true }), false);
+
+  mixer.stop();
+}
+
+async function testSlotAudioStreamDefaultsToNewDestinationTrack()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  mixer.appendStream(createStream({ video: false, audio: true }), 0);
+
+  const first = await mixer.getAudioStream({ slots: [ 0 ] });
+  const firstAgain = await mixer.getAudioStream({ slots: [ 0 ] });
+  const context = MockAudioContext.instances[0];
+
+  assert.notStrictEqual(firstAgain, first);
+  assert.notStrictEqual(firstAgain.getAudioTracks()[0], first.getAudioTracks()[0]);
+  assert.strictEqual(context.destinations.length, 2);
+  assert.strictEqual(context.destinations[0].stream.getAudioTracks()[0].readyState, 'ended');
+  assert.strictEqual(context.closed, false);
+
+  mixer.stop();
+}
+
+async function testAudioTrackEndedDisconnectsSourceAndBus()
+{
+  resetMockState();
+
+  const stream = createStream({ video: false, audio: true });
+  const track = stream.getAudioTracks()[0];
+  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+
+  mixer.appendStream(stream, 0);
+  await mixer.getAudioStream();
+  await mixer.getAudioStream({ slots: [ 0 ] });
+
+  const source = mixer._sources[0];
+  const bus = mixer._audioComposer._audioBuses.get('0');
+  const busGain = bus.connections.get(source.id).gainNode;
+  const masterGain = source.masterGainNode;
+
+  assert.strictEqual(mixer.getAudioInfo().boundTrackListeners, 1);
+
+  track.stop();
+  await flushAsync();
+
+  assert.strictEqual(source.audioSourceNode, null);
+  assert.strictEqual(source.audioTrackListeners, null);
+  assert.strictEqual(bus.connections.size, 0);
+  assert.strictEqual(busGain.disconnected, true);
+  assert.strictEqual(masterGain.disconnected, true);
+  assert.strictEqual(mixer.getAudioInfo().boundTrackListeners, 0);
+
+  mixer.stop();
+}
+
+async function testMixedStreamCreatesStableAudioTrackBeforeSources()
+{
+  resetMockState();
+
+  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixed = await mixer.getMixedStream();
+  const audioTrack = mixed.getAudioTracks()[0];
+  const context = MockAudioContext.instances[0];
+
+  assert.ok(audioTrack);
+  assert.strictEqual(mixed.getAudioTracks().length, 1);
+  assert.strictEqual(context.destinations.length, 1);
+
+  mixer.appendStream(createStream({ video: false, audio: true }), 0);
+  await flushAsync();
+
+  assert.strictEqual(mixed.getAudioTracks().length, 1);
+  assert.strictEqual(mixed.getAudioTracks()[0], audioTrack);
+  assert.strictEqual(mixer.getAudioInfo().stableOutputAudioTrack, true);
 
   mixer.stop();
 }
@@ -1698,6 +1831,7 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
 async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
 {
   resetMockState();
+  MockCanvasElement.webgl2Supported = true;
 
   const mixer = new MediaStreamComposer([], {
     width      : 320,
@@ -1721,11 +1855,11 @@ async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
   assert.strictEqual(source.aiVirtualBackground.mode, 'color');
   assert.strictEqual(source.aiVirtualBackground.backgroundColor, '#123456');
   assert.strictEqual(mixer._config.forceMainThreadRenderer, true);
-  assert.strictEqual(mixer._config.forceMain2DRenderer, true);
+  assert.strictEqual(mixer._config.forceMain2DRenderer, false);
 
   mixer.getVideoStream();
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-2d');
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
 
   mixer.stop();
 }
@@ -1760,7 +1894,7 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
   mixer.stop();
 }
 
-async function testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D()
+async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -1783,7 +1917,77 @@ async function testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D()
     blurRadius : 8
   });
 
-  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-2d');
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+
+  mixer.stop();
+}
+
+async function testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto'
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+
+  mixer.setSourceAiVirtualBackground(0, {
+    enabled  : true,
+    mode     : 'image',
+    imageUrl : 'background.png'
+  });
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(mixer.getRenderInfo().isWorker, false);
+
+  mixer.stop();
+}
+
+async function testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const source = createStream();
+  let getRenderableStateCalls = 0;
+  const mixer = new MediaStreamComposer([ source ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-webgl2',
+    sources    : [
+      {
+        slot                : 0,
+        aiVirtualBackground : {
+          enabled  : true,
+          mode     : 'image',
+          imageUrl : 'background.png'
+        }
+      }
+    ]
+  });
+
+  mixer._sourceAiVBManager.getRenderableState = function()
+  {
+    getRenderableStateCalls += 1;
+
+    return null;
+  };
+
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'main-webgl2');
+  assert.strictEqual(getRenderableStateCalls, 0);
 
   mixer.stop();
 }
@@ -2368,7 +2572,7 @@ async function run()
   const failures = [];
 
   const TESTS = [
-    { name: 'testNoAudioDoesNotCreateAudioContext', fn: testNoAudioDoesNotCreateAudioContext },
+    { name: 'testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext', fn: testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext },
     { name: 'testAppendAudioSourceInjectsAudioTrack', fn: testAppendAudioSourceInjectsAudioTrack },
     { name: 'testRepeatedOutputCallsReuseLiveStream', fn: testRepeatedOutputCallsReuseLiveStream },
     { name: 'testNewPublicApiStateAndSourceLifecycle', fn: testNewPublicApiStateAndSourceLifecycle },
@@ -2378,15 +2582,18 @@ async function run()
     { name: 'testSlotAudioStreamsCreateIndependentBuses', fn: testSlotAudioStreamsCreateIndependentBuses },
     { name: 'testDefaultAudioStreamStillMixesAllSources', fn: testDefaultAudioStreamStillMixesAllSources },
     { name: 'testDefaultAndSlotAudioShareSourceNodesWithSeparateGains', fn: testDefaultAndSlotAudioShareSourceNodesWithSeparateGains },
-    { name: 'testSlotAudioStreamIsStableWhenRequestedBeforeSources', fn: testSlotAudioStreamIsStableWhenRequestedBeforeSources },
+    { name: 'testSlotAudioStreamRecreatesWhenRequestedBeforeSources', fn: testSlotAudioStreamRecreatesWhenRequestedBeforeSources },
     { name: 'testAudioSourceFansOutThroughMasterGain', fn: testAudioSourceFansOutThroughMasterGain },
     { name: 'testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame', fn: testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame },
     { name: 'testBusRefreshMutesRemovedGainWithoutDisconnectingMaster', fn: testBusRefreshMutesRemovedGainWithoutDisconnectingMaster },
     { name: 'testAudioRefreshIsBatchedIntoSingleMicrotask', fn: testAudioRefreshIsBatchedIntoSingleMicrotask },
-    { name: 'testDestinationTrackHealthRecreatesSilentBusDestination', fn: testDestinationTrackHealthRecreatesSilentBusDestination },
+    { name: 'testSlotAudioStreamRecreatesEvenWhenPreviousTrackMuted', fn: testSlotAudioStreamRecreatesEvenWhenPreviousTrackMuted },
     { name: 'testDestinationTrackHealthRecreatesEndedBusDestination', fn: testDestinationTrackHealthRecreatesEndedBusDestination },
     { name: 'testIsolatedSlotAudioStreamsCreateIndependentContexts', fn: testIsolatedSlotAudioStreamsCreateIndependentContexts },
     { name: 'testReleaseIsolatedSubmixAudioStreamClosesContext', fn: testReleaseIsolatedSubmixAudioStreamClosesContext },
+    { name: 'testSlotAudioStreamDefaultsToNewDestinationTrack', fn: testSlotAudioStreamDefaultsToNewDestinationTrack },
+    { name: 'testAudioTrackEndedDisconnectsSourceAndBus', fn: testAudioTrackEndedDisconnectsSourceAndBus },
+    { name: 'testMixedStreamCreatesStableAudioTrackBeforeSources', fn: testMixedStreamCreatesStableAudioTrackBeforeSources },
     { name: 'testWatermarkConfigAndFiltering', fn: testWatermarkConfigAndFiltering },
     { name: 'testCanvas2DWatermarkDrawOrder', fn: testCanvas2DWatermarkDrawOrder },
     { name: 'testMainWebGL2WatermarkOpacity', fn: testMainWebGL2WatermarkOpacity },
@@ -2398,7 +2605,9 @@ async function run()
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
-    { name: 'testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D', fn: testSetSourceAiVirtualBackgroundFallsBackMainWebGL2ToMain2D },
+    { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2 },
+    { name: 'testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2', fn: testSetSourceAiVirtualBackgroundFallsBackWorkerToMainWebGL2 },
+    { name: 'testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime', fn: testMainWebGL2DoesNotStartAiVirtualBackgroundRuntime },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
     { name: 'testWorkerShaderUsesRuntimeNewlines', fn: testWorkerShaderUsesRuntimeNewlines },

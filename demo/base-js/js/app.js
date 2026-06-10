@@ -3057,7 +3057,7 @@ function buildSelectedAiVirtualBackgroundOptions()
     assetConfig  : Object.assign({}, AI_VB_ASSET_CONFIG),
     segmentation : {
       delegate  : 'GPU',
-      frameSkip : 2
+      frameSkip : 0
     },
     video : {
       height          : videoConstraints.height,
@@ -3065,7 +3065,7 @@ function buildSelectedAiVirtualBackgroundOptions()
       targetFps       : Math.min(Number(videoConstraints.frameRate) || 15, 12),
       width           : videoConstraints.width
     }
-  };
+  }; 
 
   if (virtualBackgroundType === 'blur')
   {

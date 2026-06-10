@@ -23,7 +23,7 @@
 
 1. 入口在 [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)。
 2. 输入源由 `SourceRegistry` 管理。
-3. 源级虚拟背景由 `SourceAiVBManager` 和 `AIVirtualBackground/` 子模块处理。
+3. 源级虚拟背景由 `SourceAiVBManager` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
 4. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
 5. 音频输出由 `AudioMixer` 处理。
 6. 输出流由 `OutputStreamManager` 统一产出。
@@ -52,7 +52,7 @@ MediaStreamComposer 是总调度：
 | 看视频渲染状态 | `getState().render` | `RenderLoop.getRenderInfo()` |
 | 看音频混音状态 | `getState().audio` | `AudioMixer.getInfo()` |
 | 获取完整输出 | `getOutput({ type: 'mixed' })` | `_getMixedOutput()` |
-| 获取子混音 | `getOutput({ type: 'audio', slots, isolated })` | `AudioMixer.getAudioStream()` / `getIsolatedSubmixAudioStream()` |
+| 获取子混音 | `getOutput({ type: 'audio', slots, isolated })` | shared slots bus 或 isolated AudioContext |
 
 ### 兼容旧方法如何看待
 
@@ -75,10 +75,8 @@ lib/
 │
 └── MediaStreamComposer/
     ├── AIVirtualBackground/
-    │   ├── index.js
     │   ├── AiVBConfig.js
     │   ├── AiVBAssetLoader.js
-    │   ├── Canvas2DPipeline.js
     │   └── MediaPipeSegmenterRuntime.js
     │
     ├── Core/
@@ -170,7 +168,8 @@ async getMixedStream() {
 需要特别注意的兼容点：
 
 - `getVideoStream()` 仍保留同步行为，内部直接走 `_getVideoOutputSync()`
-- `getAudioStream({ isolated: true })` 仍保留旧调用方式
+- `getAudioStream({ slots })` 使用共享主 `AudioContext`，但每次调用默认创建新的子混音输出轨道
+- `getAudioStream({ slots, isolated: true })` 或 `audioContext: 'isolated'` 使用独立 `AudioContext`
 - `setMirror()` / `setSourceMirror()` 这类旧 setter 仍然同步返回，但内部调的是异步 `setConfig()`
 
 ---
@@ -362,15 +361,15 @@ getOutput({ type: 'mixed' })
 ```js
 await composer.getOutput({ type: 'audio' })
 await composer.getOutput({ type: 'audio', slots: [0, 2] })
-await composer.getOutput({ type: 'audio', slots: [0, 2], isolated: true })
+await composer.getOutput({ type: 'audio', slots: [0, 2] })
 ```
 
 内部走：
 
 ```
 getOutput({ type: 'audio', ... })
-  ├─ isolated=true  -> AudioMixer.getIsolatedSubmixAudioStream()
-  └─ isolated=false -> AudioMixer.getAudioStream()
+  ├─ isolated=true/audioContext=isolated -> AudioMixer.getIsolatedSubmixAudioStream()
+  └─ shared slots bus -> AudioMixer.getAudioStream()
 ```
 
 旧方法对应：
@@ -387,7 +386,7 @@ getIsolatedSubmixAudioStream()
 当前 `releaseOutput()` 只负责音频子混音释放：
 
 ```
-releaseOutput({ type: 'audio', slots, isolated })
+releaseOutput({ type: 'audio', slots })
   └─ AudioMixer.releaseSubmixAudioStream()
 ```
 

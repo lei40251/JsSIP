@@ -209,7 +209,12 @@ export interface MediaStreamComposerWatermarkState extends MediaStreamComposerWa
 export interface MediaStreamComposerOutputRequest {
   type?: 'mixed' | 'video' | 'audio';
   slots?: number[];
+  /**
+   * When true, creates the submix in an independent AudioContext.
+   */
   isolated?: boolean;
+  audioContext?: 'shared' | 'isolated';
+  recreate?: boolean;
 }
 
 export interface MediaStreamComposerConfigPatch {
@@ -268,7 +273,7 @@ export interface MediaStreamComposerInstance {
   getOutput(options?: MediaStreamComposerOutputRequest | 'mixed' | 'video' | 'audio'): Promise<MediaStream | null>;
   getMixedStream(): Promise<MediaStream>;
   getVideoStream(): MediaStream;
-  getAudioStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
+  getAudioStream(options?: { slots?: number[]; isolated?: boolean; audioContext?: 'shared' | 'isolated'; recreate?: boolean } | number[]): Promise<MediaStream | null>;
   getIsolatedSubmixAudioStream(options?: { slots?: number[] } | number[]): Promise<MediaStream | null>;
   releaseOutput(options: MediaStreamComposerOutputRequest): boolean;
   releaseSubmixAudioStream(options?: { slots?: number[]; isolated?: boolean } | number[]): boolean;

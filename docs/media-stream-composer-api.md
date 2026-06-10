@@ -408,7 +408,9 @@ const isolatedSubmix = await composer.getOutput({ type: 'audio', slots: [0, 1], 
 |------|------|------|
 | `options.type` | `'mixed' \| 'video' \| 'audio'` | 输出类型 |
 | `options.slots` | `number[]` | 子混音槽位列表，仅 `audio` 有效 |
-| `options.isolated` | `boolean` | 是否独立子混音，仅 `audio` 有效 |
+| `options.isolated` | `boolean` | 使用独立 `AudioContext` 创建该子混音 |
+| `options.audioContext` | `'shared' \| 'isolated'` | 显式选择共享或独立 `AudioContext` |
+| `options.recreate` | `boolean` | 兼容参数；普通 `slots` 子混音默认每次都会创建新的 destination track |
 
 | 返回值 | 说明 |
 |--------|------|
@@ -418,7 +420,8 @@ const isolatedSubmix = await composer.getOutput({ type: 'audio', slots: [0, 1], 
 说明：
 - `type: 'mixed'` 内部会先拿视频输出，再合入音频轨
 - `type: 'video'` 走统一新入口，但旧 `getVideoStream()` 仍保留同步兼容行为
-- `type: 'audio'` + `isolated: true` 会走独立子混音链路
+- `type: 'audio'` + `slots` 默认使用共享主 `AudioContext`，但每次调用都会创建新的子混音输出轨道
+- `type: 'audio'` + `isolated: true` 或 `audioContext: 'isolated'` 会创建独立 `AudioContext`
 
 **旧写法兼容：**
 
@@ -434,7 +437,7 @@ await composer.getIsolatedSubmixAudioStream({ slots: [0, 1] });
 释放通过 `getOutput({ type: 'audio', ... })` 创建的子混音资源。
 
 ```js
-composer.releaseOutput({ type: 'audio', slots: [0, 1], isolated: true });
+composer.releaseOutput({ type: 'audio', slots: [0, 1] });
 composer.releaseOutput({ type: 'audio', slots: [2, 3] });
 ```
 
