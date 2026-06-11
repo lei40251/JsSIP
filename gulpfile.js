@@ -3,10 +3,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const Transform = require('stream').Transform;
 const exec = require('child_process').exec;
 const browserify = require('browserify');
 const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
+const vinylSourcemap = require('vinyl-sourcemap');
 const gulp = require('gulp');
 const babel = require('gulp-babel');
 const rename = require('gulp-rename');
@@ -118,6 +120,19 @@ function logError(error)
   log(colors.red(String(error)));
 }
 
+// 将 browserify 输出中的 inline sourcemap 解析到 `file.sourceMap`，
+// 后续再交给 gulp.dest(..., { sourcemaps: '.' }) 写成外部 .map 文件。
+function loadInlineSourceMap()
+{
+  return new Transform({
+    objectMode : true,
+    transform(file, enc, callback)
+    {
+      vinylSourcemap.add(file, callback);
+    }
+  });
+}
+
 function getLocalTimestamp()
 {
   const d = new Date();
@@ -177,12 +192,13 @@ gulp.task('babel', function()
 gulp.task('browserify', function()
 {
   // `standalone` 让 dist 产物既可直接挂到 window，也能兼容模块系统引用。
+  // `debug: true` 让 browserify 先输出 inline sourcemap，后面会转成外部 .map 文件。
   return browserify(
     {
       entries      : 'lib-es5/JsSIP.js',
       extensions   : [ '.js' ],
-      // Required for sourcemaps (must be false otherwise).
-      debug        : false,
+      // browserify sourcemap 的起点；不要改回 false，否则后续无法串联 map。
+      debug        : true,
       // Required for watchify (not used here).
       cache        : null,
       // Required for watchify (not used here).
@@ -195,19 +211,21 @@ gulp.task('browserify', function()
     .on('error', logError)
     .pipe(source(`${PKG.title}.js`))
     .pipe(buffer())
+    .pipe(loadInlineSourceMap())
     .pipe(rename(`${PKG.title}.js`))
     // 将源码中的占位符替换为实际构建信息。
     .pipe(replace(/__VERSION__/g, `${PKG.version }.${buildTime}`))
     .pipe(replace(/__TITLE__/g, PKG.title))
     .pipe(header(BANNER, BANNER_OPTIONS))
-    .pipe(gulp.dest('dist/'));
+    // 输出 dist/CRTC.js，并将 sourcemap 写到 dist/maps/CRTC.js.map。
+    .pipe(gulp.dest('dist/', { sourcemaps: './maps' }));
 });
 
 gulp.task('uglify', function()
 {
   const src = `dist/${ PKG.title }.js`;
 
-  return gulp.src(src)
+  return gulp.src(src, { sourcemaps: true })
     .pipe(expect(EXPECT_OPTIONS, src))
     // 这里不用重型 obfuscator，只走 terser。
     // 原因是 obfuscator 对体积、构建速度和兼容性冲击都更大。
@@ -215,7 +233,8 @@ gulp.task('uglify', function()
     // banner 在压缩产物里同样保留。
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title }.min.js`))
-    .pipe(gulp.dest('dist/'));
+    // 基于上一阶段加载进来的 sourcemap 继续生成 dist/maps/CRTC.min.js.map。
+    .pipe(gulp.dest('dist/', { sourcemaps: './maps' }));
 });
 
 gulp.task('test-files', function()

@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266111233
+ * CRTC v2.0.0.20266111244
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -1113,6 +1113,7 @@ module.exports = function () {
   return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{}],5:[function(require,module,exports){
 "use strict";
 
@@ -3767,6 +3768,7 @@ class User {
 User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
+
 },{"../attributes/name.js":14,"../messages/floorRelease.js":21,"../messages/floorRequest.js":22,"../messages/floorRequestStatus.js":23,"../messages/floorRequestStatusAck.js":24,"../messages/floorStatus.js":25,"../messages/floorStatusAck.js":26,"../messages/hello.js":27,"../messages/helloAck.js":28,"../messages/primitive.js":31,"../messages/requestStatusValue.js":32,"../parser/parser.js":34,"buffer":93}],36:[function(require,module,exports){
 "use strict";
 
@@ -4020,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212222466 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212222488 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17229,7 +17231,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212222466');
+debug('version %s', '2.0.0.405212222488');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17269,7 +17271,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212222466';
+    return '2.0.0.405212222488';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -22250,6 +22252,7 @@ class OutputStreamManager {
 }
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{}],54:[function(require,module,exports){
 "use strict";
 
@@ -34030,6 +34033,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 };
 }).call(this)}).call(this,require("buffer").Buffer)
+
 },{"./BFCP/index":6,"./Constants":37,"./Dialog":38,"./Exceptions":41,"./Logger":44,"./RTCSession/DTMF":73,"./RTCSession/Info":74,"./RTCSession/MediaPipeline":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":93,"events":92,"sdp-transform":101}],73:[function(require,module,exports){
 "use strict";
 
@@ -43336,6 +43340,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
+
 },{"base64-js":91,"buffer":93,"ieee754":96}],94:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
@@ -43612,6 +43617,7 @@ formatters.j = function (v) {
 };
 
 }).call(this)}).call(this,require('_process'))
+
 },{"./common":95,"_process":99}],95:[function(require,module,exports){
 
 /**
@@ -50489,3 +50495,5 @@ module.exports = function (session, opts) {
 
 },{"./grammar":100}]},{},[43])(43)
 });
+
+//# sourceMappingURL=maps/CRTC.js.map
