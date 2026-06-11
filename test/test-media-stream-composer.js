@@ -4,6 +4,7 @@ const MediaStreamComposer = require('../lib/MediaStreamComposer');
 const ComposerConfig = require('../lib/MediaStreamComposer/Core/ComposerConfig');
 const WatermarkManager = require('../lib/MediaStreamComposer/Core/WatermarkManager');
 const WorkerRenderer = require('../lib/MediaStreamComposer/Renderers/WorkerRenderer');
+const workerScript = require('../lib/MediaStreamComposer/Renderers/workerScript');
 const vm = require('vm');
 
 let nextTrackId = 1;
@@ -1828,6 +1829,40 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
   mixer.stop();
 }
 
+async function testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto'
+  });
+
+  mixer.appendStream(createStream(), {
+    slot                : 0,
+    aiVirtualBackground : {
+      enabled  : true,
+      mode     : 'image',
+      imageUrl : 'background.png'
+    }
+  });
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+
+  mixer.setMirror(true);
+
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+
+  mixer.stop();
+}
+
 async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
 {
   resetMockState();
@@ -1953,6 +1988,90 @@ async function testSetSourceAiVirtualBackgroundKeepsWorkerRenderer()
   assert.strictEqual(mixer.getRenderInfo().isWorker, true);
 
   mixer.stop();
+}
+
+async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const createdImages = [];
+  const originalImage = global.Image;
+
+  global.Image = class MockImage
+  {
+    constructor()
+    {
+      this.onload = null;
+      this.onerror = null;
+      createdImages.push(this);
+    }
+
+    set src(value)
+    {
+      this._src = value;
+
+      if (typeof this.onload === 'function')
+      {
+        this.onload();
+      }
+    }
+
+    get src()
+    {
+      return this._src;
+    }
+  };
+
+  try
+  {
+    const mixer = new MediaStreamComposer([], {
+      width      : 320,
+      height     : 180,
+      fps        : 15,
+      renderMode : 'auto'
+    });
+
+    mixer.appendStream(createStream(), 0);
+    mixer.getVideoStream();
+    mixer._drawVideosToCanvas(undefined, true);
+
+    mixer.setSourceAiVirtualBackground(0, {
+      enabled  : true,
+      mode     : 'image',
+      imageUrl : 'background.png'
+    });
+
+    const source = mixer._sources[0];
+    const stateBeforeMirror = source && source.__aiVirtualBackgroundState;
+
+    assert.strictEqual(createdImages.length, 0);
+    assert.ok(stateBeforeMirror);
+    assert.strictEqual(stateBeforeMirror.backgroundImageStatus, 'idle');
+    assert.strictEqual(stateBeforeMirror.backgroundImage, null);
+
+    await mixer.setConfig({ outputMirror: true });
+
+    const stateAfterMirror = source && source.__aiVirtualBackgroundState;
+
+    assert.ok(stateAfterMirror);
+    assert.strictEqual(createdImages.length, 0);
+    assert.strictEqual(stateAfterMirror.backgroundImageStatus, 'idle');
+    assert.strictEqual(stateAfterMirror.backgroundImage, null);
+
+    mixer.stop();
+  }
+  finally
+  {
+    if (originalImage === undefined)
+    {
+      delete global.Image;
+    }
+    else
+    {
+      global.Image = originalImage;
+    }
+  }
 }
 
 async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
@@ -2291,6 +2410,275 @@ async function testWorkerWatermarkFrameFlipYOnlyForWebGL2()
   assert.strictEqual(calls.length, 2);
   assert.strictEqual(calls[0].options, undefined);
   assert.deepStrictEqual(calls[1].options, { imageOrientation: 'flipY' });
+}
+
+async function testWorkerVideoFrameDoesNotUseImageBitmapFlipY()
+{
+  resetMockState();
+  const calls = [];
+
+  global.createImageBitmap = function(source, options)
+  {
+    calls.push({ source, options });
+
+    return Promise.resolve({
+      source,
+      options,
+      close : function() {}
+    });
+  };
+  global.window.createImageBitmap = global.createImageBitmap;
+
+  const renderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {
+    actualMode : 'worker-webgl2'
+  });
+  const video = new MockVideoElement();
+
+  await renderer._createFrame(video);
+
+  assert.strictEqual(calls.length, 1);
+  assert.strictEqual(calls[0].options, undefined);
+}
+
+async function testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface()
+{
+  resetMockState();
+  const pixelStoreCalls = [];
+  const sourceFrame = {
+    width  : 320,
+    height : 180,
+    close  : function()
+    {
+      sourceFrame.closed = true;
+    }
+  };
+  const composedSurface = { width: 320, height: 180 };
+
+  const script = workerScript.createWorkerScript();
+
+  assert.ok(script);
+
+  const sandbox = {
+    OffscreenCanvas : class
+    {
+      constructor(width, height)
+      {
+        this.width = width;
+        this.height = height;
+      }
+
+      getContext(type)
+      {
+        if (type === '2d')
+        {
+          return {
+            clearRect() {},
+            drawImage() {},
+            save() {},
+            restore() {},
+            translate() {},
+            scale() {},
+            fillRect() {},
+            createImageData(width, height)
+            {
+              return {
+                data   : new Uint8ClampedArray(width * height * 4),
+                width  : width,
+                height : height
+              };
+            },
+            putImageData() {},
+            get filter() { return this._filter || ''; },
+            set filter(value) { this._filter = value; },
+            get globalCompositeOperation() { return this._gco || 'source-over'; },
+            set globalCompositeOperation(value) { this._gco = value; }
+          };
+        }
+
+        return {
+          VERTEX_SHADER       : 0x8B31,
+          FRAGMENT_SHADER     : 0x8B30,
+          COMPILE_STATUS      : 0x8B81,
+          LINK_STATUS         : 0x8B82,
+          ARRAY_BUFFER        : 0x8892,
+          STATIC_DRAW         : 0x88E4,
+          TEXTURE_2D          : 0x0DE1,
+          TEXTURE_WRAP_S      : 0x2802,
+          TEXTURE_WRAP_T      : 0x2803,
+          CLAMP_TO_EDGE       : 0x812F,
+          TEXTURE_MIN_FILTER  : 0x2801,
+          TEXTURE_MAG_FILTER  : 0x2800,
+          LINEAR              : 0x2601,
+          TEXTURE0            : 0x84C0,
+          COLOR_BUFFER_BIT    : 0x4000,
+          BLEND               : 0x0BE2,
+          SRC_ALPHA           : 0x0302,
+          ONE_MINUS_SRC_ALPHA : 0x0303,
+          UNPACK_FLIP_Y_WEBGL : 0x9240,
+          RGBA                : 0x1908,
+          UNSIGNED_BYTE       : 0x1401,
+          TRIANGLE_STRIP      : 0x0005,
+          FLOAT               : 0x1406, 
+          createShader() { return {}; },
+          shaderSource() {},
+          compileShader() {},
+          getShaderParameter() { return true; },
+          getShaderInfoLog() { return ''; },
+          deleteShader() {},
+          createProgram() { return {}; },
+          attachShader() {},
+          linkProgram() {},
+          getProgramParameter() { return true; },
+          getProgramInfoLog() { return ''; },
+          deleteProgram() {},
+          createBuffer() { return {}; },
+          bindBuffer() {},
+          bufferData() {},
+          useProgram() {},
+          getAttribLocation() { return 0; },
+          enableVertexAttribArray() {},
+          vertexAttribPointer() {},
+          getUniformLocation() { return {}; },
+          uniform1i() {},
+          uniform1f() {},
+          createTexture() { return {}; },
+          bindTexture() {},
+          texParameteri() {},
+          clearColor() {},
+          clear() {},
+          activeTexture() {},
+          disable() {},
+          enable() {},
+          blendFunc() {},
+          pixelStorei(pname, value)
+          {
+            pixelStoreCalls.push({ pname, value });
+          },
+          texImage2D() {},
+          viewport() {},
+          drawArrays() {},
+          flush() {},
+          deleteTexture() {},
+          deleteBuffer() {},
+          getExtension() { return null; }
+        };
+      }
+
+      transferToImageBitmap()
+      {
+        return {
+          close : function() {}
+        };
+      }
+    },
+    ImageBitmap : function() {},
+    fetch       : async function()
+    {
+      return {
+        ok   : true,
+        blob : async function()
+        {
+          return {};
+        }
+      };
+    },
+    createImageBitmap : async function()
+    {
+      return composedSurface;
+    },
+    performance : { now: () => 0 },
+    postMessage : function() {},
+    import      : async function()
+    {
+      return {
+        FilesetResolver : {
+          forVisionTasks : async function()
+          {
+            return {};
+          }
+        },
+        ImageSegmenter : {
+          createFromOptions : async function()
+          {
+            return {
+              getLabels : function()
+              {
+                return [ 'background', 'person' ];
+              },
+              segmentForVideo : function(input, timestamp, callback)
+              {
+                callback({
+                  confidenceMasks : [
+                    {
+                      width             : 2,
+                      height            : 2,
+                      getAsFloat32Array : function()
+                      {
+                        return new Float32Array([ 0, 1, 1, 0 ]);
+                      },
+                      close : function() {}
+                    }
+                  ]
+                });
+              },
+              close : async function() {}
+            };
+          }
+        }
+      };
+    },
+    self : {}
+  };
+
+  vm.runInNewContext(`${script}
+this.__workerTest = {
+  setActualMode : function(value) { actualMode = value; },
+  setDimensions : function(w, h) { width = w; height = h; },
+  setGl : function(mock) { gl = mock; },
+  setProgram : function(value) { program = value; },
+  setOpacityLocation : function(value) { opacityLocation = value; },
+  overrideGetRenderableSurface : function(fn) { getRenderableSurface = fn; },
+  renderWebGL2 : renderWebGL2
+};`, sandbox);
+
+  sandbox.__workerTest.setActualMode('worker-webgl2');
+  sandbox.__workerTest.setDimensions(320, 180);
+  sandbox.__workerTest.setProgram({});
+  sandbox.__workerTest.setOpacityLocation({});
+  sandbox.__workerTest.setGl(new sandbox.OffscreenCanvas(320, 180).getContext('webgl2'));
+  sandbox.__workerTest.overrideGetRenderableSurface(async function(item)
+  {
+    return item.aiVirtualBackground ? composedSurface : item.frame;
+  });
+
+  await sandbox.__workerTest.renderWebGL2({
+    backgroundColor : '#000',
+    items           : [
+      {
+        id                  : 'plain',
+        draw                : { x: 0, y: 0, width: 100, height: 100 },
+        mirrorX             : false,
+        aiVirtualBackground : null,
+        frame               : sourceFrame
+      },
+      {
+        id                  : 'aivb',
+        draw                : { x: 0, y: 0, width: 100, height: 100 },
+        mirrorX             : false,
+        aiVirtualBackground : {
+          enabled : true,
+          mode    : 'color'
+        },
+        frame : sourceFrame
+      }
+    ],
+    sourceWatermarks : [],
+    outputWatermarks : []
+  });
+
+  assert.strictEqual(pixelStoreCalls.length >= 2, true);
+  assert.strictEqual(pixelStoreCalls[0].value, true);
+  assert.strictEqual(pixelStoreCalls[1].value, true);
 }
 
 async function testWorkerRendererKeepsEmptyPayload()
@@ -2686,10 +3074,12 @@ async function run()
     { name: 'testClearSourceMirrorWithoutSlotClearsAllOverrides', fn: testClearSourceMirrorWithoutSlotClearsAllOverrides },
     { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
+    { name: 'testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground', fn: testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground },
     { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
     { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer },
     { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },
+    { name: 'testOutputMirrorDoesNotPreloadAiVBBackgroundImage', fn: testOutputMirrorDoesNotPreloadAiVBBackgroundImage },
     { name: 'testMainWebGL2AiVirtualBackgroundUsesMainThreadManager', fn: testMainWebGL2AiVirtualBackgroundUsesMainThreadManager },
     { name: 'testInitialSourcesArrayMapsSourceOptionsByIndex', fn: testInitialSourcesArrayMapsSourceOptionsByIndex },
     { name: 'testEmptyInitialRenderDoesNotCreateRenderer', fn: testEmptyInitialRenderDoesNotCreateRenderer },
@@ -2700,6 +3090,8 @@ async function run()
     { name: 'testWatermarkPresetAndCoordinatePositions', fn: testWatermarkPresetAndCoordinatePositions },
     { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
     { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
+    { name: 'testWorkerVideoFrameDoesNotUseImageBitmapFlipY', fn: testWorkerVideoFrameDoesNotUseImageBitmapFlipY },
+    { name: 'testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface', fn: testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
     { name: 'testWorkerRendererPassesBitmapToInsertableFrameCallback', fn: testWorkerRendererPassesBitmapToInsertableFrameCallback },
     { name: 'testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath', fn: testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath },

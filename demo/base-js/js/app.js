@@ -2093,7 +2093,6 @@ async function applyCurrentComposerSettingsToSession()
       applyVirtualBackgroundSelection(sessionComposer);
     }
 
-    rtcSession && rtcSession.connection && getStreams(rtcSession.connection);
     setStatus('已应用当前镜像/水印设置到当前通话');
   }
   catch (error)
@@ -2419,12 +2418,14 @@ function getStreams(pc)
     // 本地视频
     newCloneStream = new MediaStream(mediaStreamArray);
 
-    localVideo.srcObject = newCloneStream;
-    newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function() 
+    if (bindMediaStreamIfChanged(localVideo, newCloneStream))
     {
-      // 特殊情况下清理页面残留的video黑框
-      localVideo.srcObject = null;
-    });
+      newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function() 
+      {
+        // 特殊情况下清理页面残留的video黑框
+        localVideo.srcObject = null;
+      });
+    }
   }
 
   // 停止旧的媒体流
@@ -2444,7 +2445,7 @@ function getStreams(pc)
   // 适配安卓微信部分情况下无声音问题 trackId
   setTimeout(() => 
   {
-    remoteAudio.srcObject = remoteStream.audioStream;
+    bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
 
     /**
      * 兼容chrome
@@ -2455,15 +2456,17 @@ function getStreams(pc)
       .catch(() => { });
   }, 100);
   // 远端视频
-  remoteVideo.srcObject = remoteStream.mediaStream;
-  remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function() 
+  if (bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream))
   {
-    // 特殊情况下清理页面残留的video黑框
-    if (!tmpSession) 
+    remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function() 
     {
-      remoteVideo.srcObject = null;
-    }
-  });
+      // 特殊情况下清理页面残留的video黑框
+      if (!tmpSession) 
+      {
+        remoteVideo.srcObject = null;
+      }
+    });
+  }
 
   /**
    * 兼容chrome
@@ -3175,14 +3178,48 @@ async function applyVirtualBackgroundToCurrentSession()
     {
       applyVirtualBackgroundSelection(sessionComposer);
     }
-
-    rtcSession && rtcSession.connection && getStreams(rtcSession.connection);
   }
   catch (error)
   {
     console.warn('applyVirtualBackgroundToCurrentSession error', error);
     setStatus(`应用虚拟背景失败：${error && error.message ? error.message : error}`);
   }
+}
+
+function hasSameTrackSet(stream, tracks)
+{
+  if (!(stream instanceof MediaStream))
+  {
+    return false;
+  }
+
+  const currentTracks = stream.getTracks();
+
+  if (currentTracks.length !== tracks.length)
+  {
+    return false;
+  }
+
+  return currentTracks.every((track, index) => track === tracks[index]);
+}
+
+function bindMediaStreamIfChanged(mediaEl, stream)
+{
+  if (!mediaEl)
+  {
+    return false;
+  }
+
+  const nextTracks = stream instanceof MediaStream ? stream.getTracks() : [];
+
+  if (stream instanceof MediaStream && hasSameTrackSet(mediaEl.srcObject, nextTracks))
+  {
+    return false;
+  }
+
+  mediaEl.srcObject = stream || null;
+
+  return true;
 }
 
 async function stopVirtualBackgroundPreview(options = {})

@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026611042
+ * CRTC v2.0.0.2026611959
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4162,7 +4162,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212220084 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212221918 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17371,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212220084');
+debug('version %s', '2.0.0.405212221918');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17411,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212220084';
+    return '2.0.0.405212221918';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -20651,7 +20651,7 @@ class MediaStreamComposer {
     });
     this._config.aiVirtualBackgroundManager = this._sourceAiVBManager;
     this._config.hasSourceAiVirtualBackground = false;
-    this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX || this._config.outputMirrorX);
+    this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX);
     this._slotMirrorXOverrides = Object.create(null);
     this._domAdapter = new ComposerDomAdapter({
       config: this._config,
@@ -20891,13 +20891,21 @@ class MediaStreamComposer {
   _hasSourceAiVirtualBackgroundEnabled() {
     return this._sources.some(source => this._sourceAiVBManager.hasEnabledEffect(source));
   }
+  _preloadSourceAiVBRenderAssets() {
+    this._sources.forEach(source => {
+      if (!source || !source.video) {
+        return;
+      }
+      this._sourceAiVBManager.preloadRenderAssets(source, source.video);
+    });
+  }
   _requiresMain2DRenderer() {
     return false;
   }
   _refreshRendererPolicyForEffects() {
     var hasSourceAiVirtualBackground = this._hasSourceAiVirtualBackgroundEnabled();
     var shouldForceMain2D = this._requiresMain2DRenderer();
-    var shouldForceMainThread = this._isMirrorEnabled() || this._isOutputMirrorEnabled() || shouldForceMain2D;
+    var shouldForceMainThread = this._isMirrorEnabled() || shouldForceMain2D;
     var previousPolicy = this._config.forceMainThreadRenderer;
     var previousMain2DPolicy = this._config.forceMain2DRenderer;
     var previousAiVBPolicy = this._config.hasSourceAiVirtualBackground;
@@ -21346,6 +21354,7 @@ class MediaStreamComposer {
     patch = patch || {};
     var needsMirrorPolicyRefresh = false;
     var needsForceRender = false;
+    var shouldPreloadAiVBRenderAssets = false;
     if (Object.prototype.hasOwnProperty.call(patch, 'outputMirror')) {
       this._config.outputMirrorX = Boolean(patch.outputMirror);
       needsMirrorPolicyRefresh = true;
@@ -21359,11 +21368,13 @@ class MediaStreamComposer {
       this._config.mirrorX = Boolean(patch.sourceMirror);
       needsMirrorPolicyRefresh = true;
       needsForceRender = true;
+      shouldPreloadAiVBRenderAssets = true;
     }
     if (patch.clearSourceMirrorOverrides === true) {
       this._slotMirrorXOverrides = Object.create(null);
       needsMirrorPolicyRefresh = true;
       needsForceRender = true;
+      shouldPreloadAiVBRenderAssets = true;
     }
     if (patch.sourceMirrorOverrides && typeof patch.sourceMirrorOverrides === 'object') {
       Object.keys(patch.sourceMirrorOverrides).forEach(slotKey => {
@@ -21381,6 +21392,7 @@ class MediaStreamComposer {
       });
       needsMirrorPolicyRefresh = true;
       needsForceRender = true;
+      shouldPreloadAiVBRenderAssets = true;
     }
     if (Object.prototype.hasOwnProperty.call(patch, 'watermarks')) {
       await this._watermarkManager.setWatermarks(patch.watermarks);
@@ -21391,6 +21403,9 @@ class MediaStreamComposer {
       needsForceRender = true;
     }
     if (needsMirrorPolicyRefresh) {
+      if (shouldPreloadAiVBRenderAssets) {
+        this._preloadSourceAiVBRenderAssets();
+      }
       this._refreshRendererPolicyForEffects();
     }
     if (needsForceRender) {
@@ -23062,6 +23077,18 @@ module.exports = class SourceAiVBManager {
   }
   hasEnabledEffect(source) {
     return isEffectEnabled(source && source.aiVirtualBackground);
+  }
+  preloadRenderAssets(source, videoElement) {
+    if (!source || !this.hasEnabledEffect(source)) {
+      return;
+    }
+    var state = this._ensureState(source);
+    var config = source.aiVirtualBackground;
+    state.config = config;
+    if (!this._isVideoReadyForSegmentation(videoElement)) {
+      return;
+    }
+    this._ensureBackgroundImage(state);
   }
   getRenderableState(source, videoElement) {
     if (!source || !this.hasEnabledEffect(source)) {
@@ -25767,6 +25794,8 @@ module.exports = class WorkerRenderer extends BaseRenderer {
           width: payload.width,
           height: payload.height,
           backgroundColor: payload.backgroundColor,
+          outputMirrorX: Boolean(payload.outputMirrorX),
+          mirrorWatermarksWithOutput: payload.mirrorWatermarksWithOutput !== false,
           items: result.items,
           sourceWatermarks: result.sourceWatermarks,
           outputWatermarks: result.outputWatermarks
@@ -25901,10 +25930,6 @@ module.exports = class WorkerRenderer extends BaseRenderer {
    *   1. createImageBitmap(video) — 广泛支持，优先使用
    *   2. new VideoFrame(video) — VideoFrame API，部分浏览器支持
    *
-   * WebGL2 Worker 路径：ImageBitmap 上传到 WebGL 时浏览器可能不再处理
-   * UNPACK_FLIP_Y_WEBGL，因此在抽帧阶段传入 { imageOrientation: 'flipY' }
-   * 来补偿翻转。
-   *
    * @param {HTMLVideoElement} video - 输入 video 元素
    * @returns {Promise<ImageBitmap|VideoFrame>} 抽取的帧
    */
@@ -25912,10 +25937,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     var VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
     if (this._frameFactory === 'imagebitmap' || this._frameFactory === null && typeof createImageBitmap !== 'undefined') {
       try {
-        var bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
-          imageOrientation: 'flipY'
-        } : undefined;
-        var bitmap = bitmapOptions ? await createImageBitmap(video, bitmapOptions) : await createImageBitmap(video);
+        var bitmap = await createImageBitmap(video);
         this._frameFactory = 'imagebitmap';
         return bitmap;
       } catch (error) {
@@ -26262,7 +26284,10 @@ var requestedMode = 'auto';
 var width = 0;
 var height = 0;
 var backgroundColor = '#000';
+var outputMirrorX = false;
+var mirrorWatermarksWithOutput = true;
 var opacityLocation = null;
+var mirrorTexCoordBuffer = null;
 var aivbSourceStates = Object.create(null);
 var aivbRuntimeStates = Object.create(null);
 var aivbModulePromises = Object.create(null);
@@ -26608,22 +26633,25 @@ function createMaskCanvas(sourceState, runtimeState, result)
   return maskSurface.canvas;
 }
 
-function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX)
+function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY)
 {
   if (!targetContext || !surface)
   {
     return;
   }
 
-  if (!mirrorX)
+  if (!mirrorX && !flipY)
   {
     targetContext.drawImage(surface, x, y, drawWidth, drawHeight);
     return;
   }
 
   targetContext.save();
-  targetContext.translate(x + drawWidth, y);
-  targetContext.scale(-1, 1);
+  targetContext.translate(
+    mirrorX ? x + drawWidth : x,
+    flipY ? y + drawHeight : y
+  );
+  targetContext.scale(mirrorX ? -1 : 1, flipY ? -1 : 1);
   targetContext.drawImage(surface, 0, 0, drawWidth, drawHeight);
   targetContext.restore();
 }
@@ -26669,6 +26697,26 @@ function drawCoverSurface(targetContext, surface, drawWidth, drawHeight)
   );
 
   return true;
+}
+
+function resolveDrawRect(draw, applyMirror)
+{
+  if (!draw)
+  {
+    return null;
+  }
+
+  if (!applyMirror)
+  {
+    return draw;
+  }
+
+  return {
+    x      : width - draw.x - draw.width,
+    y      : draw.y,
+    width  : draw.width,
+    height : draw.height
+  };
 }
 
 async function ensureBackgroundImage(url)
@@ -26777,7 +26825,7 @@ function buildSegmentationInput(sourceState, frame, config)
   }
 
   segmentationSurface.context.clearRect(0, 0, targetWidth, targetHeight);
-  segmentationSurface.context.drawImage(frame, 0, 0, targetWidth, targetHeight);
+  drawSurfaceToContext(segmentationSurface.context, frame, 0, 0, targetWidth, targetHeight, false, false);
 
   return segmentationSurface.canvas;
 }
@@ -26872,7 +26920,7 @@ async function getRenderableSurface(item)
   }
 
   foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
-  drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX));
+  drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
   foregroundSurface.context.globalCompositeOperation = 'destination-in';
   foregroundSurface.context.drawImage(mask, 0, 0, drawWidth, drawHeight);
   foregroundSurface.context.globalCompositeOperation = 'source-over';
@@ -26883,7 +26931,7 @@ async function getRenderableSurface(item)
   {
     outputSurface.context.save();
     outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
-    drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX));
+    drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
     outputSurface.context.restore();
   }
   else if (item.aiVirtualBackground.mode === 'image')
@@ -26984,6 +27032,10 @@ function initWebGL2()
   gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 0, 0, 1, 0, 0, 1, 1, 1 ]), gl.STATIC_DRAW);
 
+  mirrorTexCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, mirrorTexCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 1, 0, 0, 0, 1, 1, 0, 1 ]), gl.STATIC_DRAW);
+
   gl.useProgram(program);
   enableAttribute('a_position', positionBuffer);
   enableAttribute('a_texCoord', texCoordBuffer);
@@ -27011,6 +27063,8 @@ async function render(payload)
     width = payload.width || width;
     height = payload.height || height;
     backgroundColor = payload.backgroundColor || backgroundColor;
+    outputMirrorX = Boolean(payload.outputMirrorX);
+    mirrorWatermarksWithOutput = payload.mirrorWatermarksWithOutput !== false;
 
     if (canvas.width !== width)
     {
@@ -27080,20 +27134,21 @@ async function renderWebGL2(payload)
 
     var surface = await getRenderableSurface(item);
     var texture = getTexture(item.id);
+    var draw = resolveDrawRect(item.draw, outputMirrorX);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
     gl.uniform1f(opacityLocation, 1);
-    drawRect(item.draw);
+    drawRect(draw, Boolean(item.mirrorX) !== outputMirrorX);
   }
 
-  drawWatermarksWebGL2(payload.sourceWatermarks || []);
-  drawWatermarksWebGL2(payload.outputWatermarks || []);
+  drawWatermarksWebGL2(payload.sourceWatermarks || [], outputMirrorX);
+  drawWatermarksWebGL2(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
   gl.flush();
 }
 
-function drawWatermarksWebGL2(watermarks)
+function drawWatermarksWebGL2(watermarks, applyMirror)
 {
   if (!watermarks.length)
   {
@@ -27116,13 +27171,13 @@ function drawWatermarksWebGL2(watermarks)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.frame);
     gl.uniform1f(opacityLocation, typeof watermark.opacity === 'number' ? clamp(watermark.opacity, 0, 1) : 1);
-    drawRect(watermark.draw);
+    drawRect(resolveDrawRect(watermark.draw, applyMirror), Boolean(applyMirror));
   });
 
   gl.disable(gl.BLEND);
 }
 
-function drawRect(draw)
+function drawRect(draw, mirrorX)
 {
   var left = Math.round(draw.x);
   var top = Math.round(height - draw.y - draw.height);
@@ -27134,6 +27189,7 @@ function drawRect(draw)
     return;
   }
 
+  enableAttribute('a_texCoord', mirrorX ? mirrorTexCoordBuffer : texCoordBuffer);
   gl.viewport(left, top, drawWidth, drawHeight);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
@@ -27155,15 +27211,16 @@ async function renderCanvas2D(payload)
     }
 
     var surface = await getRenderableSurface(item);
+    var draw = resolveDrawRect(item.draw, outputMirrorX);
 
-    ctx.drawImage(surface, item.draw.x, item.draw.y, item.draw.width, item.draw.height);
+    drawSurfaceToContext(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
   }
 
-  drawWatermarksCanvas2D(payload.sourceWatermarks || []);
-  drawWatermarksCanvas2D(payload.outputWatermarks || []);
+  drawWatermarksCanvas2D(payload.sourceWatermarks || [], outputMirrorX);
+  drawWatermarksCanvas2D(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
 }
 
-function drawWatermarksCanvas2D(watermarks)
+function drawWatermarksCanvas2D(watermarks, applyMirror)
 {
   watermarks.forEach(function(watermark)
   {
@@ -27174,8 +27231,10 @@ function drawWatermarksCanvas2D(watermarks)
 
     var previousAlpha = ctx.globalAlpha;
 
+    var draw = resolveDrawRect(watermark.draw, applyMirror);
+
     ctx.globalAlpha = typeof watermark.opacity === 'number' ? watermark.opacity : 1;
-    ctx.drawImage(watermark.frame, watermark.draw.x, watermark.draw.y, watermark.draw.width, watermark.draw.height);
+    drawSurfaceToContext(ctx, watermark.frame, draw.x, draw.y, draw.width, draw.height, Boolean(applyMirror), false);
     ctx.globalAlpha = previousAlpha;
   });
 }
@@ -27350,6 +27409,11 @@ function destroyWebGL2()
     gl.deleteBuffer(texCoordBuffer);
   }
 
+  if (mirrorTexCoordBuffer)
+  {
+    gl.deleteBuffer(mirrorTexCoordBuffer);
+  }
+
   if (program)
   {
     gl.deleteProgram(program);
@@ -27366,6 +27430,7 @@ function destroyWebGL2()
   program = null;
   positionBuffer = null;
   texCoordBuffer = null;
+  mirrorTexCoordBuffer = null;
   opacityLocation = null;
 }
 
