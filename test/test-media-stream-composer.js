@@ -1657,9 +1657,10 @@ async function testMirrorGlobalAndSlotControls()
   assert.throws(() => mixer.setSourceMirror(true), /has been stopped/);
 }
 
-async function testMirrorAutoModeAvoidsWorkerRenderer()
+async function testMirrorAutoModeKeepsWorkerRenderer()
 {
   resetMockState();
+  MockCanvasElement.webgl2Supported = true;
 
   const mixer = new MediaStreamComposer([], {
     width        : 320,
@@ -1675,16 +1676,17 @@ async function testMirrorAutoModeAvoidsWorkerRenderer()
 
   const info = mixer.getRenderInfo();
 
-  assert.strictEqual(MockWorker.instances.length, 0);
-  assert.strictEqual(info.isWorker, false);
-  assert.notStrictEqual(info.actualMode, 'worker-init');
+  assert.strictEqual(MockWorker.instances.length, 1);
+  assert.strictEqual(info.isWorker, true);
+  assert.strictEqual(info.actualMode, 'worker-init');
 
   mixer.stop();
 }
 
-async function testEnableMirrorFallsBackFromWorkerToMainThread()
+async function testEnableMirrorKeepsCurrentRendererUntilFailure()
 {
   resetMockState();
+  MockCanvasElement.webgl2Supported = true;
 
   const mixer = new MediaStreamComposer([], {
     width        : 320,
@@ -1705,8 +1707,8 @@ async function testEnableMirrorFallsBackFromWorkerToMainThread()
 
   const info = mixer.getRenderInfo();
 
-  assert.strictEqual(info.actualMode, 'main-2d');
-  assert.strictEqual(info.isWorker, false);
+  assert.strictEqual(info.actualMode, 'worker-init');
+  assert.strictEqual(info.isWorker, true);
   assert.deepStrictEqual(mixer.getSourceMirror(), { global: true, overrides: {} });
 
   mixer.stop();
@@ -1856,6 +1858,33 @@ async function testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground()
   assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
 
   mixer.setMirror(true);
+
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+
+  mixer.stop();
+}
+
+async function testSourceMirrorKeepsWorkerRenderer()
+{
+  resetMockState();
+  MockCanvasElement.webgl2Supported = true;
+
+  const mixer = new MediaStreamComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'auto'
+  });
+
+  mixer.appendStream(createStream(), 0);
+  mixer.getVideoStream();
+  mixer._drawVideosToCanvas(undefined, true);
+
+  assert.strictEqual(mixer.getRenderInfo().isWorker, true);
+  assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
+
+  mixer.setSourceMirror(true);
 
   assert.strictEqual(mixer.getRenderInfo().isWorker, true);
   assert.strictEqual(mixer.getRenderInfo().actualMode, 'worker-init');
@@ -2382,34 +2411,9 @@ async function testWorkerRendererCarriesWatermarkPayload()
 async function testWorkerWatermarkFrameFlipYOnlyForWebGL2()
 {
   resetMockState();
-  const calls = [];
+  const script = workerScript.createWorkerScript();
 
-  global.createImageBitmap = function(source, options)
-  {
-    calls.push({ source, options });
-
-    return Promise.resolve({
-      source,
-      options,
-      close : function() {}
-    });
-  };
-  global.window.createImageBitmap = global.createImageBitmap;
-
-  const worker2dRenderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {
-    actualMode : 'worker-2d'
-  });
-  const workerWebglRenderer = new WorkerRenderer({ backgroundColor: '#000', maxFrameQueue: 1 }, {
-    actualMode : 'worker-webgl2'
-  });
-  const image = { width: 10, height: 10 };
-
-  await worker2dRenderer._createWatermarkFrame(image);
-  await workerWebglRenderer._createWatermarkFrame(image);
-
-  assert.strictEqual(calls.length, 2);
-  assert.strictEqual(calls[0].options, undefined);
-  assert.deepStrictEqual(calls[1].options, { imageOrientation: 'flipY' });
+  assert.ok(script.includes('gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);'));
 }
 
 async function testWorkerVideoFrameDoesNotUseImageBitmapFlipY()
@@ -2440,7 +2444,7 @@ async function testWorkerVideoFrameDoesNotUseImageBitmapFlipY()
   assert.strictEqual(calls[0].options, undefined);
 }
 
-async function testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface()
+async function testWorkerWebGL2AiVBUsesNonFlippedUploadForBothRawAndCompositedSurface()
 {
   resetMockState();
   const pixelStoreCalls = [];
@@ -2677,8 +2681,169 @@ this.__workerTest = {
   });
 
   assert.strictEqual(pixelStoreCalls.length >= 2, true);
+  assert.strictEqual(pixelStoreCalls[0].value, false);
+  assert.strictEqual(pixelStoreCalls[1].value, false);
+}
+
+async function testWorkerWebGL2WatermarkUploadUsesFlipY()
+{
+  resetMockState();
+  const pixelStoreCalls = [];
+  const script = workerScript.createWorkerScript();
+
+  const sandbox = {
+    OffscreenCanvas : class
+    {
+      constructor(width, height)
+      {
+        this.width = width;
+        this.height = height;
+      }
+
+      getContext(type)
+      {
+        if (type === '2d')
+        {
+          return {
+            clearRect() {},
+            drawImage() {},
+            save() {},
+            restore() {},
+            translate() {},
+            scale() {},
+            fillRect() {}
+          };
+        }
+
+        return {
+          VERTEX_SHADER       : 0x8B31,
+          FRAGMENT_SHADER     : 0x8B30,
+          COMPILE_STATUS      : 0x8B81,
+          LINK_STATUS         : 0x8B82,
+          ARRAY_BUFFER        : 0x8892,
+          STATIC_DRAW         : 0x88E4,
+          TEXTURE_2D          : 0x0DE1,
+          TEXTURE_WRAP_S      : 0x2802,
+          TEXTURE_WRAP_T      : 0x2803,
+          CLAMP_TO_EDGE       : 0x812F,
+          TEXTURE_MIN_FILTER  : 0x2801,
+          TEXTURE_MAG_FILTER  : 0x2800,
+          LINEAR              : 0x2601,
+          TEXTURE0            : 0x84C0,
+          COLOR_BUFFER_BIT    : 0x4000,
+          BLEND               : 0x0BE2,
+          SRC_ALPHA           : 0x0302,
+          ONE_MINUS_SRC_ALPHA : 0x0303,
+          UNPACK_FLIP_Y_WEBGL : 0x9240,
+          RGBA                : 0x1908,
+          UNSIGNED_BYTE       : 0x1401,
+          TRIANGLE_STRIP      : 0x0005,
+          FLOAT               : 0x1406,
+          createShader() { return {}; },
+          shaderSource() {},
+          compileShader() {},
+          getShaderParameter() { return true; },
+          getShaderInfoLog() { return ''; },
+          deleteShader() {},
+          createProgram() { return {}; },
+          attachShader() {},
+          linkProgram() {},
+          getProgramParameter() { return true; },
+          getProgramInfoLog() { return ''; },
+          deleteProgram() {},
+          createBuffer() { return {}; },
+          bindBuffer() {},
+          bufferData() {},
+          useProgram() {},
+          getAttribLocation() { return 0; },
+          enableVertexAttribArray() {},
+          vertexAttribPointer() {},
+          getUniformLocation() { return {}; },
+          uniform1i() {},
+          uniform1f() {},
+          createTexture() { return {}; },
+          bindTexture() {},
+          texParameteri() {},
+          clearColor() {},
+          clear() {},
+          activeTexture() {},
+          disable() {},
+          enable() {},
+          blendFunc() {},
+          pixelStorei(pname, value)
+          {
+            pixelStoreCalls.push({ pname, value });
+          },
+          texImage2D() {},
+          viewport() {},
+          drawArrays() {},
+          flush() {},
+          deleteTexture() {},
+          deleteBuffer() {},
+          getExtension() { return null; }
+        };
+      }
+
+      transferToImageBitmap()
+      {
+        return {
+          close : function() {}
+        };
+      }
+    },
+    ImageBitmap : function() {},
+    fetch       : async function()
+    {
+      return {
+        ok   : true,
+        blob : async function()
+        {
+          return {};
+        }
+      };
+    },
+    createImageBitmap : async function(input)
+    {
+      return input;
+    },
+    performance : { now: () => 0 },
+    postMessage : function() {},
+    import      : async function() { return {}; },
+    self        : {}
+  };
+
+  vm.runInNewContext(`${script}
+this.__workerTest = {
+  setActualMode : function(value) { actualMode = value; },
+  setDimensions : function(w, h) { width = w; height = h; },
+  setGl : function(mock) { gl = mock; },
+  setProgram : function(value) { program = value; },
+  setOpacityLocation : function(value) { opacityLocation = value; },
+  renderWebGL2 : renderWebGL2
+};`, sandbox);
+
+  sandbox.__workerTest.setActualMode('worker-webgl2');
+  sandbox.__workerTest.setDimensions(320, 180);
+  sandbox.__workerTest.setProgram({});
+  sandbox.__workerTest.setOpacityLocation({});
+  sandbox.__workerTest.setGl(new sandbox.OffscreenCanvas(320, 180).getContext('webgl2'));
+
+  await sandbox.__workerTest.renderWebGL2({
+    backgroundColor  : '#000',
+    items            : [],
+    sourceWatermarks : [
+      {
+        id      : 'wm-1',
+        frame   : { width: 40, height: 20 },
+        draw    : { x: 10, y: 12, width: 40, height: 20 },
+        opacity : 1
+      }
+    ],
+    outputWatermarks : []
+  });
+
+  assert.strictEqual(pixelStoreCalls.length, 1);
   assert.strictEqual(pixelStoreCalls[0].value, true);
-  assert.strictEqual(pixelStoreCalls[1].value, true);
 }
 
 async function testWorkerRendererKeepsEmptyPayload()
@@ -2784,6 +2949,8 @@ async function testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath()
   assert.strictEqual(received[0].frameSource, null);
   assert.strictEqual(received[0].frameSourceConsumed, false);
   assert.strictEqual(bitmap.closed, true);
+  assert.strictEqual(canvas._context2d.operations.some((operation) => operation.type === 'translate' && operation.x === 0 && operation.y === canvas.height), true);
+  assert.strictEqual(canvas._context2d.operations.some((operation) => operation.type === 'scale' && operation.x === 1 && operation.y === -1), true);
 }
 
 async function testComposerConfigDefaults()
@@ -3069,12 +3236,13 @@ async function run()
     { name: 'testCanvas2DWatermarkDrawOrder', fn: testCanvas2DWatermarkDrawOrder },
     { name: 'testMainWebGL2WatermarkOpacity', fn: testMainWebGL2WatermarkOpacity },
     { name: 'testMirrorGlobalAndSlotControls', fn: testMirrorGlobalAndSlotControls },
-    { name: 'testMirrorAutoModeAvoidsWorkerRenderer', fn: testMirrorAutoModeAvoidsWorkerRenderer },
-    { name: 'testEnableMirrorFallsBackFromWorkerToMainThread', fn: testEnableMirrorFallsBackFromWorkerToMainThread },
+    { name: 'testMirrorAutoModeKeepsWorkerRenderer', fn: testMirrorAutoModeKeepsWorkerRenderer },
+    { name: 'testEnableMirrorKeepsCurrentRendererUntilFailure', fn: testEnableMirrorKeepsCurrentRendererUntilFailure },
     { name: 'testClearSourceMirrorWithoutSlotClearsAllOverrides', fn: testClearSourceMirrorWithoutSlotClearsAllOverrides },
     { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground', fn: testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground },
+    { name: 'testSourceMirrorKeepsWorkerRenderer', fn: testSourceMirrorKeepsWorkerRenderer },
     { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
     { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer },
@@ -3091,7 +3259,8 @@ async function run()
     { name: 'testWorkerRendererCarriesWatermarkPayload', fn: testWorkerRendererCarriesWatermarkPayload },
     { name: 'testWorkerWatermarkFrameFlipYOnlyForWebGL2', fn: testWorkerWatermarkFrameFlipYOnlyForWebGL2 },
     { name: 'testWorkerVideoFrameDoesNotUseImageBitmapFlipY', fn: testWorkerVideoFrameDoesNotUseImageBitmapFlipY },
-    { name: 'testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface', fn: testWorkerWebGL2AiVBUsesFlippedUploadForBothRawAndCompositedSurface },
+    { name: 'testWorkerWebGL2AiVBUsesNonFlippedUploadForBothRawAndCompositedSurface', fn: testWorkerWebGL2AiVBUsesNonFlippedUploadForBothRawAndCompositedSurface },
+    { name: 'testWorkerWebGL2WatermarkUploadUsesFlipY', fn: testWorkerWebGL2WatermarkUploadUsesFlipY },
     { name: 'testWorkerRendererKeepsEmptyPayload', fn: testWorkerRendererKeepsEmptyPayload },
     { name: 'testWorkerRendererPassesBitmapToInsertableFrameCallback', fn: testWorkerRendererPassesBitmapToInsertableFrameCallback },
     { name: 'testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath', fn: testWorkerWebGL2AiVBDisablesDirectInsertableBitmapPath },

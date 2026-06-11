@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266111244
+ * CRTC v2.0.0.20266111448
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4022,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212222488 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212222896 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17231,7 +17231,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212222488');
+debug('version %s', '2.0.0.405212222896');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17271,7 +17271,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212222488';
+    return '2.0.0.405212222896';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -20549,7 +20549,8 @@ class MediaStreamComposer {
     });
     this._config.aiVirtualBackgroundManager = this._sourceAiVBManager;
     this._config.hasSourceAiVirtualBackground = false;
-    this._config.forceMainThreadRenderer = Boolean(this._config.mirrorX);
+    this._config.forceMainThreadRenderer = false;
+    this._config.forceMain2DRenderer = false;
     this._slotMirrorXOverrides = Object.create(null);
     this._domAdapter = new ComposerDomAdapter({
       config: this._config,
@@ -20773,43 +20774,13 @@ class MediaStreamComposer {
       this._sourceAiVBManager.preloadRenderAssets(source, source.video);
     });
   }
-  _requiresMain2DRenderer() {
-    return false;
-  }
   _refreshRendererPolicyForEffects() {
     var hasSourceAiVirtualBackground = this._hasSourceAiVirtualBackgroundEnabled();
-    var shouldForceMain2D = this._requiresMain2DRenderer();
-    var shouldForceMainThread = this._isMirrorEnabled() || shouldForceMain2D;
-    var previousPolicy = this._config.forceMainThreadRenderer;
-    var previousMain2DPolicy = this._config.forceMain2DRenderer;
     var previousAiVBPolicy = this._config.hasSourceAiVirtualBackground;
     this._config.hasSourceAiVirtualBackground = hasSourceAiVirtualBackground;
-    this._config.forceMainThreadRenderer = shouldForceMainThread;
-    this._config.forceMain2DRenderer = shouldForceMain2D;
-    if (previousPolicy !== shouldForceMainThread) {
-      logger.debug(`Effect renderer policy updated: forceMainThread=${shouldForceMainThread}`);
-    }
-    if (previousMain2DPolicy !== shouldForceMain2D) {
-      logger.debug(`Effect renderer policy updated: forceMain2D=${shouldForceMain2D}`);
-    }
     if (previousAiVBPolicy !== hasSourceAiVirtualBackground) {
       logger.debug(`Effect renderer policy updated: hasSourceAiVirtualBackground=${hasSourceAiVirtualBackground}`);
     }
-    if (!this._renderer || !this._renderer.getInfo) {
-      return;
-    }
-    var info = this._renderer.getInfo();
-    if (!shouldForceMainThread) {
-      return;
-    }
-    if (shouldForceMain2D && info.actualMode !== 'main-2d') {
-      this._fallbackRendererToMain2D('Active source AI virtual background requires main-thread Canvas2D');
-      return;
-    }
-    if (!info.isWorker) {
-      return;
-    }
-    this._fallbackRendererToMainThread('Active source/output effects require a main-thread renderer');
   }
 
   /**
@@ -22530,20 +22501,13 @@ class RenderLoop {
       this._renderer.destroy();
     }
     if (this._config.renderMode === 'auto' && currentInfo.actualMode !== 'worker-2d') {
-      if (this._config.hasSourceAiVirtualBackground === true) {
-        var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
-        if (worker2D) {
-          return true;
-        }
-      } else {
-        var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
-        if (mainWebGL2) {
-          return true;
-        }
-        var _worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
-        if (_worker2D) {
-          return true;
-        }
+      var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
+      if (mainWebGL2) {
+        return true;
+      }
+      var worker2D = this._tryFallbackToWorker2D(currentInfo, reason);
+      if (worker2D) {
+        return true;
       }
     }
     return this.fallbackRendererToMain2D(reason, currentInfo);
@@ -22584,7 +22548,7 @@ class RenderLoop {
     if (this._renderer && this._renderer.destroy) {
       this._renderer.destroy();
     }
-    if (this._config.forceMain2DRenderer !== true && this._config.hasSourceAiVirtualBackground !== true && currentInfo.actualMode !== 'worker-2d') {
+    if (this._config.forceMain2DRenderer !== true && currentInfo.actualMode !== 'worker-2d') {
       var mainWebGL2 = this._tryFallbackToMainWebGL2(currentInfo, reason);
       if (mainWebGL2) {
         return true;
@@ -25553,6 +25517,10 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         frameSource = data.bitmap;
         frameSourceConsumed = true;
       }
+      if (frameSource && this._info && this._info.actualMode === 'worker-webgl2') {
+        frameSource = null;
+        frameSourceConsumed = false;
+      }
       if (data.bitmap && this._outputContext) {
         // 确保输出 canvas 尺寸与预期一致
         if (this._canvas.width !== this._info.width) {
@@ -25561,7 +25529,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         if (this._canvas.height !== this._info.height) {
           this._canvas.height = this._info.height;
         }
-        this._outputContext.drawImage(data.bitmap, 0, 0, this._canvas.width, this._canvas.height);
+        this._drawWorkerBitmapToOutput(data.bitmap);
         if (!frameSourceConsumed && data.bitmap.close) {
           data.bitmap.close();
         }
@@ -25603,6 +25571,20 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       });
       this._notifyFatalError(reason);
     }
+  }
+  _drawWorkerBitmapToOutput(bitmap) {
+    if (!bitmap || !this._outputContext || !this._canvas) {
+      return;
+    }
+    if (this._info && this._info.actualMode === 'worker-webgl2') {
+      this._outputContext.save();
+      this._outputContext.translate(0, this._canvas.height);
+      this._outputContext.scale(1, -1);
+      this._outputContext.drawImage(bitmap, 0, 0, this._canvas.width, this._canvas.height);
+      this._outputContext.restore();
+      return;
+    }
+    this._outputContext.drawImage(bitmap, 0, 0, this._canvas.width, this._canvas.height);
   }
   _notifyFatalError(reason) {
     if (this._fatalErrorNotified || this._destroyed || !this._onFatalError) {
@@ -25840,10 +25822,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
    */
   async _createWatermarkFrame(image) {
     if (typeof createImageBitmap !== 'undefined') {
-      var bitmapOptions = this._info.actualMode === 'worker-webgl2' ? {
-        imageOrientation: 'flipY'
-      } : undefined;
-      return bitmapOptions ? createImageBitmap(image, bitmapOptions) : createImageBitmap(image);
+      return createImageBitmap(image);
     }
     var VideoFrameConstructor = typeof window !== 'undefined' ? window.VideoFrame : null;
     if (VideoFrameConstructor) {
@@ -26914,7 +26893,7 @@ void main() {
       var texture = getTexture(item.id);
       var draw = resolveDrawRect(item.draw, outputMirrorX);
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
       gl.uniform1f(opacityLocation, 1);
       drawRect(draw, Boolean(item.mirrorX) !== outputMirrorX);
@@ -26944,7 +26923,7 @@ void main() {
   }
   function drawRect(draw, mirrorX) {
     var left = Math.round(draw.x);
-    var top = Math.round(height - draw.y - draw.height);
+    var top = Math.round(draw.y);
     var drawWidth = Math.round(draw.width);
     var drawHeight = Math.round(draw.height);
     if (drawWidth <= 0 || drawHeight <= 0) {
