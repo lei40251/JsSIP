@@ -1,4 +1,4 @@
-# CRTC.MediaStreamComposer API 参考
+# CRTC.MediaEffectsComposer API 参考
 
 将多路 `MediaStream` / `HTMLVideoElement` 合并为单路音视频输出流的混流器。
 
@@ -19,7 +19,7 @@
 
 ```js
 // 1. 创建混流器
-const composer = new CRTC.MediaStreamComposer(
+const composer = new CRTC.MediaEffectsComposer(
   [localStream, remoteStream],
   { width: 1280, height: 720, fps: 15 }
 );
@@ -39,7 +39,7 @@ composer.stop();
 **仅视频预览：**
 
 ```js
-const composer = new CRTC.MediaStreamComposer([streamA, streamB]);
+const composer = new CRTC.MediaEffectsComposer([streamA, streamB]);
 const previewStream = await composer.getOutput({ type: 'video' });
 previewVideo.srcObject = previewStream;
 ```
@@ -55,10 +55,10 @@ const mixedStream = await composer.getMixedStream();  // 兼容保留
 
 ## 2. 构造函数
 
-### `new CRTC.MediaStreamComposer(videos, options)`
+### `new CRTC.MediaEffectsComposer(videos, options)`
 
 ```js
-const composer = new CRTC.MediaStreamComposer(
+const composer = new CRTC.MediaEffectsComposer(
   [localStream, remoteStream],
   {
     width: 1280,
@@ -76,7 +76,7 @@ const composer = new CRTC.MediaStreamComposer(
 给首路源直接挂虚拟背景：
 
 ```js
-const composer = new CRTC.MediaStreamComposer(localStream, {
+const composer = new CRTC.MediaEffectsComposer(localStream, {
   width: 1280,
   height: 720,
   sources: [
@@ -118,7 +118,7 @@ const composer = new CRTC.MediaStreamComposer(localStream, {
 
 镜像语义建议按这 4 层理解：
 
-- 本地预览镜像：通常只是页面层 `video` 的 CSS 效果，不属于 `MediaStreamComposer`
+- 本地预览镜像：通常只是页面层 `video` 的 CSS 效果，不属于 `MediaEffectsComposer`
 - 源级镜像：`sourceMirror` / `setSourceMirror()`，对某一路输入源做镜像
 - 合成输出镜像：`mirror` / `setMirror()`，对最终输出画面做整体镜像
 - 水印跟随输出镜像：`mirrorWatermarksWithOutput`，仅控制输出级水印是否跟着整体翻转
@@ -507,7 +507,7 @@ async function startMixingAndPush() {
   const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
 
-  const composer = new CRTC.MediaStreamComposer([], {
+  const composer = new CRTC.MediaEffectsComposer([], {
     width: 1280,
     height: 720,
     fps: 15
@@ -593,7 +593,7 @@ composer.clearSourceAiVirtualBackground(0);
 
 ### Q: `stop()` 后能复用吗？
 
-不能。`stop()` 后实例已销毁，需要重新 `new CRTC.MediaStreamComposer()`。
+不能。`stop()` 后实例已销毁，需要重新 `new CRTC.MediaEffectsComposer()`。
 
 ### Q: 最多支持多少路输入源？
 

@@ -221,25 +221,25 @@ body {
   max-width: 198px;
 }
 
-#callMediaStreamComposerTextWatermarkText,
-#callMediaStreamComposerImageWatermarkUrl {
+#callMediaEffectsComposerTextWatermarkText,
+#callMediaEffectsComposerImageWatermarkUrl {
   max-width: 378px;
 }
 
-#callMediaStreamComposerTextWatermarkSize,
-#callMediaStreamComposerTextWatermarkOpacity,
-#callMediaStreamComposerImageWatermarkWidth,
-#callMediaStreamComposerImageWatermarkHeight,
-#callMediaStreamComposerImageWatermarkOpacity {
+#callMediaEffectsComposerTextWatermarkSize,
+#callMediaEffectsComposerTextWatermarkOpacity,
+#callMediaEffectsComposerImageWatermarkWidth,
+#callMediaEffectsComposerImageWatermarkHeight,
+#callMediaEffectsComposerImageWatermarkOpacity {
   max-width: 99px;
 }
 
-#callMediaStreamComposerTextWatermarkPosition,
-#callMediaStreamComposerImageWatermarkPosition {
+#callMediaEffectsComposerTextWatermarkPosition,
+#callMediaEffectsComposerImageWatermarkPosition {
   max-width: 118px;
 }
 
-#callMediaStreamComposerTextWatermarkColor {
+#callMediaEffectsComposerTextWatermarkColor {
   max-width: 54px;
 }
 
@@ -851,16 +851,16 @@ body {
   #useupdate,
   #videoHint,
   #virtualBackground,
-  #callMediaStreamComposerTextWatermarkText,
-  #callMediaStreamComposerImageWatermarkUrl,
-  #callMediaStreamComposerTextWatermarkSize,
-  #callMediaStreamComposerTextWatermarkOpacity,
-  #callMediaStreamComposerImageWatermarkWidth,
-  #callMediaStreamComposerImageWatermarkHeight,
-  #callMediaStreamComposerImageWatermarkOpacity,
-  #callMediaStreamComposerTextWatermarkPosition,
-  #callMediaStreamComposerImageWatermarkPosition,
-  #callMediaStreamComposerTextWatermarkColor {
+  #callMediaEffectsComposerTextWatermarkText,
+  #callMediaEffectsComposerImageWatermarkUrl,
+  #callMediaEffectsComposerTextWatermarkSize,
+  #callMediaEffectsComposerTextWatermarkOpacity,
+  #callMediaEffectsComposerImageWatermarkWidth,
+  #callMediaEffectsComposerImageWatermarkHeight,
+  #callMediaEffectsComposerImageWatermarkOpacity,
+  #callMediaEffectsComposerTextWatermarkPosition,
+  #callMediaEffectsComposerImageWatermarkPosition,
+  #callMediaEffectsComposerTextWatermarkColor {
     max-width: 100%;
     width: 100%;
   }

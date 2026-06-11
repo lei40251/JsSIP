@@ -331,7 +331,7 @@ function installGlobals()
 
 function loadRTCSessionWithMockMixer()
 {
-  const mixerPath = require.resolve('../lib/MediaStreamComposer');
+  const mixerPath = require.resolve('../lib/MediaEffectsComposer');
   const aiNSPath = require.resolve('../lib/AINoiseSuppression/index.js');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
@@ -383,13 +383,13 @@ function loadRTCSessionWithMockMixer()
   };
 }
 
-async function testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions()
+async function testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceVideo = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
-  const mixed = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  const mixed = await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     sourceMirror     : true,
     mirror           : true,
     enableInsertable : true,
@@ -403,7 +403,7 @@ async function testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions()
   assert.notStrictEqual(mixed, sourceStream);
   assert.strictEqual(mixed.getAudioTracks().length, 1);
   assert.strictEqual(mixed.getVideoTracks().length, 1);
-  assert.strictEqual(session.getMediaStreamComposer(), MockMixer.instances[0]);
+  assert.strictEqual(session.getMediaEffectsComposer(), MockMixer.instances[0]);
   assert.deepStrictEqual(MockMixer.instances[0].outputRequest, { type: 'video' });
 
   const ctorOptions = MockMixer.instances[0].options;
@@ -420,19 +420,19 @@ async function testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions()
   assert.strictEqual(ctorOptions.watermarks[2].id, 'none');
 }
 
-async function testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions()
+async function testApplyMediaEffectsComposerSkipsWhenNoVideoOrNoOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const audioOnly = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
-  const noOptions = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(audioOnly, null);
-  const noVideo = await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(audioOnly, { sourceMirror: true });
+  const noOptions = await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(audioOnly, null);
+  const noVideo = await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(audioOnly, { sourceMirror: true });
 
   assert.strictEqual(noOptions, audioOnly);
   assert.strictEqual(noVideo, audioOnly);
-  assert.strictEqual(session.getMediaStreamComposer(), null);
+  assert.strictEqual(session.getMediaEffectsComposer(), null);
 }
 
-async function testCloseStopsAndClearsMediaStreamComposer()
+async function testCloseStopsAndClearsMediaEffectsComposer()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceAudioTrack = new MockMediaStreamTrack('audio');
@@ -442,13 +442,13 @@ async function testCloseStopsAndClearsMediaStreamComposer()
     sourceVideoTrack
   ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, { mirror: true });
-  assert.ok(session.getMediaStreamComposer());
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, { mirror: true });
+  assert.ok(session.getMediaEffectsComposer());
 
   session._close();
 
   assert.strictEqual(MockMixer.stopCalls >= 1, true);
-  assert.strictEqual(session.getMediaStreamComposer(), null);
+  assert.strictEqual(session.getMediaEffectsComposer(), null);
   assert.strictEqual(sourceAudioTrack.readyState, 'ended');
   assert.strictEqual(sourceVideoTrack.readyState, 'ended');
 }
@@ -476,7 +476,7 @@ async function testUpgradeToVideoAppliesSessionMixerToSdkGum()
   };
   session._localMediaStream = new MockMediaStream([ localAudioTrack ]);
   session._inviteMediaConstraints = { video: true };
-  session._sessionMediaStreamComposerOptions = {
+  session._sessionMediaEffectsComposerOptions = {
     sourceMirror : true,
     watermarks   : [ { id: 'wm-upgrade', target: 'output', type: 'text', text: 'upgrade' } ]
   };
@@ -521,7 +521,7 @@ async function testSwitchDeviceCameraDefaultPathAppliesSessionMixer()
   session._localMediaStream = new MockMediaStream([ oldVideoTrack ]);
   session._inviteMediaConstraints = { video: {} };
   
-  session._sessionMediaStreamComposerOptions = {
+  session._sessionMediaEffectsComposerOptions = {
     mirror     : true,
     watermarks : [ { id: 'wm-switch', target: 'output', type: 'text', text: 'switch' } ]
   };
@@ -561,7 +561,7 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMediaStreamComposerOptions = { mirror: true };
+  session._sessionMediaEffectsComposerOptions = { mirror: true };
 
   const mixedOutputTrack = new MockMediaStreamTrack('video', { width: 960, height: 540, frameRate: 20 });
   const composer = { 
@@ -583,8 +583,8 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
     }
   };
 
-  session._mediaStreamComposer = composer;
-  session._mediaStreamComposerInputStream = oldInputStream;
+  session._mediaEffectsComposer = composer;
+  session._mediaEffectsComposerInputStream = oldInputStream;
 
   const newVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
 
@@ -601,7 +601,7 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   assert.deepStrictEqual(composer.outputRequest, { type: 'video' });
   assert.strictEqual(sender.replaced, mixedOutputTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], mixedOutputTrack);
-  assert.strictEqual(session._mediaStreamComposerInputStream, MockMixer.appendCalls[0]);
+  assert.strictEqual(session._mediaEffectsComposerInputStream, MockMixer.appendCalls[0]);
 }
 
 async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
@@ -629,8 +629,8 @@ async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMediaStreamComposerOptions = { mirror: true };
-  session._mediaStreamComposer = {
+  session._sessionMediaEffectsComposerOptions = { mirror: true };
+  session._mediaEffectsComposer = {
     removeSource : function() {},
     addSource    : function() {},
     getOutput    : async function()
@@ -638,7 +638,7 @@ async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
     }
   };
-  session._mediaStreamComposerInputStream = oldInputStream;
+  session._mediaEffectsComposerInputStream = oldInputStream;
 
   let stoppedBeforeGum = false;
   const newVideoTrack = new MockMediaStreamTrack('video');
@@ -682,8 +682,8 @@ async function testSwitchDeviceCameraMixerBranchFallbackToDefault()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldMixedTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMediaStreamComposerOptions = { mirror: true };
-  session._mediaStreamComposer = {
+  session._sessionMediaEffectsComposerOptions = { mirror: true };
+  session._mediaEffectsComposer = {
     removeSource : function()
     {
       throw new Error('remove fail');
@@ -694,7 +694,7 @@ async function testSwitchDeviceCameraMixerBranchFallbackToDefault()
       return new MockMediaStream([ new MockMediaStreamTrack('video') ]);
     }
   };
-  session._mediaStreamComposerInputStream = oldInputStream;
+  session._mediaEffectsComposerInputStream = oldInputStream;
 
   const fallbackTrack = new MockMediaStreamTrack('video', { width: 1280, height: 720, frameRate: 30 });
 
@@ -726,7 +726,7 @@ async function testReplaceCanvasToVideoAppliesSessionMixerToSdkGum()
     getSenders : () => [ sender ]
   };
   session._inviteMediaConstraints = { video: true, width: 640, height: 360 };
-  session._sessionMediaStreamComposerOptions = {
+  session._sessionMediaEffectsComposerOptions = {
     mirror : true
   };
   session._restoreCameraTrackDraw = 1;
@@ -783,8 +783,8 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
 
-  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
-    mediaStreamComposer : {
+  session._sessionMediaEffectsComposerOptions = session._mediaPipeline.resolveMediaEffectsComposerOptions({
+    mediaEffectsComposer : {
       sources : [
         {
           aiVirtualBackground : {
@@ -801,7 +801,7 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
 
   const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline(
     { audio: true, video: true },
-    session._sessionMediaStreamComposerOptions
+    session._sessionMediaEffectsComposerOptions
   );
   const effect = session.getAiVirtualBackground();
 
@@ -821,8 +821,8 @@ async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
 
-  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
-    mediaStreamComposer : {
+  session._sessionMediaEffectsComposerOptions = session._mediaPipeline.resolveMediaEffectsComposerOptions({
+    mediaEffectsComposer : {
       sources : [
         {
           aiVirtualBackground : {
@@ -838,7 +838,7 @@ async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
 
   const stream = await session._mediaPipeline.getUserMediaWithSessionPipeline(
     { audio: true, video: true },
-    session._sessionMediaStreamComposerOptions
+    session._sessionMediaEffectsComposerOptions
   );
 
   assert.strictEqual(MockMixer.instances.length, 1);
@@ -946,8 +946,8 @@ async function testSwitchDeviceCameraAppliesSessionAiVirtualBackground()
   session._localCameras = [ 'cam-a', 'cam-b' ];
   session._localMediaStream = new MockMediaStream([ oldVideoTrack ]);
   session._inviteMediaConstraints = { video: {} };
-  session._sessionMediaStreamComposerOptions = session._mediaPipeline.resolveMediaStreamComposerOptions({
-    mediaStreamComposer : {
+  session._sessionMediaEffectsComposerOptions = session._mediaPipeline.resolveMediaEffectsComposerOptions({
+    mediaEffectsComposer : {
       sources : [
         {
           aiVirtualBackground : {
@@ -1005,7 +1005,7 @@ async function testCloseStopsSessionComposerWithAiVirtualBackground()
   const sourceAudio = new MockMediaStreamTrack('audio');
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     sources : [
       {
         aiVirtualBackground : {
@@ -1058,7 +1058,7 @@ async function testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions
   global.navigator.mediaDevices.getUserMedia = () => Promise.resolve(new MockMediaStream([ capturedVideoTrack ]));
 
   await session.upgradeToVideo({
-    mediaStreamComposer : {
+    mediaEffectsComposer : {
       sources : [
         {
           aiVirtualBackground : {
@@ -1071,17 +1071,17 @@ async function testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions
     }
   }, () => {});
 
-  assert.strictEqual(session._sessionMediaStreamComposerOptions.sources[0].aiVirtualBackground.mode, 'color');
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiVirtualBackground.mode, 'color');
   assert.strictEqual(MockMixer.instances.length, 1);
   assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.color, '#abcdef');
   assert.strictEqual(senderState.replaced, MockMixer.instances[0].outputTrack);
 }
 
-function testResolveMediaStreamComposerOptionsUsesSourcesOnly()
+function testResolveMediaEffectsComposerOptionsUsesSourcesOnly()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
-  const resolved = session._mediaPipeline.resolveMediaStreamComposerOptions({
-    mediaStreamComposer : {
+  const resolved = session._mediaPipeline.resolveMediaEffectsComposerOptions({
+    mediaEffectsComposer : {
       mirror  : true,
       sources : [
         {
@@ -1103,17 +1103,17 @@ function testResolveMediaStreamComposerOptionsUsesSourcesOnly()
   assert.strictEqual(Object.prototype.hasOwnProperty.call(resolved, 'sourceOptions'), false);
 }
 
-async function testUpdateMediaStreamComposerUpdatesConfigPatch()
+async function testUpdateMediaEffectsComposerUpdatesConfigPatch()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     mirror     : false,
     watermarks : []
   });
 
-  const state = await session.updateMediaStreamComposer({
+  const state = await session.updateMediaEffectsComposer({
     mirror                     : true,
     mirrorWatermarksWithOutput : false,
     watermarks                 : [
@@ -1127,12 +1127,12 @@ async function testUpdateMediaStreamComposerUpdatesConfigPatch()
   assert.strictEqual(state.config.watermarks[0].id, 'wm1');
 }
 
-async function testUpdateMediaStreamComposerUpdatesPrimarySourceEffects()
+async function testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     sources : [
       {
         aiVirtualBackground : {
@@ -1144,7 +1144,7 @@ async function testUpdateMediaStreamComposerUpdatesPrimarySourceEffects()
     ]
   });
 
-  const state = await session.updateMediaStreamComposer({
+  const state = await session.updateMediaEffectsComposer({
     sources : [
       {
         sourceMirror        : true,
@@ -1162,12 +1162,12 @@ async function testUpdateMediaStreamComposerUpdatesPrimarySourceEffects()
   assert.strictEqual(session.getAiVirtualBackground().color, '#456789');
 }
 
-async function testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground()
+async function testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackground()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     mirror  : true,
     sources : [
       {
@@ -1180,7 +1180,7 @@ async function testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackgrou
     ]
   });
 
-  const state = await session.updateMediaStreamComposer({
+  const state = await session.updateMediaEffectsComposer({
     mirror     : false,
     watermarks : [
       { id: 'wm-clear-aivb', target: 'output', type: 'text', text: 'live' }
@@ -1198,7 +1198,7 @@ async function testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackgrou
   assert.strictEqual(session.getAiVirtualBackground(), null);
 }
 
-async function testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack()
+async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const localAudioTrack = new MockMediaStreamTrack('audio');
@@ -1217,7 +1217,7 @@ async function testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack(
   };
   session._localMediaStream = new MockMediaStream([ localAudioTrack, localVideoTrack ]);
 
-  const state = await session.updateMediaStreamComposer({
+  const state = await session.updateMediaEffectsComposer({
     mirror  : true,
     sources : [
       {
@@ -1239,7 +1239,7 @@ async function testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack(
   assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 8);
 }
 
-async function testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB()
+async function testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const sourceVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
@@ -1260,18 +1260,18 @@ async function testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsA
   };
   session._localMediaStream = new MockMediaStream([ sourceAudioTrack, outputVideoTrack ]);
 
-  await session._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(sourceStream, {
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
     mirror : true
   });
 
-  const firstComposer = session.getMediaStreamComposer();
+  const firstComposer = session.getMediaEffectsComposer();
 
   firstComposer.renderInfo = {
     actualMode : 'main-webgl2',
     isWorker   : false
   };
 
-  const state = await session.updateMediaStreamComposer({
+  const state = await session.updateMediaEffectsComposer({
     mirror  : true,
     sources : [
       {
@@ -1318,9 +1318,9 @@ async function run()
   const failures = [];
 
   const TESTS = [
-    { name: 'testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions', fn: testApplyMediaStreamComposerOnSdkGumStreamUsesCtorOptions },
-    { name: 'testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions', fn: testApplyMediaStreamComposerSkipsWhenNoVideoOrNoOptions },
-    { name: 'testCloseStopsAndClearsMediaStreamComposer', fn: testCloseStopsAndClearsMediaStreamComposer },
+    { name: 'testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions', fn: testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions },
+    { name: 'testApplyMediaEffectsComposerSkipsWhenNoVideoOrNoOptions', fn: testApplyMediaEffectsComposerSkipsWhenNoVideoOrNoOptions },
+    { name: 'testCloseStopsAndClearsMediaEffectsComposer', fn: testCloseStopsAndClearsMediaEffectsComposer },
     { name: 'testUpgradeToVideoAppliesSessionMixerToSdkGum', fn: testUpgradeToVideoAppliesSessionMixerToSdkGum },
     { name: 'testSwitchDeviceCameraDefaultPathAppliesSessionMixer', fn: testSwitchDeviceCameraDefaultPathAppliesSessionMixer },
     { name: 'testSwitchDeviceCameraWithActiveMixerReusesMixer', fn: testSwitchDeviceCameraWithActiveMixerReusesMixer },
@@ -1339,12 +1339,12 @@ async function run()
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
     { name: 'testCloseStopsSessionComposerWithAiVirtualBackground', fn: testCloseStopsSessionComposerWithAiVirtualBackground },
     { name: 'testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions', fn: testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions },
-    { name: 'testResolveMediaStreamComposerOptionsUsesSourcesOnly', fn: testResolveMediaStreamComposerOptionsUsesSourcesOnly },
-    { name: 'testUpdateMediaStreamComposerUpdatesConfigPatch', fn: testUpdateMediaStreamComposerUpdatesConfigPatch },
-    { name: 'testUpdateMediaStreamComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaStreamComposerUpdatesPrimarySourceEffects },
-    { name: 'testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground', fn: testUpdateMediaStreamComposerClearsPrimarySourceAiVirtualBackground },
-    { name: 'testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaStreamComposerCreatesComposerForCurrentVideoTrack },
-    { name: 'testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB', fn: testUpdateMediaStreamComposerKeepsComposerWhenMainWebGL2SupportsAiVB },
+    { name: 'testResolveMediaEffectsComposerOptionsUsesSourcesOnly', fn: testResolveMediaEffectsComposerOptionsUsesSourcesOnly },
+    { name: 'testUpdateMediaEffectsComposerUpdatesConfigPatch', fn: testUpdateMediaEffectsComposerUpdatesConfigPatch },
+    { name: 'testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects },
+    { name: 'testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackground', fn: testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackground },
+    { name: 'testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack },
+    { name: 'testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB', fn: testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 
@@ -1393,18 +1393,18 @@ async function run()
 
   if (failures.length > 0)
   {
-    console.log(`\n  RTCSession-MediaStreamComposer Failures (${failed}):`);
+    console.log(`\n  RTCSession-MediaEffectsComposer Failures (${failed}):`);
     for (const f of failures)
     {
       console.log(`    ✗ ${f.name}`);
       console.log(`      ${f.error.message}`);
     }
   }
-  console.log(`  RTCSession-MediaStreamComposer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
+  console.log(`  RTCSession-MediaEffectsComposer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
 
   if (failed > 0)
   {
-    throw new Error(`${failed} RTCSession-MediaStreamComposer test(s) failed`);
+    throw new Error(`${failed} RTCSession-MediaEffectsComposer test(s) failed`);
   }
 }
 

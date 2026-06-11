@@ -53,7 +53,7 @@ const TERSER_RESERVED = [
 ];
 
 // 定向属性混淆白名单。
-// 这里只混淆 MediaStreamComposer / AiNS / 输出流链路里确定偏内部实现的属性，
+// 这里只混淆 MediaEffectsComposer / AiNS / 输出流链路里确定偏内部实现的属性，
 // 不对全量 `_xxx` 属性做混淆，避免把 UA / RTCSession / SIP 内部字段也一起打坏。
 // 如果后续某个测试或业务依赖这些属性名，需要从这里移除对应项。
 const TERSER_MEDIA_PROPERTY_MANGLE_REGEX = /^__(?:aiVirtualBackgroundState|workerTest)$|^_(?:activeCaptureSinkVideo|audioBuses|audioComposer|canvas|capturedStream|capturedStreams|capturedVideoTrack|closeTransferFrames|compressorNode|config|context2d|contextWebGL2|continuousWriteFailures|createFrame|createWatermarkFrame|ctx2d|drawVideosToCanvas|filter|gco|generator|generatorTrack|gl|handleWorkerMessage|insertableActive|insertableEnabledByConfig|insertableSupport|lastTimestampUs|latestPendingFrame|manualCaptureFrameControl|maxContinuousWriteFailures|mixedStream|outputContext|outputStreamManager|pendingWrite|renderInWorker|sourceAiVBManager|sources|src|videoStream|worker|workerReady|writer)$/;
@@ -248,8 +248,8 @@ gulp.task('test-files', function()
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
     'test/test-ai-virtual-background.js',
-    'test/test-media-stream-composer.js',
-    'test/test-rtcsession-media-stream-composer.js',
+    'test/test-media-effects-composer.js',
+    'test/test-rtcsession-media-effects-composer.js',
     'test/test-bfcp.js'
   ];
 
@@ -257,17 +257,17 @@ gulp.task('test-files', function()
     .pipe(expect(EXPECT_OPTIONS, src));
 });
 
-gulp.task('media-stream-composer-test', function(done)
+gulp.task('media-effects-composer-test', function(done)
 {
   // 这组测试单独串起来，方便只验证媒体合成相关能力。
   require('./test/test-ai-virtual-background').run()
     .then(function()
     {
-      return require('./test/test-media-stream-composer').run();
+      return require('./test/test-media-effects-composer').run();
     })
     .then(function()
     {
-      return require('./test/test-rtcsession-media-stream-composer').run();
+      return require('./test/test-rtcsession-media-effects-composer').run();
     })
     .then(function()
     {
@@ -276,7 +276,7 @@ gulp.task('media-stream-composer-test', function(done)
     .catch(done);
 });
 
-gulp.task('mixer-test', gulp.series('media-stream-composer-test'));
+gulp.task('mixer-test', gulp.series('media-effects-composer-test'));
 
 gulp.task('bfcp-test', function(done)
 {
@@ -319,7 +319,7 @@ gulp.task('sdk-test', function(done)
     .catch(done);
 });
 
-gulp.task('test', gulp.series('test-files', 'sdk-test', 'media-stream-composer-test', 'bfcp-test'));
+gulp.task('test', gulp.series('test-files', 'sdk-test', 'media-effects-composer-test', 'bfcp-test'));
 
 gulp.task('grammar', function(cb)
 {

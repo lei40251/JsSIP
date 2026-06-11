@@ -18,7 +18,7 @@ export interface CallOptions extends AnswerOptions {
   anonymous?: boolean;
   fromUserName?: string;
   fromDisplayName?: string;
-  mediaStreamComposer?: import('./RTCSession').MediaStreamComposerOptions;
+  mediaEffectsComposer?: import('./RTCSession').MediaEffectsComposerOptions;
 }
 
 export interface UAConfiguration {

@@ -57,7 +57,7 @@ let recorder;
 let incomingCallNotification = null;
 let notificationUnsupportedLogged = false;
 
-// 虚拟背景相关，统一走 MediaStreamComposer.sources[0].aiVirtualBackground
+// 虚拟背景相关，统一走 MediaEffectsComposer.sources[0].aiVirtualBackground
 let virtualBackgroundType = '';
 let virtualBackgroundPreviewEngine;
 let virtualBackgroundPreviewInputStream;
@@ -1300,7 +1300,7 @@ ua.on('newRTCSession', function(e)
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true },
       extraFeatures       : extraFeatures,
-      mediaStreamComposer : buildCallMediaStreamComposerOptions(),
+      mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
       aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
     });
 
@@ -1322,7 +1322,7 @@ ua.on('newRTCSession', function(e)
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures,
-      mediaStreamComposer : buildCallMediaStreamComposerOptions(),
+      mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
       aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
     });
 
@@ -1949,21 +1949,21 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
-function buildCallMediaStreamComposerOptions(options = {})
+function buildCallMediaEffectsComposerOptions(options = {})
 {
   const { includeDisabledState = false } = options;
-  const outputMirrorEl = document.getElementById('callMediaStreamComposerOutputMirror');
+  const outputMirrorEl = document.getElementById('callMediaEffectsComposerOutputMirror');
   const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
   const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
   const watermarks = [];
-  const text = String((document.getElementById('callMediaStreamComposerTextWatermarkText') || {}).value || '').trim();
+  const text = String((document.getElementById('callMediaEffectsComposerTextWatermarkText') || {}).value || '').trim();
 
   if (text)
   {
-    const textPos = String((document.getElementById('callMediaStreamComposerTextWatermarkPosition') || {}).value || 'bottom-right');
-    const textSize = (document.getElementById('callMediaStreamComposerTextWatermarkSize') || {}).value;
-    const textColor = String((document.getElementById('callMediaStreamComposerTextWatermarkColor') || {}).value || '').trim();
-    const textOpacity = readCallMediaStreamComposerOpacity(document.getElementById('callMediaStreamComposerTextWatermarkOpacity'));
+    const textPos = String((document.getElementById('callMediaEffectsComposerTextWatermarkPosition') || {}).value || 'bottom-right');
+    const textSize = (document.getElementById('callMediaEffectsComposerTextWatermarkSize') || {}).value;
+    const textColor = String((document.getElementById('callMediaEffectsComposerTextWatermarkColor') || {}).value || '').trim();
+    const textOpacity = readCallMediaEffectsComposerOpacity(document.getElementById('callMediaEffectsComposerTextWatermarkOpacity'));
     const textWatermark = {
       id       : 'call-output-text-watermark',
       target   : 'output',
@@ -1990,14 +1990,14 @@ function buildCallMediaStreamComposerOptions(options = {})
     watermarks.push(textWatermark);
   }
 
-  const imageUrl = String((document.getElementById('callMediaStreamComposerImageWatermarkUrl') || {}).value || '').trim();
+  const imageUrl = String((document.getElementById('callMediaEffectsComposerImageWatermarkUrl') || {}).value || '').trim();
 
   if (imageUrl)
   {
-    const imagePos = String((document.getElementById('callMediaStreamComposerImageWatermarkPosition') || {}).value || 'bottom-right');
-    const imageWidth = (document.getElementById('callMediaStreamComposerImageWatermarkWidth') || {}).value;
-    const imageHeight = (document.getElementById('callMediaStreamComposerImageWatermarkHeight') || {}).value;
-    const imageOpacity = readCallMediaStreamComposerOpacity(document.getElementById('callMediaStreamComposerImageWatermarkOpacity'));
+    const imagePos = String((document.getElementById('callMediaEffectsComposerImageWatermarkPosition') || {}).value || 'bottom-right');
+    const imageWidth = (document.getElementById('callMediaEffectsComposerImageWatermarkWidth') || {}).value;
+    const imageHeight = (document.getElementById('callMediaEffectsComposerImageWatermarkHeight') || {}).value;
+    const imageOpacity = readCallMediaEffectsComposerOpacity(document.getElementById('callMediaEffectsComposerImageWatermarkOpacity'));
     const imageWatermark = {
       id       : 'call-output-image-watermark',
       target   : 'output',
@@ -2065,22 +2065,22 @@ function buildCallMediaStreamComposerOptions(options = {})
 async function applyCurrentComposerSettingsToSession()
 {
   const sessionComposer = getCurrentSessionComposer();
-  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaStreamComposer === 'function');
+  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaEffectsComposer === 'function');
 
   if (!sessionComposer && !canUpdateSessionComposer)
   {
-    setStatus('当前没有可更新的 MediaStreamComposer');
+    setStatus('当前没有可更新的 MediaEffectsComposer');
 
     return;
   }
 
-  const composerOptions = buildCallMediaStreamComposerOptions({ includeDisabledState: true });
+  const composerOptions = buildCallMediaEffectsComposerOptions({ includeDisabledState: true });
 
   try
   {
     if (canUpdateSessionComposer)
     {
-      await rtcSession.updateMediaStreamComposer(composerOptions);
+      await rtcSession.updateMediaEffectsComposer(composerOptions);
     }
     else
     {
@@ -2102,7 +2102,7 @@ async function applyCurrentComposerSettingsToSession()
   }
 }
 
-function readCallMediaStreamComposerOpacity(inputEl)
+function readCallMediaEffectsComposerOpacity(inputEl)
 {
   const raw = String((inputEl || {}).value || '').trim();
 
@@ -2157,12 +2157,12 @@ async function call(type, direction, mediaStream)
     pcConfig      : pcConfig
   };
 
-  const composerOptions = buildCallMediaStreamComposerOptions();
+  const composerOptions = buildCallMediaEffectsComposerOptions();
 
   if (composerOptions)
   {
-    options.mediaStreamComposer = composerOptions;
-    // 当前示例统一使用 mediaStreamComposer 命名。
+    options.mediaEffectsComposer = composerOptions;
+    // 当前示例统一使用 mediaEffectsComposer 命名。
   }
 
   // options = {
@@ -2301,7 +2301,7 @@ async function call(type, direction, mediaStream)
       }
     }
 
-    options.mediaStreamComposer = buildCallMediaStreamComposerOptions();
+    options.mediaEffectsComposer = buildCallMediaEffectsComposerOptions();
     options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
 
     remoteNo = number;
@@ -3146,12 +3146,12 @@ function restoreLocalPreview()
 
 function getCurrentSessionComposer()
 {
-  if (!rtcSession || typeof rtcSession.getMediaStreamComposer !== 'function')
+  if (!rtcSession || typeof rtcSession.getMediaEffectsComposer !== 'function')
   {
     return null;
   }
 
-  return rtcSession.getMediaStreamComposer();
+  return rtcSession.getMediaEffectsComposer();
 }
 
 function applyVirtualBackgroundSelection(targetComposer)
@@ -3176,7 +3176,7 @@ function applyVirtualBackgroundSelection(targetComposer)
 async function applyVirtualBackgroundToCurrentSession()
 {
   const sessionComposer = getCurrentSessionComposer();
-  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaStreamComposer === 'function');
+  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaEffectsComposer === 'function');
 
   if (!sessionComposer && !canUpdateSessionComposer)
   {
@@ -3187,7 +3187,7 @@ async function applyVirtualBackgroundToCurrentSession()
   {
     if (canUpdateSessionComposer)
     {
-      await rtcSession.updateMediaStreamComposer(buildCallMediaStreamComposerOptions({ includeDisabledState: true }));
+      await rtcSession.updateMediaEffectsComposer(buildCallMediaEffectsComposerOptions({ includeDisabledState: true }));
     }
     else
     {
@@ -3283,7 +3283,7 @@ async function startVirtualBackgroundPreview()
     video : videoConstraints
   });
 
-  virtualBackgroundPreviewEngine = new CRTC.MediaStreamComposer(virtualBackgroundPreviewInputStream, {
+  virtualBackgroundPreviewEngine = new CRTC.MediaEffectsComposer(virtualBackgroundPreviewInputStream, {
     width   : videoConstraints.width,
     height  : videoConstraints.height,
     fps     : videoConstraints.frameRate,

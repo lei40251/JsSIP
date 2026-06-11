@@ -4,7 +4,7 @@
  *
  * Wraps old nodeunit exports (module.exports = { 'name': fn(test) {...} })
  * into a Promise-based runner with a one-line summary, matching the output
- * style of test-bfcp, test-media-stream-composer, and test-rtcsession-media-stream-composer.
+ * style of test-bfcp, test-media-effects-composer, and test-rtcsession-media-effects-composer.
  */
 const assert = require('assert');
 

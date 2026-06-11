@@ -1,8 +1,8 @@
-# MediaStreamComposer 混流器模块架构分析
+# MediaEffectsComposer 混流器模块架构分析
 
 ## 模块总览
 
-`MediaStreamComposer` 是一个多路音视频混流器，将多个 `MediaStream` / `HTMLMediaElement` 合并为一个输出 `MediaStream`，可直接给 `RTCPeerConnection`、本地预览或录制链路使用。
+`MediaEffectsComposer` 是一个多路音视频混流器，将多个 `MediaStream` / `HTMLMediaElement` 合并为一个输出 `MediaStream`，可直接给 `RTCPeerConnection`、本地预览或录制链路使用。
 
 镜像语义上，这个模块只处理“源级镜像”“合成输出镜像”“输出级水印是否跟随镜像”三件事，不负责页面层本地预览的 CSS 镜像。
 
@@ -21,7 +21,7 @@
 
 ### 快速理解路线
 
-1. 入口在 [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)。
+1. 入口在 [lib/MediaEffectsComposer/Core/MediaEffectsComposer.js](../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js)。
 2. 输入源由 `SourceRegistry` 管理。
 3. 源级虚拟背景由 `SourceAiVBManager` 调度，并复用 `AIVirtualBackground/` 下的配置、资源加载和 MediaPipe runtime。
 4. 视频渲染由 `LayoutEngine -> RenderLoop -> RendererFactory` 处理。
@@ -32,7 +32,7 @@
 ### 模块职责总览
 
 ```
-MediaStreamComposer 是总调度：
+MediaEffectsComposer 是总调度：
   SourceRegistry 管输入源
   SourceAiVBManager 管源级虚拟背景
   LayoutEngine 计算布局和镜像后的绘制信息
@@ -73,14 +73,14 @@ MediaStreamComposer 是总调度：
 lib/
 ├── Mixer.js
 │
-└── MediaStreamComposer/
+└── MediaEffectsComposer/
     ├── AIVirtualBackground/
     │   ├── AiVBConfig.js
     │   ├── AiVBAssetLoader.js
     │   └── MediaPipeSegmenterRuntime.js
     │
     ├── Core/
-    │   ├── MediaStreamComposer.js
+    │   ├── MediaEffectsComposer.js
     │   ├── MixerConfig.js
     │   ├── SourceRegistry.js
     │   ├── SourceAiVBManager.js
@@ -107,9 +107,9 @@ lib/
 
 ## 中枢控制器
 
-### [lib/MediaStreamComposer/Core/MediaStreamComposer.js](../lib/MediaStreamComposer/Core/MediaStreamComposer.js)
+### [lib/MediaEffectsComposer/Core/MediaEffectsComposer.js](../lib/MediaEffectsComposer/Core/MediaEffectsComposer.js)
 
-`MediaStreamComposer` 负责协调所有子模块，是整个系统的中介者。
+`MediaEffectsComposer` 负责协调所有子模块，是整个系统的中介者。
 
 ### 构造流程
 
@@ -400,7 +400,7 @@ releaseSubmixAudioStream(...)
 
 ## 关键子模块
 
-### [lib/MediaStreamComposer/Core/MixerConfig.js](../lib/MediaStreamComposer/Core/MixerConfig.js)
+### [lib/MediaEffectsComposer/Core/MixerConfig.js](../lib/MediaEffectsComposer/Core/MixerConfig.js)
 
 配置归一化模块，主要负责：
 
@@ -411,7 +411,7 @@ releaseSubmixAudioStream(...)
 
 虽然对外已经推荐 `addSource()`，但 `addSource()` 内部仍会复用这里的 `normalizeSourceOptions()`，所以旧参数形式仍能兼容。
 
-### [lib/MediaStreamComposer/Core/SourceRegistry.js](../lib/MediaStreamComposer/Core/SourceRegistry.js)
+### [lib/MediaEffectsComposer/Core/SourceRegistry.js](../lib/MediaEffectsComposer/Core/SourceRegistry.js)
 
 输入源注册表，负责：
 
@@ -427,7 +427,7 @@ addSource() / removeSource() / clearSources()
   -> SourceRegistry.add() / remove() / getSnapshot()
 ```
 
-### [lib/MediaStreamComposer/Core/LayoutEngine.js](../lib/MediaStreamComposer/Core/LayoutEngine.js)
+### [lib/MediaEffectsComposer/Core/LayoutEngine.js](../lib/MediaEffectsComposer/Core/LayoutEngine.js)
 
 负责布局和渲染输入数据生成：
 
@@ -436,7 +436,7 @@ addSource() / removeSource() / clearSources()
 - 组装 renderer 消费的 payload
 - 追加 source/output 水印绘制项
 
-### [lib/MediaStreamComposer/Core/WatermarkManager.js](../lib/MediaStreamComposer/Core/WatermarkManager.js)
+### [lib/MediaEffectsComposer/Core/WatermarkManager.js](../lib/MediaEffectsComposer/Core/WatermarkManager.js)
 
 新版本里水印管理被明确独立出来，职责包括：
 
@@ -445,7 +445,7 @@ addSource() / removeSource() / clearSources()
 - 输出带 `status/reason` 的水印快照
 - 响应 `setConfig({ watermarks })` 和 `setConfig({ clearWatermarks: true })`
 
-### [lib/MediaStreamComposer/Core/AudioMixer.js](../lib/MediaStreamComposer/Core/AudioMixer.js)
+### [lib/MediaEffectsComposer/Core/AudioMixer.js](../lib/MediaEffectsComposer/Core/AudioMixer.js)
 
 音频混音模块，负责：
 
@@ -457,7 +457,7 @@ addSource() / removeSource() / clearSources()
 
 这也是 `getOutput({ type: 'audio' })` / `releaseOutput()` 的实际执行者。
 
-### [lib/MediaStreamComposer/Core/OutputStreamManager.js](../lib/MediaStreamComposer/Core/OutputStreamManager.js)
+### [lib/MediaEffectsComposer/Core/OutputStreamManager.js](../lib/MediaEffectsComposer/Core/OutputStreamManager.js)
 
 输出流管理模块，负责：
 
@@ -466,7 +466,7 @@ addSource() / removeSource() / clearSources()
 - 在后续音频可用时把音轨补进 mixed stream
 - 停止所有 capture 出来的轨道
 
-### [lib/MediaStreamComposer/Core/RenderLoop.js](../lib/MediaStreamComposer/Core/RenderLoop.js)
+### [lib/MediaEffectsComposer/Core/RenderLoop.js](../lib/MediaEffectsComposer/Core/RenderLoop.js)
 
 渲染循环负责：
 
@@ -565,7 +565,7 @@ worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 
 镜像相关的一个实现重点：
 
-- 当启用了源镜像或输出镜像时，`MediaStreamComposer` 会通过 `_refreshRendererPolicyForMirror()` 更新 `forceMainThreadRenderer`
+- 当启用了源镜像或输出镜像时，`MediaEffectsComposer` 会通过 `_refreshRendererPolicyForMirror()` 更新 `forceMainThreadRenderer`
 - 如当前 renderer 是 Worker 路径，必要时会主动 fallback 到主线程渲染器
 
 这也是为什么镜像配置被统一纳入 `setConfig()` 之后，内部仍需要顺带改渲染策略。
@@ -575,7 +575,7 @@ worker-webgl2 -> main-webgl2 -> worker-2d -> main-2d
 ## 分层依赖图
 
 ```
-MediaStreamComposer.js
+MediaEffectsComposer.js
   ├── MixerConfig
   ├── MixerDomAdapter
   ├── WatermarkManager

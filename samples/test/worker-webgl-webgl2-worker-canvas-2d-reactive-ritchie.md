@@ -1,10 +1,10 @@
-# MediaStreamComposer 渲染后端升级方案（融合版）
+# MediaEffectsComposer 渲染后端升级方案（融合版）
 
-融合自 `docs/media-stream-composer-renderer-upgrade-plan.md`（架构/API/Worker 设计）与 `claude-code` 计划（主线程 WebGL2 / shader 实现细节）。
+融合自 `docs/media-effects-composer-renderer-upgrade-plan.md`（架构/API/Worker 设计）与 `claude-code` 计划（主线程 WebGL2 / shader 实现细节）。
 
 ## 背景
 
-当前 `lib/MediaStreamComposer.js` 使用主线程 Canvas 2D 完成视频混合。多路高分辨率视频时主线程负载高，影响页面交互。
+当前 `lib/MediaEffectsComposer.js` 使用主线程 Canvas 2D 完成视频混合。多路高分辨率视频时主线程负载高，影响页面交互。
 
 目标：引入可插拔渲染后端，优先使用 `Worker + WebGL2`，在不支持时自动降级，Safari 用户也能走 WebGL2 加速。
 
@@ -33,7 +33,7 @@ worker-webgl2 → main-webgl2 → worker-2d → main-2d
 ## 新增配置
 
 ```js
-const mixer = new CRTC.MediaStreamComposer([], {
+const mixer = new CRTC.MediaEffectsComposer([], {
   width: 1280, height: 720, fps: 30,
 
   // auto | worker-webgl2 | main-webgl2 | worker-2d | main-2d
@@ -69,7 +69,7 @@ const info = mixer.getRenderInfo();
 
 ## 架构
 
-### MediaStreamComposer 职责不变
+### MediaEffectsComposer 职责不变
 
 - 输入源管理（`appendStream/removeStream/clearStreams/getSources`）
 - 布局计算（slot / rows / cols / `_scaleVideo`）
@@ -218,7 +218,7 @@ supportsWorker = typeof Worker !== 'undefined'
 
 ```
 lib/
-  MediaStreamComposer.js                              (修改 ~60 行)
+  MediaEffectsComposer.js                              (修改 ~60 行)
   Renderers/
     BaseRenderer.js                      (接口定义 ~60 行)
     RendererFactory.js                   (选择器 ~60 行)
@@ -232,7 +232,7 @@ lib/
     mixer.worker.js                      (Worker 内渲染入口 ~80 行)
 ```
 
-总计新增 ~960 行，修改 MediaStreamComposer.js ~60 行。
+总计新增 ~960 行，修改 MediaEffectsComposer.js ~60 行。
 
 ## 实施步骤
 
@@ -241,7 +241,7 @@ lib/
 - 定义 `BaseRenderer` 接口
 - 将当前 Canvas2D 绘制逻辑抽取为 `MainCanvas2DRenderer`
 - 增加 `_initRenderer()` 和 `getRenderInfo()`
-- MediaStreamComposer.js 默认使用 `MainCanvas2DRenderer`，行为完全不变
+- MediaEffectsComposer.js 默认使用 `MainCanvas2DRenderer`，行为完全不变
 - 跑通 lint/test/demo
 
 ### 第 2 阶段：MainWebGL2Renderer

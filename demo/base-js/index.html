@@ -130,22 +130,22 @@
                 </div>
 
                 <details class="composer-detail call-config-composer">
-                  <summary>呼叫时 MediaStreamComposer 参数（紧凑配置）</summary>
+                  <summary>呼叫时 MediaEffectsComposer 参数（紧凑配置）</summary>
                   <div class="pt-2 compact-composer">
                     <div class="row g-2 align-items-center mb-2">
                       <div class="col-auto">
                         <div class="form-check"><input class="form-check-input" type="checkbox"
-                            id="callMediaStreamComposerOutputMirror"><label class="form-check-label"
-                            for="callMediaStreamComposerOutputMirror">初始输出镜像</label></div>
+                            id="callMediaEffectsComposerOutputMirror"><label class="form-check-label"
+                            for="callMediaEffectsComposerOutputMirror">初始输出镜像</label></div>
                       </div>
                     </div>
                     <div class="compact-composer-grid">
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">文字水印</div>
-                        <input class="form-control composer-row" id="callMediaStreamComposerTextWatermarkText"
+                        <input class="form-control composer-row" id="callMediaEffectsComposerTextWatermarkText"
                           placeholder="文字内容（留空不启用）" />
                         <div class="composer-inline-row watermark-inline-row composer-row">
-                          <select class="form-select" id="callMediaStreamComposerTextWatermarkPosition">
+                          <select class="form-select" id="callMediaEffectsComposerTextWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
                             <option value="top-right">右上</option>
@@ -154,20 +154,20 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMediaStreamComposerTextWatermarkSize" type="number"
+                          <input class="form-control" id="callMediaEffectsComposerTextWatermarkSize" type="number"
                             min="8" placeholder="字号" />
-                          <input class="form-control form-control-color" id="callMediaStreamComposerTextWatermarkColor"
+                          <input class="form-control form-control-color" id="callMediaEffectsComposerTextWatermarkColor"
                             type="color" value="#ffffff" />
-                          <input class="form-control" id="callMediaStreamComposerTextWatermarkOpacity" type="text"
+                          <input class="form-control" id="callMediaEffectsComposerTextWatermarkOpacity" type="text"
                             inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
                       </div>
                       <div class="sub-panel compact-panel">
                         <div class="fw-semibold mb-2">图片水印</div>
-                        <input class="form-control composer-row" id="callMediaStreamComposerImageWatermarkUrl"
+                        <input class="form-control composer-row" id="callMediaEffectsComposerImageWatermarkUrl"
                           placeholder="图片 URL（留空不启用）" />
                         <div class="composer-inline-row watermark-inline-row composer-row">
-                          <select class="form-select" id="callMediaStreamComposerImageWatermarkPosition">
+                          <select class="form-select" id="callMediaEffectsComposerImageWatermarkPosition">
                             <option value="top-left">左上</option>
                             <option value="top-center">上中</option>
                             <option value="top-right">右上</option>
@@ -176,11 +176,11 @@
                             <option value="bottom-center">下中</option>
                             <option value="bottom-right" selected>右下</option>
                           </select>
-                          <input class="form-control" id="callMediaStreamComposerImageWatermarkWidth" type="number"
+                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkWidth" type="number"
                             min="1" placeholder="宽度" />
-                          <input class="form-control" id="callMediaStreamComposerImageWatermarkHeight" type="number"
+                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkHeight" type="number"
                             min="1" placeholder="高度" />
-                          <input class="form-control" id="callMediaStreamComposerImageWatermarkOpacity" type="text"
+                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkOpacity" type="text"
                             inputmode="decimal" placeholder="透明度(0~1)" />
                         </div>
                       </div>

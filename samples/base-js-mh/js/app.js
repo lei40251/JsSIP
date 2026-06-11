@@ -817,8 +817,8 @@ ua.on('newRTCSession', function(e)
     /* 用于验证接通以后替换音频 */
     // const rs = CRTC.Utils.getStreams(e.session.connection, 'local');
 
-    // 最新接口建议使用 CRTC.MediaStreamComposer；旧版本仍可兼容 CRTC.Mixer 别名。
-    // mix = new CRTC.MediaStreamComposer([ rs.audioStream ]);
+    // 最新接口建议使用 CRTC.MediaEffectsComposer；旧版本仍可兼容 CRTC.Mixer 别名。
+    // mix = new CRTC.MediaEffectsComposer([ rs.audioStream ]);
     // mix.getAudioStream().then((m) => 
     // {
     //   const sender = e.session.connection.getSenders().filter((s) => 

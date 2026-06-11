@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266111448
+ * CRTC v2.0.0.20266112213
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4022,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212222896 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212224426 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17229,9 +17229,9 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
-var MediaStreamComposer = require('./MediaStreamComposer/index.js');
+var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212222896');
+debug('version %s', '2.0.0.405212224426');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17260,8 +17260,8 @@ module.exports = {
   URI,
   NameAddrHeader,
   WebSocketInterface,
-  MediaStreamComposer,
-  Mixer: MediaStreamComposer,
+  MediaEffectsComposer,
+  Mixer: MediaEffectsComposer,
   AiNSEngine: AINoiseSuppression,
   Grammar,
   getStats,
@@ -17271,10 +17271,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212222896';
+    return '2.0.0.405212224426';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
+},{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -20436,15 +20436,15 @@ var LayoutEngine = require('./LayoutEngine');
 var AudioComposer = require('./AudioComposer');
 var OutputStreamManager = require('./OutputStreamManager');
 var RenderLoop = require('./RenderLoop');
-var MediaStreamComposerConfig = require('./ComposerConfig');
+var MediaEffectsComposerConfig = require('./ComposerConfig');
 var ComposerDomAdapter = require('./ComposerDomAdapter');
 var SourceAiVBManager = require('./SourceAiVBManager');
 var WatermarkManager = require('./WatermarkManager');
-var logger = new Logger('MediaStreamComposer');
+var logger = new Logger('MediaEffectsComposer');
 var lastRenderInfoLogSignature = '';
 
 /**
- * MediaStreamComposer — 多路音视频合成器
+ * MediaEffectsComposer — 多路音视频合成器
  *
  * 功能：
  *   - 将多个 MediaStream / HTMLVideoElement(srcObject=MediaStream) 合并为一个 MediaStream
@@ -20455,11 +20455,11 @@ var lastRenderInfoLogSignature = '';
  * 不随源数量动态变化。
  *
  * 使用示例：
- *   const composer = new MediaStreamComposer([localStream, remoteStream], { width: 1280, height: 720 });
+ *   const composer = new MediaEffectsComposer([localStream, remoteStream], { width: 1280, height: 720 });
  *   const output = await composer.getMixedStream();
  *   // peerConnection.addTrack(output.getVideoTracks()[0], output);
  */
-class MediaStreamComposer {
+class MediaEffectsComposer {
   // =========================================================================
   //  构造与初始化
   // =========================================================================
@@ -20508,7 +20508,7 @@ class MediaStreamComposer {
     // -----------------------------------------------------------------------
 
     this._sourceRegistry = null;
-    var config = MediaStreamComposerConfig.create(options);
+    var config = MediaEffectsComposerConfig.create(options);
     logger.debug(`constructor normalized config: ${JSON.stringify(config)}`);
 
     /** @type {boolean} 实例销毁标记；stop() 后不再允许重新取流或追加源 */
@@ -20590,7 +20590,7 @@ class MediaStreamComposer {
     this._sourceRegistry = new SourceRegistry({
       logger: logger,
       getDefaultGain: () => this._config.audioGain,
-      normalizeGain: MediaStreamComposerConfig.normalizeGain,
+      normalizeGain: MediaEffectsComposerConfig.normalizeGain,
       createVideoElement: this._mediaStreamToVideoElement.bind(this),
       onBeforeRemove: source => this._disconnectAudio(source),
       onAfterRemove: source => {
@@ -20721,7 +20721,7 @@ class MediaStreamComposer {
    * @returns {Object} { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
    */
   _normalizeSourceOptions(optionsOrSlot, index) {
-    var normalized = MediaStreamComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
+    var normalized = MediaEffectsComposerConfig.normalizeSourceOptions(optionsOrSlot, index, this._config.audioGain);
     if (Object.prototype.hasOwnProperty.call(normalized, 'aiVirtualBackground')) {
       normalized.aiVirtualBackground = this._sourceAiVBManager.normalizeInput(normalized.aiVirtualBackground);
     }
@@ -20840,7 +20840,7 @@ class MediaStreamComposer {
   _assertNotDestroyed(methodName) {
     if (this._destroyed) {
       logger.warn(`Method called after stop(): ${methodName}`);
-      throw new Error(`MediaStreamComposer has been stopped. Create a new composer before calling ${methodName}.`);
+      throw new Error(`MediaEffectsComposer has been stopped. Create a new composer before calling ${methodName}.`);
     }
   }
 
@@ -21025,7 +21025,7 @@ class MediaStreamComposer {
         overrides
       };
     }
-    var normalizedSlot = MediaStreamComposerConfig.normalizeSlot(slot, 0);
+    var normalizedSlot = MediaEffectsComposerConfig.normalizeSlot(slot, 0);
     if (normalizedSlot === null) {
       throw new TypeError('Invalid slot.');
     }
@@ -21157,7 +21157,7 @@ class MediaStreamComposer {
     if (!(videos instanceof Array)) {
       videos = [videos];
     }
-    var maxSources = MediaStreamComposerConfig.getMaxSources();
+    var maxSources = MediaEffectsComposerConfig.getMaxSources();
     var currentCount = this._sources.length;
     var available = Math.max(0, maxSources - currentCount);
     if (available <= 0) {
@@ -21223,7 +21223,7 @@ class MediaStreamComposer {
     }
     if (patch.sourceMirrorOverrides && typeof patch.sourceMirrorOverrides === 'object') {
       Object.keys(patch.sourceMirrorOverrides).forEach(slotKey => {
-        var normalizedSlot = MediaStreamComposerConfig.normalizeSlot(slotKey, 0);
+        var normalizedSlot = MediaEffectsComposerConfig.normalizeSlot(slotKey, 0);
         if (normalizedSlot === null) {
           throw new TypeError('Invalid slot.');
         }
@@ -21588,7 +21588,7 @@ class MediaStreamComposer {
     return this._outputStreamManager && this._outputStreamManager.videoStream || null;
   }
 }
-module.exports = MediaStreamComposer;
+module.exports = MediaEffectsComposer;
 },{"../../Logger":44,"./AudioComposer":48,"./ComposerConfig":49,"./ComposerDomAdapter":50,"./LayoutEngine":51,"./OutputStreamManager":53,"./RenderLoop":54,"./SourceAiVBManager":55,"./SourceRegistry":56,"./WatermarkManager":57}],53:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
@@ -27168,10 +27168,10 @@ exports.createWorkerScript = function () {
 "use strict";
 
 /**
- * MediaStreamComposer public entry point.
+ * MediaEffectsComposer public entry point.
  */
-module.exports = require('./Core/MediaStreamComposer');
-},{"./Core/MediaStreamComposer":52}],67:[function(require,module,exports){
+module.exports = require('./Core/MediaEffectsComposer');
+},{"./Core/MediaEffectsComposer":52}],67:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -28067,11 +28067,11 @@ module.exports = class RTCSession extends EventEmitter {
     this._sessionAiNSEngine = null;
     this._sessionAiNSOptions = null;
     this._aiNSInputStream = null;
-    this._mediaStreamComposer = null;
-    // 记录当前送入 MediaStreamComposer 的“原始输入流”（非合成输出流）。
+    this._mediaEffectsComposer = null;
+    // 记录当前送入 MediaEffectsComposer 的“原始输入流”（非合成输出流）。
     // 用于切换摄像头时只停旧输入 videoTrack，避免误停 sender 上的合成输出轨。
-    this._mediaStreamComposerInputStream = null;
-    this._sessionMediaStreamComposerOptions = null;
+    this._mediaEffectsComposerInputStream = null;
+    this._sessionMediaEffectsComposerOptions = null;
 
     // 用于华为安卓记录后摄
     this._environment = null;
@@ -28255,8 +28255,8 @@ module.exports = class RTCSession extends EventEmitter {
   get status() {
     return this._status;
   }
-  getMediaStreamComposer() {
-    return this._mediaPipeline.getMediaStreamComposer();
+  getMediaEffectsComposer() {
+    return this._mediaPipeline.getMediaEffectsComposer();
   }
   getAiNoiseSuppression() {
     return this._mediaPipeline.getAiNoiseSuppression();
@@ -28264,30 +28264,30 @@ module.exports = class RTCSession extends EventEmitter {
   getAiVirtualBackground() {
     return this._mediaPipeline.getAiVirtualBackground();
   }
-  async updateMediaStreamComposer(options) {
+  async updateMediaEffectsComposer(options) {
     if (options === null) {
-      this._sessionMediaStreamComposerOptions = null;
-      this._mediaPipeline.stopSessionMediaStreamComposer();
+      this._sessionMediaEffectsComposerOptions = null;
+      this._mediaPipeline.stopSessionMediaEffectsComposer();
       return null;
     }
-    var resolvedOptions = this._mediaPipeline.resolveMediaStreamComposerOptions({
-      mediaStreamComposer: options
+    var resolvedOptions = this._mediaPipeline.resolveMediaEffectsComposerOptions({
+      mediaEffectsComposer: options
     });
-    this._sessionMediaStreamComposerOptions = resolvedOptions;
+    this._sessionMediaEffectsComposerOptions = resolvedOptions;
     if (!resolvedOptions) {
-      this._mediaPipeline.stopSessionMediaStreamComposer();
+      this._mediaPipeline.stopSessionMediaEffectsComposer();
       return null;
     }
-    var composer = this.getMediaStreamComposer();
+    var composer = this.getMediaEffectsComposer();
     if (!composer || typeof composer.setConfig !== 'function') {
       var sender = this._connection && typeof this._connection.getSenders === 'function' ? this._connection.getSenders().find(item => item && item.track && item.track.kind === 'video') : null;
-      var composerInputStream = this._mediaStreamComposerInputStream;
+      var composerInputStream = this._mediaEffectsComposerInputStream;
       var currentLocalVideoTrack = sender && sender.track ? sender.track : this._localMediaStream && this._localMediaStream.getVideoTracks ? this._localMediaStream.getVideoTracks()[0] : null;
       var rebuildFromComposerInputStream = Boolean(composerInputStream && composerInputStream.getVideoTracks && composerInputStream.getVideoTracks().length > 0);
       if (!rebuildFromComposerInputStream && !currentLocalVideoTrack) {
         return null;
       }
-      var mixedStream = await this._mediaPipeline.applyMediaStreamComposerOnSdkGumStream(rebuildFromComposerInputStream ? composerInputStream : (() => {
+      var mixedStream = await this._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(rebuildFromComposerInputStream ? composerInputStream : (() => {
         var currentLocalVideoStream = new MediaStream();
         currentLocalVideoStream.addTrack(currentLocalVideoTrack, currentLocalVideoStream);
         return currentLocalVideoStream;
@@ -28310,7 +28310,7 @@ module.exports = class RTCSession extends EventEmitter {
       if (sender && typeof sender.replaceTrack === 'function') {
         await sender.replaceTrack(mixedVideoTrack);
       }
-      return this.getMediaStreamComposer() ? this.getMediaStreamComposer().getState() : null;
+      return this.getMediaEffectsComposer() ? this.getMediaEffectsComposer().getState() : null;
     }
     var patch = Object.assign({}, resolvedOptions);
     if (Object.prototype.hasOwnProperty.call(patch, 'mirror')) {
@@ -28406,9 +28406,9 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcOfferConstraints = options.rtcOfferConstraints || null;
     var extraHeaders = Utils.cloneArray(options.extraHeaders);
     var extraFeatures = options.extraFeatures || null;
-    var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._mediaPipeline.resolveMediaEffectsComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
-    this._sessionMediaStreamComposerOptions = composerOptions;
+    this._sessionMediaEffectsComposerOptions = composerOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
     this._mediaPipeline.stopSessionAiNoiseSuppression();
@@ -28574,7 +28574,7 @@ module.exports = class RTCSession extends EventEmitter {
         logger.debug(`${this._id} currMediaConstraints: `, JSON.stringify(currMediaConstraints));
         if (currMediaConstraints.audio || currMediaConstraints.video) {
           // 本地设备采集统一走媒体管线，确保虚拟背景、AI 降噪、
-          // MediaStreamComposer 的执行顺序在各入口保持一致。
+          // MediaEffectsComposer 的执行顺序在各入口保持一致。
           var tStream = await this._mediaPipeline.getUserMediaWithSessionPipeline(currMediaConstraints, composerOptions).catch(error => {
             if (this._status === C.STATUS_TERMINATED) {
               throw new Error('terminated');
@@ -28795,9 +28795,9 @@ module.exports = class RTCSession extends EventEmitter {
     var rtcAnswerConstraints = options.rtcAnswerConstraints || null;
     var rtcOfferConstraints = Utils.cloneObject(options.rtcOfferConstraints);
     var extraFeatures = options.extraFeatures || null;
-    var composerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    var composerOptions = this._mediaPipeline.resolveMediaEffectsComposerOptions(options);
     var aiNSOptions = options.aiNoiseSuppression || null;
-    this._sessionMediaStreamComposerOptions = composerOptions;
+    this._sessionMediaEffectsComposerOptions = composerOptions;
     this._sessionAiNSOptions = aiNSOptions;
     this._mediaStreamProcessor = options.mediaStreamProcessor || null;
     this._mediaPipeline.stopSessionAiNoiseSuppression();
@@ -29114,8 +29114,8 @@ module.exports = class RTCSession extends EventEmitter {
     if (!done) {
       done = () => {};
     }
-    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
-      this._sessionMediaStreamComposerOptions = this._mediaPipeline.resolveMediaStreamComposerOptions(options);
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaEffectsComposer')) {
+      this._sessionMediaEffectsComposerOptions = this._mediaPipeline.resolveMediaEffectsComposerOptions(options);
     }
 
     // 优化处理切换到视频模式的视频约束条件
@@ -29146,7 +29146,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._localToAudio = false;
     this._localToVideo = true;
     return Promise.resolve().then(async () => {
-      var composerOptions = this._sessionMediaStreamComposerOptions;
+      var composerOptions = this._sessionMediaEffectsComposerOptions;
 
       // 兼容重复调用，或者由单向视频切换双向视频，或者双向视频切换单向视频的情况
       if (this._localMediaStream.getVideoTracks().length > 0) {
@@ -29322,7 +29322,7 @@ module.exports = class RTCSession extends EventEmitter {
   /**
    * 切换设备（摄像头/麦克风）。
    *
-   * 当会话中启用了 MediaStreamComposer 时，摄像头切换走 composer 分支：
+   * 当会话中启用了 MediaEffectsComposer 时，摄像头切换走 composer 分支：
    *
    *   switchDevice('camera'):
    *   ┌────────────────────────────────────────────────────────────┐
@@ -29366,7 +29366,7 @@ module.exports = class RTCSession extends EventEmitter {
 
     // TODO 需要判断当前是否是视频通话
     if (type === 'camera') {
-      var composerOptions = this._sessionMediaStreamComposerOptions;
+      var composerOptions = this._sessionMediaEffectsComposerOptions;
       if (this._localCameras.length === 0) {
         var cameras = await Utils.getCameras();
         cameras.forEach(cam => {
@@ -29385,7 +29385,7 @@ module.exports = class RTCSession extends EventEmitter {
         // 1) 当前会话声明了 composer 配置；
         // 2) composer 实例已存在（说明通话已在用 composer）；
         // 3) 已记录有效的 composer 输入流（用于 stop old input + remove/add）。
-        var useComposerBranch = Boolean(composerOptions && this._mediaStreamComposer && this._mediaStreamComposerInputStream);
+        var useComposerBranch = Boolean(composerOptions && this._mediaEffectsComposer && this._mediaEffectsComposerInputStream);
         var videoConstraints;
 
         // 如果传参包含deviceId则使用deviceId
@@ -29497,7 +29497,7 @@ module.exports = class RTCSession extends EventEmitter {
 
         // iOS手机延迟重新获取
         navigator.userAgent.indexOf('iPhone') != -1 && Utils.sleep(500);
-        var sessionComposerOptions = this._sessionMediaStreamComposerOptions;
+        var sessionComposerOptions = this._sessionMediaEffectsComposerOptions;
         var sessionAiNSOptions = this._sessionAiNSOptions;
 
         // 统一媒体获取 + 预处理入口（虚拟背景等），默认流和 composer 流共用。
@@ -29563,8 +29563,8 @@ module.exports = class RTCSession extends EventEmitter {
           return stream;
         }
         try {
-          var currentComposer = this._mediaStreamComposer;
-          var oldInputStream = this._mediaStreamComposerInputStream;
+          var currentComposer = this._mediaEffectsComposer;
+          var oldInputStream = this._mediaEffectsComposerInputStream;
           var oldInputVideoTrack = oldInputStream && oldInputStream.getVideoTracks && oldInputStream.getVideoTracks()[0];
 
           // composer 分支关键点：先停“旧输入 videoTrack”，而不是 sender 上的 composer 输出轨。
@@ -29603,7 +29603,7 @@ module.exports = class RTCSession extends EventEmitter {
           currentComposer.removeSource(oldInputStream);
           currentComposer.addSource(newInputStream, sourceOptions);
           // 记录最新输入流，供下次 switchDevice 继续替换。
-          this._mediaStreamComposerInputStream = newInputStream;
+          this._mediaEffectsComposerInputStream = newInputStream;
           var mixedVideoStream = await currentComposer.getOutput({
             type: 'video'
           });
@@ -30739,7 +30739,7 @@ module.exports = class RTCSession extends EventEmitter {
      * 释放媒体管线资源。
      *
      * 清理顺序（与初始化逆序）：
-     *   1. _mediaPipeline.stopSessionMediaStreamComposer()
+     *   1. _mediaPipeline.stopSessionMediaEffectsComposer()
      *      └─ composer.stop() → 停止渲染循环、关闭 AudioContext、
      *         停止 captureStream tracks
      *   2. _mediaPipeline.stopSessionAiNoiseSuppression()
@@ -30749,9 +30749,9 @@ module.exports = class RTCSession extends EventEmitter {
      *
      * 这些 stop 方法各自安全关闭输入流，确保设备采集流不悬挂。
      */
-    this._mediaPipeline.stopSessionMediaStreamComposer();
+    this._mediaPipeline.stopSessionMediaEffectsComposer();
     this._mediaPipeline.stopSessionAiNoiseSuppression();
-    this._sessionMediaStreamComposerOptions = null;
+    this._sessionMediaEffectsComposerOptions = null;
     this._sessionAiNSOptions = null;
     if (this._status === C.STATUS_TERMINATED) {
       return;
@@ -31791,7 +31791,7 @@ module.exports = class RTCSession extends EventEmitter {
           Object.assign(videoConstraints.video, CRTC_C.SDP_LEVELID_AS[this._sdpResolution].VIDEOCONSTRAINTS);
         }
         logger.debug('video constraints: ', JSON.stringify(videoConstraints));
-        return this._mediaPipeline.getUserMediaWithSessionPipeline(videoConstraints, this._sessionMediaStreamComposerOptions).catch(error => {
+        return this._mediaPipeline.getUserMediaWithSessionPipeline(videoConstraints, this._sessionMediaEffectsComposerOptions).catch(error => {
           if (this._status === C.STATUS_TERMINATED) {
             throw new Error('terminated');
           }
@@ -33474,7 +33474,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._mediaPipeline.getUserMediaWithSessionPipeline({
       audio: false,
       video: this._inviteMediaConstraints.video || true
-    }, this._sessionMediaStreamComposerOptions).then(stream => {
+    }, this._sessionMediaEffectsComposerOptions).then(stream => {
       this._connection.getSenders().forEach(sender => {
         if (sender.track && sender.track.kind == 'video') {
           // 停止绘制并清空画布
@@ -34247,8 +34247,8 @@ var logger = new Logger('RTCSession');
  * 前面的测试一旦提前加载 RTCSession/MediaPipeline，后续测试再写 require.cache mock
  * 就接管不到了，最终会出现“单测单跑通过、整套 gulp 失败”的问题。
  */
-function getMediaStreamComposerCtor() {
-  return require('../MediaStreamComposer');
+function getMediaEffectsComposerCtor() {
+  return require('../MediaEffectsComposer');
 }
 function getAiNSEngineCtor() {
   return require('../AINoiseSuppression/index.js');
@@ -34281,20 +34281,20 @@ function normalizeComposerSourceList(composerOptions) {
  * getUserMedia 原始流
  *   → processMediaStream (外部注入预处理)
  *     → applyAiNoiseSuppressionOnSdkGumStream (AI 降噪)
- *       → applyMediaStreamComposerOnSdkGumStream (视频合成/镜像/AiVB 等)
+ *       → applyMediaEffectsComposerOnSdkGumStream (视频合成/镜像/AiVB 等)
  *         → 最终发送流
  * ```
  *
  * 同时负责：
  * - AI 降噪引擎（AiNSEngine）的创建、复用、销毁；
- * - MediaStreamComposer 的创建、输入切换、销毁；
+ * - MediaEffectsComposer 的创建、输入切换、销毁；
  * - GUM 约束修正（关闭浏览器原生降噪，避免双重处理）；
  * - 移动端宽高交换等平台适配。
  *
  * ## 设计原则
  *
  * 1. **只持有 session 引用，不复制状态。**
- *    管线直接读写 `RTCSession` 实例上的 `_sessionAiNSEngine` / `_mediaStreamComposer`
+ *    管线直接读写 `RTCSession` 实例上的 `_sessionAiNSEngine` / `_mediaEffectsComposer`
  *    等字段，避免单独设计状态同步层。
  *
  * 2. **任何加工失败都降级为透传原流。**
@@ -34317,11 +34317,11 @@ module.exports = class MediaPipeline {
   }
 
   /**
-   * 获取当前会话的 MediaStreamComposer 实例（可能为 null）。
-   * @returns {MediaStreamComposer|null}
+   * 获取当前会话的 MediaEffectsComposer 实例（可能为 null）。
+   * @returns {MediaEffectsComposer|null}
    */
-  getMediaStreamComposer() {
-    return this._session._mediaStreamComposer;
+  getMediaEffectsComposer() {
+    return this._session._mediaEffectsComposer;
   }
 
   /**
@@ -34333,33 +34333,33 @@ module.exports = class MediaPipeline {
   }
   getAiVirtualBackground() {
     var session = this._session;
-    var composer = session._mediaStreamComposer;
+    var composer = session._mediaEffectsComposer;
     if (composer && typeof composer.getSourceAiVirtualBackground === 'function') {
       try {
         return composer.getSourceAiVirtualBackground(0);
       } catch (error) {}
     }
-    var sources = normalizeComposerSourceList(session._sessionMediaStreamComposerOptions);
+    var sources = normalizeComposerSourceList(session._sessionMediaEffectsComposerOptions);
     var sourceOptions = sources[0] || null;
     return sourceOptions && sourceOptions.aiVirtualBackground ? sourceOptions.aiVirtualBackground : null;
   }
 
   /**
-   * 从 RTCSession 的入参 `options` 中提取 `mediaStreamComposer` 配置。
+   * 从 RTCSession 的入参 `options` 中提取 `mediaEffectsComposer` 配置。
    *
    * 这里只做字段提取，不做配置归一化或默认值合并，保持 RTCSession 现有入参语义不变。
    *
    * @param {Object} [options={}] — 会话创建/更新时传入的选项对象。
    * @returns {Object|null} — 提取到的 composer 配置，或 null 表示不启用 composer。
    */
-  resolveMediaStreamComposerOptions(options = {}) {
+  resolveMediaEffectsComposerOptions(options = {}) {
     // 这里只负责从会话选项中提取 composer 配置，不做更激进的配置归一化，
     // 保持 RTCSession 现有入参语义不变。
     if (!options || typeof options !== 'object') {
       return null;
     }
-    if (Object.prototype.hasOwnProperty.call(options, 'mediaStreamComposer')) {
-      var composerOptions = options.mediaStreamComposer || null;
+    if (Object.prototype.hasOwnProperty.call(options, 'mediaEffectsComposer')) {
+      var composerOptions = options.mediaEffectsComposer || null;
       if (!composerOptions || typeof composerOptions !== 'object') {
         return composerOptions;
       }
@@ -34575,7 +34575,7 @@ module.exports = class MediaPipeline {
   }
 
   /**
-   * 构建 MediaStreamComposer 构造选项，从视频轨设置中推导宽高/帧率。
+   * 构建 MediaEffectsComposer 构造选项，从视频轨设置中推导宽高/帧率。
    *
    * 推导优先级：
    * 1. 用户显式传入的 `width` / `height`（`composerOptions`）；
@@ -34599,9 +34599,9 @@ module.exports = class MediaPipeline {
    * @param {number} [composerOptions.height] — 期望输出高度。
    * @param {number} [composerOptions.fps] — 期望输出帧率。
    * @param {boolean} [composerOptions.forceNoSwapWH] — 是否禁用移动端宽高交换。
-   * @returns {Object} — MediaStreamComposer 的构造选项。
+   * @returns {Object} — MediaEffectsComposer 的构造选项。
    */
-  buildMediaStreamComposerCtorOptions(stream, composerOptions) {
+  buildMediaEffectsComposerCtorOptions(stream, composerOptions) {
     var options = Object.assign({}, composerOptions || {});
     var videoTrack = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
     var settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() || {} : {};
@@ -34634,7 +34634,7 @@ module.exports = class MediaPipeline {
   }
 
   /**
-   * 停止当前会话的 MediaStreamComposer 并释放相关资源。
+   * 停止当前会话的 MediaEffectsComposer 并释放相关资源。
    *
    * 执行顺序：
    * 1. 调用 `composer.stop()` 释放内部渲染资源（Canvas/WebGL 上下文等）；
@@ -34643,36 +34643,36 @@ module.exports = class MediaPipeline {
    *
    * **注意：** `composer.stop()` 只释放内部资源，外部输入流仍需显式关闭。
    */
-  stopSessionMediaStreamComposer(options) {
+  stopSessionMediaEffectsComposer(options) {
     options = options || {};
     var session = this._session;
-    var composerInputStream = session._mediaStreamComposerInputStream;
+    var composerInputStream = session._mediaEffectsComposerInputStream;
     var preserveInputStream = options.preserveInputStream === true;
-    if (!session._mediaStreamComposer) {
-      session._mediaStreamComposer = null;
+    if (!session._mediaEffectsComposer) {
+      session._mediaEffectsComposer = null;
       if (!preserveInputStream) {
         this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
       }
-      session._mediaStreamComposerInputStream = null;
+      session._mediaEffectsComposerInputStream = null;
       return;
     }
 
     // composer.stop() 只释放内部渲染资源，外部输入流仍需 RTCSession 显式关闭。
-    this.safeStopMediaStreamComposer(session._mediaStreamComposer, 'stop composer failed');
+    this.safeStopMediaEffectsComposer(session._mediaEffectsComposer, 'stop composer failed');
     if (!preserveInputStream) {
       this.safeCloseMediaStream(composerInputStream, 'close composer input stream failed');
     }
-    session._mediaStreamComposer = null;
-    session._mediaStreamComposerInputStream = null;
+    session._mediaEffectsComposer = null;
+    session._mediaEffectsComposerInputStream = null;
   }
 
   /**
-   * 安全停止 MediaStreamComposer（静默吞掉异常）。
+   * 安全停止 MediaEffectsComposer（静默吞掉异常）。
    *
-   * @param {MediaStreamComposer|null} composer — composer 实例。
+   * @param {MediaEffectsComposer|null} composer — composer 实例。
    * @param {string} message — 失败时的日志前缀。
    */
-  safeStopMediaStreamComposer(composer, message) {
+  safeStopMediaEffectsComposer(composer, message) {
     var session = this._session;
     if (!composer) {
       return;
@@ -34705,14 +34705,14 @@ module.exports = class MediaPipeline {
   }
 
   /**
-   * 对 getUserMedia 原始流执行 MediaStreamComposer 视频合成。
+   * 对 getUserMedia 原始流执行 MediaEffectsComposer 视频合成。
    *
    * 内部流程：
-   * 1. 调用 {@link buildMediaStreamComposerCtorOptions} 推导构造参数；
+   * 1. 调用 {@link buildMediaEffectsComposerCtorOptions} 推导构造参数；
    * 2. 停止旧 composer（如果存在）；
-   * 3. 创建新的 `MediaStreamComposer` 实例；
+   * 3. 创建新的 `MediaEffectsComposer` 实例；
    * 4. 获取合成后的视频轨；
-   * 5. **仅替换视频轨**，保留原始音轨不变——音频混音职责不属于 MediaStreamComposer。
+   * 5. **仅替换视频轨**，保留原始音轨不变——音频混音职责不属于 MediaEffectsComposer。
    *
    * **失败降级：** catch 后清理 composer、返回原流。
    *
@@ -34721,25 +34721,25 @@ module.exports = class MediaPipeline {
    * @returns {Promise<MediaStream>} — 合成后的流（视频轨替换为 composer 输出 + 原始音轨），
    *          或原流（如果无视频轨/处理失败）。
    */
-  async applyMediaStreamComposerOnSdkGumStream(stream, composerOptions, runtimeOptions) {
+  async applyMediaEffectsComposerOnSdkGumStream(stream, composerOptions, runtimeOptions) {
     var session = this._session;
     var options = runtimeOptions || {};
-    logger.debug(`applyMediaStreamComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
+    logger.debug(`applyMediaEffectsComposerOnSdkGumStream: ${JSON.stringify(composerOptions)}`);
     if (!stream || !composerOptions || !(stream instanceof MediaStream)) {
       return stream;
     }
     if (!stream.getVideoTracks || stream.getVideoTracks().length === 0) {
       return stream;
     }
-    var composerCtorOptions = this.buildMediaStreamComposerCtorOptions(stream, composerOptions);
+    var composerCtorOptions = this.buildMediaEffectsComposerCtorOptions(stream, composerOptions);
     var composer = null;
     logger.debug(`composerCtorOptions: ${JSON.stringify(composerCtorOptions)}`);
     try {
-      this.stopSessionMediaStreamComposer({
+      this.stopSessionMediaEffectsComposer({
         preserveInputStream: options.preserveExistingComposerInputStream === true
       });
-      var MediaStreamComposer = getMediaStreamComposerCtor();
-      composer = new MediaStreamComposer([stream], composerCtorOptions);
+      var MediaEffectsComposer = getMediaEffectsComposerCtor();
+      composer = new MediaEffectsComposer([stream], composerCtorOptions);
       var mixedVideoStream = await composer.getOutput({
         type: 'video'
       });
@@ -34750,20 +34750,20 @@ module.exports = class MediaPipeline {
       var mixedStream = new MediaStream();
 
       // 保留原始音轨，只替换视频轨为 composer 输出轨。
-      // 这样不会把音频混音职责错误地耦合到 MediaStreamComposer。
+      // 这样不会把音频混音职责错误地耦合到 MediaEffectsComposer。
       stream.getAudioTracks && stream.getAudioTracks().forEach(track => {
         mixedStream.addTrack(track, mixedStream);
       });
       mixedVideoTrack.contentHint = 'detail';
       mixedStream.addTrack(mixedVideoTrack, mixedStream);
-      session._mediaStreamComposer = composer;
-      session._mediaStreamComposerInputStream = stream;
+      session._mediaEffectsComposer = composer;
+      session._mediaEffectsComposerInputStream = stream;
       return mixedStream;
     } catch (error) {
       logger.warn(`${session._id} apply composer failed:`, error);
-      this.safeStopMediaStreamComposer(composer, 'composer stop after apply failure failed');
-      session._mediaStreamComposer = null;
-      session._mediaStreamComposerInputStream = null;
+      this.safeStopMediaEffectsComposer(composer, 'composer stop after apply failure failed');
+      session._mediaEffectsComposer = null;
+      session._mediaEffectsComposerInputStream = null;
       return stream;
     }
   }
@@ -34787,7 +34787,7 @@ module.exports = class MediaPipeline {
    * │ 4. applyAiNoiseSuppressionOnSdkGumStream(stream, aiNS)       │
    * │    └─ AI 降噪处理                                           │
    * │                                                             │
-   * │ 5. applyMediaStreamComposerOnSdkGumStream(stream, composer)  │
+   * │ 5. applyMediaEffectsComposerOnSdkGumStream(stream, composer)  │
    * │    └─ 视频合成（镜像/画中画/AiVB 等）                       │
    * └─────────────────────────────────────────────────────────────┘
    * ```
@@ -34795,7 +34795,7 @@ module.exports = class MediaPipeline {
    * 每一步失败都降级透传原流，不会阻断整体管线。
    *
    * @param {Object|boolean} constraints — getUserMedia 约束。
-   * @param {Object} composerOptions — MediaStreamComposer 配置。
+   * @param {Object} composerOptions — MediaEffectsComposer 配置。
    * @param {boolean|Object} [aiNSOptions=this._session._sessionAiNSOptions] — AI 降噪配置，
    *        默认使用会话当前配置。
    * @returns {Promise<MediaStream>} — 经过完整管线处理的最终媒体流。
@@ -34805,15 +34805,15 @@ module.exports = class MediaPipeline {
     // 1. 修正 GUM 约束
     // 2. 执行外部注入预处理
     // 3. 执行 AI 降噪
-    // 4. 执行 MediaStreamComposer 合成
+    // 4. 执行 MediaEffectsComposer 合成
     var gumConstraints = this.getGumConstraintsWithProcessorFlags(constraints, aiNSOptions);
     var stream = await navigator.mediaDevices.getUserMedia(gumConstraints);
     var processedStream = await this.processMediaStream(stream);
     var aiNoiseSuppressedStream = await this.applyAiNoiseSuppressionOnSdkGumStream(processedStream, aiNSOptions);
-    return await this.applyMediaStreamComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
+    return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression/index.js":5,"../Logger":44,"../MediaStreamComposer":66,"../Utils":88}],76:[function(require,module,exports){
+},{"../AINoiseSuppression/index.js":5,"../Logger":44,"../MediaEffectsComposer":66,"../Utils":88}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');

@@ -1,5 +1,5 @@
 // ============================================================
-// app — UI 逻辑、工具方法、UI 回调及非 MediaStreamComposer-SDK 操作
+// app — UI 逻辑、工具方法、UI 回调及非 MediaEffectsComposer-SDK 操作
 // ============================================================
 const app = {
   localStreams            : [],
@@ -763,7 +763,7 @@ const app = {
     this.lastRenderPathSignature = signature;
 
     console.info(
-      `[MediaStreamComposerDemo][RenderPath] requested=${info.requestedMode || '-'} actual=${info.actualMode || '-'} ` +
+      `[MediaEffectsComposerDemo][RenderPath] requested=${info.requestedMode || '-'} actual=${info.actualMode || '-'} ` +
       `worker=${Boolean(info.isWorker)} webgl2=${Boolean(info.isWebGL2)} fallback=${Boolean(info.isFallback)} ` +
       `dropped=${info.droppedFrames || 0} rendered=${info.renderedFrames || 0} reason=${info.reason || '-'} ` +
       `outputMode=${info.outputMode || '-'} insertableActive=${Boolean(info.insertableActive)} ` +
@@ -914,7 +914,7 @@ const app = {
   },
 
   // ==========================================================
-  // UI 回调 — 被 app-media-stream-composer.js 中的 SDK 方法调用
+  // UI 回调 — 被 app-media-effects-composer.js 中的 SDK 方法调用
   // ==========================================================
 
   onComposerStarting()
@@ -1615,7 +1615,7 @@ const app = {
   },
 
   // ==========================================================
-  // 水印编排 — 构造水印配置并调用 MediaStreamComposer SDK 方法
+  // 水印编排 — 构造水印配置并调用 MediaEffectsComposer SDK 方法
   // ==========================================================
 
   async applyOutputTextWatermark()
@@ -2111,7 +2111,7 @@ const app = {
 
     for (let i = 0; i < auxCount; i++)
     {
-      const composer = new CRTC.MediaStreamComposer([], {
+      const composer = new CRTC.MediaEffectsComposer([], {
         width      : size.width,
         height     : size.height,
         fps        : scenario.fps,
@@ -2342,7 +2342,7 @@ const app = {
     };
 
     this._downloadTextFile(
-      `media-stream-composer-stress-${this._formatTimestampForFile()}.json`,
+      `media-effects-composer-stress-${this._formatTimestampForFile()}.json`,
       JSON.stringify(payload, null, 2),
       'application/json'
     );
@@ -2399,7 +2399,7 @@ const app = {
     const content = [ header.join(','), ...rows ].join('\n');
 
     this._downloadTextFile(
-      `media-stream-composer-stress-${this._formatTimestampForFile()}.csv`,
+      `media-effects-composer-stress-${this._formatTimestampForFile()}.csv`,
       content,
       'text/csv;charset=utf-8'
     );

@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
 const assert = require('assert');
-const MediaStreamComposer = require('../lib/MediaStreamComposer');
-const ComposerConfig = require('../lib/MediaStreamComposer/Core/ComposerConfig');
-const WatermarkManager = require('../lib/MediaStreamComposer/Core/WatermarkManager');
-const WorkerRenderer = require('../lib/MediaStreamComposer/Renderers/WorkerRenderer');
-const workerScript = require('../lib/MediaStreamComposer/Renderers/workerScript');
+const MediaEffectsComposer = require('../lib/MediaEffectsComposer');
+const ComposerConfig = require('../lib/MediaEffectsComposer/Core/ComposerConfig');
+const WatermarkManager = require('../lib/MediaEffectsComposer/Core/WatermarkManager');
+const WorkerRenderer = require('../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
+const workerScript = require('../lib/MediaEffectsComposer/Renderers/workerScript');
 const vm = require('vm');
 
 let nextTrackId = 1;
@@ -829,7 +829,7 @@ async function testPlainAudioRequestWithoutSourceDoesNotCreateAudioContext()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const output = await mixer.getAudioStream();
 
   assert.strictEqual(output, null);
@@ -843,7 +843,7 @@ async function testAppendAudioSourceInjectsAudioTrack()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const output = await mixer.getMixedStream();
   const audioTrack = output.getAudioTracks()[0];
 
@@ -862,7 +862,7 @@ async function testRepeatedOutputCallsReuseLiveStream()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -884,7 +884,7 @@ async function testNewPublicApiStateAndSourceLifecycle()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const firstStream = createStream({ audio: true });
   const secondStream = createStream({ audio: true });
 
@@ -917,7 +917,7 @@ async function testNewPublicApiConfigAndOutputs()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const sourceA = createStream({ audio: true });
   const sourceB = createStream({ audio: true });
 
@@ -973,7 +973,7 @@ async function testStopRejectsPublicReuse()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   await mixer.getMixedStream();
   mixer.stop();
@@ -999,7 +999,7 @@ async function testExternalVideoSrcObjectReconnectsAudio()
 
   video.srcObject = firstStream;
 
-  const mixer = new MediaStreamComposer(video, { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer(video, { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   await mixer.getMixedStream();
   video.srcObject = secondStream;
@@ -1018,7 +1018,7 @@ async function testSlotAudioStreamsCreateIndependentBuses()
   resetMockState();
 
   const streams = [];
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   for (let slot = 0; slot < 7; slot++)
   {
@@ -1080,7 +1080,7 @@ async function testDefaultAudioStreamStillMixesAllSources()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   for (let slot = 0; slot < 4; slot++)
   {
@@ -1103,7 +1103,7 @@ async function testDefaultAndSlotAudioShareSourceNodesWithSeparateGains()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   for (let slot = 0; slot < 3; slot++)
   {
@@ -1141,7 +1141,7 @@ async function testSlotAudioStreamRecreatesWhenRequestedBeforeSources()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const pendingOutput = await mixer.getAudioStream({ slots: [ 0 ] });
   const context = MockAudioContext.instances[0];
 
@@ -1169,7 +1169,7 @@ async function testAudioSourceFansOutThroughMasterGain()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const stream = createStream({ video: false, audio: true });
 
   mixer.appendStream(stream, 0);
@@ -1205,7 +1205,7 @@ async function testAudioSourceKeepsNodeWhenStreamObjectChangesButTrackIsSame()
 
   video.srcObject = firstStream;
 
-  const mixer = new MediaStreamComposer(video, { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer(video, { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   await mixer.getAudioStream();
 
@@ -1227,7 +1227,7 @@ async function testBusRefreshMutesRemovedGainWithoutDisconnectingMaster()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const streamA = createStream({ video: false, audio: true });
   const streamB = createStream({ video: false, audio: true });
 
@@ -1257,7 +1257,7 @@ async function testAudioRefreshIsBatchedIntoSingleMicrotask()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   await mixer.getAudioStream({ slots: [ 0, 1 ] });
 
@@ -1278,7 +1278,7 @@ async function testSlotAudioStreamRecreatesEvenWhenPreviousTrackMuted()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   mixer.appendStream(createStream({ video: false, audio: true }), 0);
 
@@ -1302,7 +1302,7 @@ async function testDestinationTrackHealthRecreatesEndedBusDestination()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   mixer.appendStream(createStream({ video: false, audio: true }), 0);
 
@@ -1328,7 +1328,7 @@ async function testIsolatedSlotAudioStreamsCreateIndependentContexts()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   for (let slot = 0; slot < 4; slot++)
   {
@@ -1362,7 +1362,7 @@ async function testReleaseIsolatedSubmixAudioStreamClosesContext()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   for (let slot = 0; slot < 3; slot++)
   {
@@ -1390,7 +1390,7 @@ async function testSlotAudioStreamDefaultsToNewDestinationTrack()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   mixer.appendStream(createStream({ video: false, audio: true }), 0);
 
@@ -1413,7 +1413,7 @@ async function testAudioTrackEndedDisconnectsSourceAndBus()
 
   const stream = createStream({ video: false, audio: true });
   const track = stream.getAudioTracks()[0];
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
 
   mixer.appendStream(stream, 0);
   await mixer.getAudioStream();
@@ -1443,7 +1443,7 @@ async function testMixedStreamCreatesStableAudioTrackBeforeSources()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const mixed = await mixer.getMixedStream();
   const audioTrack = mixed.getAudioTracks()[0];
   const context = MockAudioContext.instances[0];
@@ -1466,7 +1466,7 @@ async function testWatermarkConfigAndFiltering()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1511,7 +1511,7 @@ async function testCanvas2DWatermarkDrawOrder()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-2d' });
   const sourceA = createStream();
   const sourceB = createStream();
 
@@ -1559,7 +1559,7 @@ async function testMainWebGL2WatermarkOpacity()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-webgl2' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'main-webgl2' });
   const sourceA = createStream();
 
   mixer.appendStream(sourceA, 0);
@@ -1602,7 +1602,7 @@ async function testMirrorGlobalAndSlotControls()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width        : 320,
     height       : 180,
     fps          : 15,
@@ -1662,7 +1662,7 @@ async function testMirrorAutoModeKeepsWorkerRenderer()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width        : 320,
     height       : 180,
     fps          : 15,
@@ -1688,7 +1688,7 @@ async function testEnableMirrorKeepsCurrentRendererUntilFailure()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width        : 320,
     height       : 180,
     fps          : 15,
@@ -1718,7 +1718,7 @@ async function testClearSourceMirrorWithoutSlotClearsAllOverrides()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width        : 320,
     height       : 180,
     fps          : 15,
@@ -1746,7 +1746,7 @@ async function testOutputMirrorFlipsWholeComposedFrame()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1778,7 +1778,7 @@ async function testOutputMirrorCanDisableWatermarkMirroring()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1836,7 +1836,7 @@ async function testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1870,7 +1870,7 @@ async function testSourceMirrorKeepsWorkerRenderer()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1897,7 +1897,7 @@ async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1934,7 +1934,7 @@ async function testSetSourceAiVirtualBackgroundLifecycle()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1965,7 +1965,7 @@ async function testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -1994,7 +1994,7 @@ async function testSetSourceAiVirtualBackgroundKeepsWorkerRenderer()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], {
+  const mixer = new MediaEffectsComposer([], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -2054,7 +2054,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
 
   try
   {
-    const mixer = new MediaStreamComposer([], {
+    const mixer = new MediaEffectsComposer([], {
       width      : 320,
       height     : 180,
       fps        : 15,
@@ -2110,7 +2110,7 @@ async function testMainWebGL2AiVirtualBackgroundUsesMainThreadManager()
 
   const source = createStream();
   let getRenderableStateCalls = 0;
-  const mixer = new MediaStreamComposer([ source ], {
+  const mixer = new MediaEffectsComposer([ source ], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -2150,7 +2150,7 @@ async function testInitialSourcesArrayMapsSourceOptionsByIndex()
 
   const sourceA = createStream();
   const sourceB = createStream();
-  const mixer = new MediaStreamComposer([ sourceA, sourceB ], {
+  const mixer = new MediaEffectsComposer([ sourceA, sourceB ], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -2190,7 +2190,7 @@ async function testEmptyInitialRenderDoesNotCreateRenderer()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
 
   assert.strictEqual(mixer.getRenderInfo().actualMode, 'not-started');
   assert.strictEqual(MockWorker.instances.length, 0);
@@ -2202,7 +2202,7 @@ async function testWorkerShaderUsesRuntimeNewlines()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
 
   mixer.appendStream(createStream(), 0);
   mixer.getVideoStream();
@@ -2230,7 +2230,7 @@ async function testAutoRendererFallbackPrefersMainWebGL2()
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
 
   mixer.appendStream(createStream(), 0);
   mixer.getVideoStream();
@@ -2260,7 +2260,7 @@ async function testAutoRendererFallbackTriesWorker2DBeforeMain2D()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
 
   mixer.appendStream(createStream(), 0);
   mixer.getVideoStream();
@@ -2305,7 +2305,7 @@ async function testAutoRendererFallbackEndsAtMain2D()
 {
   resetMockState();
 
-  const mixer = new MediaStreamComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
+  const mixer = new MediaEffectsComposer([], { width: 320, height: 180, fps: 15, renderMode: 'auto' });
 
   mixer.appendStream(createStream(), 0);
   mixer.getVideoStream();
@@ -2996,7 +2996,7 @@ async function testInsertableVideoStreamPreferredWhenSupported()
   resetMockState();
   enableInsertableMocks();
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width            : 320,
     height           : 180,
     fps              : 15,
@@ -3041,7 +3041,7 @@ async function testInsertableFallbacksToCaptureStreamWhenGeneratorUnavailable()
   delete global.window.VideoTrackGenerator;
   delete global.window.MediaStreamTrackGenerator;
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width                     : 320,
     height                    : 180,
     fps                       : 15,
@@ -3078,7 +3078,7 @@ async function testCaptureStreamUsesManualRequestFrameWhenSupported()
   delete global.window.VideoTrackGenerator;
   delete global.window.MediaStreamTrackGenerator;
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width                     : 320,
     height                    : 180,
     fps                       : 15,
@@ -3107,7 +3107,7 @@ async function testInsertableCanUseLegacyMediaStreamTrackGenerator()
   resetMockState();
   enableInsertableMocks({ useLegacyGenerator: true });
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width            : 320,
     height           : 180,
     fps              : 15,
@@ -3128,7 +3128,7 @@ async function testDisableInsertableForcesCaptureStreamEvenWhenSupported()
   resetMockState();
   enableInsertableMocks();
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width                     : 320, 
     height                    : 180,
     fps                       : 15,
@@ -3154,7 +3154,7 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
   resetMockState();
   enableInsertableMocks();
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width                     : 320,
     height                    : 180,
     fps                       : 15,
@@ -3182,7 +3182,7 @@ async function testCaptureStreamActiveSinkIsDisposedOnStop()
   resetMockState();
   enableInsertableMocks();
 
-  const mixer = new MediaStreamComposer([ createStream({ audio: true }) ], {
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
     width      : 320,
     height     : 180,
     fps        : 15,
@@ -3298,18 +3298,18 @@ async function run()
 
   if (failures.length > 0)
   {
-    console.log(`\n  MediaStreamComposer Failures (${failed}):`);
+    console.log(`\n  MediaEffectsComposer Failures (${failed}):`);
     for (const f of failures)
     {
       console.log(`    ✗ ${f.name}`);
       console.log(`      ${f.error.message}`);
     }
   }
-  console.log(`  MediaStreamComposer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
+  console.log(`  MediaEffectsComposer Tests: ${passed} passed, ${failed} failed, ${TESTS.length} total`);
 
   if (failed > 0)
   {
-    throw new Error(`${failed} MediaStreamComposer test(s) failed`);
+    throw new Error(`${failed} MediaEffectsComposer test(s) failed`);
   }
 }
 

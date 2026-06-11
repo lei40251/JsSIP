@@ -1,7 +1,7 @@
 // ============================================================
-// app — CRTC.MediaStreamComposer SDK 调用层
+// app — CRTC.MediaEffectsComposer SDK 调用层
 // 职责：此文件中的方法通过 Object.assign 挂载到全局 app 对象上，
-//       封装所有直接调用 CRTC.MediaStreamComposer SDK 的操作。UI 层（app-base.js）
+//       封装所有直接调用 CRTC.MediaEffectsComposer SDK 的操作。UI 层（app-base.js）
 //       不应直接访问 this.composer，而应通过此文件提供的包装方法读取状态。
 // ============================================================
 Object.assign(window.app, {
@@ -13,12 +13,12 @@ Object.assign(window.app, {
   },
 
   // ==========================================================
-  // 生命周期 — MediaStreamComposer 实例的创建与销毁
+  // 生命周期 — MediaEffectsComposer 实例的创建与销毁
   // ==========================================================
 
   /**
-   * 启动 MediaStreamComposer 实例。
-   * 从 UI 控件读取输出分辨率、帧率和渲染后端配置，创建 CRTC.MediaStreamComposer，
+   * 启动 MediaEffectsComposer 实例。
+   * 从 UI 控件读取输出分辨率、帧率和渲染后端配置，创建 CRTC.MediaEffectsComposer，
    * 默认仅获取视频输出流用于预览；完整音视频混流由 UI 层在用户点击监听时按需获取。
    *
    * @async
@@ -60,8 +60,8 @@ Object.assign(window.app, {
       }
     }
 
-    // 创建 MediaStreamComposer 实例，初始空源列表
-    this.composer = new CRTC.MediaStreamComposer([], options);
+    // 创建 MediaEffectsComposer 实例，初始空源列表
+    this.composer = new CRTC.MediaEffectsComposer([], options);
     // 重置监听状态，由 UI 层按需开启
     this.monitorAudio = false;
     // 通知 UI 层进入启动前准备（如停止旧子混音）
@@ -89,7 +89,7 @@ Object.assign(window.app, {
   },
 
   /**
-   * 停止 MediaStreamComposer 实例。
+   * 停止 MediaEffectsComposer 实例。
    * 销毁当前 composer，释放资源，通知 UI 层清理界面状态。
    *
    * @async
@@ -113,7 +113,7 @@ Object.assign(window.app, {
   },
 
   // ==========================================================
-  // 源查询 — 从 MediaStreamComposer 实例读取源与状态信息
+  // 源查询 — 从 MediaEffectsComposer 实例读取源与状态信息
   // ==========================================================
 
   /**
@@ -371,12 +371,12 @@ Object.assign(window.app, {
   },
 
   // ==========================================================
-  // MediaStreamComposer 状态查询包装方法
+  // MediaEffectsComposer 状态查询包装方法
   // 供 UI 层读取状态，避免 app-base.js 直接访问 this.composer
   // ==========================================================
 
   /**
-   * 判断 MediaStreamComposer 是否正在运行。
+   * 判断 MediaEffectsComposer 是否正在运行。
    * UI 层通过此方法替代直接检查 this.composer，保持职责分离。
    *
    * @returns {boolean} true 表示 composer 实例存在且正在运行
@@ -409,7 +409,7 @@ Object.assign(window.app, {
   },
 
   /**
-   * 获取 MediaStreamComposer 当前所有输入源列表。
+   * 获取 MediaEffectsComposer 当前所有输入源列表。
    *
    * @returns {Array} source 对象数组，每个包含 slot、id、hasAudio 等。
    *         无 composer 时返回空数组。
@@ -561,7 +561,7 @@ Object.assign(window.app, {
   },
 
   /**
-   * 获取 MediaStreamComposer 的音频引擎状态信息。
+   * 获取 MediaEffectsComposer 的音频引擎状态信息。
    *
    * @returns {Object|null} 音频信息对象（含 status、connectedSources、liveSourceCount），
    *         无 composer 或 SDK 不支持时返回 null。
@@ -574,7 +574,7 @@ Object.assign(window.app, {
   },
 
   /**
-   * 获取 MediaStreamComposer 的渲染器运行信息。
+   * 获取 MediaEffectsComposer 的渲染器运行信息。
    *
    * @returns {Object|null} 渲染信息对象（含 actualMode、requestedMode、droppedFrames、reason），
    *         无 composer 或 SDK 不支持时返回 null。
@@ -645,11 +645,11 @@ Object.assign(window.app, {
   },
 
   // ==========================================================
-  // 水印变更 — 通过 MediaStreamComposer SDK 管理全局与槽位水印
+  // 水印变更 — 通过 MediaEffectsComposer SDK 管理全局与槽位水印
   // ==========================================================
 
   /**
-   * 应用水印列表到 MediaStreamComposer。
+   * 应用水印列表到 MediaEffectsComposer。
    * 替换所有已有水印，然后触发 UI 刷新。
    *
    * @async
@@ -729,7 +729,7 @@ Object.assign(window.app, {
   },
 
   // ==========================================================
-  // 子混音 — 从 MediaStreamComposer 获取指定槽位的独立音频流
+  // 子混音 — 从 MediaEffectsComposer 获取指定槽位的独立音频流
   // 用于监听局部混音，非破坏性操作，不改变输出内容。
   // ==========================================================
 
@@ -796,7 +796,7 @@ Object.assign(window.app, {
         }
       }
 
-      // 从 MediaStreamComposer 获取独立的子混音音频流
+      // 从 MediaEffectsComposer 获取独立的子混音音频流
       const stream = await this.composer.getOutput({
         type     : 'audio',
         slots    : normalizedSlots,
@@ -979,7 +979,7 @@ Object.assign(window.app, {
 
   /**
    * 处理输入源添加的内部方法。
-   * 检查源数量上限，覆盖目标槽位旧源，添加到 MediaStreamComposer，然后更新 UI。
+   * 检查源数量上限，覆盖目标槽位旧源，添加到 MediaEffectsComposer，然后更新 UI。
    *
    * @param {MediaStream} stream - 要添加的媒体流
    * @param {string}      label  - 缩略图显示的标签文字
@@ -1016,7 +1016,7 @@ Object.assign(window.app, {
 
     // 移除目标槽位的旧源（如有）
     this.removeLocalStreamBySlot(slot);
-    // 将新源添加到 MediaStreamComposer 指定槽位
+    // 将新源添加到 MediaEffectsComposer 指定槽位
     this.composer.addSource(stream, { slot });
 
     // 记录本地源列表
@@ -1046,7 +1046,7 @@ Object.assign(window.app, {
   },
 
   /**
-   * 按源 ID 从 MediaStreamComposer 移除输入源。
+   * 按源 ID 从 MediaEffectsComposer 移除输入源。
    * 停止并释放流的音视频轨道，清理对应缩略图，压缩槽位。
    *
    * @param {string} id - MediaStream.id，用于定位和移除
@@ -1062,7 +1062,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    // 从 MediaStreamComposer 移除流
+    // 从 MediaEffectsComposer 移除流
     this.composer.removeSource(id);
 
     // 在本地列表中查找并移除
