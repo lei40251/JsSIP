@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026611959
+ * CRTC v2.0.0.20266111021
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4162,7 +4162,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212221918 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212222042 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17371,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212221918');
+debug('version %s', '2.0.0.405212222042');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17411,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212221918';
+    return '2.0.0.405212222042';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -18035,6 +18035,8 @@ var logger = new Logger('AiVBMediaPipeRuntime');
 
 /** 默认推理后端 —— 'GPU' 以获得最佳性能 */
 var DEFAULT_DELEGATE = 'GPU';
+var DEFAULT_MASK_EDGE_BLUR_PX = 2;
+var DEFAULT_MASK_ALPHA_BIAS = 0.08;
 function normalizeDelegate() {
   return DEFAULT_DELEGATE;
 }
@@ -18083,6 +18085,12 @@ module.exports = class MediaPipeSegmenterRuntime {
 
     /** @type {ImageData|null} 复用的 ImageData 缓冲区，用于遮罩输出 */
     this.maskImageData = null;
+
+    /** @type {HTMLCanvasElement|null} 对遮罩边缘做轻量羽化的离屏 canvas */
+    this.featherCanvas = null;
+
+    /** @type {CanvasRenderingContext2D|null} featherCanvas 的 2D 上下文 */
+    this.featherContext = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -18150,6 +18158,8 @@ module.exports = class MediaPipeSegmenterRuntime {
         this.maskCanvas = null;
         this.maskContext = null;
         this.maskImageData = null;
+        this.featherCanvas = null;
+        this.featherContext = null;
 
         // 拒绝正在等待初始化的请求
         if (this.pendingRequest) {
@@ -18365,7 +18375,9 @@ module.exports = class MediaPipeSegmenterRuntime {
 
     // 将置信度值写入 alpha 通道（R=G=B=0, A=置信度）
     for (var i = 0; i < confidenceValues.length; i += 1) {
-      var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[i] * 255)));
+      // 轻微收缩遮罩，减少亮背景在羽化边缘处泄漏形成白边。
+      var normalizedAlpha = Math.max(0, Math.min(1, (confidenceValues[i] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS)));
+      var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
       imageData[offset] = 0;
       imageData[offset + 1] = 0;
       imageData[offset + 2] = 0;
@@ -18373,7 +18385,31 @@ module.exports = class MediaPipeSegmenterRuntime {
       offset += 4;
     }
     this.maskContext.putImageData(this.maskImageData, 0, 0);
-    return this.maskCanvas;
+    return this.applyMaskEdgeBlur(width, height);
+  }
+  applyMaskEdgeBlur(width, height) {
+    if (!this.maskCanvas || !this.maskContext || DEFAULT_MASK_EDGE_BLUR_PX <= 0) {
+      return this.maskCanvas;
+    }
+    if (!this.featherCanvas) {
+      this.featherCanvas = document.createElement('canvas');
+      this.featherContext = this.featherCanvas.getContext('2d');
+    }
+    if (!this.featherContext) {
+      return this.maskCanvas;
+    }
+    if (this.featherCanvas.width !== width) {
+      this.featherCanvas.width = width;
+    }
+    if (this.featherCanvas.height !== height) {
+      this.featherCanvas.height = height;
+    }
+    this.featherContext.clearRect(0, 0, width, height);
+    this.featherContext.save();
+    this.featherContext.filter = `blur(${DEFAULT_MASK_EDGE_BLUR_PX}px)`;
+    this.featherContext.drawImage(this.maskCanvas, 0, 0, width, height);
+    this.featherContext.restore();
+    return this.featherCanvas;
   }
 
   /**
@@ -18501,6 +18537,8 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.maskCanvas = null;
     this.maskContext = null;
     this.maskImageData = null;
+    this.featherCanvas = null;
+    this.featherContext = null;
   }
 };
 },{"../../Logger":44,"./AiVBAssetLoader":45}],48:[function(require,module,exports){
@@ -22913,7 +22951,7 @@ module.exports = RenderLoop;
 var AiVBConfig = require('../AIVirtualBackground/AiVBConfig');
 var MediaPipeSegmenterRuntime = require('../AIVirtualBackground/MediaPipeSegmenterRuntime');
 var DEFAULT_RUNTIME_STARTUP_DELAY_MS = 1500;
-var DEFAULT_MAX_RUNTIME_FPS = 5;
+var DEFAULT_MAX_RUNTIME_FPS = 15;
 function cloneObject(input) {
   return input && typeof input === 'object' ? Object.assign({}, input) : {};
 }
@@ -26292,6 +26330,8 @@ var aivbSourceStates = Object.create(null);
 var aivbRuntimeStates = Object.create(null);
 var aivbModulePromises = Object.create(null);
 var aivbBackgroundStates = Object.create(null);
+var DEFAULT_MASK_EDGE_BLUR_PX = 2;
+var DEFAULT_MASK_ALPHA_BIAS = 0.08;
 var VERTEX_SHADER = "#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n";
 var FRAGMENT_SHADER = "#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";
 
@@ -26367,6 +26407,7 @@ function getSourceState(id)
       runtimeAllowedAt           : 0,
       segmentationSurface        : { canvas: null, context: null },
       maskSurface                : { canvas: null, context: null, imageData: null },
+      featherSurface             : { canvas: null, context: null },
       foregroundSurface          : { canvas: null, context: null },
       outputSurface              : { canvas: null, context: null }
     };
@@ -26619,7 +26660,11 @@ function createMaskCanvas(sourceState, runtimeState, result)
 
   for (var index = 0; index < confidenceValues.length; index += 1)
   {
-    var alpha = Math.max(0, Math.min(255, Math.round(confidenceValues[index] * 255)));
+    var normalizedAlpha = Math.max(
+      0,
+      Math.min(1, (confidenceValues[index] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS))
+    );
+    var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
 
     imageData[offset] = 0;
     imageData[offset + 1] = 0;
@@ -26630,7 +26675,25 @@ function createMaskCanvas(sourceState, runtimeState, result)
 
   maskSurface.context.putImageData(sourceState.maskSurface.imageData, 0, 0);
 
-  return maskSurface.canvas;
+  if (DEFAULT_MASK_EDGE_BLUR_PX <= 0)
+  {
+    return maskSurface.canvas;
+  }
+
+  var featherSurface = ensureCanvasSize(sourceState.featherSurface, maskWidth, maskHeight);
+
+  if (!featherSurface || !featherSurface.context)
+  {
+    return maskSurface.canvas;
+  }
+
+  featherSurface.context.clearRect(0, 0, maskWidth, maskHeight);
+  featherSurface.context.save();
+  featherSurface.context.filter = 'blur(' + DEFAULT_MASK_EDGE_BLUR_PX + 'px)';
+  featherSurface.context.drawImage(maskSurface.canvas, 0, 0, maskWidth, maskHeight);
+  featherSurface.context.restore();
+
+  return featherSurface.canvas;
 }
 
 function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY)

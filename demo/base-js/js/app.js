@@ -3037,20 +3037,35 @@ function buildSelectedAiVirtualBackgroundOptions()
     return null;
   }
 
+  const sourceWidth = Number(videoConstraints.width) || 640;
+  const sourceHeight = Number(videoConstraints.height) || 480;
+  const sourceFps = Number(videoConstraints.frameRate) || 15;
+  // 优先保证分割跟手性；分辨率越高，分割输入缩得越小，避免人物移动时遮罩跟不上。
+  let processingScale = 0.4;
+
+  if (sourceWidth * sourceHeight >= 1280 * 720)
+  {
+    processingScale = 0.3;
+  }
+  else if (sourceWidth * sourceHeight >= 640 * 480)
+  {
+    processingScale = 0.35;
+  }
+
   const aiVirtualBackground = {
-    enabled      : true,
+    enabled        : true,
     startupDelayMs : 0,
-    maxRuntimeFps  : Math.min(Number(videoConstraints.frameRate) || 15, 15),
-    assetConfig  : Object.assign({}, AI_VB_ASSET_CONFIG),
-    segmentation : {
+    maxRuntimeFps  : Math.min(sourceFps, 15),
+    assetConfig    : Object.assign({}, AI_VB_ASSET_CONFIG),
+    segmentation   : {
       delegate  : 'GPU',
       frameSkip : 0
     },
     video : {
-      height          : videoConstraints.height,
-      processingScale : 0.5,
-      targetFps       : Math.min(Number(videoConstraints.frameRate) || 15, 15),
-      width           : videoConstraints.width
+      height          : sourceHeight,
+      processingScale : processingScale,
+      targetFps       : Math.min(sourceFps, 15),
+      width           : sourceWidth
     }
   }; 
 
