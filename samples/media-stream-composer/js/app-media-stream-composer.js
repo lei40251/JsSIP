@@ -107,6 +107,11 @@ Object.assign(window.app, {
     this.onComposerStopped();
   },
 
+  getComposerState()
+  {
+    return this.composer ? this.composer.getState() : null;
+  },
+
   // ==========================================================
   // 源查询 — 从 MediaStreamComposer 实例读取源与状态信息
   // ==========================================================
@@ -119,9 +124,11 @@ Object.assign(window.app, {
    */
   getSelectedSource()
   {
-    if (!this.composer) return null;
+    const state = this.getComposerState();
 
-    return this.composer.getState().sources.find((source) => source.slot === this.currentSlot) || null;
+    if (!state) return null;
+
+    return state.sources.find((source) => source.slot === this.currentSlot) || null;
   },
 
   getLocalStreamItemBySlot(slot)
@@ -342,8 +349,10 @@ Object.assign(window.app, {
    */
   hasSlotWatermark(slot)
   {
-    if (!this.composer) return false;
-    const watermarks = this.composer.getState().config.watermarks || [];
+    const state = this.getComposerState();
+
+    if (!state) return false;
+    const watermarks = state.config.watermarks || [];
 
     return watermarks.some((item) => item.target === 'source' && item.slot === slot);
   },
@@ -356,9 +365,9 @@ Object.assign(window.app, {
    */
   getWatermarkSnapshot()
   {
-    if (!this.composer) return [];
+    const state = this.getComposerState();
 
-    return this.composer.getState().config.watermarks || [];
+    return state ? (state.config.watermarks || []) : [];
   },
 
   // ==========================================================
@@ -407,7 +416,9 @@ Object.assign(window.app, {
    */
   getSources()
   {
-    return this.composer ? this.composer.getState().sources : [];
+    const state = this.getComposerState();
+
+    return state ? state.sources : [];
   },
 
   /**
@@ -418,9 +429,11 @@ Object.assign(window.app, {
    */
   getSourceMirror(slot)
   {
-    if (!this.composer) return slot === undefined ? { global: false, overrides: {} } : null;
+    const state = this.getComposerState();
 
-    const config = this.composer.getState().config;
+    if (!state) return slot === undefined ? { global: false, overrides: {} } : null;
+
+    const config = state.config;
     const global = Boolean(config.sourceMirror);
     const overrides = Object.assign({}, config.sourceMirrorOverrides || {});
 
@@ -449,9 +462,9 @@ Object.assign(window.app, {
    */
   getMirror()
   {
-    if (!this.composer) return false;
+    const state = this.getComposerState();
 
-    return Boolean(this.composer.getState().config.outputMirror);
+    return Boolean(state && state.config.outputMirror);
   },
 
   /**
@@ -461,9 +474,9 @@ Object.assign(window.app, {
    */
   getOutputWatermarkMirror()
   {
-    if (!this.composer) return true;
+    const state = this.getComposerState();
 
-    return Boolean(this.composer.getState().config.mirrorWatermarksWithOutput);
+    return state ? Boolean(state.config.mirrorWatermarksWithOutput) : true;
   },
 
   /**
@@ -555,7 +568,9 @@ Object.assign(window.app, {
    */
   getAudioInfo()
   {
-    return this.composer ? this.composer.getState().audio : null;
+    const state = this.getComposerState();
+
+    return state ? state.audio : null;
   },
 
   /**
@@ -566,7 +581,9 @@ Object.assign(window.app, {
    */
   getRenderInfo()
   {
-    return this.composer ? this.composer.getState().render : null;
+    const state = this.getComposerState();
+
+    return state ? state.render : null;
   },
 
   /**
@@ -1000,7 +1017,7 @@ Object.assign(window.app, {
     // 移除目标槽位的旧源（如有）
     this.removeLocalStreamBySlot(slot);
     // 将新源添加到 MediaStreamComposer 指定槽位
-    this.composer.addSource(stream, slot);
+    this.composer.addSource(stream, { slot });
 
     // 记录本地源列表
     this.localStreams.push({

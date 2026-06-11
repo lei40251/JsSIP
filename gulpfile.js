@@ -9,16 +9,13 @@ const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
 const gulp = require('gulp');
 const babel = require('gulp-babel');
-// const uglify = require('gulp-uglify-es').default;
 const rename = require('gulp-rename');
 const header = require('gulp-header');
 const expect = require('gulp-expect-file');
-// const nodeunit = require('gulp-nodeunit-runner');
 const eslint = require('gulp-eslint');
 const plumber = require('gulp-plumber');
 const log = require('fancy-log');
 const colors = require('ansi-colors');
-// const obfuscate = require('gulp-javascript-obfuscator');
 const zip = require('gulp-zip');
 const del = require('del');
 const terser = require('gulp-terser');
@@ -27,7 +24,8 @@ const replace = require('gulp-replace');
 const PKG = require('./package.json');
 const today = new Date();
 
-// gulp-header.
+// 构建产物头部 banner。
+// 这里保留原始 banner 文件，并在构建时注入版本和编译时间。
 const BANNER = fs.readFileSync('banner.txt').toString();
 const BANNER_OPTIONS = {
   pkg         : PKG,
@@ -35,9 +33,80 @@ const BANNER_OPTIONS = {
   compileTime : `${today.getFullYear()}${today.getMonth()+1}${today.getDate()}${today.getHours()}${today.getMinutes()}`
 };
 
+// BFCP 相关名称在协议处理、外部调试和兼容场景里相对敏感，
+// 这里显式保留，避免压缩后名称变化带来额外风险。
+const TERSER_RESERVED = [
+  'CommonHeader',
+  'FloorRequest',
+  'FloorRelease',
+  'FloorStatus',
+  'Hello',
+  'HelloAck',
+  'FloorQuery',
+  'AttributeType',
+  'FloorRequestId',
+  'FloorRequestStatusAtr',
+  'FloorRequestInformation',
+  'RequestStatus'
+];
+
+// 定向属性混淆白名单。
+// 这里只混淆 MediaStreamComposer / AiNS / 输出流链路里确定偏内部实现的属性，
+// 不对全量 `_xxx` 属性做混淆，避免把 UA / RTCSession / SIP 内部字段也一起打坏。
+// 如果后续某个测试或业务依赖这些属性名，需要从这里移除对应项。
+const TERSER_MEDIA_PROPERTY_MANGLE_REGEX = /^__(?:aiVirtualBackgroundState|workerTest)$|^_(?:activeCaptureSinkVideo|audioBuses|audioComposer|canvas|capturedStream|capturedStreams|capturedVideoTrack|closeTransferFrames|compressorNode|config|context2d|contextWebGL2|continuousWriteFailures|createFrame|createWatermarkFrame|ctx2d|drawVideosToCanvas|filter|gco|generator|generatorTrack|gl|handleWorkerMessage|insertableActive|insertableEnabledByConfig|insertableSupport|lastTimestampUs|latestPendingFrame|manualCaptureFrameControl|maxContinuousWriteFailures|mixedStream|outputContext|outputStreamManager|pendingWrite|renderInWorker|sourceAiVBManager|sources|src|videoStream|worker|workerReady|writer)$/;
+
+// 压缩配置说明：
+// 1. 目标不是重型 obfuscator，而是在体积和可维护性之间做平衡。
+// 2. `module: true` / `toplevel: true` 用于更激进地压缩顶级作用域。
+// 3. `mangle.properties` 只对上面的定向属性生效，避免全局属性混淆风险过高。
+// 4. `keep_quoted: true` 表示凡是以字符串字面量访问的属性名不参与属性混淆，
+//    这样可以降低动态访问场景被打坏的概率。
+// 5. `unsafe*` / `hoist_props` / `reduce_funcs` 会提高压缩率，但也意味着更依赖测试兜底。
+// 6. `preamble` 是用户要求保留的前缀，不要移除。
+const TERSER_OPTIONS = {
+  toplevel        : true,
+  module          : true,
+  keep_classnames : false,
+  keep_fnames     : false,
+  mangle          : {
+    eval       : true,
+    properties : {
+      regex       : TERSER_MEDIA_PROPERTY_MANGLE_REGEX,
+      keep_quoted : true
+    },
+    reserved : TERSER_RESERVED
+  },
+  compress : {
+    // `passes` 不继续无限加大，5 基本已经接近收益和构建时间的平衡点。
+    passes        : 5,
+    unsafe        : true,
+    unsafe_math   : true,
+    pure_getters  : 'strict',
+    hoist_props   : true,
+    reduce_vars   : true,
+    reduce_funcs  : true,
+    side_effects  : true,
+    keep_fargs    : false,
+    drop_debugger : true,
+    global_defs   : {
+      __DEBUG__ : false
+    }
+  },
+  output : {
+    comments   : false,
+    beautify   : false,
+    semicolons : false,
+    // 该前缀是当前产物兼容用户既有策略的一部分，需要保留。
+    preamble   : 'var _0x1234=0;'
+  }
+};
+
+// 构建时间参与版本号替换，历史逻辑是把本地时间戳乘 2。
+// 这里保留现状，避免影响现有版本串依赖。
 const buildTime = getLocalTimestamp()*2;
 
-// gulp-expect-file options.
+// 文件存在性校验统一配置。
 const EXPECT_OPTIONS = {
   silent         : true,
   errorOnFailure : true,
@@ -86,6 +155,7 @@ function deleteBackup()
 
 gulp.task('lint', function()
 {
+  // 先跑 lint，尽早暴露语法和风格问题，避免进入后续耗时流程。
   const src = [ 'gulpfile.js', '.eslintrc.js', 'lib/**/*.js', 'test/**/*.js' ];
 
   return gulp.src(src)
@@ -96,22 +166,17 @@ gulp.task('lint', function()
 
 gulp.task('babel', function()
 {
+  // 先把 lib 编译到临时目录，再基于 lib-es5 做 browserify。
+  // 这样不污染源码目录，也方便最终统一清理。
   return gulp
     .src([ 'lib/**/*.js' ])
     .pipe(babel())
     .pipe(gulp.dest('lib-es5'));
 });
 
-// gulp.task('babel1', function()
-// {
-//   return gulp
-//     .src([ `dist/${ PKG.title }.js` ])
-//     .pipe(babel())
-//     .pipe(gulp.dest('dist/b/'));
-// });
-
 gulp.task('browserify', function()
 {
+  // `standalone` 让 dist 产物既可直接挂到 window，也能兼容模块系统引用。
   return browserify(
     {
       entries      : 'lib-es5/JsSIP.js',
@@ -131,6 +196,7 @@ gulp.task('browserify', function()
     .pipe(source(`${PKG.title}.js`))
     .pipe(buffer())
     .pipe(rename(`${PKG.title}.js`))
+    // 将源码中的占位符替换为实际构建信息。
     .pipe(replace(/__VERSION__/g, `${PKG.version }.${buildTime}`))
     .pipe(replace(/__TITLE__/g, PKG.title))
     .pipe(header(BANNER, BANNER_OPTIONS))
@@ -143,81 +209,10 @@ gulp.task('uglify', function()
 
   return gulp.src(src)
     .pipe(expect(EXPECT_OPTIONS, src))
-    // .pipe(obfuscate({ compact: true }))
-    .pipe(terser({
-      toplevel        : true, // 混淆顶级作用域
-      module          : true, // 处理 ES 模块
-      keep_classnames : false, // 混淆类名
-      keep_fnames     : false, // 混淆函数名
-      mangle          : {
-        // // 保留必要的名称
-        // properties : {
-        //   regex       : /^_/,
-        //   keep_quoted : true
-        // },
-        reserved : [
-          'CommonHeader',
-          'FloorRequest',
-          'FloorRelease',
-          // 'FloorRequestStatusMsg',
-          'FloorStatus',
-          'Hello',
-          'HelloAck',
-          // 'FloorRequestStatusAck',
-          // 'FloorStatusAck',
-          'FloorQuery',
-          'AttributeType',
-          // 'FloorId',
-          'FloorRequestId',
-          'FloorRequestStatusAtr',
-          // 'SupportedAttributes',
-          // 'SupportedPrimitives',
-          'FloorRequestInformation',
-          // 'Primitive',
-          // 'Complements',
-          'RequestStatus'
-        ]
-      },
-      compress : {
-        // 增加压缩轮次
-        passes      : 5,
-        unsafe      : true,
-        unsafe_math : true,
-        reduce_vars : true,
-        global_defs : {
-          __DEBUG__ : false // 全局常量替换
-        }
-      },
-      output : { // 添加这一段配置
-        comments : false, // 禁用所有注释
-        beautify : false, // 禁用美化格式
-        preamble : 'var _0x1234=0;' // 添加混淆前缀
-        // ascii_only : true // 防止 Unicode 转义
-      }
-    }))
-    // .pipe(obfuscate({
-    //   compact                  : true,
-    //   // controlFlowFlattening          : true, // 控制流扁平化
-    //   // controlFlowFlatteningThreshold : 0.01,
-    //   // deadCodeInjection              : true, // 注入死代码
-    //   // deadCodeInjectionThreshold     : 0.4,
-    //   // debugProtection                : true, // 防调试
-    //   // debugProtectionInterval        : 5000,
-    //   // disableConsoleOutput           : true, // 禁用 console
-    //   identifierNamesGenerator : 'hexadecimal', // 16进制变量名
-    //   // log                            : false,
-    //   numbersToExpressions     : true
-    //   // renameGlobals            : false, // 保留全局变量
-    //   // selfDefending            : true, // 自我保护
-    //   // simplify                 : true,
-    //   // splitStrings             : true,
-    //   // splitStringsChunkLength        : 5,
-    //   // stringArray              : true
-    //   // stringArrayEncoding      : [ 'base64', 'rc4' ], // 字符串加密
-    //   // stringArrayThreshold     : 0.15,
-    //   // transformObjectKeys            : true
-    //   // unicodeEscapeSequence          : false
-    // }))
+    // 这里不用重型 obfuscator，只走 terser。
+    // 原因是 obfuscator 对体积、构建速度和兼容性冲击都更大。
+    .pipe(terser(TERSER_OPTIONS))
+    // banner 在压缩产物里同样保留。
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title }.min.js`))
     .pipe(gulp.dest('dist/'));
@@ -225,6 +220,7 @@ gulp.task('uglify', function()
 
 gulp.task('test-files', function()
 {
+  // 先确认测试文件都在，避免后续 require 时报出不直观的问题。
   const src = [
     'test/test-classes.js',
     'test/test-normalizeTarget.js',
@@ -244,6 +240,7 @@ gulp.task('test-files', function()
 
 gulp.task('media-stream-composer-test', function(done)
 {
+  // 这组测试单独串起来，方便只验证媒体合成相关能力。
   require('./test/test-ai-virtual-background').run()
     .then(function()
     {
@@ -274,6 +271,7 @@ gulp.task('bfcp-test', function(done)
 
 gulp.task('sdk-test', function(done)
 {
+  // SDK 通用能力测试与媒体合成测试分开跑，便于快速定位问题范围。
   const runner = require('./test/include/runner');
 
   require('./test/include/common');
@@ -306,6 +304,8 @@ gulp.task('test', gulp.series('test-files', 'sdk-test', 'media-stream-composer-t
 
 gulp.task('grammar', function(cb)
 {
+  // `grammar` 会重新生成 lib/Grammar.js，并在生成后做一次定制补丁。
+  // 这是有副作用的任务，只在明确需要时执行。
   const local_pegjs = path.resolve('./node_modules/.bin/pegjs');
   const Grammar_pegjs = path.resolve('lib/Grammar.pegjs');
   const Grammar_js = path.resolve('lib/Grammar.js');
@@ -325,8 +325,10 @@ gulp.task('grammar', function(cb)
       log('grammar: applying custom changes to Grammar.js...');
 
       const grammar = fs.readFileSync('lib/Grammar.js').toString();
+      // 历史兼容补丁：调整 pegjs 生成代码的错误返回逻辑。
       let modified_grammar = grammar.replace(/throw new this\.SyntaxError\(([\s\S]*?)\);([\s\S]*?)}([\s\S]*?)return result;/, 'new this.SyntaxError($1);\n        return -1;$2}$3return data;');
 
+      // 清理行尾空白，避免生成文件里出现无意义差异。
       modified_grammar = modified_grammar.replace(/\s+$/mg, '');
       fs.writeFileSync('lib/Grammar.js', modified_grammar);
       log(`grammar: ${ colors.yellow('done')}`);
@@ -335,7 +337,7 @@ gulp.task('grammar', function(cb)
   );
 });
 
-// 打zip压缩包用
+// 以下 zip 相关任务用于生成交付包，不参与普通 dist 构建。
 gulp.task('zip-demo', gulp.series(
   copyFiles,
   renameConfig,
@@ -383,16 +385,20 @@ gulp.task('zip-del', function(done)
 
 gulp.task('tmp-del', function(done)
 {
+  // 清理 browserify/构建过程中的临时目录。
   del.sync('./dist/b', done());
 });
 
 gulp.task('lib-es5-del', function(done)
 {
+  // 清理 babel 中间产物，避免仓库里长期残留编译目录。
   del.sync('./lib-es5/', done());
 });
 
 gulp.task('dist-del', function(done)
 {
+  // Windows 下 dist 目录偶发会被占用。
+  // 这里对 EPERM / EBUSY 做软处理，避免一次占用直接让默认构建失败。
   try
   {
     del.sync('./dist/');
@@ -419,8 +425,11 @@ gulp.task('dist-del', function(done)
 
 gulp.task('devel', gulp.series('grammar'));
 
+// 标准构建链路：
+// lint -> babel -> test -> browserify -> terser -> 清理临时目录
 gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del', 'lib-es5-del'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 
+// 默认先清 dist，再执行标准构建。
 gulp.task('default', gulp.series('dist-del', 'dist'));

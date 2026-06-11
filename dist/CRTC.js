@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266111021
+ * CRTC v2.0.0.20266111233
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -188,7 +188,7 @@ exports.normalizeAssetConfig = function (assetConfig) {
 
 var Logger = require('../Logger');
 var AiNSConfig = require('./AINoiseSuppressionConfig');
-var workletCode = require('./aiNoiseSuppressionWorkletSource');
+var createWorkletCode = require('./aiNoiseSuppressionWorkletSource');
 var logger = new Logger('AINoiseSuppressionCore');
 var DEFAULT_CDN_URL = AiNSConfig.DEFAULT_CDN_URL;
 var WORKLET_MESSAGE_TYPES = {
@@ -310,7 +310,7 @@ module.exports = class AiNSCore {
       throw new Error('Assets not loaded');
     }
     logger.debug(`createAudioWorkletNode() start: sampleRate=${audioContext && audioContext.sampleRate}`);
-    await registerInlineWorkletModule(audioContext, workletCode);
+    await registerInlineWorkletModule(audioContext, createWorkletCode());
     this.workletNode = new AudioWorkletNode(audioContext, 'ai-noise-suppression-audio-processor', {
       processorOptions: {
         wasmBytes: this.assets.wasmBytes,
@@ -730,531 +730,389 @@ module.exports = class AiNSMediaStreamProcessor {
   }
 };
 },{"../Logger":44,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
+(function (global){(function (){
 "use strict";
 
+/* eslint-disable */
 /**
- * AINoiseSuppression AudioWorklet 内联源码。
+ * AINoiseSuppression AudioWorklet inline source.
  *
- * 为什么单独放在一个文件：
- * - 这段源码体积大、细节多，和主线程控制逻辑混在一起会显著降低可读性；
- * - Worklet 运行在独立作用域，不能直接复用主线程模块依赖；
- * - 未来若要替换为外链 Worklet 文件、压缩版本或自动生成版本，改动范围最小。
- *
- * 这段代码主要完成：
- * 1. 在 Worklet 线程内同步初始化 WASM 模块；
- * 2. 根据模型句柄获取 frameLength；
- * 3. 使用环形缓冲区适配 WebAudio 128-sample quantum 与 DF3 固定帧长；
- * 4. 提供 bypass 与 suppressionLevel 的实时控制。
+ * Keep the worklet body as executable JS so the minifier can compress it
+ * before we serialize it back to a string for addModule().
  */
-module.exports = String.raw`(function () {
-  'use strict';
+function workletMain() {
+  (function () {
+    'use strict';
 
-  let cachedFloat32ArrayMemory0 = null;
-  let cachedUint8ArrayMemory0 = null;
-  let cachedTextDecoder = null;
-  let WASM_VECTOR_LEN = 0;
-  let wasmModule;
-  let wasmInstance;
-  let wasm;
-
-  function getTextDecoder()
-  {
-    if (cachedTextDecoder === null && typeof TextDecoder !== 'undefined')
-    {
-      cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
-      cachedTextDecoder.decode();
-    }
-
-    return cachedTextDecoder;
-  }
-
-  const MAX_SAFARI_DECODE_BYTES = 2146435072;
-  let numBytesDecoded = 0;
-
-  function getFloat32ArrayMemory0()
-  {
-    if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0)
-    {
-      cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
-    }
-
-    return cachedFloat32ArrayMemory0;
-  }
-
-  function getUint8ArrayMemory0()
-  {
-    if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0)
-    {
-      cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
-    }
-
-    return cachedUint8ArrayMemory0;
-  }
-
-  function decodeText(ptr, len)
-  {
-    const decoder = getTextDecoder();
-
-    if (!decoder)
-    {
-      return '';
-    }
-
-    numBytesDecoded += len;
-
-    if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES)
-    {
-      cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
-      cachedTextDecoder.decode();
-      numBytesDecoded = len;
-    }
-
-    return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
-  }
-
-  function getStringFromWasm0(ptr, len)
-  {
-    return decodeText(ptr >>> 0, len);
-  }
-
-  function addToExternrefTable0(obj)
-  {
-    const idx = wasm.__externref_table_alloc();
-
-    wasm.__wbindgen_externrefs.set(idx, obj);
-
-    return idx;
-  }
-
-  function handleError(f, args)
-  {
-    try
-    {
-      return f.apply(this, args);
-    }
-    catch (e)
-    {
-      const idx = addToExternrefTable0(e);
-
-      wasm.__wbindgen_exn_store(idx);
-    }
-  }
-
-  function passArray8ToWasm0(arg, malloc)
-  {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-
-    getUint8ArrayMemory0().set(arg, ptr);
-    WASM_VECTOR_LEN = arg.length;
-
-    return ptr;
-  }
-
-  function passArrayF32ToWasm0(arg, malloc)
-  {
-    const ptr = malloc(arg.length * 4, 4) >>> 0;
-
-    getFloat32ArrayMemory0().set(arg, ptr / 4);
-    WASM_VECTOR_LEN = arg.length;
-
-    return ptr;
-  }
-
-  function ans_create(modelBytes, attenLim)
-  {
-    const ptr0 = passArray8ToWasm0(modelBytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.ans_create(ptr0, len0, attenLim);
-
-    return ret >>> 0;
-  }
-
-  function ans_get_frame_length(st)
-  {
-    const ret = wasm.ans_get_frame_length(st);
-
-    return ret >>> 0;
-  }
-
-  function ans_process_frame(st, input)
-  {
-    const ptr0 = passArrayF32ToWasm0(input, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-
-    return wasm.ans_process_frame(st, ptr0, len0);
-  }
-
-  function ans_set_atten_lim(st, limDb)
-  {
-    wasm.ans_set_atten_lim(st, limDb);
-  }
-
-  function __wbg_get_imports()
-  {
-    const import0 = {
-      __proto__ : null,
-      __wbg___wbindgen_is_function_754e9f305ff6029e(arg0)
-      {
-        return typeof arg0 === 'function';
-      },
-      __wbg___wbindgen_is_object_56732c2bc353f41d(arg0)
-      {
-        return typeof arg0 === 'object' && arg0 !== null;
-      },
-      __wbg___wbindgen_is_string_c236cabd84a4d769(arg0)
-      {
-        return typeof arg0 === 'string';
-      },
-      __wbg___wbindgen_is_undefined_67b456be8673d3d7(arg0)
-      {
-        return arg0 === undefined;
-      },
-      __wbg___wbindgen_memory_fbc4c3e30b409f08()
-      {
-        return wasm.memory;
-      },
-      __wbg___wbindgen_throw_1506f2235d1bdba0(arg0, arg1)
-      {
-        throw new Error(getStringFromWasm0(arg0, arg1));
-      },
-      __wbg_buffer_dab8cf7849f66ff8(arg0)
-      {
-        return arg0.buffer;
-      },
-      __wbg_call_4ffe5b44583f9954()
-      {
-        return handleError(function(arg0, arg1, arg2)
-        {
-          return arg0.call(arg1, arg2);
-        }, arguments);
-      },
-      __wbg_call_aa058b3a50f1c0a1()
-      {
-        return handleError(function(arg0, arg1)
-        {
-          return arg0.call(arg1);
-        }, arguments);
-      },
-      __wbg_crypto_90efa04a103d6db2(arg0)
-      {
-        return arg0.crypto;
-      },
-      __wbg_getRandomValues_b9488c03d6ecdc0d()
-      {
-        return handleError(function(arg0, arg1)
-        {
-          arg0.getRandomValues(arg1);
-        }, arguments);
-      },
-      __wbg_globalThis_d76c93eb4fcb97ff()
-      {
-        return handleError(function()
-        {
-          return globalThis.globalThis;
-        }, arguments);
-      },
-      __wbg_global_d5571d09e84f338f()
-      {
-        return handleError(function()
-        {
-          return global.global;
-        }, arguments);
-      },
-      __wbg_msCrypto_68b2f4999b2901b0(arg0)
-      {
-        return arg0.msCrypto;
-      },
-      __wbg_new_1c499b98736d881b(arg0)
-      {
-        return new Float32Array(arg0);
-      },
-      __wbg_new_f3375b05b49ca4cb(arg0)
-      {
-        return new Uint8Array(arg0);
-      },
-      __wbg_new_no_args_4856846a7397439f(arg0, arg1)
-      {
-        return new Function(getStringFromWasm0(arg0, arg1));
-      },
-      __wbg_new_with_byte_offset_and_length_ae71716dc4a8aa2f(arg0, arg1, arg2)
-      {
-        return new Float32Array(arg0, arg1 >>> 0, arg2 >>> 0);
-      },
-      __wbg_new_with_byte_offset_and_length_c74776d039a72b10(arg0, arg1, arg2)
-      {
-        return new Uint8Array(arg0, arg1 >>> 0, arg2 >>> 0);
-      },
-      __wbg_new_with_length_135fb0a3b25f39fc(arg0)
-      {
-        return new Uint8Array(arg0 >>> 0);
-      },
-      __wbg_node_046e1cb1b8cf3d92(arg0)
-      {
-        return arg0.node;
-      },
-      __wbg_process_7b13606d1afee88f(arg0)
-      {
-        return arg0.process;
-      },
-      __wbg_randomFillSync_73a2861b2e659112()
-      {
-        return handleError(function(arg0, arg1)
-        {
-          arg0.randomFillSync(arg1);
-        }, arguments);
-      },
-      __wbg_require_01ac6430ef887047()
-      {
-        return handleError(function()
-        {
-          return module.require;
-        }, arguments);
-      },
-      __wbg_self_84d02e00450d52f3()
-      {
-        return handleError(function()
-        {
-          return self.self;
-        }, arguments);
-      },
-      __wbg_set_8ab55bbf9f2507cd(arg0, arg1, arg2)
-      {
-        arg0.set(arg1, arg2 >>> 0);
-      },
-      __wbg_subarray_a1d2eeb856ccb090(arg0, arg1, arg2)
-      {
-        return arg0.subarray(arg1 >>> 0, arg2 >>> 0);
-      },
-      __wbg_versions_6963303269777792(arg0)
-      {
-        return arg0.versions;
-      },
-      __wbg_window_58f68528f5b015de()
-      {
-        return handleError(function()
-        {
-          return window.window;
-        }, arguments);
-      },
-      __wbindgen_cast_0000000000000001(arg0, arg1)
-      {
-        return getStringFromWasm0(arg0, arg1);
-      },
-      __wbindgen_init_externref_table()
-      {
-        const table = wasm.__wbindgen_externrefs;
-        const offset = table.grow(4);
-
-        table.set(0, undefined);
-        table.set(offset + 0, undefined);
-        table.set(offset + 1, null);
-        table.set(offset + 2, true);
-        table.set(offset + 3, false);
+    var cachedFloat32ArrayMemory0 = null;
+    var cachedUint8ArrayMemory0 = null;
+    var cachedTextDecoder = null;
+    var WASM_VECTOR_LEN = 0;
+    var wasmModule;
+    var wasmInstance;
+    var wasm;
+    function getTextDecoder() {
+      if (cachedTextDecoder === null && typeof TextDecoder !== 'undefined') {
+        cachedTextDecoder = new TextDecoder('utf-8', {
+          ignoreBOM: true,
+          fatal: true
+        });
+        cachedTextDecoder.decode();
       }
-    };
-
-    return {
-      __proto__   : null,
-      './ans_bg.js' : import0
-    };
-  }
-
-  function __wbg_finalize_init(instance, module)
-  {
-    wasmInstance = instance;
-    wasm = instance.exports;
-    wasmModule = module;
-    cachedFloat32ArrayMemory0 = null;
-    cachedUint8ArrayMemory0 = null;
-    wasm.__wbindgen_start();
-
-    return wasm;
-  }
-
-  function initSync(module)
-  {
-    if (wasm !== undefined) return wasm;
-
-    if (module !== undefined && Object.getPrototypeOf(module) === Object.prototype)
-    {
-      ({ module } = module);
+      return cachedTextDecoder;
     }
-
-    const imports = __wbg_get_imports();
-
-    if (!(module instanceof WebAssembly.Module))
-    {
-      module = new WebAssembly.Module(module);
+    var MAX_SAFARI_DECODE_BYTES = 2146435072;
+    var numBytesDecoded = 0;
+    function getFloat32ArrayMemory0() {
+      if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0) {
+        cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
+      }
+      return cachedFloat32ArrayMemory0;
     }
-
-    const instance = new WebAssembly.Instance(module, imports);
-
-    return __wbg_finalize_init(instance, module);
-  }
-
-  const WorkletMessageTypes = {
-    SET_SUPPRESSION_LEVEL : 'SET_SUPPRESSION_LEVEL',
-    SET_BYPASS            : 'SET_BYPASS'
-  };
-
-  class DeepFilterAudioProcessor extends AudioWorkletProcessor
-  {
-    constructor(options)
-    {
-      super();
-      this.dfModel = null;
-      this.inputWritePos = 0;
-      this.inputReadPos = 0;
-      this.outputWritePos = 0;
-      this.outputReadPos = 0;
-      this.bypass = false;
-      this.isInitialized = false;
-      this.tempFrame = null;
-      this.bufferSize = 8192;
-      this.inputBuffer = new Float32Array(this.bufferSize);
-      this.outputBuffer = new Float32Array(this.bufferSize);
-
-      try
-      {
-        initSync(options.processorOptions.wasmBytes);
-        const modelBytes = new Uint8Array(options.processorOptions.modelBytes);
-        const handle = ans_create(modelBytes, options.processorOptions.suppressionLevel ?? 50);
-        const frameLength = ans_get_frame_length(handle);
-
-        this.dfModel = { handle, frameLength };
-        this.bufferSize = frameLength * 4;
+    function getUint8ArrayMemory0() {
+      if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+        cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+      }
+      return cachedUint8ArrayMemory0;
+    }
+    function decodeText(ptr, len) {
+      var decoder = getTextDecoder();
+      if (!decoder) {
+        return '';
+      }
+      numBytesDecoded += len;
+      if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+        cachedTextDecoder = new TextDecoder('utf-8', {
+          ignoreBOM: true,
+          fatal: true
+        });
+        cachedTextDecoder.decode();
+        numBytesDecoded = len;
+      }
+      return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+    }
+    function getStringFromWasm0(ptr, len) {
+      return decodeText(ptr >>> 0, len);
+    }
+    function addToExternrefTable0(obj) {
+      var idx = wasm.__externref_table_alloc();
+      wasm.__wbindgen_externrefs.set(idx, obj);
+      return idx;
+    }
+    function handleError(f, args) {
+      try {
+        return f.apply(this, args);
+      } catch (e) {
+        var idx = addToExternrefTable0(e);
+        wasm.__wbindgen_exn_store(idx);
+      }
+    }
+    function passArray8ToWasm0(arg, malloc) {
+      var ptr = malloc(arg.length * 1, 1) >>> 0;
+      getUint8ArrayMemory0().set(arg, ptr);
+      WASM_VECTOR_LEN = arg.length;
+      return ptr;
+    }
+    function passArrayF32ToWasm0(arg, malloc) {
+      var ptr = malloc(arg.length * 4, 4) >>> 0;
+      getFloat32ArrayMemory0().set(arg, ptr / 4);
+      WASM_VECTOR_LEN = arg.length;
+      return ptr;
+    }
+    function ans_create(modelBytes, attenLim) {
+      var ptr0 = passArray8ToWasm0(modelBytes, wasm.__wbindgen_malloc);
+      var len0 = WASM_VECTOR_LEN;
+      var ret = wasm.ans_create(ptr0, len0, attenLim);
+      return ret >>> 0;
+    }
+    function ans_get_frame_length(st) {
+      var ret = wasm.ans_get_frame_length(st);
+      return ret >>> 0;
+    }
+    function ans_process_frame(st, input) {
+      var ptr0 = passArrayF32ToWasm0(input, wasm.__wbindgen_malloc);
+      var len0 = WASM_VECTOR_LEN;
+      return wasm.ans_process_frame(st, ptr0, len0);
+    }
+    function ans_set_atten_lim(st, limDb) {
+      wasm.ans_set_atten_lim(st, limDb);
+    }
+    function __wbg_get_imports() {
+      var import0 = {
+        __proto__: null,
+        __wbg___wbindgen_is_function_754e9f305ff6029e(arg0) {
+          return typeof arg0 === 'function';
+        },
+        __wbg___wbindgen_is_object_56732c2bc353f41d(arg0) {
+          return typeof arg0 === 'object' && arg0 !== null;
+        },
+        __wbg___wbindgen_is_string_c236cabd84a4d769(arg0) {
+          return typeof arg0 === 'string';
+        },
+        __wbg___wbindgen_is_undefined_67b456be8673d3d7(arg0) {
+          return arg0 === undefined;
+        },
+        __wbg___wbindgen_memory_fbc4c3e30b409f08() {
+          return wasm.memory;
+        },
+        __wbg___wbindgen_throw_1506f2235d1bdba0(arg0, arg1) {
+          throw new Error(getStringFromWasm0(arg0, arg1));
+        },
+        __wbg_buffer_dab8cf7849f66ff8(arg0) {
+          return arg0.buffer;
+        },
+        __wbg_call_4ffe5b44583f9954() {
+          return handleError(function (arg0, arg1, arg2) {
+            return arg0.call(arg1, arg2);
+          }, arguments);
+        },
+        __wbg_call_aa058b3a50f1c0a1() {
+          return handleError(function (arg0, arg1) {
+            return arg0.call(arg1);
+          }, arguments);
+        },
+        __wbg_crypto_90efa04a103d6db2(arg0) {
+          return arg0.crypto;
+        },
+        __wbg_getRandomValues_b9488c03d6ecdc0d() {
+          return handleError(function (arg0, arg1) {
+            arg0.getRandomValues(arg1);
+          }, arguments);
+        },
+        __wbg_globalThis_d76c93eb4fcb97ff() {
+          return handleError(function () {
+            return globalThis.globalThis;
+          }, arguments);
+        },
+        __wbg_global_d5571d09e84f338f() {
+          return handleError(function () {
+            return global.global;
+          }, arguments);
+        },
+        __wbg_msCrypto_68b2f4999b2901b0(arg0) {
+          return arg0.msCrypto;
+        },
+        __wbg_new_1c499b98736d881b(arg0) {
+          return new Float32Array(arg0);
+        },
+        __wbg_new_f3375b05b49ca4cb(arg0) {
+          return new Uint8Array(arg0);
+        },
+        __wbg_new_no_args_4856846a7397439f(arg0, arg1) {
+          return new Function(getStringFromWasm0(arg0, arg1));
+        },
+        __wbg_new_with_byte_offset_and_length_ae71716dc4a8aa2f(arg0, arg1, arg2) {
+          return new Float32Array(arg0, arg1 >>> 0, arg2 >>> 0);
+        },
+        __wbg_new_with_byte_offset_and_length_c74776d039a72b10(arg0, arg1, arg2) {
+          return new Uint8Array(arg0, arg1 >>> 0, arg2 >>> 0);
+        },
+        __wbg_new_with_length_135fb0a3b25f39fc(arg0) {
+          return new Uint8Array(arg0 >>> 0);
+        },
+        __wbg_node_046e1cb1b8cf3d92(arg0) {
+          return arg0.node;
+        },
+        __wbg_process_7b13606d1afee88f(arg0) {
+          return arg0.process;
+        },
+        __wbg_randomFillSync_73a2861b2e659112() {
+          return handleError(function (arg0, arg1) {
+            arg0.randomFillSync(arg1);
+          }, arguments);
+        },
+        __wbg_require_01ac6430ef887047() {
+          return handleError(function () {
+            return module.require;
+          }, arguments);
+        },
+        __wbg_self_84d02e00450d52f3() {
+          return handleError(function () {
+            return self.self;
+          }, arguments);
+        },
+        __wbg_set_8ab55bbf9f2507cd(arg0, arg1, arg2) {
+          arg0.set(arg1, arg2 >>> 0);
+        },
+        __wbg_subarray_a1d2eeb856ccb090(arg0, arg1, arg2) {
+          return arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+        },
+        __wbg_versions_6963303269777792(arg0) {
+          return arg0.versions;
+        },
+        __wbg_window_58f68528f5b015de() {
+          return handleError(function () {
+            return window.window;
+          }, arguments);
+        },
+        __wbindgen_cast_0000000000000001(arg0, arg1) {
+          return getStringFromWasm0(arg0, arg1);
+        },
+        __wbindgen_init_externref_table() {
+          var table = wasm.__wbindgen_externrefs;
+          var offset = table.grow(4);
+          table.set(0, undefined);
+          table.set(offset + 0, undefined);
+          table.set(offset + 1, null);
+          table.set(offset + 2, true);
+          table.set(offset + 3, false);
+        }
+      };
+      return {
+        __proto__: null,
+        './ans_bg.js': import0
+      };
+    }
+    function __wbg_finalize_init(instance, module) {
+      wasmInstance = instance;
+      wasm = instance.exports;
+      wasmModule = module;
+      cachedFloat32ArrayMemory0 = null;
+      cachedUint8ArrayMemory0 = null;
+      wasm.__wbindgen_start();
+      return wasm;
+    }
+    function initSync(module) {
+      if (wasm !== undefined) {
+        return wasm;
+      }
+      if (module !== undefined && Object.getPrototypeOf(module) === Object.prototype) {
+        ({
+          module
+        } = module);
+      }
+      var imports = __wbg_get_imports();
+      if (!(module instanceof WebAssembly.Module)) {
+        module = new WebAssembly.Module(module);
+      }
+      var instance = new WebAssembly.Instance(module, imports);
+      return __wbg_finalize_init(instance, module);
+    }
+    var WorkletMessageTypes = {
+      SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
+      SET_BYPASS: 'SET_BYPASS'
+    };
+    class DeepFilterAudioProcessor extends AudioWorkletProcessor {
+      constructor(options) {
+        super();
+        this.dfModel = null;
+        this.inputWritePos = 0;
+        this.inputReadPos = 0;
+        this.outputWritePos = 0;
+        this.outputReadPos = 0;
+        this.bypass = false;
+        this.isInitialized = false;
+        this.tempFrame = null;
+        this.bufferSize = 8192;
         this.inputBuffer = new Float32Array(this.bufferSize);
         this.outputBuffer = new Float32Array(this.bufferSize);
-        this.tempFrame = new Float32Array(frameLength);
-        this.isInitialized = true;
-        this.port.onmessage = (event) => this.handleMessage(event.data);
+        try {
+          initSync(options.processorOptions.wasmBytes);
+          var modelBytes = new Uint8Array(options.processorOptions.modelBytes);
+          var suppressionLevel = options.processorOptions.suppressionLevel;
+          var handle = ans_create(modelBytes, suppressionLevel == null ? 50 : suppressionLevel);
+          var frameLength = ans_get_frame_length(handle);
+          this.dfModel = {
+            handle,
+            frameLength
+          };
+          this.bufferSize = frameLength * 4;
+          this.inputBuffer = new Float32Array(this.bufferSize);
+          this.outputBuffer = new Float32Array(this.bufferSize);
+          this.tempFrame = new Float32Array(frameLength);
+          this.isInitialized = true;
+          this.port.onmessage = event => this.handleMessage(event.data);
+        } catch (error) {
+          console.error('Failed to initialize DeepFilter in AudioWorklet:', error);
+          this.isInitialized = false;
+        }
       }
-      catch (error)
-      {
-        console.error('Failed to initialize DeepFilter in AudioWorklet:', error);
-        this.isInitialized = false;
+      handleMessage(data) {
+        switch (data.type) {
+          case WorkletMessageTypes.SET_SUPPRESSION_LEVEL:
+            if (this.dfModel && typeof data.value === 'number') {
+              var level = Math.max(0, Math.min(100, Math.floor(data.value)));
+              ans_set_atten_lim(this.dfModel.handle, level);
+            }
+            break;
+          case WorkletMessageTypes.SET_BYPASS:
+            this.bypass = Boolean(data.value);
+            break;
+        }
       }
-    }
-
-    handleMessage(data)
-    {
-      switch (data.type)
-      {
-        case WorkletMessageTypes.SET_SUPPRESSION_LEVEL:
-          if (this.dfModel && typeof data.value === 'number')
-          {
-            const level = Math.max(0, Math.min(100, Math.floor(data.value)));
-            ans_set_atten_lim(this.dfModel.handle, level);
+      getInputAvailable() {
+        return (this.inputWritePos - this.inputReadPos + this.bufferSize) % this.bufferSize;
+      }
+      getOutputAvailable() {
+        return (this.outputWritePos - this.outputReadPos + this.bufferSize) % this.bufferSize;
+      }
+      process(inputList, outputList) {
+        var sourceLimit = Math.min(inputList.length, outputList.length);
+        var input = inputList[0] && inputList[0][0];
+        if (!input) {
+          return true;
+        }
+        if (!this.isInitialized || !this.dfModel || this.bypass || !this.tempFrame) {
+          for (var inputNum = 0; inputNum < sourceLimit; inputNum++) {
+            var output = outputList[inputNum];
+            var channelCount = output.length;
+            for (var channelNum = 0; channelNum < channelCount; channelNum++) {
+              output[channelNum].set(input);
+            }
           }
-          break;
-        case WorkletMessageTypes.SET_BYPASS:
-          this.bypass = Boolean(data.value);
-          break;
-      }
-    }
-
-    getInputAvailable()
-    {
-      return (this.inputWritePos - this.inputReadPos + this.bufferSize) % this.bufferSize;
-    }
-
-    getOutputAvailable()
-    {
-      return (this.outputWritePos - this.outputReadPos + this.bufferSize) % this.bufferSize;
-    }
-
-    process(inputList, outputList)
-    {
-      const sourceLimit = Math.min(inputList.length, outputList.length);
-      const input = inputList[0] && inputList[0][0];
-
-      if (!input) return true;
-
-      if (!this.isInitialized || !this.dfModel || this.bypass || !this.tempFrame)
-      {
-        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
-        {
-          const output = outputList[inputNum];
-          const channelCount = output.length;
-
-          for (let channelNum = 0; channelNum < channelCount; channelNum++)
-          {
-            output[channelNum].set(input);
+          return true;
+        }
+        for (var i = 0; i < input.length; i++) {
+          this.inputBuffer[this.inputWritePos] = input[i];
+          this.inputWritePos = (this.inputWritePos + 1) % this.bufferSize;
+        }
+        var frameLength = this.dfModel.frameLength;
+        while (this.getInputAvailable() >= frameLength) {
+          for (var _i = 0; _i < frameLength; _i++) {
+            this.tempFrame[_i] = this.inputBuffer[this.inputReadPos];
+            this.inputReadPos = (this.inputReadPos + 1) % this.bufferSize;
+          }
+          var processed = ans_process_frame(this.dfModel.handle, this.tempFrame);
+          for (var _i2 = 0; _i2 < processed.length; _i2++) {
+            this.outputBuffer[this.outputWritePos] = processed[_i2];
+            this.outputWritePos = (this.outputWritePos + 1) % this.bufferSize;
           }
         }
-
-        return true;
-      }
-
-      for (let i = 0; i < input.length; i++)
-      {
-        this.inputBuffer[this.inputWritePos] = input[i];
-        this.inputWritePos = (this.inputWritePos + 1) % this.bufferSize;
-      }
-
-      const frameLength = this.dfModel.frameLength;
-
-      while (this.getInputAvailable() >= frameLength)
-      {
-        for (let i = 0; i < frameLength; i++)
-        {
-          this.tempFrame[i] = this.inputBuffer[this.inputReadPos];
-          this.inputReadPos = (this.inputReadPos + 1) % this.bufferSize;
-        }
-
-        const processed = ans_process_frame(this.dfModel.handle, this.tempFrame);
-
-        for (let i = 0; i < processed.length; i++)
-        {
-          this.outputBuffer[this.outputWritePos] = processed[i];
-          this.outputWritePos = (this.outputWritePos + 1) % this.bufferSize;
-        }
-      }
-
-      const outputAvailable = this.getOutputAvailable();
-
-      if (outputAvailable >= 128)
-      {
-        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
-        {
-          const output = outputList[inputNum];
-          const channelCount = output.length;
-
-          for (let channelNum = 0; channelNum < channelCount; channelNum++)
-          {
-            const outputChannel = output[channelNum];
-            let readPos = this.outputReadPos;
-
-            for (let i = 0; i < 128; i++)
-            {
-              outputChannel[i] = this.outputBuffer[readPos];
-              readPos = (readPos + 1) % this.bufferSize;
+        var outputAvailable = this.getOutputAvailable();
+        if (outputAvailable >= 128) {
+          for (var _inputNum = 0; _inputNum < sourceLimit; _inputNum++) {
+            var _output = outputList[_inputNum];
+            var _channelCount = _output.length;
+            for (var _channelNum = 0; _channelNum < _channelCount; _channelNum++) {
+              var outputChannel = _output[_channelNum];
+              var readPos = this.outputReadPos;
+              for (var _i3 = 0; _i3 < 128; _i3++) {
+                outputChannel[_i3] = this.outputBuffer[readPos];
+                readPos = (readPos + 1) % this.bufferSize;
+              }
+            }
+          }
+          this.outputReadPos = (this.outputReadPos + 128) % this.bufferSize;
+        } else {
+          for (var _inputNum2 = 0; _inputNum2 < sourceLimit; _inputNum2++) {
+            var _output2 = outputList[_inputNum2];
+            var _channelCount2 = _output2.length;
+            for (var _channelNum2 = 0; _channelNum2 < _channelCount2; _channelNum2++) {
+              _output2[_channelNum2].fill(0);
             }
           }
         }
-
-        this.outputReadPos = (this.outputReadPos + 128) % this.bufferSize;
+        return true;
       }
-      else
-      {
-        for (let inputNum = 0; inputNum < sourceLimit; inputNum++)
-        {
-          const output = outputList[inputNum];
-          const channelCount = output.length;
-
-          for (let channelNum = 0; channelNum < channelCount; channelNum++)
-          {
-            output[channelNum].fill(0);
-          }
-        }
-      }
-
-      return true;
     }
-  }
-
-  registerProcessor('ai-noise-suppression-audio-processor', DeepFilterAudioProcessor);
-})();`;
+    registerProcessor('ai-noise-suppression-audio-processor', DeepFilterAudioProcessor);
+  })();
+}
+module.exports = function () {
+  var source = workletMain.toString();
+  return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
+};
+}).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],5:[function(require,module,exports){
 "use strict";
 
@@ -4162,7 +4020,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212222042 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212222466 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17371,7 +17229,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaStreamComposer = require('./MediaStreamComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212222042');
+debug('version %s', '2.0.0.405212222466');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17411,7 +17269,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212222042';
+    return '2.0.0.405212222466';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaStreamComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -20729,7 +20587,7 @@ class MediaStreamComposer {
     this._sourceRegistry = new SourceRegistry({
       logger: logger,
       getDefaultGain: () => this._config.audioGain,
-      normalizeGain: this._normalizeGain.bind(this),
+      normalizeGain: MediaStreamComposerConfig.normalizeGain,
       createVideoElement: this._mediaStreamToVideoElement.bind(this),
       onBeforeRemove: source => this._disconnectAudio(source),
       onAfterRemove: source => {
@@ -20848,30 +20706,6 @@ class MediaStreamComposer {
   // =========================================================================
   //  配置检测与参数归一化
   // =========================================================================
-
-  /**
-   * 归一化 slot 值。
-   * slot 只允许非负整数，数组批量添加时从起始 slot 递增（沿用演示页行为）。
-   *
-   * @param {*} value - 原始 slot 值
-   * @param {number} index - 在数组中的索引，批量添加时累加到 slot 上
-   * @returns {number|null} 归一化后的 slot，非法则返回 null
-   */
-  _normalizeSlot(value, index) {
-    return MediaStreamComposerConfig.normalizeSlot(value, index);
-  }
-
-  /**
-   * 归一化音量增益值。
-   * 允许大于 1 做放大，但不允许负数。非法值使用全局默认音量。
-   *
-   * @param {*} value - 原始增益值
-   * @param {number} fallback - 非法时的备选值
-   * @returns {number} 归一化后的增益值（>= 0）
-   */
-  _normalizeGain(value, fallback) {
-    return MediaStreamComposerConfig.normalizeGain(value, fallback);
-  }
 
   /**
    * 统一 appendStream() 第二个参数的格式。
@@ -21218,7 +21052,7 @@ class MediaStreamComposer {
         overrides
       };
     }
-    var normalizedSlot = this._normalizeSlot(slot, 0);
+    var normalizedSlot = MediaStreamComposerConfig.normalizeSlot(slot, 0);
     if (normalizedSlot === null) {
       throw new TypeError('Invalid slot.');
     }
@@ -21416,7 +21250,7 @@ class MediaStreamComposer {
     }
     if (patch.sourceMirrorOverrides && typeof patch.sourceMirrorOverrides === 'object') {
       Object.keys(patch.sourceMirrorOverrides).forEach(slotKey => {
-        var normalizedSlot = this._normalizeSlot(slotKey, 0);
+        var normalizedSlot = MediaStreamComposerConfig.normalizeSlot(slotKey, 0);
         if (normalizedSlot === null) {
           throw new TypeError('Invalid slot.');
         }
@@ -25657,7 +25491,35 @@ module.exports = class WorkerRenderer extends BaseRenderer {
   _handleWorkerMessage(event) {
     var data = event.data || {};
     if (data.type === 'ready') {
-      if (!this._ensureOutputContext()) {
+      if (!this._outputContext) {
+        if (!this._canvas || !this._canvas.getContext) {
+          this._workerReady = false;
+          this._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: 'Canvas2D output context is not available'
+          });
+          this._notifyFatalError('Canvas2D output context is not available');
+          return;
+        }
+        this._outputContext = this._canvas.getContext('2d', {
+          alpha: false
+        }) || this._canvas.getContext('2d');
+        if (!this._outputContext) {
+          this._workerReady = false;
+          this._updateInfo({
+            actualMode: 'worker-failed',
+            isFallback: true,
+            reason: 'Canvas2D output context is not available'
+          });
+          this._notifyFatalError('Canvas2D output context is not available');
+          return;
+        }
+        this._outputContext.fillStyle = this._config.backgroundColor || '#000';
+        this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
+        this._outputContext.imageSmoothingEnabled = true;
+      }
+      if (!this._outputContext) {
         this._workerReady = false;
         this._updateInfo({
           actualMode: 'worker-failed',
@@ -25674,14 +25536,16 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         isWebGL2: Boolean(data.isWebGL2),
         reason: data.reason || this._info.reason
       });
-      this._flushQueuedPayload();
+      if (this._queuedPayloads.length && !this._destroyed && !this._workerBusy && !this._extractingFrame) {
+        this._renderInWorker(this._queuedPayloads.shift());
+      }
       return;
     }
     if (data.type === 'rendered') {
       var presentedTimestamp = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
       var frameSource = null;
       var frameSourceConsumed = false;
-      var canUseDirectFrameSource = this._canUseDirectFrameSource();
+      var canUseDirectFrameSource = this._preferDirectFrameSource && !(this._info && this._info.actualMode === 'worker-webgl2' && this._config && this._config.hasSourceAiVirtualBackground === true);
       if (data.bitmap && canUseDirectFrameSource) {
         frameSource = data.bitmap;
         frameSourceConsumed = true;
@@ -25708,7 +25572,9 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         timestamp: presentedTimestamp,
         source: this._info.actualMode || 'worker'
       });
-      this._flushQueuedPayload();
+      if (this._queuedPayloads.length && !this._destroyed && !this._workerBusy && !this._extractingFrame) {
+        this._renderInWorker(this._queuedPayloads.shift());
+      }
       return;
     }
     if (data.type === 'renderError') {
@@ -25717,7 +25583,9 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         isFallback: true,
         reason: data.reason || 'Worker render failed'
       });
-      this._flushQueuedPayload();
+      if (this._queuedPayloads.length && !this._destroyed && !this._workerBusy && !this._extractingFrame) {
+        this._renderInWorker(this._queuedPayloads.shift());
+      }
       return;
     }
     if (data.type === 'failed') {
@@ -25739,33 +25607,6 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
     this._fatalErrorNotified = true;
     this._onFatalError(reason);
-  }
-  _ensureOutputContext() {
-    if (this._outputContext) {
-      return true;
-    }
-    if (!this._canvas || !this._canvas.getContext) {
-      return false;
-    }
-    this._outputContext = this._canvas.getContext('2d', {
-      alpha: false
-    }) || this._canvas.getContext('2d');
-    if (!this._outputContext) {
-      return false;
-    }
-    this._outputContext.fillStyle = this._config.backgroundColor || '#000';
-    this._outputContext.fillRect(0, 0, this._canvas.width || 1, this._canvas.height || 1);
-    this._outputContext.imageSmoothingEnabled = true;
-    return true;
-  }
-  _canUseDirectFrameSource() {
-    if (!this._preferDirectFrameSource) {
-      return false;
-    }
-    if (this._info && this._info.actualMode === 'worker-webgl2' && this._config && this._config.hasSourceAiVirtualBackground === true) {
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -25797,11 +25638,39 @@ module.exports = class WorkerRenderer extends BaseRenderer {
       return;
     }
     if (!this._workerReady) {
-      this._queuePayload(payload);
+      var maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
+      if (maxFrameQueue <= 0) {
+        this._info.droppedFrames += 1;
+        return;
+      }
+      if (this._config.dropFrameWhenBusy) {
+        this._info.droppedFrames += 1;
+        this._queuedPayloads = [payload];
+        return;
+      }
+      this._queuedPayloads.push(payload);
+      while (this._queuedPayloads.length > maxFrameQueue) {
+        this._queuedPayloads.shift();
+        this._info.droppedFrames += 1;
+      }
       return;
     }
     if (this._workerBusy || this._extractingFrame) {
-      this._queuePayload(payload);
+      var _maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
+      if (_maxFrameQueue <= 0) {
+        this._info.droppedFrames += 1;
+        return;
+      }
+      if (this._config.dropFrameWhenBusy) {
+        this._info.droppedFrames += 1;
+        this._queuedPayloads = [payload];
+        return;
+      }
+      this._queuedPayloads.push(payload);
+      while (this._queuedPayloads.length > _maxFrameQueue) {
+        this._queuedPayloads.shift();
+        this._info.droppedFrames += 1;
+      }
       return;
     }
     this._renderInWorker(payload);
@@ -25851,44 +25720,6 @@ module.exports = class WorkerRenderer extends BaseRenderer {
         reason: `Worker frame extraction failed: ${error.message || String(error)}`
       });
     }
-  }
-
-  /**
-   * 将 payload 入队列。
-   *
-   * 根据配置决定行为：
-   *   - dropFrameWhenBusy: 丢弃旧帧，只保留最新一帧
-   *   - 非丢帧模式: 追加到队列尾部，超出 maxFrameQueue 时丢弃最早帧
-   *
-   * @param {Object} payload - 布局数据
-   */
-  _queuePayload(payload) {
-    var maxFrameQueue = Math.max(0, this._config.maxFrameQueue || 0);
-    if (maxFrameQueue <= 0) {
-      this._info.droppedFrames += 1;
-      return;
-    }
-    if (this._config.dropFrameWhenBusy) {
-      this._info.droppedFrames += 1;
-      this._queuedPayloads = [payload];
-      return;
-    }
-    this._queuedPayloads.push(payload);
-    while (this._queuedPayloads.length > maxFrameQueue) {
-      this._queuedPayloads.shift();
-      this._info.droppedFrames += 1;
-    }
-  }
-
-  /**
-   * 消费队列中的下一帧（Worker 空闲时调用）。
-   */
-  _flushQueuedPayload() {
-    if (!this._queuedPayloads.length || this._destroyed || this._workerBusy || this._extractingFrame) {
-      return;
-    }
-    var payload = this._queuedPayloads.shift();
-    this._renderInWorker(payload);
   }
 
   /**
@@ -26293,1322 +26124,1063 @@ exports.createVideoTexture = function (gl) {
 },{}],65:[function(require,module,exports){
 "use strict";
 
+/* eslint-disable */
 /**
- * workerScript — Worker 内联脚本生成器
+ * workerScript - Worker inline script generator.
  *
- * 生成一个自包含的 WebWorker 渲染脚本源码字符串。
- * Browserify 将此模块打包进 SDK 主包，默认通过 Blob URL 创建 Worker。
- *
- * Worker 内部支持：
- *   - worker-webgl2: OffscreenCanvas + WebGL2 输出
- *   - worker-2d: OffscreenCanvas + Canvas2D 输出
- *   - source-level AI virtual background: MediaPipe + OffscreenCanvas 全部留在 Worker
- *
- * @module workerScript
+ * Keep the worker implementation as executable JS so the SDK minifier can
+ * compress and mangle it before we serialize it with Function#toString().
  */
-exports.createWorkerScript = function () {
-  // eslint-disable-next-line quotes
-  return `
-var canvas = null;
-var ctx = null;
-var gl = null;
-var program = null;
-var positionBuffer = null;
-var texCoordBuffer = null;
-var textures = {};
-var watermarkTextures = {};
-var actualMode = 'unknown';
-var requestedMode = 'auto';
-var width = 0;
-var height = 0;
-var backgroundColor = '#000';
-var outputMirrorX = false;
-var mirrorWatermarksWithOutput = true;
-var opacityLocation = null;
-var mirrorTexCoordBuffer = null;
-var aivbSourceStates = Object.create(null);
-var aivbRuntimeStates = Object.create(null);
-var aivbModulePromises = Object.create(null);
-var aivbBackgroundStates = Object.create(null);
-var DEFAULT_MASK_EDGE_BLUR_PX = 2;
-var DEFAULT_MASK_ALPHA_BIAS = 0.08;
-var VERTEX_SHADER = "#version 300 es\\nin vec2 a_position;\\nin vec2 a_texCoord;\\nout vec2 v_texCoord;\\nvoid main() {\\n  gl_Position = vec4(a_position, 0.0, 1.0);\\n  v_texCoord = a_texCoord;\\n}\\n";
-var FRAGMENT_SHADER = "#version 300 es\\nprecision highp float;\\nin vec2 v_texCoord;\\nuniform sampler2D u_texture;\\nuniform float u_opacity;\\nout vec4 outColor;\\nvoid main() {\\n  vec4 color = texture(u_texture, v_texCoord);\\n  outColor = vec4(color.rgb, color.a * u_opacity);\\n}\\n";
+function workerMain() {
+  // =============================================================================
+  // Worker 渲染脚本 —— 在 WebWorker 中运行，负责实际的视频帧合成渲染。
+  //
+  // 渲染流程概览：
+  //   1. 主线程通过 postMessage 发送 init 消息（含 OffscreenCanvas）
+  //   2. Worker 根据 requestedMode 选择 WebGL2 或 Canvas2D 初始化渲染上下文
+  //   3. 主线程每帧将 VideoFrame/ImageBitmap transfer 过来（render 消息）
+  //   4. Worker 渲染到 OffscreenCanvas 后，调用 transferToImageBitmap() 回传
+  //   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
+  //
+  // 消息协议：
+  //   init(canvas, requestedMode, width, height, backgroundColor)
+  //   render(payload: {width, height, backgroundColor, items[], watermarks[]})
+  //   removeSource(id)
+  //   destroy()
+  //   → 回复: ready | rendered(bitmap) | renderError | failed
+  //
+  // AiVB 路径：当 item 带有 aiVirtualBackground 配置且 runtimeEnabled=true 时，
+  //   Worker 内部通过动态 import() 加载 MediaPipe Tasks Vision 模块，
+  //   在 Worker 内完成人像分割 → 遮罩合成 → 背景替换，全部不经过主线程。
+  // =============================================================================
 
-function now()
-{
-  return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ?
-    performance.now() :
-    Date.now();
+  // =============================================================================
+  // 一、全局状态 — Worker 渲染上下文 & 纹理缓存
+  // =============================================================================
+  var canvas = null; // OffscreenCanvas（主线程 transfer 进来）
+  var ctx = null; // Canvas2D 上下文（worker-2d 模式使用）
+  var gl = null; // WebGL2 上下文（worker-webgl2 模式使用）
+  var program = null; // WebGL shader program
+  var positionBuffer = null; // 全屏四边形顶点 buffer（[-1,1] 范围）
+  var texCoordBuffer = null; // 标准纹理坐标 buffer（[0,1] 范围）
+  var textures = {}; // 每个 video source 的 WebGL 纹理缓存
+  var watermarkTextures = {}; // 每个水印的 WebGL 纹理缓存
+  var actualMode = 'unknown'; // 实际使用的渲染模式（worker-webgl2 / worker-2d）
+  var requestedMode = 'auto'; // 请求的渲染模式
+  var width = 0; // 输出宽度
+  var height = 0; // 输出高度
+  var backgroundColor = '#000'; // 画布背景色
+  var outputMirrorX = false; // 是否对最终输出做水平镜像
+  var mirrorWatermarksWithOutput = true; // 输出镜像时水印是否一起镜像
+  var opacityLocation = null; // shader 中 u_opacity uniform 的 location
+  var mirrorTexCoordBuffer = null; // 镜像纹理坐标 buffer（U 坐标翻转）
+
+  // =============================================================================
+  // 二、AiVB (AI Virtual Background) 状态 — Worker 内的人像分割与背景替换
+  // =============================================================================
+  var aivbSourceStates = Object.create(null); // sourceId → 分割状态（遮罩、画布等）
+  var aivbRuntimeStates = Object.create(null); // runtimeKey → MediaPipe segmenter 实例
+  var aivbModulePromises = Object.create(null); // moduleUrl → 动态 import() Promise（去重）
+  var aivbBackgroundStates = Object.create(null); // imageUrl → 背景图 ImageBitmap 缓存
+  var dynamicImport = new Function('moduleUrl', 'return import(moduleUrl);');
+
+  // 遮罩后处理参数
+  var DEFAULT_MASK_EDGE_BLUR_PX = 2; // 遮罩边缘羽化模糊半径（px），防止硬边白边
+  var DEFAULT_MASK_ALPHA_BIAS = 0.08; // 遮罩 alpha 偏移，轻微收缩遮罩减少边缘泄漏
+
+  // WebGL2 shader 源码
+  // 顶点着色器：传递顶点位置和纹理坐标
+  var VERTEX_SHADER = `#version 300 es
+in vec2 a_position;
+in vec2 a_texCoord;
+out vec2 v_texCoord;
+void main() {
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  v_texCoord = a_texCoord;
 }
-
-function clamp(value, min, max)
-{
-  return Math.min(max, Math.max(min, value));
+`;
+  // 片元着色器：采样纹理并应用透明度
+  var FRAGMENT_SHADER = `#version 300 es
+precision highp float;
+in vec2 v_texCoord;
+uniform sampler2D u_texture;
+uniform float u_opacity;
+out vec4 outColor;
+void main() {
+  vec4 color = texture(u_texture, v_texCoord);
+  outColor = vec4(color.rgb, color.a * u_opacity);
 }
+`;
 
-function hasAiVirtualBackground(item)
-{
-  return Boolean(item &&
-    item.aiVirtualBackground &&
-    item.aiVirtualBackground.enabled !== false &&
-    item.aiVirtualBackground.mode &&
-    item.aiVirtualBackground.mode !== 'none');
-}
+  // ---------------------------------------------------------------------------
+  // 三、工具函数
+  // ---------------------------------------------------------------------------
 
-function getFrameWidth(frame)
-{
-  return (frame && (frame.displayWidth || frame.codedWidth || frame.width)) || 0;
-}
-
-function getFrameHeight(frame)
-{
-  return (frame && (frame.displayHeight || frame.codedHeight || frame.height)) || 0;
-}
-
-function ensureCanvasSize(surface, targetWidth, targetHeight)
-{
-  var nextWidth = Math.max(1, Math.round(targetWidth || 1));
-  var nextHeight = Math.max(1, Math.round(targetHeight || 1));
-
-  if (!surface.canvas)
-  {
-    surface.canvas = new OffscreenCanvas(nextWidth, nextHeight);
-    surface.context = surface.canvas.getContext('2d');
+  // 获取当前高精度时间戳（ms），优先使用 performance.now，回退 Date.now
+  function now() {
+    return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 
-  if (!surface.context)
-  {
-    return null;
+  // 数值钳位到 [min, max] 范围
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
   }
 
-  if (surface.canvas.width !== nextWidth)
-  {
-    surface.canvas.width = nextWidth;
+  // 判断 item 是否启用了 AiVB 虚拟背景效果
+  function hasAiVirtualBackground(item) {
+    return Boolean(item && item.aiVirtualBackground && item.aiVirtualBackground.enabled !== false && item.aiVirtualBackground.mode && item.aiVirtualBackground.mode !== 'none');
   }
 
-  if (surface.canvas.height !== nextHeight)
-  {
-    surface.canvas.height = nextHeight;
+  // 从 VideoFrame / ImageBitmap 中提取实际宽度和高度
+  // VideoFrame 用 displayWidth/codedWidth，ImageBitmap 用 width
+  function getFrameWidth(frame) {
+    return frame && (frame.displayWidth || frame.codedWidth || frame.width) || 0;
+  }
+  function getFrameHeight(frame) {
+    return frame && (frame.displayHeight || frame.codedHeight || frame.height) || 0;
   }
 
-  return surface;
-}
-
-function getSourceState(id)
-{
-  if (!aivbSourceStates[id])
-  {
-    aivbSourceStates[id] = {
-      configKey                  : '',
-      latestMask                 : null,
-      renderedSinceSegmentation  : 0,
-      lastSegmentationScheduledAt: 0,
-      runtimeAllowedAt           : 0,
-      segmentationSurface        : { canvas: null, context: null },
-      maskSurface                : { canvas: null, context: null, imageData: null },
-      featherSurface             : { canvas: null, context: null },
-      foregroundSurface          : { canvas: null, context: null },
-      outputSurface              : { canvas: null, context: null }
-    };
+  // 确保离屏 surface（{canvas, context}）尺寸匹配目标尺寸，不匹配则重建
+  // 用于复用 AiVB 处理链中的中间画布，避免每帧创建新 canvas
+  function ensureCanvasSize(surface, targetWidth, targetHeight) {
+    var nextWidth = Math.max(1, Math.round(targetWidth || 1));
+    var nextHeight = Math.max(1, Math.round(targetHeight || 1));
+    if (!surface.canvas) {
+      surface.canvas = new OffscreenCanvas(nextWidth, nextHeight);
+      surface.context = surface.canvas.getContext('2d');
+    }
+    if (!surface.context) {
+      return null;
+    }
+    if (surface.canvas.width !== nextWidth) {
+      surface.canvas.width = nextWidth;
+    }
+    if (surface.canvas.height !== nextHeight) {
+      surface.canvas.height = nextHeight;
+    }
+    return surface;
   }
 
-  return aivbSourceStates[id];
-}
+  // ---------------------------------------------------------------------------
+  // 四、AiVB Source 状态管理 — 每个视频源的独立分割管线状态
+  // ---------------------------------------------------------------------------
 
-function createConfigKey(config)
-{
-  return JSON.stringify({
-    mode            : config.mode || '',
-    imageUrl        : config.imageUrl || '',
-    backgroundColor : config.backgroundColor || '',
-    blurRadius      : Number(config.blurRadius) || 0,
-    modelPath       : config.modelPath || '',
-    runtimeEnabled  : config.runtimeEnabled !== false,
-    startupDelayMs  : Number(config.startupDelayMs) || 0,
-    maxRuntimeFps   : Number(config.maxRuntimeFps) || 0,
-    video           : config.video || {},
-    segmentation    : config.segmentation || {},
-    assetConfig     : config.assetConfig || {}
-  });
-}
-
-function resetSourceStateForConfig(state, config)
-{
-  state.latestMask = null;
-  state.renderedSinceSegmentation = 0;
-  state.lastSegmentationScheduledAt = 0;
-  state.runtimeAllowedAt = now() + Math.max(0, Number(config.startupDelayMs) || 0);
-}
-
-function resolveAiVBState(id, config)
-{
-  var state = getSourceState(id);
-  var configKey = createConfigKey(config);
-
-  if (state.configKey !== configKey)
-  {
-    state.configKey = configKey;
-    resetSourceStateForConfig(state, config);
+  // 获取或创建指定 source 的 AiVB 处理状态
+  // 每个 source 维护独立的：
+  //   - latestMask: 最新人像分割遮罩 canvas
+  //   - segmentationSurface: 缩放到处理分辨率的输入帧
+  //   - maskSurface: 分割模型输出的置信度遮罩
+  //   - featherSurface: 边缘羽化后的遮罩
+  //   - foregroundSurface: 前景（人像）合成中间画布
+  //   - outputSurface: 最终合成输出（前景 + 替换背景）
+  function getSourceState(id) {
+    if (!aivbSourceStates[id]) {
+      aivbSourceStates[id] = {
+        configKey: '',
+        // 当前配置的序列化 key，用于检测配置变更
+        latestMask: null,
+        // 最新的分割遮罩 canvas
+        renderedSinceSegmentation: 0,
+        // 上次分割后已渲染的帧数（用于 frameSkip）
+        lastSegmentationScheduledAt: 0,
+        // 上次调度分割的时间戳（用于 fps 节流）
+        runtimeAllowedAt: 0,
+        // 最早允许启动分割的时间（startupDelayMs）
+        segmentationSurface: {
+          canvas: null,
+          context: null
+        },
+        // 送入分割模型的缩放后帧
+        maskSurface: {
+          canvas: null,
+          context: null,
+          imageData: null
+        },
+        // 原始置信度遮罩
+        featherSurface: {
+          canvas: null,
+          context: null
+        },
+        // 羽化后的遮罩
+        foregroundSurface: {
+          canvas: null,
+          context: null
+        },
+        // 前景合成画布
+        outputSurface: {
+          canvas: null,
+          context: null
+        } // 最终输出画布
+      };
+    }
+    return aivbSourceStates[id];
   }
 
-  return state;
-}
-
-async function loadVisionTasksModule(moduleUrl)
-{
-  if (!moduleUrl)
-  {
-    throw new Error('AIVirtualBackground moduleUrl is required');
+  // 生成配置的唯一 key，用于检测 AiVB 配置是否发生实质性变化
+  // 配置变化时需要重置分割管线（清遮罩、重新初始化 segmenter 等）
+  function createConfigKey(config) {
+    return JSON.stringify({
+      mode: config.mode || '',
+      imageUrl: config.imageUrl || '',
+      backgroundColor: config.backgroundColor || '',
+      blurRadius: Number(config.blurRadius) || 0,
+      modelPath: config.modelPath || '',
+      runtimeEnabled: config.runtimeEnabled !== false,
+      startupDelayMs: Number(config.startupDelayMs) || 0,
+      maxRuntimeFps: Number(config.maxRuntimeFps) || 0,
+      video: config.video || {},
+      segmentation: config.segmentation || {},
+      assetConfig: config.assetConfig || {}
+    });
+  }
+  function resetSourceStateForConfig(state, config) {
+    state.latestMask = null;
+    state.renderedSinceSegmentation = 0;
+    state.lastSegmentationScheduledAt = 0;
+    state.runtimeAllowedAt = now() + Math.max(0, Number(config.startupDelayMs) || 0);
+  }
+  function resolveAiVBState(id, config) {
+    var state = getSourceState(id);
+    var configKey = createConfigKey(config);
+    if (state.configKey !== configKey) {
+      state.configKey = configKey;
+      resetSourceStateForConfig(state, config);
+    }
+    return state;
   }
 
-  if (!aivbModulePromises[moduleUrl])
-  {
-    aivbModulePromises[moduleUrl] = import(moduleUrl)
-      .then(function(module)
-      {
-        if (!module || !module.FilesetResolver || !module.ImageSegmenter)
-        {
+  // ---------------------------------------------------------------------------
+  // 五、AiVB 分割运行时 — 动态加载 MediaPipe Tasks Vision 并管理 segmenter 生命周期
+  // ---------------------------------------------------------------------------
+
+  // 动态 import() 加载 MediaPipe Tasks Vision ESM 模块（按 moduleUrl 去重缓存）
+  async function loadVisionTasksModule(moduleUrl) {
+    if (!moduleUrl) {
+      throw new Error('AIVirtualBackground moduleUrl is required');
+    }
+    if (!aivbModulePromises[moduleUrl]) {
+      aivbModulePromises[moduleUrl] = dynamicImport(moduleUrl).then(function (module) {
+        if (!module || !module.FilesetResolver || !module.ImageSegmenter) {
           throw new Error('MediaPipe Tasks module is missing exports');
         }
-
         return module;
       });
-  }
-
-  return aivbModulePromises[moduleUrl];
-}
-
-function getRuntimeKey(config)
-{
-  return JSON.stringify({
-    moduleUrl   : config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '',
-    wasmBaseUrl : config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '',
-    modelUrl    : config.modelPath || (config.assetConfig && config.assetConfig.modelUrl) || '',
-    delegate    : config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU'
-  });
-}
-
-function resolvePersonMaskIndex(labels, maskCount)
-{
-  for (var index = 0; index < labels.length; index += 1)
-  {
-    if (typeof labels[index] === 'string' && /person/i.test(labels[index]))
-    {
-      return index;
     }
+    return aivbModulePromises[moduleUrl];
   }
 
-  if (maskCount > 1)
-  {
-    return maskCount - 1;
+  // 生成 segmenter 运行时的唯一 key（按模块 URL + 模型路径 + delegate 区分）
+  // 不同 source 可以共享同一个 segmenter 实例（如相同配置的多路视频）
+  function getRuntimeKey(config) {
+    return JSON.stringify({
+      moduleUrl: config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '',
+      wasmBaseUrl: config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '',
+      modelUrl: config.modelPath || config.assetConfig && config.assetConfig.modelUrl || '',
+      delegate: config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU'
+    });
+  }
+  function resolvePersonMaskIndex(labels, maskCount) {
+    for (var index = 0; index < labels.length; index += 1) {
+      if (typeof labels[index] === 'string' && /person/i.test(labels[index])) {
+        return index;
+      }
+    }
+    if (maskCount > 1) {
+      return maskCount - 1;
+    }
+    return 0;
   }
 
-  return 0;
-}
-
-async function ensureSegmenterRuntime(config)
-{
-  var runtimeKey = getRuntimeKey(config);
-  var runtimeState = aivbRuntimeStates[runtimeKey];
-
-  if (!runtimeState)
-  {
-    runtimeState = {
-      segmenter   : null,
-      labels      : [],
-      ready       : false,
-      initializing: null
-    };
-    aivbRuntimeStates[runtimeKey] = runtimeState;
-  }
-
-  if (runtimeState.ready && runtimeState.segmenter)
-  {
-    return runtimeState;
-  }
-
-  if (!runtimeState.initializing)
-  {
-    runtimeState.initializing = (async function()
-    {
-      var moduleUrl = config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '';
-      var wasmBaseUrl = config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '';
-      var modelUrl = config.modelPath || (config.assetConfig && config.assetConfig.modelUrl) || '';
-      var delegate = config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU';
-      var tasksModule = await loadVisionTasksModule(moduleUrl);
-      var vision = await tasksModule.FilesetResolver.forVisionTasks(wasmBaseUrl);
-      var segmenter = await tasksModule.ImageSegmenter.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: modelUrl,
-          delegate: delegate
-        },
-        runningMode: 'VIDEO',
-        outputCategoryMask: false,
-        outputConfidenceMasks: true
-      });
-
-      runtimeState.segmenter = segmenter;
-      runtimeState.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
-      runtimeState.ready = true;
-    })()
-      .finally(function()
-      {
+  // 确保 MediaPipe ImageSegmenter 已初始化（按 runtimeKey 去重，避免并发创建）
+  // 使用 selfie-segmenter 模型，VIDEO 运行模式，输出置信度遮罩
+  async function ensureSegmenterRuntime(config) {
+    var runtimeKey = getRuntimeKey(config);
+    var runtimeState = aivbRuntimeStates[runtimeKey];
+    if (!runtimeState) {
+      runtimeState = {
+        segmenter: null,
+        labels: [],
+        ready: false,
+        initializing: null
+      };
+      aivbRuntimeStates[runtimeKey] = runtimeState;
+    }
+    if (runtimeState.ready && runtimeState.segmenter) {
+      return runtimeState;
+    }
+    if (!runtimeState.initializing) {
+      runtimeState.initializing = async function () {
+        var moduleUrl = config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '';
+        var wasmBaseUrl = config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '';
+        var modelUrl = config.modelPath || config.assetConfig && config.assetConfig.modelUrl || '';
+        var delegate = config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU';
+        var tasksModule = await loadVisionTasksModule(moduleUrl);
+        var vision = await tasksModule.FilesetResolver.forVisionTasks(wasmBaseUrl);
+        var segmenter = await tasksModule.ImageSegmenter.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: modelUrl,
+            delegate: delegate
+          },
+          runningMode: 'VIDEO',
+          outputCategoryMask: false,
+          outputConfidenceMasks: true
+        });
+        runtimeState.segmenter = segmenter;
+        runtimeState.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
+        runtimeState.ready = true;
+      }().finally(function () {
         runtimeState.initializing = null;
       });
+    }
+    await runtimeState.initializing;
+    return runtimeState;
+  }
+  function closeSegmentationResult(result) {
+    if (result && typeof result.close === 'function') {
+      result.close();
+      return;
+    }
+    if (result && Array.isArray(result.confidenceMasks)) {
+      result.confidenceMasks.forEach(function (mask) {
+        if (mask && typeof mask.close === 'function') {
+          mask.close();
+        }
+      });
+    }
+    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
+      result.categoryMask.close();
+    }
+  }
+  function resolveMaskValues(mask) {
+    if (!mask) {
+      throw new Error('ImageSegmenter mask is required');
+    }
+    if (typeof mask.getAsFloat32Array === 'function') {
+      return mask.getAsFloat32Array();
+    }
+    if (typeof mask.getAsUint8Array === 'function') {
+      var categoryValues = mask.getAsUint8Array();
+      var floatValues = new Float32Array(categoryValues.length);
+      for (var index = 0; index < categoryValues.length; index += 1) {
+        floatValues[index] = categoryValues[index] > 0 ? 1 : 0;
+      }
+      return floatValues;
+    }
+    throw new Error('Unsupported ImageSegmenter mask format');
   }
 
-  await runtimeState.initializing;
+  // ---------------------------------------------------------------------------
+  // 六、遮罩构建 — 将 MediaPipe 分割结果转为 alpha 遮罩 canvas
+  // ---------------------------------------------------------------------------
 
-  return runtimeState;
-}
-
-function closeSegmentationResult(result)
-{
-  if (result && typeof result.close === 'function')
-  {
-    result.close();
-    return;
+  // 将 MediaPipe 置信度/类别遮罩转换为 RGBA ImageData，写入 alpha 通道
+  // 返回羽化后的遮罩 canvas（用于 destination-in 合成抠出人像）
+  function createMaskCanvas(sourceState, runtimeState, result) {
+    var mask = null;
+    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
+      var personMaskIndex = resolvePersonMaskIndex(runtimeState.labels || [], result.confidenceMasks.length);
+      mask = result.confidenceMasks[personMaskIndex];
+    } else if (result && result.categoryMask) {
+      mask = result.categoryMask;
+    }
+    if (!mask) {
+      throw new Error('ImageSegmenter did not return a supported mask output');
+    }
+    var maskWidth = mask.width || 0;
+    var maskHeight = mask.height || 0;
+    var maskSurface = ensureCanvasSize(sourceState.maskSurface, maskWidth, maskHeight);
+    if (!maskSurface || !maskSurface.context) {
+      throw new Error('Unable to create segmentation mask canvas');
+    }
+    if (!sourceState.maskSurface.imageData || sourceState.maskSurface.canvas.width !== maskWidth || sourceState.maskSurface.canvas.height !== maskHeight) {
+      sourceState.maskSurface.imageData = maskSurface.context.createImageData(maskWidth, maskHeight);
+    }
+    var confidenceValues = resolveMaskValues(mask);
+    var imageData = sourceState.maskSurface.imageData.data;
+    var offset = 0;
+    for (var index = 0; index < confidenceValues.length; index += 1) {
+      var normalizedAlpha = Math.max(0, Math.min(1, (confidenceValues[index] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS)));
+      var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
+      imageData[offset] = 0;
+      imageData[offset + 1] = 0;
+      imageData[offset + 2] = 0;
+      imageData[offset + 3] = alpha;
+      offset += 4;
+    }
+    maskSurface.context.putImageData(sourceState.maskSurface.imageData, 0, 0);
+    if (DEFAULT_MASK_EDGE_BLUR_PX <= 0) {
+      return maskSurface.canvas;
+    }
+    var featherSurface = ensureCanvasSize(sourceState.featherSurface, maskWidth, maskHeight);
+    if (!featherSurface || !featherSurface.context) {
+      return maskSurface.canvas;
+    }
+    featherSurface.context.clearRect(0, 0, maskWidth, maskHeight);
+    featherSurface.context.save();
+    featherSurface.context.filter = 'blur(' + DEFAULT_MASK_EDGE_BLUR_PX + 'px)';
+    featherSurface.context.drawImage(maskSurface.canvas, 0, 0, maskWidth, maskHeight);
+    featherSurface.context.restore();
+    return featherSurface.canvas;
   }
 
-  if (result && Array.isArray(result.confidenceMasks))
-  {
-    result.confidenceMasks.forEach(function(mask)
-    {
-      if (mask && typeof mask.close === 'function')
-      {
-        mask.close();
+  // ---------------------------------------------------------------------------
+  // 七、绘制辅助函数
+  // ---------------------------------------------------------------------------
+
+  // 向目标上下文绘制 surface，支持水平镜像和垂直翻转
+  // mirrorX: 水平翻转（用于镜像效果）；flipY: 垂直翻转（WebGL 纹理坐标系适配）
+  function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY) {
+    if (!targetContext || !surface) {
+      return;
+    }
+    if (!mirrorX && !flipY) {
+      targetContext.drawImage(surface, x, y, drawWidth, drawHeight);
+      return;
+    }
+    targetContext.save();
+    targetContext.translate(mirrorX ? x + drawWidth : x, flipY ? y + drawHeight : y);
+    targetContext.scale(mirrorX ? -1 : 1, flipY ? -1 : 1);
+    targetContext.drawImage(surface, 0, 0, drawWidth, drawHeight);
+    targetContext.restore();
+  }
+  function drawCoverSurface(targetContext, surface, drawWidth, drawHeight) {
+    var imageWidth = surface && (surface.displayWidth || surface.naturalWidth || surface.videoWidth || surface.width) || 0;
+    var imageHeight = surface && (surface.displayHeight || surface.naturalHeight || surface.videoHeight || surface.height) || 0;
+    if (!imageWidth || !imageHeight) {
+      return false;
+    }
+    var imageAspect = imageWidth / imageHeight;
+    var drawAspect = drawWidth / drawHeight;
+    var sourceWidth = imageWidth;
+    var sourceHeight = imageHeight;
+    var sourceX = 0;
+    var sourceY = 0;
+    if (imageAspect > drawAspect) {
+      sourceWidth = imageHeight * drawAspect;
+      sourceX = (imageWidth - sourceWidth) / 2;
+    } else {
+      sourceHeight = imageWidth / drawAspect;
+      sourceY = (imageHeight - sourceHeight) / 2;
+    }
+    targetContext.drawImage(surface, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, drawWidth, drawHeight);
+    return true;
+  }
+  function resolveDrawRect(draw, applyMirror) {
+    if (!draw) {
+      return null;
+    }
+    if (!applyMirror) {
+      return draw;
+    }
+    return {
+      x: width - draw.x - draw.width,
+      y: draw.y,
+      width: draw.width,
+      height: draw.height
+    };
+  }
+  async function ensureBackgroundImage(url) {
+    if (!url) {
+      return null;
+    }
+    var backgroundState = aivbBackgroundStates[url];
+    if (!backgroundState) {
+      backgroundState = {
+        bitmap: null,
+        promise: null,
+        error: ''
+      };
+      aivbBackgroundStates[url] = backgroundState;
+    }
+    if (backgroundState.bitmap) {
+      return backgroundState.bitmap;
+    }
+    if (!backgroundState.promise) {
+      backgroundState.promise = fetch(url).then(function (response) {
+        if (!response.ok) {
+          throw new Error('Failed to load background image: ' + response.status);
+        }
+        return response.blob();
+      }).then(function (blob) {
+        return createImageBitmap(blob);
+      }).then(function (bitmap) {
+        backgroundState.bitmap = bitmap;
+        backgroundState.error = '';
+        backgroundState.promise = null;
+        return bitmap;
+      }).catch(function (error) {
+        backgroundState.promise = null;
+        backgroundState.error = error && error.message ? error.message : String(error);
+        return null;
+      });
+    }
+    return backgroundState.promise;
+  }
+  function canRunSegmentation(sourceState, config) {
+    var fps = Number(config.maxRuntimeFps);
+    var minInterval = fps > 0 ? 1000 / fps : 200;
+    if (!sourceState.lastSegmentationScheduledAt) {
+      return true;
+    }
+    return now() - sourceState.lastSegmentationScheduledAt >= minInterval;
+  }
+  function shouldUpdateMask(sourceState, config) {
+    var frameSkip = config && config.segmentation ? Number(config.segmentation.frameSkip) : 0;
+    if (!sourceState.latestMask) {
+      return true;
+    }
+    if (!Number.isFinite(frameSkip) || frameSkip <= 0) {
+      return true;
+    }
+    return sourceState.renderedSinceSegmentation >= frameSkip;
+  }
+  function buildSegmentationInput(sourceState, frame, config) {
+    var frameWidth = getFrameWidth(frame);
+    var frameHeight = getFrameHeight(frame);
+    var processingScale = config && config.video ? Number(config.video.processingScale) : 1;
+    var scale = Number.isFinite(processingScale) ? clamp(processingScale, 0.1, 1) : 1;
+    var targetWidth = Math.max(1, Math.round(frameWidth * scale));
+    var targetHeight = Math.max(1, Math.round(frameHeight * scale));
+    var segmentationSurface = ensureCanvasSize(sourceState.segmentationSurface, targetWidth, targetHeight);
+    if (!segmentationSurface || !segmentationSurface.context) {
+      return null;
+    }
+    segmentationSurface.context.clearRect(0, 0, targetWidth, targetHeight);
+    drawSurfaceToContext(segmentationSurface.context, frame, 0, 0, targetWidth, targetHeight, false, false);
+    return segmentationSurface.canvas;
+  }
+  async function runSegmentation(sourceState, runtimeState, input) {
+    return new Promise(function (resolve, reject) {
+      try {
+        runtimeState.segmenter.segmentForVideo(input, now(), function (result) {
+          try {
+            resolve(createMaskCanvas(sourceState, runtimeState, result));
+          } catch (error) {
+            reject(error);
+          } finally {
+            closeSegmentationResult(result);
+          }
+        });
+      } catch (error) {
+        reject(error);
       }
     });
   }
 
-  if (result && result.categoryMask && typeof result.categoryMask.close === 'function')
-  {
-    result.categoryMask.close();
-  }
-}
+  // ---------------------------------------------------------------------------
+  // 八、AiVB 核心管线 — 逐帧人像分割 → 背景合成
+  // ---------------------------------------------------------------------------
 
-function resolveMaskValues(mask)
-{
-  if (!mask)
-  {
-    throw new Error('ImageSegmenter mask is required');
-  }
-
-  if (typeof mask.getAsFloat32Array === 'function')
-  {
-    return mask.getAsFloat32Array();
-  }
-
-  if (typeof mask.getAsUint8Array === 'function')
-  {
-    var categoryValues = mask.getAsUint8Array();
-    var floatValues = new Float32Array(categoryValues.length);
-
-    for (var index = 0; index < categoryValues.length; index += 1)
-    {
-      floatValues[index] = categoryValues[index] > 0 ? 1 : 0;
+  // 确保当前帧有最新的分割遮罩
+  // 流程：检查是否需要更新 → 构建分割输入 → 调用 MediaPipe segmenter → 构建遮罩 canvas
+  async function ensureLatestMask(item) {
+    var config = item.aiVirtualBackground;
+    var sourceState = resolveAiVBState(item.id, config);
+    if (config.runtimeEnabled === false) {
+      return sourceState.latestMask;
     }
-
-    return floatValues;
-  }
-
-  throw new Error('Unsupported ImageSegmenter mask format');
-}
-
-function createMaskCanvas(sourceState, runtimeState, result)
-{
-  var mask = null;
-
-  if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0)
-  {
-    var personMaskIndex = resolvePersonMaskIndex(runtimeState.labels || [], result.confidenceMasks.length);
-
-    mask = result.confidenceMasks[personMaskIndex];
-  }
-  else if (result && result.categoryMask)
-  {
-    mask = result.categoryMask;
-  }
-
-  if (!mask)
-  {
-    throw new Error('ImageSegmenter did not return a supported mask output');
-  }
-
-  var maskWidth = mask.width || 0;
-  var maskHeight = mask.height || 0;
-  var maskSurface = ensureCanvasSize(sourceState.maskSurface, maskWidth, maskHeight);
-
-  if (!maskSurface || !maskSurface.context)
-  {
-    throw new Error('Unable to create segmentation mask canvas');
-  }
-
-  if (
-    !sourceState.maskSurface.imageData ||
-    sourceState.maskSurface.canvas.width !== maskWidth ||
-    sourceState.maskSurface.canvas.height !== maskHeight
-  )
-  {
-    sourceState.maskSurface.imageData = maskSurface.context.createImageData(maskWidth, maskHeight);
-  }
-
-  var confidenceValues = resolveMaskValues(mask);
-  var imageData = sourceState.maskSurface.imageData.data;
-  var offset = 0;
-
-  for (var index = 0; index < confidenceValues.length; index += 1)
-  {
-    var normalizedAlpha = Math.max(
-      0,
-      Math.min(1, (confidenceValues[index] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS))
-    );
-    var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
-
-    imageData[offset] = 0;
-    imageData[offset + 1] = 0;
-    imageData[offset + 2] = 0;
-    imageData[offset + 3] = alpha;
-    offset += 4;
-  }
-
-  maskSurface.context.putImageData(sourceState.maskSurface.imageData, 0, 0);
-
-  if (DEFAULT_MASK_EDGE_BLUR_PX <= 0)
-  {
-    return maskSurface.canvas;
-  }
-
-  var featherSurface = ensureCanvasSize(sourceState.featherSurface, maskWidth, maskHeight);
-
-  if (!featherSurface || !featherSurface.context)
-  {
-    return maskSurface.canvas;
-  }
-
-  featherSurface.context.clearRect(0, 0, maskWidth, maskHeight);
-  featherSurface.context.save();
-  featherSurface.context.filter = 'blur(' + DEFAULT_MASK_EDGE_BLUR_PX + 'px)';
-  featherSurface.context.drawImage(maskSurface.canvas, 0, 0, maskWidth, maskHeight);
-  featherSurface.context.restore();
-
-  return featherSurface.canvas;
-}
-
-function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY)
-{
-  if (!targetContext || !surface)
-  {
-    return;
-  }
-
-  if (!mirrorX && !flipY)
-  {
-    targetContext.drawImage(surface, x, y, drawWidth, drawHeight);
-    return;
-  }
-
-  targetContext.save();
-  targetContext.translate(
-    mirrorX ? x + drawWidth : x,
-    flipY ? y + drawHeight : y
-  );
-  targetContext.scale(mirrorX ? -1 : 1, flipY ? -1 : 1);
-  targetContext.drawImage(surface, 0, 0, drawWidth, drawHeight);
-  targetContext.restore();
-}
-
-function drawCoverSurface(targetContext, surface, drawWidth, drawHeight)
-{
-  var imageWidth = (surface && (surface.displayWidth || surface.naturalWidth || surface.videoWidth || surface.width)) || 0;
-  var imageHeight = (surface && (surface.displayHeight || surface.naturalHeight || surface.videoHeight || surface.height)) || 0;
-
-  if (!imageWidth || !imageHeight)
-  {
-    return false;
-  }
-
-  var imageAspect = imageWidth / imageHeight;
-  var drawAspect = drawWidth / drawHeight;
-  var sourceWidth = imageWidth;
-  var sourceHeight = imageHeight;
-  var sourceX = 0;
-  var sourceY = 0;
-
-  if (imageAspect > drawAspect)
-  {
-    sourceWidth = imageHeight * drawAspect;
-    sourceX = (imageWidth - sourceWidth) / 2;
-  }
-  else
-  {
-    sourceHeight = imageWidth / drawAspect;
-    sourceY = (imageHeight - sourceHeight) / 2;
-  }
-
-  targetContext.drawImage(
-    surface,
-    sourceX,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-    0,
-    0,
-    drawWidth,
-    drawHeight
-  );
-
-  return true;
-}
-
-function resolveDrawRect(draw, applyMirror)
-{
-  if (!draw)
-  {
-    return null;
-  }
-
-  if (!applyMirror)
-  {
-    return draw;
-  }
-
-  return {
-    x      : width - draw.x - draw.width,
-    y      : draw.y,
-    width  : draw.width,
-    height : draw.height
-  };
-}
-
-async function ensureBackgroundImage(url)
-{
-  if (!url)
-  {
-    return null;
-  }
-
-  var backgroundState = aivbBackgroundStates[url];
-
-  if (!backgroundState)
-  {
-    backgroundState = {
-      bitmap: null,
-      promise: null,
-      error: ''
-    };
-    aivbBackgroundStates[url] = backgroundState;
-  }
-
-  if (backgroundState.bitmap)
-  {
-    return backgroundState.bitmap;
-  }
-
-  if (!backgroundState.promise)
-  {
-    backgroundState.promise = fetch(url)
-      .then(function(response)
-      {
-        if (!response.ok)
-        {
-          throw new Error('Failed to load background image: ' + response.status);
-        }
-
-        return response.blob();
-      })
-      .then(function(blob)
-      {
-        return createImageBitmap(blob);
-      })
-      .then(function(bitmap)
-      {
-        backgroundState.bitmap = bitmap;
-        backgroundState.error = '';
-        backgroundState.promise = null;
-
-        return bitmap;
-      })
-      .catch(function(error)
-      {
-        backgroundState.promise = null;
-        backgroundState.error = error && error.message ? error.message : String(error);
-
-        return null;
-      });
-  }
-
-  return backgroundState.promise;
-}
-
-function canRunSegmentation(sourceState, config)
-{
-  var fps = Number(config.maxRuntimeFps);
-  var minInterval = fps > 0 ? 1000 / fps : 200;
-
-  if (!sourceState.lastSegmentationScheduledAt)
-  {
-    return true;
-  }
-
-  return now() - sourceState.lastSegmentationScheduledAt >= minInterval;
-}
-
-function shouldUpdateMask(sourceState, config)
-{
-  var frameSkip = config && config.segmentation ? Number(config.segmentation.frameSkip) : 0;
-
-  if (!sourceState.latestMask)
-  {
-    return true;
-  }
-
-  if (!Number.isFinite(frameSkip) || frameSkip <= 0)
-  {
-    return true;
-  }
-
-  return sourceState.renderedSinceSegmentation >= frameSkip;
-}
-
-function buildSegmentationInput(sourceState, frame, config)
-{
-  var frameWidth = getFrameWidth(frame);
-  var frameHeight = getFrameHeight(frame);
-  var processingScale = config && config.video ? Number(config.video.processingScale) : 1;
-  var scale = Number.isFinite(processingScale) ? clamp(processingScale, 0.1, 1) : 1;
-  var targetWidth = Math.max(1, Math.round(frameWidth * scale));
-  var targetHeight = Math.max(1, Math.round(frameHeight * scale));
-  var segmentationSurface = ensureCanvasSize(sourceState.segmentationSurface, targetWidth, targetHeight);
-
-  if (!segmentationSurface || !segmentationSurface.context)
-  {
-    return null;
-  }
-
-  segmentationSurface.context.clearRect(0, 0, targetWidth, targetHeight);
-  drawSurfaceToContext(segmentationSurface.context, frame, 0, 0, targetWidth, targetHeight, false, false);
-
-  return segmentationSurface.canvas;
-}
-
-async function runSegmentation(sourceState, runtimeState, input)
-{
-  return new Promise(function(resolve, reject)
-  {
-    try
-    {
-      runtimeState.segmenter.segmentForVideo(input, now(), function(result)
-      {
-        try
-        {
-          resolve(createMaskCanvas(sourceState, runtimeState, result));
-        }
-        catch (error)
-        {
-          reject(error);
-        }
-        finally
-        {
-          closeSegmentationResult(result);
-        }
-      });
+    if (now() < sourceState.runtimeAllowedAt) {
+      return sourceState.latestMask;
     }
-    catch (error)
-    {
-      reject(error);
+    if (!shouldUpdateMask(sourceState, config) || !canRunSegmentation(sourceState, config)) {
+      return sourceState.latestMask;
     }
-  });
-}
-
-async function ensureLatestMask(item)
-{
-  var config = item.aiVirtualBackground;
-  var sourceState = resolveAiVBState(item.id, config);
-
-  if (config.runtimeEnabled === false)
-  {
+    sourceState.lastSegmentationScheduledAt = now();
+    var runtimeState = await ensureSegmenterRuntime(config);
+    var input = buildSegmentationInput(sourceState, item.frame, config);
+    if (!runtimeState || !runtimeState.segmenter || !input) {
+      return sourceState.latestMask;
+    }
+    sourceState.latestMask = await runSegmentation(sourceState, runtimeState, input);
+    sourceState.renderedSinceSegmentation = 0;
     return sourceState.latestMask;
   }
 
-  if (now() < sourceState.runtimeAllowedAt)
-  {
-    return sourceState.latestMask;
-  }
-
-  if (!shouldUpdateMask(sourceState, config) || !canRunSegmentation(sourceState, config))
-  {
-    return sourceState.latestMask;
-  }
-
-  sourceState.lastSegmentationScheduledAt = now();
-
-  var runtimeState = await ensureSegmenterRuntime(config);
-  var input = buildSegmentationInput(sourceState, item.frame, config);
-
-  if (!runtimeState || !runtimeState.segmenter || !input)
-  {
-    return sourceState.latestMask;
-  }
-
-  sourceState.latestMask = await runSegmentation(sourceState, runtimeState, input);
-  sourceState.renderedSinceSegmentation = 0;
-
-  return sourceState.latestMask;
-}
-
-async function getRenderableSurface(item)
-{
-  if (!hasAiVirtualBackground(item))
-  {
-    return item.frame;
-  }
-
-  var sourceState = resolveAiVBState(item.id, item.aiVirtualBackground);
-  var mask = await ensureLatestMask(item);
-  var drawWidth = Math.max(1, Math.round(item.draw && item.draw.width ? item.draw.width : getFrameWidth(item.frame)));
-  var drawHeight = Math.max(1, Math.round(item.draw && item.draw.height ? item.draw.height : getFrameHeight(item.frame)));
-  var foregroundSurface = ensureCanvasSize(sourceState.foregroundSurface, drawWidth, drawHeight);
-  var outputSurface = ensureCanvasSize(sourceState.outputSurface, drawWidth, drawHeight);
-
-  if (!foregroundSurface || !foregroundSurface.context || !outputSurface || !outputSurface.context)
-  {
-    return item.frame;
-  }
-
-  if (!mask)
-  {
-    return item.frame;
-  }
-
-  foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
-  drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
-  foregroundSurface.context.globalCompositeOperation = 'destination-in';
-  foregroundSurface.context.drawImage(mask, 0, 0, drawWidth, drawHeight);
-  foregroundSurface.context.globalCompositeOperation = 'source-over';
-
-  outputSurface.context.clearRect(0, 0, drawWidth, drawHeight);
-
-  if (item.aiVirtualBackground.mode === 'blur')
-  {
-    outputSurface.context.save();
-    outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
-    drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
-    outputSurface.context.restore();
-  }
-  else if (item.aiVirtualBackground.mode === 'image')
-  {
-    var backgroundImage = await ensureBackgroundImage(item.aiVirtualBackground.imageUrl || '');
-
-    if (!backgroundImage || !drawCoverSurface(outputSurface.context, backgroundImage, drawWidth, drawHeight))
-    {
+  // 获取 item 的可渲染 surface
+  // 无 AiVB：直接返回原始 frame
+  // 有 AiVB：执行人像分割 → 前景合成 → 背景替换，返回合成后的 outputSurface canvas
+  // 支持三种背景模式：blur（模糊）、image（图片）、color（纯色）
+  async function getRenderableSurface(item) {
+    if (!hasAiVirtualBackground(item)) {
       return item.frame;
     }
-  }
-  else if (item.aiVirtualBackground.mode === 'color')
-  {
-    outputSurface.context.fillStyle = item.aiVirtualBackground.backgroundColor || '#00ff00';
-    outputSurface.context.fillRect(0, 0, drawWidth, drawHeight);
-  }
-  else
-  {
-    return item.frame;
-  }
-
-  outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, drawWidth, drawHeight);
-  sourceState.renderedSinceSegmentation += 1;
-
-  return outputSurface.canvas;
-}
-
-async function init(message)
-{
-  canvas = message.canvas;
-  requestedMode = message.requestedMode || 'auto';
-  width = message.width || canvas.width || 1;
-  height = message.height || canvas.height || 1;
-  backgroundColor = message.backgroundColor || '#000';
-  canvas.width = width;
-  canvas.height = height;
-
-  if (requestedMode === 'worker-webgl2' || requestedMode === 'auto')
-  {
-    try
-    {
-      initWebGL2();
-      actualMode = 'worker-webgl2';
-      postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: true, reason: '' });
-
-      return;
+    var sourceState = resolveAiVBState(item.id, item.aiVirtualBackground);
+    var mask = await ensureLatestMask(item);
+    var drawWidth = Math.max(1, Math.round(item.draw && item.draw.width ? item.draw.width : getFrameWidth(item.frame)));
+    var drawHeight = Math.max(1, Math.round(item.draw && item.draw.height ? item.draw.height : getFrameHeight(item.frame)));
+    var foregroundSurface = ensureCanvasSize(sourceState.foregroundSurface, drawWidth, drawHeight);
+    var outputSurface = ensureCanvasSize(sourceState.outputSurface, drawWidth, drawHeight);
+    if (!foregroundSurface || !foregroundSurface.context || !outputSurface || !outputSurface.context) {
+      return item.frame;
     }
-    catch (error)
-    {
-      destroyWebGL2();
+    if (!mask) {
+      return item.frame;
+    }
+    foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
+    drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
+    foregroundSurface.context.globalCompositeOperation = 'destination-in';
+    foregroundSurface.context.drawImage(mask, 0, 0, drawWidth, drawHeight);
+    foregroundSurface.context.globalCompositeOperation = 'source-over';
+    outputSurface.context.clearRect(0, 0, drawWidth, drawHeight);
+    if (item.aiVirtualBackground.mode === 'blur') {
+      outputSurface.context.save();
+      outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
+      drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
+      outputSurface.context.restore();
+    } else if (item.aiVirtualBackground.mode === 'image') {
+      var backgroundImage = await ensureBackgroundImage(item.aiVirtualBackground.imageUrl || '');
+      if (!backgroundImage || !drawCoverSurface(outputSurface.context, backgroundImage, drawWidth, drawHeight)) {
+        return item.frame;
+      }
+    } else if (item.aiVirtualBackground.mode === 'color') {
+      outputSurface.context.fillStyle = item.aiVirtualBackground.backgroundColor || '#00ff00';
+      outputSurface.context.fillRect(0, 0, drawWidth, drawHeight);
+    } else {
+      return item.frame;
+    }
+    outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, drawWidth, drawHeight);
+    sourceState.renderedSinceSegmentation += 1;
+    return outputSurface.canvas;
+  }
 
-      if (requestedMode === 'worker-webgl2')
-      {
-        postMessage({ type: 'failed', reason: error.message || String(error) });
+  // =============================================================================
+  // 九、Worker 生命周期 — 初始化 / 渲染 / 销毁
+  // =============================================================================
+
+  // 初始化 Worker 渲染器
+  // 优先尝试 WebGL2；auto 模式下 WebGL2 失败则降级到 Canvas2D
+  // 明确指定 worker-webgl2 失败则直接回复 failed
+  async function init(message) {
+    canvas = message.canvas;
+    requestedMode = message.requestedMode || 'auto';
+    width = message.width || canvas.width || 1;
+    height = message.height || canvas.height || 1;
+    backgroundColor = message.backgroundColor || '#000';
+    canvas.width = width;
+    canvas.height = height;
+
+    // 阶段1：尝试 WebGL2 初始化
+    if (requestedMode === 'worker-webgl2' || requestedMode === 'auto') {
+      try {
+        initWebGL2();
+        actualMode = 'worker-webgl2';
+        postMessage({
+          type: 'ready',
+          actualMode: actualMode,
+          isWebGL2: true,
+          reason: ''
+        });
+        return;
+      } catch (error) {
+        destroyWebGL2();
+
+        // 明确指定 worker-webgl2 失败 → 直接失败，不降级
+        if (requestedMode === 'worker-webgl2') {
+          postMessage({
+            type: 'failed',
+            reason: error.message || String(error)
+          });
+          return;
+        }
+      }
+    }
+
+    // 阶段2：降级到 Canvas2D（auto 模式或明确指定 worker-2d）
+    try {
+      initCanvas2D();
+      actualMode = 'worker-2d';
+      postMessage({
+        type: 'ready',
+        actualMode: actualMode,
+        isWebGL2: false,
+        reason: ''
+      });
+    } catch (error) {
+      postMessage({
+        type: 'failed',
+        reason: error.message || String(error)
+      });
+    }
+  }
+  function initWebGL2() {
+    gl = canvas.getContext('webgl2', {
+      alpha: false,
+      antialias: false,
+      preserveDrawingBuffer: false,
+      powerPreference: 'high-performance'
+    });
+    if (!gl) {
+      throw new Error('Worker WebGL2 context is not available');
+    }
+    var vertexShader = compileShader(gl.VERTEX_SHADER, VERTEX_SHADER);
+    var fragmentShader = compileShader(gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+    program = createProgram(vertexShader, fragmentShader);
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+    positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+    mirrorTexCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, mirrorTexCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1, 0, 0, 0, 1, 1, 0, 1]), gl.STATIC_DRAW);
+    gl.useProgram(program);
+    enableAttribute('a_position', positionBuffer);
+    enableAttribute('a_texCoord', texCoordBuffer);
+    gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
+    opacityLocation = gl.getUniformLocation(program, 'u_opacity');
+    gl.uniform1f(opacityLocation, 1);
+  }
+  function initCanvas2D() {
+    ctx = canvas.getContext('2d', {
+      alpha: false
+    }) || canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Worker Canvas2D context is not available');
+    }
+  }
+
+  // 渲染一帧 — Worker 的核心入口
+  // 流程：
+  //   1. 更新输出尺寸和背景色
+  //   2. 根据 actualMode 分发到 renderWebGL2() 或 renderCanvas2D()
+  //   3. 通过 transferToImageBitmap() 将结果传回主线程
+  //   4. 关闭所有已使用的 VideoFrame/ImageBitmap（防止内存泄漏）
+  async function render(payload) {
+    var bitmap = null;
+    try {
+      width = payload.width || width;
+      height = payload.height || height;
+      backgroundColor = payload.backgroundColor || backgroundColor;
+      outputMirrorX = Boolean(payload.outputMirrorX);
+      mirrorWatermarksWithOutput = payload.mirrorWatermarksWithOutput !== false;
+      if (canvas.width !== width) {
+        canvas.width = width;
+      }
+      if (canvas.height !== height) {
+        canvas.height = height;
+      }
+      if (actualMode === 'worker-webgl2') {
+        await renderWebGL2(payload);
+      } else if (actualMode === 'worker-2d') {
+        await renderCanvas2D(payload);
+      }
+      if (!canvas.transferToImageBitmap) {
+        postMessage({
+          type: 'renderError',
+          reason: 'OffscreenCanvas.transferToImageBitmap is not available'
+        });
         return;
       }
-    }
-  }
-
-  try
-  {
-    initCanvas2D();
-    actualMode = 'worker-2d';
-    postMessage({ type: 'ready', actualMode: actualMode, isWebGL2: false, reason: '' });
-  }
-  catch (error)
-  {
-    postMessage({ type: 'failed', reason: error.message || String(error) });
-  }
-}
-
-function initWebGL2()
-{
-  gl = canvas.getContext('webgl2', {
-    alpha: false,
-    antialias: false,
-    preserveDrawingBuffer: false,
-    powerPreference: 'high-performance'
-  });
-
-  if (!gl)
-  {
-    throw new Error('Worker WebGL2 context is not available');
-  }
-
-  var vertexShader = compileShader(gl.VERTEX_SHADER, VERTEX_SHADER);
-  var fragmentShader = compileShader(gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
-
-  program = createProgram(vertexShader, fragmentShader);
-  gl.deleteShader(vertexShader);
-  gl.deleteShader(fragmentShader);
-
-  positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1, -1, 1, -1, -1, 1, 1, 1 ]), gl.STATIC_DRAW);
-
-  texCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 0, 0, 1, 0, 0, 1, 1, 1 ]), gl.STATIC_DRAW);
-
-  mirrorTexCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, mirrorTexCoordBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 1, 0, 0, 0, 1, 1, 0, 1 ]), gl.STATIC_DRAW);
-
-  gl.useProgram(program);
-  enableAttribute('a_position', positionBuffer);
-  enableAttribute('a_texCoord', texCoordBuffer);
-  gl.uniform1i(gl.getUniformLocation(program, 'u_texture'), 0);
-  opacityLocation = gl.getUniformLocation(program, 'u_opacity');
-  gl.uniform1f(opacityLocation, 1);
-}
-
-function initCanvas2D()
-{
-  ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
-
-  if (!ctx)
-  {
-    throw new Error('Worker Canvas2D context is not available');
-  }
-}
-
-async function render(payload)
-{
-  var bitmap = null;
-
-  try
-  {
-    width = payload.width || width;
-    height = payload.height || height;
-    backgroundColor = payload.backgroundColor || backgroundColor;
-    outputMirrorX = Boolean(payload.outputMirrorX);
-    mirrorWatermarksWithOutput = payload.mirrorWatermarksWithOutput !== false;
-
-    if (canvas.width !== width)
-    {
-      canvas.width = width;
-    }
-
-    if (canvas.height !== height)
-    {
-      canvas.height = height;
-    }
-
-    if (actualMode === 'worker-webgl2')
-    {
-      await renderWebGL2(payload);
-    }
-    else if (actualMode === 'worker-2d')
-    {
-      await renderCanvas2D(payload);
-    }
-
-    if (!canvas.transferToImageBitmap)
-    {
-      postMessage({ type: 'renderError', reason: 'OffscreenCanvas.transferToImageBitmap is not available' });
-      return;
-    }
-
-    bitmap = canvas.transferToImageBitmap();
-    postMessage({ type: 'rendered', bitmap: bitmap }, [ bitmap ]);
-    bitmap = null;
-  }
-  catch (error)
-  {
-    if (bitmap && typeof bitmap.close === 'function')
-    {
-      bitmap.close();
-    }
-
-    postMessage({ type: 'renderError', reason: error && error.message ? error.message : String(error) });
-  }
-  finally
-  {
-    closeFrames(payload.items || []);
-    closeFrames(payload.sourceWatermarks || []);
-    closeFrames(payload.outputWatermarks || []);
-  }
-}
-
-async function renderWebGL2(payload)
-{
-  var color = parseColor(payload.backgroundColor || '#000');
-  var items = payload.items || [];
-
-  gl.useProgram(program);
-  gl.clearColor(color[0], color[1], color[2], color[3]);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.activeTexture(gl.TEXTURE0);
-  gl.disable(gl.BLEND);
-
-  for (var index = 0; index < items.length; index += 1)
-  {
-    var item = items[index];
-
-    if (!item.frame || !item.draw)
-    {
-      continue;
-    }
-
-    var surface = await getRenderableSurface(item);
-    var texture = getTexture(item.id);
-    var draw = resolveDrawRect(item.draw, outputMirrorX);
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
-    gl.uniform1f(opacityLocation, 1);
-    drawRect(draw, Boolean(item.mirrorX) !== outputMirrorX);
-  }
-
-  drawWatermarksWebGL2(payload.sourceWatermarks || [], outputMirrorX);
-  drawWatermarksWebGL2(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
-  gl.flush();
-}
-
-function drawWatermarksWebGL2(watermarks, applyMirror)
-{
-  if (!watermarks.length)
-  {
-    return;
-  }
-
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-  watermarks.forEach(function(watermark)
-  {
-    if (!watermark.frame || !watermark.draw)
-    {
-      return;
-    }
-
-    var texture = getWatermarkTexture(watermark.id);
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.frame);
-    gl.uniform1f(opacityLocation, typeof watermark.opacity === 'number' ? clamp(watermark.opacity, 0, 1) : 1);
-    drawRect(resolveDrawRect(watermark.draw, applyMirror), Boolean(applyMirror));
-  });
-
-  gl.disable(gl.BLEND);
-}
-
-function drawRect(draw, mirrorX)
-{
-  var left = Math.round(draw.x);
-  var top = Math.round(height - draw.y - draw.height);
-  var drawWidth = Math.round(draw.width);
-  var drawHeight = Math.round(draw.height);
-
-  if (drawWidth <= 0 || drawHeight <= 0)
-  {
-    return;
-  }
-
-  enableAttribute('a_texCoord', mirrorX ? mirrorTexCoordBuffer : texCoordBuffer);
-  gl.viewport(left, top, drawWidth, drawHeight);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-}
-
-async function renderCanvas2D(payload)
-{
-  var items = payload.items || [];
-
-  ctx.fillStyle = payload.backgroundColor || '#000';
-  ctx.fillRect(0, 0, width, height);
-
-  for (var index = 0; index < items.length; index += 1)
-  {
-    var item = items[index];
-
-    if (!item.frame || !item.draw)
-    {
-      continue;
-    }
-
-    var surface = await getRenderableSurface(item);
-    var draw = resolveDrawRect(item.draw, outputMirrorX);
-
-    drawSurfaceToContext(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
-  }
-
-  drawWatermarksCanvas2D(payload.sourceWatermarks || [], outputMirrorX);
-  drawWatermarksCanvas2D(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
-}
-
-function drawWatermarksCanvas2D(watermarks, applyMirror)
-{
-  watermarks.forEach(function(watermark)
-  {
-    if (!watermark.frame || !watermark.draw)
-    {
-      return;
-    }
-
-    var previousAlpha = ctx.globalAlpha;
-
-    var draw = resolveDrawRect(watermark.draw, applyMirror);
-
-    ctx.globalAlpha = typeof watermark.opacity === 'number' ? watermark.opacity : 1;
-    drawSurfaceToContext(ctx, watermark.frame, draw.x, draw.y, draw.width, draw.height, Boolean(applyMirror), false);
-    ctx.globalAlpha = previousAlpha;
-  });
-}
-
-function compileShader(type, source)
-{
-  var shader = gl.createShader(type);
-
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-  {
-    var shaderError = gl.getShaderInfoLog(shader);
-
-    gl.deleteShader(shader);
-    throw new Error('Could not compile shader: ' + shaderError);
-  }
-
-  return shader;
-}
-
-function createProgram(vertexShader, fragmentShader)
-{
-  var programObject = gl.createProgram();
-
-  gl.attachShader(programObject, vertexShader);
-  gl.attachShader(programObject, fragmentShader);
-  gl.linkProgram(programObject);
-
-  if (!gl.getProgramParameter(programObject, gl.LINK_STATUS))
-  {
-    var programError = gl.getProgramInfoLog(programObject);
-
-    gl.deleteProgram(programObject);
-    throw new Error('Could not link WebGL program: ' + programError);
-  }
-
-  return programObject;
-}
-
-function enableAttribute(name, buffer)
-{
-  var location = gl.getAttribLocation(program, name);
-
-  gl.enableVertexAttribArray(location);
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
-}
-
-function getTexture(id)
-{
-  if (!textures[id])
-  {
-    textures[id] = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, textures[id]);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  }
-
-  return textures[id];
-}
-
-function getWatermarkTexture(id)
-{
-  if (!watermarkTextures[id])
-  {
-    watermarkTextures[id] = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, watermarkTextures[id]);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  }
-
-  return watermarkTextures[id];
-}
-
-function removeSource(id)
-{
-  if (gl && textures[id])
-  {
-    gl.deleteTexture(textures[id]);
-  }
-
-  delete textures[id];
-  delete aivbSourceStates[id];
-}
-
-function closeFrames(items)
-{
-  items.forEach(function(item)
-  {
-    if (item.frame && typeof item.frame.close === 'function')
-    {
-      item.frame.close();
-    }
-  });
-}
-
-function closeBackgroundBitmaps()
-{
-  Object.keys(aivbBackgroundStates).forEach(function(key)
-  {
-    var state = aivbBackgroundStates[key];
-
-    if (state && state.bitmap && typeof state.bitmap.close === 'function')
-    {
-      state.bitmap.close();
-    }
-  });
-
-  aivbBackgroundStates = Object.create(null);
-}
-
-async function destroy()
-{
-  var runtimeKeys = Object.keys(aivbRuntimeStates);
-
-  closeBackgroundBitmaps();
-  destroyWebGL2();
-  ctx = null;
-  canvas = null;
-  aivbSourceStates = Object.create(null);
-
-  for (var index = 0; index < runtimeKeys.length; index += 1)
-  {
-    var runtimeState = aivbRuntimeStates[runtimeKeys[index]];
-
-    if (runtimeState && runtimeState.segmenter && typeof runtimeState.segmenter.close === 'function')
-    {
-      try
-      {
-        await runtimeState.segmenter.close();
+      bitmap = canvas.transferToImageBitmap();
+      postMessage({
+        type: 'rendered',
+        bitmap: bitmap
+      }, [bitmap]);
+      bitmap = null;
+    } catch (error) {
+      if (bitmap && typeof bitmap.close === 'function') {
+        bitmap.close();
       }
-      catch (error)
-      {}
+      postMessage({
+        type: 'renderError',
+        reason: error && error.message ? error.message : String(error)
+      });
+    } finally {
+      closeFrames(payload.items || []);
+      closeFrames(payload.sourceWatermarks || []);
+      closeFrames(payload.outputWatermarks || []);
     }
   }
+  async function renderWebGL2(payload) {
+    var color = parseColor(payload.backgroundColor || '#000');
+    var items = payload.items || [];
+    gl.useProgram(program);
+    gl.clearColor(color[0], color[1], color[2], color[3]);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.disable(gl.BLEND);
+    for (var index = 0; index < items.length; index += 1) {
+      var item = items[index];
+      if (!item.frame || !item.draw) {
+        continue;
+      }
+      var surface = await getRenderableSurface(item);
+      var texture = getTexture(item.id);
+      var draw = resolveDrawRect(item.draw, outputMirrorX);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, surface);
+      gl.uniform1f(opacityLocation, 1);
+      drawRect(draw, Boolean(item.mirrorX) !== outputMirrorX);
+    }
+    drawWatermarksWebGL2(payload.sourceWatermarks || [], outputMirrorX);
+    drawWatermarksWebGL2(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
+    gl.flush();
+  }
+  function drawWatermarksWebGL2(watermarks, applyMirror) {
+    if (!watermarks.length) {
+      return;
+    }
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    watermarks.forEach(function (watermark) {
+      if (!watermark.frame || !watermark.draw) {
+        return;
+      }
+      var texture = getWatermarkTexture(watermark.id);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, watermark.frame);
+      gl.uniform1f(opacityLocation, typeof watermark.opacity === 'number' ? clamp(watermark.opacity, 0, 1) : 1);
+      drawRect(resolveDrawRect(watermark.draw, applyMirror), Boolean(applyMirror));
+    });
+    gl.disable(gl.BLEND);
+  }
+  function drawRect(draw, mirrorX) {
+    var left = Math.round(draw.x);
+    var top = Math.round(height - draw.y - draw.height);
+    var drawWidth = Math.round(draw.width);
+    var drawHeight = Math.round(draw.height);
+    if (drawWidth <= 0 || drawHeight <= 0) {
+      return;
+    }
+    enableAttribute('a_texCoord', mirrorX ? mirrorTexCoordBuffer : texCoordBuffer);
+    gl.viewport(left, top, drawWidth, drawHeight);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  async function renderCanvas2D(payload) {
+    var items = payload.items || [];
+    ctx.fillStyle = payload.backgroundColor || '#000';
+    ctx.fillRect(0, 0, width, height);
+    for (var index = 0; index < items.length; index += 1) {
+      var item = items[index];
+      if (!item.frame || !item.draw) {
+        continue;
+      }
+      var surface = await getRenderableSurface(item);
+      var draw = resolveDrawRect(item.draw, outputMirrorX);
+      drawSurfaceToContext(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
+    }
+    drawWatermarksCanvas2D(payload.sourceWatermarks || [], outputMirrorX);
+    drawWatermarksCanvas2D(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
+  }
+  function drawWatermarksCanvas2D(watermarks, applyMirror) {
+    watermarks.forEach(function (watermark) {
+      if (!watermark.frame || !watermark.draw) {
+        return;
+      }
+      var previousAlpha = ctx.globalAlpha;
+      var draw = resolveDrawRect(watermark.draw, applyMirror);
+      ctx.globalAlpha = typeof watermark.opacity === 'number' ? watermark.opacity : 1;
+      drawSurfaceToContext(ctx, watermark.frame, draw.x, draw.y, draw.width, draw.height, Boolean(applyMirror), false);
+      ctx.globalAlpha = previousAlpha;
+    });
+  }
+  function compileShader(type, source) {
+    var shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      var shaderError = gl.getShaderInfoLog(shader);
+      gl.deleteShader(shader);
+      throw new Error('Could not compile shader: ' + shaderError);
+    }
+    return shader;
+  }
+  function createProgram(vertexShader, fragmentShader) {
+    var programObject = gl.createProgram();
+    gl.attachShader(programObject, vertexShader);
+    gl.attachShader(programObject, fragmentShader);
+    gl.linkProgram(programObject);
+    if (!gl.getProgramParameter(programObject, gl.LINK_STATUS)) {
+      var programError = gl.getProgramInfoLog(programObject);
+      gl.deleteProgram(programObject);
+      throw new Error('Could not link WebGL program: ' + programError);
+    }
+    return programObject;
+  }
+  function enableAttribute(name, buffer) {
+    var location = gl.getAttribLocation(program, name);
+    gl.enableVertexAttribArray(location);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+  }
+  function getTexture(id) {
+    if (!textures[id]) {
+      textures[id] = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, textures[id]);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+    return textures[id];
+  }
+  function getWatermarkTexture(id) {
+    if (!watermarkTextures[id]) {
+      watermarkTextures[id] = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, watermarkTextures[id]);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+    return watermarkTextures[id];
+  }
+  function removeSource(id) {
+    if (gl && textures[id]) {
+      gl.deleteTexture(textures[id]);
+    }
+    delete textures[id];
+    delete aivbSourceStates[id];
+  }
+  function closeFrames(items) {
+    items.forEach(function (item) {
+      if (item.frame && typeof item.frame.close === 'function') {
+        item.frame.close();
+      }
+    });
+  }
+  function closeBackgroundBitmaps() {
+    Object.keys(aivbBackgroundStates).forEach(function (key) {
+      var state = aivbBackgroundStates[key];
+      if (state && state.bitmap && typeof state.bitmap.close === 'function') {
+        state.bitmap.close();
+      }
+    });
+    aivbBackgroundStates = Object.create(null);
+  }
+  async function destroy() {
+    var runtimeKeys = Object.keys(aivbRuntimeStates);
+    closeBackgroundBitmaps();
+    destroyWebGL2();
+    ctx = null;
+    canvas = null;
+    aivbSourceStates = Object.create(null);
+    for (var index = 0; index < runtimeKeys.length; index += 1) {
+      var runtimeState = aivbRuntimeStates[runtimeKeys[index]];
+      if (runtimeState && runtimeState.segmenter && typeof runtimeState.segmenter.close === 'function') {
+        try {
+          await runtimeState.segmenter.close();
+        } catch (error) {}
+      }
+    }
+    aivbRuntimeStates = Object.create(null);
+  }
+  function destroyWebGL2() {
+    if (!gl) {
+      return;
+    }
+    Object.keys(textures).forEach(function (key) {
+      gl.deleteTexture(textures[key]);
+    });
+    textures = {};
+    Object.keys(watermarkTextures).forEach(function (key) {
+      gl.deleteTexture(watermarkTextures[key]);
+    });
+    watermarkTextures = {};
+    if (positionBuffer) {
+      gl.deleteBuffer(positionBuffer);
+    }
+    if (texCoordBuffer) {
+      gl.deleteBuffer(texCoordBuffer);
+    }
+    if (mirrorTexCoordBuffer) {
+      gl.deleteBuffer(mirrorTexCoordBuffer);
+    }
+    if (program) {
+      gl.deleteProgram(program);
+    }
+    var loseContext = gl.getExtension('WEBGL_lose_context');
+    if (loseContext) {
+      loseContext.loseContext();
+    }
+    gl = null;
+    program = null;
+    positionBuffer = null;
+    texCoordBuffer = null;
+    mirrorTexCoordBuffer = null;
+    opacityLocation = null;
+  }
+  function parseColor(value) {
+    if (!value || typeof value !== 'string') {
+      return [0, 0, 0, 1];
+    }
+    var normalized = value.trim();
+    if (normalized[0] === '#') {
+      return parseHexColor(normalized);
+    }
+    if (normalized.indexOf('rgb') === 0) {
+      return parseRgbColor(normalized);
+    }
+    return [0, 0, 0, 1];
+  }
+  function parseHexColor(value) {
+    var hex = value.slice(1);
+    if (hex.length === 3) {
+      hex = hex.split('').map(function (char) {
+        return char + char;
+      }).join('');
+    }
+    if (hex.length !== 6) {
+      return [0, 0, 0, 1];
+    }
+    var parsed = parseInt(hex, 16);
+    if (!isFinite(parsed)) {
+      return [0, 0, 0, 1];
+    }
+    return [(parsed >> 16 & 255) / 255, (parsed >> 8 & 255) / 255, (parsed & 255) / 255, 1];
+  }
+  function parseRgbColor(value) {
+    var match = value.match(/rgba?\(([^)]+)\)/i);
+    if (!match) {
+      return [0, 0, 0, 1];
+    }
+    var parts = match[1].split(',').map(function (part) {
+      return Number(part.trim());
+    });
+    if (parts.length < 3 || parts.some(function (part) {
+      return !isFinite(part);
+    })) {
+      return [0, 0, 0, 1];
+    }
+    return [clamp(parts[0] / 255, 0, 1), clamp(parts[1] / 255, 0, 1), clamp(parts[2] / 255, 0, 1), clamp(parts.length > 3 ? parts[3] : 1, 0, 1)];
+  }
 
-  aivbRuntimeStates = Object.create(null);
+  // =============================================================================
+  // 十、消息分发 — Worker 主消息循环
+  //
+  // 接收主线程的 postMessage，按 type 分发到对应处理函数：
+  //   init         → 初始化渲染上下文（OffscreenCanvas + WebGL2/Canvas2D）
+  //   render       → 渲染一帧（payload 含 items 和 watermarks）
+  //   removeSource → 释放指定 source 的纹理和 AiVB 状态
+  //   destroy      → 销毁所有资源（纹理、shader、segmenter、背景图缓存）
+  // =============================================================================
+  self.onmessage = function (event) {
+    var data = event.data || {};
+    if (data.type === 'init') {
+      init(data);
+      return;
+    }
+    if (data.type === 'render') {
+      render(data.payload || {});
+      return;
+    }
+    if (data.type === 'removeSource') {
+      removeSource(data.id);
+      return;
+    }
+    if (data.type === 'destroy') {
+      destroy();
+    }
+  };
 }
-
-function destroyWebGL2()
-{
-  if (!gl)
-  {
-    return;
-  }
-
-  Object.keys(textures).forEach(function(key)
-  {
-    gl.deleteTexture(textures[key]);
-  });
-  textures = {};
-
-  Object.keys(watermarkTextures).forEach(function(key)
-  {
-    gl.deleteTexture(watermarkTextures[key]);
-  });
-  watermarkTextures = {};
-
-  if (positionBuffer)
-  {
-    gl.deleteBuffer(positionBuffer);
-  }
-
-  if (texCoordBuffer)
-  {
-    gl.deleteBuffer(texCoordBuffer);
-  }
-
-  if (mirrorTexCoordBuffer)
-  {
-    gl.deleteBuffer(mirrorTexCoordBuffer);
-  }
-
-  if (program)
-  {
-    gl.deleteProgram(program);
-  }
-
-  var loseContext = gl.getExtension('WEBGL_lose_context');
-
-  if (loseContext)
-  {
-    loseContext.loseContext();
-  }
-
-  gl = null;
-  program = null;
-  positionBuffer = null;
-  texCoordBuffer = null;
-  mirrorTexCoordBuffer = null;
-  opacityLocation = null;
-}
-
-function parseColor(value)
-{
-  if (!value || typeof value !== 'string')
-  {
-    return [ 0, 0, 0, 1 ];
-  }
-
-  var normalized = value.trim();
-
-  if (normalized[0] === '#')
-  {
-    return parseHexColor(normalized);
-  }
-
-  if (normalized.indexOf('rgb') === 0)
-  {
-    return parseRgbColor(normalized);
-  }
-
-  return [ 0, 0, 0, 1 ];
-}
-
-function parseHexColor(value)
-{
-  var hex = value.slice(1);
-
-  if (hex.length === 3)
-  {
-    hex = hex.split('').map(function(char)
-    {
-      return char + char;
-    }).join('');
-  }
-
-  if (hex.length !== 6)
-  {
-    return [ 0, 0, 0, 1 ];
-  }
-
-  var parsed = parseInt(hex, 16);
-
-  if (!isFinite(parsed))
-  {
-    return [ 0, 0, 0, 1 ];
-  }
-
-  return [
-    ((parsed >> 16) & 255) / 255,
-    ((parsed >> 8) & 255) / 255,
-    (parsed & 255) / 255,
-    1
-  ];
-}
-
-function parseRgbColor(value)
-{
-  var match = value.match(/rgba?\\\\(([^)]+)\\\\)/i);
-
-  if (!match)
-  {
-    return [ 0, 0, 0, 1 ];
-  }
-
-  var parts = match[1].split(',').map(function(part)
-  {
-    return Number(part.trim());
-  });
-
-  if (parts.length < 3 || parts.some(function(part)
-  {
-    return !isFinite(part);
-  }))
-  {
-    return [ 0, 0, 0, 1 ];
-  }
-
-  return [
-    clamp(parts[0] / 255, 0, 1),
-    clamp(parts[1] / 255, 0, 1),
-    clamp(parts[2] / 255, 0, 1),
-    clamp(parts.length > 3 ? parts[3] : 1, 0, 1)
-  ];
-}
-
-self.onmessage = function(event)
-{
-  var data = event.data || {};
-
-  if (data.type === 'init')
-  {
-    init(data);
-    return;
-  }
-
-  if (data.type === 'render')
-  {
-    render(data.payload || {});
-    return;
-  }
-
-  if (data.type === 'removeSource')
-  {
-    removeSource(data.id);
-    return;
-  }
-
-  if (data.type === 'destroy')
-  {
-    destroy();
-  }
-};
-`;
+exports.createWorkerScript = function () {
+  var source = workerMain.toString();
+  return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
 },{}],66:[function(require,module,exports){
 "use strict";
@@ -28382,12 +27954,16 @@ function parseHeader(message, data, headerStart, headerEnd) {
 },{"./Grammar":42,"./Logger":44,"./SIPMessage":80}],71:[function(require,module,exports){
 "use strict";
 
-/* eslint-disable max-len */
-// 密钥
-var pk = [77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66];
-// const pk=[ 45, 45, 45, 45, 45, 66, 69, 71, 73, 78, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45, 10, 77, 73, 73, 66, 73, 106, 65, 78, 66, 103, 107, 113, 104, 107, 105, 71, 57, 119, 48, 66, 65, 81, 69, 70, 65, 65, 79, 67, 65, 81, 56, 65, 77, 73, 73, 66, 67, 103, 75, 67, 65, 81, 69, 65, 50, 66, 103, 106, 73, 55, 82, 112, 51, 85, 73, 117, 108, 74, 109, 114, 78, 81, 47, 80, 10, 82, 73, 56, 65, 101, 118, 100, 119, 70, 47, 67, 105, 115, 97, 56, 85, 117, 86, 84, 79, 52, 113, 101, 83, 73, 49, 43, 52, 122, 77, 103, 106, 87, 79, 110, 89, 75, 48, 71, 87, 66, 122, 77, 118, 67, 77, 81, 106, 74, 65, 47, 84, 110, 106, 108, 87, 66, 85, 107, 90, 118, 52, 112, 65, 10, 111, 82, 76, 77, 55, 112, 121, 80, 86, 51, 98, 87, 75, 89, 117, 118, 113, 81, 69, 84, 113, 105, 66, 79, 121, 43, 104, 65, 71, 73, 121, 66, 108, 77, 108, 83, 97, 55, 81, 70, 56, 99, 67, 112, 115, 105, 111, 103, 119, 57, 120, 85, 73, 114, 116, 122, 82, 98, 57, 84, 106, 107, 87, 57, 10, 49, 69, 111, 101, 52, 110, 53, 66, 80, 99, 119, 78, 100, 86, 88, 55, 99, 118, 73, 82, 99, 84, 114, 122, 71, 106, 51, 54, 103, 75, 100, 71, 66, 90, 73, 109, 75, 101, 122, 79, 81, 114, 111, 87, 109, 114, 119, 73, 73, 115, 55, 51, 115, 83, 79, 55, 98, 52, 49, 101, 119, 43, 66, 87, 10, 84, 71, 81, 122, 78, 75, 86, 106, 104, 65, 71, 121, 82, 103, 88, 109, 77, 119, 65, 80, 79, 98, 55, 97, 67, 98, 43, 49, 98, 84, 56, 48, 120, 68, 71, 78, 114, 87, 72, 65, 120, 114, 90, 97, 56, 75, 120, 122, 113, 102, 47, 76, 83, 66, 97, 119, 97, 75, 85, 117, 102, 55, 105, 100, 10, 117, 48, 112, 68, 118, 66, 98, 57, 109, 51, 116, 50, 110, 67, 80, 65, 102, 107, 103, 85, 56, 112, 109, 100, 56, 49, 101, 99, 86, 113, 73, 83, 43, 121, 48, 50, 65, 88, 108, 100, 65, 72, 75, 109, 72, 74, 118, 111, 67, 100, 77, 66, 52, 115, 71, 106, 50, 65, 112, 90, 102, 73, 111, 52, 10, 89, 119, 73, 68, 65, 81, 65, 66, 10, 45, 45, 45, 45, 45, 69, 78, 68, 32, 80, 85, 66, 76, 73, 67, 32, 75, 69, 89, 45, 45, 45, 45, 45 ];
-
-module.exports = pk;
+var a = 'BQDw\nofp2G4MCvHKAlA0+IVe8m8gfPntmbvpud7uKwBLfzKarAWND0T1babPwmgyAjKzG\nBw1bOs7IwmoQzKIBdg3GrcIcXdwP54o19kTbzrU9gipcF7SMBIA+OiTQvYW3PpMR\npvkBln/JQCMBGKnWgz+Ie4Tu8sCFde8RPQrJuUp7jBAQCgBIAQCAFQBwGkqgNjBI';
+var b = 'AAIY4IZAjsBdoJmHdX2ySqc1dpUkAC239BD0\nifUaaS/qx8ZxHrGx8b+C7OAMXRGhVNQTW+e47S3sIrWrOemZGK6jzTRv7VNcBneE\nWj9RtIxwosC8QallyGhyBqEquKbVy7LoA4ZUWjTAjMvzW0YOjM41SqOVUai/wvAI\n/NmlI3RIg2EAKCIM8AOAEA09ihkBAIIM';
+var s = '';
+for (var i = 0; i < a.length; i++) {
+  s += a[i];
+  if (i < b.length) {
+    s += b[i];
+  }
+}
+module.exports = s.split('').reverse().join('');
 },{}],72:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
@@ -38009,7 +37585,7 @@ module.exports = class UA extends EventEmitter {
     // 解析授权码
     try {
       var je = new encrypt.JSEncrypt();
-      je.setPublicKey(String.fromCharCode.apply(null, new Uint16Array(pk)));
+      je.setPublicKey(pk);
       sk = je.decrypt(configuration.secret_key, false).replace(/\s*/g, '').split('|');
       if (sk && sk[2] <= generateDate()) {
         sk[2] = 1;

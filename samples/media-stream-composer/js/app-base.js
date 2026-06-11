@@ -2123,7 +2123,7 @@ const app = {
       {
         const stream = await this.stressSourceFactory.create(`AUX${i + 1}-SRC${slot + 1}`, slot, i + 1);
 
-        composer.addSource(stream, slot);
+        composer.addSource(stream, { slot });
         streams.push(stream);
       }
 
