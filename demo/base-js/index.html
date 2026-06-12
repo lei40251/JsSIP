@@ -400,23 +400,9 @@
   <script src="../../dist/CRTC.min.js"></script>
   <script src="../config.js"></script>
   <script src="./js/app-media-effects.js"></script>
+  <script src="./js/app.sdk-helper.js"></script>
   <script src="./js/app.js"></script>
-  <script>
-    (function () {
-      var captureBtn = document.getElementById('capture');
-      var captureCanvas = document.getElementById('captureView');
-      var captureEmpty = document.getElementById('capture-empty');
-      var capturePanel = document.getElementById('capture-preview-panel');
-      if (!captureBtn || !captureCanvas) return;
-      captureBtn.addEventListener('click', function () {
-        setTimeout(function () {
-          captureCanvas.classList.remove('hide');
-          if (captureEmpty) captureEmpty.classList.add('hide');
-          if (capturePanel) capturePanel.classList.add('has-capture');
-        }, 180);
-      });
-    })();
-  </script>
+  <script src="./js/app.ui-bindings.js"></script>
 </body>
 
 </html>

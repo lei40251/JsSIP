@@ -213,7 +213,7 @@ iceServers && (pcConfig['iceServers'] = iceServers);
 // ICE 传输策略（如 'relay' 强制走 TURN）
 iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
 // ICE 候选池大小，预收集候选加速连接
-pcConfig['iceCandidatePoolSize'] = 10;
+pcConfig['iceCandidatePoolSize'] = 4;
 
 // BUNDLE 策略设为最大兼容模式，所有媒体流复用同一端口
 pcConfig['bundlePolicy'] = 'max-compat';
@@ -396,9 +396,9 @@ ua.on('newRTCSession', function(e)
 {
   // 输出完整会话对象用于调试
   console.warn('nsession: ', e);
-
   // 检测远端设备的操作系统类型（用于后续兼容处理）
   console.warn('dOS: ', detectRemoteOS(e.request));
+
   // 重置通话确认标志
   confirmed = false;
 
@@ -1071,7 +1071,7 @@ ua.on('newRTCSession', function(e)
    */
   e.session.on('accepted', (d) =>
   {
-    // 远端已应答，关闭来电提示
+    // 已应答，关闭来电提示
     closeIncomingCallNotification();
     console.warn('dOS: ', detectRemoteOS(d.response));
   });
@@ -1607,7 +1607,7 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * cancelReferBtn — 取消呼转等候室
+   * cancelReferBtn — 取消呼转
    *
    * 通过 SIP INFO 发送 cancel 事件通知对端。
    */
@@ -1943,57 +1943,6 @@ ua.on('newRTCSession', function(e)
 
 
 /**
- * testBtn — 测试按钮：枚举设备信息
- *
- * 列出所有媒体设备及其能力（capabilities），用于调试。
- */
-document.querySelector('#testBtn').onclick = function()
-{
-  navigator.mediaDevices.enumerateDevices()
-    .then((devices) =>
-    {
-      const dev = [];
-
-      devices.forEach((device) =>
-      {
-        dev.push(device);
-        // 如果设备支持 getCapabilities，一并输出
-        if (typeof device.getCapabilities === 'function')
-        {
-          dev.push(device.getCapabilities());
-          console.warn(device);
-        }
-      });
-
-      document.body.innerText = JSON.stringify(dev);
-    });
-};
-
-/**
- * resume — 恢复所有视频播放
- *
- * 部分场景下视频可能因浏览器策略卡死，需要手动恢复播放。
- */
-document.querySelector('.resume').onclick = function()
-{
-  document.querySelectorAll('video').forEach((video) => video.play().catch());
-};
-
-/**
- * useupdate — 音视频升级策略选择
- *
- * 控制音视频切换时使用 update（re-INVITE 更新）还是 reInvite（全新 INVITE）。
- * - 'update': 使用 SIP UPDATE 方法
- * - 'reInvite': 使用 re-INVITE
- */
-document.querySelector('#useupdate').onchange = function()
-{
-  this.options[this.selectedIndex].value !== 'update' ? useUpdate = false : useUpdate = true;
-  console.log(this.options[this.selectedIndex]);
-  setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
-};
-
-/**
  * 发起呼叫（核心函数）
  *
  * @param {string} type - 呼叫类型：
@@ -2016,8 +1965,6 @@ document.querySelector('#useupdate').onchange = function()
  */
 async function call(type, direction, mediaStream)
 {
-  // 重置 DTMF telephone-event 负载类型
-  telephone_event_pt = null;
   // 重置录音实例
   recorder = undefined;
   // 重置为前置摄像头
@@ -2216,8 +2163,6 @@ async function call(type, direction, mediaStream)
     // 发起 SIP 呼叫
     const session = await ua.call(`${number}@${sipDomain}`, options);
 
-    console.warn('sessionID: ', session.id);
-
     // ---- 远端回铃音（早期媒体）处理 ----
     // 默认假设无远端回铃音
     earlyMedia = false;
@@ -2304,320 +2249,6 @@ async function call(type, direction, mediaStream)
  * 4. 渲染远端视频（监听 ended 清理残留黑框）
  * 5. 统一播放（兼容 Chrome 自动播放策略）
  */
-function getStreams(pc)
-{
-  const localStream = CRTC.Utils.getStreams(pc, 'local');
-  const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
-
-  // 提取本地音视频轨道
-  const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
-  const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
-  const mediaStreamArray = [];
-
-  let newCloneStream;
-
-  // 优先放入视频轨道，其次音频轨道
-  if (videoTrack)
-  {
-    mediaStreamArray.push(videoTrack);
-  }
-  else if (audioTrack)
-  {
-    mediaStreamArray.push(audioTrack);
-  }
-
-  // 构建新的克隆媒体流
-  if (mediaStreamArray.length > 0)
-  {
-    newCloneStream = new MediaStream(mediaStreamArray);
-
-    // 仅当流发生变化时才更新 srcObject
-    if (bindMediaStreamIfChanged(localVideo, newCloneStream))
-    {
-      // 监听轨道结束事件，清理残留的 video 黑框
-      newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
-      {
-        localVideo.srcObject = null;
-      });
-    }
-  }
-
-  // ---- 清理旧的克隆流 ----
-  if (cloneStream)
-  {
-    // 呼叫转移场景不清理旧的克隆流
-    if (!isRefer)
-    {
-      // cloneStream.getTracks().forEach((track) => track.stop());
-    }
-  }
-  isRefer = false;
-
-  // 更新全局 cloneStream 引用
-  newCloneStream && (cloneStream = newCloneStream);
-
-  // ---- 渲染远端音频 ----
-  // 延迟 100ms 适配安卓微信部分场景下无声音问题
-  setTimeout(() =>
-  {
-    bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
-
-    // Chrome 自动播放策略兼容
-    remoteAudio.play()
-      .catch(() => { });
-  }, 100);
-
-  // ---- 渲染远端视频 ----
-  if (bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream))
-  {
-    // 监听视频轨道结束，清理残留的 video 黑框
-    // 有临时会话时不清理（呼叫转接场景）
-    remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
-    {
-      if (!tmpSession)
-      {
-        remoteVideo.srcObject = null;
-      }
-    });
-  }
-
-  // ---- 统一播放所有媒体元素 ----
-  // 兼容 Chrome 自动播放策略：play() 可能返回被拒绝的 Promise
-  Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
-    .then(() => { })
-    .catch(() => { });
-}
-
-/**
- * 停止所有媒体流渲染
- *
- * 将本地视频、远端视频、远端音频的 srcObject 清空。
- * 通常在通话保持/结束时调用，配合 UI 状态切换。
- */
-function stopStreams()
-{
-  remoteVideo.srcObject = null;
-  remoteAudio.srcObject = null;
-  localVideo.srcObject = null;
-}
-
-/**
- * 从 URL 查询参数中提取值
- *
- * @param {string} name - 参数名（区分大小写）
- * @returns {string|null} 参数值，不存在时返回 null
- */
-function handleGetQuery(name)
-{
-  const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
-  const r = window.location.search.substr(1).match(reg);
-
-  if (r != null) return unescape(r[2]);
-
-  return null;
-}
-
-/**
- * 向页面状态栏追加文本
- *
- * @param {string} text - 要输出的内容
- *
- * 每次调用追加一行，并自动滚动到底部。
- */
-function setStatus(text)
-{
-  const statusDom = document.querySelector('#status');
-
-  statusDom.innerText = `${statusDom.innerText}${text}\r\n`;
-  statusDom.scrollTop = statusDom.scrollHeight;
-}
-
-/**
- * 关闭来电系统通知
- *
- * 清除活跃的 Notification 实例并重置引用。
- */
-function closeIncomingCallNotification()
-{
-  if (incomingCallNotification)
-  {
-    incomingCallNotification.close();
-    incomingCallNotification = null;
-  }
-}
-
-/**
- * 显示来电系统通知（Browser Notification API）
- *
- * @param {string} mode - 呼叫模式: 'audio' | 'video'
- * @param {string} fromNo - 主叫号码
- *
- * 处理流程：
- * 1. 检查浏览器是否支持 Notification API（不支持则记录一次日志）
- * 2. 已授权 → 直接显示
- * 3. 未授权（default）→ 请求权限后显示
- * 4. 已拒绝（denied）→ 不处理
- */
-async function showIncomingCallNotification(mode, fromNo)
-{
-  // 浏览器不支持 Notification API
-  if (typeof window === 'undefined' || !('Notification' in window))
-  {
-    // 只记录一次避免重复日志
-    if (!notificationUnsupportedLogged)
-    {
-      notificationUnsupportedLogged = true;
-      setStatus('当前浏览器不支持系统通知');
-    }
-
-    return;
-  }
-
-  const title = `收到${mode === 'video' ? '视频' : '音频'}呼叫`;
-  const body = fromNo ? `来自 ${fromNo}，点击返回页面处理` : '点击返回页面处理';
-
-  // 显示通知的内部函数
-  const show = () =>
-  {
-    try
-    {
-      // 先关闭上一个通知，避免重复堆积
-      closeIncomingCallNotification();
-      incomingCallNotification = new Notification(title, {
-        body,
-        tag                : 'crtc-incoming-call', // 相同 tag 会覆盖旧通知
-        renotify           : true, // 允许重复提醒
-        requireInteraction : true, // 需要用户交互才消失
-        icon               : './imgs/logo.svg'
-      });
-
-      // 点击通知 → 聚焦窗口并关闭通知
-      incomingCallNotification.onclick = function()
-      {
-        window.focus();
-        closeIncomingCallNotification();
-      };
-    }
-    catch (error)
-    {
-      setStatus(`系统通知失败: ${error.message || error}`);
-    }
-  };
-
-  // 已授权 → 直接显示
-  if (Notification.permission === 'granted')
-  {
-    show();
-
-    return;
-  }
-
-  // 未授权 → 请求权限
-  if (Notification.permission === 'default')
-  {
-    try
-    {
-      const permission = await Notification.requestPermission();
-
-      permission === 'granted' && show();
-    }
-    catch (error)
-    {
-      setStatus(`系统通知授权失败: ${error.message || error}`);
-    }
-  }
-  // denied → 不处理
-}
-
-/**
- * 检查摄像头可用性
- *
- * @returns {Promise<string>} 描述摄像头状态的文本
- *
- * 处理流程：
- * 1. 枚举设备检查是否存在视频输入设备
- * 2. 尝试访问摄像头验证权限
- * 3. 根据错误类型返回对应的中文描述
- */
-async function checkCameraStatus()
-{
-  try
-  {
-    // 第一步：枚举设备检查是否有摄像头硬件
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter((device) => device.kind === 'videoinput');
-
-    if (videoDevices.length === 0)
-    {
-      return '系统没有摄像头';
-    }
-
-    // 第二步：尝试访问摄像头验证权限
-    await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =>
-    {
-      mediastream && mediastream.getTracks().forEach((t) => t.stop());
-    });
-    haveACamera = true;
-
-    return '摄像头可以正常使用';
-  }
-  catch (error)
-  {
-    // NotFoundError: 无摄像头硬件
-    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError')
-    {
-      return '系统没有摄像头';
-    }
-    // NotAllowedError: 用户拒绝了摄像头权限
-    else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
-    {
-      return '用户拒绝了摄像头权限';
-    }
-    // 其他未知错误
-    else
-    {
-      return `摄像头错误: ${error.name}`;
-    }
-  }
-}
-
-/**
- * 更新摄像头和麦克风下拉列表
- *
- * 从设备枚举中获取可用设备并填充到对应的 select 元素。
- * 移动端通常只有前置/后置摄像头，PC 端可能有多个外接设备。
- */
-async function updateDevices()
-{
-  // 更新摄像头列表
-  await CRTC.Utils.getCameras()
-    .then((cameras) =>
-    {
-      let option = '<option selected value="">切换摄像头</option>';
-
-      cameras.forEach((device) =>
-      {
-        option += `<option value="${device.deviceId}">${device.label}</option>`;
-      });
-
-      document.querySelector('#cameras').innerHTML = option;
-    });
-
-  // 更新麦克风列表（注意：移动端通常不支持切换麦克风）
-  await CRTC.Utils.getMicrophones()
-    .then((microphones) =>
-    {
-      let menus = '<option selected value="">切换麦克风</option>';
-
-      microphones.forEach((device) =>
-      {
-        menus += `<option value="${device.deviceId}">${device.label}</option>`;
-      });
-
-      document.querySelector('#mics').innerHTML = menus;
-    });
-}
-
 /**
  * 应用启动初始化
  *
@@ -2657,145 +2288,6 @@ function start()
       console.log('网络连接异常或未注册成功');
     }
   }, 10000);
-
-  // =====================================================================
-  // 呼叫按钮绑定
-  // =====================================================================
-
-  // 发起无音视频呼叫（静默音频 + 黑屏视频）
-  document.querySelector('#callNull').onclick = function()
-  {
-    call('callnull');
-  };
-
-  // 发起无麦克风呼叫（静默音频 + 真实摄像头）
-  document.querySelector('#callNullAudio').onclick = function()
-  {
-    call('callnullaudio');
-  };
-
-  // 发起无摄像头呼叫（真实麦克风 + 黑屏视频）
-  document.querySelector('#callNullVideo').onclick = function()
-  {
-    call('callnullvideo');
-  };
-
-  // 发起标准音频呼叫
-  document.querySelector('#call').onclick = function()
-  {
-    call();
-  };
-
-  // 发起屏幕分享呼叫
-  document.querySelector('#callScreen').onclick = function()
-  {
-    call('screen');
-  };
-
-  // 发起标准视频呼叫
-  document.querySelector('#callVideo').onclick = function()
-  {
-    call('video');
-  };
-
-  // =====================================================================
-  // B2B（Back-to-Back）呼叫按钮
-  // 通过服务端 API 获取转接号码，模拟 B2B 场景
-  // =====================================================================
-
-  // B2B 纯视频呼叫（无音频）
-  document.querySelector('#b2bCallVideoOnly').onclick = function()
-  {
-    // 第一步：通过服务端 API 获取呼叫 ID
-    request({
-      url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-      body : { 'caller': document.querySelector('#callee').value }
-    })
-      .then((callId) =>
-      {
-        console.warn('cid: ', callId);
-
-        // 第二步：查询呼叫状态获取真实被叫号码
-        return request({
-          url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
-          method : 'POST',
-          secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-          body : { 'callId': callId.data.data, 'cmd': 'query' }
-        });
-      })
-      .then(((callNo) =>
-      {
-        // 解析返回的 stat: "callee&xdata"
-        const stat = callNo.data.data.stat.split('&');
-
-        xdata = stat[1];
-        callee = stat[0];
-        console.warn('call: ', callee);
-        videoOnly = true;
-        call('onlyVideo');
-      }));
-  };
-
-  // B2B 纯视频单向呼叫（仅发送）
-  document.querySelector('#b2bCallVideoSendonly').onclick = function()
-  {
-    request({
-      url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
-      method : 'POST',
-      secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-      body : { 'caller': document.querySelector('#callee').value }
-    })
-      .then((callId) =>
-      {
-        console.warn('cid: ', callId);
-
-        return request({
-          url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
-          method : 'POST',
-          secret : '1qaz2wsx3edc4rfv5tgb6yhn7ujm8iko1qaz2wsx3edc4rfv5tgb6yhn7ujm8ikp',
-
-          body : { 'callId': callId.data.data, 'cmd': 'query' }
-        });
-      })
-      .then(((callNo) =>
-      {
-        const stat = callNo.data.data.stat.split('&');
-
-        xdata = stat[1];
-        callee = stat[0];
-        console.warn('call: ', callee);
-        videoOnly = true;
-        call('onlyVideo', 'sendonly');
-      }));
-  };
-
-  // 发起纯视频呼叫（无音频、双向）
-  document.querySelector('#callVideoSendonly').onclick = function()
-  {
-    videoOnly = true;
-    call('onlyVideo');
-  };
-
-  // ---- 系统事件监听 ----
-
-  // 设备变化事件（热插拔摄像头/麦克风时触发）
-  navigator.mediaDevices.addEventListener('devicechange', () =>
-  {
-    // 当前不自动刷新设备列表，可按需开启
-    // updateDevices();
-  });
-
-  // 页面卸载时优雅退出：终止所有会话并注销 UA
-  window.onbeforeunload = function()
-  {
-    handleStop = true;
-    ua.stop();
-  };
 }
 
 // =============================================================================
@@ -2806,148 +2298,3 @@ function start()
 start();
 // 初始化媒体效果模块（虚拟背景、AI 降噪、水印等）
 initMediaEffects();
-
-// =============================================================================
-// 全局事件监听（会话外）
-// =============================================================================
-
-// 页面可见性变化：回到前台时关闭来电通知
-document.addEventListener('visibilitychange', function()
-{
-  if (document.hidden)
-  {
-    console.log('页面进入后台');
-  }
-  else
-  {
-    closeIncomingCallNotification();
-    console.warn('页面回到前台');
-  }
-});
-
-/**
- * cameras — 会话外摄像头选择
- *
- * 会话外的摄像头切换仅记录选择，不执行切换操作。
- * 实际切换在新呼叫发起时通过 selectCamera 变量生效。
- */
-document.querySelector('#cameras').addEventListener('change', function()
-{
-  selectCamera = this.options[this.selectedIndex].value;
-  setStatus(`select camera ${this.options[this.selectedIndex].innerText}`);
-});
-
-/**
- * mics — 会话外麦克风选择
- *
- * 会话外的麦克风切换仅记录选择，不执行切换操作。
- * 实际切换在新呼叫发起时通过 selectMic 变量生效。
- */
-document.querySelector('#mics').addEventListener('change', function()
-{
-  selectMic = this.options[this.selectedIndex].value;
-  setStatus(`select mic ${this.options[this.selectedIndex].innerText}`);
-});
-
-// =============================================================================
-// 工具函数
-// =============================================================================
-
-/**
- * 检查两个 MediaStream 是否拥有相同的轨道集合
- *
- * @param {MediaStream} stream - 待比较的媒体流
- * @param {MediaStreamTrack[]} tracks - 目标轨道数组
- * @returns {boolean} 轨道集合完全相同时返回 true
- *
- * 用于优化 DOM 更新：避免将相同的流重复赋值给 video.srcObject。
- */
-function hasSameTrackSet(stream, tracks)
-{
-  if (!(stream instanceof MediaStream))
-  {
-    return false;
-  }
-
-  const currentTracks = stream.getTracks();
-
-  if (currentTracks.length !== tracks.length)
-  {
-    return false;
-  }
-
-  return currentTracks.every((track, index) => track === tracks[index]);
-}
-
-/**
- * 仅在流发生变化时更新媒体元素的 srcObject
- *
- * @param {HTMLMediaElement} mediaEl - video 或 audio 元素
- * @param {MediaStream} stream - 目标媒体流
- * @returns {boolean} 是否执行了更新
- *
- * 避免不必要的 srcObject 赋值导致的闪烁或播放中断。
- */
-function bindMediaStreamIfChanged(mediaEl, stream)
-{
-  if (!mediaEl)
-  {
-    return false;
-  }
-
-  const nextTracks = stream instanceof MediaStream ? stream.getTracks() : [];
-
-  // 轨道集合相同则跳过更新
-  if (stream instanceof MediaStream && hasSameTrackSet(mediaEl.srcObject, nextTracks))
-  {
-    return false;
-  }
-
-  mediaEl.srcObject = stream || null;
-
-  return true;
-}
-
-/**
- * 检测远端设备的操作系统类型
- *
- * @param {object} request - SIP 请求/响应对象
- * @returns {'ios' | 'android' | 'unknown'}
- *
- * 检测逻辑：
- * - 从请求的 User-Agent 和 Server 头中提取信息
- * - 包含 'ios' 或 'iphone' → iOS
- * - 两个头都没有 → unknown
- * - 其余情况默认 → android
- */
-function detectRemoteOS(request)
-{
-  if (!request || typeof request.getHeader !== 'function')
-  {
-    return 'unknown';
-  }
-
-  const userAgent = request.getHeader('User-Agent') || '';
-  const server = request.getHeader('Server') || '';
-
-  // 合并两个 header 统一判断
-  const headerText = `${userAgent} ${server}`.toLowerCase();
-
-  // 两个 header 都为空 → 无法判断
-  if (!userAgent && !server)
-  {
-    return 'unknown';
-  }
-
-  // iOS 特征匹配
-  if (
-    headerText.includes('ios') ||
-    headerText.includes('iphone')
-  )
-  {
-    return 'ios';
-  }
-
-  // 其余默认判定为 Android
-  return 'android';
-}
