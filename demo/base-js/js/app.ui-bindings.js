@@ -195,35 +195,3 @@ window.onbeforeunload = function()
   handleStop = true;
   ua.stop();
 };
-
-// 截图后显示预览区
-(function()
-{
-  const captureBtn = document.getElementById('capture');
-  const captureCanvas = document.getElementById('captureView');
-  const captureEmpty = document.getElementById('capture-empty');
-  const capturePanel = document.getElementById('capture-preview-panel');
-
-  if (!captureBtn || !captureCanvas)
-  {
-    return;
-  }
-
-  captureBtn.addEventListener('click', function()
-  {
-    setTimeout(function()
-    {
-      captureCanvas.classList.remove('hide');
-
-      if (captureEmpty)
-      {
-        captureEmpty.classList.add('hide');
-      }
-
-      if (capturePanel)
-      {
-        capturePanel.classList.add('has-capture');
-      }
-    }, 180);
-  });
-})();

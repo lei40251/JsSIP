@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable prefer-const */
 /* eslint-disable max-len */
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
@@ -52,7 +54,7 @@ let selectCamera;
 // 当前选中的麦克风 deviceId
 let selectMic;
 
-// 移动端前后摄像头切换标记：true = user（前置），false = environment（后置）
+// 移动端摄像头方向切换标记：true 表示下次切换到 environment（后置），false 表示下次切换到 user（前置）
 let camFlag = true;
 
 // 音视频升级模式选择：true = useUpdate，false = useReInvite
@@ -78,7 +80,6 @@ let isShowUI = false;
 // 通话模式与媒体流变量
 // =============================================================================
 
-// eslint-disable-next-line no-unused-vars
 // 混音/混流实例（预留）
 let mix;
 // 是否纯视频模式（不采集麦克风）
@@ -513,8 +514,9 @@ ua.on('newRTCSession', function(e)
    * 可在此设置回铃音或本地振铃提示。
    *
    * @type {object}
-   * @property {string} originator - 'local'（本端发出）或 'remote'（远端发来）
+   * @property {string} originator - 'local'（本端为被叫，正在振铃）或 'remote'（本端为主叫，远端已振铃）
    * @property {string} mode - 'audio' 或 'video'
+   * @property {object} response - 触发此事件的 SIP 响应对象（仅 remote 方向时可用于检测远端 OS）
    *
    * 处理逻辑：
    * - local：本端已收到 INVITE，正在振铃
@@ -862,7 +864,7 @@ ua.on('newRTCSession', function(e)
     }
 
     // 输出通话时间线
-    setStatus(`start: ${e.session.end_time}`);
+    setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
     // ---- 会话交接逻辑 ----
@@ -1714,6 +1716,10 @@ ua.on('newRTCSession', function(e)
    * screenShare — 分享屏幕（简单模式）
    *
    * 启动屏幕分享，不替换本地视频轨道。
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'screen' — 分享屏幕
+   *   id: null       — 屏幕分享不需要 CSS 选择器
+   *   assembly: null — 屏幕分享不需要渲染函数
    */
   document.querySelector('#screenShare').onclick = function()
   {
@@ -1735,12 +1741,17 @@ ua.on('newRTCSession', function(e)
    * screenShareD — 分享屏幕（双流模式）
    *
    * 在双流模式下分享屏幕：额外的视频流作为第二路发送。
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'screen' — 分享屏幕
+   *   id: null       — 屏幕分享不需要 CSS 选择器
+   *   assembly: null — 屏幕分享不需要渲染函数
+   *   dual: true     — 双流模式，屏幕画面作为独立第二路视频流，不替换摄像头画面
    * 包含双重停止检测机制：
    * 1. ended 事件（主流）
    * 2. 定时轮询 readyState（兜底，部分场景 ended 不触发）
    *
    * Safari 兼容：检测到 user gesture 错误时设置 safari_r 标志，
-   * 引导用户点击专用的 iOS 分享按钮。
+   * 引导用户点击专用的 macOS 分享按钮。
    */
   document.querySelector('#screenShareD').onclick = function()
   {
@@ -1788,7 +1799,14 @@ ua.on('newRTCSession', function(e)
   /**
    * screenShareD_iOS — Safari 屏幕分享补救按钮
    *
-   * 仅在 safari_r 为 true 时有效，作为用户手势触发屏幕分享。
+   * 当首次分享因 Safari 缺少 user gesture 而失败（safari_r 被置为 true）时，
+   * 用户需手动点击此按钮以提供用户手势上下文，重新发起分享。
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'screen' — 分享屏幕
+   *   id: null       — 屏幕分享不需要 CSS 选择器
+   *   assembly: null — 屏幕分享不需要渲染函数
+   *   dual: true     — 双流模式
+   *   skip: true     — 跳过 BFCP 握手（Safari 兼容），直接发起屏幕分享
    */
   document.querySelector('#screenShareD_iOS').onclick = function()
   {
@@ -1828,8 +1846,12 @@ ua.on('newRTCSession', function(e)
   /**
    * formShare / formShareD — 分享 HTML 元素
    *
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'html'        — 分享页面 HTML 元素
+   *   id: '#ele'          — 要分享的 DOM 元素 CSS 选择器
+   *   assembly: html2canvas — 将 DOM 元素渲染为 Canvas 的函数
+   *   dual: true/false    — 是否双流模式（D 后缀版本传 true）
    * 依赖 html2canvas.js 将 DOM 元素渲染为视频流。
-   * D 后缀表示双流模式。
    */
   document.querySelector('#formShare').onclick = function()
   {
@@ -1843,7 +1865,11 @@ ua.on('newRTCSession', function(e)
   /**
    * picShare / picShareD — 分享图片
    *
-   * 将图片元素作为视频流分享。D 后缀表示双流模式。
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'pic'     — 分享图片元素
+   *   id: '#pic_s'    — 图片元素的 CSS 选择器
+   *   assembly: null  — 图片分享不需要渲染函数
+   *   dual: true/false — 是否双流模式（D 后缀版本传 true）
    */
   document.querySelector('#picShare').onclick = function()
   {
@@ -1857,8 +1883,12 @@ ua.on('newRTCSession', function(e)
   /**
    * videoShare / videoShareD — 分享视频元素
    *
-   * 将正在播放的 video 元素作为视频流分享。
-   * 需要视频已在播放状态。D 后缀表示双流模式。
+   * share(type, id, assembly, dual, skip) 参数说明：
+   *   type: 'video'    — 分享正在播放的 video 元素
+   *   id: '#video_s'   — video 元素的 CSS 选择器
+   *   assembly: null   — 视频分享不需要渲染函数，直接 captureStream
+   *   dual: true/false — 是否双流模式（D 后缀版本传 true）
+   * 需要视频已在播放状态。
    */
   document.querySelector('#videoShare').onclick = function()
   {
@@ -1916,7 +1946,7 @@ ua.on('newRTCSession', function(e)
   /**
    * capture — 对远端视频截图
    *
-   * 将当前远端视频帧绘制到 Canvas 上。
+   * 将当前远端视频帧绘制到 Canvas 上并显示预览面板。
    * 分辨率优先取实际视频分辨率，回退到 CSS 尺寸，再回退到默认 640x360。
    */
   document.querySelector('#capture').onclick = function()
@@ -1938,6 +1968,22 @@ ua.on('newRTCSession', function(e)
       frameW,
       frameH
     );
+
+    // drawImage 是同步的，画完后直接显示预览面板
+    canvas.classList.remove('hide');
+
+    const captureEmpty = document.getElementById('capture-empty');
+    const capturePanel = document.getElementById('capture-preview-panel');
+
+    if (captureEmpty)
+    {
+      captureEmpty.classList.add('hide');
+    }
+
+    if (capturePanel)
+    {
+      capturePanel.classList.add('has-capture');
+    }
   };
 });
 
@@ -2237,18 +2283,6 @@ async function call(type, direction, mediaStream)
   }
 }
 
-/**
- * 获取并渲染本地和远端媒体流
- *
- * @param {RTCPeerConnection} pc - 用于获取媒体流的 RTCPeerConnection 实例
- *
- * 处理流程：
- * 1. 从连接中提取本地和远端流
- * 2. 克隆本地音视频轨道构造新的 MediaStream（兼容 MCU 等候室）
- * 3. 渲染远端音频（延迟 100ms 适配安卓微信无声问题）
- * 4. 渲染远端视频（监听 ended 清理残留黑框）
- * 5. 统一播放（兼容 Chrome 自动播放策略）
- */
 /**
  * 应用启动初始化
  *
