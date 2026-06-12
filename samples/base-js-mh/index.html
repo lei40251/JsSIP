@@ -58,27 +58,39 @@
   </div>
   <div class="bg-light p-2 m-2" id="ele">
     <div class="row">
-      <div class="col col-6">
+      <div class="col col-9">
         <div class="col col-12 row">
-          <div class="col col-3">
+          <div class="col col-2">
             <select id="cameras" class="form-select"></select>
           </div>
-          <div class="col col-3">
+          <div class="col col-2">
             <select id="mics" class="form-select"></select>
           </div>
-          <div class="col col-3">
+          <div class="col col-2">
             <select id="useupdate" class="form-select">
               <option value="update">useUpdate</option>
               <option value="invite">useReInvite</option>
             </select>
           </div>
-          <div class="col col-3">
+          <div class="col col-1 hide">
             <select id="useRnnoiseNode" class="form-select">
               <option value="0">不降噪</option>
               <option value="1">降噪</option>
             </select>
           </div>
-          <div class="col col-3">
+          <div class="col col-2">
+            <select id="metaflag" class="form-select">
+              <option value="0">asr/tts 不处理</option>
+              <option value="1">asr/tts 处理</option>
+            </select>
+          </div>
+          <div class="col col-2">
+            <select id="metaavatar" class="form-select">
+              <option value="wav2lip256_avatar1">数字人1</option>
+              <option value="wav2lip256_avatar2">数字人2</option>
+            </select>
+          </div>
+          <div class="col col-2">
             <select id="videoHint" class="form-select">
               <option value=""></option>
               <option value="detail">保清晰</option>
@@ -217,7 +229,7 @@
 
         </div>
       </div>
-      <div class="col col-6 align-items-stretch">
+      <div class="col col-3 align-items-stretch">
         <div class="bg-light border-1 p-2 rounded border border-1 overflow-auto" style="max-height: 230px;">
           <pre id="status" class="w-100 overflow-hidden h-auto mb-0"
             style="font-size: 11px;line-height: 1.2; color: #666; font-family: 'Microsoft YaHei', Arial, Helvetica, sans-serif;"></pre>

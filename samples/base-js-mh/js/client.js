@@ -39,8 +39,10 @@ function negotiate(flag)
         
       return fetch('https://dev.vsbc.com:9090/offer', {
         body : JSON.stringify({
-          sdp  : offer.sdp,
-          type : offer.type
+          sdp    : offer.sdp,
+          type   : offer.type,
+          flag   : metaflag,
+          avatar : metaavatar
         }),
         headers : {
           'Content-Type' : 'application/json'
@@ -141,6 +143,22 @@ document.querySelector('#callMetaHuman').onclick= function()
 document.querySelector('#metaHuman').onclick= function()
 {
   start(null, true);
+};
+
+// metaavatar
+document.querySelector('#metaavatar').onchange = function()
+{
+  metaavatar = this.options[this.selectedIndex].value;
+  
+  setStatus(`数字人: ${metaavatar}`);
+};
+
+// metaflag
+document.querySelector('#metaflag').onchange = function()
+{
+  metaflag = this.options[this.selectedIndex].value;
+  
+  setStatus(`asr/tts: ${metaflag}`);
 };
 
 document.querySelector('#closeMetaHuman').onclick= function()

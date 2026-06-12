@@ -1,3 +1,5 @@
+/* eslint-disable prefer-const */
+/* eslint-disable no-unused-vars */
 /* eslint-disable max-len */
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
@@ -20,6 +22,9 @@ let optionsTimer;
 let tmpSession;
 let safari_r = false;
 let options;
+
+let metaflag=0;
+let metaavatar = 'wav2lip256_avatar1';
 
 let camFlag = true;
 
