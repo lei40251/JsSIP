@@ -2,109 +2,188 @@
 /* eslint-disable no-console */
 /* eslint-disable no-undef */
 
-// 调试信息输出
+// =============================================================================
+// 调试配置
+// =============================================================================
+
+// 开启 SDK 调试信息输出，便于开发排查问题
 CRTC.debug.enable('CRTC:*');
 // 关闭调试信息输出
 // CRTC.debug.disable('CRTC:*');
 
+// =============================================================================
+// 全局常量
+// =============================================================================
+
+// 无摄像头时展示的占位 SVG 图标
 const no_camera_svg = '<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg t="1756366745939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10589" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100"><path d="M865.08627 773.036973l-0.83027 0.996324a35.424865 35.424865 0 0 0-17.380324-4.649513 36.006054 36.006054 0 0 0-2.767568 71.956757c8.468757 7.140324 13.062919 14.612757 13.062919 22.417297 0 45.111351-152.050162 81.643243-339.635892 81.643243-130.739892 0-244.154811-17.767784-300.945297-43.782919l-50.425081 50.36973C241.442595 995.272649 370.632649 1024 517.535135 1024c232.475676 0 420.67027-71.956757 420.67027-160.518919 0-33.542919-27.011459-64.70573-73.119135-90.444108zM965.881081 49.816216a33.210811 33.210811 0 0 0-46.937946 0L58.118919 910.751135a33.210811 33.210811 0 0 0 46.827243 46.827243L965.881081 96.643459a33.210811 33.210811 0 0 0 0-46.827243zM251.350486 647.610811a363.935135 363.935135 0 0 1-73.229837-221.405406c0-195.611676 148.895135-354.248649 339.414486-354.248648a329.728 329.728 0 0 1 222.955243 86.126702l51.58746-51.532108A407.164541 407.164541 0 0 0 517.535135 0c-229.265297 0-415.135135 190.796108-415.135135 426.205405a431.076324 431.076324 0 0 0 96.754162 273.380325z m382.643892-382.588541a199.264865 199.264865 0 0 0-278.14054 278.140541l120.665946-120.942703a83.027027 83.027027 0 1 1 53.635459-53.635459zM716.8 426.205405a207.622919 207.622919 0 0 0-1.439135-23.635027l-221.405406 221.405406a207.622919 207.622919 0 0 0 23.579676 1.494486 199.264865 199.264865 0 0 0 199.264865-199.264865z m-398.861838 373.732325A404.618378 404.618378 0 0 0 517.535135 852.410811c229.265297 0 415.135135-190.796108 415.135135-426.205406a433.34573 433.34573 0 0 0-45.996973-194.947459L830.380973 287.827027a371.407568 371.407568 0 0 1 26.568649 138.378378c0 195.611676-148.895135 354.248649-339.414487 354.248649a329.783351 329.783351 0 0 1-146.127567-33.819676z" fill="#8a8a8a" p-id="10590"></path></svg>';
 
-// 通话统计
+// =============================================================================
+// 通话状态变量
+// =============================================================================
+
+// 通话统计实例，用于收集网络质量、码率、丢包等实时数据
 let stats;
-// 是否存在远端回铃音
+// 远端是否存在回铃音：false 表示可播放本地振铃音
 let earlyMedia = false;
-// 断线重连
+// 当前活跃通话的 RTCSession 实例
 let rtcSession;
+// iOS 兼容：定时发送 OPTIONS 保活的定时器句柄
 let optionsTimer;
-// 呼叫转移 被转用
+// 呼叫转移场景中被转入的新会话实例
 let tmpSession;
+// Safari 浏览器屏幕分享降级标志：需用户手势触发
 let safari_r = false;
+// 外呼时传入的选项对象缓存
 let options;
+// 被 refer 转移前的旧会话实例
 let oldSession;
+// B2B 呼转时从服务端获取的被叫号码
 let callee;
+// 远端来电/呼叫的号码
 let remoteNo;
 
-// 选中的摄像头
+// =============================================================================
+// 设备与 UI 状态变量
+// =============================================================================
+
+// 当前选中的摄像头 deviceId
 let selectCamera;
-// 选中的麦克风
+// 当前选中的麦克风 deviceId
 let selectMic;
 
+// 移动端前后摄像头切换标记：true = user（前置），false = environment（后置）
 let camFlag = true;
 
+// 音视频升级模式选择：true = useUpdate，false = useReInvite
 let useUpdate = true;
+// 系统是否有可用摄像头
 let haveACamera = false;
+// 通话是否已确认（ACK 完成）
 let confirmed = false;
 
-// 用于断网提示相关
+// =============================================================================
+// 断网提示相关变量
+// =============================================================================
+
+// 是否主动停止 UA（页面卸载时设为 true，避免误判断网）
 let handleStop = false;
+// 断网原因标记：'BROWSER'（浏览器离线）、'UA'（信令断开）
 let disconnectedBy = null;
 // eslint-disable-next-line no-unused-vars
+// 断网提示 UI 是否已显示
 let isShowUI = false;
 
+// =============================================================================
+// 通话模式与媒体流变量
+// =============================================================================
+
 // eslint-disable-next-line no-unused-vars
+// 混音/混流实例（预留）
 let mix;
-// 是否单视频
+// 是否纯视频模式（不采集麦克风）
 let videoOnly = false;
 
-// 当前模式
+// 当前通话模式：'audio'（音频）或 'video'（视频）
 let curMode;
 
-// 兼容mcu等候室用
+// 兼容 MCU 等候室：克隆的本地媒体流引用
 let cloneStream = null;
+// 是否正在处理 refer 呼叫转移
 let isRefer = false;
 
+// =============================================================================
+// 录音与通知变量
+// =============================================================================
+
+// 通话录音实例（MultiStreamRecorder）
 let recorder;
+// 浏览器系统通知实例，用于来电弹窗
 let incomingCallNotification = null;
+// 浏览器是否不支持系统通知（只记录一次，避免重复日志）
 let notificationUnsupportedLogged = false;
 
+// 通话附加扩展特性列表（如 BP720P、BFCP 等）
 const extraFeatures = [];
 
 // let payload;
 
-// 远端客户端UA
-// let remoteUA;
+// =============================================================================
+// DOM 元素引用
+// =============================================================================
 
+// 本端视频播放元素
 const localVideo = document.querySelector('#localVideo');
+// 远端视频播放元素
 const remoteVideo = document.querySelector('#remoteVideo');
+// 远端音频播放元素（用于回铃音/早期媒体播放）
 const remoteAudio = document.querySelector('#remoteAudio');
 
+// 自定义媒体流容器（屏幕分享等场景复用）
 let cusMediaStream = new MediaStream();
+// 无摄像头/黑屏视频轨道生成器实例
 let blackVideo = null;
 
+// =============================================================================
+// URL 参数解析
+// =============================================================================
+
+// 随路数据（Base64 编码），默认 'dGVzdCB4LWRhdGE=' → 'test x-data'
 let xdata = handleGetQuery('xdata') || 'dGVzdCB4LWRhdGE=';
+// 最大视频码率（kbps），用于 RTCRtpSender 配置
 const mbit = handleGetQuery('mbit') || 400;
+// 通话录音时长（秒），0 或不传则不录音
 const rec = handleGetQuery('rec') || false;
+// 环境标识，用于切换不同的信令服务器/密码等配置
 const env = handleGetQuery('env');
+// 是否移除 REMB/Transport-CC 扩展（VoLTE 互通兼容）
 const noremb = handleGetQuery('noremb') || false;
+// 根据 env 参数选择对应的环境配置，默认使用 env_default
 const { signalingUrl, sipDomain, secretKey, iceServers, iceTransportPolicy, password } = env ? envs[`env_${env}`] : envs['env_default'];
+// 附加扩展特性的 URL 参数，逗号分隔
 const exts = handleGetQuery('ext') ? handleGetQuery('ext').split(',') : null;
-const extSet = new Set((exts || []).map((ext) => String(ext).trim() 
+// 扩展特性转为大写集合，便于快速查重
+const extSet = new Set((exts || []).map((ext) => String(ext).trim()
   .toUpperCase()).filter(Boolean));
 
+// 将 URL 传入的扩展特性逐个注册到 extraFeatures 列表
 exts && exts.forEach((ext) => extraFeatures.push(ext));
 
-// 注册UA的用户名
+// =============================================================================
+// UA 与信令配置
+// =============================================================================
+
+// SIP 注册用户名（来自 URL 参数 caller）
 const account = handleGetQuery('caller');
-// websocket 实例
+// WebSocket 信令传输实例
 const socket = new CRTC.WebSocketInterface(signalingUrl);
-// UA 配置项
+// UA（User Agent）完整配置，包含信令、鉴权、重连等参数
 const configuration = {
-  // Socket 实例
+  // WebSocket 信令实例
   sockets                          : socket,
-  // 与 UA 关联的 SIP URI
+  // SIP URI，格式 sip:账号@域
   uri                              : `sip:${account}@${sipDomain}`,
-  // 显示名
+  // 来电显示名称
   display_name                     : account,
-  // SIP身份验证密码
+  // SIP 注册密码（优先使用 env 配置的 password，否则回退 yl_19）
   password                         : `${password ? password : 'yl_19'}${account}`,
+  // 断线重连最大间隔（秒）
   connection_recovery_max_interval : 3,
+  // 断线重连最小间隔（秒）
   connection_recovery_min_interval : 2,
+  // 注册过期时间（秒），UA 会周期性刷新注册
   register_expires                 : 20,
+  // 禁用 Session Timers（RFC 4028）
   session_timers                   : false,
+  // 通话加密密钥
   secret_key                       : secretKey
 };
 
-// 媒体约束条件
+// =============================================================================
+// 媒体约束
+// =============================================================================
+
+// 默认视频采集参数：前置摄像头、640x480、15fps
 let videoConstraints = {
   facingMode : 'user',
   width      : 640,
@@ -112,7 +191,8 @@ let videoConstraints = {
   frameRate  : 15
 };
 
-if (extSet.has('BP720P')) 
+// 如果请求了 BP720P 扩展，则升级到 720p 分辨率
+if (extSet.has('BP720P'))
 {
   videoConstraints = {
     facingMode : 'user',
@@ -122,125 +202,159 @@ if (extSet.has('BP720P'))
   };
 }
 
-// RTCPeerConnection 的 RTCConfiguration 对象
+// =============================================================================
+// RTCPeerConnection 配置
+// =============================================================================
+
 const pcConfig = {};
 
+// ICE 服务器列表（STUN/TURN）
 iceServers && (pcConfig['iceServers'] = iceServers);
+// ICE 传输策略（如 'relay' 强制走 TURN）
 iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
+// ICE 候选池大小，预收集候选加速连接
 pcConfig['iceCandidatePoolSize'] = 10;
 
+// BUNDLE 策略设为最大兼容模式，所有媒体流复用同一端口
 pcConfig['bundlePolicy'] = 'max-compat';
 
-// UA 实例
+// =============================================================================
+// UA 实例化
+// =============================================================================
+
 const ua = new CRTC.UA(configuration);
 
 // ***** UA 事件回调 *****
+// 以下为 UA（User Agent）级别的事件监听，涵盖信令连接、注册、浏览器网络状态等
 
 /**
- * browser:navigator:offline
+ * browser:navigator:offline — 浏览器离线
  *
- * @fires 浏览器离线时触发
+ * @fires 浏览器检测到网络断开时触发
+ *
+ * 处理逻辑：记录断开来源为 BROWSER，显示断网提示 UI。
+ * 只有首次断开时才标记来源，避免重复设置。
  */
-ua.on('browser:navigator:offline', function() 
+ua.on('browser:navigator:offline', function()
 {
   setStatus('浏览器已离线');
 
-  // 断网提示
-  if (!disconnectedBy) 
+  // 仅首次断开时设置断开来源，后续重复事件忽略
+  if (!disconnectedBy)
   {
     disconnectedBy = 'BROWSER';
 
-    // 断网提示
+    // 显示断网提示 UI
     isShowUI = true;
   }
 });
 
 /**
- * browser:navigator:online
+ * browser:navigator:online — 浏览器恢复在线
  *
- * @fires 浏览器在线时触发
+ * @fires 浏览器检测到网络恢复时触发
+ *
+ * 处理逻辑：仅当之前是由浏览器触发的断网时才清除状态。
+ * UA 层断网与浏览器断网分开管理，避免互相干扰。
  */
-ua.on('browser:navigator:online', function() 
+ua.on('browser:navigator:online', function()
 {
   setStatus('浏览器在线');
-  if (disconnectedBy === 'BROWSER') 
+  // 只有浏览器离线导致的断网才在此恢复
+  if (disconnectedBy === 'BROWSER')
   {
     disconnectedBy = null;
 
-    // 关闭断网提示
+    // 关闭断网提示 UI
     isShowUI = false;
   }
 });
 
 /**
- * connected
+ * connected — 信令 WebSocket 连接成功
  *
- * @fires 信令连接成功时触发
+ * @fires 与信令服务器 WebSocket 连接建立时触发
+ *
+ * 处理逻辑：清除所有断网状态，关闭断网提示。
+ * 此事件表示传输层已就绪，但尚未完成 SIP 注册。
  */
-ua.on('connected', function() 
+ua.on('connected', function()
 {
+  // 信令连接成功后清除所有断网标记
   disconnectedBy = null;
 
-  // 关闭断网提示
+  // 关闭断网提示 UI
   isShowUI = false;
 
   setStatus('信令连接成功');
 });
 
 /**
- * disconnected
+ * disconnected — 信令 WebSocket 断开
  *
- * @fires 信令连接尝试(或自动重新尝试)失败时触发
+ * @fires 信令连接主动或被动断开时触发
  *
  * @type {object}
- * @property {boolean} error - 连接是否因为错误而断开
+ * @property {number} code - 断开状态码
+ * @property {string} reason - 断开原因描述
+ * @property {boolean} error - 是否因错误断开
+ *
+ * 处理逻辑：
+ * - 主动停止（handleStop）时不显示断网提示
+ * - 非主动断开时标记为 UA 断网并显示提示
  */
-ua.on('disconnected', function(data) 
+ua.on('disconnected', function(data)
 {
   setStatus(`信令连接断开: ${data.code} ${data.reason}`);
 
-  // 主动断开不处理断网提示
-  if (handleStop) 
+  // 页面卸载/主动停止 UA 导致的断开，不触发断网提示
+  if (handleStop)
   {
     return;
   }
 
-  if (!disconnectedBy) 
+  // 首次被动断开时显示断网提示
+  if (!disconnectedBy)
   {
-    // 显示断网提示
     isShowUI = true;
   }
   disconnectedBy = 'UA';
 });
 
 /**
- * failed
+ * failed — UA 错误
  *
- * @fires UA 错误时触发
+ * @fires UA 内部发生不可恢复的错误时触发
  *
  * @type {object}
- * @property {string} originator - 错误来源
- * @property {string} message - 错误说明
- * @property {string} cause - 错误原因
+ * @property {string} originator - 错误来源模块
+ * @property {string} message - 错误描述
+ * @property {string} cause - 错误根本原因
+ *
+ * 处理逻辑：重置纯视频模式标志，输出详细错误信息。
  */
-ua.on('failed', function(data) 
+ua.on('failed', function(data)
 {
+  // 发生错误时重置纯视频模式
   videoOnly = false;
   console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
 });
 
 /**
- * registered
+ * registered — SIP 注册成功
  *
- * @fires 用户注册成功后触发
+ * @fires SIP REGISTER 请求收到 200 OK 响应时触发
  *
  * @type {object}
- * @property {object} response - 注册的响应实例
+ * @property {object} response - SIP 注册响应实例
+ *
+ * 处理逻辑：输出注册成功信息。后续可在此自动发起呼叫（已注释）。
  */
-ua.on('registered', function(data) 
+ua.on('registered', function(data)
 {
   setStatus(`注册成功：${data.response.from.uri.toString()}`);
+  // 注册成功后自动发起呼叫（测试用，已注释）
   // setTimeout(() =>
   // {
   //   call('callnull');
@@ -248,78 +362,115 @@ ua.on('registered', function(data)
 });
 
 /**
- * registrationFailed
+ * registrationFailed — SIP 注册失败
  *
- * @fires 用户注册失败时触发
+ * @fires SIP REGISTER 请求失败时触发
  *
  * @type {object}
- * @property {object} response - 注册的响应实例
+ * @property {object} response - 失败的响应实例
  * @property {string} cause - 注册失败原因
+ *
+ * 处理逻辑：输出失败原因供排查。
  */
-ua.on('registrationFailed', function(data) 
+ua.on('registrationFailed', function(data)
 {
   setStatus(`注册失败${data.cause}`);
 });
 
 /**
- * newRTCSession
+ * newRTCSession — 新建通话会话
  *
- * @fires 呼入或呼出通话时触发
+ * @fires 呼入或呼出通话时触发（SIP INVITE 发送或接收）
  *
  * @type {object}
- * @property {string} origin - 新通话是本端（'local'）或远端（'remote'）生成
- * @property {object} session - 通话的session实例
- * @property {object} request - 本端或远端的请求对象，远端呼入可以在此获取随路数据，呼叫模式等
+ * @property {string} originator - 'local'（本端发起）或 'remote'（远端呼入）
+ * @property {object} session - 通话的 RTCSession 实例
+ * @property {object} request - 请求对象，远端呼入时可从此获取随路数据和呼叫模式
+ *
+ * 处理逻辑：
+ * 1. 打印会话信息和远端操作系统类型
+ * 2. 会话交接：已有会话时按冲突策略处理（终止新会话或排队为 tmpSession）
+ * 3. 远端呼入时提取主叫号码并显示通知
  */
-ua.on('newRTCSession', function(e) 
-{  
+ua.on('newRTCSession', function(e)
+{
+  // 输出完整会话对象用于调试
   console.warn('nsession: ', e);
-  
+
+  // 检测远端设备的操作系统类型（用于后续兼容处理）
   console.warn('dOS: ', detectRemoteOS(e.request));
+  // 重置通话确认标志
   confirmed = false;
 
-  if (tmpSession) 
+  // ---- 会话交接/冲突处理 ----
+  // 策略：最多保留两个会话（rtcSession + tmpSession），第三个直接拒绝
+  if (tmpSession)
   {
+    // 已有两个会话，拒绝第三个（486 Busy Here）
     e.session.terminate({ status_code: 486 });
   }
-  else if (!rtcSession) 
+  else if (!rtcSession)
   {
+    // 当前无活跃会话，直接作为主会话
     rtcSession = e.session;
   }
-  else 
+  else
   {
+    // 已有主会话，新会话排队为临时会话（呼叫转接场景）
     tmpSession = e.session;
   }
 
-  if (e.originator === 'remote') 
+  // ---- 远端呼入处理 ----
+  if (e.originator === 'remote')
   {
+    // 从请求中提取主叫号码
     remoteNo = e.request.from.uri.user;
     console.warn('remoteNo: ', remoteNo);
     document.querySelector('#callee').value = remoteNo;
 
-    // 远端呼入通过 request.mode 判断呼叫是音频还是视频
+    // 根据请求模式显示对应的呼叫通知
     setStatus(`收到${e.request.mode === 'video' ? '视频' : '音频'}呼叫`);
     showIncomingCallNotification(e.request.mode, remoteNo);
-    // 通过 request.getHeader(param) 获取随路数据, param 为 call 时携带的参数命称
+    // 可通过 request.getHeader(param) 获取随路数据
     // setStatus(`收到 x-data: ${e.request.getHeader('x-data')}`);
   }
 
   // ***** Session 事件回调 *****
+  // 以下为通话级事件监听，在每个 newRTCSession 中注册
 
-  // 远端是否支持视频模式
-  e.session.on('remoteSupportsVideo', function(d) 
+  /**
+   * remoteSupportsVideo — 远端支持视频
+   *
+   * @fires 收到远端 SDP 中包含视频媒体行时触发
+   * 用于判断对端是否具备视频能力。
+   */
+  e.session.on('remoteSupportsVideo', function(d)
   {
     setStatus('对端支持视频模式');
   });
 
-  e.session.on('refer', function(d) 
+  /**
+   * refer — 呼叫转移
+   *
+   * @fires 收到远端 REFER 请求时触发
+   *
+   * 处理逻辑：
+   * - 修正 refer_to 的 host 为当前域，确保转接目标可达
+   * - 保存旧会话引用，接受转接请求
+   * - 标记 isRefer 兼容华为 MCU 等候室场景
+   */
+  e.session.on('refer', function(d)
   {
     setStatus('refer');
+    // 统一转接目标域为当前 SIP 域
     d.request.refer_to.uri.host = sipDomain;
+    // 保存当前会话为旧会话
     oldSession = e.session;
+    // 接受转接请求
     d.accept(null, options);
-    // 兼容华为MCU
+    // 标记正在处理 refer，兼容华为 MCU
     isRefer = true;
+    // 备选方案：接受转接后主动挂断旧会话并发起新呼叫
     // d.accept(() =>
     // {
     //   e.session.terminate();
@@ -327,48 +478,65 @@ ua.on('newRTCSession', function(e)
     // }, options);
   });
 
-  // 部分场景兼容使用
-  e.session.on('sdp', function(d) 
+  /**
+   * sdp — SDP 协商
+   *
+   * @fires 每次 SDP 创建或接收时触发
+   *
+   * 处理逻辑：
+   * - 呼叫 VoLTE 手机号时需要移除 REMB 和 Transport-CC 扩展，避免互通问题
+   */
+  e.session.on('sdp', function(d)
   {
-    // 呼叫VoLTE手机号需要
+    // 移除 Google REMB（Receiver Estimated Maximum Bitrate）扩展
     noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, ''));
+    // 移除 Transport-CC（Transport-wide Congestion Control）扩展
     noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, ''));
   });
 
   /**
-    * trying
-    *
-    * @fires 收到或者发出 100 的SIP请求时触发;
-    */
-  e.session.on('trying', function() 
+   * trying — SIP 100 Trying
+   *
+   * @fires 收到或发出 SIP 100 Trying 响应时触发
+   * 表示下一跳已收到 INVITE，正在处理中。
+   */
+  e.session.on('trying', function()
   {
     console.warn('trying');
     setStatus('Trying');
   });
 
   /**
-    * progress
-    *
-    * @fires 收到或者发出 1xx （>100） 的SIP请求时触发;可以在此设置回铃音或振铃
-    *
-    * @type {object}
-    * @property {string} mode - 'audio'音频模式，'video'视频模式
-    */
-  e.session.on('progress', function(d) 
+   * progress — 呼叫进展（振铃）
+   *
+   * @fires 收到或发出 SIP 1xx（>100）临时响应时触发
+   * 可在此设置回铃音或本地振铃提示。
+   *
+   * @type {object}
+   * @property {string} originator - 'local'（本端发出）或 'remote'（远端发来）
+   * @property {string} mode - 'audio' 或 'video'
+   *
+   * 处理逻辑：
+   * - local：本端已收到 INVITE，正在振铃
+   * - remote：远端已振铃；若没有远端回铃音（earlyMedia），可播放本地铃声
+   */
+  e.session.on('progress', function(d)
   {
-    if (d.originator === 'local') 
+    if (d.originator === 'local')
     {
+      // 被叫侧：本端正振铃等待用户接听
       setStatus('收到呼叫，振铃中');
     }
-    else 
+    else
     {
-      // 如果不存在远端铃声，可以播放本地铃声
-      if (!earlyMedia) 
+      // 主叫侧：远端已振铃
+      // 若不存在远端回铃音，此处可播放本地铃声
+      if (!earlyMedia)
       {
-        // 可以播放本地铃声
+        // 可在此播放本地回铃音（local ringback tone）
       }
-      
-      // 用于通话未接通的情况，只以第一次检测为准
+
+      // 仅在呼叫未接通时检测一次远端 OS
       console.warn('dOS: ', detectRemoteOS(d.response));
 
       setStatus('对方已振铃，请等待接听');
@@ -376,185 +544,203 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
-   * hold
+   * hold — 通话保持
    *
-   * @fires 本端或远端暂停通话时触发
+   * @fires 本端或远端将通话置于保持状态时触发
    *
    * @type {object}
-   * @property {string} originator - 'remote'为远端触发，'local'为本端触发
+   * @property {string} originator - 'remote'（远端保持）或 'local'（本端保持）
+   *
+   * 处理逻辑：暂停后清空媒体渲染，切换到保持状态 UI。
    */
-  e.session.on('hold', function(d) 
+  e.session.on('hold', function(d)
   {
     setStatus(`${d.originator} hold`);
-    // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
+    // 清空所有音视频渲染，切换 UI 为暂停状态
     stopStreams();
   });
 
   /**
-    * unhold
-    *
-    * 部分情况下取消暂停后无法加载出视频媒体；可以在此重新获取本地和远端媒体
-    *
-    * @fires 本端或远端取消暂停通话时触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    */
-  e.session.on('unhold', function(d) 
+   * unhold — 取消保持
+   *
+   * @fires 本端或远端恢复通话时触发
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   *
+   * 处理逻辑：恢复后重新从 PeerConnection 获取本地和远端媒体流并渲染。
+   * 部分场景下取消保持后可能无法自动恢复媒体，因此这里主动调用 getStreams。
+   */
+  e.session.on('unhold', function(d)
   {
     setStatus(`${d.originator} unhold`);
 
-    // 获取媒体流
+    // 重新获取并渲染媒体流
     getStreams(e.session.connection);
   });
 
   /**
-    * mode
-    *
-    * 通话模式变化后需要重新获取本地和远端媒体
-    *
-    * @fires 通话模式发生变化时触发，如：音频模式切换为视频模式，视频模式切换为音频模式
-    *
-    * @type {object}
-    * @property {string} mode - 'audio'音频模式，'video'视频模式
-    */
-  e.session.on('mode', function(d) 
+   * mode — 通话模式切换
+   *
+   * @fires 通话模式变化时触发（音频→视频、视频→音频）
+   *
+   * @type {object}
+   * @property {string} mode - 'audio' 或 'video'
+   *
+   * 处理逻辑：
+   * - 更新当前模式和统计实例
+   * - 切换为视频模式时设置最大码率 400kbps
+   * - 重新获取媒体流渲染
+   */
+  e.session.on('mode', function(d)
   {
     setStatus(`mode: ${d.mode}`);
 
+    // 更新当前通话模式
     curMode = d.mode;
 
+    // 同步模式到统计模块
     stats && stats.setMode(d.mode);
 
-    if (d.mode == 'video') 
+    // 切换到视频模式时，设置视频发送最大码率
+    if (d.mode == 'video')
     {
-      e.session.connection.getSenders().forEach((sender) => 
+      e.session.connection.getSenders().forEach((sender) =>
       {
-        if (sender.track && sender.track.kind === 'video') 
+        if (sender.track && sender.track.kind === 'video')
         {
           const parameters = sender.getParameters();
 
+          // 设置视频编码最大码率为 400kbps
           parameters.encodings[0].maxBitrate = 400 * 1000;
 
           sender.setParameters(parameters);
         }
       });
-
     }
 
-    // stats && stats.reset();
-
-    // 获取媒体流
+    // 模式切换后重新获取媒体流
     getStreams(e.session.connection);
   });
 
   /**
-    * cameraChanged
-    *
-    * 通话模式变化后需要重新获取本地和远端媒体
-    *
-    * @fires 摄像头切换完成后触发
-    *
-    * @type {object}
-    * @property {string} videoStream - 切换后的视频流
-    */
-  e.session.on('cameraChanged', function(d) 
+   * cameraChanged — 摄像头切换完成
+   *
+   * @fires 调用 switchDevice('camera', ...) 成功后触发
+   *
+   * @type {object}
+   * @property {MediaStream} videoStream - 切换后的新视频流
+   *
+   * 处理逻辑：
+   * - 克隆本地音频轨道 + 新视频轨道构造新的 MediaStream
+   * - 兼容 MCU 等候室场景（保留 cloneStream 引用）
+   * - 延迟 100ms 播放以兼容不同浏览器的安全策略
+   */
+  e.session.on('cameraChanged', function(d)
   {
-    // 兼容mcu等候室用
+    // 获取当前本地音频和视频流
     const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
     const tmpTracks = [];
 
-    if (localStream.audioStream.getAudioTracks().length > 0) 
+    // 有音频轨道时克隆一份
+    if (localStream.audioStream.getAudioTracks().length > 0)
     {
       tmpTracks.push(localStream.audioStream.getAudioTracks()[0].clone());
-      // tmpTracks.push(localStream.audioStream.getAudioTracks()[0]);
     }
 
-    if (d.videoStream.getVideoTracks().length > 0) 
+    // 有新视频轨道时克隆一份
+    if (d.videoStream.getVideoTracks().length > 0)
     {
       tmpTracks.push(d.videoStream.getVideoTracks()[0].clone());
-      // tmpTracks.push(d.videoStream.getVideoTracks()[0]);
     }
 
+    // 停止旧的克隆流
     cloneStream && cloneStream.getTracks().forEach((track) => track.stop());
 
+    // 创建新的克隆流用于本地预览
     cloneStream = new MediaStream(tmpTracks);
     localVideo.srcObject = cloneStream;
 
-    // 兼容不同浏览器安全策略
-    setTimeout(() => 
+    // 延迟播放兼容不同浏览器的自动播放策略
+    setTimeout(() =>
     {
       localVideo.play();
     }, 100);
   });
 
   /**
-    * remoteShared
-    *
-    * 渲染或者停止渲染远端分享的视频媒体
-    *
-    * @fires 远端分享或停止分享后触发
-    */
-  e.session.on('remoteShared', function(d) 
+   * remoteShared — 远端开始共享
+   *
+   * @fires 远端发起屏幕/元素共享时触发
+   *
+   * 处理逻辑：将共享的视频流渲染到辅助视频区域。
+   */
+  e.session.on('remoteShared', function(d)
   {
     document.querySelector('#remoteVideo2').srcObject = d.sharedStream.videoStream;
     document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100';
   });
 
   /**
-    * remoteUnShared
-    *
-    * 停止渲染远端分享的视频媒体
-    *
-    * @fires 远端停止分享后触发
-    */
-  e.session.on('remoteUnShared', function() 
+   * remoteUnShared — 远端停止共享
+   *
+   * @fires 远端停止共享时触发
+   *
+   * 处理逻辑：清空辅助视频区域并隐藏。
+   */
+  e.session.on('remoteUnShared', function()
   {
     document.querySelector('#remoteVideo2').srcObject = null;
     document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
   });
 
   /**
-    * peerconnection:iceConnectionState
-    *
-    * 反应当前的媒体连接状态变化，如果checking后长时间没有connected则说明媒体异常
-    *
-    * @fires iceconnectionstatechange事件触发
-    *
-    */
-  e.session.on('peerconnection:iceConnectionState', (d) => 
+   * peerconnection:iceConnectionState — ICE 连接状态变化
+   *
+   * @fires RTCPeerConnection 的 iceconnectionstatechange 事件触发
+   *
+   * 可用于监控媒体连接的健康状态：
+   * - checking 后长时间未变为 connected → 可能存在网络/防火墙问题
+   */
+  e.session.on('peerconnection:iceConnectionState', (d) =>
   {
     console.warn('iceConnectionState: ', d);
   });
 
-
   /**
-    * mediaerror
-    *
-    * @fires 当获取到的用户媒体为已知异常时触发
-    *
-    * @type {object}
-    * @property {string} type - 'video'为视频轨道异常
-    * @property {Mediastream} mediastream - 触发此异常的媒体流
-    */
-  e.session.on('mediaerror', function(d) 
+   * mediaerror — 用户媒体异常
+   *
+   * @fires 本地媒体轨道出现已知异常时触发（如视频轨道静音/黑屏）
+   *
+   * @type {object}
+   * @property {string} type - 异常轨道类型（如 'video'）
+   * @property {MediaStream} mediastream - 触发异常的媒体流
+   *
+   * 处理逻辑：
+   * - 启动定时检测（共 3 次，间隔 1s）
+   * - 若轨道恢复正常则停止检测
+   * - 若 3 次后仍异常，可提示用户或做进一步处理
+   */
+  e.session.on('mediaerror', function(d)
   {
     setStatus(`用户媒体错误：${d.type} track failed`);
 
-    // 可以根据需要多次检查并做进一步处理
+    // 定时检测视频轨道是否恢复正常，最多检测 3 次
     let count = 3;
-    const timer = setInterval(() => 
+    const timer = setInterval(() =>
     {
-      if (CRTC.Utils.isVideoTrackHealthy(d.mediastream)) 
+      // 视频轨道已恢复正常
+      if (CRTC.Utils.isVideoTrackHealthy(d.mediastream))
       {
         clearInterval(timer);
       }
-      else if (count >= 0) 
+      // 达到重试上限仍未恢复
+      else if (count >= 0)
       {
         clearInterval(timer);
-        // 可以根据需要做进一步处理，提示用户等
+        // 可在此提示用户摄像头异常或引导检查设备
       }
-      else 
+      else
       {
         count--;
       }
@@ -562,55 +748,63 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
-    * failed
-    *
-    * @fires 建立通话失败触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    * @property {string} message - originator 为 'remote' 时输出失败信息
-    * @property {string} cause - 失败原因
-    */
-  e.session.on('failed', function(d) 
+   * failed — 通话建立失败
+   *
+   * @fires 通话建立过程中发生不可恢复的错误时触发
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   * @property {string} message - 失败描述（originator 为 remote 时）
+   * @property {string} cause - 失败原因码/描述
+   *
+   * 处理逻辑：
+   * - 清理通知、重置状态、停止混流
+   * - 停止录音和统计
+   * - 清理自定义流和 AiNS 验证器
+   */
+  e.session.on('failed', function(d)
   {
     closeIncomingCallNotification();
     videoOnly = false;
     remoteNo = undefined;
-    if (mix) 
+    // 停止混流实例（如果存在）
+    if (mix)
     {
       mix.stop();
       mix = null;
     }
     setStatus(`通话建立失败: ${d.cause}`);
 
+    // 重置会话引用
     tmpSession = null;
     rtcSession = null;
 
-    if (recorder) 
+    // 清理录音
+    if (recorder)
     {
       recorder.stop();
       recorder.clearRecordedData();
     }
 
-    // 输出通话开始时间及通话结束时间
+    // 输出通话时间线
     setStatus(`start: ${e.session.start_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-    // 呼转被拒绝会有问题，暂时先不停止媒体
-    // stopStreams();
-
-    // 停止获取统计信息
+    // 停止统计信息收集
     stats && stats.stop();
 
+    // 停止 iOS OPTIONS 保活定时器
     optionsTimer && clearInterval(optionsTimer);
 
+    // 清理 UI：恢复远端视频区域布局
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
 
+    // 清理自定义媒体流
     cusMediaStream.getTracks().forEach((track) => track.stop());
-
     cusMediaStream = new MediaStream();
+
+    // 停止 AiNS 验证器（如果正在运行）
     stopAiNsMonitor().catch((error) =>
     {
       console.warn('failed stopAiNsMonitor on failed', error);
@@ -618,75 +812,85 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
-    * videoTrackState
-    *
-    * @fires 视频轨道状态变化时触发
-    *
-    * @type {object}
-    * @property {MediaStreamTrack} track - 触发当前事件的视频轨道
-    * @property {string} properties - 触发当前事件的属性 muted/readyState/enabled/label 等
-    * @property {string/boolean} value - 变化后的值
-    */
-  e.session.on('videoTrackState', function(d) 
+   * videoTrackState — 视频轨道状态变化
+   *
+   * @fires 视频轨道的属性发生变化时触发（muted/readyState/enabled/label 等）
+   *
+   * @type {object}
+   * @property {MediaStreamTrack} track - 触发事件的视频轨道
+   * @property {string} properties - 变化的属性名
+   * @property {string|boolean} value - 变化后的值
+   */
+  e.session.on('videoTrackState', function(d)
   {
-    // 视频轨道状态
     setStatus(`VTState ${d.properties} ${d.value}`);
   });
 
   /**
-    * ended
-    *
-    * @fires 通话结束后触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    * @property {string} message - originator 为 'remote' 时输出失败信息
-    * @property {string} cause - 结束原因
-    */
-  e.session.on('ended', function(d) 
+   * ended — 通话结束
+   *
+   * @fires 通话正常或异常结束时触发
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   * @property {string} message - 结束描述
+   * @property {string} cause - 结束原因
+   *
+   * 处理逻辑：
+   * - 清理通知、状态、混流、录音
+   * - 如果有排队的临时会话（tmpSession），则切换到该会话
+   * - 否则完全清理通话状态
+   */
+  e.session.on('ended', function(d)
   {
     closeIncomingCallNotification();
     videoOnly = false;
     remoteNo = undefined;
-    if (mix) 
+    // 停止混流实例
+    if (mix)
     {
       mix.stop();
       mix = null;
     }
     setStatus(`通话结束: ${d.cause}`);
 
-    if (recorder) 
+    // 停止并清理录音数据
+    if (recorder)
     {
       recorder.stop();
       recorder.clearRecordedData();
     }
 
-    // 输出通话开始时间及通话结束时间
-    setStatus(`start: ${e.session.start_time}`);
+    // 输出通话时间线
+    setStatus(`start: ${e.session.end_time}`);
     setStatus(`ended: ${e.session.end_time}`);
 
-    if (rtcSession === e.session && Boolean(tmpSession)) 
+    // ---- 会话交接逻辑 ----
+    // 如果结束的是主会话且有排队的 tmpSession，切换到该会话
+    if (rtcSession === e.session && Boolean(tmpSession))
     {
+      // 停止当前渲染，切换到临时会话的媒体流
       stopStreams();
       getStreams(tmpSession.connection);
     }
-    else 
+    else
     {
+      // 无排队的会话，完全清理
       tmpSession = null;
       rtcSession = null;
-      // 通话暂停后跨域设置本地视频媒体为空，或者切换UI为暂停通话状态
-      // stopStreams();
-      // 停止获取统计信息
       stats && stats.stop();
     }
     optionsTimer && clearInterval(optionsTimer);
 
+    // 清理 UI
     document.querySelector('#remoteVideo').classList = 'h-100';
     document.querySelector('#remoteVideo2').classList = 'hide';
 
+    // 清理自定义媒体流
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
 
+    // 停止 AiNS 验证器
     stopAiNsMonitor().catch((error) =>
     {
       console.warn('failed stopAiNsMonitor on ended', error);
@@ -694,65 +898,76 @@ ua.on('newRTCSession', function(e)
   });
 
   /**
-    * newDTMF
-    *
-    * @fires 收到INFO模式的DTMF后触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    * @property {object} dtmf - DTMF 对象
-    */
-  e.session.on('newDTMF', function(d) 
+   * newDTMF — 收到 DTMF 信号
+   *
+   * @fires 收到 INFO 模式携带的 DTMF 信令时触发
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   * @property {object} dtmf - DTMF 对象
+   * @property {string} dtmf.tone - DTMF 按键字符（0-9、*、#、A-D）
+   */
+  e.session.on('newDTMF', function(d)
   {
-    // 输出 INFO 模式的 DTMF
+    // 输出 INFO 模式收到的 DTMF
     setStatus(`${d.originator} DTMF:${d.dtmf.tone}`);
   });
 
   /**
-    * newInfo
-    *
-    * @fires 收到INFO消息后触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    * @property {object} info - INFO 对象
-    */
-  e.session.on('newInfo', function(d) 
+   * newInfo — 收到 SIP INFO 消息
+   *
+   * @fires 收到 INFO 消息时触发
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   * @property {object} info - INFO 消息体对象
+   *
+   * 处理逻辑：
+   * - remote：解析 JSON body，处理 cancel 事件（取消呼转等候室）
+   * - local：输出已发送的消息内容
+   */
+  e.session.on('newInfo', function(d)
   {
-    if (d.originator === 'remote') 
+    if (d.originator === 'remote')
     {
       setStatus(`收到新消息：${JSON.stringify(d.info.body)}`);
       const body = JSON.parse(d.info.body);
 
-      if (body) 
+      // 收到 cancel 事件时终止呼转等候室会话
+      if (body)
       {
-        if (body.event === 'cancel') 
+        if (body.event === 'cancel')
         {
           isRefer && tmpSession.terminate();
         }
       }
     }
-    else if (d.originator === 'local') 
+    else if (d.originator === 'local')
     {
       setStatus(`发出消息：${d.info.body}`);
     }
   });
 
   /**
-    * notify
-    *
-    * @fires 收到需要处理的notify消息（talk，hold）时触发
-    *
-    * @type {object}
-    * @property {string} event - 'talk'，'hold'
-    * @property {object} request - 请求对象
-    */
-  e.session.on('notify', function(d) 
+   * notify — 收到 SIP NOTIFY
+   *
+   * @fires 收到需要处理的 NOTIFY 消息（talk/hold 事件类型）时触发
+   *
+   * @type {object}
+   * @property {string} event - 事件类型: 'talk'（3PCC 接通）、'hold'（3PCC 保持）
+   * @property {object} request - NOTIFY 请求对象
+   *
+   * 处理逻辑：
+   * - talk: 如果本地已保持则取消保持，否则自动应答（3PCC 场景）
+   * - hold: 将会话置于保持状态
+   */
+  e.session.on('notify', function(d)
   {
-    // 3pcc 取消保持&自动接听
-    if (d.event == 'talk') 
+    // 3PCC（Third Party Call Control）唤醒/接通
+    if (d.event == 'talk')
     {
-      if (e.session.isOnHold().local) 
+      // 如果本地已保持，只需取消保持即可恢复通话
+      if (e.session.isOnHold().local)
       {
         e.session.unhold();
         setStatus('3pcc unhold');
@@ -760,6 +975,7 @@ ua.on('newRTCSession', function(e)
         return;
       }
 
+      // 否则自动应答（3PCC 呼入自动接听）
       e.session.answer({
         rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
         mediaConstraints    : {
@@ -774,100 +990,134 @@ ua.on('newRTCSession', function(e)
       });
       setStatus('3pcc answer');
     }
-    else if (d.event == 'hold') 
+    // 3PCC 保持通话
+    else if (d.event == 'hold')
     {
       e.session.hold();
       setStatus('3pcc hold');
     }
-
   });
 
   /**
-    * muted
-    *
-    * @fires 本地开启麦克风或摄像头方法调用成功后触发
-    *
-    * @type {object}
-    * @property {boolean} audio - 判断是否音频被开启
-    * @property {boolean} video - 判断是否视频被开启
-    */
-  e.session.on('muted', function(d) 
+   * muted — 媒体已静音/关闭
+   *
+   * @fires 本端调用 mute() 成功后触发
+   *
+   * @type {object}
+   * @property {boolean} audio - 是否关闭了麦克风
+   * @property {boolean} video - 是否关闭了摄像头
+   */
+  e.session.on('muted', function(d)
   {
-    if (d.audio) 
+    if (d.audio)
     {
       setStatus('关闭麦克风');
     }
-    else if (d.video) 
+    else if (d.video)
     {
       setStatus('关闭摄像头');
     }
   });
 
   /**
-    * unmuted
-    *
-    * @fires 本地关闭麦克风或摄像头方法调用成功后触发
-    *
-    * @type {object}
-    * @property {boolean} audio - 判断是否音频被关闭
-    * @property {boolean} video - 判断是否视频被关闭
-    */
-  e.session.on('unmuted', function(d) 
+   * unmuted — 媒体已取消静音/开启
+   *
+   * @fires 本端调用 unmute() 成功后触发
+   *
+   * @type {object}
+   * @property {boolean} audio - 是否开启了麦克风
+   * @property {boolean} video - 是否开启了摄像头
+   */
+  e.session.on('unmuted', function(d)
   {
-    if (d.audio) 
+    if (d.audio)
     {
       setStatus('开启麦克风');
     }
-    else if (d.video) 
+    else if (d.video)
     {
       setStatus('开启摄像头');
     }
   });
 
-  e.session.on('upgradeToVideo', (d) => 
+  /**
+   * upgradeToVideo — 远端请求升级为视频通话
+   *
+   * @fires 远端发起视频升级请求时触发
+   *
+   * 处理逻辑：
+   * - 如果已确认且无摄像头，则拒绝升级
+   * - 否则接受，使用当前视频约束
+   */
+  e.session.on('upgradeToVideo', (d) =>
   {
-    if (confirmed && !haveACamera) 
+    // 已确认通话且无摄像头时拒绝升级
+    if (confirmed && !haveACamera)
     {
       d.reject();
     }
-    else 
+    else
     {
       d.accept(videoConstraints);
     }
   });
 
-  e.session.on('accepted', (d) => 
-  {    
+  /**
+   * accepted — 远端接受呼叫
+   *
+   * @fires 收到 SIP 200 OK（即远端应答）时触发
+   *
+   * 处理逻辑：关闭来电通知，检测远端操作系统类型。
+   */
+  e.session.on('accepted', (d) =>
+  {
+    // 远端已应答，关闭来电提示
     closeIncomingCallNotification();
     console.warn('dOS: ', detectRemoteOS(d.response));
   });
 
   /**
-    * confirmed
-    *
-    * @fires 通话确认ACK的时候触发
-    *
-    * @type {object}
-    * @property {string} originator - 'remote'为远端触发，'local'为本端触发
-    */
-  e.session.on('confirmed', async function() 
+   * confirmed — 通话确认（ACK 完成）
+   *
+   * @fires 通话 SIP ACK 确认后触发，此时媒体链路已完全建立
+   *
+   * @type {object}
+   * @property {string} originator - 'remote' 或 'local'
+   *
+   * 处理逻辑：
+   * 1. 关闭来电通知
+   * 2. ICE 状态异常检测
+   * 3. 启动录音（如果 URL 参数指定）
+   * 4. 初始化通话统计（getStats）
+   * 5. 渲染本地/远端媒体流
+   * 6. 监听 ontrack 处理远端辅助视频流
+   * 7. 根据参数设置视频码率
+   */
+  e.session.on('confirmed', async function()
   {
     closeIncomingCallNotification();
-    if (e.session.connection.iceConnectionState === 'new') 
+
+    // ---- ICE 异常检测 ----
+    // 如果 ICE 仍处于 'new' 状态，说明网络连接可能异常
+    if (e.session.connection.iceConnectionState === 'new')
     {
-      // 根据业务需求进行网络连接异常提示，或者可以延迟2秒再判断一次做为确认
+      // 可根据业务需要进行网络异常提示，或延迟 2 秒后再判一次确认
     }
 
-    // 本地媒体流
+    // 获取本地媒体流（用于录音/渲染）
     const localStream = CRTC.Utils.getStreams(e.session.connection, 'local');
-    // 远端媒体流
+    // 获取远端媒体流
     const remoteStream = CRTC.Utils.getStreams(e.session.connection, 'remote');
 
-    if (rec) 
+    // ---- 录音逻辑 ----
+    // rec 参数为录音时长（秒），由 URL 查询参数传入
+    if (rec)
     {
+      // 同时录制本地和远端视频
       recorder = new MultiStreamRecorder([ localStream.videoStream, remoteStream.videoStream ]);
       recorder.mimeType = 'video/webm;codecs=vp8';
-      recorder.ondataavailable = function(blob) 
+      // 录音数据可用时自动下载
+      recorder.ondataavailable = function(blob)
       {
         console.warn('recorder: ', blob);
         const url = URL.createObjectURL(blob);
@@ -878,137 +1128,144 @@ ua.on('newRTCSession', function(e)
         document.body.appendChild(a);
         a.click();
       };
+      // 按指定秒数启动录音
       recorder.start(Number(rec) * 1000);
     }
 
     setStatus('confirmed');
-    // updateDevices();
-    // if (e.session === tmpSession)
-    // {
-    //   rtcSession.terminate();
-    // }
 
+    // 标记通话已确认
     confirmed = true;
 
-    /* 结尾 */
-
-    // 获取统计信息
+    // =====================================================================
+    // 初始化通话统计（网络质量、码率、丢包率等）
+    // =====================================================================
     stats = new CRTC.getStats(e.session.connection);
 
-    stats.on('report', function(r) 
+    // 统计报告事件：每秒输出上下行媒体质量数据
+    stats.on('report', function(r)
     {
-      // e.session.connection.getReceivers().forEach((re) =>
-      // {
-      //   // 测试丢包用
-      //   re.jitterBufferTarget = 2000;
-      //   re.playoutDelayHint = 1000;
-      // });
+      let downF = ''; // 下行（接收）媒体格式化文本
+      let upF = ''; // 上行（发送）媒体格式化文本
 
-      // console.warn('report: ', JSON.stringify(r));
-      let downF = '';
-      let upF = '';
-
-      r.downStreams.forEach((item) => 
+      // 格式化下行流信息
+      r.downStreams.forEach((item) =>
       {
-        if (item.type === 'audio') 
+        if (item.type === 'audio')
         {
           downF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
-        else 
+        else
         {
+          // 视频或共享流：显示分辨率 + 帧率 + 码率 + 抖动 + 丢包
           downF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
       });
 
-      r.upStreams.forEach((item) => 
+      // 格式化上行流信息
+      r.upStreams.forEach((item) =>
       {
-        if (item.type === 'audio') 
+        if (item.type === 'audio')
         {
           upF += `# 音频 # ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
-        else 
+        else
         {
           upF += `# ${item.type === 'shared' ? '共享' : '视频'} # ${item.frameWidth || ''} * ${item.frameHeight || ''} | ${item.framesPerSecond || ''}fps | ${item.speed}kbps | ${item.jitter || ''}ms | ${item.loss}%\n`;
         }
       });
 
+      // 更新页面上的上下行统计文本
       document.querySelector('#upF').innerText = upF;
       document.querySelector('#downF').innerText = downF;
 
+      // 更新往返时延
       document.querySelector('#RTT').innerText = r.RTT || '';
-      // document.querySelector('#upL').innerText = r.uplinkLoss || '';
-      // document.querySelector('#downL').innerText = r.downlinkLoss || '';
     });
 
-    stats.on('network-quality', function(ev) 
+    // 网络质量评估事件
+    stats.on('network-quality', function(ev)
     {
       const { uplinkNetworkQuality, RTT, uplinkLoss, downlinkNetworkQuality, downlinkLoss } = ev;
 
       document.querySelector('#NQ').innerText = `Rtt: ${RTT} ## uQ: ${uplinkNetworkQuality} uL: ${uplinkLoss} ## dQ: ${downlinkNetworkQuality} dL: ${downlinkLoss}`;
     });
 
-    // 获取媒体流
+    // ---- 渲染本地和远端媒体流 ----
     getStreams(e.session.connection);
 
-    e.session.connection.ontrack = function(event) 
+    // ---- 监听远端附加视频轨道（如双流共享） ----
+    e.session.connection.ontrack = function(event)
     {
-      if (event.track.kind !== 'video') 
+      // 只处理视频轨道
+      if (event.track.kind !== 'video')
       {
         return;
       }
 
-      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id) 
+      // 如果是活跃的、未静音的视频轨道且与当前辅助视频不同
+      if (event.track.readyState == 'live' && event.track.muted == false && document.querySelector('#remoteVideo2').srcObject.id != event.streams[0].id)
       {
+        // 渲染辅助视频流，将主视频缩小到右上角
         document.querySelector('#remoteVideo2').srcObject = event.streams[0];
-        // document.querySelector('#remoteVideo2').play();
-
         document.querySelector('#remoteVideo').classList = 'w-25 position-absolute top-0 end-0';
-        // document.querySelector('#remoteVideo2').classList = 'h-100 w-100';
       }
-      else 
+      else
       {
+        // 辅助视频不可用时恢复主视频全屏
         document.querySelector('#remoteVideo').classList = 'h-100';
-        // document.querySelector('#remoteVideo2').classList = 'hide';
       }
     };
 
-    // 根据分辨率设置速率
-    if (mbit) 
+    // ---- 设置视频发送最大码率 ----
+    // 根据 URL 参数 mbit 调整视频编码码率
+    if (mbit)
     {
-      e.session.connection.getSenders().forEach((sender) => 
+      e.session.connection.getSenders().forEach((sender) =>
       {
-        if (sender.track && sender.track.kind === 'video') 
+        if (sender.track && sender.track.kind === 'video')
         {
           const parameters = sender.getParameters();
 
+          // 将 mbit（kbps）转为 bps 设置
           parameters.encodings[0].maxBitrate = mbit * 1000;
 
-          sender.setParameters(parameters).then(() => 
+          sender.setParameters(parameters).then(() =>
           {
             console.warn('成功设置 maxBitrate');
           })
-            .catch((err) => 
+            .catch((err) =>
             {
               console.error('设置 RTCRtpSender 参数失败:', err);
-            });            
+            });
         }
       });
     }
   });
 
   //  ***** DOM 事件绑定 *****
+  // 以下事件绑定在 newRTCSession 内部，因此每个会话都持有独立的 handler 引用
 
-  // 保清晰/保流畅
-  document.querySelector('#videoHint').onchange = function() 
+  /**
+   * videoHint — 视频内容优先级切换
+   *
+   * 控制视频编码策略：
+   * - 'motion'（保流畅）：偏向高帧率
+   * - 'detail'（保清晰）：偏向高分辨率
+   */
+  document.querySelector('#videoHint').onchange = function()
   {
     e.session.setVideoContentHint(this.options[this.selectedIndex].value);
     setStatus(`${this.options[this.selectedIndex].text}`);
   };
 
   /**
-   * 音频接听
+   * answer — 音频接听
+   *
+   * 仅使用音频，不采集/发送视频。
+   * 携带随路数据 X-Data 和 X-UA 用于自定义业务逻辑。
    */
-  document.querySelector('#answer').onclick = function() 
+  document.querySelector('#answer').onclick = function()
   {
     e.session.answer({
       mediaConstraints : {
@@ -1017,10 +1274,10 @@ ua.on('newRTCSession', function(e)
           sampleRate   : 48000,
           channelCount : 1
         },
-        video : false
+        video : false // 不采集视频
       },
       pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+      // 随路数据：注意 'X' 大写及 ':' 后面的空格
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true },
       extraFeatures        : extraFeatures,
@@ -1032,9 +1289,11 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 视频接听
+   * answerVideo — 视频接听
+   *
+   * 同时采集音频和视频，使用当前的 videoConstraints。
    */
-  document.querySelector('#answerVideo').onclick = function() 
+  document.querySelector('#answerVideo').onclick = function()
   {
     e.session.answer({
       mediaConstraints : {
@@ -1042,23 +1301,26 @@ ua.on('newRTCSession', function(e)
         video : videoConstraints
       },
       pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures        : extraFeatures,
       mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
-      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions() 
+      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
     });
 
     setStatus('video answer');
   };
 
   /**
-   * 空音频接听
+   * answerAudio — 空音频接听
+   *
+   * 使用静默音频轨道（generateAnEmptyAudioTrack）代替真实麦克风采集。
+   * 视频使用真实摄像头。适用于仅需视频、不需要真实音频的场景。
    */
-  document.querySelector('#answerAudio').onclick = async function() 
+  document.querySelector('#answerAudio').onclick = async function()
   {
     const tmpStream = new MediaStream();
+    // 生成静默音频轨道（不采集真实麦克风）
     const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
 
     tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
@@ -1068,29 +1330,29 @@ ua.on('newRTCSession', function(e)
         video : videoConstraints
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures,
-      mediaStream         : tmpStream
+      mediaStream         : tmpStream // 使用自定义的静默音频流
     });
 
     setStatus('video answer');
   };
 
   /**
-   * 单视频接听
+   * onlyVideoAudio — 单视频接听（无音频采集）
+   *
+   * 仅采集视频，不采集麦克风。设置 videoOnly 标志。
    */
-  document.querySelector('#onlyVideoAudio').onclick = async function() 
+  document.querySelector('#onlyVideoAudio').onclick = async function()
   {
     videoOnly = true;
     e.session.answer({
       mediaConstraints : {
-        audio : false,
+        audio : false, // 不采集音频
         video : videoConstraints
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures
@@ -1100,12 +1362,16 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 自定义视频接听
+   * onlyCommVideo — 自定义黑屏视频接听（无音频）
+   *
+   * 使用黑色占位视频轨道（无摄像头图标）代替真实摄像头。
+   * 不采集音频。适用于仅需展示占位视频的场景。
    */
-  document.querySelector('#onlyCommVideo').onclick = async function() 
+  document.querySelector('#onlyCommVideo').onclick = async function()
   {
     const tmpStream = new MediaStream();
 
+    // 生成黑色占位视频轨道（仅首次创建）
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
@@ -1116,7 +1382,6 @@ ua.on('newRTCSession', function(e)
         video : true
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures,
@@ -1125,10 +1390,15 @@ ua.on('newRTCSession', function(e)
 
     setStatus('video answer');
   };
-  document.querySelector('#audioCommVideo').onclick = async function() 
+
+  /**
+   * audioCommVideo — 自定义黑屏视频接听（含音频）
+   *
+   * 与 onlyCommVideo 相同，但保留真实音频采集。
+   */
+  document.querySelector('#audioCommVideo').onclick = async function()
   {
     const tmpStream = new MediaStream();
-
 
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
@@ -1140,7 +1410,6 @@ ua.on('newRTCSession', function(e)
         video : true
       },
       pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
-      // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
       extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures       : extraFeatures,
@@ -1151,24 +1420,23 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 切换为音频模式
+   * toAudio — 切换为纯音频模式
    *
-   * 切换会触发 session 的 mode 事件回调
+   * 触发 session 的 mode 事件回调，关闭视频发送。
    */
-  document.querySelector('#toAudio').onclick = function() 
+  document.querySelector('#toAudio').onclick = function()
   {
     e.session.downgradeToAudio({ useUpdate: false }, () => { setStatus(`切换音频模式完成${curMode}`); });
   };
 
   /**
-   * 切换为视频模式
+   * toVideo — 切换为视频模式
    *
-   * 切换会触发 session 的 mode 事件回调
+   * 触发 session 的 mode 事件回调，开启视频发送。
    */
-  document.querySelector('#toVideo').onclick = function() 
+  document.querySelector('#toVideo').onclick = function()
   {
     e.session.upgradeToVideo({ useUpdate: false, videoConstraints: videoConstraints }, () => { setStatus(`切换视频模式完成${curMode}`); });
-    // stats && stats.reset();
   };
 
   // // b2b切换视频模式
@@ -1206,31 +1474,33 @@ ua.on('newRTCSession', function(e)
   // };
 
   /**
-   * 切换自定义流单向视频
+   * toCommonVideoSendonly — 切换为单向视频（自定义黑屏流，仅发送）
+   *
+   * 使用黑色占位视频轨道，仅发不收。依赖 useUpdate 全局变量。
    */
-  document.querySelector('#toCommonVideoSendonly').onclick = function() 
+  document.querySelector('#toCommonVideoSendonly').onclick = function()
   {
     const tmpStream = new MediaStream();
-
 
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
 
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
-    // stats && stats.reset();
   };
 
   /**
-   * 替换自定义流
+   * switchVideo — 动态替换视频轨道
+   *
+   * 通话中将视频发送轨道替换为黑色占位视频，不经过协商。
    */
-  document.querySelector('#switchVideo').onclick = function() 
+  document.querySelector('#switchVideo').onclick = function()
   {
     const cusVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps });
 
-    e.session.connection.getSenders().forEach((sender) => 
+    e.session.connection.getSenders().forEach((sender) =>
     {
-      if (sender.track.kind === 'video') 
+      if (sender.track.kind === 'video')
       {
         sender.replaceTrack(cusVideo.videoTrack).then(() => setStatus('替换成功'));
       }
@@ -1238,18 +1508,19 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 切换单向视频
+   * toVideoSendonly — 切换为单向视频（真实摄像头，仅发送）
    */
-  document.querySelector('#toVideoSendonly').onclick = function() 
+  document.querySelector('#toVideoSendonly').onclick = function()
   {
     e.session.upgradeToVideo({ sendOnly: true, useUpdate: useUpdate, videoConstraints: videoConstraints }, () => { setStatus('切换视频模式完成') + curMode; });
-    // stats && stats.reset();
   };
 
   /**
-   * 自定义流视频模式
+   * toCommonVideo — 切换为自定义流视频模式（双向）
+   *
+   * 使用黑色占位视频作为视频源进行双向视频通话。
    */
-  document.querySelector('#toCommonVideo').onclick = function() 
+  document.querySelector('#toCommonVideo').onclick = function()
   {
     const tmpStream = new MediaStream();
 
@@ -1257,48 +1528,50 @@ ua.on('newRTCSession', function(e)
 
     tmpStream.addTrack(blackVideo.videoTrack, tmpStream);
     e.session.upgradeToVideo({ useUpdate: useUpdate, videoStream: tmpStream }, () => { setStatus('切换视频模式完成') + curMode; });
-    // stats && stats.reset();
   };
 
   /**
-   * 切换摄像头
+   * cameras — 会话内切换摄像头
    *
-   * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
+   * 选择新的摄像头设备进行切换。切换成功触发 cameraChanged 事件。
+   * 兼容 MCU 等候室：先停止旧的克隆视频轨道再切换。
    */
-  document.querySelector('#cameras').addEventListener('change', function() 
+  document.querySelector('#cameras').addEventListener('change', function()
   {
-    if (cloneStream) 
+    // 清理旧的克隆视频轨道（MCU 等候室兼容）
+    if (cloneStream)
     {
-      cloneStream.getVideoTracks().forEach((v) => 
+      cloneStream.getVideoTracks().forEach((v) =>
       {
         v.stop();
       });
     }
     e.session.switchDevice('camera', this.options[this.selectedIndex].value);
-    // .then(() => e.session.renegotiate())
-    // .catch((err) => console.warn('err: ', err));
     setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
   });
 
   /**
-   * 切换麦克风
+   * mics — 会话内切换麦克风
    *
-   * 切换摄像头成功会触发 session 的 cameraChanged 事件回调
+   * 选择新的麦克风设备进行切换。不做额外协商。
    */
-  document.querySelector('#mics').addEventListener('change', function() 
+  document.querySelector('#mics').addEventListener('change', function()
   {
     e.session.switchDevice('audio', this.options[this.selectedIndex].value);
     setStatus(`switchDevice ${this.options[this.selectedIndex].innerText}`);
   });
 
   /**
-   * 手机端用切换摄像头
+   * switchDevice — 移动端前后摄像头切换
+   *
+   * 在 'user'（前置）和 'environment'（后置）之间切换。
+   * 切换后调用 renegotiate 更新 SDP。
    */
-  document.querySelector('#switchDevice').onclick = async function() 
+  document.querySelector('#switchDevice').onclick = async function()
   {
-    if (cloneStream) 
+    if (cloneStream)
     {
-      cloneStream.getVideoTracks().forEach((v) => 
+      cloneStream.getVideoTracks().forEach((v) =>
       {
         v.stop();
       });
@@ -1307,20 +1580,24 @@ ua.on('newRTCSession', function(e)
       .then(() => e.session.renegotiate())
       .catch((err) => console.warn('err: ', err));
 
+    // 翻转标记供下次切换
     camFlag = !camFlag;
     setStatus(`switchDevice facingMode ${camFlag}`);
   };
 
   /**
-   * 结束通话
+   * cancel — 结束通话
+   *
+   * 终止所有相关会话（主会话、临时会话、旧会话），清理黑屏视频资源和通知。
    */
-  document.querySelector('#cancel').onclick = function() 
+  document.querySelector('#cancel').onclick = function()
   {
     closeIncomingCallNotification();
     blackVideo && blackVideo.cleanup();
 
-    try 
+    try
     {
+      // 终止所有可能的会话：旧 refer 会话、当前会话、主会话、排队会话
       oldSession && oldSession.isEstablished() && oldSession.terminate();
       e.session && e.session.terminate();
       rtcSession && rtcSession.terminate();
@@ -1329,21 +1606,27 @@ ua.on('newRTCSession', function(e)
     catch (error) { console.error(error); }
   };
 
-
   /**
-   * 结束呼转
+   * cancelReferBtn — 取消呼转等候室
+   *
+   * 通过 SIP INFO 发送 cancel 事件通知对端。
    */
-  document.querySelector('#cancelReferBtn').onclick = function() 
+  document.querySelector('#cancelReferBtn').onclick = function()
   {
     e.session.sendInfo('text/plain', JSON.stringify({ 'event': 'cancel' }));
   };
 
   /**
-   * 呼叫盲转
+   * referBtn — 呼叫盲转（Blind Transfer）
+   *
+   * 保持当前通话后将呼叫盲转到指定号码。
+   * 转接过程中监听各类事件：
+   * - failed/requestFailed：取消保持恢复通话
+   * - accepted：转接成功后终止原会话
    */
-  document.querySelector('#referBtn').onclick = function() 
+  document.querySelector('#referBtn').onclick = function()
   {
-    // 转接过程中的事件
+    // 转接过程中的事件回调
     const eventHandlers = {
       'progress'         : function(data) { console.log('progress', data); },
       'failed'           : function() { if (e.session.isOnHold().local) { e.session.unhold(); } },
@@ -1353,7 +1636,7 @@ ua.on('newRTCSession', function(e)
       'requestFailed'    : function() { if (e.session.isOnHold().local) { e.session.unhold(); } }
     };
 
-    // 暂停前一个通话，开始转接
+    // 保持当前通话后发起盲转
     e.session.hold();
     e.session.refer(`${document.querySelector('#refer').value}@${sipDomain}`, {
       eventHandlers : eventHandlers
@@ -1361,123 +1644,137 @@ ua.on('newRTCSession', function(e)
   };
 
   /**
-   * 关闭麦克风
+   * muteMic — 关闭麦克风
    */
-  document.querySelector('#muteMic').onclick = function() 
+  document.querySelector('#muteMic').onclick = function()
   {
     console.log('mute: ', e.session.isMuted().audio);
-    // 关闭麦克风
     e.session.mute({ audio: true });
   };
 
   /**
-   * 开启麦克风
+   * unmuteMic — 开启麦克风
    */
-  document.querySelector('#unmuteMic').onclick = function() 
+  document.querySelector('#unmuteMic').onclick = function()
   {
     console.log('unmute: ', e.session.isMuted().audio);
-    // 开启麦克风
     e.session.unmute({ audio: true });
   };
 
   /**
-   * 关闭视频
+   * muteCam — 关闭摄像头
+   *
+   * 如果为纯视频模式（videoOnly），使用 video_only 参数仅关闭视频轨道。
    */
-  document.querySelector('#muteCam').onclick = function() 
+  document.querySelector('#muteCam').onclick = function()
   {
-    // 关闭摄像头
-    if (videoOnly) 
+    if (videoOnly)
     {
+      // 纯视频模式：使用 video_only 标志
       e.session.mute({ video: true, video_only: true });
     }
-    else 
+    else
     {
       e.session.mute({ video: true });
     }
   };
 
   /**
-   * 开启视频
+   * unmuteCam — 开启摄像头
+   *
+   * 仅在摄像头已关闭状态下有效。
    */
-  document.querySelector('#unmuteCam').onclick = function() 
+  document.querySelector('#unmuteCam').onclick = function()
   {
-    // 摄像头为关闭状态，则开启摄像头
     e.session.unmute({ video: true });
   };
 
   /**
-   * 暂停/恢复通话
+   * hold — 暂停/恢复通话
+   *
+   * 切换逻辑：本端已暂停则恢复，否则暂停（仅当远端也未暂停时）。
    */
-  document.querySelector('#hold').onclick = function() 
+  document.querySelector('#hold').onclick = function()
   {
-    // 获取通话中本端和远端是否是暂停状态
     const isHold = e.session.isOnHold();
 
-    // 本端暂停才可以执行恢复方法
-    if (isHold.local) 
+    // 本端已暂停 → 恢复通话
+    if (isHold.local)
     {
-      // 恢复通话
       e.session.unhold();
     }
-    // 本地和远端都未暂停才可以执行暂停方法
-    else if (!isHold.remote) 
+    // 本地和远端都未暂停 → 执行暂停
+    else if (!isHold.remote)
     {
-      // 暂停通话
       e.session.hold();
     }
   };
 
   /**
-   * 分享屏幕
+   * screenShare — 分享屏幕（简单模式）
+   *
+   * 启动屏幕分享，不替换本地视频轨道。
    */
-  document.querySelector('#screenShare').onclick = function() 
+  document.querySelector('#screenShare').onclick = function()
   {
     e.session.share('screen', null, null)
-      .then((stream) => 
+      .then((stream) =>
       {
         document.querySelector('#screen').srcObject = stream;
         document.querySelector('#screen').classList = 'mh-100 mw-100';
 
-        stream.getVideoTracks()[0].onended = () => 
+        // 用户通过浏览器 UI 停止分享时隐藏屏幕预览
+        stream.getVideoTracks()[0].onended = () =>
         {
           document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
         };
       });
   };
-  document.querySelector('#screenShareD').onclick = function() 
+
+  /**
+   * screenShareD — 分享屏幕（双流模式）
+   *
+   * 在双流模式下分享屏幕：额外的视频流作为第二路发送。
+   * 包含双重停止检测机制：
+   * 1. ended 事件（主流）
+   * 2. 定时轮询 readyState（兜底，部分场景 ended 不触发）
+   *
+   * Safari 兼容：检测到 user gesture 错误时设置 safari_r 标志，
+   * 引导用户点击专用的 iOS 分享按钮。
+   */
+  document.querySelector('#screenShareD').onclick = function()
   {
     e.session.share('screen', null, null, true)
-      .then((stream) => 
+      .then((stream) =>
       {
+        // 渲染屏幕共享预览
         document.querySelector('#screen').srcObject = stream;
         document.querySelector('#screen').classList = 'mh-100 mw-100';
 
-        // 演示用
-        // e.session.sendFloorStatus(3);
-
-        // 部分被动场景可能无法触发ended事件，集成时如果必要可以考虑定时获取状态更新页面
-        stream.getVideoTracks()[0].addEventListener('ended', () => 
+        // 方式一：监听 ended 事件（主流浏览器支持）
+        stream.getVideoTracks()[0].addEventListener('ended', () =>
         {
-          // e.session.sendFloorStatus(6);
           document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
         });
 
-        const timer = setInterval(() => 
+        // 方式二：定时轮询兜底（部分被动场景 ended 事件不触发）
+        const timer = setInterval(() =>
         {
-          if (stream.getVideoTracks()[0].readyState === 'ended') 
+          if (stream.getVideoTracks()[0].readyState === 'ended')
           {
-            // e.session.sendFloorStatus(6);
             document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
             clearInterval(timer);
           }
         }, 100);
 
+        // 双流模式下清空辅助视频区
         document.querySelector('#remoteVideo2').srcObject = null;
         document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
       })
-      .catch((error) => 
+      .catch((error) =>
       {
-        if (error.message && error.message.indexOf('user gesture handler') !== -1) 
+        // Safari 浏览器需用户手势才能触发屏幕分享
+        if (error.message && error.message.indexOf('user gesture handler') !== -1)
         {
           safari_r = true;
           setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
@@ -1485,36 +1782,34 @@ ua.on('newRTCSession', function(e)
 
         console.warn('error: ', error);
         setStatus(error.message);
-        // e.session.sendFloorStatus(6);
       });
   };
 
-  document.querySelector('#screenShareD_iOS').onclick = function() 
+  /**
+   * screenShareD_iOS — Safari 屏幕分享补救按钮
+   *
+   * 仅在 safari_r 为 true 时有效，作为用户手势触发屏幕分享。
+   */
+  document.querySelector('#screenShareD_iOS').onclick = function()
   {
-    if (safari_r) 
+    if (safari_r)
     {
       safari_r = false;
       e.session.share('screen', null, null, true, true)
-        .then((stream) => 
+        .then((stream) =>
         {
           document.querySelector('#screen').srcObject = stream;
           document.querySelector('#screen').classList = 'mh-100 mw-100';
 
-          // 演示用
-          // e.session.sendFloorStatus(3);
-
-          // 部分被动场景可能无法触发ended事件，集成时如果必要可以考虑定时获取状态更新页面
-          stream.getVideoTracks()[0].addEventListener('ended', () => 
+          stream.getVideoTracks()[0].addEventListener('ended', () =>
           {
-            // e.session.sendFloorStatus(6);
             document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
           });
 
-          const timer = setInterval(() => 
+          const timer = setInterval(() =>
           {
-            if (stream.getVideoTracks()[0].readyState === 'ended') 
+            if (stream.getVideoTracks()[0].readyState === 'ended')
             {
-              // e.session.sendFloorStatus(6);
               document.querySelector('#screen').classList = 'mh-100 mw-100 hide';
               clearInterval(timer);
             }
@@ -1523,101 +1818,113 @@ ua.on('newRTCSession', function(e)
           document.querySelector('#remoteVideo2').srcObject = null;
           document.querySelector('#remoteVideo2').classList = 'mh-100 mw-100 hide';
         })
-        .catch((err) => 
+        .catch((err) =>
         {
           console.warn('err: ', err);
-          // e.session.sendFloorStatus(6);
         });
     }
   };
 
   /**
-   * 分享页面元素
+   * formShare / formShareD — 分享 HTML 元素
    *
-   * 分享页面元素依赖 html2canvas.js
+   * 依赖 html2canvas.js 将 DOM 元素渲染为视频流。
+   * D 后缀表示双流模式。
    */
-  document.querySelector('#formShare').onclick = function() 
+  document.querySelector('#formShare').onclick = function()
   {
     e.session.share('html', '#ele', html2canvas);
   };
-  document.querySelector('#formShareD').onclick = function() 
+  document.querySelector('#formShareD').onclick = function()
   {
     e.session.share('html', '#ele', html2canvas, true);
   };
 
   /**
-   * 分享图片
+   * picShare / picShareD — 分享图片
+   *
+   * 将图片元素作为视频流分享。D 后缀表示双流模式。
    */
-  document.querySelector('#picShare').onclick = function() 
+  document.querySelector('#picShare').onclick = function()
   {
     e.session.share('pic', '#pic_s', null);
   };
-  document.querySelector('#picShareD').onclick = function() 
+  document.querySelector('#picShareD').onclick = function()
   {
     e.session.share('pic', '#pic_s', null, true);
   };
 
   /**
-   * 分享视频
+   * videoShare / videoShareD — 分享视频元素
+   *
+   * 将正在播放的 video 元素作为视频流分享。
+   * 需要视频已在播放状态。D 后缀表示双流模式。
    */
-  document.querySelector('#videoShare').onclick = function() 
+  document.querySelector('#videoShare').onclick = function()
   {
-    // 分享视频需要视频在播放状态
     document.querySelector('#video_s').play()
-      .then(() => 
+      .then(() =>
       {
         e.session.share('video', '#video_s', null);
       });
   };
-  document.querySelector('#videoShareD').onclick = function() 
+  document.querySelector('#videoShareD').onclick = function()
   {
-    // 分享视频需要视频在播放状态
     document.querySelector('#video_s').play()
-      .then(() => 
+      .then(() =>
       {
         e.session.share('video', '#video_s', null, true);
       });
   };
 
   /**
-   * 停止分享
+   * stopShare — 停止分享
+   *
+   * 停止后延迟 300ms 恢复本地/远端媒体渲染。
    */
-  document.querySelector('#stopShare').onclick = function() 
+  document.querySelector('#stopShare').onclick = function()
   {
     e.session.unShare();
 
-    setTimeout(() => 
+    setTimeout(() =>
     {
-      // 获取媒体流
       getStreams(e.session.connection);
     }, 300);
   };
 
   /**
-   * 发送 DTMF
+   * dtmf — 发送 DTMF 按键
+   *
+   * 使用 RFC2833 方式传输，通过按键文本确定 tone。
    */
-  document.querySelector('#dtmf').onclick = function(d) 
+  document.querySelector('#dtmf').onclick = function(d)
   {
     e.session.sendDTMF(d.target.innerText, { 'transportType': 'RFC2833' });
   };
 
   /**
-   * 通话种推送消息
+   * sendInfo — 通话中推送消息
+   *
+   * 通过 SIP INFO 发送自定义 JSON 数据。
+   * contentType 为 text/plain。
    */
-  document.querySelector('#sendInfo').onclick = function() 
+  document.querySelector('#sendInfo').onclick = function()
   {
-    // 注意： contentType 必填，一般用 text/plain 发送字符串
     e.session.sendInfo('text/plain', JSON.stringify(document.querySelector('#info').value));
   };
 
   /**
-   * 对远端媒体截图
+   * capture — 对远端视频截图
+   *
+   * 将当前远端视频帧绘制到 Canvas 上。
+   * 分辨率优先取实际视频分辨率，回退到 CSS 尺寸，再回退到默认 640x360。
    */
-  document.querySelector('#capture').onclick = function() 
+  document.querySelector('#capture').onclick = function()
   {
     const canvas = document.getElementById('captureView');
     const ctx = canvas.getContext('2d');
     const videoEl = $('#remoteVideo')[0];
+    // 优先取实际视频分辨率，回退到 CSS 尺寸，最后回退到默认值
     const frameW = videoEl.videoWidth || videoEl.clientWidth || 640;
     const frameH = videoEl.videoHeight || videoEl.clientHeight || 360;
 
@@ -1636,19 +1943,22 @@ ua.on('newRTCSession', function(e)
 
 
 /**
- * 测试用
+ * testBtn — 测试按钮：枚举设备信息
+ *
+ * 列出所有媒体设备及其能力（capabilities），用于调试。
  */
-document.querySelector('#testBtn').onclick = function() 
+document.querySelector('#testBtn').onclick = function()
 {
   navigator.mediaDevices.enumerateDevices()
-    .then((devices) => 
+    .then((devices) =>
     {
       const dev = [];
 
-      devices.forEach((device) => 
+      devices.forEach((device) =>
       {
         dev.push(device);
-        if (typeof device.getCapabilities === 'function') 
+        // 如果设备支持 getCapabilities，一并输出
+        if (typeof device.getCapabilities === 'function')
         {
           dev.push(device.getCapabilities());
           console.warn(device);
@@ -1659,14 +1969,24 @@ document.querySelector('#testBtn').onclick = function()
     });
 };
 
-// 部分场景视频卡死需要重新播放
-document.querySelector('.resume').onclick = function() 
+/**
+ * resume — 恢复所有视频播放
+ *
+ * 部分场景下视频可能因浏览器策略卡死，需要手动恢复播放。
+ */
+document.querySelector('.resume').onclick = function()
 {
   document.querySelectorAll('video').forEach((video) => video.play().catch());
 };
 
-// useUpdate
-document.querySelector('#useupdate').onchange = function() 
+/**
+ * useupdate — 音视频升级策略选择
+ *
+ * 控制音视频切换时使用 update（re-INVITE 更新）还是 reInvite（全新 INVITE）。
+ * - 'update': 使用 SIP UPDATE 方法
+ * - 'reInvite': 使用 re-INVITE
+ */
+document.querySelector('#useupdate').onchange = function()
 {
   this.options[this.selectedIndex].value !== 'update' ? useUpdate = false : useUpdate = true;
   console.log(this.options[this.selectedIndex]);
@@ -1674,44 +1994,67 @@ document.querySelector('#useupdate').onchange = function()
 };
 
 /**
- * 发起呼叫
- * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
+ * 发起呼叫（核心函数）
+ *
+ * @param {string} type - 呼叫类型：
+ *   - 空/默认: 音频模式
+ *   - 'video': 视频模式
+ *   - 'onlyVideo': 纯视频模式（不采集麦克风）
+ *   - 'screen': 屏幕分享模式
+ *   - 'callnull': 空音视频模式
+ *   - 'callnullaudio': 空音频模式
+ *   - 'callnullvideo': 空视频模式
+ * @param {string} direction - 媒体方向: 'sendonly'（仅发送）或 'sendrecv'（双向，默认）
+ * @param {MediaStream} mediaStream - 自定义媒体流（优先于 mediaConstraints）
+ *
+ * 处理流程：
+ * 1. 检查注册状态
+ * 2. 关闭虚拟背景预览
+ * 3. 构建呼叫选项（随路数据、媒体约束、设备选择等）
+ * 4. 根据 type 参数定制媒体流
+ * 5. 发起 SIP 呼叫并处理早期事件
  */
-async function call(type, direction, mediaStream) 
+async function call(type, direction, mediaStream)
 {
+  // 重置 DTMF telephone-event 负载类型
   telephone_event_pt = null;
+  // 重置录音实例
   recorder = undefined;
+  // 重置为前置摄像头
   camFlag = true;
 
-  if (!ua.isRegistered()) 
+  // ---- 前置检查：必须已注册 ----
+  if (!ua.isRegistered())
   {
     setStatus('请注册成功后呼叫');
 
     return;
   }
 
+  // ---- 关闭虚拟背景预览，避免与通话冲突 ----
   if (virtualBackgroundPreviewActive)
   {
     await stopVirtualBackgroundPreview({ restoreSessionPreview: false });
     setStatus('已关闭本端虚拟背景演示，开始发起通话');
   }
 
+  // ---- 终止已有会话 ----
   rtcSession && rtcSession.terminate();
 
+  // ---- 构建呼叫选项 ----
   options = {
-    // 呼叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
+    // 随路数据：X-Data（业务数据）、X-UA（设备信息）、X-Direction（媒体方向）
     extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || 'sendrecv'}` ],
-    // cMode         : 'paphone',
     extraFeatures : extraFeatures,
     pcConfig      : pcConfig
   };
 
+  // ---- 附加媒体特效合成器配置 ----
   const composerOptions = buildCallMediaEffectsComposerOptions();
 
   if (composerOptions)
   {
     options.mediaEffectsComposer = composerOptions;
-    // 当前示例统一使用 mediaEffectsComposer 命名。
   }
 
   // options = {
@@ -1750,38 +2093,48 @@ async function call(type, direction, mediaStream)
   //   }
   // };
 
-  if (direction == 'sendonly') 
+  // ---- 媒体方向控制 ----
+  if (direction == 'sendonly')
   {
+    // 仅发送模式：不接收远端视频
     options['rtcOfferConstraints'] = { offerToReceiveAudio: true, offerToReceiveVideo: false };
-    if (type === 'onlyVideo') 
+    // 纯视频 + 仅发送：音频也不接收
+    if (type === 'onlyVideo')
     {
       options['rtcOfferConstraints'] = { offerToReceiveAudio: false, offerToReceiveVideo: false };
     }
   }
 
-  if (mediaStream) 
+  // ---- 媒体流选择：自定义流优先于媒体约束 ----
+  if (mediaStream)
   {
+    // 使用传入的自定义媒体流
     options['mediaStream'] = mediaStream;
   }
-  else 
+  else
   {
+    // 使用媒体约束让浏览器自动采集
     options['mediaConstraints'] = {
       audio :
       {
         sampleRate   : 48000,
         channelCount : 1
       },
+      // 仅 video 和 onlyVideo 类型需要视频
       video : (type === 'video' || type === 'onlyVideo') ? videoConstraints : false
     };
   }
 
-  if (type === 'screen') 
+  // ---- 屏幕分享模式：采集屏幕 + 麦克风 ----
+  if (type === 'screen')
   {
     await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false })
-      .then(async(stream) => 
+      .then(async(stream) =>
       {
+        // 同时获取麦克风音频流
         const audioStream = await navigator.mediaDevices.getUserMedia({ audio: options['mediaConstraints'].audio, video: false });
 
+        // 合并屏幕视频 + 麦克风音频
         cusMediaStream.addTrack(stream.getVideoTracks()[0]);
         cusMediaStream.addTrack(audioStream.getAudioTracks()[0]);
         delete options['mediaConstraints'];
@@ -1789,123 +2142,126 @@ async function call(type, direction, mediaStream)
       });
   }
 
-  if (type === 'callnull' || type === 'callnullaudio' || type === 'callnullvideo') 
+  // ---- 空媒体模式：使用静默/黑屏占位轨道 ----
+  if (type === 'callnull' || type === 'callnullaudio' || type === 'callnullvideo')
   {
     const tmpStream = new MediaStream();
 
-    if (type === 'callnullaudio' || type === 'callnull') 
+    // callnullaudio 或 callnull：使用静默音频轨道
+    if (type === 'callnullaudio' || type === 'callnull')
     {
       const emptyTrack = await CRTC.Utils.generateAnEmptyAudioTrack();
 
-      // 自定义音频
       tmpStream.addTrack(emptyTrack.audioTrack, tmpStream);
     }
 
+    // 生成黑色占位视频轨道（全局复用，仅首次创建）
     blackVideo || (blackVideo = CRTC.Utils.generateAnBlackVideoTrack({ svgSource: no_camera_svg, width: videoConstraints.width, height: videoConstraints.height, fps: videoConstraints.fps }));
 
     window.novideo = blackVideo;
 
-    // 自定义视频
+    // callnullvideo 或 callnull：附加黑屏视频轨道
     (type === 'callnullvideo' || type === 'callnull') && tmpStream.addTrack(novideo.videoTrack, tmpStream);
 
     options['mediaStream'] = tmpStream;
 
-    // 系统麦克风和摄像头
+    // 同时指定媒体约束作为 fallback（系统麦克风和摄像头）
     options['mediaConstraints'] = {
       audio : type === 'callnullvideo' ? true : false,
       video : type === 'callnullaudio' ? videoConstraints : true
     };
   }
 
-  if (type === 'onlyVideo') 
+  // ---- 纯视频模式：关闭音频采集 ----
+  if (type === 'onlyVideo')
   {
     options.mediaConstraints.audio = false;
   }
 
-  // if (mix)
-  // {
-  //   options.mediaStream = await mix.getOutput({ type: 'audio' });
-  // }
-
   console.log('op: ', options);
 
-  try 
+  // ---- 发起 SIP 呼叫 ----
+  try
   {
+    // 确定被叫号码：优先使用 B2B 转接的 callee，否则取输入框值
     const number = callee || document.querySelector('#callee').value;
 
-    if (selectCamera && options.mediaConstraints && options.mediaConstraints.video) 
+    // ---- 应用选中的摄像头设备 ----
+    if (selectCamera && options.mediaConstraints && options.mediaConstraints.video)
     {
       options.mediaConstraints.video.deviceId = { exact: selectCamera };
     }
 
-    if (selectMic && options.mediaConstraints && options.mediaConstraints.audio) 
+    // ---- 应用选中的麦克风设备 ----
+    if (selectMic && options.mediaConstraints && options.mediaConstraints.audio)
     {
       if (typeof options.mediaConstraints.audio === 'object')
       {
+        // 音频约束是对象，直接附加 deviceId
         options.mediaConstraints.audio.deviceId = { exact: selectMic };
       }
       else
       {
+        // 音频约束是布尔值，需要构造对象
         options.mediaConstraints.audio = { deviceId: { exact: selectMic } };
       }
     }
 
+    // ---- 重新构建媒体效果和降噪配置（使用最新的 UI 选择） ----
     options.mediaEffectsComposer = buildCallMediaEffectsComposerOptions();
     options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
 
     remoteNo = number;
 
+    // 发起 SIP 呼叫
     const session = await ua.call(`${number}@${sipDomain}`, options);
 
     console.warn('sessionID: ', session.id);
 
-
-    // 默认远端无回铃音
+    // ---- 远端回铃音（早期媒体）处理 ----
+    // 默认假设无远端回铃音
     earlyMedia = false;
 
-    // 播放远端的回铃音
-    session.connection.ontrack = function(event) 
+    session.connection.ontrack = function(event)
     {
-      if (event.track.kind === 'audio') 
+      // 仅处理音频轨道（回铃音）
+      if (event.track.kind === 'audio')
       {
-        // 收到远端媒体则设置远端回铃音
+        // 收到远端音频媒体，说明存在回铃音
         earlyMedia = true;
 
+        // 将远端音频渲染到音频元素
         remoteAudio.srcObject = event.streams[0];
 
-        /**
-       * 兼容chrome
-       * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-       * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-       */
+        // Chrome 自动播放策略兼容：必须 catch 否则可能抛出 NotAllowedError
         remoteAudio.play()
           .catch(() => { });
       }
     };
 
-    // 外呼未触发newRTCSession前取消呼叫
-    document.querySelector('#cancel').onclick = function() 
+    // ---- 外呼阶段取消按钮（newRTCSession 触发前有效） ----
+    document.querySelector('#cancel').onclick = function()
     {
       closeIncomingCallNotification();
-      try 
+      try
       {
         session.terminate();
       }
-      catch (error) 
+      catch (error)
       {
-        if (error.message === 'Invalid status: 8' || error.message === 'Invalid status: 7') 
+        // SIP 状态 7/8 表示会话已结束/已终止，可忽略
+        if (error.message === 'Invalid status: 8' || error.message === 'Invalid status: 7')
         {
           console.warn('ended');
         }
         console.warn(error.message);
       }
 
-      // session.terminate();
-      // 关闭无设备的黑屏
+      // 清理黑屏视频资源
       blackVideo && blackVideo.cleanup();
 
-      // 兼容mcu等候室用
-      cloneStream && cloneStream.getTracks().forEach((track) => 
+      // 兼容 MCU 等候室：停止克隆流的所有轨道
+      cloneStream && cloneStream.getTracks().forEach((track) =>
       {
         track.stop();
         localVideo.srcObject = null;
@@ -1913,138 +2269,145 @@ async function call(type, direction, mediaStream)
 
       cloneStream = null;
     };
-
   }
-  catch (error) 
+  catch (error)
   {
     console.warn(`name: ${error.name}, message: ${error.message}`);
   }
 
-
-  // 兼容iOS
-  if (optionsTimer) 
+  // ---- iOS 保活机制 ----
+  // iOS 设备在后台时 WebSocket 可能被系统挂起，
+  // 定时发送 OPTIONS 请求保持信令通道活跃
+  if (optionsTimer)
   {
     clearInterval(optionsTimer);
   }
 
-  if (navigator.userAgent.indexOf('iPhone') != -1) 
+  if (navigator.userAgent.indexOf('iPhone') != -1)
   {
-    optionsTimer = setInterval(() => 
+    optionsTimer = setInterval(() =>
     {
       ua.sendOptions(`sip_ping@${sipDomain}`);
     }, 3000);
   }
-
 }
 
 /**
- * 获取发送和接收的音视频媒体流，并渲染到DOM
+ * 获取并渲染本地和远端媒体流
  *
- * @param {RTCPeerConnection} pc 用户获取媒体流的 RTCPeerConnection 对象
+ * @param {RTCPeerConnection} pc - 用于获取媒体流的 RTCPeerConnection 实例
+ *
+ * 处理流程：
+ * 1. 从连接中提取本地和远端流
+ * 2. 克隆本地音视频轨道构造新的 MediaStream（兼容 MCU 等候室）
+ * 3. 渲染远端音频（延迟 100ms 适配安卓微信无声问题）
+ * 4. 渲染远端视频（监听 ended 清理残留黑框）
+ * 5. 统一播放（兼容 Chrome 自动播放策略）
  */
-function getStreams(pc) 
+function getStreams(pc)
 {
-  // 本地媒体流
   const localStream = CRTC.Utils.getStreams(pc, 'local');
-  // 远端媒体流
   const remoteStream = CRTC.Utils.getStreams(pc, 'remote');
 
-  // const audioTrack = localStream.audioStream.getAudioTracks()>0 ? localStream.audioStream.getAudioTracks()[0].clone():null;
-  // const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0].clone() : null;
+  // 提取本地音视频轨道
   const audioTrack = localStream.audioStream.getAudioTracks() > 0 ? localStream.audioStream.getAudioTracks()[0] : null;
   const videoTrack = (localStream.videoStream.getVideoTracks().length > 0) ? localStream.videoStream.getVideoTracks()[0] : null;
   const mediaStreamArray = [];
 
   let newCloneStream;
 
-  if (videoTrack) 
+  // 优先放入视频轨道，其次音频轨道
+  if (videoTrack)
   {
     mediaStreamArray.push(videoTrack);
   }
-  else if (audioTrack) 
+  else if (audioTrack)
   {
     mediaStreamArray.push(audioTrack);
   }
 
-  if (mediaStreamArray.length > 0) 
+  // 构建新的克隆媒体流
+  if (mediaStreamArray.length > 0)
   {
-    // 本地视频
     newCloneStream = new MediaStream(mediaStreamArray);
 
+    // 仅当流发生变化时才更新 srcObject
     if (bindMediaStreamIfChanged(localVideo, newCloneStream))
     {
-      newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function() 
+      // 监听轨道结束事件，清理残留的 video 黑框
+      newCloneStream.getTracks().length > 0 && newCloneStream.getTracks()[0].addEventListener('ended', function()
       {
-        // 特殊情况下清理页面残留的video黑框
         localVideo.srcObject = null;
       });
     }
   }
 
-  // 停止旧的媒体流
-  if (cloneStream) 
+  // ---- 清理旧的克隆流 ----
+  if (cloneStream)
   {
-    if (!isRefer) 
+    // 呼叫转移场景不清理旧的克隆流
+    if (!isRefer)
     {
       // cloneStream.getTracks().forEach((track) => track.stop());
     }
   }
   isRefer = false;
 
-  // 更新全局的 cloneStream 引用
+  // 更新全局 cloneStream 引用
   newCloneStream && (cloneStream = newCloneStream);
 
-  // 远端音频
-  // 适配安卓微信部分情况下无声音问题 trackId
-  setTimeout(() => 
+  // ---- 渲染远端音频 ----
+  // 延迟 100ms 适配安卓微信部分场景下无声音问题
+  setTimeout(() =>
   {
     bindMediaStreamIfChanged(remoteAudio, remoteStream.audioStream);
 
-    /**
-     * 兼容chrome
-     * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-     * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-     */
+    // Chrome 自动播放策略兼容
     remoteAudio.play()
       .catch(() => { });
   }, 100);
-  // 远端视频
+
+  // ---- 渲染远端视频 ----
   if (bindMediaStreamIfChanged(remoteVideo, remoteStream.mediaStream))
   {
-    remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function() 
+    // 监听视频轨道结束，清理残留的 video 黑框
+    // 有临时会话时不清理（呼叫转接场景）
+    remoteStream.videoStream.getVideoTracks().length > 0 && remoteStream.videoStream.getVideoTracks()[0].addEventListener('ended', function()
     {
-      // 特殊情况下清理页面残留的video黑框
-      if (!tmpSession) 
+      if (!tmpSession)
       {
         remoteVideo.srcObject = null;
       }
     });
   }
 
-  /**
-   * 兼容chrome
-   * https://developer.chrome.com/blog/play-request-was-interrupted/#error
-   * https://bugs.chromium.org/p/chromium/issues/detail?id=718647
-   */
+  // ---- 统一播放所有媒体元素 ----
+  // 兼容 Chrome 自动播放策略：play() 可能返回被拒绝的 Promise
   Promise.all([ localVideo.play(), remoteAudio.play(), remoteVideo.play() ])
     .then(() => { })
     .catch(() => { });
 }
 
-function stopStreams() 
+/**
+ * 停止所有媒体流渲染
+ *
+ * 将本地视频、远端视频、远端音频的 srcObject 清空。
+ * 通常在通话保持/结束时调用，配合 UI 状态切换。
+ */
+function stopStreams()
 {
-  // 停止媒体流，这里可以切换页面UI
   remoteVideo.srcObject = null;
   remoteAudio.srcObject = null;
   localVideo.srcObject = null;
 }
 
 /**
- * 获取url参数
+ * 从 URL 查询参数中提取值
  *
- * @param {string} name - 参数名，区分大小写
+ * @param {string} name - 参数名（区分大小写）
+ * @returns {string|null} 参数值，不存在时返回 null
  */
-function handleGetQuery(name) 
+function handleGetQuery(name)
 {
   const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`, 'i');
   const r = window.location.search.substr(1).match(reg);
@@ -2055,11 +2418,13 @@ function handleGetQuery(name)
 }
 
 /**
- * 输出显示状态
+ * 向页面状态栏追加文本
  *
- * @param {string} text - 输出的内容
+ * @param {string} text - 要输出的内容
+ *
+ * 每次调用追加一行，并自动滚动到底部。
  */
-function setStatus(text) 
+function setStatus(text)
 {
   const statusDom = document.querySelector('#status');
 
@@ -2067,112 +2432,149 @@ function setStatus(text)
   statusDom.scrollTop = statusDom.scrollHeight;
 }
 
+/**
+ * 关闭来电系统通知
+ *
+ * 清除活跃的 Notification 实例并重置引用。
+ */
 function closeIncomingCallNotification()
 {
-  if (incomingCallNotification) 
+  if (incomingCallNotification)
   {
     incomingCallNotification.close();
     incomingCallNotification = null;
   }
 }
 
+/**
+ * 显示来电系统通知（Browser Notification API）
+ *
+ * @param {string} mode - 呼叫模式: 'audio' | 'video'
+ * @param {string} fromNo - 主叫号码
+ *
+ * 处理流程：
+ * 1. 检查浏览器是否支持 Notification API（不支持则记录一次日志）
+ * 2. 已授权 → 直接显示
+ * 3. 未授权（default）→ 请求权限后显示
+ * 4. 已拒绝（denied）→ 不处理
+ */
 async function showIncomingCallNotification(mode, fromNo)
 {
-  if (typeof window === 'undefined' || !('Notification' in window)) 
+  // 浏览器不支持 Notification API
+  if (typeof window === 'undefined' || !('Notification' in window))
   {
-    if (!notificationUnsupportedLogged) 
+    // 只记录一次避免重复日志
+    if (!notificationUnsupportedLogged)
     {
       notificationUnsupportedLogged = true;
       setStatus('当前浏览器不支持系统通知');
     }
-    
+
     return;
   }
 
   const title = `收到${mode === 'video' ? '视频' : '音频'}呼叫`;
   const body = fromNo ? `来自 ${fromNo}，点击返回页面处理` : '点击返回页面处理';
-  const show = () => 
+
+  // 显示通知的内部函数
+  const show = () =>
   {
-    try 
+    try
     {
+      // 先关闭上一个通知，避免重复堆积
       closeIncomingCallNotification();
       incomingCallNotification = new Notification(title, {
         body,
-        tag                : 'crtc-incoming-call',
-        renotify           : true,
-        requireInteraction : true,
+        tag                : 'crtc-incoming-call', // 相同 tag 会覆盖旧通知
+        renotify           : true, // 允许重复提醒
+        requireInteraction : true, // 需要用户交互才消失
         icon               : './imgs/logo.svg'
       });
 
+      // 点击通知 → 聚焦窗口并关闭通知
       incomingCallNotification.onclick = function()
       {
         window.focus();
         closeIncomingCallNotification();
       };
     }
-    catch (error) 
+    catch (error)
     {
       setStatus(`系统通知失败: ${error.message || error}`);
     }
   };
 
-  if (Notification.permission === 'granted') 
+  // 已授权 → 直接显示
+  if (Notification.permission === 'granted')
   {
     show();
-    
+
     return;
   }
 
-  if (Notification.permission === 'default') 
+  // 未授权 → 请求权限
+  if (Notification.permission === 'default')
   {
-    try 
+    try
     {
       const permission = await Notification.requestPermission();
 
       permission === 'granted' && show();
     }
-    catch (error) 
+    catch (error)
     {
       setStatus(`系统通知授权失败: ${error.message || error}`);
     }
   }
+  // denied → 不处理
 }
 
-// 检查摄像头状态
-async function checkCameraStatus() 
+/**
+ * 检查摄像头可用性
+ *
+ * @returns {Promise<string>} 描述摄像头状态的文本
+ *
+ * 处理流程：
+ * 1. 枚举设备检查是否存在视频输入设备
+ * 2. 尝试访问摄像头验证权限
+ * 3. 根据错误类型返回对应的中文描述
+ */
+async function checkCameraStatus()
 {
-  try 
+  try
   {
-    // 先检查是否有摄像头设备
+    // 第一步：枚举设备检查是否有摄像头硬件
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter((device) => device.kind === 'videoinput');
 
-    if (videoDevices.length === 0) 
+    if (videoDevices.length === 0)
     {
       return '系统没有摄像头';
     }
 
-    // 尝试访问摄像头
-    await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) => 
+    // 第二步：尝试访问摄像头验证权限
+    await navigator.mediaDevices.getUserMedia({ video: true }).then(async(mediastream) =>
     {
-      mediastream && mediastream.getTracks().forEach((t) => t.stop()); 
+      mediastream && mediastream.getTracks().forEach((t) => t.stop());
     });
     haveACamera = true;
-    
-    return '摄像头可以正常使用';
 
+    return '摄像头可以正常使用';
   }
-  catch (error) 
+  catch (error)
   {
-    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') 
+    // NotFoundError: 无摄像头硬件
+    if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError')
     {
       return '系统没有摄像头';
     }
-    else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') 
+    // NotAllowedError: 用户拒绝了摄像头权限
+    else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
     {
       return '用户拒绝了摄像头权限';
     }
-    else 
+    // 其他未知错误
+    else
     {
       return `摄像头错误: ${error.name}`;
     }
@@ -2180,16 +2582,20 @@ async function checkCameraStatus()
 }
 
 /**
- * 更新摄像头下拉列表
+ * 更新摄像头和麦克风下拉列表
+ *
+ * 从设备枚举中获取可用设备并填充到对应的 select 元素。
+ * 移动端通常只有前置/后置摄像头，PC 端可能有多个外接设备。
  */
-async function updateDevices() 
+async function updateDevices()
 {
+  // 更新摄像头列表
   await CRTC.Utils.getCameras()
-    .then((cameras) => 
+    .then((cameras) =>
     {
       let option = '<option selected value="">切换摄像头</option>';
 
-      cameras.forEach((device) => 
+      cameras.forEach((device) =>
       {
         option += `<option value="${device.deviceId}">${device.label}</option>`;
       });
@@ -2197,13 +2603,13 @@ async function updateDevices()
       document.querySelector('#cameras').innerHTML = option;
     });
 
-  // 移动端不支持切换麦克风
+  // 更新麦克风列表（注意：移动端通常不支持切换麦克风）
   await CRTC.Utils.getMicrophones()
-    .then((microphones) => 
+    .then((microphones) =>
     {
       let menus = '<option selected value="">切换麦克风</option>';
 
-      microphones.forEach((device) => 
+      microphones.forEach((device) =>
       {
         menus += `<option value="${device.deviceId}">${device.label}</option>`;
       });
@@ -2213,80 +2619,94 @@ async function updateDevices()
 }
 
 /**
- * 启动初始化
+ * 应用启动初始化
+ *
+ * 执行顺序：
+ * 1. 输出 SDK 版本号
+ * 2. 更新摄像头/麦克风设备列表
+ * 3. 启动 UA（连接信令服务器并注册）
+ * 4. 设置 10 秒超时检测网络/注册状态
+ * 5. 绑定各项呼叫按钮事件
+ * 6. 监听设备变化和页面卸载
  */
-function start() 
+function start()
 {
-  // 输出SDK版本号
   setStatus(`${CRTC.version}`);
 
+  // 异步加载设备列表
   updateDevices()
     .catch((error) =>
     {
       setStatus(`设备列表加载失败: ${error.name || error.message || 'unknown'}`);
     });
 
-  // 初始化断网提示相关
+  // 初始化断网提示相关状态
   handleStop = false;
   disconnectedBy = null;
   isShowUI = false;
 
-  // 启动UA，连接信令服务器并注册
+  // 启动 UA：连接 WebSocket 信令并执行 SIP 注册
   ua.start();
 
-  setTimeout(() => 
+  // 10 秒后检测网络连接和注册状态
+  setTimeout(() =>
   {
-    if (!ua.isConnected() || !ua.isRegistered()) 
+    if (!ua.isConnected() || !ua.isRegistered())
     {
       ua.stop();
       console.log('网络连接异常或未注册成功');
     }
   }, 10000);
 
-  // 发起无音视频呼叫
-  document.querySelector('#callNull').onclick = function() 
+  // =====================================================================
+  // 呼叫按钮绑定
+  // =====================================================================
+
+  // 发起无音视频呼叫（静默音频 + 黑屏视频）
+  document.querySelector('#callNull').onclick = function()
   {
-    // 设置当前通话模式为音频模式
     call('callnull');
   };
 
-  // 发起无麦克风呼叫
-  document.querySelector('#callNullAudio').onclick = function() 
+  // 发起无麦克风呼叫（静默音频 + 真实摄像头）
+  document.querySelector('#callNullAudio').onclick = function()
   {
-    // 设置当前通话模式为音频模式
     call('callnullaudio');
   };
 
-  // 发起无摄像头呼叫
-  document.querySelector('#callNullVideo').onclick = function() 
+  // 发起无摄像头呼叫（真实麦克风 + 黑屏视频）
+  document.querySelector('#callNullVideo').onclick = function()
   {
     call('callnullvideo');
   };
 
-  // 发起音频呼叫
-  document.querySelector('#call').onclick = function() 
+  // 发起标准音频呼叫
+  document.querySelector('#call').onclick = function()
   {
-    // 设置当前通话模式为音频模式
     call();
   };
 
-  // 发起共享桌面视频呼叫
-  document.querySelector('#callScreen').onclick = function() 
+  // 发起屏幕分享呼叫
+  document.querySelector('#callScreen').onclick = function()
   {
-    // 设置当前通话模式为视频模式
     call('screen');
   };
 
-  // 发起视频呼叫
-  document.querySelector('#callVideo').onclick = function() 
+  // 发起标准视频呼叫
+  document.querySelector('#callVideo').onclick = function()
   {
-    // 设置当前通话模式为视频模式
     call('video');
   };
 
-  // 发起B2B无音频视频呼叫
-  document.querySelector('#b2bCallVideoOnly').onclick = function() 
+  // =====================================================================
+  // B2B（Back-to-Back）呼叫按钮
+  // 通过服务端 API 获取转接号码，模拟 B2B 场景
+  // =====================================================================
+
+  // B2B 纯视频呼叫（无音频）
+  document.querySelector('#b2bCallVideoOnly').onclick = function()
   {
+    // 第一步：通过服务端 API 获取呼叫 ID
     request({
       url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
       method : 'POST',
@@ -2294,10 +2714,11 @@ function start()
 
       body : { 'caller': document.querySelector('#callee').value }
     })
-      .then((callId) => 
+      .then((callId) =>
       {
         console.warn('cid: ', callId);
 
+        // 第二步：查询呼叫状态获取真实被叫号码
         return request({
           url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/status',
           method : 'POST',
@@ -2306,21 +2727,21 @@ function start()
           body : { 'callId': callId.data.data, 'cmd': 'query' }
         });
       })
-      .then(((callNo) => 
+      .then(((callNo) =>
       {
+        // 解析返回的 stat: "callee&xdata"
         const stat = callNo.data.data.stat.split('&');
 
         xdata = stat[1];
         callee = stat[0];
         console.warn('call: ', callee);
         videoOnly = true;
-        // 设置当前通话模式为视频模式
         call('onlyVideo');
       }));
   };
 
-  // 发起B2B无音频视频单向呼叫
-  document.querySelector('#b2bCallVideoSendonly').onclick = function() 
+  // B2B 纯视频单向呼叫（仅发送）
+  document.querySelector('#b2bCallVideoSendonly').onclick = function()
   {
     request({
       url    : 'https://pro.vsbc.com:5085/b2b/tapi/v1/getInCallIdStr',
@@ -2329,7 +2750,7 @@ function start()
 
       body : { 'caller': document.querySelector('#callee').value }
     })
-      .then((callId) => 
+      .then((callId) =>
       {
         console.warn('cid: ', callId);
 
@@ -2341,7 +2762,7 @@ function start()
           body : { 'callId': callId.data.data, 'cmd': 'query' }
         });
       })
-      .then(((callNo) => 
+      .then(((callNo) =>
       {
         const stat = callNo.data.data.stat.split('&');
 
@@ -2349,77 +2770,98 @@ function start()
         callee = stat[0];
         console.warn('call: ', callee);
         videoOnly = true;
-        // 设置当前通话模式为视频模式
         call('onlyVideo', 'sendonly');
       }));
   };
 
-  // 发起无音频视频呼叫
-  document.querySelector('#callVideoSendonly').onclick = function() 
+  // 发起纯视频呼叫（无音频、双向）
+  document.querySelector('#callVideoSendonly').onclick = function()
   {
     videoOnly = true;
-    // 设置当前通话模式为视频模式
     call('onlyVideo');
   };
 
-  // 发起视频呼叫
-  // document.querySelector('#callVideoSendonly').onclick = function()
-  // {
-  //   // 设置当前通话模式为单向视频模式
-  //   call('onlyVideo', 'sendonly');
-  // };
+  // ---- 系统事件监听 ----
 
-  // 监听系统输入设备变化更新摄像头列表
-  navigator.mediaDevices.addEventListener('devicechange', () => 
+  // 设备变化事件（热插拔摄像头/麦克风时触发）
+  navigator.mediaDevices.addEventListener('devicechange', () =>
   {
+    // 当前不自动刷新设备列表，可按需开启
     // updateDevices();
   });
 
-  // 页面刷新 终止会话，注销ua
-  window.onbeforeunload = function() 
+  // 页面卸载时优雅退出：终止所有会话并注销 UA
+  window.onbeforeunload = function()
   {
     handleStop = true;
     ua.stop();
   };
 }
 
+// =============================================================================
+// 应用入口
+// =============================================================================
+
+// 启动主应用
 start();
+// 初始化媒体效果模块（虚拟背景、AI 降噪、水印等）
 initMediaEffects();
 
-document.addEventListener('visibilitychange', function() 
+// =============================================================================
+// 全局事件监听（会话外）
+// =============================================================================
+
+// 页面可见性变化：回到前台时关闭来电通知
+document.addEventListener('visibilitychange', function()
 {
-  if (document.hidden) 
+  if (document.hidden)
   {
     console.log('页面进入后台');
   }
-  else 
+  else
   {
     closeIncomingCallNotification();
-    // document.querySelectorAll('video').forEach((video) => video.play().catch((err) => console.warn('e: ', err)));
     console.warn('页面回到前台');
   }
 });
 
-
 /**
- * 切换选择的摄像头，session外只是切换选择
+ * cameras — 会话外摄像头选择
+ *
+ * 会话外的摄像头切换仅记录选择，不执行切换操作。
+ * 实际切换在新呼叫发起时通过 selectCamera 变量生效。
  */
-document.querySelector('#cameras').addEventListener('change', function() 
+document.querySelector('#cameras').addEventListener('change', function()
 {
   selectCamera = this.options[this.selectedIndex].value;
   setStatus(`select camera ${this.options[this.selectedIndex].innerText}`);
 });
 
 /**
- * 切换选择的麦克风，session外只是切换选择
+ * mics — 会话外麦克风选择
+ *
+ * 会话外的麦克风切换仅记录选择，不执行切换操作。
+ * 实际切换在新呼叫发起时通过 selectMic 变量生效。
  */
-document.querySelector('#mics').addEventListener('change', function() 
+document.querySelector('#mics').addEventListener('change', function()
 {
   selectMic = this.options[this.selectedIndex].value;
   setStatus(`select mic ${this.options[this.selectedIndex].innerText}`);
 });
 
+// =============================================================================
+// 工具函数
+// =============================================================================
 
+/**
+ * 检查两个 MediaStream 是否拥有相同的轨道集合
+ *
+ * @param {MediaStream} stream - 待比较的媒体流
+ * @param {MediaStreamTrack[]} tracks - 目标轨道数组
+ * @returns {boolean} 轨道集合完全相同时返回 true
+ *
+ * 用于优化 DOM 更新：避免将相同的流重复赋值给 video.srcObject。
+ */
 function hasSameTrackSet(stream, tracks)
 {
   if (!(stream instanceof MediaStream))
@@ -2437,6 +2879,15 @@ function hasSameTrackSet(stream, tracks)
   return currentTracks.every((track, index) => track === tracks[index]);
 }
 
+/**
+ * 仅在流发生变化时更新媒体元素的 srcObject
+ *
+ * @param {HTMLMediaElement} mediaEl - video 或 audio 元素
+ * @param {MediaStream} stream - 目标媒体流
+ * @returns {boolean} 是否执行了更新
+ *
+ * 避免不必要的 srcObject 赋值导致的闪烁或播放中断。
+ */
 function bindMediaStreamIfChanged(mediaEl, stream)
 {
   if (!mediaEl)
@@ -2446,6 +2897,7 @@ function bindMediaStreamIfChanged(mediaEl, stream)
 
   const nextTracks = stream instanceof MediaStream ? stream.getTracks() : [];
 
+  // 轨道集合相同则跳过更新
   if (stream instanceof MediaStream && hasSameTrackSet(mediaEl.srcObject, nextTracks))
   {
     return false;
@@ -2457,10 +2909,16 @@ function bindMediaStreamIfChanged(mediaEl, stream)
 }
 
 /**
- * 判断远端手机系统
+ * 检测远端设备的操作系统类型
  *
- * @param request
+ * @param {object} request - SIP 请求/响应对象
  * @returns {'ios' | 'android' | 'unknown'}
+ *
+ * 检测逻辑：
+ * - 从请求的 User-Agent 和 Server 头中提取信息
+ * - 包含 'ios' 或 'iphone' → iOS
+ * - 两个头都没有 → unknown
+ * - 其余情况默认 → android
  */
 function detectRemoteOS(request)
 {
@@ -2469,20 +2927,19 @@ function detectRemoteOS(request)
     return 'unknown';
   }
 
-  // 获取 header
   const userAgent = request.getHeader('User-Agent') || '';
   const server = request.getHeader('Server') || '';
 
-  // 合并统一判断
+  // 合并两个 header 统一判断
   const headerText = `${userAgent} ${server}`.toLowerCase();
 
-  // 两个 header 都没有
+  // 两个 header 都为空 → 无法判断
   if (!userAgent && !server)
   {
     return 'unknown';
   }
 
-  // iOS 特征
+  // iOS 特征匹配
   if (
     headerText.includes('ios') ||
     headerText.includes('iphone')
@@ -2491,6 +2948,6 @@ function detectRemoteOS(request)
     return 'ios';
   }
 
-  // 其余默认安卓
+  // 其余默认判定为 Android
   return 'android';
 }
