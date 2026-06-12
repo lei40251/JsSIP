@@ -57,179 +57,6 @@ let recorder;
 let incomingCallNotification = null;
 let notificationUnsupportedLogged = false;
 
-// 虚拟背景相关，统一走 MediaEffectsComposer.sources[0].aiVirtualBackground
-let virtualBackgroundType = '';
-let virtualBackgroundPreviewEngine;
-let virtualBackgroundPreviewInputStream;
-let virtualBackgroundPreviewActive = false;
-let virtualBackgroundPreviewPending = false;
-const virtualBackgroundImgs = {
-  img1 : './virtual-background/backgrounds/office.png',
-  img2 : './virtual-background/backgrounds/sky.jpg'
-};
-const AI_VB_TASKS_ROOT = './assets/aivb';
-const AI_VB_ASSET_CONFIG = {
-  moduleUrl   : `${AI_VB_TASKS_ROOT}/vision.js`,
-  wasmBaseUrl : AI_VB_TASKS_ROOT,
-  modelUrl    : `${AI_VB_TASKS_ROOT}/selfie_segmenter_landscape.tflite`
-};
-
-// AI 降噪相关
-let aiNsType = '';
-const AI_NOISE_ASSET_ROOT = './assets/ains';
-let aiNsMonitorStream = null;
-let aiNsMonitorProcessedStream = null;
-let aiNsMonitorProcessor = null;
-let aiNsMonitorActive = false;
-
-// 统一收敛 UI 输入的强度值，避免把非法值直接送进处理器。
-function normalizeAiNsReductionLevel(value)
-{
-  const parsedLevel = parseInt(value, 10);
-
-  return Number.isNaN(parsedLevel) ? 80 : Math.max(0, Math.min(100, parsedLevel));
-}
-
-// 呼叫/接听建链前，从页面读取当前选择的 AiNS 强度。
-function getCurrentAiNsLevel()
-{
-  const levelInput = document.querySelector('#aiNoiseReductionLevel');
-
-  return levelInput ? normalizeAiNsReductionLevel(levelInput.value) : 80;
-}
-
-function updateAiNsMonitorButton()
-{
-  const button = document.querySelector('#toggleAiNsMonitor');
-
-  if (!button)
-  {
-    return;
-  }
-
-  button.innerHTML = aiNsMonitorActive ?
-    '<i class="bi-stop-circle me-1"></i>结束验证' :
-    '<i class="bi-soundwave me-1"></i>开始验证';
-  button.className = aiNsMonitorActive ? 'btn btn-warning' : 'btn btn-outline-warning';
-}
-
-function getAiNsMonitorAudio()
-{
-  return document.querySelector('#aiNoiseMonitorAudio');
-}
-
-function applyAiNsLevelToCurrentCall(level)
-{
-  if (aiNsType !== 'AiNS' || !rtcSession || typeof rtcSession.getAiNoiseSuppression !== 'function')
-  {
-    return false;
-  }
-
-  const aiNsEngine = rtcSession.getAiNoiseSuppression();
-
-  if (!aiNsEngine || typeof aiNsEngine.setSuppressionLevel !== 'function')
-  {
-    return false;
-  }
-
-  aiNsEngine.setSuppressionLevel(level);
-
-  return true;
-}
-
-// 本地验证链路与正式通话链路分开管理，避免相互影响。
-async function stopAiNsMonitor()
-{
-  const monitorAudio = getAiNsMonitorAudio();
-
-  aiNsMonitorActive = false;
-  updateAiNsMonitorButton();
-
-  if (monitorAudio)
-  {
-    monitorAudio.pause();
-    monitorAudio.srcObject = null;
-  }
-
-  if (aiNsMonitorProcessor && typeof aiNsMonitorProcessor.destroy === 'function')
-  {
-    try
-    {
-      await aiNsMonitorProcessor.destroy();
-    }
-    catch (error)
-    {
-      console.warn('stopAiNsMonitor destroy error', error);
-    }
-  }
-
-  if (aiNsMonitorStream)
-  {
-    aiNsMonitorStream.getTracks().forEach((track) => track.stop());
-  }
-
-  aiNsMonitorStream = null;
-  aiNsMonitorProcessedStream = null;
-  aiNsMonitorProcessor = null;
-}
-
-// 仅用于 demo 本地回放验证，便于快速对比 AiNS 前后的主观效果。
-async function applyAiNsMonitorState(forceStatus = false)
-{
-  if (!aiNsMonitorActive || !aiNsMonitorStream)
-  {
-    return;
-  }
-
-  const monitorAudio = getAiNsMonitorAudio();
-  const level = getCurrentAiNsLevel();
-
-  if (!monitorAudio)
-  {
-    return;
-  }
-
-  if (aiNsType === 'AiNS')
-  {
-    if (!aiNsMonitorProcessor)
-    {
-      aiNsMonitorProcessor = new CRTC.AiNSEngine({
-        enabled             : true,
-        preserveOtherTracks : true,
-        noiseReductionLevel : level,
-        assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
-      });
-      aiNsMonitorProcessedStream = await aiNsMonitorProcessor.process(aiNsMonitorStream);
-      monitorAudio.srcObject = aiNsMonitorProcessedStream;
-      await monitorAudio.play();
-    }
-    else
-    {
-      await aiNsMonitorProcessor.setEnabled(true);
-      aiNsMonitorProcessor.setSuppressionLevel(level);
-    }
-
-    setStatus(`本地降噪验证中，当前强度 ${level}`);
-
-    return;
-  }
-
-  if (aiNsMonitorProcessor)
-  {
-    await aiNsMonitorProcessor.destroy();
-    aiNsMonitorProcessor = null;
-    aiNsMonitorProcessedStream = null;
-  }
-
-  monitorAudio.srcObject = aiNsMonitorStream;
-  await monitorAudio.play();
-
-  if (forceStatus)
-  {
-    setStatus('本地麦克风原声验证中（未开启 AI 降噪）');
-  }
-}
-
 const extraFeatures = [];
 
 // let payload;
@@ -240,9 +67,6 @@ const extraFeatures = [];
 const localVideo = document.querySelector('#localVideo');
 const remoteVideo = document.querySelector('#remoteVideo');
 const remoteAudio = document.querySelector('#remoteAudio');
-
-updateAiNsMonitorButton();
-updateVirtualBackgroundPreviewButton();
 
 let cusMediaStream = new MediaStream();
 let blackVideo = null;
@@ -306,27 +130,6 @@ iceTransportPolicy && (pcConfig['iceTransportPolicy'] = iceTransportPolicy);
 pcConfig['iceCandidatePoolSize'] = 10;
 
 pcConfig['bundlePolicy'] = 'max-compat';
-
-// b2b
-// const b2bChannel = new BroadcastChannel('b2bChannel');
-
-// b2bChannel.onmessage = function(event)
-// {
-//   console.log('Tab B 收到数据:', event.data);
-
-//   if (event.data.type === 'toVideo')
-//   {
-//     callee = event.data.data;
-//     console.warn('call: ', callee);
-//     videoOnly = true;
-//     // 设置当前通话模式为视频模式
-//     call('onlyVideo');
-//   }
-//   else if (event.data.type === 'toAudio')
-//   {
-//     document.querySelector('#cancel').click();
-//   }
-// };
 
 // UA 实例
 const ua = new CRTC.UA(configuration);
@@ -469,12 +272,10 @@ ua.on('registrationFailed', function(data)
  * @property {object} request - 本端或远端的请求对象，远端呼入可以在此获取随路数据，呼叫模式等
  */
 ua.on('newRTCSession', function(e) 
-{
-  console.warn('dOS: ', detectRemoteOS(e.request));
-
+{  
   console.warn('nsession: ', e);
-
-
+  
+  console.warn('dOS: ', detectRemoteOS(e.request));
   confirmed = false;
 
   if (tmpSession) 
@@ -532,83 +333,6 @@ ua.on('newRTCSession', function(e)
     // 呼叫VoLTE手机号需要
     noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* goog-remb\r\n/g, ''));
     noremb && (d.sdp = d.sdp.replace(/a=rtcp-fb:\d* transport-cc\r\n/g, ''));
-
-    // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:8');
-
-    // d.sdp = d.sdp.replace(/a=extmap:\d+ urn:3gpp:video-orientation\r\n/g, '');
-    // d.sdp = d.sdp.replace(/a=extmap:.*\r\n/g, '');
-
-    if (d.originator === 'local') 
-    {
-      // 保存浏览器默认payload，适配pa
-      // const payloadRegex = /profile-level-id=([a-zA-Z0-9]{6})/;
-      // payload || (payload = d.sdp.match(payloadRegex)[1]);
-      // const newPayloadRegex = new RegExp(payload, 'g');
-      // // 将sdp的默认payload改为420D0D
-      // d.sdp = d.sdp.replace(newPayloadRegex, '420D0D');
-      // d.sdp = d.sdp.replace(/packetization-mode=0/, 'packetization-mode=1');
-      // d.sdp = d.sdp.replace(/profile-level-id=([a-zA-Z0-9]{6})/g, 'profile-level-id=428028');
-      // d.sdp = d.sdp.replace(/(m=video .*\r\n)/g, '$1b=AS:2048\r\n');
-
-      // d.sdp = d.sdp.replace(/a=rtcp.*nack pli\r\n/g, '');
-
-      // d.sdp = d.sdp.replace(/packetization-mode=0/g, 'packetization-mode=1');
-
-      // d.sdp = d.sdp.replace(/a=extmap:13/, 'a=extmap:2');
-      // a=fmtp:109 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42c01f
-
-      // a=content:slides
-
-      // let videoCount = 10;
-
-      // d.sdp = d.sdp.replace(/(m=video[^\r\n]*)([\r\n]+)/g, (match, videoLine, newline) =>
-      // {
-      //   videoCount++;
-
-      //   return `${videoLine}${newline}a=label:${videoCount}\r\n`;
-      // });
-
-      // d.sdp = d.sdp.replace(/a=floorid:1 m-stream:2\r\n/, 'a=floorid:1 mstrm:12\r\n');
-
-      // d.sdp = `${d.sdp}\r\nm=application 0 RTP/AVP 100\r\na=rtpmap:100 H224/4800\r\n`;
-    }
-    else if (d.originator === 'remote') 
-    {
-      // 适配pa
-      // d.sdp = d.sdp.replace(/profile-level-id=420D0D;.*packetization-mode=1;/g, `level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=${payload}`);
-      // d.sdp = d.sdp.replace(/420D0D/g, payload);
-
-      // d.sdp = d.sdp.replace(/packetization-mode=1/g, 'packetization-mode=0');
-
-      // 端到端用
-      // d.sdp = d.sdp.replace('a=floorctrl:s-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 mstrm:12\r\na=confid:123\r\na=userid:456\r\n');
-      // d.sdp = d.sdp.replace('a=floorctrl:c-only\r\n', 'a=floorctrl:s-only\r\na=floorid:2 m-stream:3\r\n');
-
-      // d.sdp = d.sdp.replace(/SAVPF 106\r\n/g, 'SAVPF 126\r\n');
-      // d.sdp = d.sdp.replace(/a=rtpmap:106/g, 'a=rtpmap:126');
-      // d.sdp = d.sdp.replace(/a=fmtp:106/g, 'a=fmtp:126');
-      // d.sdp = d.sdp.replace(/a=mid:([2-9]|\d{2,})/g, 'a=mid:1');
-      // d.sdp = d.sdp.replace(/a=group:BUNDLE(.*?)(\s)([2-9]|\d{2,})/g, 'a=group:BUNDLE$1$21');
-
-      // m=video 20080 UDP/TLS/RTP/SAVPF 106
-      // b=TIAS:512000
-      // a=rtpmap:106 H264/90000
-      // a=fmtp:106 profile-level-id=42801F;max-br=512;packetization-mode=1
-      // d.sdp = d.sdp.replace(/a=extmap:2/, 'a=extmap:13');
-      // d.sdp = d.sdp.replace(/a=extmap:8 urn:3gpp:video-orientation\r\n/g, '');
-
-      // d.sdp = d.sdp.replace(/(m=video\s+)\d+/, '$10');
-      // d.sdp = d.sdp.replace(
-      //   /(m=video[\s\S]*?)(a=sendrecv|a=sendonly|a=recvonly)/,
-      //   (match, part1) =>
-      //   {
-      //     // part1 是 m=video 到 属性前的所有内容
-      //     return `${part1 }a=inactive`;
-      //   }
-      // );
-
-      // console.warn('d.sdp: ', d.sdp);
-    }
   });
 
   /**
@@ -1295,13 +1019,13 @@ ua.on('newRTCSession', function(e)
         },
         video : false
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true },
-      extraFeatures       : extraFeatures,
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints  : { offerToReceiveAudio: true },
+      extraFeatures        : extraFeatures,
       mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
-      aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
+      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
     });
 
     setStatus('audio answer');
@@ -1317,13 +1041,13 @@ ua.on('newRTCSession', function(e)
         audio : true,
         video : videoConstraints
       },
-      pcConfig            : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
+      pcConfig             : Object.assign(pcConfig, { 'rtcpMuxPolicy': 'negotiate' }),
       // 被叫随路数据携带 X-Data，注意 'X' 大写及 ':' 后面的空格
-      extraHeaders        : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
-      rtcOfferConstraints : { offerToReceiveAudio: true, offerToReceiveVideo: true },
-      extraFeatures       : extraFeatures,
+      extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
+      rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
+      extraFeatures        : extraFeatures,
       mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
-      aiNoiseSuppression  : buildCallAiNoiseSuppressionOptions()
+      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions() 
     });
 
     setStatus('video answer');
@@ -1949,181 +1673,6 @@ document.querySelector('#useupdate').onchange = function()
   setStatus(`${this.options[this.selectedIndex].value === 'update' ? 'useUpdate' : 'useReInvite'}`);
 };
 
-function buildCallMediaEffectsComposerOptions(options = {})
-{
-  const { includeDisabledState = false } = options;
-  const outputMirrorEl = document.getElementById('callMediaEffectsComposerOutputMirror');
-  const outputMirror = Boolean(outputMirrorEl && outputMirrorEl.checked);
-  const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
-  const watermarks = [];
-  const text = String((document.getElementById('callMediaEffectsComposerTextWatermarkText') || {}).value || '').trim();
-
-  if (text)
-  {
-    const textPos = String((document.getElementById('callMediaEffectsComposerTextWatermarkPosition') || {}).value || 'bottom-right');
-    const textSize = (document.getElementById('callMediaEffectsComposerTextWatermarkSize') || {}).value;
-    const textColor = String((document.getElementById('callMediaEffectsComposerTextWatermarkColor') || {}).value || '').trim();
-    const textOpacity = readCallMediaEffectsComposerOpacity(document.getElementById('callMediaEffectsComposerTextWatermarkOpacity'));
-    const textWatermark = {
-      id       : 'call-output-text-watermark',
-      target   : 'output',
-      type     : 'text',
-      text     : text,
-      position : textPos
-    };
-
-    if (String(textSize).trim())
-    {
-      textWatermark.fontSize = Number(textSize);
-    }
-
-    if (textColor)
-    {
-      textWatermark.color = textColor;
-    }
-
-    if (textOpacity !== undefined)
-    {
-      textWatermark.opacity = textOpacity;
-    }
-
-    watermarks.push(textWatermark);
-  }
-
-  const imageUrl = String((document.getElementById('callMediaEffectsComposerImageWatermarkUrl') || {}).value || '').trim();
-
-  if (imageUrl)
-  {
-    const imagePos = String((document.getElementById('callMediaEffectsComposerImageWatermarkPosition') || {}).value || 'bottom-right');
-    const imageWidth = (document.getElementById('callMediaEffectsComposerImageWatermarkWidth') || {}).value;
-    const imageHeight = (document.getElementById('callMediaEffectsComposerImageWatermarkHeight') || {}).value;
-    const imageOpacity = readCallMediaEffectsComposerOpacity(document.getElementById('callMediaEffectsComposerImageWatermarkOpacity'));
-    const imageWatermark = {
-      id       : 'call-output-image-watermark',
-      target   : 'output',
-      type     : 'image',
-      image    : imageUrl,
-      position : imagePos
-    };
-
-    if (String(imageWidth).trim())
-    {
-      imageWatermark.width = Number(imageWidth);
-    }
-
-    if (String(imageHeight).trim())
-    {
-      imageWatermark.height = Number(imageHeight);
-    }
-
-    if (imageOpacity !== undefined)
-    {
-      imageWatermark.opacity = imageOpacity;
-    }
-
-    watermarks.push(imageWatermark);
-  }
-
-  const composerOptions = {};
-
-  if (includeDisabledState)
-  {
-    composerOptions.mirror = outputMirror;
-  }
-  else if (outputMirror)
-  {
-    composerOptions.mirror = true;
-  }
-
-  if (includeDisabledState || watermarks.length)
-  {
-    composerOptions.watermarks = watermarks;
-  }
-
-  if (includeDisabledState || aiVirtualBackground)
-  {
-    composerOptions.sources = [
-      {
-        aiVirtualBackground : aiVirtualBackground || null
-      }
-    ];
-  }
-
-  if (includeDisabledState || outputMirror || watermarks.length || aiVirtualBackground)
-  {
-    composerOptions.enableInsertable = true;
-  }
-
-  if (!includeDisabledState && !outputMirror && !watermarks.length && !aiVirtualBackground)
-  {
-    return null;
-  }
-
-  return composerOptions;
-}
-
-async function applyCurrentComposerSettingsToSession()
-{
-  const sessionComposer = getCurrentSessionComposer();
-  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaEffectsComposer === 'function');
-
-  if (!sessionComposer && !canUpdateSessionComposer)
-  {
-    setStatus('当前没有可更新的 MediaEffectsComposer');
-
-    return;
-  }
-
-  const composerOptions = buildCallMediaEffectsComposerOptions({ includeDisabledState: true });
-
-  try
-  {
-    if (canUpdateSessionComposer)
-    {
-      await rtcSession.updateMediaEffectsComposer(composerOptions);
-    }
-    else
-    {
-      const patch = {
-        outputMirror : Boolean(composerOptions.mirror),
-        watermarks   : composerOptions.watermarks || []
-      };
-
-      await sessionComposer.setConfig(patch);
-      applyVirtualBackgroundSelection(sessionComposer);
-    }
-
-    setStatus('已应用当前镜像/水印设置到当前通话');
-  }
-  catch (error)
-  {
-    console.warn('applyCurrentComposerSettingsToSession error', error);
-    setStatus(`应用合成设置失败：${error && error.message ? error.message : error}`);
-  }
-}
-
-function readCallMediaEffectsComposerOpacity(inputEl)
-{
-  const raw = String((inputEl || {}).value || '').trim();
-
-  if (!raw)
-  {
-    return undefined;
-  }
-
-  const normalized = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
-  const parsed = Number(normalized.replace(',', '.'));
-
-  if (!Number.isFinite(parsed))
-  {
-    return undefined;
-  }
-
-  const opacity = parsed > 1 ? (parsed / 100) : parsed;
-
-  return Math.min(1, Math.max(0, opacity));
-}
-
 /**
  * 发起呼叫
  * @param {string} type 呼叫类型 - audio：音频模式（默认）；video：视频模式
@@ -2305,7 +1854,11 @@ async function call(type, direction, mediaStream)
     options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
 
     remoteNo = number;
+
     const session = await ua.call(`${number}@${sipDomain}`, options);
+
+    console.warn('sessionID: ', session.id);
+
 
     // 默认远端无回铃音
     earlyMedia = false;
@@ -2704,37 +2257,6 @@ function start()
     call('callnullaudio');
   };
 
-  document.querySelector('#toggleVirtualBackgroundPreview').onclick = async function()
-  {
-    if (virtualBackgroundPreviewPending)
-    {
-      return;
-    }
-
-    if (virtualBackgroundPreviewActive)
-    {
-      await stopVirtualBackgroundPreview();
-      setStatus('已结束本端虚拟背景演示');
-
-      return;
-    }
-
-    try
-    {
-      virtualBackgroundPreviewPending = true;
-      updateVirtualBackgroundPreviewButton();
-      setStatus('正在启动本端虚拟背景演示...');
-      await startVirtualBackgroundPreview();
-      setStatus('本端虚拟背景演示已开启');
-    }
-    catch (error)
-    {
-      await stopVirtualBackgroundPreview({ restoreSessionPreview: true });
-      console.warn('startVirtualBackgroundPreview error', error);
-      setStatus(`本端虚拟背景演示启动失败：${error && error.message ? error.message : error}`);
-    }
-  };
-
   // 发起无摄像头呼叫
   document.querySelector('#callNullVideo').onclick = function() 
   {
@@ -2862,6 +2384,7 @@ function start()
 }
 
 start();
+initMediaEffects();
 
 document.addEventListener('visibilitychange', function() 
 {
@@ -2897,310 +2420,6 @@ document.querySelector('#mics').addEventListener('change', function()
 });
 
 
-/**
- * 切换虚拟背景
- */
-document.querySelector('#virtualBackground').addEventListener('change', function()
-{
-  handleVirtualBackgroundChange(this).catch((error) =>
-  {
-    console.warn('virtual background change error', error);
-    setStatus(`虚拟背景切换失败：${error && error.message ? error.message : error}`);
-  });
-});
-
-async function handleVirtualBackgroundChange(selectEl)
-{
-  virtualBackgroundType = selectEl.options[selectEl.selectedIndex].value;
-  if (!virtualBackgroundType)
-  {
-    setStatus('虚拟背景已关闭');
-  }
-  else if (virtualBackgroundType === 'none')
-  {
-    setStatus('虚拟背景已切换为保留人物，不替换背景');
-  }
-  else
-  {
-    setStatus(`虚拟背景已切换为 ${selectEl.options[selectEl.selectedIndex].innerText}`);
-  }
-
-  const sessionComposer = getCurrentSessionComposer();
-
-  if (!sessionComposer && !virtualBackgroundPreviewEngine)
-  {
-    return;
-  }
-
-  if (!virtualBackgroundType)
-  {
-    sessionComposer && await applyVirtualBackgroundToCurrentSession();
-    virtualBackgroundPreviewEngine && virtualBackgroundPreviewEngine.clearSourceAiVirtualBackground(0);
-
-    return;
-  }
-
-  if (sessionComposer)
-  {
-    await applyVirtualBackgroundToCurrentSession();
-  }
-
-  if (virtualBackgroundPreviewEngine)
-  {
-    applyVirtualBackgroundSelection(virtualBackgroundPreviewEngine);
-  }
-}
-
-
-/**
- * 切换 AI 降噪模式。
- *
- * AiNSEngine 的配置会在下一次外呼或接听建链时生效。
- */
-document.querySelector('#aiNoiseSuppression').addEventListener('change', function()
-{
-  aiNsType = this.value;
-
-  setStatus(aiNsType === 'AiNS' ?
-    `AI 降噪强度已设为 ${getCurrentAiNsLevel()}，将在下一次呼叫/接听时生效` :
-    'AI 降噪已关闭');
-
-  applyAiNsMonitorState(true);
-});
-
-document.querySelector('#aiNoiseReductionLevel').addEventListener('change', function()
-{
-  const nextLevel = normalizeAiNsReductionLevel(this.value);
-
-  this.value = nextLevel;
-
-  if (aiNsType === 'AiNS')
-  {
-    if (applyAiNsLevelToCurrentCall(nextLevel))
-    {
-      setStatus(`AI 降噪强度已设为 ${nextLevel}，已应用到当前通话`);
-    }
-    else
-    {
-      setStatus(`AI 降噪强度已设为 ${nextLevel}，将在下一次呼叫/接听时生效`);
-    }
-  }
-
-  applyAiNsMonitorState(false);
-});
-
-document.querySelector('#toggleAiNsMonitor').onclick = async function()
-{
-  if (aiNsMonitorActive)
-  {
-    await stopAiNsMonitor();
-    setStatus('已停止本地降噪验证');
-
-    return;
-  }
-
-  try
-  {
-    aiNsMonitorStream = await navigator.mediaDevices.getUserMedia({
-      audio : {
-        echoCancellation : false,
-        autoGainControl  : false,
-        noiseSuppression : false
-      },
-      video : false
-    });
-    aiNsMonitorActive = true;
-    updateAiNsMonitorButton();
-    await applyAiNsMonitorState(true);
-  }
-  catch (error)
-  {
-    aiNsMonitorActive = false;
-    updateAiNsMonitorButton();
-    console.warn('toggleAiNsMonitor error', error);
-    setStatus(`降噪验证启动失败：${error && error.message ? error.message : error}`);
-  }
-};
-
-document.querySelector('#applyCurrentComposerSettings').onclick = async function()
-{
-  await applyCurrentComposerSettingsToSession();
-};
-
-/**
- * @returns {Object|null}
- */
-function buildSelectedAiVirtualBackgroundOptions()
-{
-  if (!virtualBackgroundType)
-  {
-    return null;
-  }
-
-  const sourceWidth = Number(videoConstraints.width) || 640;
-  const sourceHeight = Number(videoConstraints.height) || 480;
-  const sourceFps = Number(videoConstraints.frameRate) || 15;
-  // 优先保证分割跟手性；分辨率越高，分割输入缩得越小，避免人物移动时遮罩跟不上。
-  let processingScale = 0.4;
-
-  if (sourceWidth * sourceHeight >= 1280 * 720)
-  {
-    processingScale = 0.3;
-  }
-  else if (sourceWidth * sourceHeight >= 640 * 480)
-  {
-    processingScale = 0.35;
-  }
-
-  const aiVirtualBackground = {
-    enabled        : true,
-    startupDelayMs : 0,
-    maxRuntimeFps  : Math.min(sourceFps, 15),
-    assetConfig    : Object.assign({}, AI_VB_ASSET_CONFIG),
-    segmentation   : {
-      delegate  : 'GPU',
-      frameSkip : 0
-    },
-    video : {
-      height          : sourceHeight,
-      processingScale : processingScale,
-      targetFps       : Math.min(sourceFps, 15),
-      width           : sourceWidth
-    }
-  }; 
-
-  if (virtualBackgroundType === 'blur')
-  {
-    aiVirtualBackground.mode = 'blur';
-    aiVirtualBackground.blurRadius = 16;
-
-    return aiVirtualBackground;
-  }
-
-  if (virtualBackgroundType === 'none')
-  {
-    aiVirtualBackground.mode = 'none';
-
-    return aiVirtualBackground;
-  }
-
-  const backgroundImageUrl = virtualBackgroundImgs[virtualBackgroundType];
-
-  if (!backgroundImageUrl)
-  {
-    throw new Error(`Unknown virtual background type: ${virtualBackgroundType || 'empty'}`);
-  }
-
-  aiVirtualBackground.mode = 'image';
-  aiVirtualBackground.imageUrl = backgroundImageUrl;
-
-  return aiVirtualBackground;
-}
-
-function getVirtualBackgroundPreviewButton()
-{
-  return document.querySelector('#toggleVirtualBackgroundPreview');
-}
-
-function updateVirtualBackgroundPreviewButton()
-{
-  const button = getVirtualBackgroundPreviewButton();
-
-  if (!button)
-  {
-    return;
-  }
-
-  if (virtualBackgroundPreviewPending)
-  {
-    button.innerHTML = '<i class="bi-arrow-repeat me-1"></i>启动中...';
-    button.className = 'btn btn-outline-secondary';
-    button.disabled = true;
-
-    return;
-  }
-
-  button.innerHTML = virtualBackgroundPreviewActive ?
-    '<i class="bi-stop-circle me-1"></i>结束演示' :
-    '<i class="bi-person-bounding-box me-1"></i>开始演示';
-  button.className = virtualBackgroundPreviewActive ? 'btn btn-outline-danger' : 'btn btn-outline-primary';
-  button.disabled = false;
-}
-
-function hasRtcSessionConnection()
-{
-  return Boolean(rtcSession && rtcSession.connection);
-}
-
-function restoreLocalPreview()
-{
-  if (hasRtcSessionConnection())
-  {
-    getStreams(rtcSession.connection);
-
-    return;
-  }
-
-  localVideo.srcObject = null;
-}
-
-function getCurrentSessionComposer()
-{
-  if (!rtcSession || typeof rtcSession.getMediaEffectsComposer !== 'function')
-  {
-    return null;
-  }
-
-  return rtcSession.getMediaEffectsComposer();
-}
-
-function applyVirtualBackgroundSelection(targetComposer)
-{
-  if (!targetComposer)
-  {
-    return;
-  }
-
-  const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
-
-  if (!aiVirtualBackground)
-  {
-    targetComposer.clearSourceAiVirtualBackground(0);
-
-    return;
-  }
-
-  targetComposer.setSourceAiVirtualBackground(0, aiVirtualBackground);
-}
-
-async function applyVirtualBackgroundToCurrentSession()
-{
-  const sessionComposer = getCurrentSessionComposer();
-  const canUpdateSessionComposer = Boolean(rtcSession && typeof rtcSession.updateMediaEffectsComposer === 'function');
-
-  if (!sessionComposer && !canUpdateSessionComposer)
-  {
-    return;
-  }
-
-  try
-  {
-    if (canUpdateSessionComposer)
-    {
-      await rtcSession.updateMediaEffectsComposer(buildCallMediaEffectsComposerOptions({ includeDisabledState: true }));
-    }
-    else
-    {
-      applyVirtualBackgroundSelection(sessionComposer);
-    }
-  }
-  catch (error)
-  {
-    console.warn('applyVirtualBackgroundToCurrentSession error', error);
-    setStatus(`应用虚拟背景失败：${error && error.message ? error.message : error}`);
-  }
-}
-
 function hasSameTrackSet(stream, tracks)
 {
   if (!(stream instanceof MediaStream))
@@ -3235,93 +2454,6 @@ function bindMediaStreamIfChanged(mediaEl, stream)
   mediaEl.srcObject = stream || null;
 
   return true;
-}
-
-async function stopVirtualBackgroundPreview(options = {})
-{
-  const { restoreSessionPreview = true } = options;
-
-  virtualBackgroundPreviewPending = false;
-  virtualBackgroundPreviewActive = false;
-  updateVirtualBackgroundPreviewButton();
-
-  if (virtualBackgroundPreviewEngine && typeof virtualBackgroundPreviewEngine.stop === 'function')
-  {
-    try
-    {
-      virtualBackgroundPreviewEngine.stop();
-    }
-    catch (error)
-    {
-      console.warn('stopVirtualBackgroundPreview stop error', error);
-    }
-  }
-
-  if (virtualBackgroundPreviewInputStream)
-  {
-    virtualBackgroundPreviewInputStream.getTracks().forEach((track) => track.stop());
-  }
-
-  virtualBackgroundPreviewEngine = null;
-  virtualBackgroundPreviewInputStream = null;
-
-  if (restoreSessionPreview)
-  {
-    restoreLocalPreview();
-  }
-}
-
-async function startVirtualBackgroundPreview()
-{
-  if (!virtualBackgroundType)
-  {
-    throw new Error('请先选择虚拟背景效果');
-  }
-
-  virtualBackgroundPreviewInputStream = await navigator.mediaDevices.getUserMedia({
-    audio : false,
-    video : videoConstraints
-  });
-
-  virtualBackgroundPreviewEngine = new CRTC.MediaEffectsComposer(virtualBackgroundPreviewInputStream, {
-    width   : videoConstraints.width,
-    height  : videoConstraints.height,
-    fps     : videoConstraints.frameRate,
-    sources : [
-      {
-        aiVirtualBackground : buildSelectedAiVirtualBackgroundOptions()
-      }
-    ]
-  });
-
-  localVideo.srcObject = await virtualBackgroundPreviewEngine.getOutput({
-    type : 'video'
-  });
-  localVideo.play().catch(() => {});
-
-  virtualBackgroundPreviewPending = false;
-  virtualBackgroundPreviewActive = true;
-  updateVirtualBackgroundPreviewButton();
-}
-
-/**
- * 根据当前 UI 选择构建 RTCSession 的 AI 降噪参数。
- *
- * @returns {Object|null}
- */
-function buildCallAiNoiseSuppressionOptions()
-{
-  if (aiNsType !== 'AiNS')
-  {
-    return null;
-  }
-
-  return {
-    enabled             : true,
-    preserveOtherTracks : true,
-    noiseReductionLevel : getCurrentAiNsLevel(),
-    assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
-  };
 }
 
 /**
