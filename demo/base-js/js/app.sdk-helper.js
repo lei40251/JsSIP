@@ -122,6 +122,74 @@ function setStatus(text)
   statusDom.scrollTop = statusDom.scrollHeight;
 }
 
+// =============================================================================
+// 媒体效果通用输入处理
+// =============================================================================
+
+/**
+ * 把 AI 降噪强度整理到 0-100。
+ * 这个方法只负责处理输入值，不关心具体媒体链路怎么使用它。
+ *
+ * @param {string|number} value - 输入框里读到的原始值
+ * @returns {number} 归一化后的强度，默认 80
+ */
+function normalizeAiNsReductionLevel(value)
+{
+  const parsedLevel = parseInt(value, 10);
+
+  if (Number.isNaN(parsedLevel))
+  {
+    return 80;
+  }
+
+  return Math.max(0, Math.min(100, parsedLevel));
+}
+
+/**
+ * 从页面读取当前 AI 降噪强度。
+ * 这里只负责从输入框取值并做归一化，方便媒体效果模块直接复用。
+ *
+ * @returns {number} 当前页面上的合法降噪强度
+ */
+function getCurrentAiNsLevel()
+{
+  const levelInput = document.querySelector('#aiNoiseReductionLevel');
+  const currentValue = levelInput ? levelInput.value : '';
+
+  return normalizeAiNsReductionLevel(currentValue);
+}
+
+/**
+ * 把透明度输入框的值统一转成 0-1。
+ * 支持：
+ * 1. 小数写法，例如 0.8
+ * 2. 百分比写法，例如 80%
+ *
+ * @param {HTMLInputElement} inputEl - 透明度输入框
+ * @returns {number|undefined} 归一化后的透明度，空值或非法值时返回 undefined
+ */
+function readCallMediaEffectsComposerOpacity(inputEl)
+{
+  const raw = String(inputEl.value).trim();
+
+  if (!raw)
+  {
+    return undefined;
+  }
+
+  const normalized = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
+  const parsed = Number(normalized.replace(',', '.'));
+
+  if (!Number.isFinite(parsed))
+  {
+    return undefined;
+  }
+
+  const opacity = parsed > 1 ? (parsed / 100) : parsed;
+
+  return Math.max(0, Math.min(1, opacity));
+}
+
 /**
  * 关闭来电系统通知
  */
