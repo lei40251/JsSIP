@@ -67,13 +67,12 @@ function buildSelectedAiVirtualBackgroundOptions()
     video       : {
       width     : sourceWidth,
       height    : sourceHeight,
-      // 输出目标帧率，钳位范围 [1, 60]，默认 15
+      // 输出目标帧率，默认 15
       targetFps : Math.min(sourceFps, 15)
     }
   };
 
-  // mode 可选值：'blur'（虚化） / 'none'（仅保留人物） / 'image'（图片背景）
-  // SDK 也会根据 blurRadius / imageUrl / color 自动推断 mode
+  // mode 可选值：'blur'（虚化背景） / 'none'（保留全部） / 'image'（图片背景）
 
   // 纯虚化模式：只模糊背景，不替换图片
   if (virtualBackgroundType === 'blur')
@@ -131,7 +130,7 @@ function buildCallTextWatermark()
     document.getElementById('callMediaEffectsComposerTextWatermarkOpacity')
   );
   const textWatermark = {
-    // 水印唯一标识，用于精确删除/替换；不传则 SDK 自动分配 "watermark-N"
+    // 水印唯一标识，用于精确删除/替换
     id       : 'call-output-text-watermark',
     type     : 'text',
     text     : text,
@@ -188,7 +187,7 @@ function buildCallImageWatermark()
     document.getElementById('callMediaEffectsComposerImageWatermarkOpacity')
   );
   const imageWatermark = {
-    // 水印唯一标识，用于精确删除/替换；不传则 SDK 自动分配 "watermark-N"
+    // 水印唯一标识，用于精确删除/替换
     id       : 'call-output-image-watermark',
     type     : 'image',
     image    : imageUrl,
