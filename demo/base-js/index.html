@@ -101,8 +101,15 @@
                     </div>
                   </div>
 
-                  <div class="call-config-group call-config-group-ai">
-                    <div class="call-config-grid call-config-grid-ai">
+                  <div class="call-config-group call-config-group-effects">
+                    <div class="call-config-grid call-config-grid-effects">
+                      <div class="call-field">
+                        <div class="call-field-label">输出镜像</div>
+                        <select id="callMediaEffectsComposerOutputMirror" class="form-select">
+                          <option value="off" selected>关闭</option>
+                          <option value="on">开启</option>
+                        </select>
+                      </div>
                       <div class="call-field">
                         <div class="call-field-label">虚拟背景</div>
                         <select id="virtualBackground" class="form-select">
@@ -113,6 +120,11 @@
                           <option value="blur">背景模糊</option>
                         </select>
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="call-config-group call-config-group-ains">
+                    <div class="call-config-grid call-config-grid-ains">
                       <div class="call-field">
                         <div class="call-field-label">Ai降噪</div>
                         <select id="aiNoiseSuppression" class="form-select">
@@ -129,69 +141,60 @@
                   </div>
                 </div>
 
-                <details class="composer-detail call-config-composer">
-                  <summary>呼叫时 MediaEffectsComposer 参数（紧凑配置）</summary>
-                  <div class="pt-2 compact-composer">
-                    <div class="row g-2 align-items-center mb-2">
-                      <div class="col-auto">
-                        <div class="form-check"><input class="form-check-input" type="checkbox"
-                            id="callMediaEffectsComposerOutputMirror"><label class="form-check-label"
-                            for="callMediaEffectsComposerOutputMirror">初始输出镜像</label></div>
+                <div class="call-config-watermark-shell">
+                  <div class="call-config-watermark-grid">
+                    <div class="call-config-group call-config-watermark-group call-config-group-effects">
+                      <div class="call-config-group-title">文字水印</div>
+                      <div class="composer-inline-row watermark-control-row composer-row">
+                        <input class="form-control" id="callMediaEffectsComposerTextWatermarkText"
+                          placeholder="文字" />
+                        <select class="form-select" id="callMediaEffectsComposerTextWatermarkPosition">
+                          <option value="top-left">左上</option>
+                          <option value="top-center">上中</option>
+                          <option value="top-right">右上</option>
+                          <option value="center">居中</option>
+                          <option value="bottom-left">左下</option>
+                          <option value="bottom-center">下中</option>
+                          <option value="bottom-right" selected>右下</option>
+                        </select>
+                        <input class="form-control" id="callMediaEffectsComposerTextWatermarkSize" type="number"
+                          min="8" placeholder="字号" />
+                        <input class="form-control form-control-color" id="callMediaEffectsComposerTextWatermarkColor"
+                          type="color" value="#ffffff" />
+                        <input class="form-control" id="callMediaEffectsComposerTextWatermarkOpacity" type="text"
+                          inputmode="decimal" placeholder="透明(0~1)" />
+                        <button class="btn btn-outline-secondary" id="clearCurrentTextWatermark">清空</button>
+                        <button class="btn btn-outline-primary" id="applyCurrentTextWatermark"><i
+                            class="bi-type me-1"></i>应用</button>
                       </div>
                     </div>
-                    <div class="compact-composer-grid">
-                      <div class="sub-panel compact-panel">
-                        <div class="fw-semibold mb-2">文字水印</div>
-                        <input class="form-control composer-row" id="callMediaEffectsComposerTextWatermarkText"
-                          placeholder="文字内容（留空不启用）" />
-                        <div class="composer-inline-row watermark-inline-row composer-row">
-                          <select class="form-select" id="callMediaEffectsComposerTextWatermarkPosition">
-                            <option value="top-left">左上</option>
-                            <option value="top-center">上中</option>
-                            <option value="top-right">右上</option>
-                            <option value="center">居中</option>
-                            <option value="bottom-left">左下</option>
-                            <option value="bottom-center">下中</option>
-                            <option value="bottom-right" selected>右下</option>
-                          </select>
-                          <input class="form-control" id="callMediaEffectsComposerTextWatermarkSize" type="number"
-                            min="8" placeholder="字号" />
-                          <input class="form-control form-control-color" id="callMediaEffectsComposerTextWatermarkColor"
-                            type="color" value="#ffffff" />
-                          <input class="form-control" id="callMediaEffectsComposerTextWatermarkOpacity" type="text"
-                            inputmode="decimal" placeholder="透明度(0~1)" />
-                        </div>
+                    <div class="call-config-group call-config-watermark-group call-config-group-effects">
+                      <div class="call-config-group-title">图片水印</div>
+                      <div class="composer-inline-row watermark-control-row composer-row">
+                        <input class="form-control" id="callMediaEffectsComposerImageWatermarkUrl"
+                          placeholder="URL" />
+                        <select class="form-select" id="callMediaEffectsComposerImageWatermarkPosition">
+                          <option value="top-left">左上</option>
+                          <option value="top-center">上中</option>
+                          <option value="top-right">右上</option>
+                          <option value="center">居中</option>
+                          <option value="bottom-left">左下</option>
+                          <option value="bottom-center">下中</option>
+                          <option value="bottom-right" selected>右下</option>
+                        </select>
+                        <input class="form-control" id="callMediaEffectsComposerImageWatermarkWidth" type="number"
+                          min="1" placeholder="宽" />
+                        <input class="form-control" id="callMediaEffectsComposerImageWatermarkHeight" type="number"
+                          min="1" placeholder="高" />
+                        <input class="form-control" id="callMediaEffectsComposerImageWatermarkOpacity" type="text"
+                          inputmode="decimal" placeholder="透明(0~1)" />
+                        <button class="btn btn-outline-secondary" id="clearCurrentImageWatermark">清空</button>
+                        <button class="btn btn-outline-primary" id="applyCurrentImageWatermark"><i
+                            class="bi-image me-1"></i>应用</button>
                       </div>
-                      <div class="sub-panel compact-panel">
-                        <div class="fw-semibold mb-2">图片水印</div>
-                        <input class="form-control composer-row" id="callMediaEffectsComposerImageWatermarkUrl"
-                          placeholder="图片 URL（留空不启用）" />
-                        <div class="composer-inline-row watermark-inline-row composer-row">
-                          <select class="form-select" id="callMediaEffectsComposerImageWatermarkPosition">
-                            <option value="top-left">左上</option>
-                            <option value="top-center">上中</option>
-                            <option value="top-right">右上</option>
-                            <option value="center">居中</option>
-                            <option value="bottom-left">左下</option>
-                            <option value="bottom-center">下中</option>
-                            <option value="bottom-right" selected>右下</option>
-                          </select>
-                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkWidth" type="number"
-                            min="1" placeholder="宽度" />
-                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkHeight" type="number"
-                            min="1" placeholder="高度" />
-                          <input class="form-control" id="callMediaEffectsComposerImageWatermarkOpacity" type="text"
-                            inputmode="decimal" placeholder="透明度(0~1)" />
-                        </div>
-                      </div>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
-                      <button class="btn btn-outline-primary" id="applyCurrentComposerSettings"><i
-                          class="bi-magic me-1"></i>应用当前镜像/水印</button>
-                      <span class="text-muted small">通话中修改后，点击这里同步到当前会话</span>
                     </div>
                   </div>
-                </details>
+                </div>
               </div>
               <div class="sub-group-title mt-2">呼叫模式</div>
               <div class="d-flex flex-wrap gap-2">
@@ -401,6 +404,7 @@
   <script src="../config.js"></script>
   <script src="./js/app-media-effects.js"></script>
   <script src="./js/app.sdk-helper.js"></script>
+  <script src="./js/app.media-effects-demo.js"></script>
   <script src="./js/app.js"></script>
   <script src="./js/app.ui-bindings.js"></script>
 </body>

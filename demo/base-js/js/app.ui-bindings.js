@@ -275,6 +275,15 @@ document.querySelector('#virtualBackground').addEventListener('change', function
   });
 });
 
+document.querySelector('#callMediaEffectsComposerOutputMirror').addEventListener('change', function()
+{
+  applyMirrorToCurrentSession().catch((error) =>
+  {
+    console.warn('output mirror change error', error);
+    setStatus(`输出镜像切换失败：${error && error.message ? error.message : error}`);
+  });
+});
+
 // AiNS 开关变化时：
 // 1. 更新当前模式
 // 2. 提示当前状态
@@ -373,10 +382,24 @@ document.querySelector('#toggleAiNsMonitor').onclick = async function()
   }
 };
 
-// 当前通话里的镜像、水印、虚拟背景都统一通过这个按钮重应用
-document.querySelector('#applyCurrentComposerSettings').onclick = async function()
+document.querySelector('#applyCurrentTextWatermark').onclick = async function()
 {
-  await applyCurrentComposerSettingsToSession();
+  await applyTextWatermarkToCurrentSession();
+};
+
+document.querySelector('#clearCurrentTextWatermark').onclick = async function()
+{
+  await clearTextWatermarkFromCurrentSession();
+};
+
+document.querySelector('#applyCurrentImageWatermark').onclick = async function()
+{
+  await applyImageWatermarkToCurrentSession();
+};
+
+document.querySelector('#clearCurrentImageWatermark').onclick = async function()
+{
+  await clearImageWatermarkFromCurrentSession();
 };
 
 // 本地虚拟背景演示按钮：
