@@ -257,7 +257,7 @@ async function startVirtualBackgroundPreview()
     sources : [
       {
         // 本地演示和通话里的配置保持一致，方便对照最终效果
-        aiVirtualBackground : buildSelectedAiVirtualBackgroundOptions()
+        aiVirtualBackground : buildCurrentAiVirtualBackgroundOptions()
       }
     ]
   });
@@ -317,7 +317,7 @@ async function handleVirtualBackgroundChange(selectEl)
   {
     if (sessionComposer || canUpdateSessionComposer)
     {
-      await applyVirtualBackgroundToCurrentSession();
+      await applyCurrentVirtualBackgroundToSession();
     }
 
     if (virtualBackgroundPreviewEngine)
@@ -331,14 +331,14 @@ async function handleVirtualBackgroundChange(selectEl)
   // 如果当前正在通话，就把新选择同步到当前会话
   if (sessionComposer || canUpdateSessionComposer)
   {
-    await applyVirtualBackgroundToCurrentSession();
+    await applyCurrentVirtualBackgroundToSession();
   }
 
   // 如果本地演示已经开着，也同步更新本地演示画面
   if (virtualBackgroundPreviewEngine)
   {
     // 本地演示中的 composer 也同步到当前选择
-    const aiVirtualBackground = buildSelectedAiVirtualBackgroundOptions();
+    const aiVirtualBackground = buildCurrentAiVirtualBackgroundOptions();
 
     if (!aiVirtualBackground)
     {

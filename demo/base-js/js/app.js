@@ -1283,8 +1283,8 @@ ua.on('newRTCSession', function(e)
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true },
       extraFeatures        : extraFeatures,
-      mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
-      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
+      mediaEffectsComposer : buildCallComposerOptions(),
+      aiNoiseSuppression   : buildCallAiNsOptions()
     });
 
     setStatus('audio answer');
@@ -1306,8 +1306,8 @@ ua.on('newRTCSession', function(e)
       extraHeaders         : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}` ],
       rtcOfferConstraints  : { offerToReceiveAudio: true, offerToReceiveVideo: true },
       extraFeatures        : extraFeatures,
-      mediaEffectsComposer : buildCallMediaEffectsComposerOptions(),
-      aiNoiseSuppression   : buildCallAiNoiseSuppressionOptions()
+      mediaEffectsComposer : buildCallComposerOptions(),
+      aiNoiseSuppression   : buildCallAiNsOptions()
     });
 
     setStatus('video answer');
@@ -2043,7 +2043,7 @@ async function call(type, direction, mediaStream)
   };
 
   // ---- 附加媒体特效合成器配置 ----
-  const composerOptions = buildCallMediaEffectsComposerOptions();
+  const composerOptions = buildCallComposerOptions();
 
   if (composerOptions)
   {
@@ -2201,8 +2201,8 @@ async function call(type, direction, mediaStream)
     }
 
     // ---- 重新构建媒体效果和降噪配置（使用最新的 UI 选择） ----
-    options.mediaEffectsComposer = buildCallMediaEffectsComposerOptions();
-    options.aiNoiseSuppression = buildCallAiNoiseSuppressionOptions();
+    options.mediaEffectsComposer = buildCallComposerOptions();
+    options.aiNoiseSuppression = buildCallAiNsOptions();
 
     remoteNo = number;
 

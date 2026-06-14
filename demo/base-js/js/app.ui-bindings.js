@@ -277,7 +277,7 @@ document.querySelector('#virtualBackground').addEventListener('change', function
 
 document.querySelector('#callMediaEffectsComposerOutputMirror').addEventListener('change', function()
 {
-  applyMirrorToCurrentSession().catch((error) =>
+  applyCurrentOutputMirrorToSession().catch((error) =>
   {
     console.warn('output mirror change error', error);
     setStatus(`输出镜像切换失败：${error && error.message ? error.message : error}`);
@@ -384,22 +384,22 @@ document.querySelector('#toggleAiNsMonitor').onclick = async function()
 
 document.querySelector('#applyCurrentTextWatermark').onclick = async function()
 {
-  await applyTextWatermarkToCurrentSession();
+  await applyCurrentTextWatermarkToSession();
 };
 
 document.querySelector('#clearCurrentTextWatermark').onclick = async function()
 {
-  await clearTextWatermarkFromCurrentSession();
+  await clearCurrentTextWatermarkFromSession();
 };
 
 document.querySelector('#applyCurrentImageWatermark').onclick = async function()
 {
-  await applyImageWatermarkToCurrentSession();
+  await applyCurrentImageWatermarkToSession();
 };
 
 document.querySelector('#clearCurrentImageWatermark').onclick = async function()
 {
-  await clearImageWatermarkFromCurrentSession();
+  await clearCurrentImageWatermarkFromSession();
 };
 
 // 本地虚拟背景演示按钮：
