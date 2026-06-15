@@ -750,14 +750,14 @@ async function testAssetLoaderSharesConcurrentRuntimeLoad()
   assert.strictEqual(appendedScripts.length, 1);
 }
 
-async function testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions()
+async function testConfigNormalizesCdnUrlAndSegmentationOptions()
 {
   const config = Config.create({
     segmentation : {
       delegate : 'cpu'
     },
     assetConfig : {
-      baseUrl  : './assets/tasks/',
+      cdnUrl   : './assets/ai-vb/',
       modelUrl : './assets/tasks/selfie_segmenter_landscape.tflite'
     }
   });
@@ -765,18 +765,18 @@ async function testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions()
   assert.strictEqual(config.segmentation.delegate, 'GPU');
   assert.deepStrictEqual(config.segmentation, {
     delegate  : 'GPU',
-    frameSkip : 0
+    frameSkip : 1
   });
-  assert.strictEqual(config.assetConfig.moduleUrl, './assets/tasks/vision_bundle.mjs');
-  assert.strictEqual(config.assetConfig.wasmBaseUrl, './assets/tasks/wasm');
+  assert.strictEqual(config.assetConfig.moduleUrl, './assets/ai-vb/vision.js');
+  assert.strictEqual(config.assetConfig.wasmBaseUrl, './assets/ai-vb');
   assert.strictEqual(config.assetConfig.modelUrl, './assets/tasks/selfie_segmenter_landscape.tflite');
 }
 
-async function testConfigNormalizesFlatAivbAssetBaseUrl()
+async function testConfigNormalizesCdnUrlDefaultModelPath()
 {
   const config = Config.create({
     assetConfig : {
-      flatBaseUrl : './assets/ai-vb/'
+      cdnUrl : './assets/ai-vb/'
     }
   });
 
@@ -1292,8 +1292,8 @@ async function run()
     { name: 'testRuntimeProcessesLatestQueuedFrame', fn: testRuntimeProcessesLatestQueuedFrame },
     { name: 'testRuntimeRejectsWhenGpuInitFails', fn: testRuntimeRejectsWhenGpuInitFails },
     { name: 'testAssetLoaderSharesConcurrentRuntimeLoad', fn: testAssetLoaderSharesConcurrentRuntimeLoad },
-    { name: 'testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions', fn: testConfigNormalizesTasksAssetBaseUrlAndSegmentationOptions },
-    { name: 'testConfigNormalizesFlatAivbAssetBaseUrl', fn: testConfigNormalizesFlatAivbAssetBaseUrl },
+    { name: 'testConfigNormalizesCdnUrlAndSegmentationOptions', fn: testConfigNormalizesCdnUrlAndSegmentationOptions },
+    { name: 'testConfigNormalizesCdnUrlDefaultModelPath', fn: testConfigNormalizesCdnUrlDefaultModelPath },
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
     { name: 'testConfigRejectsLegacyPostProcessingOptions', fn: testConfigRejectsLegacyPostProcessingOptions },
     { name: 'testConfigClampsPostProcessingRanges', fn: testConfigClampsPostProcessingRanges },

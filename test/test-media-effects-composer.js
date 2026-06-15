@@ -1892,7 +1892,7 @@ async function testSourceMirrorKeepsWorkerRenderer()
   mixer.stop();
 }
 
-async function testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot()
+async function testSourceAiVBOptionsAppearInSourceSnapshot()
 {
   resetMockState();
   MockCanvasElement.webgl2Supported = true;
@@ -3243,7 +3243,7 @@ async function run()
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground', fn: testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground },
     { name: 'testSourceMirrorKeepsWorkerRenderer', fn: testSourceMirrorKeepsWorkerRenderer },
-    { name: 'testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot', fn: testSourceAiVirtualBackgroundOptionsAppearInSourceSnapshot },
+    { name: 'testSourceAiVBOptionsAppearInSourceSnapshot', fn: testSourceAiVBOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },
     { name: 'testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer', fn: testSetSourceAiVirtualBackgroundKeepsMainWebGL2Renderer },
     { name: 'testSetSourceAiVirtualBackgroundKeepsWorkerRenderer', fn: testSetSourceAiVirtualBackgroundKeepsWorkerRenderer },

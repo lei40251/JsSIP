@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266112213
+ * CRTC v2.0.0.20266151317
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4022,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212224426 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212302634 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17231,7 +17231,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212224426');
+debug('version %s', '2.0.0.405212302634');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17271,7 +17271,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212224426';
+    return '2.0.0.405212302634';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -17645,7 +17645,7 @@ var SEGMENTATION_OPTION_KEYS = ['delegate', 'frameSkip'];
 var POST_PROCESSING_OPTION_KEYS = ['blurRadius', 'maxBlurRadius'];
 
 /** `assetConfig` 选项块下已识别的 key */
-var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'baseUrl', 'flatBaseUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
+var ASSET_CONFIG_OPTION_KEYS = ['cdnUrl', 'moduleUrl', 'wasmBaseUrl', 'modelUrl'];
 
 // ---------------------------------------------------------------------------
 // 默认值
@@ -17657,19 +17657,19 @@ var DEFAULT_VIDEO = {
   height: 720,
   targetFps: 15,
   mirror: false,
-  processingScale: 0.25
+  processingScale: 0.4
 };
 
 /** @type {{ delegate: 'GPU', frameSkip: number }} */
 var DEFAULT_SEGMENTATION = {
   delegate: FORCED_DELEGATE,
-  frameSkip: 0
+  frameSkip: 1
 };
 
 /** @type {{ blurRadius: number, maxBlurRadius: number }} */
 var DEFAULT_POST_PROCESSING = {
-  blurRadius: 20,
-  maxBlurRadius: 12
+  blurRadius: 12,
+  maxBlurRadius: 20
 };
 
 /** MediaPipe Tasks Vision 默认 CDN URL（jsDelivr） */
@@ -17786,9 +17786,8 @@ exports.normalizePostProcessing = function (postProcessing) {
  *
  * URL 解析优先级（从高到低）：
  *   1. 显式的 `moduleUrl` / `wasmBaseUrl` / `modelUrl`
- *   2. `cdnUrl` 或 `baseUrl`（自动推导传统 tasks 目录的 module + wasm 路径）
- *   3. `flatBaseUrl`（自动推导扁平 aivb 目录的 vision.js + wasm + model 路径）
- *   4. 硬编码的 jsDelivr + Google Cloud Storage 默认值
+ *   2. `cdnUrl`（自动推导扁平 aivb 目录的 vision.js + wasm + model 路径）
+ *   3. 硬编码的 jsDelivr + Google Cloud Storage 默认值
  *
  * @param {Object} [assetConfig] — 原始资源配置
  * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
@@ -17805,20 +17804,12 @@ exports.normalizeAssetConfig = function (assetConfig) {
   }
   assertKnownKeys('assetConfig', assetConfig, ASSET_CONFIG_OPTION_KEYS);
 
-  // 便捷方式：从单个 cdnUrl / baseUrl 推导 module 和 wasm URL
+  // 便捷方式：从单个 cdnUrl 推导扁平 aivb 目录的运行时 URL
   if (typeof assetConfig.cdnUrl === 'string' && assetConfig.cdnUrl.trim()) {
     var baseUrl = assetConfig.cdnUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${baseUrl}/vision_bundle.mjs`;
-    normalized.wasmBaseUrl = `${baseUrl}/wasm`;
-  } else if (typeof assetConfig.baseUrl === 'string' && assetConfig.baseUrl.trim()) {
-    var _baseUrl = assetConfig.baseUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${_baseUrl}/vision_bundle.mjs`;
-    normalized.wasmBaseUrl = `${_baseUrl}/wasm`;
-  } else if (typeof assetConfig.flatBaseUrl === 'string' && assetConfig.flatBaseUrl.trim()) {
-    var _baseUrl2 = assetConfig.flatBaseUrl.trim().replace(/\/$/, '');
-    normalized.moduleUrl = `${_baseUrl2}/vision.js`;
-    normalized.wasmBaseUrl = _baseUrl2;
-    normalized.modelUrl = `${_baseUrl2}/selfie_segmenter_landscape.tflite`;
+    normalized.moduleUrl = `${baseUrl}/vision.js`;
+    normalized.wasmBaseUrl = baseUrl;
+    normalized.modelUrl = `${baseUrl}/selfie_segmenter_landscape.tflite`;
   }
 
   // 显式的逐项 URL 覆盖具有最高优先级
@@ -22817,7 +22808,7 @@ function normalizeConfig(input) {
     modelPath: typeof options.modelPath === 'string' && options.modelPath.trim() ? options.modelPath.trim() : null,
     runtimeEnabled: options.runtimeEnabled !== false,
     startupDelayMs: Math.floor(clampNumber(options.startupDelayMs, 0, 10000, DEFAULT_RUNTIME_STARTUP_DELAY_MS)),
-    maxRuntimeFps: clampNumber(options.maxRuntimeFps, 1, 30, DEFAULT_MAX_RUNTIME_FPS),
+    maxRuntimeFps: clampNumber(options.maxRuntimeFps, 1, 30, Number.isFinite(Number(options.video && options.video.targetFps)) && Number(options.video.targetFps) > 0 ? Number(options.video.targetFps) : DEFAULT_MAX_RUNTIME_FPS),
     video: video,
     segmentation: segmentation,
     postProcessing: postProcessing,

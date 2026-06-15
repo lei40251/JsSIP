@@ -1026,7 +1026,7 @@ async function testCloseStopsSessionComposerWithAiVirtualBackground()
   assert.strictEqual(sourceAudio.readyState, 'ended');
 }
 
-async function testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions()
+async function testUpgradeToVideoAcceptsComposerSourceAiVBOptions()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const localAudioTrack = new MockMediaStreamTrack('audio');
@@ -1338,7 +1338,7 @@ async function run()
     { name: 'testGetAiVirtualBackgroundReturnsNullByDefault', fn: testGetAiVirtualBackgroundReturnsNullByDefault },
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
     { name: 'testCloseStopsSessionComposerWithAiVirtualBackground', fn: testCloseStopsSessionComposerWithAiVirtualBackground },
-    { name: 'testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions', fn: testUpgradeToVideoAcceptsComposerSourceAiVirtualBackgroundOptions },
+    { name: 'testUpgradeToVideoAcceptsComposerSourceAiVBOptions', fn: testUpgradeToVideoAcceptsComposerSourceAiVBOptions },
     { name: 'testResolveMediaEffectsComposerOptionsUsesSourcesOnly', fn: testResolveMediaEffectsComposerOptionsUsesSourcesOnly },
     { name: 'testUpdateMediaEffectsComposerUpdatesConfigPatch', fn: testUpdateMediaEffectsComposerUpdatesConfigPatch },
     { name: 'testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects },

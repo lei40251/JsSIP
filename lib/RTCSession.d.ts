@@ -82,7 +82,7 @@ export interface MediaEffectsComposerSourceOptions {
   slot?: number;
   gain?: number;
   sourceMirror?: boolean;
-  aiVirtualBackground?: AIVirtualBackgroundOptions | null;
+  aiVirtualBackground?: AiVBOptions | null;
   [key: string]: any;
 }
 
@@ -92,7 +92,7 @@ export interface MediaEffectsComposerSourceState {
   slot: number | null;
   gain: number;
   sourceMirror: boolean | null;
-  aiVirtualBackground: AIVirtualBackgroundOptions | null;
+  aiVirtualBackground: AiVBOptions | null;
   hasAudio: boolean;
   hasVideo: boolean;
 }
@@ -264,8 +264,8 @@ export interface MediaEffectsComposerInstance {
   ): Promise<MediaEffectsComposerWatermarkState[]>;
   clearWatermarks(filter?: MediaEffectsComposerWatermarkFilter): void;
   getWatermarks(): MediaEffectsComposerWatermarkState[];
-  setSourceAiVirtualBackground(slotOrTarget: number | string, options: AIVirtualBackgroundOptions | null): void;
-  getSourceAiVirtualBackground(slotOrTarget: number | string): AIVirtualBackgroundOptions | null;
+  setSourceAiVirtualBackground(slotOrTarget: number | string, options: AiVBOptions | null): void;
+  getSourceAiVirtualBackground(slotOrTarget: number | string): AiVBOptions | null;
   clearSourceAiVirtualBackground(slotOrTarget: number | string): void;
   setConfig(patch: MediaEffectsComposerConfigPatch): Promise<MediaEffectsComposerConfigState>;
   getRenderInfo(): MediaEffectsComposerRenderState;
@@ -280,42 +280,40 @@ export interface MediaEffectsComposerInstance {
   stop(): void;
 }
 
-export interface AIVirtualBackgroundVideoOptions {
+export interface AiVBVideoOptions {
   width?: number;
   height?: number;
   processingScale?: number;
 }
 
-export interface AIVirtualBackgroundSegmentationOptions {
+export interface AiVBSegmentationOptions {
   delegate?: 'CPU' | 'GPU';
   frameSkip?: number;
 }
 
-export interface AIVirtualBackgroundPostProcessingOptions {
+export interface AiVBPostProcessingOptions {
   blurRadius?: number;
   maxBlurRadius?: number;
 }
 
-export interface AIVirtualBackgroundAssetOptions {
+export interface AiVBAssetOptions {
   cdnUrl?: string;
-  baseUrl?: string;
-  flatBaseUrl?: string;
   moduleUrl?: string;
   wasmBaseUrl?: string;
   modelUrl?: string;
 }
 
-export interface AIVirtualBackgroundOptions {
+export interface AiVBOptions {
   enabled?: boolean;
   mode?: 'none' | 'blur' | 'image' | 'color';
   imageUrl?: string;
   color?: string;
   blurRadius?: number;
   modelPath?: string;
-  video?: AIVirtualBackgroundVideoOptions;
-  segmentation?: AIVirtualBackgroundSegmentationOptions;
-  postProcessing?: AIVirtualBackgroundPostProcessingOptions;
-  assetConfig?: AIVirtualBackgroundAssetOptions;
+  video?: AiVBVideoOptions;
+  segmentation?: AiVBSegmentationOptions;
+  postProcessing?: AiVBPostProcessingOptions;
+  assetConfig?: AiVBAssetOptions;
   [key: string]: any;
 }
 

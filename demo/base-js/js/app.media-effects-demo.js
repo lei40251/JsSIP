@@ -257,7 +257,7 @@ async function startVirtualBackgroundPreview()
     sources : [
       {
         // 本地演示和通话里的配置保持一致，方便对照最终效果
-        aiVirtualBackground : buildCurrentAiVirtualBackgroundOptions()
+        aiVirtualBackground : buildCurrentAiVBOptions()
       }
     ]
   });
@@ -304,10 +304,9 @@ async function handleVirtualBackgroundChange(selectEl)
   const sessionComposer = rtcSession && rtcSession.getMediaEffectsComposer ?
     rtcSession.getMediaEffectsComposer() :
     null;
-  const canUpdateSessionComposer = Boolean(rtcSession && rtcSession.updateMediaEffectsComposer);
 
-  // 页面上既没有通话中的 composer / 会话更新能力，也没有本地预览，就不用再往下做了
-  if (!sessionComposer && !canUpdateSessionComposer && !virtualBackgroundPreviewEngine)
+  // 页面上既没有通话中的 composer，也没有本地预览，就不用再往下做了
+  if (!sessionComposer && !virtualBackgroundPreviewEngine)
   {
     return;
   }
@@ -315,7 +314,7 @@ async function handleVirtualBackgroundChange(selectEl)
   // 用户把虚拟背景关掉时，分别清掉通话和本地预览中的效果
   if (!virtualBackgroundType)
   {
-    if (sessionComposer || canUpdateSessionComposer)
+    if (sessionComposer)
     {
       await applyCurrentVirtualBackgroundToSession();
     }
@@ -329,7 +328,7 @@ async function handleVirtualBackgroundChange(selectEl)
   }
 
   // 如果当前正在通话，就把新选择同步到当前会话
-  if (sessionComposer || canUpdateSessionComposer)
+  if (sessionComposer)
   {
     await applyCurrentVirtualBackgroundToSession();
   }
@@ -338,15 +337,15 @@ async function handleVirtualBackgroundChange(selectEl)
   if (virtualBackgroundPreviewEngine)
   {
     // 本地演示中的 composer 也同步到当前选择
-    const aiVirtualBackground = buildCurrentAiVirtualBackgroundOptions();
+    const aiVBOptions = buildCurrentAiVBOptions();
 
-    if (!aiVirtualBackground)
+    if (!aiVBOptions)
     {
       virtualBackgroundPreviewEngine.clearSourceAiVirtualBackground(0);
     }
     else
     {
-      virtualBackgroundPreviewEngine.setSourceAiVirtualBackground(0, aiVirtualBackground);
+      virtualBackgroundPreviewEngine.setSourceAiVirtualBackground(0, aiVBOptions);
     }
   }
 }

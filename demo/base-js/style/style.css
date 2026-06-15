@@ -333,13 +333,13 @@ body {
 
 .watermark-control-row {
   grid-template-columns:
-    minmax(0, 1fr) minmax(64px, 74px) minmax(58px, 70px) minmax(46px, 52px) minmax(86px, 108px) minmax(48px, 60px) minmax(56px, 72px);
+    minmax(0, 4.3fr) minmax(84px, 1.18fr) minmax(68px, 0.74fr) minmax(52px, 0.62fr) minmax(92px, 1fr) minmax(74px, 0.76fr) minmax(86px, 0.88fr);
 }
 
 @media (max-width: 1330px) {
   .watermark-control-row {
     grid-template-columns:
-      minmax(0, 1fr) minmax(60px, 68px) minmax(54px, 62px) minmax(42px, 48px) minmax(80px, 96px) minmax(46px, 56px) minmax(52px, 64px);
+      minmax(0, 3.9fr) minmax(78px, 1.08fr) minmax(62px, 0.7fr) minmax(48px, 0.56fr) minmax(84px, 0.92fr) minmax(68px, 0.7fr) minmax(80px, 0.82fr);
   }
 }
 
@@ -386,7 +386,7 @@ body {
 
 .call-config-row {
   display: grid;
-  grid-template-columns: minmax(0, 5.1fr) minmax(250px, 2.35fr) minmax(210px, 1.45fr);
+  grid-template-columns: minmax(0, 5.15fr) minmax(0, 2.6fr) minmax(0, 1.7fr);
   gap: 0.5rem;
   align-items: stretch;
 }
@@ -438,21 +438,21 @@ body {
 .call-config-grid {
   display: grid;
   gap: 0.45rem 0.55rem;
-  grid-template-columns: repeat(6, minmax(120px, max-content));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: end;
 }
 
 .call-config-grid-main {
   grid-template-columns:
-    minmax(104px, 1.32fr) minmax(108px, 1.16fr) minmax(108px, 1.16fr) minmax(94px, 0.9fr) minmax(94px, 0.9fr);
+    minmax(0, 1.4fr) minmax(0, 1.18fr) minmax(0, 1.18fr) minmax(0, 0.96fr) minmax(0, 0.96fr);
 }
 
 .call-config-grid-effects {
-  grid-template-columns: minmax(120px, 150px) minmax(130px, 170px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
 }
 
 .call-config-grid-ains {
-  grid-template-columns: minmax(100px, 130px) minmax(78px, 88px);
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
 }
 
 .call-field .form-control,
@@ -536,6 +536,18 @@ body {
 .call-config-watermark-group #callMediaEffectsComposerTextWatermarkText,
 .call-config-watermark-group #callMediaEffectsComposerImageWatermarkUrl {
   min-width: 0;
+  max-width: none !important;
+}
+
+.call-config-watermark-group #callMediaEffectsComposerTextWatermarkPosition,
+.call-config-watermark-group #callMediaEffectsComposerImageWatermarkPosition,
+.call-config-watermark-group #callMediaEffectsComposerTextWatermarkSize,
+.call-config-watermark-group #callMediaEffectsComposerTextWatermarkColor,
+.call-config-watermark-group #callMediaEffectsComposerTextWatermarkOpacity,
+.call-config-watermark-group #callMediaEffectsComposerImageWatermarkWidth,
+.call-config-watermark-group #callMediaEffectsComposerImageWatermarkHeight,
+.call-config-watermark-group #callMediaEffectsComposerImageWatermarkOpacity {
+  max-width: none !important;
 }
 
 .btn {
