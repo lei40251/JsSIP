@@ -306,6 +306,8 @@ ua.on('newRTCSession', function(e)
 {
   console.warn('nsession: ', e);
 
+  window.cSession = e.session;
+
   confirmed = false;
 
   if (tmpSession) 

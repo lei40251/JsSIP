@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.3.2026641129
+ * CRTC v1.13.3.20266151557
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.3.405212082258 (Web)',
+  USER_AGENT: 'UA/1.13.3.405212303114 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.3.405212082258');
+debug('version %s', '1.13.3.405212303114');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.3.405212082258';
+    return '1.13.3.405212303114';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -18811,12 +18811,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       if (options.fromDisplayName) {
         requestParams.from_display_name = options.fromDisplayName;
       }
-      extraHeaders.push("Contact: ".concat(this._contact));
 
       // 5G Headers
       if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+        extraHeaders.push("Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\""));
+        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+      } else {
+        extraHeaders.push("Contact: ".concat(this._contact));
       }
       extraHeaders.push('Content-Type: application/sdp');
       if (this._sessionTimers.enabled) {
@@ -19235,8 +19237,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 5G Headers
       if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+        extraHeaders.push("Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\""));
+        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+      } else {
+        extraHeaders.push("Contact: ".concat(this._contact));
       }
 
       // Check Session Direction and Status.
@@ -19540,6 +19545,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               _this4._initDataChannel(event);
             };
           }
+          _this4._connection.ondatachannel = function (event) {
+            _this4._initDataChannel(event);
+          };
         }
       })
       // Set remote description.
@@ -22404,7 +22412,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 5G Headers
         if (this._ua.sk[7] >= 3) {
-          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders = ["Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\"")];
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
           extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
         }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
@@ -22579,7 +22588,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
         // 5G Headers
         if (this._ua.sk[7] >= 3) {
-          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+          extraHeaders = ["Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\"")];
+          extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
           extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
         }
         this._handleSessionTimersInIncomingRequest(request, extraHeaders);
@@ -23029,6 +23039,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
                 _this29._connection.addTrack(_this29._bfcpVideoTrack, _this29._localMediaStream);
                 _this29._initDataChannel();
               }
+              _this29._initDataChannel();
 
               // TODO: should this be triggered here?
               _this29._connecting(_this29._request);
@@ -23435,11 +23446,10 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var succeeded = false;
 
-      // extraHeaders.push(`Contact: ${this._contact}`);
-
       // 5G Headers
       if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+        extraHeaders.push("Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\""));
+        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
       }
       extraHeaders.push('Content-Type: application/sdp');
@@ -23607,12 +23617,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var rtcOfferConstraints = options.rtcOfferConstraints || this._rtcOfferConstraints || null;
       var sdpOffer = options.sdpOffer || false;
       var succeeded = false;
-      extraHeaders.push("Contact: ".concat(this._contact));
 
       // 5G Headers
       if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
+        extraHeaders.push("Contact: ".concat(this._contact, ";+sip.app-subtype=\"webrtc-datachannel\""));
+        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video;+sip.app-subtype="webrtc-datachannel"');
         extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
+      } else {
+        extraHeaders.push("Contact: ".concat(this._contact));
       }
 
       // Session Timers.
@@ -24948,6 +24960,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
        * 事件监听
        */
       datachannel.onmessage = function (ev) {
+        console.warn('recv DC message: ', ev);
         // 收到数据
         _this48._onChannelMessage(ev);
       };
@@ -24957,10 +24970,11 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         logger.warn("".concat(_this48._id, " datachannel opened."));
         _this48._dataChannelReady = true;
         // 开始发送心跳消息
-        _this48._sendHello();
-        _this48._bfcpHeatbeatTimer = setInterval(function () {
-          _this48._sendHello();
-        }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
+        // this._sendHello();
+        // this._bfcpHeatbeatTimer = setInterval(() => 
+        // {
+        //   this._sendHello();
+        // }, CRTC_C.BFCP_HEARTBEAT_INTERVAL);
       };
       datachannel.onclose = function () {
         // 底层链路被关闭的时候会触发
@@ -28328,6 +28342,9 @@ module.exports = /*#__PURE__*/function () {
 
       // 修正rtcpmux的ip问题
       message = Utils.fixRtcpLines(message);
+
+      // 检查并添加SCTP参数,适配Firefox
+      message = message.replace(/(SCTP webrtc-datachannel\r\n)/g, '$1a=dcmap:0 subprotocol="http"\r\na=dcmap:100 subprotocol="http"\r\n');
 
       // 修复修改SDP后的Header头
       message = Utils.fixContentLength(message);
