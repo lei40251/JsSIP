@@ -43,9 +43,42 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
 // =============================================================================
 
 /**
- * 根据当前选择构建 AI 虚拟背景配置；未开启时返回 null。
+ * =============================================================================
+ * === SDK: AiVBOptions 参数结构 ===
+ * =============================================================================
+ *
+ * @typedef {Object} AiVBOptions
+ *
+ * @property {boolean} [enabled] — 是否启用（默认 true，设为 false 可暂停效果而不销毁）
+ *
+ * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
+ *   - 'none'  : 仅做 AI 人像分割（背景变透明），不替换具体背景
+ *   - 'blur'  : 背景模糊
+ *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
+ *   - 'color' : 替换为纯色背景（需同时传 color，如 '#00ff00'）
+ *
+ * @property {string}  [imageUrl]   — 背景图片 URL（mode='image' 时需要）
+ * @property {string}  [color]      — 背景颜色（mode='color' 时需要，CSS 颜色值）
+ * @property {string}  [modelPath]  — 自定义 AI 模型路径
+ *
+ * ---------- video：视频源处理参数 ----------
+ * @property {Object}  [video]
+ * @property {number}  [video.width]           — 输入宽度（默认 1280）
+ * @property {number}  [video.height]          — 输入高度（默认 720）
+ * @property {number}  [video.targetFps]       — 目标帧率（默认 15）
+ * @property {boolean} [video.mirror]          — 是否水平翻转源视频（默认 false）
+ *
+ * ---------- assetConfig：AI 资源文件路径（用于自定义 CDN / 本地部署）----------
+ * @property {Object}  [assetConfig]
+ * @property {string}  [assetConfig.cdnUrl]      — 扁平资源基路径（所有文件在同一目录）
  */
-function buildCurrentAiVirtualBackgroundOptions()
+
+/**
+ * 根据当前选择构建 AI 虚拟背景配置；未开启时返回 null。
+ *
+ * @returns {AiVBOptions|null}
+ */
+function buildCurrentAiVBOptions()
 {
   if (!virtualBackgroundType)
   {
@@ -57,8 +90,13 @@ function buildCurrentAiVirtualBackgroundOptions()
   const sourceHeight = Number(videoConstraints.height) || 480;
   const sourceFps = Number(videoConstraints.frameRate) || 15;
 
-  const aiVirtualBackground = {
-    assetConfig : { flatBaseUrl: AI_VB_TASKS_ROOT },
+  /**
+   * 组装 AiVBOptions 对象（详见上方 JSDoc）
+   *
+   * @type {AiVBOptions}
+   */
+  const aiVBOptions = {
+    assetConfig : { cdnUrl: AI_VB_TASKS_ROOT },
     video       : {
       width     : sourceWidth,
       height    : sourceHeight,
@@ -68,28 +106,70 @@ function buildCurrentAiVirtualBackgroundOptions()
 
   if (virtualBackgroundType === 'blur')
   {
-    aiVirtualBackground.mode = 'blur';
+    aiVBOptions.mode = 'blur';
 
-    return aiVirtualBackground;
+    return aiVBOptions;
   }
 
   if (virtualBackgroundType === 'none')
   {
-    aiVirtualBackground.mode = 'none';
+    aiVBOptions.mode = 'none';
 
-    return aiVirtualBackground;
+    return aiVBOptions;
   }
 
   // 其余值（img1 / img2）都按图片背景处理。
-  aiVirtualBackground.mode = 'image';
-  aiVirtualBackground.imageUrl = virtualBackgroundImgs[virtualBackgroundType];
+  const imageUrl = virtualBackgroundImgs[virtualBackgroundType];
 
-  return aiVirtualBackground;
+  if (!imageUrl)
+  {
+    return null;
+  }
+
+  aiVBOptions.mode = 'image';
+  aiVBOptions.imageUrl = imageUrl;
+
+  return aiVBOptions;
 }
 
 // =============================================================================
 // 水印配置构建
 // =============================================================================
+
+/**
+ * === SDK: MediaEffectsComposerWatermarkOptions ===
+ *
+ * @typedef {Object} MediaEffectsComposerWatermarkOptions
+ *
+ * ---- 核心字段 ----
+ * @property {string}  [id]               — 水印唯一 ID（用于后续更新/删除时的去重和定位） * 
+ * @property {'text'|'image'} [type]      — 水印类型：'text'=文字水印，'image'=图片水印
+ *
+ * ---- 文字水印专用 ----
+ * @property {string}  [text]            — 文字内容
+ * @property {string}  [font]            — CSS font 属性（如 'bold 20px Arial'）
+ * @property {number}  [fontSize]        — 字号 / px（优先级低于 font）
+ * @property {string}  [color]           — 文字颜色（CSS 颜色值，默认 '#ffffff'）
+ * @property {string}  [backgroundColor] — 文字背景色（CSS 颜色值，默认透明）
+ * @property {number}  [padding]         — 文字背景内边距 / px
+ * @property {number}  [backgroundRadius] — 文字背景圆角 / px
+ *
+ * ---- 图片水印专用 ----
+ * @property {string|ImageBitmap} [image]
+ *   — 图片源：URL 字符串 或 ImageBitmap
+ *
+ * ---- 通用外观 ----
+ * @property {number}  [width]    — 水印宽度 / px；文字水印不传则自适应，图片水印建议传
+ * @property {number}  [height]   — 水印高度 / px；同上
+ * @property {number}  [opacity]  — 透明度（0~1，默认 1）
+ *
+ * ---- 位置（二选一）----
+ * @property {'top-left'|'top-center'|'top-right'|'center'|'bottom-left'|'bottom-center'|'bottom-right'} [position]
+ *   — 预设位置（默认 'bottom-right'），九宫格定位
+ * @property {{x:number, y:number}} [position]
+ *   — 自定义坐标（像素值，原点在左上角）
+ *
+ */
 
 /**
  * 从页面控件读取文字水印配置；文字为空时返回 null。
@@ -201,33 +281,77 @@ function buildCurrentWatermarks()
 }
 
 /**
+ * ================================================================================
+ * === SDK: MediaEffectsComposerOptions（通话时通过 mediaEffectsComposer 字段传入）===
+ * ================================================================================
+ *
+ * @typedef {Object} MediaEffectsComposerOptions
+ *
+ * ---- 画布基础参数 ----
+ * @property {number}  [width]                 — 合成画布宽度（默认 1280）
+ * @property {number}  [height]                — 合成画布高度（默认 720）
+ * @property {number}  [fps]                   — 合成帧率（默认 15）
+ * @property {string}  [backgroundColor]       — 画布背景色（CSS 颜色值，默认 '#000'）
+ * @property {number}  [audioGain]             — 输出音频增益（默认 0.8）
+ *
+ * ---- 输出镜像 ----
+ * @property {boolean} [mirror]       — 输出画面水平镜像（默认 false，影响所有观看者看到的画面）
+ * @property {boolean} [sourceMirror] — 源画面水平镜像（默认 false，仅影响本地预览）
+ * @property {boolean} [mirrorWatermarksWithOutput]
+ *   — 水印是否跟随输出镜像翻转（默认 false）
+ *
+ * ---- 水印 ----
+ * @property {MediaEffectsComposerWatermarkOptions[]|MediaEffectsComposerWatermarkOptions|null} [watermarks]
+ *   — 水印配置（数组/单对象/null），详见 buildCurrentTextWatermark 上方注释
+ *
+ * ---- 输入源配置（含 AI 虚拟背景）----
+ * @property {MediaEffectsComposerSourceOptions[]} [sources]
+ *   — 输入源配置数组，每个元素：
+ *     @property {number}   [slot]               — 槽位索引
+ *     @property {number}   [gain]               — 音频增益（0~1）
+ *     @property {boolean}  [sourceMirror]       — 该源画面是否水平镜像
+ *     @property {AiVBOptions} [aiVirtualBackground]
+ *       — 该源的 AI 虚拟背景配置，详见 buildCurrentAiVBOptions 上方 JSDoc
+ */
+
+/**
  * 从页面读取当前所有 MediaEffectsComposer 设置。
- * 这个配置用于呼叫发起或接听时的初始效果参数。
+ * 这个配置用于呼叫发起（call）或接听（answer）时的初始效果参数。
+ *
+ * @returns {MediaEffectsComposerOptions|null} 有效果时返回配置对象，无效果时返回 null
  */
 function buildCallComposerOptions()
 {
   const outputMirror = document.getElementById('callMediaEffectsComposerOutputMirror').value === 'on';
-  const aiVirtualBackground = buildCurrentAiVirtualBackgroundOptions();
+  const aiVBOptions = buildCurrentAiVBOptions();
   const watermarks = buildCurrentWatermarks();
-  const hasComposerEffects = outputMirror || watermarks.length || aiVirtualBackground;
+  const hasComposerEffects = outputMirror || watermarks.length || aiVBOptions;
 
+  /**
+   * SDK 的 MediaEffectsComposerOptions 对象
+   * @type {MediaEffectsComposerOptions}
+   */
   const composerOptions = {};
 
   if (outputMirror)
   {
+    // 输出画面水平镜像
     composerOptions.mirror = true;
   }
 
   if (watermarks.length)
   {
+    // 水印配置数组
     composerOptions.watermarks = watermarks;
   }
 
-  if (aiVirtualBackground)
+  if (aiVBOptions)
   {
+    // 输入源配置：每个源可独立设置 AI 虚拟背景。
+    // 这里把所有源配置放在第一个槽位（index 0）。
     composerOptions.sources = [
       {
-        aiVirtualBackground : aiVirtualBackground
+        aiVirtualBackground : aiVBOptions
       }
     ];
   }
@@ -250,24 +374,66 @@ function buildCallComposerOptions()
 // =============================================================================
 
 /**
+ * SDK: MediaEffectsComposerInstance 运行时接口速览
+ *
+ * 获取实例：
+ *   rtcSession.getMediaEffectsComposer() → MediaEffectsComposerInstance | null
+ *
+ * 镜像：
+ *   setMirror(enabled: boolean) — 设置输出画面水平镜像
+ *   setSourceMirror(slotOrEnabled, enabled?) — 设置/清除某输入源水平镜像
+ *
+ * 水印：
+ *   setWatermarks(watermarks: WatermarkOptions[] | WatermarkOptions | null)
+ *     → Promise<WatermarkState[]> — 全量设置水印（传 null 清除全部）
+ *   getWatermarks() → WatermarkState[] — 读取当前水印状态（含 SDK 默认值）
+ *   clearWatermarks(filter?) — 按条件清除水印
+ *     filter: { id?, target?, slot?, sourceId?, streamId? }
+ *
+ * AI 虚拟背景：
+ *   setSourceAiVirtualBackground(slotOrTarget, options)
+ *     slotOrTarget: number|string — 槽位索引（如 0）或源 ID 字符串
+ *     options: AiVBOptions | null — 传 null 等同 clear
+ *   getSourceAiVirtualBackground(slotOrTarget) → AiVBOptions | null
+ *   clearSourceAiVirtualBackground(slotOrTarget) — 清除某源的虚拟背景
+ *
+ * 运行时配置补丁：
+ *   setConfig(patch: MediaEffectsComposerConfigPatch) → Promise<ConfigState>
+ */
+
+/**
  * 获取当前会话可用的 composer 更新入口。
  *
- * @returns {{ sessionComposer: Object|null, canUpdateSessionComposer: boolean }}
+ * ========== SDK 调用 ==========
+ * rtcSession.getMediaEffectsComposer()
+ *   - 返回: MediaEffectsComposerInstance | null
+ *   - 说明: 仅在通话建立且 mediaEffectsComposer 已启用时返回实例，
+ *           否则返回 null（需在 call/answer 时传入 enableInsertable: true）
+ *   - 返回的实例上可用方法见本区块顶部注释
+ *
+ * @returns {{ sessionComposer: Object|null }}
  */
 function getSessionComposerHandles()
 {
+  /** @type {import('../../lib/RTCSession').MediaEffectsComposerInstance|null} */
   const sessionComposer = rtcSession && rtcSession.getMediaEffectsComposer ?
     rtcSession.getMediaEffectsComposer() :
     null;
-  const canUpdateSessionComposer = Boolean(rtcSession && rtcSession.updateMediaEffectsComposer);
 
-  return { sessionComposer, canUpdateSessionComposer };
+  return { sessionComposer };
 }
 
 /**
  * 获取当前会话里已存在的水印快照；不可读时返回空数组。
  *
- * @param {Object} sessionComposer — 当前会话的 MediaEffectsComposer 实例（旧接口）
+ * ========== SDK 调用 ==========
+ * sessionComposer.getWatermarks()
+ *   - 返回: MediaEffectsComposerWatermarkState[]
+ *   - 说明: 返回当前已设置的水印配置数组（已归一化，含 SDK 填充的默认值）
+ *   - WatermarkState 比 WatermarkOptions 多出:
+ *     { status, reason, slot, sourceId, streamId } 等运行时字段
+ *
+ * @param {Object} sessionComposer — 当前会话的 MediaEffectsComposer 实例
  * @returns {Object[]} 水印配置数组，获取失败时返回空数组
  */
 function getSessionWatermarkSnapshot(sessionComposer)
@@ -311,6 +477,12 @@ function mergeSessionWatermarks(nextItems, idsToReplace)
 /**
  * 把当前输出镜像开关同步到正在进行的通话。
  * 未通话时只更新页面状态提示。
+ *
+ * ========== SDK 调用 ==========
+ * sessionComposer.setMirror(enabled: boolean)
+ *   - enabled: true=开启输出画面水平镜像，false=关闭
+ *   - 影响所有观看者看到的画面（非本地预览镜像）
+ *   - 同步方法（内部），无需 await，但这里为了统一处理异常加了 await
  */
 async function applyCurrentOutputMirrorToSession()
 {
@@ -323,11 +495,11 @@ async function applyCurrentOutputMirrorToSession()
     return;
   }
 
-  const { sessionComposer, canUpdateSessionComposer } = getSessionComposerHandles();
+  const { sessionComposer } = getSessionComposerHandles();
 
-  if (!sessionComposer && !canUpdateSessionComposer)
+  if (!sessionComposer)
   {
-    setStatus('当前没有可更新的输出镜像');
+    setStatus('当前通话没有 MediaEffectsComposer，输出镜像将在下一次呼叫/接听时生效');
 
     return;
   }
@@ -336,13 +508,10 @@ async function applyCurrentOutputMirrorToSession()
 
   try
   {
+    // SDK: setMirror(enabled: boolean) — 设置输出画面水平镜像
     if (sessionComposer && typeof sessionComposer.setMirror === 'function')
     {
       await sessionComposer.setMirror(outputMirror);
-    }
-    else if (canUpdateSessionComposer)
-    {
-      await rtcSession.updateMediaEffectsComposer({ mirror: outputMirror, enableInsertable: true });
     }
 
     setStatus(`已${outputMirror ? '开启' : '关闭'}当前通话输出镜像`);
@@ -357,32 +526,37 @@ async function applyCurrentOutputMirrorToSession()
 /**
  * 将一组输出水印写入当前通话。
  *
- * @param {Object[]} watermarks — 水印配置数组
+ * ========== SDK 调用 ==========
+ * sessionComposer.setWatermarks(watermarks)
+ *   - 参数:
+ *     watermarks: MediaEffectsComposerWatermarkOptions[] | MediaEffectsComposerWatermarkOptions | null
+ *       - 数组: 全量替换当前所有水印为新的一组
+ *       - 单个: 替换为只有这一个水印
+ *       - null:  清除全部水印
+ *   - 返回: Promise<MediaEffectsComposerWatermarkState[]>
+ *   - 注意: 这是全量替换（非增量），每次调用会清空之前的水印再设置新的
+ *     - 所以 demo 里先通过 getWatermarks() 读旧列表，再 merge 后传回
+ *
+ * @param {Object[]} watermarks — 水印配置数组（MediaEffectsComposerWatermarkOptions[]），
+ *   字段详见 buildCurrentTextWatermark 上方 JSDoc
  */
 async function applyWatermarksToSession(watermarks)
 {
-  const { sessionComposer, canUpdateSessionComposer } = getSessionComposerHandles();
+  const { sessionComposer } = getSessionComposerHandles();
 
-  if (!sessionComposer && !canUpdateSessionComposer)
+  if (!sessionComposer)
   {
-    setStatus('当前没有可更新的水印');
+    setStatus('当前通话没有 MediaEffectsComposer，水印将在下一次呼叫/接听时生效');
 
     return;
   }
 
+  // SDK: setWatermarks(watermarks) — 全量设置水印配置
   if (sessionComposer && typeof sessionComposer.setWatermarks === 'function')
   {
     await sessionComposer.setWatermarks(watermarks);
 
     return;
-  }
-
-  if (canUpdateSessionComposer)
-  {
-    await rtcSession.updateMediaEffectsComposer({
-      watermarks,
-      enableInsertable : true
-    });
   }
 }
 
@@ -489,45 +663,49 @@ async function clearCurrentImageWatermarkFromSession()
 
 /**
  * 把当前虚拟背景应用到当前通话。
+ *
+ * ========== SDK 调用 ==========
+ * sessionComposer.setSourceAiVirtualBackground(slotOrTarget, options)
+ *   - slotOrTarget: number | string
+ *     - number: 槽位索引（如 0=第一个输入源）
+ *     - string: 源 ID
+ *   - options: AiVBOptions | null
+ *     - 传 null 等同于 clear（但建议用下面的 clear 方法）
+ *     - 参数结构详见 buildCurrentAiVBOptions 上方 JSDoc
+ *
+ * sessionComposer.clearSourceAiVirtualBackground(slotOrTarget)
+ *   - slotOrTarget: number | string — 同上
+ *   - 作用: 清除指定源的 AI 虚拟背景效果
  */
 async function applyCurrentVirtualBackgroundToSession()
 {
-  const { sessionComposer, canUpdateSessionComposer } = getSessionComposerHandles();
+  const { sessionComposer } = getSessionComposerHandles();
 
-  // 两种方式都没有，说明当前 SDK 版本不支持动态应用虚拟背景，静默返回
-  if (!sessionComposer && !canUpdateSessionComposer)
+  if (!sessionComposer)
   {
+    setStatus('当前通话没有 MediaEffectsComposer，虚拟背景将在下一次呼叫/接听时生效');
+
     return;
   }
 
   try
   {
-    // 旧接口：通过 composer 实例的 setSourceAiVirtualBackground 直接设置
     if (sessionComposer && typeof sessionComposer.setSourceAiVirtualBackground === 'function')
     {
-      const aiVirtualBackground = buildCurrentAiVirtualBackgroundOptions();
+      const aiVBOptions = buildCurrentAiVBOptions();
 
-      if (!aiVirtualBackground)
+      if (!aiVBOptions)
       {
-        // 没选虚拟背景 → 清除当前用户的 AI 虚拟背景效果
+        // SDK: clearSourceAiVirtualBackground(0)
+        // 没选虚拟背景 → 清除槽位 0 的 AI 虚拟背景效果
         sessionComposer.clearSourceAiVirtualBackground(0);
       }
       else
       {
-        sessionComposer.setSourceAiVirtualBackground(0, aiVirtualBackground);
+        // SDK: setSourceAiVirtualBackground(0, AiVBOptions)
+        // 将虚拟背景配置应用到槽位 0（第一个输入源）
+        sessionComposer.setSourceAiVirtualBackground(0, aiVBOptions);
       }
-    }
-    // 新接口：只更新 sources[0] 上的虚拟背景，不重新传水印/镜像等无关配置
-    else if (canUpdateSessionComposer)
-    {
-      await rtcSession.updateMediaEffectsComposer({
-        sources : [
-          {
-            aiVirtualBackground : buildCurrentAiVirtualBackgroundOptions() || null
-          }
-        ],
-        enableInsertable : true
-      });
     }
   }
   catch (error)
@@ -542,7 +720,29 @@ async function applyCurrentVirtualBackgroundToSession()
 // =============================================================================
 
 /**
+ * =============================================================================
+ * === SDK: AiNS（AI 降噪）配置参数结构 ===
+ * =============================================================================
+ *
+ * @typedef {Object} AiNSOptions
+ *
+ * @property {boolean} [enabled] — 是否启用 AI 降噪（默认 true）
+ *   设为 false 可暂时关闭而不销毁管线
+ *
+ * @property {number} [noiseReductionLevel] — 降噪强度（0~100，默认 80）
+ *   - 0   = 不降噪
+ *   - 100 = 最大降噪强度
+ *   - 值越高噪声抑制越强，但语音可能稍有失真
+ *
+ * @property {Object} [assetConfig] — AI 模型资源路径配置
+ * @property {string} [assetConfig.cdnUrl] — CDN 根路径（默认 './static'）
+ *   SDK 会在该路径下查找 WASM 和模型文件
+ */
+
+/**
  * 构建呼叫 / 接听时要传给 SDK 的 AiNS 配置。
+ *
+ * @returns {AiNSOptions|null} 启用了 AiNS 时返回配置对象，否则返回 null
  */
 function buildCallAiNsOptions()
 {
@@ -553,7 +753,6 @@ function buildCallAiNsOptions()
 
   return {
     enabled             : true,
-    preserveOtherTracks : true,
     noiseReductionLevel : getCurrentAiNsLevel(),
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
