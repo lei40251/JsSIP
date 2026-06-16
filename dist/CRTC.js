@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266161828
+ * CRTC v2.0.3.20266162033
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3768,7 +3768,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../attributes/name.js":14,"../messages/floorRelease.js":21,"../messages/floorRequest.js":22,"../messages/floorRequestStatus.js":23,"../messages/floorRequestStatusAck.js":24,"../messages/floorStatus.js":25,"../messages/floorStatusAck.js":26,"../messages/hello.js":27,"../messages/helloAck.js":28,"../messages/primitive.js":31,"../messages/requestStatusValue.js":32,"../parser/parser.js":34,"buffer":93}],36:[function(require,module,exports){
+},{"../attributes/name.js":14,"../messages/floorRelease.js":21,"../messages/floorRequest.js":22,"../messages/floorRequestStatus.js":23,"../messages/floorRequestStatusAck.js":24,"../messages/floorStatus.js":25,"../messages/floorStatusAck.js":26,"../messages/hello.js":27,"../messages/helloAck.js":28,"../messages/primitive.js":31,"../messages/requestStatusValue.js":32,"../parser/parser.js":34,"buffer":94}],36:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4017,11 +4017,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./Socket":81,"./URI":87,"./Utils":88}],37:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./Socket":82,"./URI":88,"./Utils":89}],37:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212323656 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212324066 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4488,7 +4488,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":37,"./Dialog/RequestSender":39,"./Logger":44,"./SIPMessage":80,"./Transactions":84,"./Utils":88}],39:[function(require,module,exports){
+},{"./Constants":37,"./Dialog/RequestSender":39,"./Logger":44,"./SIPMessage":81,"./Transactions":85,"./Utils":89}],39:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4583,7 +4583,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":37,"../RequestSender":79,"../Transactions":84}],40:[function(require,module,exports){
+},{"../Constants":37,"../RequestSender":80,"../Transactions":85}],40:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4762,7 +4762,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":44,"./Utils":88}],41:[function(require,module,exports){
+},{"./Logger":44,"./Utils":89}],41:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -17214,7 +17214,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":68,"./URI":87}],43:[function(require,module,exports){
+},{"./NameAddrHeader":69,"./URI":88}],43:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17228,7 +17228,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
-debug('version %s', '2.0.3.405212323656');
+debug('version %s', '2.0.3.405212324066');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17266,10 +17266,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212323656';
+    return '2.0.3.405212324066';
   }
 };
-},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":67,"./NameAddrHeader":69,"./Stats":83,"./UA":87,"./URI":88,"./Utils":89,"./WebSocketInterface":90,"debug":95}],44:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17371,7 +17371,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":94}],45:[function(require,module,exports){
+},{"debug":95}],45:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17390,7 +17390,9 @@ module.exports = class Logger {
 
 var Logger = require('../../Logger');
 var Config = require('./AiVBConfig');
+var SegmentationCommon = require('./AiVBSegmentationCommon');
 var logger = new Logger('AiVBAssetLoader');
+var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
 
 /** window 上存储 MediaPipe Tasks 全局变量的键名 */
 var TASKS_GLOBAL = 'CRTCAiVBVisionTasks';
@@ -17431,25 +17433,7 @@ module.exports = class AiVBAssetLoader {
    * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
    */
   getRuntimeOptions(modelPath) {
-    return {
-      moduleUrl: this.assetConfig.moduleUrl,
-      wasmBaseUrl: this.assetConfig.wasmBaseUrl,
-      modelUrl: this.resolveModelUrl(modelPath)
-    };
-  }
-
-  /**
-   * 解析模型 URL：显式传入的 modelPath 优先，否则使用配置的默认值。
-   *
-   * @private
-   * @param {string} [modelPath]
-   * @returns {string}
-   */
-  resolveModelUrl(modelPath) {
-    if (typeof modelPath === 'string' && modelPath.trim()) {
-      return modelPath.trim();
-    }
-    return this.assetConfig.modelUrl;
+    return segmentationHelpers.resolveRuntimeOptions(this.assetConfig, modelPath);
   }
 
   /**
@@ -17609,7 +17593,7 @@ module.exports = class AiVBAssetLoader {
     });
   }
 };
-},{"../../Logger":44,"./AiVBConfig":46}],46:[function(require,module,exports){
+},{"../../Logger":44,"./AiVBConfig":46,"./AiVBSegmentationCommon":47}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17862,6 +17846,134 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
 "use strict";
 
 /**
+ * AiVBSegmentationCommon —— 主线程 / Worker 共用的纯分割辅助逻辑。
+ *
+ * 这里刻意只放与宿主环境无关的代码：
+ *   - segmenter 初始化参数
+ *   - 从 MediaPipe 结果里选择人物遮罩
+ *   - 读取遮罩数值
+ *   - 释放分割结果资源
+ *   - 将置信度写入 alpha 通道
+ *
+ * 不放这里的内容：
+ *   - DOM / script 注入
+ *   - Worker 动态 import
+ *   - canvas / OffscreenCanvas 的创建与生命周期
+ *
+ * 这样主线程和 Worker 能共享同一套业务规则，同时保留各自的宿主实现。
+ */
+
+function createSegmentationHelpers() {
+  function createSegmenterOptions(modelUrl, delegate) {
+    return {
+      baseOptions: {
+        modelAssetPath: modelUrl,
+        delegate
+      },
+      runningMode: 'VIDEO',
+      outputCategoryMask: false,
+      outputConfidenceMasks: true
+    };
+  }
+  function resolveRuntimeOptions(assetConfig, modelPath) {
+    var safeAssetConfig = assetConfig && typeof assetConfig === 'object' ? assetConfig : {};
+    return {
+      moduleUrl: typeof safeAssetConfig.moduleUrl === 'string' ? safeAssetConfig.moduleUrl : '',
+      wasmBaseUrl: typeof safeAssetConfig.wasmBaseUrl === 'string' ? safeAssetConfig.wasmBaseUrl : '',
+      modelUrl: typeof modelPath === 'string' && modelPath.trim() ? modelPath.trim() : typeof safeAssetConfig.modelUrl === 'string' ? safeAssetConfig.modelUrl : ''
+    };
+  }
+  function resolvePersonMaskIndex(labels, maskCount) {
+    var safeLabels = Array.isArray(labels) ? labels : [];
+    for (var index = 0; index < safeLabels.length; index += 1) {
+      if (typeof safeLabels[index] === 'string' && /person/i.test(safeLabels[index])) {
+        return index;
+      }
+    }
+    if (maskCount > 1) {
+      return maskCount - 1;
+    }
+    return 0;
+  }
+  function resolveOutputMask(result, labels) {
+    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
+      var personMaskIndex = resolvePersonMaskIndex(labels, result.confidenceMasks.length);
+      return {
+        mask: result.confidenceMasks[personMaskIndex],
+        personMaskIndex
+      };
+    }
+    if (result && result.categoryMask) {
+      return {
+        mask: result.categoryMask,
+        personMaskIndex: 0
+      };
+    }
+    throw new Error('ImageSegmenter did not return a supported mask output');
+  }
+  function readMaskValues(mask) {
+    if (!mask) {
+      throw new Error('ImageSegmenter mask is required');
+    }
+    if (typeof mask.getAsFloat32Array === 'function') {
+      return mask.getAsFloat32Array();
+    }
+    if (typeof mask.getAsUint8Array === 'function') {
+      var categoryValues = mask.getAsUint8Array();
+      var floatValues = new Float32Array(categoryValues.length);
+      for (var index = 0; index < categoryValues.length; index += 1) {
+        floatValues[index] = categoryValues[index] > 0 ? 1 : 0;
+      }
+      return floatValues;
+    }
+    throw new Error('Unsupported ImageSegmenter mask format');
+  }
+  function closeSegmentationResult(result) {
+    if (result && typeof result.close === 'function') {
+      result.close();
+      return;
+    }
+    if (result && Array.isArray(result.confidenceMasks)) {
+      result.confidenceMasks.forEach(mask => {
+        if (mask && typeof mask.close === 'function') {
+          mask.close();
+        }
+      });
+    }
+    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
+      result.categoryMask.close();
+    }
+  }
+  function fillAlphaMaskImageData(confidenceValues, imageData, alphaBias) {
+    var offset = 0;
+    for (var index = 0; index < confidenceValues.length; index += 1) {
+      var normalizedAlpha = Math.max(0, Math.min(1, (confidenceValues[index] - alphaBias) / (1 - alphaBias)));
+      var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
+      imageData[offset] = 0;
+      imageData[offset + 1] = 0;
+      imageData[offset + 2] = 0;
+      imageData[offset + 3] = alpha;
+      offset += 4;
+    }
+  }
+  return {
+    closeSegmentationResult,
+    createSegmenterOptions,
+    fillAlphaMaskImageData,
+    readMaskValues,
+    resolveRuntimeOptions,
+    resolveOutputMask,
+    resolvePersonMaskIndex
+  };
+}
+exports.createSegmentationHelpers = createSegmentationHelpers;
+exports.getWorkerSegmentationHelpersFactorySource = function () {
+  return createSegmentationHelpers.toString();
+};
+},{}],48:[function(require,module,exports){
+"use strict";
+
+/**
  * MediaPipeSegmenterRuntime —— 封装 MediaPipe ImageSegmenter（VIDEO 模式），
  * 为 AIVirtualBackground 提供人像分割能力。
  *
@@ -17877,7 +17989,9 @@ function assertKnownKeys(sectionName, value, allowedKeys) {
 
 var Logger = require('../../Logger');
 var AiVBAssetLoader = require('./AiVBAssetLoader');
+var SegmentationCommon = require('./AiVBSegmentationCommon');
 var logger = new Logger('AiVBMediaPipeRuntime');
+var segmentationHelpers = SegmentationCommon.createSegmentationHelpers();
 
 /** 默认推理后端 —— 'GPU' 以获得最佳性能 */
 var DEFAULT_DELEGATE = 'GPU';
@@ -18024,15 +18138,7 @@ module.exports = class MediaPipeSegmenterRuntime {
   }
   async createGpuSegmenter(ImageSegmenter, vision, requestedDelegate) {
     try {
-      return await ImageSegmenter.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: this.assetUrls.modelUrl,
-          delegate: requestedDelegate
-        },
-        runningMode: 'VIDEO',
-        outputCategoryMask: false,
-        outputConfidenceMasks: true
-      });
+      return await ImageSegmenter.createFromOptions(vision, segmentationHelpers.createSegmenterOptions(this.assetUrls.modelUrl, requestedDelegate));
     } catch (error) {
       logger.warn(`ImageSegmenter GPU init failed; CPU fallback is disabled: ${error && error.message ? error.message : error}`);
       throw error;
@@ -18169,15 +18275,7 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @returns {number} 从 0 开始的索引
    */
   resolvePersonMaskIndex(maskCount) {
-    for (var index = 0; index < this.labels.length; index += 1) {
-      if (typeof this.labels[index] === 'string' && /person/i.test(this.labels[index])) {
-        return index;
-      }
-    }
-    if (maskCount > 1) {
-      return maskCount - 1;
-    }
-    return 0;
+    return segmentationHelpers.resolvePersonMaskIndex(this.labels, maskCount);
   }
 
   /**
@@ -18217,19 +18315,7 @@ module.exports = class MediaPipeSegmenterRuntime {
     }
     var confidenceValues = this.readMaskValues(mask);
     var imageData = this.maskImageData.data;
-    var offset = 0;
-
-    // 将置信度值写入 alpha 通道（R=G=B=0, A=置信度）
-    for (var i = 0; i < confidenceValues.length; i += 1) {
-      // 轻微收缩遮罩，减少亮背景在羽化边缘处泄漏形成白边。
-      var normalizedAlpha = Math.max(0, Math.min(1, (confidenceValues[i] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS)));
-      var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
-      imageData[offset] = 0;
-      imageData[offset + 1] = 0;
-      imageData[offset + 2] = 0;
-      imageData[offset + 3] = alpha;
-      offset += 4;
-    }
+    segmentationHelpers.fillAlphaMaskImageData(confidenceValues, imageData, DEFAULT_MASK_ALPHA_BIAS);
     this.maskContext.putImageData(this.maskImageData, 0, 0);
     return this.applyMaskEdgeBlur(width, height);
   }
@@ -18270,14 +18356,9 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @throws {Error} 如果既没有 confidenceMasks 也没有 categoryMask
    */
   resolveOutputMask(result) {
-    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
-      this.personMaskIndex = this.resolvePersonMaskIndex(result.confidenceMasks.length);
-      return result.confidenceMasks[this.personMaskIndex];
-    }
-    if (result && result.categoryMask) {
-      return result.categoryMask;
-    }
-    throw new Error('ImageSegmenter did not return a supported mask output');
+    var outputMask = segmentationHelpers.resolveOutputMask(result, this.labels);
+    this.personMaskIndex = outputMask.personMaskIndex;
+    return outputMask.mask;
   }
 
   /**
@@ -18292,21 +18373,7 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @throws {Error} 如果遮罩格式不受支持
    */
   readMaskValues(mask) {
-    if (!mask) {
-      throw new Error('ImageSegmenter mask is required');
-    }
-    if (typeof mask.getAsFloat32Array === 'function') {
-      return mask.getAsFloat32Array();
-    }
-    if (typeof mask.getAsUint8Array === 'function') {
-      var categoryValues = mask.getAsUint8Array();
-      var floatValues = new Float32Array(categoryValues.length);
-      for (var i = 0; i < categoryValues.length; i += 1) {
-        floatValues[i] = categoryValues[i] > 0 ? 1 : 0;
-      }
-      return floatValues;
-    }
-    throw new Error('Unsupported ImageSegmenter mask format');
+    return segmentationHelpers.readMaskValues(mask);
   }
 
   /**
@@ -18319,20 +18386,7 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @param {Object} result — MediaPipe ImageSegmenterResult
    */
   closeSegmentationResult(result) {
-    if (result && typeof result.close === 'function') {
-      result.close();
-      return;
-    }
-    if (result && Array.isArray(result.confidenceMasks)) {
-      result.confidenceMasks.forEach(mask => {
-        if (mask && typeof mask.close === 'function') {
-          mask.close();
-        }
-      });
-    }
-    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
-      result.categoryMask.close();
-    }
+    segmentationHelpers.closeSegmentationResult(result);
   }
 
   // ---------------------------------------------------------------------------
@@ -18387,7 +18441,7 @@ module.exports = class MediaPipeSegmenterRuntime {
     this.featherContext = null;
   }
 };
-},{"../../Logger":44,"./AiVBAssetLoader":45}],48:[function(require,module,exports){
+},{"../../Logger":44,"./AiVBAssetLoader":45,"./AiVBSegmentationCommon":47}],49:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19713,7 +19767,7 @@ class AudioComposer {
   }
 }
 module.exports = AudioComposer;
-},{}],49:[function(require,module,exports){
+},{}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -19913,7 +19967,7 @@ exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   logger.debug(`normalizeSourceOptions: index=${index} options=${JSON.stringify(options)}`);
   return options;
 };
-},{"../../Logger":44}],50:[function(require,module,exports){
+},{"../../Logger":44}],51:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20055,7 +20109,7 @@ class ComposerDomAdapter {
   }
 }
 module.exports = ComposerDomAdapter;
-},{}],51:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20413,7 +20467,7 @@ class LayoutEngine {
   }
 }
 module.exports = LayoutEngine;
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../../Logger');
@@ -21575,7 +21629,7 @@ class MediaEffectsComposer {
   }
 }
 module.exports = MediaEffectsComposer;
-},{"../../Logger":44,"./AudioComposer":48,"./ComposerConfig":49,"./ComposerDomAdapter":50,"./LayoutEngine":51,"./OutputStreamManager":53,"./RenderLoop":54,"./SourceAiVBManager":55,"./SourceRegistry":56,"./WatermarkManager":57}],53:[function(require,module,exports){
+},{"../../Logger":44,"./AudioComposer":49,"./ComposerConfig":50,"./ComposerDomAdapter":51,"./LayoutEngine":52,"./OutputStreamManager":54,"./RenderLoop":55,"./SourceAiVBManager":56,"./SourceRegistry":57,"./WatermarkManager":58}],54:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -22210,7 +22264,7 @@ class OutputStreamManager {
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22732,7 +22786,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"../Renderers/MainCanvas2DRenderer":59,"../Renderers/MainWebGL2Renderer":60,"../Renderers/RendererFactory":61,"../Renderers/WorkerRenderer":62}],55:[function(require,module,exports){
+},{"../Renderers/MainCanvas2DRenderer":60,"../Renderers/MainWebGL2Renderer":61,"../Renderers/RendererFactory":62,"../Renderers/WorkerRenderer":63}],56:[function(require,module,exports){
 "use strict";
 
 var AiVBConfig = require('../AIVirtualBackground/AiVBConfig');
@@ -23279,7 +23333,7 @@ module.exports = class SourceAiVBManager {
     return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 };
-},{"../AIVirtualBackground/AiVBConfig":46,"../AIVirtualBackground/MediaPipeSegmenterRuntime":47}],56:[function(require,module,exports){
+},{"../AIVirtualBackground/AiVBConfig":46,"../AIVirtualBackground/MediaPipeSegmenterRuntime":48}],57:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23649,7 +23703,7 @@ class SourceRegistry {
   }
 }
 module.exports = SourceRegistry;
-},{}],57:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24111,7 +24165,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],58:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24252,7 +24306,7 @@ module.exports = class BaseRenderer {
     this._onFramePresented(meta || {});
   }
 };
-},{}],59:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 "use strict";
 
 /**
@@ -24549,7 +24603,7 @@ module.exports = class MainCanvas2DRenderer extends BaseRenderer {
     this._canvas = null;
   }
 };
-},{"./BaseRenderer":58}],60:[function(require,module,exports){
+},{"./BaseRenderer":59}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25097,7 +25151,7 @@ module.exports = class MainWebGL2Renderer extends BaseRenderer {
     this._aiVirtualBackgroundManager = null;
   }
 };
-},{"./BaseRenderer":58,"./helpers/color":63,"./helpers/gl":64}],61:[function(require,module,exports){
+},{"./BaseRenderer":59,"./helpers/color":64,"./helpers/gl":65}],62:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25271,7 +25325,7 @@ function shouldPreferMainWebGL2() {
   var isIOSWebView = /iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua);
   return isSafari || isIOSWebView;
 }
-},{"./MainCanvas2DRenderer":59,"./MainWebGL2Renderer":60,"./WorkerRenderer":62}],62:[function(require,module,exports){
+},{"./MainCanvas2DRenderer":60,"./MainWebGL2Renderer":61,"./WorkerRenderer":63}],63:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25921,7 +25975,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }
   }
 };
-},{"./BaseRenderer":58,"./workerScript":65}],63:[function(require,module,exports){
+},{"./BaseRenderer":59,"./workerScript":66}],64:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26014,7 +26068,7 @@ function parseRgbColor(value) {
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
-},{}],64:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
 "use strict";
 
 /**
@@ -26089,8 +26143,10 @@ exports.createVideoTexture = function (gl) {
   gl.bindTexture(gl.TEXTURE_2D, null);
   return texture;
 };
-},{}],65:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
+
+var SegmentationCommon = require('../AIVirtualBackground/AiVBSegmentationCommon');
 
 /* eslint-disable */
 /**
@@ -26151,6 +26207,7 @@ function workerMain() {
   var aivbModulePromises = Object.create(null); // moduleUrl → 动态 import() Promise（去重）
   var aivbBackgroundStates = Object.create(null); // imageUrl → 背景图 ImageBitmap 缓存
   var dynamicImport = new Function('moduleUrl', 'return import(moduleUrl);');
+  /* __AIVB_SEGMENTATION_HELPERS__ */
 
   // 遮罩后处理参数
   var DEFAULT_MASK_EDGE_BLUR_PX = 2; // 遮罩边缘羽化模糊半径（px），防止硬边白边
@@ -26347,17 +26404,6 @@ void main() {
       delegate: config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU'
     });
   }
-  function resolvePersonMaskIndex(labels, maskCount) {
-    for (var index = 0; index < labels.length; index += 1) {
-      if (typeof labels[index] === 'string' && /person/i.test(labels[index])) {
-        return index;
-      }
-    }
-    if (maskCount > 1) {
-      return maskCount - 1;
-    }
-    return 0;
-  }
 
   // 确保 MediaPipe ImageSegmenter 已初始化（按 runtimeKey 去重，避免并发创建）
   // 使用 selfie-segmenter 模型，VIDEO 运行模式，输出置信度遮罩
@@ -26378,21 +26424,14 @@ void main() {
     }
     if (!runtimeState.initializing) {
       runtimeState.initializing = async function () {
-        var moduleUrl = config.assetConfig && config.assetConfig.moduleUrl ? config.assetConfig.moduleUrl : '';
-        var wasmBaseUrl = config.assetConfig && config.assetConfig.wasmBaseUrl ? config.assetConfig.wasmBaseUrl : '';
-        var modelUrl = config.modelPath || config.assetConfig && config.assetConfig.modelUrl || '';
+        var runtimeOptions = segmentationCommon.resolveRuntimeOptions(config.assetConfig, config.modelPath);
+        var moduleUrl = runtimeOptions.moduleUrl;
+        var wasmBaseUrl = runtimeOptions.wasmBaseUrl;
+        var modelUrl = runtimeOptions.modelUrl;
         var delegate = config.segmentation && config.segmentation.delegate ? config.segmentation.delegate : 'GPU';
         var tasksModule = await loadVisionTasksModule(moduleUrl);
         var vision = await tasksModule.FilesetResolver.forVisionTasks(wasmBaseUrl);
-        var segmenter = await tasksModule.ImageSegmenter.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: modelUrl,
-            delegate: delegate
-          },
-          runningMode: 'VIDEO',
-          outputCategoryMask: false,
-          outputConfidenceMasks: true
-        });
+        var segmenter = await tasksModule.ImageSegmenter.createFromOptions(vision, segmentationCommon.createSegmenterOptions(modelUrl, delegate));
         runtimeState.segmenter = segmenter;
         runtimeState.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
         runtimeState.ready = true;
@@ -26403,39 +26442,6 @@ void main() {
     await runtimeState.initializing;
     return runtimeState;
   }
-  function closeSegmentationResult(result) {
-    if (result && typeof result.close === 'function') {
-      result.close();
-      return;
-    }
-    if (result && Array.isArray(result.confidenceMasks)) {
-      result.confidenceMasks.forEach(function (mask) {
-        if (mask && typeof mask.close === 'function') {
-          mask.close();
-        }
-      });
-    }
-    if (result && result.categoryMask && typeof result.categoryMask.close === 'function') {
-      result.categoryMask.close();
-    }
-  }
-  function resolveMaskValues(mask) {
-    if (!mask) {
-      throw new Error('ImageSegmenter mask is required');
-    }
-    if (typeof mask.getAsFloat32Array === 'function') {
-      return mask.getAsFloat32Array();
-    }
-    if (typeof mask.getAsUint8Array === 'function') {
-      var categoryValues = mask.getAsUint8Array();
-      var floatValues = new Float32Array(categoryValues.length);
-      for (var index = 0; index < categoryValues.length; index += 1) {
-        floatValues[index] = categoryValues[index] > 0 ? 1 : 0;
-      }
-      return floatValues;
-    }
-    throw new Error('Unsupported ImageSegmenter mask format');
-  }
 
   // ---------------------------------------------------------------------------
   // 六、遮罩构建 — 将 MediaPipe 分割结果转为 alpha 遮罩 canvas
@@ -26444,13 +26450,8 @@ void main() {
   // 将 MediaPipe 置信度/类别遮罩转换为 RGBA ImageData，写入 alpha 通道
   // 返回羽化后的遮罩 canvas（用于 destination-in 合成抠出人像）
   function createMaskCanvas(sourceState, runtimeState, result) {
-    var mask = null;
-    if (result && Array.isArray(result.confidenceMasks) && result.confidenceMasks.length > 0) {
-      var personMaskIndex = resolvePersonMaskIndex(runtimeState.labels || [], result.confidenceMasks.length);
-      mask = result.confidenceMasks[personMaskIndex];
-    } else if (result && result.categoryMask) {
-      mask = result.categoryMask;
-    }
+    var outputMask = segmentationCommon.resolveOutputMask(result, runtimeState.labels || []);
+    var mask = outputMask.mask;
     if (!mask) {
       throw new Error('ImageSegmenter did not return a supported mask output');
     }
@@ -26463,18 +26464,9 @@ void main() {
     if (!sourceState.maskSurface.imageData || sourceState.maskSurface.canvas.width !== maskWidth || sourceState.maskSurface.canvas.height !== maskHeight) {
       sourceState.maskSurface.imageData = maskSurface.context.createImageData(maskWidth, maskHeight);
     }
-    var confidenceValues = resolveMaskValues(mask);
+    var confidenceValues = segmentationCommon.readMaskValues(mask);
     var imageData = sourceState.maskSurface.imageData.data;
-    var offset = 0;
-    for (var index = 0; index < confidenceValues.length; index += 1) {
-      var normalizedAlpha = Math.max(0, Math.min(1, (confidenceValues[index] - DEFAULT_MASK_ALPHA_BIAS) / (1 - DEFAULT_MASK_ALPHA_BIAS)));
-      var alpha = Math.max(0, Math.min(255, Math.round(normalizedAlpha * 255)));
-      imageData[offset] = 0;
-      imageData[offset + 1] = 0;
-      imageData[offset + 2] = 0;
-      imageData[offset + 3] = alpha;
-      offset += 4;
-    }
+    segmentationCommon.fillAlphaMaskImageData(confidenceValues, imageData, DEFAULT_MASK_ALPHA_BIAS);
     maskSurface.context.putImageData(sourceState.maskSurface.imageData, 0, 0);
     if (DEFAULT_MASK_EDGE_BLUR_PX <= 0) {
       return maskSurface.canvas;
@@ -26626,7 +26618,7 @@ void main() {
           } catch (error) {
             reject(error);
           } finally {
-            closeSegmentationResult(result);
+            segmentationCommon.closeSegmentationResult(result);
           }
         });
       } catch (error) {
@@ -27148,16 +27140,17 @@ void main() {
 }
 exports.createWorkerScript = function () {
   var source = workerMain.toString();
+  source = source.replace('/* __AIVB_SEGMENTATION_HELPERS__ */', 'var segmentationCommon = (' + SegmentationCommon.getWorkerSegmentationHelpersFactorySource() + ')();');
   return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
-},{}],66:[function(require,module,exports){
+},{"../AIVirtualBackground/AiVBSegmentationCommon":47}],67:[function(require,module,exports){
 "use strict";
 
 /**
  * MediaEffectsComposer public entry point.
  */
 module.exports = require('./Core/MediaEffectsComposer');
-},{"./Core/MediaEffectsComposer":52}],67:[function(require,module,exports){
+},{"./Core/MediaEffectsComposer":53}],68:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -27370,7 +27363,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./URI":87,"./Utils":88,"events":92}],68:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":80,"./SIPMessage":81,"./URI":88,"./Utils":89,"events":93}],69:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -27459,7 +27452,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":42,"./URI":87}],69:[function(require,module,exports){
+},{"./Grammar":42,"./URI":88}],70:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -27665,7 +27658,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./Utils":88,"events":92}],70:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Logger":44,"./RequestSender":80,"./SIPMessage":81,"./Utils":89,"events":93}],71:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -27919,7 +27912,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":42,"./Logger":44,"./SIPMessage":80}],71:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44,"./SIPMessage":81}],72:[function(require,module,exports){
 "use strict";
 
 var a = 'BQDw\nofp2G4MCvHKAlA0+IVe8m8gfPntmbvpud7uKwBLfzKarAWND0T1babPwmgyAjKzG\nBw1bOs7IwmoQzKIBdg3GrcIcXdwP54o19kTbzrU9gipcF7SMBIA+OiTQvYW3PpMR\npvkBln/JQCMBGKnWgz+Ie4Tu8sCFde8RPQrJuUp7jBAQCgBIAQCAFQBwGkqgNjBI';
@@ -27932,7 +27925,7 @@ for (var i = 0; i < a.length; i++) {
   }
 }
 module.exports = s.split('').reverse().join('');
-},{}],72:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -34001,7 +33994,7 @@ module.exports = class RTCSession extends EventEmitter {
 };
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./BFCP/index":6,"./Constants":37,"./Dialog":38,"./Exceptions":41,"./Logger":44,"./RTCSession/DTMF":73,"./RTCSession/Info":74,"./RTCSession/MediaPipeline":75,"./RTCSession/ReferNotifier":76,"./RTCSession/ReferSubscriber":77,"./RequestSender":79,"./SIPMessage":80,"./Timers":83,"./Transactions":84,"./URI":87,"./Utils":88,"buffer":93,"events":92,"sdp-transform":101}],73:[function(require,module,exports){
+},{"./BFCP/index":6,"./Constants":37,"./Dialog":38,"./Exceptions":41,"./Logger":44,"./RTCSession/DTMF":74,"./RTCSession/Info":75,"./RTCSession/MediaPipeline":76,"./RTCSession/ReferNotifier":77,"./RTCSession/ReferSubscriber":78,"./RequestSender":80,"./SIPMessage":81,"./Timers":84,"./Transactions":85,"./URI":88,"./Utils":89,"buffer":94,"events":93,"sdp-transform":102}],74:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34140,7 +34133,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":37,"../Exceptions":41,"../Logger":44,"../Utils":88,"events":92}],74:[function(require,module,exports){
+},{"../Constants":37,"../Exceptions":41,"../Logger":44,"../Utils":89,"events":93}],75:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34221,7 +34214,7 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":37,"../Exceptions":41,"../Utils":88,"events":92}],75:[function(require,module,exports){
+},{"../Constants":37,"../Exceptions":41,"../Utils":89,"events":93}],76:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -34801,7 +34794,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression/index.js":5,"../Logger":44,"../MediaEffectsComposer":66,"../Utils":88}],76:[function(require,module,exports){
+},{"../AINoiseSuppression/index.js":5,"../Logger":44,"../MediaEffectsComposer":67,"../Utils":89}],77:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -34848,7 +34841,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":37,"../Logger":44}],77:[function(require,module,exports){
+},{"../Constants":37,"../Logger":44}],78:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34972,7 +34965,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":37,"../Grammar":42,"../Logger":44,"../Utils":88,"events":92}],78:[function(require,module,exports){
+},{"../Constants":37,"../Grammar":42,"../Logger":44,"../Utils":89,"events":93}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -35270,7 +35263,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":37,"./Logger":44,"./RequestSender":79,"./SIPMessage":80,"./Utils":88}],79:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./RequestSender":80,"./SIPMessage":81,"./Utils":89}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -35409,7 +35402,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":37,"./DigestAuthentication":40,"./Logger":44,"./Transactions":84}],80:[function(require,module,exports){
+},{"./Constants":37,"./DigestAuthentication":40,"./Logger":44,"./Transactions":85}],81:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -35981,7 +35974,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":37,"./Grammar":42,"./Logger":44,"./NameAddrHeader":68,"./Utils":88,"sdp-transform":101}],81:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./Logger":44,"./NameAddrHeader":69,"./Utils":89,"sdp-transform":102}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -36049,7 +36042,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":42,"./Logger":44,"./Utils":88}],82:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44,"./Utils":89}],83:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -36455,7 +36448,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":37,"./Logger":44,"./Utils":88,"events":92}],83:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./Utils":89,"events":93}],84:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -36476,7 +36469,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],84:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -37066,7 +37059,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":37,"./Logger":44,"./SIPMessage":80,"./Timers":83,"events":92}],85:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./SIPMessage":81,"./Timers":84,"events":93}],86:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37439,7 +37432,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":37,"./Logger":44,"./Socket":81,"./Utils":88}],86:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./Socket":82,"./Utils":89}],87:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -38499,7 +38492,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":36,"./Constants":37,"./Exceptions":41,"./Logger":44,"./Message":67,"./Options":69,"./Parser":70,"./Pk":71,"./RTCSession":72,"./Registrator":78,"./SIPMessage":80,"./Transactions":84,"./Transport":85,"./URI":87,"./Utils":88,"./sanityCheck":90,"events":92,"jsencrypt":97}],87:[function(require,module,exports){
+},{"./Config":36,"./Constants":37,"./Exceptions":41,"./Logger":44,"./Message":68,"./Options":70,"./Parser":71,"./Pk":72,"./RTCSession":73,"./Registrator":79,"./SIPMessage":81,"./Transactions":85,"./Transport":86,"./URI":88,"./Utils":89,"./sanityCheck":91,"events":93,"jsencrypt":98}],88:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -38671,7 +38664,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":37,"./Grammar":42,"./Utils":88}],88:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./Utils":89}],89:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -40537,7 +40530,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":37,"./Grammar":42,"./URI":87}],89:[function(require,module,exports){
+},{"./Constants":37,"./Grammar":42,"./URI":88}],90:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40656,7 +40649,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":42,"./Logger":44}],90:[function(require,module,exports){
+},{"./Grammar":42,"./Logger":44}],91:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40849,7 +40842,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":37,"./Logger":44,"./SIPMessage":80,"./Utils":88}],91:[function(require,module,exports){
+},{"./Constants":37,"./Logger":44,"./SIPMessage":81,"./Utils":89}],92:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -41001,7 +40994,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -41526,7 +41519,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -43308,7 +43301,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":91,"buffer":93,"ieee754":96}],94:[function(require,module,exports){
+},{"base64-js":92,"buffer":94,"ieee754":97}],95:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -43585,7 +43578,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":95,"_process":99}],95:[function(require,module,exports){
+},{"./common":96,"_process":100}],96:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -43879,7 +43872,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":98}],96:[function(require,module,exports){
+},{"ms":99}],97:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -43966,7 +43959,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -49357,7 +49350,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -49521,7 +49514,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],99:[function(require,module,exports){
+},{}],100:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -49707,7 +49700,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -50203,7 +50196,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -50218,7 +50211,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":100,"./parser":102,"./writer":103}],102:[function(require,module,exports){
+},{"./grammar":101,"./parser":103,"./writer":104}],103:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -50344,7 +50337,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":100}],103:[function(require,module,exports){
+},{"./grammar":101}],104:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -50460,7 +50453,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":100}]},{},[43])(43)
+},{"./grammar":101}]},{},[43])(43)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map
