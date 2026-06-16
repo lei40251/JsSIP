@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.2026616180
+ * CRTC v2.0.3.20266161828
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -8,7 +8,7 @@
 "use strict";
 
 /**
- * AINoiseSuppressionConfig — AI 降噪引擎的配置归一化模块。
+ * AiNSConfig — AI 降噪引擎的配置归一化模块。
  *
  * 职责：
  *   - 将外部传入的选项与安全默认值合并
@@ -20,11 +20,11 @@
  *   - 对外导出常量供 Core 和 Processor 直接引用，避免魔术数字
  *   - 非法值统一回退到安全的默认值，并在 debug 级别记录 fallback 原因
  *
- * @module AINoiseSuppressionConfig
+ * @module AiNSConfig
  */
 
 var Logger = require('../Logger');
-var logger = new Logger('AINoiseSuppressionConfig');
+var logger = new Logger('AiNSConfig');
 
 /**
  * 默认采样率（48kHz）。
@@ -57,7 +57,7 @@ exports.DEFAULT_SUPPRESSION_LEVEL = DEFAULT_SUPPRESSION_LEVEL;
 exports.DEFAULT_CDN_URL = DEFAULT_CDN_URL;
 
 /**
- * 创建完全归一化的 AINoiseSuppression 配置对象。
+ * 创建完全归一化的 AiNS 配置对象。
  *
  * 所有外部选项经此函数处理后，下游代码可以按标准类型直接使用，
  * 无需再做额外校验。
@@ -187,9 +187,9 @@ exports.normalizeAssetConfig = function (assetConfig) {
 "use strict";
 
 var Logger = require('../Logger');
-var AiNSConfig = require('./AINoiseSuppressionConfig');
-var createWorkletCode = require('./aiNoiseSuppressionWorkletSource');
-var logger = new Logger('AINoiseSuppressionCore');
+var AiNSConfig = require('./AiNSConfig');
+var createWorkletCode = require('./AiNSWorkletSource');
+var logger = new Logger('AiNSCore');
 var DEFAULT_CDN_URL = AiNSConfig.DEFAULT_CDN_URL;
 var WORKLET_MESSAGE_TYPES = {
   SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
@@ -233,7 +233,7 @@ async function registerInlineWorkletModule(audioContext, inlineCode) {
 }
 
 /**
- * AINoiseSuppression Core 运行时。
+ * AiNS Core 运行时。
  *
  * 它只负责：
  * - 拉取 WASM / 模型资源
@@ -242,7 +242,7 @@ async function registerInlineWorkletModule(audioContext, inlineCode) {
  * - 向 Worklet 发送运行时控制消息
  *
  * 它不直接处理 MediaStream，也不管理 AudioContext 生命周期。
- * MediaStream 图的搭建由 `AINoiseSuppressionMediaStreamProcessor` 负责。
+ * MediaStream 图的搭建由 `AiNSMediaStreamProcessor` 负责。
  */
 module.exports = class AiNSCore {
   /**
@@ -390,16 +390,16 @@ module.exports = class AiNSCore {
     }
   }
 };
-},{"../Logger":44,"./AINoiseSuppressionConfig":1,"./aiNoiseSuppressionWorkletSource":4}],3:[function(require,module,exports){
+},{"../Logger":44,"./AiNSConfig":1,"./AiNSWorkletSource":4}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
-var AiNSConfig = require('./AINoiseSuppressionConfig');
-var AiNSCore = require('./AINoiseSuppressionCore');
-var logger = new Logger('AINoiseSuppression');
+var AiNSConfig = require('./AiNSConfig');
+var AiNSCore = require('./AiNSCore');
+var logger = new Logger('AiNSMediaStreamProcessor');
 
 /**
- * AINoiseSuppression 的 MediaStream 处理器。
+ * AiNS 的 MediaStream 处理器。
  *
  * 职责：
  * 1. 接收原始 MediaStream / MediaStreamTrack；
@@ -465,7 +465,7 @@ module.exports = class AiNSMediaStreamProcessor {
     this.setInput(input);
     await this.ensureGraph();
     if (!this.processedStream) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor.init: failed to create processed MediaStream');
+      throw new Error('AiNSMediaStreamProcessor.init: failed to create processed MediaStream');
     }
     return this.processedStream;
   }
@@ -499,14 +499,14 @@ module.exports = class AiNSMediaStreamProcessor {
     logger.debug('replaceAudioTrack()');
     var nextAudioTrack = this._resolveInputAudioTrack(input);
     if (!nextAudioTrack) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor: replacement input has no audio track');
+      throw new Error('AiNSMediaStreamProcessor: replacement input has no audio track');
     }
     var nextStream = this._buildStreamWithReplacedAudioTrack(nextAudioTrack);
     this.originalTrack = nextAudioTrack;
     this.originalStream = nextStream;
     await this.ensureGraph();
     if (!this.processedStream) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor.replaceAudioTrack: failed to create processed MediaStream');
+      throw new Error('AiNSMediaStreamProcessor.replaceAudioTrack: failed to create processed MediaStream');
     }
     return this.processedStream;
   }
@@ -579,7 +579,7 @@ module.exports = class AiNSMediaStreamProcessor {
     if (input instanceof MediaStream) {
       var audioTrack = this._resolveInputAudioTrack(input);
       if (!audioTrack) {
-        throw new Error('AINoiseSuppressionMediaStreamProcessor: input stream has no audio track');
+        throw new Error('AiNSMediaStreamProcessor: input stream has no audio track');
       }
       this.originalStream = input;
       this.originalTrack = audioTrack;
@@ -587,7 +587,7 @@ module.exports = class AiNSMediaStreamProcessor {
       return;
     }
     if (!input || input.kind !== 'audio') {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor: input track must be audio');
+      throw new Error('AiNSMediaStreamProcessor: input track must be audio');
     }
     this.originalTrack = input;
     this.originalStream = new MediaStream([input]);
@@ -638,7 +638,7 @@ module.exports = class AiNSMediaStreamProcessor {
   async ensureGraph() {
     logger.debug('ensureGraph() start');
     if (!this.originalTrack || !this.originalStream) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor: missing source audio track');
+      throw new Error('AiNSMediaStreamProcessor: missing source audio track');
     }
     this.audioContext = this.audioContext || new AudioContext({
       sampleRate: this.config.sampleRate
@@ -676,11 +676,11 @@ module.exports = class AiNSMediaStreamProcessor {
    */
   rebuildProcessedStream() {
     if (!this.destination) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor: missing destination node');
+      throw new Error('AiNSMediaStreamProcessor: missing destination node');
     }
     var processedTrack = this.destination.stream.getAudioTracks()[0];
     if (!processedTrack) {
-      throw new Error('AINoiseSuppressionMediaStreamProcessor: worklet destination did not produce an audio track');
+      throw new Error('AiNSMediaStreamProcessor: worklet destination did not produce an audio track');
     }
     this.processedTrack = processedTrack;
     var outputTracks = [processedTrack];
@@ -728,7 +728,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
   }
 };
-},{"../Logger":44,"./AINoiseSuppressionConfig":1,"./AINoiseSuppressionCore":2}],4:[function(require,module,exports){
+},{"../Logger":44,"./AiNSConfig":1,"./AiNSCore":2}],4:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -1116,7 +1116,7 @@ module.exports = function () {
 },{}],5:[function(require,module,exports){
 "use strict";
 
-var AiNSMediaStreamProcessor = require('./AINoiseSuppressionMediaStreamProcessor');
+var AiNSMediaStreamProcessor = require('./AiNSMediaStreamProcessor');
 var Logger = require('../Logger');
 var logger = new Logger('AiNSEngine');
 
@@ -1237,7 +1237,7 @@ class AiNSEngine {
   }
 }
 module.exports = AiNSEngine;
-},{"../Logger":44,"./AINoiseSuppressionMediaStreamProcessor":3}],6:[function(require,module,exports){
+},{"../Logger":44,"./AiNSMediaStreamProcessor":3}],6:[function(require,module,exports){
 "use strict";
 
 /**
@@ -4021,7 +4021,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212323600 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212323656 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17228,7 +17228,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
-debug('version %s', '2.0.3.405212323600');
+debug('version %s', '2.0.3.405212323656');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17266,7 +17266,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212323600';
+    return '2.0.3.405212323656';
   }
 };
 },{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -26117,7 +26117,7 @@ function workerMain() {
   //   destroy()
   //   → 回复: ready | rendered(bitmap) | renderError | failed
   //
-  // AiVB 路径：当 item 带有 aiVirtualBackground 配置且 runtimeEnabled=true 时，
+  // AI 虚拟背景路径：当 item 带有 aiVirtualBackground 配置且 runtimeEnabled=true 时，
   //   Worker 内部通过动态 import() 加载 MediaPipe Tasks Vision 模块，
   //   在 Worker 内完成人像分割 → 遮罩合成 → 背景替换，全部不经过主线程。
   // =============================================================================
@@ -26144,7 +26144,7 @@ function workerMain() {
   var mirrorTexCoordBuffer = null; // 镜像纹理坐标 buffer（U 坐标翻转）
 
   // =============================================================================
-  // 二、AiVB (AI Virtual Background) 状态 — Worker 内的人像分割与背景替换
+  // 二、AI 虚拟背景状态 — Worker 内的人像分割与背景替换
   // =============================================================================
   var aivbSourceStates = Object.create(null); // sourceId → 分割状态（遮罩、画布等）
   var aivbRuntimeStates = Object.create(null); // runtimeKey → MediaPipe segmenter 实例
@@ -26284,7 +26284,7 @@ void main() {
     return aivbSourceStates[id];
   }
 
-  // 生成配置的唯一 key，用于检测 AiVB 配置是否发生实质性变化
+  // 生成配置的唯一 key，用于检测 AI 虚拟背景配置是否发生实质性变化
   // 配置变化时需要重置分割管线（清遮罩、重新初始化 segmenter 等）
   function createConfigKey(config) {
     return JSON.stringify({

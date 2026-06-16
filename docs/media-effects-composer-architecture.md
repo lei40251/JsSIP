@@ -6,6 +6,8 @@
 
 镜像语义上，这个模块只处理“源级镜像”“合成输出镜像”“输出级水印是否跟随镜像”三件事，不负责页面层本地预览的 CSS 镜像。
 
+命名约定：目录名优先使用完整能力名并统一写成 `AI`（如 `AIVirtualBackground/`、`AINoiseSuppression/`）；文件名和标识符优先使用缩写形式 `Ai` / `ai`（如 `AiVBConfig.js`、`AiNSCore.js`、`AiNSEngine`、`aiVirtualBackground`）。
+
 这一版对外 API 已经收敛为 8 个主方法：
 
 - `addSource()`

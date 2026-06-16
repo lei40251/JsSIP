@@ -247,7 +247,7 @@ gulp.task('test-files', function()
     'test/test-properties.js',
     'test/test-UA-no-WebRTC.js',
     'test/test-digestAuthentication.js',
-    'test/test-ai-virtual-background.js',
+    'test/test-aivb.js',
     'test/test-media-effects-composer.js',
     'test/test-rtcsession-media-effects-composer.js',
     'test/test-bfcp.js'
@@ -260,7 +260,7 @@ gulp.task('test-files', function()
 gulp.task('media-effects-composer-test', function(done)
 {
   // 这组测试单独串起来，方便只验证媒体合成相关能力。
-  require('./test/test-ai-virtual-background').run()
+  require('./test/test-aivb').run()
     .then(function()
     {
       return require('./test/test-media-effects-composer').run();

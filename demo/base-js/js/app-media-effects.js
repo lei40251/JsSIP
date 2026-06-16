@@ -11,7 +11,7 @@
  * 1. 页面状态与效果资源
  * 2. MediaEffectsComposer 配置构建
  * 3. 当前通话中的增量效果更新
- * 4. 呼叫 / 接听时使用的 AiNS 配置
+ * 4. 呼叫 / 接听时使用的 AI 降噪配置
  */
 
 // =============================================================================
@@ -50,7 +50,7 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  * @property {boolean} [enabled] — 是否启用（默认 true，设为 false 可暂停效果而不销毁）
  *
  * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
- *   - 'none'  : 不应用虚拟背景效果；保留 AiVB 配置对象，但不做人像分割、不替换背景
+ *   - 'none'  : 不应用虚拟背景效果；保留 AI 虚拟背景配置对象，但不做人像分割、不替换背景
  *   - 'blur'  : 背景模糊
  *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
  *   - 'color' : 替换为纯色背景（需同时传 color）
@@ -732,12 +732,12 @@ async function handleVirtualBackgroundChange(selectEl)
 }
 
 // =============================================================================
-// AiNS（AI 降噪）呼叫参数构建
+// AI 降噪呼叫参数构建
 // =============================================================================
 
 /**
  * =============================================================================
- * === SDK: AiNS（AI 降噪）配置参数结构 ===
+ * === SDK: AI 降噪配置参数结构 ===
  * =============================================================================
  *
  * @typedef {Object} AiNSOptions
@@ -756,7 +756,7 @@ async function handleVirtualBackgroundChange(selectEl)
  */
 
 /**
- * 构建呼叫 / 接听时要传给 SDK 的 AiNS 配置。
+ * 构建呼叫 / 接听时要传给 SDK 的 AI 降噪配置。
  *
  * @returns {AiNSOptions|null} 启用了 AiNS 时返回配置对象，否则返回 null
  */
