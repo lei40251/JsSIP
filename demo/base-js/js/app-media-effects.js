@@ -49,10 +49,11 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  *
  * @property {boolean} [enabled] — 是否启用（默认 true，设为 false 可暂停效果而不销毁）
  *
- * @property {'none'|'blur'|'image'} [mode] — 虚拟背景模式：
- *   - 'none'  : 仅做 AI 人像分割（背景变透明），不替换具体背景
+ * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
+ *   - 'none'  : 不应用虚拟背景效果；保留 AiVB 配置对象，但不做人像分割、不替换背景
  *   - 'blur'  : 背景模糊
  *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
+ *   - 'color' : 替换为纯色背景（需同时传 color）
  *
  * @property {string}  [imageUrl]   — 背景图片 URL（mode='image' 时需要）
  * @property {string}  [color]      — 背景颜色（mode='color' 时需要，CSS 颜色值）
