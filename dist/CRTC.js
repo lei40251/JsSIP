@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.20266151317
+ * CRTC v2.0.0.2026616166
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4022,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212302634 (Web)',
+  USER_AGENT: 'UA/2.0.0.405212323212 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17231,7 +17231,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
 var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212302634');
+debug('version %s', '2.0.0.405212323212');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17271,7 +17271,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212302634';
+    return '2.0.0.405212323212';
   }
 };
 },{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
@@ -28756,6 +28756,7 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 远端支持视频模式，触发回调
     if (/(^|[;>])\s*\+?video\s*([;=]|$)/i.test(request.getHeader('contact'))) {
+      logger.debug('remoteSupportsVideo');
       this.emit('remoteSupportsVideo', true);
     }
 
@@ -33117,6 +33118,7 @@ module.exports = class RTCSession extends EventEmitter {
 
     // 远端支持视频模式，触发回调
     if (originator !== 'local' && /(^|[;>])\s*\+?video\s*([;=]|$)/i.test(message.getHeader('contact'))) {
+      logger.debug('remoteSupportsVideo');
       this.emit('remoteSupportsVideo', true);
     }
   }

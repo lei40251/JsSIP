@@ -148,9 +148,7 @@ function buildCurrentAiVBOptions()
  * @property {number}  [fontSize]        — 字号 / px（优先级低于 font）
  * @property {string}  [color]           — 文字颜色（CSS 颜色值，默认 '#ffffff'）
  * @property {string}  [backgroundColor] — 文字背景色（CSS 颜色值，默认透明）
- * @property {number}  [padding]         — 文字背景内边距 / px
- * @property {number}  [backgroundRadius] — 文字背景圆角 / px
- *
+ * 
  * ---- 图片水印专用 ----
  * @property {string|ImageBitmap} [image]
  *   — 图片源：URL 字符串 或 ImageBitmap
@@ -288,14 +286,9 @@ function buildCurrentWatermarks()
  * @property {number}  [width]                 — 合成画布宽度（默认 1280）
  * @property {number}  [height]                — 合成画布高度（默认 720）
  * @property {number}  [fps]                   — 合成帧率（默认 15）
- * @property {string}  [backgroundColor]       — 画布背景色（CSS 颜色值，默认 '#000'）
- * @property {number}  [audioGain]             — 输出音频增益（默认 0.8）
  *
  * ---- 输出镜像 ----
  * @property {boolean} [mirror]       — 输出画面水平镜像（默认 false，影响所有观看者看到的画面）
- * @property {boolean} [sourceMirror] — 源画面水平镜像（默认 false，仅影响本地预览）
- * @property {boolean} [mirrorWatermarksWithOutput]
- *   — 水印是否跟随输出镜像翻转（默认 false）
  *
  * ---- 水印 ----
  * @property {MediaEffectsComposerWatermarkOptions[]|MediaEffectsComposerWatermarkOptions|null} [watermarks]
@@ -305,8 +298,6 @@ function buildCurrentWatermarks()
  * @property {MediaEffectsComposerSourceOptions[]} [sources]
  *   — 输入源配置数组，每个元素：
  *     @property {number}   [slot]               — 槽位索引
- *     @property {number}   [gain]               — 音频增益（0~1）
- *     @property {boolean}  [sourceMirror]       — 该源画面是否水平镜像
  *     @property {AiVBOptions} [aiVirtualBackground]
  *       — 该源的 AI 虚拟背景配置，详见 buildCurrentAiVBOptions 上方 JSDoc
  */
@@ -378,14 +369,12 @@ function buildCallComposerOptions()
  *
  * 镜像：
  *   setMirror(enabled: boolean) — 设置输出画面水平镜像
- *   setSourceMirror(slotOrEnabled, enabled?) — 设置/清除某输入源水平镜像
  *
  * 水印：
  *   setWatermarks(watermarks: WatermarkOptions[] | WatermarkOptions | null)
  *     → Promise<WatermarkState[]> — 全量设置水印（传 null 清除全部）
- *   getWatermarks() → WatermarkState[] — 读取当前水印状态（含 SDK 默认值）
  *   clearWatermarks(filter?) — 按条件清除水印
- *     filter: { id?, target?, slot?, sourceId?, streamId? }
+ *     filter: { id }
  *
  * AI 虚拟背景：
  *   setSourceAiVirtualBackground(slotOrTarget, options)
