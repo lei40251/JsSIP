@@ -200,72 +200,9 @@ window.onbeforeunload = function()
 // 媒体效果 UI 绑定
 // =============================================================================
 
-/**
- * 根据当前 AiNS 试听状态，更新按钮文案和样式。
- * 这里只负责 UI，不处理真正的降噪逻辑。
- */
-function updateAiNsMonitorButton()
-{
-  // 演示页里固定使用这个按钮控制本地降噪试听
-  const button = document.querySelector('#toggleAiNsMonitor');
-
-  // 正在试听时显示“结束验证”
-  if (aiNsMonitorActive)
-  {
-    button.innerHTML = '<i class="bi-stop-circle me-1"></i>结束验证';
-    button.className = 'btn btn-warning';
-
-    return;
-  }
-
-  // 未试听时显示“开始验证”
-  button.innerHTML = '<i class="bi-soundwave me-1"></i>开始验证';
-  button.className = 'btn btn-outline-warning';
-}
-
-/**
- * 根据当前虚拟背景演示状态，更新按钮文案和样式。
- * 这里只负责 UI，不处理真正的预览逻辑。
- */
-function updateVirtualBackgroundPreviewButton()
-{
-  // 演示页里固定使用这个按钮控制本地虚拟背景演示
-  const button = document.querySelector('#toggleVirtualBackgroundPreview');
-
-  // 启动中的时候禁止重复点击
-  if (virtualBackgroundPreviewPending)
-  {
-    button.innerHTML = '<i class="bi-arrow-repeat me-1"></i>启动中...';
-    button.className = 'btn btn-outline-secondary';
-    button.disabled = true;
-
-    return;
-  }
-
-  // 演示开启后显示“结束演示”
-  if (virtualBackgroundPreviewActive)
-  {
-    button.innerHTML = '<i class="bi-stop-circle me-1"></i>结束演示';
-    button.className = 'btn btn-outline-danger';
-    button.disabled = false;
-
-    return;
-  }
-
-  // 默认状态显示“开始演示”
-  button.innerHTML = '<i class="bi-person-bounding-box me-1"></i>开始演示';
-  button.className = 'btn btn-outline-primary';
-  button.disabled = false;
-}
-
-// 页面首次加载时，先把两个按钮状态和当前全局状态同步一次
-updateAiNsMonitorButton();
-updateVirtualBackgroundPreviewButton();
-
 // 虚拟背景下拉框变化时：
 // 1. 更新全局状态
 // 2. 同步到当前通话
-// 3. 同步到本地演示
 document.querySelector('#virtualBackground').addEventListener('change', function()
 {
   handleVirtualBackgroundChange(this).catch((error) =>
@@ -287,10 +224,9 @@ document.querySelector('#callMediaEffectsComposerOutputMirror').addEventListener
 // AiNS 开关变化时：
 // 1. 更新当前模式
 // 2. 提示当前状态
-// 3. 如果本地试听开着，同步切到原声或降噪声
 document.querySelector('#aiNoiseSuppression').addEventListener('change', function()
 {
-  // 保存当前下拉框值，供构建呼叫参数和试听链路复用
+  // 保存当前下拉框值，供构建呼叫参数复用
   aiNsType = this.value;
 
   // 先提示当前模式
@@ -302,15 +238,11 @@ document.querySelector('#aiNoiseSuppression').addEventListener('change', functio
   {
     setStatus('AI 降噪已关闭');
   }
-
-  // 如果本地试听已经开着，这里同步切换试听链路
-  applyAiNsMonitorState(true);
 });
 
 // AiNS 强度变化时：
 // 1. 先把输入值整理到 0-100
 // 2. 如果当前通话已经开了 AiNS，就直接动态生效
-// 3. 如果本地试听开着，也同步更新试听效果
 document.querySelector('#aiNoiseReductionLevel').addEventListener('change', function()
 {
   // 先把输入整理成 SDK 期望的合法范围
@@ -333,54 +265,7 @@ document.querySelector('#aiNoiseReductionLevel').addEventListener('change', func
       setStatus(`AI 降噪强度已设为 ${nextLevel}，将在下一次呼叫/接听时生效`);
     }
   }
-
-  // 如果试听已经开着，同时把试听链路也切到新的强度
-  applyAiNsMonitorState(false);
 });
-
-// 本地降噪试听按钮：
-// 1. 第一次点击时采集原始麦克风
-// 2. 然后按当前 AiNS 开关决定播放原声还是降噪后音频
-// 3. 再次点击时停止试听并释放资源
-document.querySelector('#toggleAiNsMonitor').onclick = async function()
-{
-  // 已经在试听时，这次点击就是“结束验证”
-  if (aiNsMonitorActive)
-  {
-    await stopAiNsMonitor();
-    setStatus('已停止本地降噪验证');
-
-    return;
-  }
-
-  try
-  {
-    // 采一条不带浏览器降噪/回声消除的原始麦克风流
-    aiNsMonitorStream = await navigator.mediaDevices.getUserMedia({
-      audio : {
-        echoCancellation : false,
-        autoGainControl  : false,
-        noiseSuppression : false
-      },
-      video : false
-    });
-
-    // 标记试听已开启，先更新按钮状态
-    aiNsMonitorActive = true;
-    updateAiNsMonitorButton();
-
-    // 再根据当前 AiNS 开关，把试听切到原声或处理后音频
-    await applyAiNsMonitorState(true);
-  }
-  catch (error)
-  {
-    // 启动失败时把状态还原，避免按钮卡住
-    aiNsMonitorActive = false;
-    updateAiNsMonitorButton();
-    console.warn('toggleAiNsMonitor error', error);
-    setStatus(`降噪验证启动失败：${error && error.message ? error.message : error}`);
-  }
-};
 
 document.querySelector('#applyCurrentTextWatermark').onclick = async function()
 {
@@ -400,44 +285,4 @@ document.querySelector('#applyCurrentImageWatermark').onclick = async function()
 document.querySelector('#clearCurrentImageWatermark').onclick = async function()
 {
   await clearCurrentImageWatermarkFromSession();
-};
-
-// 本地虚拟背景演示按钮：
-// 1. 点击开始时，额外采集一条摄像头流做本地演示
-// 2. 点击结束时，释放演示流并恢复页面上的本地预览
-document.querySelector('#toggleVirtualBackgroundPreview').onclick = async function()
-{
-  // 启动过程中不允许再次点击，避免重复创建 composer
-  if (virtualBackgroundPreviewPending)
-  {
-    return;
-  }
-
-  // 已经在演示时，这次点击就是“结束演示”
-  if (virtualBackgroundPreviewActive)
-  {
-    await stopVirtualBackgroundPreview();
-    setStatus('已结束本端虚拟背景演示');
-
-    return;
-  }
-
-  try
-  {
-    // 先切到“启动中”状态，给用户明确反馈
-    virtualBackgroundPreviewPending = true;
-    updateVirtualBackgroundPreviewButton();
-    setStatus('正在启动本端虚拟背景演示...');
-
-    // 真正开始本地演示
-    await startVirtualBackgroundPreview();
-    setStatus('本端虚拟背景演示已开启');
-  }
-  catch (error)
-  {
-    // 演示启动失败时，把临时流和本地预览都清理干净
-    await stopVirtualBackgroundPreview({ restoreSessionPreview: true });
-    console.warn('startVirtualBackgroundPreview error', error);
-    setStatus(`本端虚拟背景演示启动失败：${error && error.message ? error.message : error}`);
-  }
 };

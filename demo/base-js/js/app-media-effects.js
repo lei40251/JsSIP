@@ -698,6 +698,39 @@ async function applyCurrentVirtualBackgroundToSession()
   }
 }
 
+/**
+ * 处理虚拟背景下拉框变化。
+ * 这里只同步页面状态，并在当前通话存在 composer 时热更新效果。
+ */
+async function handleVirtualBackgroundChange(selectEl)
+{
+  const selectedOption = selectEl.options[selectEl.selectedIndex];
+
+  virtualBackgroundType = selectedOption.value;
+
+  if (!virtualBackgroundType)
+  {
+    setStatus('虚拟背景已关闭');
+  }
+  else if (virtualBackgroundType === 'none')
+  {
+    setStatus('虚拟背景已切换为保留人物，不替换背景');
+  }
+  else
+  {
+    setStatus(`虚拟背景已切换为 ${selectedOption.innerText}`);
+  }
+
+  const { sessionComposer } = getSessionComposerHandles();
+
+  if (!sessionComposer)
+  {
+    return;
+  }
+
+  await applyCurrentVirtualBackgroundToSession();
+}
+
 // =============================================================================
 // AiNS（AI 降噪）呼叫参数构建
 // =============================================================================
@@ -739,4 +772,40 @@ function buildCallAiNsOptions()
     noiseReductionLevel : getCurrentAiNsLevel(),
     assetConfig         : { cdnUrl: AI_NOISE_ASSET_ROOT }
   };
+}
+
+/**
+ * 把新的降噪强度应用到当前通话。
+ * 仅当前会话已创建 AiNS 实例时返回 true。
+ */
+function applyAiNsLevelToCurrentCall(level)
+{
+  if (aiNsType !== 'AiNS' || !rtcSession)
+  {
+    return false;
+  }
+
+  const aiNsEngine = rtcSession.getAiNoiseSuppression();
+
+  if (!aiNsEngine)
+  {
+    return false;
+  }
+
+  aiNsEngine.setSuppressionLevel(level);
+
+  return true;
+}
+
+/**
+ * 初始化媒体效果表单状态，避免首次呼叫读到未同步的页面值。
+ */
+function initMediaEffects()
+{
+  virtualBackgroundType = document.querySelector('#virtualBackground').value;
+  aiNsType = document.querySelector('#aiNoiseSuppression').value;
+
+  const levelInput = document.querySelector('#aiNoiseReductionLevel');
+
+  levelInput.value = normalizeAiNsReductionLevel(levelInput.value);
 }

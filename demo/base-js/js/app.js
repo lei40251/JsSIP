@@ -1996,10 +1996,9 @@ ua.on('newRTCSession', function(e)
  *
  * 处理流程：
  * 1. 检查注册状态
- * 2. 关闭虚拟背景预览
- * 3. 构建呼叫选项（随路数据、媒体约束、设备选择等）
- * 4. 根据 type 参数定制媒体流
- * 5. 发起 SIP 呼叫并处理早期事件
+ * 2. 构建呼叫选项（随路数据、媒体约束、设备选择等）
+ * 3. 根据 type 参数定制媒体流
+ * 4. 发起 SIP 呼叫并处理早期事件
  */
 async function call(type, direction, mediaStream)
 {
@@ -2014,13 +2013,6 @@ async function call(type, direction, mediaStream)
     setStatus('请注册成功后呼叫');
 
     return;
-  }
-
-  // ---- 关闭虚拟背景预览，避免与通话冲突 ----
-  if (virtualBackgroundPreviewActive)
-  {
-    await stopVirtualBackgroundPreview({ restoreSessionPreview: false });
-    setStatus('已关闭本端虚拟背景演示，开始发起通话');
   }
 
   // ---- 终止已有会话 ----

@@ -51,7 +51,6 @@
               id="remoteVideo2"></video>
           </div>
           <audio id="remoteAudio" autoplay class="hide"></audio>
-          <audio id="aiNoiseMonitorAudio" autoplay class="hide"></audio>
         </article>
         <div class="video-stats-overlay">
           <div><span>延迟:</span> <span id="RTT"></span></div>
@@ -299,30 +298,6 @@
                     </div>
                   </div>
 
-                  <div class="utility-feature-grid">
-                    <div class="tool-row tool-row-feature">
-                      <div class="tool-feature-copy">
-                        <div class="sub-group-title">AI 降噪验证</div>
-                        <div class="tool-feature-desc">本地麦克风回放，需佩戴耳机避免啸叫</div>
-                      </div>
-                      <div class="tool-feature-action">
-                        <button class="btn btn-outline-warning" id="toggleAiNsMonitor"><i
-                            class="bi-soundwave me-1"></i>开始验证</button>
-                      </div>
-                    </div>
-
-                    <div class="tool-row tool-row-feature">
-                      <div class="tool-feature-copy">
-                        <div class="sub-group-title">虚拟背景演示</div>
-                        <div class="tool-feature-desc">本端预览切换效果，便于演示虚拟背景</div>
-                      </div>
-                      <div class="tool-feature-action">
-                        <button class="btn btn-outline-primary" id="toggleVirtualBackgroundPreview"><i
-                            class="bi-person-bounding-box me-1"></i>开始演示</button>
-                      </div>
-                    </div>
-                  </div>
-
                   <div class="tool-row">
                     <div class="sub-group-title">DTMF</div>
                     <div class="dial-pad dial-pad-two-rows" id="dtmf">
@@ -404,7 +379,6 @@
   <script src="../config.js"></script>
   <script src="./js/app-media-effects.js"></script>
   <script src="./js/app.sdk-helper.js"></script>
-  <script src="./js/app.media-effects-demo.js"></script>
   <script src="./js/app.js"></script>
   <script src="./js/app.ui-bindings.js"></script>
 </body>

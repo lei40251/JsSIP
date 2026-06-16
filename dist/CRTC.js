@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.0.2026616166
+ * CRTC v2.0.1.20266161731
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4022,7 +4022,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.0.405212323212 (Web)',
+  USER_AGENT: 'UA/2.0.1.405212323462 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17228,10 +17228,8 @@ var Grammar = require('./Grammar');
 var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
-var BFCPLib = require('./BFCP');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
-var AINoiseSuppression = require('./AINoiseSuppression/index.js');
-debug('version %s', '2.0.0.405212323212');
+debug('version %s', '2.0.1.405212323462');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17252,7 +17250,6 @@ debug('version %s', '2.0.0.405212323212');
  * Expose the CRTC module.
  */
 module.exports = {
-  BFCPLib,
   C,
   Exceptions,
   Utils,
@@ -17262,7 +17259,6 @@ module.exports = {
   WebSocketInterface,
   MediaEffectsComposer,
   Mixer: MediaEffectsComposer,
-  AiNSEngine: AINoiseSuppression,
   Grammar,
   getStats,
   // Expose the debug module.
@@ -17271,10 +17267,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.0.405212323212';
+    return '2.0.1.405212323462';
   }
 };
-},{"./AINoiseSuppression/index.js":5,"./BFCP":6,"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
+},{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
