@@ -338,7 +338,6 @@ ua.on('failed', function(data)
 {
   // 发生错误时重置纯视频模式
   videoOnly = false;
-  console.warn('data:', data);
   setStatus(`${data.originator} ${data.message} ${data.cause}`);
 });
 
@@ -426,7 +425,6 @@ ua.on('newRTCSession', function(e)
   {
     // 从请求中提取主叫号码
     remoteNo = e.request.from.uri.user;
-    console.warn('remoteNo: ', remoteNo);
     document.querySelector('#callee').value = remoteNo;
 
     // 根据请求模式显示对应的呼叫通知
@@ -503,7 +501,6 @@ ua.on('newRTCSession', function(e)
    */
   e.session.on('trying', function()
   {
-    console.warn('trying');
     setStatus('Trying');
   });
 
@@ -537,9 +534,6 @@ ua.on('newRTCSession', function(e)
       {
         // 可在此播放本地回铃音（local ringback tone）
       }
-
-      // 仅在呼叫未接通时检测一次远端 OS
-      console.warn('dOS: ', detectRemoteOS(d.response));
 
       setStatus('对方已振铃，请等待接听');
     }
@@ -1121,7 +1115,6 @@ ua.on('newRTCSession', function(e)
       // 录音数据可用时自动下载
       recorder.ondataavailable = function(blob)
       {
-        console.warn('recorder: ', blob);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
 
@@ -1234,7 +1227,7 @@ ua.on('newRTCSession', function(e)
 
           sender.setParameters(parameters).then(() =>
           {
-            console.warn('成功设置 maxBitrate');
+            console.log('成功设置 maxBitrate');
           })
             .catch((err) =>
             {
@@ -1791,7 +1784,6 @@ ua.on('newRTCSession', function(e)
           setStatus('请在浏览器中点击 "Safari分享" 按钮触发屏幕分享');
         }
 
-        console.warn('error: ', error);
         setStatus(error.message);
       });
   };
@@ -2245,7 +2237,7 @@ async function call(type, direction, mediaStream)
         {
           console.warn('ended');
         }
-        console.warn(error.message);
+        setStatus(error.message);
       }
 
       // 清理黑屏视频资源

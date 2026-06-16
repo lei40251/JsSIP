@@ -12,8 +12,6 @@
  * 2. MediaEffectsComposer 配置构建
  * 3. 当前通话中的增量效果更新
  * 4. 呼叫 / 接听时使用的 AiNS 配置
- *
- * 本地试听、预览、演示控制逻辑已拆到 app.media-effects-demo.js。
  */
 
 // =============================================================================
@@ -51,11 +49,10 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  *
  * @property {boolean} [enabled] — 是否启用（默认 true，设为 false 可暂停效果而不销毁）
  *
- * @property {'none'|'blur'|'image'|'color'} [mode] — 虚拟背景模式：
+ * @property {'none'|'blur'|'image'} [mode] — 虚拟背景模式：
  *   - 'none'  : 仅做 AI 人像分割（背景变透明），不替换具体背景
  *   - 'blur'  : 背景模糊
  *   - 'image' : 替换为自定义图片（需同时传 imageUrl）
- *   - 'color' : 替换为纯色背景（需同时传 color，如 '#00ff00'）
  *
  * @property {string}  [imageUrl]   — 背景图片 URL（mode='image' 时需要）
  * @property {string}  [color]      — 背景颜色（mode='color' 时需要，CSS 颜色值）
@@ -70,7 +67,7 @@ const CALL_IMAGE_WATERMARK_ID = 'call-output-image-watermark';
  *
  * ---------- assetConfig：AI 资源文件路径（用于自定义 CDN / 本地部署）----------
  * @property {Object}  [assetConfig]
- * @property {string}  [assetConfig.cdnUrl]      — 扁平资源基路径（所有文件在同一目录）
+ * @property {string}  [assetConfig.cdnUrl]    — 扁平资源基路径（所有文件在同一目录）
  */
 
 /**
