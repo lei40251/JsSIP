@@ -373,18 +373,15 @@ function buildCallComposerOptions()
  * 水印：
  *   setWatermarks(watermarks: WatermarkOptions[] | WatermarkOptions | null)
  *     → Promise<WatermarkState[]> — 全量设置水印（传 null 清除全部）
+ *   getWatermarks() → WatermarkState[] — 读取当前水印状态（含 SDK 默认值）
  *   clearWatermarks(filter?) — 按条件清除水印
  *     filter: { id }
  *
  * AI 虚拟背景：
  *   setSourceAiVirtualBackground(slotOrTarget, options)
- *     slotOrTarget: number|string — 槽位索引（如 0）或源 ID 字符串
- *     options: AiVBOptions | null — 传 null 等同 clear
- *   getSourceAiVirtualBackground(slotOrTarget) → AiVBOptions | null
- *   clearSourceAiVirtualBackground(slotOrTarget) — 清除某源的虚拟背景
- *
- * 运行时配置补丁：
- *   setConfig(patch: MediaEffectsComposerConfigPatch) → Promise<ConfigState>
+ *     slotOrTarget: number — 槽位索引（如 0）
+ *     options: AiVBOptions
+ * 
  */
 
 /**
@@ -467,7 +464,7 @@ function mergeSessionWatermarks(nextItems, idsToReplace)
  * ========== SDK 调用 ==========
  * sessionComposer.setMirror(enabled: boolean)
  *   - enabled: true=开启输出画面水平镜像，false=关闭
- *   - 影响所有观看者看到的画面（非本地预览镜像）
+ *   - 影响所有观看者看到的画面
  *   - 同步方法（内部），无需 await，但这里为了统一处理异常加了 await
  */
 async function applyCurrentOutputMirrorToSession()
@@ -654,7 +651,6 @@ async function clearCurrentImageWatermarkFromSession()
  * sessionComposer.setSourceAiVirtualBackground(slotOrTarget, options)
  *   - slotOrTarget: number | string
  *     - number: 槽位索引（如 0=第一个输入源）
- *     - string: 源 ID
  *   - options: AiVBOptions | null
  *     - 传 null 等同于 clear（但建议用下面的 clear 方法）
  *     - 参数结构详见 buildCurrentAiVBOptions 上方 JSDoc
@@ -702,7 +698,7 @@ async function applyCurrentVirtualBackgroundToSession()
 }
 
 // =============================================================================
-// 输入清理与呼叫参数构建
+// AiNS（AI 降噪）呼叫参数构建
 // =============================================================================
 
 /**
