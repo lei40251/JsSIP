@@ -800,11 +800,14 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
 
-    // 停止 AiNS 验证器（如果正在运行）
-    stopAiNsMonitor().catch((error) =>
+    // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
+    if (typeof stopAiNsMonitor === 'function')
     {
-      console.warn('failed stopAiNsMonitor on failed', error);
-    });
+      stopAiNsMonitor().catch((error) =>
+      {
+        console.warn('failed stopAiNsMonitor on failed', error);
+      });
+    }
   });
 
   /**
@@ -886,11 +889,14 @@ ua.on('newRTCSession', function(e)
     cusMediaStream.getTracks().forEach((track) => track.stop());
     cusMediaStream = new MediaStream();
 
-    // 停止 AiNS 验证器
-    stopAiNsMonitor().catch((error) =>
+    // 停止 AiNS 验证器（如果该 demo 版本提供了该函数）
+    if (typeof stopAiNsMonitor === 'function')
     {
-      console.warn('failed stopAiNsMonitor on ended', error);
-    });
+      stopAiNsMonitor().catch((error) =>
+      {
+        console.warn('failed stopAiNsMonitor on ended', error);
+      });
+    }
   });
 
   /**
