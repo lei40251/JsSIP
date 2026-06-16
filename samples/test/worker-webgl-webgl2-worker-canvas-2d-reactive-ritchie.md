@@ -4,7 +4,7 @@
 
 ## 背景
 
-当前 `lib/MediaEffectsComposer.js` 使用主线程 Canvas 2D 完成视频混合。多路高分辨率视频时主线程负载高，影响页面交互。
+当前 `lib/MediaEffectsComposer/MediaEffectsComposer.js` 通过 `ComposerRuntime` 驱动主线程 Canvas 2D 完成视频混合。多路高分辨率视频时主线程负载高，影响页面交互。
 
 目标：引入可插拔渲染后端，优先使用 `Worker + WebGL2`，在不支持时自动降级，Safari 用户也能走 WebGL2 加速。
 
@@ -218,21 +218,22 @@ supportsWorker = typeof Worker !== 'undefined'
 
 ```
 lib/
-  MediaEffectsComposer.js                              (修改 ~60 行)
-  Renderers/
-    BaseRenderer.js                      (接口定义 ~60 行)
-    RendererFactory.js                   (选择器 ~60 行)
-    MainCanvas2DRenderer.js              (现有逻辑抽取 ~100 行)
-    MainWebGL2Renderer.js                (新增 ~200 行)
-    WorkerCanvas2DRenderer.js            (新增 ~120 行)
-    WorkerWebGL2Renderer.js              (新增 ~250 行)
-    helpers/
-      glHelpers.js                       (compileShader/createProgram ~50 行)
-      frameUtils.js                      (抽帧: VideoFrame/createImageBitmap ~40 行)
-    mixer.worker.js                      (Worker 内渲染入口 ~80 行)
+  MediaEffectsComposer/
+    MediaEffectsComposer.js              (公开入口)
+    ComposerRuntime.js                   (编排层)
+    RenderLoop.js                        (渲染循环)
+    renderers/
+      BaseRenderer.js                    (接口定义 ~60 行)
+      RendererFactory.js                 (选择器 ~60 行)
+      MainCanvas2DRenderer.js            (现有逻辑抽取 ~100 行)
+      MainWebGL2Renderer.js              (新增 ~200 行)
+      WorkerRenderer.js                  (Worker 渲染桥接层)
+      gl.js                              (compileShader/createProgram ~50 行)
+      color.js                           (颜色处理辅助)
+      workerScript.js                    (Worker 内渲染入口 ~80 行)
 ```
 
-总计新增 ~960 行，修改 MediaEffectsComposer.js ~60 行。
+总计新增 ~960 行，核心修改集中在 `ComposerRuntime` / `RenderLoop` / `renderers/*`。
 
 ## 实施步骤
 
@@ -241,7 +242,7 @@ lib/
 - 定义 `BaseRenderer` 接口
 - 将当前 Canvas2D 绘制逻辑抽取为 `MainCanvas2DRenderer`
 - 增加 `_initRenderer()` 和 `getRenderInfo()`
-- MediaEffectsComposer.js 默认使用 `MainCanvas2DRenderer`，行为完全不变
+- `MediaEffectsComposer` 默认使用 `MainCanvas2DRenderer`，行为完全不变
 - 跑通 lint/test/demo
 
 ### 第 2 阶段：MainWebGL2Renderer

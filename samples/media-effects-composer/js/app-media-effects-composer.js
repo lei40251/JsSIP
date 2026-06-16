@@ -489,19 +489,7 @@ Object.assign(window.app, {
   async setSourceMirror(slotOrEnabled, enabled)
   {
     if (!this.composer) return false;
-
-    if (typeof slotOrEnabled === 'boolean' && enabled === undefined)
-    {
-      await this.composer.setConfig({ sourceMirror: slotOrEnabled });
-    }
-    else
-    {
-      await this.composer.setConfig({
-        sourceMirrorOverrides : {
-          [Number(slotOrEnabled)] : Boolean(enabled)
-        }
-      });
-    }
+    await this.composer.setSourceMirror(slotOrEnabled, enabled);
 
     return true;
   },
@@ -515,7 +503,7 @@ Object.assign(window.app, {
   async setMirror(enabled)
   {
     if (!this.composer) return false;
-    await this.composer.setConfig({ outputMirror: Boolean(enabled) });
+    await this.composer.setMirror(Boolean(enabled));
 
     return true;
   },
@@ -543,19 +531,7 @@ Object.assign(window.app, {
   async clearSourceMirror(slot)
   {
     if (!this.composer) return false;
-
-    if (slot === undefined)
-    {
-      await this.composer.setConfig({ clearSourceMirrorOverrides: true });
-    }
-    else
-    {
-      await this.composer.setConfig({
-        sourceMirrorOverrides : {
-          [Number(slot)] : null
-        }
-      });
-    }
+    await this.composer.clearSourceMirror(slot);
 
     return true;
   },
@@ -662,7 +638,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    await this.composer.setConfig({ watermarks });
+    await this.composer.setWatermarks(watermarks);
     // 刷新界面：水印列表 + 槽位状态标记
     this.refreshWatermarkList();
     this.updateSlotUI();
@@ -680,10 +656,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    await this.composer.setConfig({
-      clearWatermarks      : true,
-      clearWatermarkFilter : { target: 'output' }
-    });
+    await this.composer.clearWatermarks({ target: 'output' });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },
@@ -700,10 +673,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    await this.composer.setConfig({
-      clearWatermarks      : true,
-      clearWatermarkFilter : { target: 'source', slot: this.currentSlot }
-    });
+    await this.composer.clearWatermarks({ target: 'source', slot: this.currentSlot });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },
@@ -720,10 +690,7 @@ Object.assign(window.app, {
   {
     if (!this.composer) return;
 
-    await this.composer.setConfig({
-      clearWatermarks      : true,
-      clearWatermarkFilter : { target: 'source' }
-    });
+    await this.composer.clearWatermarks({ target: 'source' });
     this.refreshWatermarkList();
     this.updateSlotUI();
   },

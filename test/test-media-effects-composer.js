@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
 const assert = require('assert');
 const MediaEffectsComposer = require('../lib/MediaEffectsComposer');
-const ComposerConfig = require('../lib/MediaEffectsComposer/Core/ComposerConfig');
-const WatermarkManager = require('../lib/MediaEffectsComposer/Core/WatermarkManager');
-const WorkerRenderer = require('../lib/MediaEffectsComposer/Renderers/WorkerRenderer');
-const workerScript = require('../lib/MediaEffectsComposer/Renderers/workerScript');
+const ComposerConfig = require('../lib/MediaEffectsComposer/ComposerConfig');
+const WatermarkManager = require('../lib/MediaEffectsComposer/WatermarkManager');
+const WorkerRenderer = require('../lib/MediaEffectsComposer/renderers/WorkerRenderer');
+const workerScript = require('../lib/MediaEffectsComposer/renderers/workerScript');
 const vm = require('vm');
 
 let nextTrackId = 1;
@@ -1865,6 +1865,56 @@ async function testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground()
   mixer.stop();
 }
 
+async function testLegacyAsyncSettersReturnPromises()
+{
+  resetMockState();
+
+  const mixer = new MediaEffectsComposer([], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+
+  mixer.appendStream(createStream(), 0);
+
+  const mirrorResult = mixer.setMirror(true);
+  const sourceMirrorResult = mixer.setSourceMirror(0, true);
+  const watermarkClearResult = mixer.clearWatermarks();
+
+  assert.ok(mirrorResult && typeof mirrorResult.then === 'function');
+  assert.ok(sourceMirrorResult && typeof sourceMirrorResult.then === 'function');
+  assert.ok(watermarkClearResult && typeof watermarkClearResult.then === 'function');
+
+  await Promise.all([ mirrorResult, sourceMirrorResult, watermarkClearResult ]);
+  mixer.stop();
+}
+
+async function testCapabilityReportExposesRenderAndAudioRoute()
+{
+  resetMockState();
+
+  const mixer = new MediaEffectsComposer([ createStream({ audio: true }) ], {
+    width      : 320,
+    height     : 180,
+    fps        : 15,
+    renderMode : 'main-2d'
+  });
+
+  await mixer.getAudioStream();
+  mixer.getVideoStream();
+
+  const report = mixer.getCapabilityReport();
+
+  assert.strictEqual(report.limits.maxSources, ComposerConfig.getMaxSources());
+  assert.strictEqual(report.features.multiSource, true);
+  assert.strictEqual(report.features.audioSubmix, true);
+  assert.strictEqual(report.render.actualMode, mixer.getRenderInfo().actualMode);
+  assert.strictEqual(report.audio.status, mixer.getAudioInfo().status);
+
+  mixer.stop();
+}
+
 async function testSourceMirrorKeepsWorkerRenderer()
 {
   resetMockState();
@@ -2072,7 +2122,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
     });
 
     const source = mixer._sources[0];
-    const stateBeforeMirror = source && source.__aiVirtualBackgroundState;
+    const stateBeforeMirror = source && mixer._sourceAiVBManager._states.get(source);
 
     assert.strictEqual(createdImages.length, 0);
     assert.ok(stateBeforeMirror);
@@ -2081,7 +2131,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
 
     await mixer.setConfig({ outputMirror: true });
 
-    const stateAfterMirror = source && source.__aiVirtualBackgroundState;
+    const stateAfterMirror = source && mixer._sourceAiVBManager._states.get(source);
 
     assert.ok(stateAfterMirror);
     assert.strictEqual(createdImages.length, 0);
@@ -3242,6 +3292,8 @@ async function run()
     { name: 'testOutputMirrorFlipsWholeComposedFrame', fn: testOutputMirrorFlipsWholeComposedFrame },
     { name: 'testOutputMirrorCanDisableWatermarkMirroring', fn: testOutputMirrorCanDisableWatermarkMirroring },
     { name: 'testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground', fn: testOutputMirrorKeepsWorkerRendererWithAiVirtualBackground },
+    { name: 'testLegacyAsyncSettersReturnPromises', fn: testLegacyAsyncSettersReturnPromises },
+    { name: 'testCapabilityReportExposesRenderAndAudioRoute', fn: testCapabilityReportExposesRenderAndAudioRoute },
     { name: 'testSourceMirrorKeepsWorkerRenderer', fn: testSourceMirrorKeepsWorkerRenderer },
     { name: 'testSourceAiVBOptionsAppearInSourceSnapshot', fn: testSourceAiVBOptionsAppearInSourceSnapshot },
     { name: 'testSetSourceAiVirtualBackgroundLifecycle', fn: testSetSourceAiVirtualBackgroundLifecycle },

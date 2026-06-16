@@ -169,7 +169,22 @@ export interface MediaEffectsComposerState {
   audio: MediaEffectsComposerAudioState;
 }
 
-export interface MediaEffectsComposerOptions {
+export interface MediaEffectsComposerCapabilityReport {
+  limits: {
+    maxSources: number;
+  };
+  features: {
+    multiSource: boolean;
+    sourceAiVirtualBackground: boolean;
+    outputMirror: boolean;
+    audioSubmix: boolean;
+    insertableStreamsConfigured: boolean;
+  };
+  render: MediaEffectsComposerRenderState;
+  audio: MediaEffectsComposerAudioState;
+}
+
+export interface MediaEffectsComposerSessionOptions {
   width?: number;
   height?: number;
   fps?: number;
@@ -187,6 +202,8 @@ export interface MediaEffectsComposerOptions {
   sources?: MediaEffectsComposerSourceOptions[] | null;
   [key: string]: any;
 }
+
+export interface MediaEffectsComposerOptions extends MediaEffectsComposerSessionOptions {}
 
 export interface MediaEffectsComposerWatermarkState extends MediaEffectsComposerWatermarkOptions {
   target: MediaEffectsComposerWatermarkTarget;
@@ -230,6 +247,19 @@ export interface MediaEffectsComposerConfigPatch {
   [key: string]: any;
 }
 
+/**
+ * Runtime patch for an already created composer.
+ *
+ * Note:
+ * - `RTCSession.updateMediaEffectsComposer()` only guarantees session-scoped state:
+ *   source 0 plus output-level config.
+ * - Immutable constructor fields such as `width/height/fps/renderMode/...` cannot be
+ *   hot-updated on an existing composer instance and will be rejected at runtime.
+ */
+export interface MediaEffectsComposerRuntimePatch extends MediaEffectsComposerConfigPatch {
+  sources?: MediaEffectsComposerSourceOptions[] | null;
+}
+
 export interface MediaEffectsComposerInstance {
   addSource(
     videos: MediaStream | HTMLVideoElement | Array<MediaStream | HTMLVideoElement>,
@@ -249,20 +279,20 @@ export interface MediaEffectsComposerInstance {
    * 合成输出镜像，影响实际输出流。
    */
   getMirror(): boolean;
-  setMirror(enabled: boolean): void;
+  setMirror(enabled: boolean): Promise<MediaEffectsComposerConfigState>;
   /**
    * 源级镜像状态。无 slot 时返回全局与覆盖项；指定 slot 时返回该路生效值。
    */
   getSourceMirror(): MediaEffectsComposerMirrorState;
   getSourceMirror(slot: number): MediaEffectsComposerSlotMirrorState;
-  setSourceMirror(slotOrEnabled: number | boolean, enabled?: boolean): void;
-  clearSourceMirror(slot?: number): void;
+  setSourceMirror(slotOrEnabled: number | boolean, enabled?: boolean): Promise<MediaEffectsComposerConfigState>;
+  clearSourceMirror(slot?: number): Promise<MediaEffectsComposerConfigState>;
   getMirrorWatermarksWithOutput(): boolean;
-  setMirrorWatermarksWithOutput(enabled: boolean): void;
+  setMirrorWatermarksWithOutput(enabled: boolean): Promise<MediaEffectsComposerConfigState>;
   setWatermarks(
     watermarks: MediaEffectsComposerWatermarkOptions[] | MediaEffectsComposerWatermarkOptions | null
   ): Promise<MediaEffectsComposerWatermarkState[]>;
-  clearWatermarks(filter?: MediaEffectsComposerWatermarkFilter): void;
+  clearWatermarks(filter?: MediaEffectsComposerWatermarkFilter): Promise<MediaEffectsComposerConfigState>;
   getWatermarks(): MediaEffectsComposerWatermarkState[];
   setSourceAiVirtualBackground(slotOrTarget: number | string, options: AiVBOptions | null): void;
   getSourceAiVirtualBackground(slotOrTarget: number | string): AiVBOptions | null;
@@ -270,6 +300,7 @@ export interface MediaEffectsComposerInstance {
   setConfig(patch: MediaEffectsComposerConfigPatch): Promise<MediaEffectsComposerConfigState>;
   getRenderInfo(): MediaEffectsComposerRenderState;
   getAudioInfo(): MediaEffectsComposerAudioState;
+  getCapabilityReport(): MediaEffectsComposerCapabilityReport;
   getOutput(options?: MediaEffectsComposerOutputRequest | 'mixed' | 'video' | 'audio'): Promise<MediaStream | null>;
   getMixedStream(): Promise<MediaStream>;
   getVideoStream(): MediaStream;
@@ -324,7 +355,7 @@ export interface ExtraHeaders {
 export interface AnswerOptions extends ExtraHeaders {
   mediaConstraints?: MediaConstraints;
   mediaStream?: MediaStream;
-  mediaEffectsComposer?: MediaEffectsComposerOptions;
+  mediaEffectsComposer?: MediaEffectsComposerSessionOptions;
   pcConfig?: RTCConfiguration;
   rtcConstraints?: object;
   rtcAnswerConstraints?: RTCOfferOptions;
@@ -343,7 +374,7 @@ export interface UpgradeToVideoOptions extends ExtraHeaders {
   sendOnly?: boolean;
   recvOnly?: boolean;
   useUpdate?: boolean;
-  mediaEffectsComposer?: MediaEffectsComposerOptions;
+  mediaEffectsComposer?: MediaEffectsComposerSessionOptions;
 }
 
 export interface TerminateOptions extends RejectOptions {
@@ -581,7 +612,7 @@ export class RTCSession extends EventEmitter {
 
   getAiVirtualBackground(): any | null;
 
-  updateMediaEffectsComposer(options: MediaEffectsComposerOptions | null): Promise<MediaEffectsComposerState | null>;
+  updateMediaEffectsComposer(options: MediaEffectsComposerSessionOptions | MediaEffectsComposerRuntimePatch | null): Promise<MediaEffectsComposerState | null>;
 
   isInProgress(): boolean;
 

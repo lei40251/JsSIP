@@ -369,7 +369,8 @@ function buildCallComposerOptions()
  *   rtcSession.getMediaEffectsComposer() → MediaEffectsComposerInstance | null
  *
  * 镜像：
- *   setMirror(enabled: boolean) — 设置输出画面水平镜像
+ *   setMirror(enabled: boolean) → Promise<MediaEffectsComposerConfigState>
+ *     — 设置输出画面水平镜像
  *
  * 水印：
  *   setWatermarks(watermarks: WatermarkOptions[] | WatermarkOptions | null)
@@ -466,7 +467,7 @@ function mergeSessionWatermarks(nextItems, idsToReplace)
  * sessionComposer.setMirror(enabled: boolean)
  *   - enabled: true=开启输出画面水平镜像，false=关闭
  *   - 影响所有观看者看到的画面
- *   - 同步方法（内部），无需 await，但这里为了统一处理异常加了 await
+ *   - 返回 Promise，建议 await，便于感知运行时失败
  */
 async function applyCurrentOutputMirrorToSession()
 {

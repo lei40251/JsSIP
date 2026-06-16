@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const assert = require('assert');
-const Config = require('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBConfig');
+const Config = require('../lib/MediaEffectsComposer/aiVirtualBackground/AiVBConfig');
 
 let nextAnimationFrameId = 1;
 let scheduledFrames = {};
@@ -557,8 +557,8 @@ function installBrowserMocks()
 
 async function testRuntimeClosesSegmentationResultAfterMaskCopy()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
   let closeCalls = 0;
   const mask = {
@@ -594,8 +594,8 @@ async function testRuntimeClosesSegmentationResultAfterMaskCopy()
 
 async function testRuntimeRejectsMissingMask()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
 
   assert.throws(() => runtime.readMaskValues(), /mask is required/);
@@ -603,8 +603,8 @@ async function testRuntimeRejectsMissingMask()
 
 async function testRuntimeProcessesLatestQueuedFrame()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime')];
-  const Runtime = require('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime')];
+  const Runtime = require('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
   const runtime = new Runtime();
   const callbacks = [];
   const calls = [];
@@ -657,8 +657,8 @@ async function testRuntimeProcessesLatestQueuedFrame()
 
 async function testRuntimeRejectsWhenGpuInitFails()
 {
-  const runtimePath = require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
-  const loaderPath = require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBAssetLoader');
+  const runtimePath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
+  const loaderPath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/AiVBAssetLoader');
   const originalLoader = require.cache[loaderPath];
   const createCalls = [];
 
@@ -705,7 +705,7 @@ async function testRuntimeRejectsWhenGpuInitFails()
 
   try
   {
-    const Runtime = require('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+    const Runtime = require('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
     const runtime = new Runtime();
 
     await assert.rejects(() => runtime.initialize(), /gpu init failed/);
@@ -732,7 +732,7 @@ async function testRuntimeRejectsWhenGpuInitFails()
 
 async function testAssetLoaderSharesConcurrentRuntimeLoad()
 {
-  const AssetLoader = require('../lib/MediaEffectsComposer/AIVirtualBackground/AiVBAssetLoader');
+  const AssetLoader = require('../lib/MediaEffectsComposer/aiVirtualBackground/AiVBAssetLoader');
   const loaderA = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
   const loaderB = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
 
@@ -834,8 +834,8 @@ async function testConfigClampsPostProcessingRanges()
 
 async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager')];
-  const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
   const manager = new SourceAiVBManager();
   const source = { slot: 0 };
 
@@ -849,7 +849,7 @@ async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
     segmentation   : { delegate: 'CPU', frameSkip: 0 }
   });
 
-  const state = source.__aiVirtualBackgroundState;
+  const state = manager._states.get(source);
   const calls = [];
 
   state.runtimeReady = true;
@@ -887,8 +887,8 @@ async function testSourceAiVBManagerUsesScaledCanvasForSegmentation()
 
 async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager')];
-  const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
   const manager = new SourceAiVBManager();
   const source = { slot: 0 };
   const resolvers = [];
@@ -917,7 +917,7 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
     segmentation   : { delegate: 'CPU', frameSkip: 0 }
   });
 
-  const state = source.__aiVirtualBackgroundState;
+  const state = manager._states.get(source);
   const calls = [];
   const queuedUpdates = [];
 
@@ -981,8 +981,8 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
 
 async function testSourceAiVBManagerDefersHeavyWorkUntilVideoReady()
 {
-  const managerPath = require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
-  const runtimePath = require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  const managerPath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
+  const runtimePath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
   const originalRuntime = require.cache[runtimePath];
   let runtimeConstructed = 0;
   let runtimeInitializeCalls = 0;
@@ -1012,7 +1012,7 @@ async function testSourceAiVBManagerDefersHeavyWorkUntilVideoReady()
 
   try
   {
-    const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+    const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
     const manager = new SourceAiVBManager();
     const source = { slot: 0 };
 
@@ -1067,8 +1067,8 @@ async function testSourceAiVBManagerDefersHeavyWorkUntilVideoReady()
 
 async function testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay()
 {
-  const managerPath = require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
-  const runtimePath = require.resolve('../lib/MediaEffectsComposer/AIVirtualBackground/MediaPipeSegmenterRuntime');
+  const managerPath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
+  const runtimePath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
   const originalRuntime = require.cache[runtimePath];
   let runtimeConstructed = 0;
   let runtimeInitializeCalls = 0;
@@ -1098,7 +1098,7 @@ async function testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay()
 
   try
   {
-    const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+    const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
     const manager = new SourceAiVBManager();
     const source = { slot: 0 };
     let now = 1000;
@@ -1121,7 +1121,7 @@ async function testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay()
 
     assert.strictEqual(runtimeConstructed, 0);
     assert.strictEqual(runtimeInitializeCalls, 0);
-    assert.strictEqual(source.__aiVirtualBackgroundState.runtime, null);
+    assert.strictEqual(manager._states.get(source).runtime, null);
 
     now = 2600;
     manager.getRenderableState(source, {
@@ -1150,8 +1150,8 @@ async function testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay()
 
 async function testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager')];
-  const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
   const manager = new SourceAiVBManager();
   const source = { slot: 0 };
   const pendingPromises = [
@@ -1173,7 +1173,7 @@ async function testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued()
     segmentation   : { frameSkip: 0 }
   });
 
-  const state = source.__aiVirtualBackgroundState;
+  const state = manager._states.get(source);
   const calls = [];
   const queuedUpdates = [];
 
@@ -1216,8 +1216,8 @@ async function testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued()
 
 async function testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads()
 {
-  delete require.cache[require.resolve('../lib/MediaEffectsComposer/Core/SourceAiVBManager')];
-  const SourceAiVBManager = require('../lib/MediaEffectsComposer/Core/SourceAiVBManager');
+  delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController')];
+  const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
   const manager = new SourceAiVBManager();
   const source = { slot: 0 };
 

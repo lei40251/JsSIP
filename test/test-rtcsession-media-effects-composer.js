@@ -95,13 +95,24 @@ class MockMixer
     };
     this.stopped = false;
     this.outputTrack = new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 24 });
+    this.outputAudioTrack = new MockMediaStreamTrack('audio');
     MockMixer.instances.push(this);
   }
 
   async getOutput(options)
   {
     this.outputRequest = options;
-    
+
+    if (options && options.type === 'audio')
+    {
+      return new MockMediaStream([ this.outputAudioTrack ]);
+    }
+
+    if (options && options.type === 'mixed')
+    {
+      return new MockMediaStream([ this.outputAudioTrack, this.outputTrack ]);
+    }
+
     return new MockMediaStream([ this.outputTrack ]);
   }
 
@@ -332,7 +343,7 @@ function installGlobals()
 function loadRTCSessionWithMockMixer()
 {
   const mixerPath = require.resolve('../lib/MediaEffectsComposer');
-  const aiNSPath = require.resolve('../lib/AINoiseSuppression/index.js');
+  const aiNSPath = require.resolve('../lib/AINoiseSuppression');
   const rtcSessionPath = require.resolve('../lib/RTCSession');
   const mixerCache = require.cache[mixerPath];
   const aiNSCache = require.cache[aiNSPath];
@@ -404,7 +415,8 @@ async function testApplyMediaEffectsComposerOnSdkGumStreamUsesCtorOptions()
   assert.strictEqual(mixed.getAudioTracks().length, 1);
   assert.strictEqual(mixed.getVideoTracks().length, 1);
   assert.strictEqual(session.getMediaEffectsComposer(), MockMixer.instances[0]);
-  assert.deepStrictEqual(MockMixer.instances[0].outputRequest, { type: 'video' });
+  assert.deepStrictEqual(MockMixer.instances[0].outputRequest, { type: 'mixed' });
+  assert.strictEqual(mixed.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
 
   const ctorOptions = MockMixer.instances[0].options;
 
@@ -541,8 +553,9 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   // 目标：active mixer 场景复用同一个 mixer 实例，不重建 mixer。
   // 预期：走 removeSource + addSource 替换输入源，sender 仍发送 mixer 输出轨。
   const session = new (require('../lib/RTCSession'))(createMockUA());
+  const oldInputAudioTrack = new MockMediaStreamTrack('audio');
   const oldInputVideoTrack = new MockMediaStreamTrack('video');
-  const oldInputStream = new MockMediaStream([ oldInputVideoTrack ]);
+  const oldInputStream = new MockMediaStream([ oldInputAudioTrack, oldInputVideoTrack ]);
   const oldMixedTrack = new MockMediaStreamTrack('video');
   const sender = {
     track        : oldMixedTrack,
@@ -602,6 +615,8 @@ async function testSwitchDeviceCameraWithActiveMixerReusesMixer()
   assert.strictEqual(sender.replaced, mixedOutputTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], mixedOutputTrack);
   assert.strictEqual(session._mediaEffectsComposerInputStream, MockMixer.appendCalls[0]);
+  assert.strictEqual(MockMixer.appendCalls[0].getAudioTracks()[0], oldInputAudioTrack);
+  assert.strictEqual(MockMixer.appendCalls[0].getVideoTracks()[0], newVideoTrack);
 }
 
 async function testSwitchDeviceCameraMixerBranchStopsOldInputBeforeGum()
@@ -811,7 +826,7 @@ async function testGetUserMediaPipelineAppliesSessionAiVirtualBackground()
   assert.strictEqual(effect.mode, 'blur');
   assert.strictEqual(effect.blurRadius, 18);
   assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
-  assert.strictEqual(stream.getAudioTracks()[0], sourceAudio);
+  assert.strictEqual(stream.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
 }
 
 async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
@@ -845,7 +860,7 @@ async function testGetUserMediaPipelineAcceptsComposerSourcesArray()
   assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.imageUrl, 'https://example.com/bg-a.png');
   assert.strictEqual(session.getAiVirtualBackground().imageUrl, 'https://example.com/bg-a.png');
   assert.strictEqual(stream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
-  assert.strictEqual(stream.getAudioTracks()[0], sourceAudio);
+  assert.strictEqual(stream.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
 }
 
 async function testSessionAiNoiseSuppressionDisablesNativeNoiseSuppression()
@@ -1198,13 +1213,88 @@ async function testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackgro
   assert.strictEqual(session.getAiVirtualBackground(), null);
 }
 
+async function testUpdateMediaEffectsComposerPreservesSessionCreateOptionsAcrossRuntimePatch()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
+
+  session._sessionMediaEffectsComposerOptions = {
+    width      : 1280,
+    height     : 720,
+    renderMode : 'worker-webgl2',
+    mirror     : false,
+    sources    : [
+      {
+        aiVirtualBackground : {
+          enabled    : true,
+          mode       : 'blur',
+          blurRadius : 6
+        }
+      }
+    ]
+  };
+
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
+    mirror : false
+  });
+
+  await session.updateMediaEffectsComposer({
+    mirror                     : true,
+    mirrorWatermarksWithOutput : false
+  });
+
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.width, 1280);
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.height, 720);
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.renderMode, 'worker-webgl2');
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.mirror, true);
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.sources[0].aiVirtualBackground.blurRadius, 6);
+}
+
+async function testUpdateMediaEffectsComposerRejectsImmutableRuntimeFields()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('video'), new MockMediaStreamTrack('audio') ]);
+
+  session._sessionMediaEffectsComposerOptions = {
+    width      : 640,
+    height     : 360,
+    renderMode : 'main-2d',
+    mirror     : false
+  };
+
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, {
+    width      : 640,
+    height     : 360,
+    renderMode : 'main-2d'
+  });
+
+  await assert.rejects(async() =>
+  {
+    await session.updateMediaEffectsComposer({
+      width  : 1920,
+      mirror : true
+    });
+  }, /width/);
+
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.width, 640);
+  assert.strictEqual(session._sessionMediaEffectsComposerOptions.mirror, false);
+}
+
 async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
   const localAudioTrack = new MockMediaStreamTrack('audio');
   const localVideoTrack = new MockMediaStreamTrack('video', { width: 640, height: 480, frameRate: 15 });
-  const sender = {
+  const videoSender = {
     track        : localVideoTrack,
+    replaceTrack : async function(track)
+    {
+      this.replaced = track;
+      this.track = track;
+    }
+  };
+  const audioSender = {
+    track        : localAudioTrack,
     replaceTrack : async function(track)
     {
       this.replaced = track;
@@ -1213,7 +1303,7 @@ async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack
   };
 
   session._connection = {
-    getSenders : () => [ sender ]
+    getSenders : () => [ audioSender, videoSender ]
   };
   session._localMediaStream = new MockMediaStream([ localAudioTrack, localVideoTrack ]);
 
@@ -1233,8 +1323,11 @@ async function testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack
   assert.strictEqual(MockMixer.instances.length, 1);
   assert.strictEqual(MockMixer.instances[0].options.mirror, true);
   assert.strictEqual(MockMixer.instances[0].options.sources[0].aiVirtualBackground.blurRadius, 8);
-  assert.strictEqual(sender.replaced, MockMixer.instances[0].outputTrack);
+  assert.strictEqual(MockMixer.instances[0].streams[0].getAudioTracks()[0], localAudioTrack);
+  assert.strictEqual(videoSender.replaced, MockMixer.instances[0].outputTrack);
+  assert.strictEqual(audioSender.replaced, MockMixer.instances[0].outputAudioTrack);
   assert.strictEqual(session._localMediaStream.getVideoTracks()[0], MockMixer.instances[0].outputTrack);
+  assert.strictEqual(session._localMediaStream.getAudioTracks()[0], MockMixer.instances[0].outputAudioTrack);
   assert.strictEqual(state.config.outputMirror, true);
   assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 8);
 }
@@ -1343,6 +1436,8 @@ async function run()
     { name: 'testUpdateMediaEffectsComposerUpdatesConfigPatch', fn: testUpdateMediaEffectsComposerUpdatesConfigPatch },
     { name: 'testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects', fn: testUpdateMediaEffectsComposerUpdatesPrimarySourceEffects },
     { name: 'testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackground', fn: testUpdateMediaEffectsComposerClearsPrimarySourceAiVirtualBackground },
+    { name: 'testUpdateMediaEffectsComposerPreservesSessionCreateOptionsAcrossRuntimePatch', fn: testUpdateMediaEffectsComposerPreservesSessionCreateOptionsAcrossRuntimePatch },
+    { name: 'testUpdateMediaEffectsComposerRejectsImmutableRuntimeFields', fn: testUpdateMediaEffectsComposerRejectsImmutableRuntimeFields },
     { name: 'testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack },
     { name: 'testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB', fn: testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
