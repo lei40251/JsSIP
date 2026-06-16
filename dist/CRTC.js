@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.2.20266161739
+ * CRTC v2.0.3.2026616180
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -205,9 +205,8 @@ class AssetLoader {
   }
   getAssetUrls() {
     return {
-      glue: this.getAssetUrl('v2/ans.js'),
-      wasm: this.getAssetUrl('v2/ans.wasm'),
-      model: this.getAssetUrl('v2/ans_onnx.tar.gz')
+      wasm: this.getAssetUrl('ans.wasm'),
+      model: this.getAssetUrl('ans_onnx.tar.gz')
     };
   }
   getAssetUrl(relativePath) {
@@ -4022,7 +4021,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.2.405212323478 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212323600 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17229,7 +17228,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer/index.js');
-debug('version %s', '2.0.2.405212323478');
+debug('version %s', '2.0.3.405212323600');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17267,7 +17266,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.2.405212323478';
+    return '2.0.3.405212323600';
   }
 };
 },{"./Constants":37,"./Exceptions":41,"./Grammar":42,"./MediaEffectsComposer/index.js":66,"./NameAddrHeader":68,"./Stats":82,"./UA":86,"./URI":87,"./Utils":88,"./WebSocketInterface":89,"debug":94}],44:[function(require,module,exports){
