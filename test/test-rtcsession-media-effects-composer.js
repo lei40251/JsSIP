@@ -1033,7 +1033,7 @@ async function testApplyAiNoiseSuppressionEmitsMediaEffectsIssue()
   const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
   const events = [];
 
-  session.on('mediaeffectsissue', (event) => events.push(event));
+  session.on('mediaEffectsIssue', (event) => events.push(event));
   MockAiNSEngine.issueOnProcess = (engine) =>
   {
     engine.onIssue && engine.onIssue({
@@ -1440,7 +1440,7 @@ async function testApplyMediaEffectsComposerEmitsMediaEffectsIssue()
   const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
   const events = [];
 
-  session.on('mediaeffectsissue', (event) => events.push(event));
+  session.on('mediaEffectsIssue', (event) => events.push(event));
   MockMixer.issueOnGetOutput = (mixer) =>
   {
     mixer.onIssue && mixer.onIssue({

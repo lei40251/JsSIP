@@ -539,7 +539,7 @@ export type ModeListener = (event: ModeEvent) => void;
  *
  * 当混流器、AI 降噪、AI 虚拟背景等模块发生运行时异常（如模型加载失败、
  * 渲染器降级、资源获取超时等），系统会自动上报并通过 session.emit 发出
- * 'mediaeffectsissue' 事件。业务侧可监听此事件用于 UI 提示或监控告警。
+ * 'mediaEffectsIssue' 事件。业务侧可监听此事件用于 UI 提示或监控告警。
  *
  * 字段说明：
  * - module: 问题所属模块名，如 'AiNS'（AI 降噪）、'MediaEffectsComposer'（混流器）
@@ -574,7 +574,7 @@ export interface RTCSessionEventMap {
   'mode': ModeListener,
   'upgradeToVideo': AnyListener,
   'getusermediafailed': AnyListener;
-  'mediaeffectsissue': (event: MediaEffectsIssueEvent) => void;
+  'mediaEffectsIssue': (event: MediaEffectsIssueEvent) => void;
   'peerconnection:createofferfailed': AnyListener;
   'peerconnection:createanswerfailed': AnyListener;
   'peerconnection:setlocaldescriptionfailed': AnyListener;

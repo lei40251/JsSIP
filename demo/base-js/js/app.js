@@ -392,6 +392,18 @@ ua.on('registrationFailed', function(data)
  * 2. 会话交接：已有会话时按冲突策略处理（终止新会话或排队为 tmpSession）
  * 3. 远端呼入时提取主叫号码并显示通知
  */
+function handleSessionMediaEffectsIssue(d)
+{
+  const moduleName = d && d.module ? d.module : 'MediaEffects';
+  const message = d && d.message ? d.message : 'Unknown media effects failure';
+
+  console.warn(
+    `[base-js][mediaEffectsIssue] module=${moduleName} message=${message}`,
+    d
+  );
+  setStatus(`媒体效果异常[${moduleName}]：${message}`);
+}
+
 ua.on('newRTCSession', function(e)
 {
   // 输出完整会话对象用于调试
@@ -743,17 +755,10 @@ ua.on('newRTCSession', function(e)
     }, 1000);
   });
 
-  e.session.on('mediaeffectsissue', function(d)
+  if (e.originator !== 'local')
   {
-    const moduleName = d && d.module ? d.module : 'MediaEffects';
-    const message = d && d.message ? d.message : 'Unknown media effects failure';
-
-    console.warn(
-      `[base-js][mediaeffectsissue] module=${moduleName} message=${message}`,
-      d
-    );
-    setStatus(`媒体效果异常[${moduleName}]：${message}`);
-  });
+    e.session.on('mediaEffectsIssue', handleSessionMediaEffectsIssue);
+  }
 
   /**
    * failed — 通话建立失败
@@ -2041,7 +2046,10 @@ async function call(type, direction, mediaStream)
     // 随路数据：X-Data（业务数据）、X-UA（设备信息）、X-Direction（媒体方向）
     extraHeaders  : [ `X-Data: ${xdata}`, `X-UA: ${navigator.userAgent}`, `X-Direction: ${direction || 'sendrecv'}` ],
     extraFeatures : extraFeatures,
-    pcConfig      : pcConfig
+    pcConfig      : pcConfig,
+    eventHandlers : {
+      mediaEffectsIssue : handleSessionMediaEffectsIssue
+    }
   };
 
   // ---- 附加媒体特效合成器配置 ----

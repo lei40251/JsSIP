@@ -1,8 +1,8 @@
-# `mediaeffectsissue` message 清单
+# `mediaEffectsIssue` message 清单
 
 ## 目的
 
-`RTCSession` 对外统一发出 `mediaeffectsissue` 事件，当前事件负载只保留两个字段：
+`RTCSession` 对外统一发出 `mediaEffectsIssue` 事件，当前事件负载只保留两个字段：
 
 ```js
 {
@@ -117,7 +117,7 @@
 
 ## logger 使用建议
 
-收到 `mediaeffectsissue` 后，如果需要进一步定位，优先从 SDK logger 看这些信息：
+收到 `mediaEffectsIssue` 后，如果需要进一步定位，优先从 SDK logger 看这些信息：
 
 - `module`：`AiNS` 或 `MediaEffectsComposer`
 - `component`：具体出错组件，例如 `AiNSWorkletRuntime`、`AudioMixer`、`RenderLoop`、`SourceAiVBController`

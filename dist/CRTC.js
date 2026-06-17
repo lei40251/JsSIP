@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.2026617142
+ * CRTC v2.0.3.20266171628
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -587,6 +587,8 @@ var createWorkletCode = require('./AiNSWorkletSource');
 var logger = new Logger('AiNSWorkletRuntime');
 var DEFAULT_CDN_URL = AiNSConfig.DEFAULT_CDN_URL;
 var DEFAULT_FETCH_TIMEOUT_MS = 15000;
+var ASSET_FETCH_RETRY_DELAY_MS = 1000;
+var ASSET_FETCH_MAX_RETRIES = 5;
 var WORKLET_MESSAGE_TYPES = {
   SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
   SET_BYPASS: 'SET_BYPASS'
@@ -605,6 +607,11 @@ var ISSUE_DEFAULTS = {
   details: {}
 };
 var getErrorMessage = issueUtils.getErrorMessage;
+function wait(delayMs) {
+  return new Promise(resolve => {
+    setTimeout(resolve, delayMs);
+  });
+}
 
 /**
  * AiNS 资源地址解析与抓取辅助器。
@@ -624,6 +631,25 @@ class AiNSAssetLoader {
   getAssetUrl(relativePath) {
     return `${this.cdnUrl}/${relativePath}`;
   }
+  resolveAssetUrl(url) {
+    if (typeof url !== 'string' || !url.trim()) {
+      return url;
+    }
+    try {
+      if (typeof document !== 'undefined' && document && document.baseURI) {
+        return new URL(url, document.baseURI).toString();
+      }
+      if (typeof location !== 'undefined' && location && location.href) {
+        return new URL(url, location.href).toString();
+      }
+      if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+        return new URL(url).toString();
+      }
+    } catch (error) {
+      logger.debug(`AiNSAssetLoader.resolveAssetUrl() fallback: url=${url} error=${error.message}`);
+    }
+    return url;
+  }
 
   /**
    * 获取 AI 降噪所需的静态资源（WASM / 模型文件）。
@@ -631,7 +657,7 @@ class AiNSAssetLoader {
    * 引入 DEFAULT_FETCH_TIMEOUT_MS 超时机制（默认 15000ms），解决弱网环境下
    * fetch() 长时间挂起导致整个初始化流程卡死的问题。超时后 Promise 会被 reject，
    * 由上层 initialize() 捕获并通过 _reportIssue 上报，最终业务侧可通过
-   * 'mediaeffectsissue' 事件获知并执行降级。
+   * 'mediaEffectsIssue' 事件获知并执行降级。
    *
    * 实现细节：
    * - 使用 Promise.race 竞速：fetch 请求 vs 超时 Promise
@@ -642,28 +668,51 @@ class AiNSAssetLoader {
    * @returns {Promise<ArrayBuffer>}
    */
   async fetchAsset(url) {
-    logger.debug(`AiNSAssetLoader.fetchAsset() start: url=${url} timeoutMs=${DEFAULT_FETCH_TIMEOUT_MS}`);
-    var timeoutResolve = null;
-    var trackedTimeoutPromise = new Promise((_, reject) => {
-      var timerId = setTimeout(() => {
-        reject(new Error(`Timed out fetching asset after ${DEFAULT_FETCH_TIMEOUT_MS}ms: ${url}`));
-      }, DEFAULT_FETCH_TIMEOUT_MS);
-      timeoutResolve = () => clearTimeout(timerId);
-    });
-    var response = null;
-    try {
-      response = await Promise.race([fetch(url), trackedTimeoutPromise]);
-    } finally {
-      if (timeoutResolve) {
-        timeoutResolve();
-      }
+    var fetchUrl = this.resolveAssetUrl(url);
+    var totalAttempts = ASSET_FETCH_MAX_RETRIES + 1;
+    var _loop = async function () {
+        logger.debug(`AiNSAssetLoader.fetchAsset() attempt ${attempt}/${totalAttempts} start: ` + `url=${fetchUrl} timeoutMs=${DEFAULT_FETCH_TIMEOUT_MS}`);
+        var timeoutResolve = null;
+        var trackedTimeoutPromise = new Promise((_, reject) => {
+          var timerId = setTimeout(() => {
+            reject(new Error(`Timed out fetching asset after ${DEFAULT_FETCH_TIMEOUT_MS}ms: ${fetchUrl}`));
+          }, DEFAULT_FETCH_TIMEOUT_MS);
+          timeoutResolve = () => clearTimeout(timerId);
+        });
+        var response = null;
+        try {
+          response = await Promise.race([fetch(fetchUrl), trackedTimeoutPromise]);
+        } finally {
+          if (timeoutResolve) {
+            timeoutResolve();
+          }
+        }
+        try {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch asset: url=${fetchUrl} status=${response.status}`);
+          }
+          var bytes = await response.arrayBuffer();
+          logger.debug(`AiNSAssetLoader.fetchAsset() attempt ${attempt}/${totalAttempts} complete: ` + `url=${fetchUrl} bytes=${bytes.byteLength}`);
+          return {
+            v: bytes
+          };
+        } catch (error) {
+          var message = error && error.message ? error.message : String(error);
+          logger.warn(`AiNSAssetLoader.fetchAsset() attempt ${attempt}/${totalAttempts} failed: ` + `url=${fetchUrl} error=${message}`);
+          if (attempt >= totalAttempts) {
+            logger.warn('AiNSAssetLoader.fetchAsset() retries exhausted: ' + `url=${fetchUrl} retryCount=${ASSET_FETCH_MAX_RETRIES}`);
+            throw error;
+          }
+          logger.debug('AiNSAssetLoader.fetchAsset() scheduling retry: ' + `url=${fetchUrl} retryInMs=${ASSET_FETCH_RETRY_DELAY_MS} nextAttempt=${attempt + 1}/${totalAttempts}`);
+          await wait(ASSET_FETCH_RETRY_DELAY_MS);
+        }
+      },
+      _ret;
+    for (var attempt = 1; attempt <= totalAttempts; attempt += 1) {
+      _ret = await _loop();
+      if (_ret) return _ret.v;
     }
-    if (!response.ok) {
-      throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
-    }
-    var bytes = await response.arrayBuffer();
-    logger.debug(`AiNSAssetLoader.fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
-    return bytes;
+    throw new Error(`Failed to fetch asset: url=${fetchUrl} status=unknown`);
   }
 }
 
@@ -1371,6 +1420,9 @@ var ISSUE_DEFAULTS = {
 function cloneIssue(issue) {
   return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
 }
+function buildIssueSignature(issue) {
+  return [issue && issue.module ? issue.module : '', issue && issue.message ? issue.message : ''].join('|');
+}
 
 /**
  * 汇总浏览器能力与当前处理器运行态快照。
@@ -1420,6 +1472,7 @@ class AiNoiseSuppressionEngine {
     this.options = options;
     this._issues = [];
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._lastForwardedIssueSignature = '';
     this.processor = new AiNSMediaStreamProcessor(Object.assign({}, options, {
       onIssue: this._handleIssue.bind(this)
     }));
@@ -1438,7 +1491,7 @@ class AiNoiseSuppressionEngine {
    *    防止内存无限增长。
    *
    * 2. **向上传递**：调用构造函数传入的 onIssue 回调（通常由 MediaPipeline 提供，
-   *    最终通过 RTCSession._emitMediaEffectsIssue 发出 'mediaeffectsissue' 事件），
+   *    最终通过 RTCSession._emitMediaEffectsIssue 发出 'mediaEffectsIssue' 事件），
    *    回调异常时会被 catch 后记录警告日志，不中断问题处理流程。
    *
    * 3. **能力报告：** 在 getCapabilityReport() 中将问题列表和最后一条问题写入
@@ -1448,6 +1501,12 @@ class AiNoiseSuppressionEngine {
    */
   _handleIssue(issue) {
     var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    var signature = buildIssueSignature(normalizedIssue);
+    if (signature && signature === this._lastForwardedIssueSignature) {
+      logger.debug(`Suppress duplicate AiNS issue: ${normalizedIssue.message}`);
+      return;
+    }
+    this._lastForwardedIssueSignature = signature;
     this._issues.push(cloneIssue(normalizedIssue));
     if (this._issues.length > MAX_REPORTED_ISSUES) {
       this._issues.shift();
@@ -4393,7 +4452,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212342804 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212343256 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17600,7 +17659,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212342804');
+debug('version %s', '2.0.3.405212343256');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17638,7 +17697,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212342804';
+    return '2.0.3.405212343256';
   }
 };
 },{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":72,"./Stats":86,"./UA":90,"./URI":91,"./Utils":92,"./WebSocketInterface":93,"debug":98}],45:[function(require,module,exports){
@@ -19525,6 +19584,9 @@ var getErrorMessage = issueUtils.getErrorMessage;
 function cloneIssue(issue) {
   return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
 }
+function buildIssueSignature(issue) {
+  return [issue && issue.module ? issue.module : '', issue && issue.message ? issue.message : ''].join('|');
+}
 
 /**
  * ComposerState —— 混流器状态聚合器
@@ -19711,6 +19773,7 @@ class ComposerRuntime {
     videos = videos || [];
     this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
     this._issues = [];
+    this._lastForwardedIssueSignature = '';
 
     // 统一为数组，方便后续统一遍历
     if (!(videos instanceof Array)) {
@@ -20007,7 +20070,7 @@ class ComposerRuntime {
    * 1. 内存缓存：将 clone 后的 issue 推入 this._issues（FIFO，MAX_REPORTED_ISSUES=50）
    * 2. 状态快照：通过 ComposerState.getSnapshot() 将问题列表写入 state.issues，供调试面板查询
    * 3. 向上传递：调用 onIssue 回调（最终到达 RTCSession._emitMediaEffectsIssue），
-   *    触发 'mediaeffectsissue' 事件
+   *    触发 'mediaEffectsIssue' 事件
    *
    * 各子组件通过 bind(this._recordIssue) 获得上报能力，形成统一的汇合点。
    * 所有子组件上报的问题在 component 字段中标记自身的组件名，
@@ -20017,6 +20080,12 @@ class ComposerRuntime {
    */
   _recordIssue(issue) {
     var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    var signature = buildIssueSignature(normalizedIssue);
+    if (signature && signature === this._lastForwardedIssueSignature) {
+      logger.debug(`Suppress duplicate MediaEffectsComposer issue: ${normalizedIssue.message}`);
+      return;
+    }
+    this._lastForwardedIssueSignature = signature;
     this._issues.push(cloneIssue(normalizedIssue));
     if (this._issues.length > MAX_REPORTED_ISSUES) {
       this._issues.shift();
@@ -23664,6 +23733,117 @@ var SCRIPT_WAIT_TIMEOUT_MS = 15000;
 
 /** 轮询模块脚本执行结果的间隔（毫秒） */
 var SCRIPT_POLL_INTERVAL_MS = 50;
+var ASSET_FETCH_RETRY_DELAY_MS = 1000;
+var ASSET_FETCH_MAX_RETRIES = 1;
+function resolveAssetUrl(url) {
+  if (typeof url !== 'string' || !url.trim()) {
+    return url;
+  }
+  try {
+    if (typeof URL !== 'undefined') {
+      if (typeof document !== 'undefined' && document && document.baseURI) {
+        return new URL(url, document.baseURI).toString();
+      }
+      if (typeof location !== 'undefined' && location && location.href) {
+        return new URL(url, location.href).toString();
+      }
+      if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+        return new URL(url).toString();
+      }
+    }
+  } catch (error) {
+    logger.debug(`resolveAssetUrl() fallback: url=${url} error=${error.message}`);
+  }
+  return url;
+}
+function isLikelyRelativeUrl(url) {
+  return typeof url === 'string' && url.trim() && !/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url) && !/^\/\//.test(url);
+}
+function shouldSkipReachabilityProbe(url, fetchUrl, error) {
+  var message = error && error.message ? error.message : String(error);
+  return isLikelyRelativeUrl(url) && fetchUrl === url && /Failed to parse URL/i.test(message);
+}
+function wait(delayMs) {
+  return new Promise(resolve => {
+    setTimeout(resolve, delayMs);
+  });
+}
+async function fetchAssetResponse(url, timeoutMs) {
+  if (typeof fetch !== 'function') {
+    return {
+      response: null,
+      fetchUrl: url
+    };
+  }
+  var fetchUrl = resolveAssetUrl(url);
+  var clearTimer = null;
+  var timeoutPromise = new Promise((_, reject) => {
+    var timerId = setTimeout(() => {
+      reject(new Error(`Timed out fetching asset after ${timeoutMs}ms: ${fetchUrl}`));
+    }, timeoutMs);
+    clearTimer = () => clearTimeout(timerId);
+  });
+  try {
+    var response = await Promise.race([fetch(fetchUrl), timeoutPromise]);
+    return {
+      response,
+      fetchUrl
+    };
+  } finally {
+    if (clearTimer) {
+      clearTimer();
+    }
+  }
+}
+function notifyReachabilityFailure(onRetryFailure, error, meta) {
+  if (typeof onRetryFailure !== 'function') {
+    return;
+  }
+  try {
+    onRetryFailure(error, Object.assign({}, meta));
+  } catch (callbackError) {
+    logger.warn(`Reachability failure callback failed: ${callbackError.message}`);
+  }
+}
+async function ensureAssetReachable(url, options = {}) {
+  var fetchUrl = resolveAssetUrl(url);
+  var totalAttempts = ASSET_FETCH_MAX_RETRIES + 1;
+  var onRetryFailure = typeof options.onRetryFailure === 'function' ? options.onRetryFailure : null;
+  for (var attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    logger.debug(`ensureAssetReachable() attempt ${attempt}/${totalAttempts} start: ` + `url=${fetchUrl} timeoutMs=${SCRIPT_WAIT_TIMEOUT_MS}`);
+    try {
+      var {
+        response
+      } = await fetchAssetResponse(fetchUrl, SCRIPT_WAIT_TIMEOUT_MS);
+      if (response && !response.ok) {
+        throw new Error(`Failed to fetch asset: url=${fetchUrl} status=${response.status}`);
+      }
+      logger.debug(`ensureAssetReachable() attempt ${attempt}/${totalAttempts} complete: url=${fetchUrl}`);
+      return;
+    } catch (error) {
+      var message = error && error.message ? error.message : String(error);
+      if (shouldSkipReachabilityProbe(url, fetchUrl, error)) {
+        logger.debug('ensureAssetReachable() probe skipped: ' + `url=${fetchUrl} reason=${message}`);
+        return;
+      }
+      logger.warn(`ensureAssetReachable() attempt ${attempt}/${totalAttempts} failed: ` + `url=${fetchUrl} error=${message}`);
+      if (attempt === 1) {
+        notifyReachabilityFailure(onRetryFailure, error, {
+          attempt,
+          totalAttempts,
+          fetchUrl,
+          willRetry: attempt < totalAttempts
+        });
+      }
+      if (attempt >= totalAttempts) {
+        logger.warn(`ensureAssetReachable() retries exhausted: url=${fetchUrl} retryCount=${ASSET_FETCH_MAX_RETRIES}`);
+        throw error;
+      }
+      logger.debug('ensureAssetReachable() scheduling retry: ' + `url=${fetchUrl} retryInMs=${ASSET_FETCH_RETRY_DELAY_MS} nextAttempt=${attempt + 1}/${totalAttempts}`);
+      await wait(ASSET_FETCH_RETRY_DELAY_MS);
+    }
+  }
+}
 
 /**
  * 全局去重表：moduleUrl → Promise<void>。
@@ -23681,6 +23861,9 @@ module.exports = class AiVBAssetLoader {
     /** @type {Object} 归一化后的资源配置，包含解析完成的 URL */
     this.assetConfig = Config.normalizeAssetConfig(assetConfig);
   }
+  getEffectiveAssetConfig() {
+    return this.assetConfig;
+  }
 
   /**
    * 返回 MediaPipe FilesetResolver 和 ImageSegmenter 工厂所需的运行时选项。
@@ -23689,7 +23872,7 @@ module.exports = class AiVBAssetLoader {
    * @returns {{ moduleUrl: string, wasmBaseUrl: string, modelUrl: string }}
    */
   getRuntimeOptions(modelPath) {
-    return segmentationHelpers.resolveRuntimeOptions(this.assetConfig, modelPath);
+    return segmentationHelpers.resolveRuntimeOptions(this.getEffectiveAssetConfig(), modelPath);
   }
 
   /**
@@ -23701,7 +23884,7 @@ module.exports = class AiVBAssetLoader {
    *   Tasks 全局命名空间
    * @throws {Error} 如果不在浏览器环境中运行
    */
-  async ensureTasksLoaded() {
+  async ensureTasksLoaded(options = {}) {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       throw new Error('AIVirtualBackground requires browser environment');
     }
@@ -23710,14 +23893,14 @@ module.exports = class AiVBAssetLoader {
     if (window[TASKS_GLOBAL]) {
       return window[TASKS_GLOBAL];
     }
-    var moduleUrl = this.assetConfig.moduleUrl;
+    var moduleUrl = this.getEffectiveAssetConfig().moduleUrl;
 
     // 其他调用方正在加载此 moduleUrl —— 等待它完成
     if (TASKS_LOAD_PROMISES[moduleUrl]) {
       await TASKS_LOAD_PROMISES[moduleUrl];
       return window[TASKS_GLOBAL];
     }
-    TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl);
+    TASKS_LOAD_PROMISES[moduleUrl] = this.loadTasksRuntime(moduleUrl, options);
     try {
       await TASKS_LOAD_PROMISES[moduleUrl];
     } finally {
@@ -23738,7 +23921,8 @@ module.exports = class AiVBAssetLoader {
    * @param {string} moduleUrl — MediaPipe Tasks Vision ESM 包的 URL
    * @returns {Promise<void>}
    */
-  async loadTasksRuntime(moduleUrl) {
+  async loadTasksRuntime(moduleUrl, options = {}) {
+    await ensureAssetReachable(moduleUrl, options);
     var selector = `script[data-aivb-module="${moduleUrl}"]`;
     var existingScript = document.querySelector(selector);
     if (existingScript) {
@@ -24324,6 +24508,7 @@ module.exports = class MediaPipeSegmenterRuntime {
    * @param {Object} [options={}]
    * @param {string} [options.modelPath] — 可选的模型 URL 覆盖
    * @param {'GPU'} [options.delegate='GPU'] — 推理后端固定为 GPU
+   * @param {Function} [options.onReachabilityFailure] — 资源探测首次失败时的回调
    * @returns {Promise<void>}
    * @throws {Error} 如果分割器已被销毁
    */
@@ -24341,7 +24526,9 @@ module.exports = class MediaPipeSegmenterRuntime {
       var {
         FilesetResolver,
         ImageSegmenter
-      } = await this.assetLoader.ensureTasksLoaded();
+      } = await this.assetLoader.ensureTasksLoaded({
+        onRetryFailure: options.onReachabilityFailure
+      });
       if (this.destroyed) {
         throw new Error('MediaPipe segmenter destroyed');
       }
@@ -25273,6 +25460,8 @@ module.exports = class SourceAiVBController {
       // 运行时初始化中
       runtimeInitError: '',
       // 初始化错误信息
+      runtimeLastReportedInitError: '',
+      // 同配置下相同初始化错误只上报一次
       runtimeConfigKey: '',
       // 运行时配置 key
       pendingSegmentation: false,
@@ -25318,6 +25507,28 @@ module.exports = class SourceAiVBController {
     this._states.set(source, state);
     return state;
   }
+  _getRuntimeInitIssueDetails(state) {
+    return {
+      modelPath: state && state.config && state.config.modelPath ? state.config.modelPath : '',
+      delegate: state && state.config && state.config.segmentation ? state.config.segmentation.delegate : '',
+      assetConfig: state && state.config && state.config.assetConfig ? cloneObject(state.config.assetConfig) : {}
+    };
+  }
+  _reportRuntimeInitFailure(state, generation, error, extraDetails) {
+    if (!state || state.disposed || state.generation !== generation) {
+      return;
+    }
+    state.runtimeInitError = getErrorMessage(error);
+    if (state.runtimeInitError === state.runtimeLastReportedInitError) {
+      return;
+    }
+    state.runtimeLastReportedInitError = state.runtimeInitError;
+    this._reportIssue({
+      stage: 'aivb-runtime-init',
+      message: state.runtimeInitError,
+      details: Object.assign(this._getRuntimeInitIssueDetails(state), extraDetails || {})
+    });
+  }
 
   /**
    * 确保 MediaPipe 分割器运行时已初始化。
@@ -25345,13 +25556,23 @@ module.exports = class SourceAiVBController {
 
     state.runtime.initialize({
       modelPath: state.config.modelPath,
-      delegate: state.config.segmentation.delegate
+      delegate: state.config.segmentation.delegate,
+      onReachabilityFailure: (error, meta) => {
+        this._reportRuntimeInitFailure(state, generation, error, {
+          attempt: meta && meta.attempt ? meta.attempt : 0,
+          totalTries: meta && meta.totalAttempts ? meta.totalAttempts : 0,
+          willRetry: Boolean(meta && meta.willRetry),
+          fetchUrl: meta && meta.fetchUrl ? meta.fetchUrl : ''
+        });
+      }
     }).then(() => {
       // 状态已被替换（generation 不匹配）或已销毁 → 忽略
       if (state.disposed || state.generation !== generation) {
         return;
       }
       state.runtimeReady = true;
+      state.runtimeInitError = '';
+      state.runtimeLastReportedInitError = '';
     }).catch(error => {
       if (state.disposed || state.generation !== generation) {
         return;
@@ -25360,15 +25581,7 @@ module.exports = class SourceAiVBController {
       if (this._logger) {
         this._logger.warn(`AiVB runtime init failed: error=${state.runtimeInitError} ` + `modelPath=${state.config && state.config.modelPath ? state.config.modelPath : ''} ` + `delegate=${state.config && state.config.segmentation ? state.config.segmentation.delegate : ''} ` + `assetConfig=${JSON.stringify(state.config && state.config.assetConfig ? state.config.assetConfig : {})}`);
       }
-      this._reportIssue({
-        stage: 'aivb-runtime-init',
-        message: state.runtimeInitError,
-        details: {
-          modelPath: state.config && state.config.modelPath ? state.config.modelPath : '',
-          delegate: state.config && state.config.segmentation ? state.config.segmentation.delegate : '',
-          assetConfig: state.config && state.config.assetConfig ? cloneObject(state.config.assetConfig) : {}
-        }
-      });
+      this._reportRuntimeInitFailure(state, generation, error);
     }).finally(() => {
       if (state.disposed || state.generation !== generation) {
         return;
@@ -25390,6 +25603,7 @@ module.exports = class SourceAiVBController {
     state.runtimeReady = false;
     state.runtimeInitializing = false;
     state.runtimeInitError = '';
+    state.runtimeLastReportedInitError = '';
     state.pendingSegmentation = false;
     state.activeSegPromise = null;
     state.queuedSegPromise = null;
@@ -27772,6 +27986,19 @@ var SegmentationCommon = require('../aiVirtualBackground/AiVBSegmentationCommon'
  * compress and mangle it before we serialize it with Function#toString().
  */
 function workerMain() {
+  var logger = {
+    debug: function (message) {
+      if (typeof console !== 'undefined' && console && typeof console.debug === 'function') {
+        console.debug('[AiVBWorkerAsset] ' + message);
+      }
+    },
+    warn: function (message) {
+      if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
+        console.warn('[AiVBWorkerAsset] ' + message);
+      }
+    }
+  };
+
   // =============================================================================
   // Worker 渲染脚本 —— 在 WebWorker 中运行，负责实际的视频帧合成渲染。
   //
@@ -27828,6 +28055,8 @@ function workerMain() {
   // 遮罩后处理参数
   var DEFAULT_MASK_EDGE_BLUR_PX = 2; // 遮罩边缘羽化模糊半径（px），防止硬边白边
   var DEFAULT_MASK_ALPHA_BIAS = 0.08; // 遮罩 alpha 偏移，轻微收缩遮罩减少边缘泄漏
+  var ASSET_FETCH_RETRY_DELAY_MS = 1000;
+  var ASSET_FETCH_MAX_RETRIES = 5;
 
   // WebGL2 shader 源码
   // 顶点着色器：传递顶点位置和纹理坐标
@@ -27865,6 +28094,83 @@ void main() {
   // 数值钳位到 [min, max] 范围
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+  function resolveAssetUrl(url) {
+    if (typeof url !== 'string' || !url.trim()) {
+      return url;
+    }
+    try {
+      if (typeof URL !== 'undefined') {
+        if (typeof location !== 'undefined' && location && location.href) {
+          return new URL(url, location.href).toString();
+        }
+        if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+          return new URL(url).toString();
+        }
+      }
+    } catch (error) {
+      return url;
+    }
+    return url;
+  }
+  function wait(delayMs) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, delayMs);
+    });
+  }
+  async function fetchAssetResponse(url, timeoutMs) {
+    if (typeof fetch !== 'function') {
+      return {
+        response: null,
+        fetchUrl: url
+      };
+    }
+    var fetchUrl = resolveAssetUrl(url);
+    var clearTimer = null;
+    var timeoutPromise = new Promise(function (_, reject) {
+      var timerId = setTimeout(function () {
+        reject(new Error('Timed out fetching asset after ' + timeoutMs + 'ms: ' + fetchUrl));
+      }, timeoutMs);
+      clearTimer = function () {
+        clearTimeout(timerId);
+      };
+    });
+    try {
+      var response = await Promise.race([fetch(fetchUrl), timeoutPromise]);
+      return {
+        response: response,
+        fetchUrl: fetchUrl
+      };
+    } finally {
+      if (clearTimer) {
+        clearTimer();
+      }
+    }
+  }
+  async function ensureAssetReachable(url) {
+    var fetchUrl = resolveAssetUrl(url);
+    var totalAttempts = ASSET_FETCH_MAX_RETRIES + 1;
+    for (var attempt = 1; attempt <= totalAttempts; attempt += 1) {
+      logger.debug('ensureAssetReachable() attempt ' + attempt + '/' + totalAttempts + ' start: ' + 'url=' + fetchUrl + ' timeoutMs=15000');
+      try {
+        var fetchResult = await fetchAssetResponse(fetchUrl, 15000);
+        var response = fetchResult.response;
+        if (response && !response.ok) {
+          throw new Error('Failed to fetch asset: url=' + fetchUrl + ' status=' + response.status);
+        }
+        logger.debug('ensureAssetReachable() attempt ' + attempt + '/' + totalAttempts + ' complete: ' + 'url=' + fetchUrl);
+        return;
+      } catch (error) {
+        var message = error && error.message ? error.message : String(error);
+        logger.warn('ensureAssetReachable() attempt ' + attempt + '/' + totalAttempts + ' failed: ' + 'url=' + fetchUrl + ' error=' + message);
+        if (attempt >= totalAttempts) {
+          logger.warn('ensureAssetReachable() retries exhausted: ' + 'url=' + fetchUrl + ' retryCount=' + ASSET_FETCH_MAX_RETRIES);
+          throw error;
+        }
+        logger.debug('ensureAssetReachable() scheduling retry: ' + 'url=' + fetchUrl + ' retryInMs=' + ASSET_FETCH_RETRY_DELAY_MS + ' nextAttempt=' + (attempt + 1) + '/' + totalAttempts);
+        await wait(ASSET_FETCH_RETRY_DELAY_MS);
+      }
+    }
   }
 
   // 判断 item 是否启用了 AiVB 虚拟背景效果
@@ -27999,6 +28305,7 @@ void main() {
     if (!moduleUrl) {
       throw new Error('AIVirtualBackground moduleUrl is required');
     }
+    await ensureAssetReachable(moduleUrl);
     if (!aivbModulePromises[moduleUrl]) {
       aivbModulePromises[moduleUrl] = dynamicImport(moduleUrl).then(function (module) {
         if (!module || !module.FilesetResolver || !module.ImageSegmenter) {
@@ -28031,7 +28338,9 @@ void main() {
         segmenter: null,
         labels: [],
         ready: false,
-        initializing: null
+        initializing: null,
+        error: '',
+        reportedError: ''
       };
       aivbRuntimeStates[runtimeKey] = runtimeState;
     }
@@ -28041,6 +28350,7 @@ void main() {
     if (!runtimeState.initializing) {
       runtimeState.initializing = async function () {
         var runtimeOptions = segmentationCommon.resolveRuntimeOptions(config.assetConfig, config.modelPath);
+        await ensureAssetReachable(runtimeOptions.moduleUrl);
         var moduleUrl = runtimeOptions.moduleUrl;
         var wasmBaseUrl = runtimeOptions.wasmBaseUrl;
         var modelUrl = runtimeOptions.modelUrl;
@@ -28051,11 +28361,25 @@ void main() {
         runtimeState.segmenter = segmenter;
         runtimeState.labels = typeof segmenter.getLabels === 'function' ? segmenter.getLabels() : [];
         runtimeState.ready = true;
-      }().finally(function () {
+        runtimeState.error = '';
+        runtimeState.reportedError = '';
+      }().catch(function (error) {
+        runtimeState.error = error && error.message ? error.message : String(error);
+        throw error;
+      }).finally(function () {
         runtimeState.initializing = null;
       });
     }
-    await runtimeState.initializing;
+    try {
+      await runtimeState.initializing;
+    } catch (error) {
+      var message = error && error.message ? error.message : String(error);
+      if (runtimeState.reportedError === message) {
+        return runtimeState;
+      }
+      runtimeState.reportedError = message;
+      throw error;
+    }
     return runtimeState;
   }
 
@@ -28756,8 +29080,8 @@ void main() {
 }
 exports.createWorkerScript = function () {
   var source = workerMain.toString();
-  source = source.replace('/* __AIVB_SEGMENTATION_HELPERS__ */', 'var segmentationCommon = (' + SegmentationCommon.getWorkerSegmentationHelpersFactorySource() + ')();');
-  return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
+  var body = source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
+  return 'var segmentationCommon = (' + SegmentationCommon.getWorkerSegmentationHelpersFactorySource() + ')();\n' + body.replace('/* __AIVB_SEGMENTATION_HELPERS__ */', '');
 };
 },{"../aiVirtualBackground/AiVBSegmentationCommon":58}],70:[function(require,module,exports){
 "use strict";
@@ -35036,7 +35360,7 @@ module.exports = class RTCSession extends EventEmitter {
   }
 
   /**
-   * 内部方法：接收上游和各媒体的异常报告，统一发出 'mediaeffectsissue' 事件。
+   * 内部方法：接收上游和各媒体的异常报告，统一发出 'mediaEffectsIssue' 事件。
    *
    * ## 数据流路径
    *
@@ -35047,8 +35371,8 @@ module.exports = class RTCSession extends EventEmitter {
    *       → ComposerRuntime._recordIssue（统一汇聚，缓存到 _issues）
    *         → MediaPipeline.emitMediaEffectsIssue（桥接）
    *           → RTCSession._emitMediaEffectsIssue（本方法）
-   *             → this.emit('mediaeffectsissue', payload)
-   *               → 业务层 session.on('mediaeffectsissue', handler)
+   *             → this.emit('mediaEffectsIssue', payload)
+   *               → 业务层 session.on('mediaEffectsIssue', handler)
    *
    * ## 事件负载
    *
@@ -35061,7 +35385,7 @@ module.exports = class RTCSession extends EventEmitter {
    *
    * ## 设计目标
    *
-   * 业务侧可通过 session.on('mediaeffectsissue', handler) 监听异常事件，
+   * 业务侧可通过 session.on('mediaEffectsIssue', handler) 监听异常事件，
    * 用于：
    * - 用户体验：在 UI 上提示"美颜/降噪功能异常，已降级处理"
    * - 监控告警：将事件上报到监控系统
@@ -35079,8 +35403,8 @@ module.exports = class RTCSession extends EventEmitter {
       module: normalizedIssue.module,
       message: normalizedIssue.message
     };
-    loggerMethod.call(logger, `${this._id} emit "mediaeffectsissue": module=${normalizedIssue.module} message=${normalizedIssue.message}`);
-    this.emit('mediaeffectsissue', payload);
+    loggerMethod.call(logger, `${this._id} emit "mediaEffectsIssue": module=${normalizedIssue.module} message=${normalizedIssue.message}`);
+    this.emit('mediaEffectsIssue', payload);
   }
   _logOperationError(level, prefix, error) {
     var loggerMethod = logger[level] || logger.warn;
@@ -36077,7 +36401,7 @@ module.exports = class MediaPipeline {
    *   ComposerRuntime._onIssue（或 AiNSEngine._onIssue）
    *     → MediaPipeline.emitMediaEffectsIssue（本方法，clone后再转发）
    *       → RTCSession._emitMediaEffectsIssue
-   *         → session.emit('mediaeffectsissue', { module, message })
+   *         → session.emit('mediaEffectsIssue', { module, message })
    *
    * ## 重复上报防护
    *
