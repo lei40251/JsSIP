@@ -57,6 +57,10 @@ const TERSER_RESERVED = [
 // 不对全量 `_xxx` 属性做混淆，避免把 UA / RTCSession / SIP 内部字段也一起打坏。
 // 如果后续某个测试或业务依赖这些属性名，需要从这里移除对应项。
 const TERSER_MEDIA_PROPERTY_MANGLE_REGEX = /^__(?:aiVirtualBackgroundState|workerTest)$|^_(?:activeCaptureSinkVideo|audioBuses|audioComposer|canvas|capturedStream|capturedStreams|capturedVideoTrack|closeTransferFrames|compressorNode|config|context2d|contextWebGL2|continuousWriteFailures|createFrame|createWatermarkFrame|ctx2d|drawVideosToCanvas|filter|gco|generator|generatorTrack|gl|handleWorkerMessage|insertableActive|insertableEnabledByConfig|insertableSupport|lastTimestampUs|latestPendingFrame|manualCaptureFrameControl|maxContinuousWriteFailures|mixedStream|outputContext|outputStreamManager|pendingWrite|renderInWorker|sourceAiVBManager|sources|src|videoStream|worker|workerReady|writer)$/;
+// 可选的激进私有属性混淆：
+// 直接瞄准 `_xxx` 私有字段，压缩率更高，但会改变内部字段名。
+// 适合只消费公开 API、且希望进一步压缩体积的场景。
+const TERSER_PRIVATE_PROPERTY_MANGLE_REGEX = /^_/;
 
 // 压缩配置说明：
 // 1. 目标不是重型 obfuscator，而是在体积和可维护性之间做平衡。
@@ -66,43 +70,49 @@ const TERSER_MEDIA_PROPERTY_MANGLE_REGEX = /^__(?:aiVirtualBackgroundState|worke
 //    这样可以降低动态访问场景被打坏的概率。
 // 5. `unsafe*` / `hoist_props` / `reduce_funcs` 会提高压缩率，但也意味着更依赖测试兜底。
 // 6. `preamble` 是用户要求保留的前缀，不要移除。
-const TERSER_OPTIONS = {
-  toplevel        : true,
-  module          : true,
-  keep_classnames : false,
-  keep_fnames     : false,
-  mangle          : {
-    eval       : true,
-    properties : {
-      regex       : TERSER_MEDIA_PROPERTY_MANGLE_REGEX,
-      keep_quoted : true
+function createTerserOptions(propertyRegex)
+{
+  return {
+    toplevel        : true,
+    module          : true,
+    keep_classnames : false,
+    keep_fnames     : false,
+    mangle          : {
+      eval       : true,
+      properties : {
+        regex       : propertyRegex,
+        keep_quoted : true
+      },
+      reserved : TERSER_RESERVED
     },
-    reserved : TERSER_RESERVED
-  },
-  compress : {
-    // `passes` 不继续无限加大，5 基本已经接近收益和构建时间的平衡点。
-    passes        : 5,
-    unsafe        : true,
-    unsafe_math   : true,
-    pure_getters  : 'strict',
-    hoist_props   : true,
-    reduce_vars   : true,
-    reduce_funcs  : true,
-    side_effects  : true,
-    keep_fargs    : false,
-    drop_debugger : true,
-    global_defs   : {
-      __DEBUG__ : false
+    compress : {
+      // `passes` 不继续无限加大，5 基本已经接近收益和构建时间的平衡点。
+      passes        : 5,
+      unsafe        : true,
+      unsafe_math   : true,
+      pure_getters  : 'strict',
+      hoist_props   : true,
+      reduce_vars   : true,
+      reduce_funcs  : true,
+      side_effects  : true,
+      keep_fargs    : false,
+      drop_debugger : true,
+      global_defs   : {
+        __DEBUG__ : false
+      }
+    },
+    output : {
+      comments   : false,
+      beautify   : false,
+      semicolons : false,
+      // 该前缀是当前产物兼容用户既有策略的一部分，需要保留。
+      preamble   : 'var _0x1234=0;'
     }
-  },
-  output : {
-    comments   : false,
-    beautify   : false,
-    semicolons : false,
-    // 该前缀是当前产物兼容用户既有策略的一部分，需要保留。
-    preamble   : 'var _0x1234=0;'
-  }
-};
+  };
+}
+
+const TERSER_OPTIONS = createTerserOptions(TERSER_MEDIA_PROPERTY_MANGLE_REGEX);
+const TERSER_PRIVATE_OPTIONS = createTerserOptions(TERSER_PRIVATE_PROPERTY_MANGLE_REGEX);
 
 // 构建时间参与版本号替换，历史逻辑是把本地时间戳乘 2。
 // 这里保留现状，避免影响现有版本串依赖。
@@ -247,24 +257,35 @@ gulp.task('browserify', function()
     .pipe(gulp.dest('dist/', { sourcemaps: './maps' }));
 });
 
-gulp.task('uglify', function()
+function createUglifyTask(taskName, terserOptions, outputFileName)
 {
-  const src = `dist/${ PKG.title }.js`;
+  gulp.task(taskName, function()
+  {
+    const src = `dist/${ PKG.title }.js`;
 
-  return gulp.src(src, { sourcemaps: true })
-    .pipe(expect(EXPECT_OPTIONS, src))
-    // 这里不用重型 obfuscator，只走 terser。
-    // 原因是 obfuscator 对体积、构建速度和兼容性冲击都更大。
-    .pipe(terser(TERSER_OPTIONS))
-    // banner 在压缩产物里同样保留。
-    .pipe(header(BANNER, BANNER_OPTIONS))
-    .pipe(rename(`${PKG.title }.min.js`))
-    // 基于上一阶段加载进来的 sourcemap 继续生成 dist/maps/CRTC.min.js.map。
-    .pipe(gulp.dest('dist/', { sourcemaps: './maps' }))
-    // 发布压缩包保留外部 .map 文件，但不在主文件尾部暴露 sourceMappingURL。
-    .pipe(stripExternalSourceMapComment())
-    .pipe(gulp.dest('dist/'));
-});
+    return gulp.src(src, { sourcemaps: true })
+      .pipe(expect(EXPECT_OPTIONS, src))
+      // 这里不用重型 obfuscator，只走 terser。
+      // 原因是 obfuscator 对体积、构建速度和兼容性冲击都更大。
+      .pipe(terser(terserOptions))
+      // banner 在压缩产物里同样保留。
+      .pipe(header(BANNER, BANNER_OPTIONS))
+      .pipe(rename(outputFileName))
+      // 基于上一阶段加载进来的 sourcemap 继续生成 dist/maps/*.map。
+      .pipe(gulp.dest('dist/', { sourcemaps: './maps' }))
+      // 发布压缩包保留外部 .map 文件，但不在主文件尾部暴露 sourceMappingURL。
+      .pipe(stripExternalSourceMapComment())
+      .pipe(gulp.dest('dist/'));
+  });
+}
+
+// 标准保守压缩产物：保留当前较低风险的属性混淆范围。
+createUglifyTask('uglify-standard', TERSER_OPTIONS, `${PKG.title }.standard.min.js`);
+// 激进压缩产物：继续输出为默认 `CRTC.min.js`。
+// 风险在于依赖内部字段名的外部脚本会失效，但体积收益更高。
+createUglifyTask('uglify-private-props', TERSER_PRIVATE_OPTIONS, `${PKG.title }.min.js`);
+// 兼容旧任务名；现在 `uglify` 指向激进版最小产物。
+gulp.task('uglify', gulp.series('uglify-private-props'));
 
 gulp.task('test-files', function()
 {
@@ -478,9 +499,13 @@ gulp.task('dist-del', function(done)
 
 gulp.task('devel', gulp.series('grammar'));
 
-// 标准构建链路：
-// lint -> babel -> test -> browserify -> terser -> 清理临时目录
-gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify', 'tmp-del', 'lib-es5-del'));
+// 默认构建链路：
+// lint -> babel -> test -> browserify -> 先出标准版，再出激进版 -> 清理临时目录
+gulp.task('dist', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'uglify-private-props', 'tmp-del', 'lib-es5-del'));
+// 仅输出激进版最小产物。
+gulp.task('dist-private-props', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-private-props', 'tmp-del', 'lib-es5-del'));
+// 仅输出标准保守版最小产物。
+gulp.task('dist-standard', gulp.series('lint', 'babel', 'test', 'browserify', 'uglify-standard', 'tmp-del', 'lib-es5-del'));
 
 gulp.task('zip', gulp.series('zip-del-zip', 'zip-demo', 'zip-dist', 'zip-changelog', 'zip-doc', 'zip-zip', 'zip-del'));
 

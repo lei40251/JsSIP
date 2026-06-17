@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266171341
+ * CRTC v2.0.3.2026617142
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4393,7 +4393,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212342682 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212342804 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17600,7 +17600,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212342682');
+debug('version %s', '2.0.3.405212342804');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17638,7 +17638,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212342682';
+    return '2.0.3.405212342804';
   }
 };
 },{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":72,"./Stats":86,"./UA":90,"./URI":91,"./Utils":92,"./WebSocketInterface":93,"debug":98}],45:[function(require,module,exports){
@@ -29643,6 +29643,24 @@ var C = {
  * Local variables.
  */
 var holdMediaTypes = ['audio', 'video'];
+var EVENT_SET_REMOTE_DESCRIPTION_FAILED = 'peerconnection:setremotedescriptionfailed';
+var HEADER_ACCEPT_CONTACT_MMTEL_VIDEO = 'Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video';
+var HEADER_P_PREFERRED_SERVICE_MMTEL = 'P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel';
+var SDP_DATA_CHANNEL_MEDIA = 'UDP/DTLS/SCTP webrtc-datachannel';
+var SDP_BFCP_MEDIA = 'UDP/DTLS/SCTP/BFCP *';
+function push5GServiceHeaders(extraHeaders, ua) {
+  if (ua.sk[7] >= 3) {
+    extraHeaders.push(HEADER_ACCEPT_CONTACT_MMTEL_VIDEO);
+    extraHeaders.push(HEADER_P_PREFERRED_SERVICE_MMTEL);
+  }
+}
+function replaceDataChannelMediaWithBFCP(sdp) {
+  return sdp.replace(SDP_DATA_CHANNEL_MEDIA, SDP_BFCP_MEDIA);
+}
+function emitSetRemoteDescriptionFailed(session, error) {
+  session._logEventError('warn', EVENT_SET_REMOTE_DESCRIPTION_FAILED, error);
+  session.emit(EVENT_SET_REMOTE_DESCRIPTION_FAILED, error);
+}
 module.exports = class RTCSession extends EventEmitter {
   /**
    * Expose C object.
@@ -30187,10 +30205,7 @@ module.exports = class RTCSession extends EventEmitter {
     extraHeaders.push(`Contact: ${this._contact}`);
 
     // 5G Headers
-    if (this._ua.sk[7] >= 3) {
-      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-    }
+    push5GServiceHeaders(extraHeaders, this._ua);
     extraHeaders.push('Content-Type: application/sdp');
     if (this._sessionTimers.enabled) {
       extraHeaders.push(`Session-Expires: ${this._sessionTimers.defaultExpires}${this._ua.configuration.session_timers_force_refresher ? ';refresher=uac' : ''}`);
@@ -30501,10 +30516,7 @@ module.exports = class RTCSession extends EventEmitter {
     this._data = options.data || this._data;
 
     // 5G Headers
-    if (this._ua.sk[7] >= 3) {
-      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-    }
+    push5GServiceHeaders(extraHeaders, this._ua);
 
     // Check Session Direction and Status.
     if (this._direction !== 'incoming') {
@@ -30712,8 +30724,7 @@ module.exports = class RTCSession extends EventEmitter {
       this._connectionPromiseQueue = this._connectionPromiseQueue.then(() => this._connection.setRemoteDescription(offer)).catch(error => {
         request.reply(488);
         this._failed('system', null, CRTC_C.causes.WEBRTC_ERROR);
-        this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-        this.emit('peerconnection:setremotedescriptionfailed', error);
+        emitSetRemoteDescriptionFailed(this, error);
         throw new Error('peerconnection.setRemoteDescription() failed');
       });
       return this._connectionPromiseQueue;
@@ -32225,8 +32236,7 @@ module.exports = class RTCSession extends EventEmitter {
                 cause: CRTC_C.causes.BAD_MEDIA_DESCRIPTION,
                 status_code: 488
               });
-              this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-              this.emit('peerconnection:setremotedescriptionfailed', error);
+              emitSetRemoteDescriptionFailed(this, error);
             });
           } else if (!this._is_confirmed) {
             this._confirmed('remote', request);
@@ -32763,7 +32773,7 @@ module.exports = class RTCSession extends EventEmitter {
           type: type,
           sdp: connection.localDescription.sdp
         };
-        this._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+        this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
 
         // logger.debug(`${this._id} complete emit "sdp"${ e.sdp}`);
         this.emit('sdp', e);
@@ -32789,7 +32799,7 @@ module.exports = class RTCSession extends EventEmitter {
             type: type,
             sdp: connection.localDescription.sdp
           };
-          this._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+          this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
           logger.debug(`${this._id} ready emit "sdp"`);
           this.emit('sdp', e);
           resolve(e.sdp);
@@ -33205,10 +33215,7 @@ module.exports = class RTCSession extends EventEmitter {
       var extraHeaders = [`Contact: ${this._contact}`];
 
       // 5G Headers
-      if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-        extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-      }
+      push5GServiceHeaders(extraHeaders, this._ua);
       this._handleSessionTimersInIncomingRequest(request, extraHeaders);
       if (this._late_sdp) {
         desc = this._mangleOffer(desc);
@@ -33366,10 +33373,7 @@ module.exports = class RTCSession extends EventEmitter {
       var extraHeaders = [`Contact: ${this._contact}`];
 
       // 5G Headers
-      if (this._ua.sk[7] >= 3) {
-        extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-        extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-      }
+      push5GServiceHeaders(extraHeaders, this._ua);
       this._handleSessionTimersInIncomingRequest(request, extraHeaders);
       request.reply(200, null, extraHeaders, desc);
 
@@ -33421,8 +33425,7 @@ module.exports = class RTCSession extends EventEmitter {
       }
       return this._connection.setRemoteDescription(offer).catch(error => {
         request.reply(488);
-        this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-        this.emit('peerconnection:setremotedescriptionfailed', error);
+        emitSetRemoteDescriptionFailed(this, error);
         throw error;
       });
     }).then(() => {
@@ -33967,8 +33970,7 @@ module.exports = class RTCSession extends EventEmitter {
               });
             }
           }).then(() => this._progress('remote', response)).catch(error => {
-            this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-            this.emit('peerconnection:setremotedescriptionfailed', error);
+            emitSetRemoteDescriptionFailed(this, error);
           });
           break;
         }
@@ -34116,8 +34118,7 @@ module.exports = class RTCSession extends EventEmitter {
             }).catch(error => {
               this._acceptAndTerminate(response, 488, 'Not Acceptable Here');
               this._failed('remote', response, CRTC_C.causes.BAD_MEDIA_DESCRIPTION);
-              this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-              this.emit('peerconnection:setremotedescriptionfailed', error);
+              emitSetRemoteDescriptionFailed(this, error);
             });
           });
           break;
@@ -34143,10 +34144,7 @@ module.exports = class RTCSession extends EventEmitter {
     // extraHeaders.push(`Contact: ${this._contact}`);
 
     // 5G Headers
-    if (this._ua.sk[7] >= 3) {
-      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-    }
+    push5GServiceHeaders(extraHeaders, this._ua);
     extraHeaders.push('Content-Type: application/sdp');
 
     // Session Timers.
@@ -34165,7 +34163,7 @@ module.exports = class RTCSession extends EventEmitter {
         type: 'offer',
         sdp
       };
-      this._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+      this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
       logger.debug(`${this._id} emit "sdp"`);
       this.emit('sdp', e);
 
@@ -34272,8 +34270,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
       }).catch(error => {
         onFailed.call(this);
-        this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-        this.emit('peerconnection:setremotedescriptionfailed', error);
+        emitSetRemoteDescriptionFailed(this, error);
       });
     }
     function onFailed(response) {
@@ -34296,10 +34293,7 @@ module.exports = class RTCSession extends EventEmitter {
     extraHeaders.push(`Contact: ${this._contact}`);
 
     // 5G Headers
-    if (this._ua.sk[7] >= 3) {
-      extraHeaders.push('Accept-Contact: *;+g.3gpp.icsi-ref="urn%3Aurn-7%3A3gpp-service.ims.icsi.mmtel";video');
-      extraHeaders.push('P-Preferred-Service: urn:urn-7:3gpp-service.ims.icsi.mmtel');
-    }
+    push5GServiceHeaders(extraHeaders, this._ua);
 
     // Session Timers.
     if (this._sessionTimers.running) {
@@ -34314,7 +34308,7 @@ module.exports = class RTCSession extends EventEmitter {
           type: 'offer',
           sdp
         };
-        this._enableBFCP && (e.sdp = e.sdp.replace('UDP/DTLS/SCTP webrtc-datachannel', 'UDP/DTLS/SCTP/BFCP *'));
+        this._enableBFCP && (e.sdp = replaceDataChannelMediaWithBFCP(e.sdp));
         logger.debug(`${this._id} emit "sdp"`);
         this.emit('sdp', e);
         this.sendRequest(CRTC_C.UPDATE, {
@@ -34441,8 +34435,7 @@ module.exports = class RTCSession extends EventEmitter {
           }
         }).catch(error => {
           onFailed.call(this);
-          this._logEventError('warn', 'peerconnection:setremotedescriptionfailed', error);
-          this.emit('peerconnection:setremotedescriptionfailed', error);
+          emitSetRemoteDescriptionFailed(this, error);
         });
       }
       // No SDP answer.
@@ -38995,6 +38988,8 @@ var Socket = require('./Socket');
 var CRTC_C = require('./Constants');
 var Utils = require('./Utils');
 var logger = new Logger('Transport');
+var SDP_BFCP_MEDIA = 'UDP/DTLS/SCTP/BFCP *';
+var SDP_DATA_CHANNEL_MEDIA = 'UDP/DTLS/SCTP webrtc-datachannel';
 
 /**
  * Constants
@@ -39339,10 +39334,10 @@ module.exports = class Transport {
     // data = data.replace(/(a=fmtp:\d+\s+profile-level-id=[\w\d]+[\s\S]*?a=fmtp:\d+\s+profile-level-id=)([\w\d]+)/, '$142c01e');
 
     // 修复BFCP用到的SDP信息
-    data = data.replace('UDP/DTLS/SCTP/BFCP *', 'UDP/DTLS/SCTP webrtc-datachannel');
+    data = data.replace(SDP_BFCP_MEDIA, SDP_DATA_CHANNEL_MEDIA);
 
     // 检查并添加SCTP参数,适配Firefox
-    if (data.includes('UDP/DTLS/SCTP webrtc-datachannel')) {
+    if (data.includes(SDP_DATA_CHANNEL_MEDIA)) {
       var hasSctpPort = /a=sctp-port:\d+/.test(data);
       var hasMaxMessageSize = /a=max-message-size:\d+/.test(data);
       if (!hasSctpPort || !hasMaxMessageSize) {
