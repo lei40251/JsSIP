@@ -2126,7 +2126,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
 
     assert.strictEqual(createdImages.length, 0);
     assert.ok(stateBeforeMirror);
-    assert.strictEqual(stateBeforeMirror.backgroundImageStatus, 'idle');
+    assert.strictEqual(stateBeforeMirror.bgImageStatus, 'idle');
     assert.strictEqual(stateBeforeMirror.backgroundImage, null);
 
     await mixer.setConfig({ outputMirror: true });
@@ -2135,7 +2135,7 @@ async function testOutputMirrorDoesNotPreloadAiVBBackgroundImage()
 
     assert.ok(stateAfterMirror);
     assert.strictEqual(createdImages.length, 0);
-    assert.strictEqual(stateAfterMirror.backgroundImageStatus, 'idle');
+    assert.strictEqual(stateAfterMirror.bgImageStatus, 'idle');
     assert.strictEqual(stateAfterMirror.backgroundImage, null);
 
     mixer.stop();
@@ -3221,8 +3221,8 @@ async function testDefaultPrefersCaptureStreamEvenWhenInsertableSupported()
   assert.strictEqual(info.insertableEnabledByConfig, false);
   assert.strictEqual(info.insertableSupported, true);
   assert.strictEqual(info.activeCaptureSinkAttached, true);
-  assert.ok(mixer._outputStreamManager._activeCaptureSinkVideo);
-  assert.strictEqual(mixer._outputStreamManager._activeCaptureSinkVideo.srcObject, mixer._capturedStreams[0]);
+  assert.ok(mixer._outMgr._captureSinkVideo);
+  assert.strictEqual(mixer._outMgr._captureSinkVideo.srcObject, mixer._capturedStreams[0]);
 
   mixer.stop();
 }
@@ -3240,7 +3240,7 @@ async function testCaptureStreamActiveSinkIsDisposedOnStop()
   });
 
   mixer.getVideoStream();
-  const sinkVideo = mixer._outputStreamManager._activeCaptureSinkVideo;
+  const sinkVideo = mixer._outMgr._captureSinkVideo;
 
   assert.ok(sinkVideo);
 
@@ -3249,7 +3249,7 @@ async function testCaptureStreamActiveSinkIsDisposedOnStop()
   assert.strictEqual(sinkVideo._paused, true);
   assert.strictEqual(sinkVideo._removed, true);
   assert.strictEqual(sinkVideo.srcObject, null);
-  assert.strictEqual(mixer._outputStreamManager._activeCaptureSinkVideo, null);
+  assert.strictEqual(mixer._outMgr._captureSinkVideo, null);
 }
 
 async function run()

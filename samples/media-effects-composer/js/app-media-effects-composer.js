@@ -44,6 +44,7 @@ Object.assign(window.app, {
       height                     : h,
       fps                        : fps,
       renderMode                 : renderMode,
+      onIssue                    : this.createComposerIssueHandler('MainComposer'),
       mirror                     : ctorOutputMirror && ctorOutputMirror.value === 'on',
       mirrorWatermarksWithOutput : !ctorOutputWatermarkMirror || ctorOutputWatermarkMirror.value === 'on',
       watermarks                 : []

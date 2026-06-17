@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266162229
+ * CRTC v2.0.3.20266171341
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -187,9 +187,21 @@ exports.normalizeAssetConfig = function (assetConfig) {
 "use strict";
 
 var Logger = require('../Logger');
+var issueUtils = require('../MediaEffectsIssue');
 var AiNSConfig = require('./AiNSConfig');
 var AiNSWorkletRuntime = require('./AiNSWorkletRuntime');
 var logger = new Logger('AiNSMediaStreamProcessor');
+var ISSUE_DEFAULTS = {
+  module: 'AiNS',
+  component: 'AiNSMediaStreamProcessor',
+  stage: 'unknown',
+  severity: 'error',
+  message: 'Unknown AiNS processor issue',
+  fallbackApplied: false,
+  degraded: false,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
 function isAiNSSupported() {
   return typeof AudioContext !== 'undefined' && typeof AudioWorkletNode !== 'undefined' && typeof WebAssembly !== 'undefined';
 }
@@ -215,6 +227,7 @@ module.exports = class AiNSMediaStreamProcessor {
    * @param {Object} [options.assetConfig]
    */
   constructor(options = {}) {
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
     var normalizedOptions = AiNSConfig.create(options);
     this.name = 'ai-noise-suppression-media-stream-processor';
     this.processedTrack = null;
@@ -231,9 +244,39 @@ module.exports = class AiNSMediaStreamProcessor {
     this.processor = new AiNSWorkletRuntime({
       sampleRate: normalizedOptions.sampleRate,
       noiseReductionLevel: normalizedOptions.noiseReductionLevel,
-      assetConfig: normalizedOptions.assetConfig
+      assetConfig: normalizedOptions.assetConfig,
+      onIssue: this._reportIssue.bind(this)
     });
     logger.debug(`constructor: ${JSON.stringify(this.config)}`);
+  }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 将 AiNSWorkletRuntime 上报的问题统一格式化后记录日志，并根据 severity 级别
+   * 将问题通过 `onIssue` 回调向上传递给 AiNoiseSuppressionEngine。
+   *
+   * issue 对象包含以下字段：
+   * - module (string): 问题所属模块，如 'AiNS'
+   * - component (string): 报告问题的组件名，如 'AiNSMediaStreamProcessor'
+   * - stage (string): 问题发生的阶段，如 'audio-context-resume'
+   * - severity (string): 严重级别，可选值为 'debug' | 'warn' | 'error'
+   * - message (string): 问题描述信息
+   * - fallbackApplied (boolean): 是否已应用降级方案
+   * - degraded (boolean): 当前是否处于降级运行状态
+   * - details (object): 与问题相关的额外上下文信息
+   *
+   * 异常处理机制：
+   * - 日志记录：根据 severity 自动选择 logger.debug / logger.warn / logger.error
+   * - 向上传递：调用构造函数传入的 onIssue 回调，回调异常时会被 catch 后记录警告日志
+   * - 传参给下游时会将自身 _reportIssue 方法绑定后传给 AiNSWorkletRuntime，形成自底向上的问题上报链
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    issueUtils.logIssue(logger, 'AiNS processor issue', normalizedIssue, false);
+    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS issue forwarding failed');
   }
 
   /**
@@ -293,11 +336,11 @@ module.exports = class AiNSMediaStreamProcessor {
    */
   async replaceAudioTrack(input) {
     logger.debug('replaceAudioTrack()');
-    var nextAudioTrack = this._resolveInputAudioTrack(input);
+    var nextAudioTrack = this._getInputAudioTrack(input);
     if (!nextAudioTrack) {
       throw new Error('AiNSMediaStreamProcessor: replacement input has no audio track');
     }
-    var nextStream = this._buildStreamWithReplacedAudioTrack(nextAudioTrack);
+    var nextStream = this._buildReplacedAudioStream(nextAudioTrack);
     this.originalTrack = nextAudioTrack;
     this.originalStream = nextStream;
     await this.ensureGraph();
@@ -316,7 +359,7 @@ module.exports = class AiNSMediaStreamProcessor {
   async setEnabled(enable) {
     this.enabled = AiNSConfig.normalizeBoolean(enable, this.enabled);
     logger.debug(`setEnabled(): enabled=${this.enabled}`);
-    this.processor.setNoiseSuppressionEnabled(this.enabled);
+    this.processor.setNsEnabled(this.enabled);
     return this.enabled;
   }
   setSuppressionLevel(level) {
@@ -373,7 +416,7 @@ module.exports = class AiNSMediaStreamProcessor {
   setInput(input) {
     logger.debug(`setInput(): type=${this._getInputType(input)}`);
     if (input instanceof MediaStream) {
-      var audioTrack = this._resolveInputAudioTrack(input);
+      var audioTrack = this._getInputAudioTrack(input);
       if (!audioTrack) {
         throw new Error('AiNSMediaStreamProcessor: input stream has no audio track');
       }
@@ -389,7 +432,7 @@ module.exports = class AiNSMediaStreamProcessor {
     this.originalStream = new MediaStream([input]);
     logger.debug('setInput() single audio track wrapped into MediaStream');
   }
-  _resolveInputAudioTrack(input) {
+  _getInputAudioTrack(input) {
     if (input instanceof MediaStream) {
       return input.getAudioTracks()[0] || null;
     }
@@ -407,7 +450,7 @@ module.exports = class AiNSMediaStreamProcessor {
     }
     return typeof input;
   }
-  _buildStreamWithReplacedAudioTrack(audioTrack) {
+  _buildReplacedAudioStream(audioTrack) {
     if (!this.originalStream) {
       return new MediaStream([audioTrack]);
     }
@@ -443,7 +486,17 @@ module.exports = class AiNSMediaStreamProcessor {
       try {
         await this.audioContext.resume();
       } catch (error) {
-        logger.warn('ensureGraph() | audioContext resume failed', error);
+        logger.warn(`ensureGraph() | audioContext resume failed: ${getErrorMessage(error)}`);
+        this._reportIssue({
+          stage: 'audio-context-resume',
+          severity: 'warn',
+          message: getErrorMessage(error),
+          degraded: true,
+          details: {
+            contextState: this.audioContext ? this.audioContext.state : 'unknown',
+            sampleRate: this.audioContext ? this.audioContext.sampleRate : this.config.sampleRate
+          }
+        });
       }
     }
     await this.processor.initialize();
@@ -524,18 +577,40 @@ module.exports = class AiNSMediaStreamProcessor {
     }
   }
 };
-},{"../Logger":45,"./AiNSConfig":1,"./AiNSWorkletRuntime":3}],3:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSConfig":1,"./AiNSWorkletRuntime":3}],3:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
+var issueUtils = require('../MediaEffectsIssue');
 var AiNSConfig = require('./AiNSConfig');
 var createWorkletCode = require('./AiNSWorkletSource');
 var logger = new Logger('AiNSWorkletRuntime');
 var DEFAULT_CDN_URL = AiNSConfig.DEFAULT_CDN_URL;
+var DEFAULT_FETCH_TIMEOUT_MS = 15000;
 var WORKLET_MESSAGE_TYPES = {
   SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
   SET_BYPASS: 'SET_BYPASS'
 };
+var WORKLET_EVENT_TYPES = {
+  INIT_FAILED: 'AINS_WORKLET_INIT_FAILED'
+};
+var ISSUE_DEFAULTS = {
+  module: 'AiNS',
+  component: 'AiNSWorkletRuntime',
+  stage: 'unknown',
+  severity: 'error',
+  message: 'Unknown AiNS worklet runtime issue',
+  fallbackApplied: false,
+  degraded: false,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
+
+/**
+ * AiNS 资源地址解析与抓取辅助器。
+ *
+ * 负责把 assetConfig 中的 cdnUrl 展开成具体资源 URL，并执行 fetch。
+ */
 class AiNSAssetLoader {
   constructor(config = {}) {
     this.cdnUrl = config.cdnUrl || DEFAULT_CDN_URL;
@@ -549,15 +624,57 @@ class AiNSAssetLoader {
   getAssetUrl(relativePath) {
     return `${this.cdnUrl}/${relativePath}`;
   }
+
+  /**
+   * 获取 AI 降噪所需的静态资源（WASM / 模型文件）。
+   *
+   * 引入 DEFAULT_FETCH_TIMEOUT_MS 超时机制（默认 15000ms），解决弱网环境下
+   * fetch() 长时间挂起导致整个初始化流程卡死的问题。超时后 Promise 会被 reject，
+   * 由上层 initialize() 捕获并通过 _reportIssue 上报，最终业务侧可通过
+   * 'mediaeffectsissue' 事件获知并执行降级。
+   *
+   * 实现细节：
+   * - 使用 Promise.race 竞速：fetch 请求 vs 超时 Promise
+   * - 超时 Promise 在 finally 块中通过 clearTimeout 清理，防止内存泄漏
+   * - 超时错误信息包含 URL 和超时毫秒数，方便排查
+   *
+   * @param {string} url - 资源 URL
+   * @returns {Promise<ArrayBuffer>}
+   */
   async fetchAsset(url) {
-    var response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch asset: ${response.status} ${response.statusText}`);
+    logger.debug(`AiNSAssetLoader.fetchAsset() start: url=${url} timeoutMs=${DEFAULT_FETCH_TIMEOUT_MS}`);
+    var timeoutResolve = null;
+    var trackedTimeoutPromise = new Promise((_, reject) => {
+      var timerId = setTimeout(() => {
+        reject(new Error(`Timed out fetching asset after ${DEFAULT_FETCH_TIMEOUT_MS}ms: ${url}`));
+      }, DEFAULT_FETCH_TIMEOUT_MS);
+      timeoutResolve = () => clearTimeout(timerId);
+    });
+    var response = null;
+    try {
+      response = await Promise.race([fetch(url), trackedTimeoutPromise]);
+    } finally {
+      if (timeoutResolve) {
+        timeoutResolve();
+      }
     }
-    return response.arrayBuffer();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch asset: url=${url} status=${response.status} statusText=${response.statusText}`);
+    }
+    var bytes = await response.arrayBuffer();
+    logger.debug(`AiNSAssetLoader.fetchAsset() complete: url=${url} bytes=${bytes.byteLength}`);
+    return bytes;
   }
 }
-async function registerInlineWorkletModule(audioContext, inlineCode) {
+
+/**
+ * 以 Blob URL 的形式注册内联 AudioWorklet 模块。
+ *
+ * @param {AudioContext} audioContext
+ * @param {string} inlineCode
+ * @returns {Promise<void>}
+ */
+async function registerWorkletModule(audioContext, inlineCode) {
   var blob = new Blob([inlineCode], {
     type: 'application/javascript'
   });
@@ -590,6 +707,7 @@ module.exports = class AiNSWorkletRuntime {
    */
   constructor(config = {}) {
     var normalizedConfig = AiNSConfig.create(config);
+    this._onIssue = typeof config.onIssue === 'function' ? config.onIssue : null;
     this.assetLoader = new AiNSAssetLoader(normalizedConfig.assetConfig || {});
     this.assets = null;
     this.workletNode = null;
@@ -604,10 +722,37 @@ module.exports = class AiNSWorkletRuntime {
   }
 
   /**
+   * 内部异常报告方法。
+   *
+   * 将 Worklet 运行时层面的问题（资源拉取失败、Worklet 节点初始化失败、
+   * Worklet 内部线程初始化失败等）统一格式化后记录日志，并通过 onIssue 回调
+   * 向上传递给 AiNSMediaStreamProcessor。
+   *
+   * 上报的问题类型包括：
+   * - asset-fetch: WASM/模型资源拉取失败
+   * - worklet-node-init: AudioWorkletNode 创建失败（如 addModule 失败）
+   * - worklet-internal-init: Worker 线程内部 DeepFilter 初始化失败
+   *   （通过 AudioWorklet port 的 onmessage 监听 WORKLET_EVENT_TYPES.INIT_FAILED 事件）
+   *
+   * 与 AiNSMediaStreamProcessor._reportIssue 的区别：
+   * - 本方法位于调用链的最底层，直接面对运行时错误
+   * - 上报后会设置 error.__mediaEffectsIssueReported = true，防止上层重复上报
+   * - 对 AiNSWorkletSource 发来的 INIT_FAILED 消息，会将 fallbackApplied 和 degraded
+   *   标记为 true，表明降噪功能已降级（音频直通、不处理）
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    issueUtils.logIssue(logger, 'AiNS runtime issue', normalizedIssue, false);
+    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS runtime issue callback failed');
+  }
+
+  /**
    * 预加载 AINoiseSuppression 运行时资源。
    *
    * 设计成显式初始化有两个好处：
-     * - 可以把网络开销前移到真正建图之前；
+   * - 可以把网络开销前移到真正建图之前；
    * - 发生失败时更容易在业务侧做降级和提示。
    *
    * @returns {Promise<void>}
@@ -620,7 +765,24 @@ module.exports = class AiNSWorkletRuntime {
     logger.debug('initialize() start');
     var assetUrls = this.assetLoader.getAssetUrls();
     logger.debug(`initialize() asset urls: ${JSON.stringify(assetUrls)}`);
-    var assets = await Promise.all([this.assetLoader.fetchAsset(assetUrls.wasm), this.assetLoader.fetchAsset(assetUrls.model)]);
+    var assets = null;
+    try {
+      assets = await Promise.all([this.assetLoader.fetchAsset(assetUrls.wasm), this.assetLoader.fetchAsset(assetUrls.model)]);
+    } catch (error) {
+      this._reportIssue({
+        stage: 'asset-fetch',
+        severity: 'error',
+        message: getErrorMessage(error),
+        details: {
+          cdnUrl: this.assetLoader.cdnUrl,
+          assetUrls: assetUrls
+        }
+      });
+      if (error && typeof error === 'object') {
+        error.__mediaEffectsIssueReported = true;
+      }
+      throw error;
+    }
     this.assets = {
       wasmBytes: assets[0],
       modelBytes: assets[1]
@@ -646,14 +808,55 @@ module.exports = class AiNSWorkletRuntime {
       throw new Error('Assets not loaded');
     }
     logger.debug(`createAudioWorkletNode() start: sampleRate=${audioContext && audioContext.sampleRate}`);
-    await registerInlineWorkletModule(audioContext, createWorkletCode());
-    this.workletNode = new AudioWorkletNode(audioContext, 'ai-noise-suppression-audio-processor', {
-      processorOptions: {
-        wasmBytes: this.assets.wasmBytes,
-        modelBytes: this.assets.modelBytes,
-        suppressionLevel: this.config.noiseReductionLevel
+    try {
+      await registerWorkletModule(audioContext, createWorkletCode());
+      this.workletNode = new AudioWorkletNode(audioContext, 'ai-noise-suppression-audio-processor', {
+        processorOptions: {
+          wasmBytes: this.assets.wasmBytes,
+          modelBytes: this.assets.modelBytes,
+          suppressionLevel: this.config.noiseReductionLevel
+        }
+      });
+    } catch (error) {
+      this._reportIssue({
+        stage: 'worklet-node-init',
+        severity: 'error',
+        message: getErrorMessage(error),
+        details: {
+          sampleRate: audioContext && audioContext.sampleRate,
+          hasAssets: Boolean(this.assets),
+          moduleBytes: this.assets && this.assets.wasmBytes ? this.assets.wasmBytes.byteLength : 0,
+          modelBytes: this.assets && this.assets.modelBytes ? this.assets.modelBytes.byteLength : 0
+        }
+      });
+      if (error && typeof error === 'object') {
+        error.__mediaEffectsIssueReported = true;
       }
-    });
+      throw error;
+    }
+    this.workletNode.port.onmessage = event => {
+      var data = event && event.data ? event.data : null;
+      if (!data) {
+        logger.debug('createAudioWorkletNode() port message ignored: empty payload');
+        return;
+      }
+      logger.debug(`createAudioWorkletNode() port message: ${JSON.stringify(data)}`);
+      if (data.type === WORKLET_EVENT_TYPES.INIT_FAILED) {
+        this._reportIssue({
+          component: 'AiNSWorkletSource',
+          stage: 'worklet-internal-init',
+          severity: 'error',
+          message: data.message || 'AudioWorklet internal initialization failed',
+          fallbackApplied: true,
+          degraded: true,
+          details: Object.assign({
+            sampleRate: audioContext && audioContext.sampleRate,
+            noiseReductionLevel: this.config.noiseReductionLevel,
+            cdnUrl: this.assetLoader.cdnUrl
+          }, data.details || {})
+        });
+      }
+    };
     logger.debug('createAudioWorkletNode() complete');
     return this.workletNode;
   }
@@ -685,12 +888,12 @@ module.exports = class AiNSWorkletRuntime {
    *
    * @param {boolean} enabled
    */
-  setNoiseSuppressionEnabled(enabled) {
+  setNsEnabled(enabled) {
     var normalizedEnabled = AiNSConfig.normalizeBoolean(enabled, true);
     this.bypassEnabled = !normalizedEnabled;
-    logger.debug(`setNoiseSuppressionEnabled(): enabled=${normalizedEnabled}`);
+    logger.debug(`setNsEnabled(): enabled=${normalizedEnabled}`);
     if (!this.workletNode) {
-      logger.debug('setNoiseSuppressionEnabled() deferred: worklet node not ready');
+      logger.debug('setNsEnabled() deferred: worklet node not ready');
       return;
     }
     this.workletNode.port.postMessage({
@@ -698,6 +901,12 @@ module.exports = class AiNSWorkletRuntime {
       value: !normalizedEnabled
     });
   }
+
+  /**
+   * 返回当前是否处于“降噪启用”状态。
+   *
+   * @returns {boolean}
+   */
   isNoiseSuppressionEnabled() {
     return !this.bypassEnabled;
   }
@@ -719,6 +928,8 @@ module.exports = class AiNSWorkletRuntime {
 
   /**
    * 在需要 WorkletNode 之前确保 initialize() 已被调用。
+   *
+   * @throws {Error} 资源尚未初始化时抛错
    */
   ensureInitialized() {
     if (!this.isInitialized) {
@@ -727,7 +938,7 @@ module.exports = class AiNSWorkletRuntime {
     }
   }
 };
-},{"../Logger":45,"./AiNSConfig":1,"./AiNSWorkletSource":4}],4:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSConfig":1,"./AiNSWorkletSource":4}],4:[function(require,module,exports){
 (function (global){(function (){
 "use strict";
 
@@ -990,6 +1201,22 @@ function workletMain() {
       SET_SUPPRESSION_LEVEL: 'SET_SUPPRESSION_LEVEL',
       SET_BYPASS: 'SET_BYPASS'
     };
+    /**
+     * AudioWorklet 线程向主线程发送的事件类型枚举。
+     *
+     * 由于 AudioWorklet 在独立线程中运行，无法直接调用主线程的日志或回调，
+     * 需要通过 port.postMessage() 发送消息。主线程的 AiNSWorkletRuntime 在
+     * workletNode.port.onmessage 中监听这些事件并做相应处理。
+     *
+     * INIT_FAILED:
+     *   当 DeepFilter 初始化失败时（WASM 加载失败、模型解析失败等），
+     *   Worklet 线程向主线程发送此事件。主线程收到后会通过 _reportIssue
+     *   上报问题并标记 fallbackApplied=true、degraded=true，
+     *   表明降噪功能已降级（音频将直通、不做降噪处理）。
+     */
+    var WorkletEventTypes = {
+      INIT_FAILED: 'AINS_WORKLET_INIT_FAILED'
+    };
     class DeepFilterAudioProcessor extends AudioWorkletProcessor {
       constructor(options) {
         super();
@@ -1023,6 +1250,23 @@ function workletMain() {
         } catch (error) {
           console.error('Failed to initialize DeepFilter in AudioWorklet:', error);
           this.isInitialized = false;
+          // 通过 port.postMessage 向主线程发送 INIT_FAILED 事件，
+          // 让主线程获知 Worklet 初始化失败并执行降级处理。
+          // hasWasmBytes / hasModelBytes 用于帮助排查是否是资源缺失导致的问题。
+          if (this.port && typeof this.port.postMessage === 'function') {
+            try {
+              this.port.postMessage({
+                type: WorkletEventTypes.INIT_FAILED,
+                message: error && error.message ? error.message : String(error),
+                details: {
+                  hasWasmBytes: Boolean(options && options.processorOptions && options.processorOptions.wasmBytes),
+                  hasModelBytes: Boolean(options && options.processorOptions && options.processorOptions.modelBytes)
+                }
+              });
+            } catch (postError) {
+              console.error('Failed to notify main thread about DeepFilter init failure:', postError);
+            }
+          }
         }
       }
       handleMessage(data) {
@@ -1117,7 +1361,23 @@ module.exports = function () {
 
 var AiNSMediaStreamProcessor = require('./AiNSMediaStreamProcessor');
 var Logger = require('../Logger');
+var issueUtils = require('../MediaEffectsIssue');
 var logger = new Logger('AiNoiseSuppressionEngine');
+var MAX_REPORTED_ISSUES = 20;
+var ISSUE_DEFAULTS = {
+  module: 'AiNS',
+  message: 'Unknown AiNS issue'
+};
+function cloneIssue(issue) {
+  return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
+}
+
+/**
+ * 汇总浏览器能力与当前处理器运行态快照。
+ *
+ * @param {AiNSMediaStreamProcessor|null} processor
+ * @returns {Object}
+ */
 function collectCapabilityReport(processor) {
   var requirements = {
     audioContext: typeof AudioContext !== 'undefined',
@@ -1150,13 +1410,49 @@ function collectCapabilityReport(processor) {
 class AiNoiseSuppressionEngine {
   /**
    * @param {Object} [options]
+   * @param {boolean} [options.enabled=true]
+   * @param {boolean} [options.preserveOtherTracks=true]
+   * @param {number} [options.sampleRate=48000]
+   * @param {number} [options.noiseReductionLevel=80]
+   * @param {Object} [options.assetConfig]
    */
   constructor(options = {}) {
     this.options = options;
-    this.processor = new AiNSMediaStreamProcessor(options);
+    this._issues = [];
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this.processor = new AiNSMediaStreamProcessor(Object.assign({}, options, {
+      onIssue: this._handleIssue.bind(this)
+    }));
     this.inputStream = null;
     this.outputStream = null;
     logger.debug(`constructor: ${JSON.stringify(this.processor.config)}`);
+  }
+
+  /**
+   * 统一的问题处理入口。
+   *
+   * 接收来自 AiNSMediaStreamProcessor 的上报后执行以下操作：
+   *
+   * 1. **内存缓存**：将 clone 后的 issue 推入 this._issues 数组，供 getIssues() 查询。
+   *    通过 MAX_REPORTED_ISSUES（默认 20）限制缓存条数，超出时丢弃最旧记录（FIFO 策略），
+   *    防止内存无限增长。
+   *
+   * 2. **向上传递**：调用构造函数传入的 onIssue 回调（通常由 MediaPipeline 提供，
+   *    最终通过 RTCSession._emitMediaEffectsIssue 发出 'mediaeffectsissue' 事件），
+   *    回调异常时会被 catch 后记录警告日志，不中断问题处理流程。
+   *
+   * 3. **能力报告：** 在 getCapabilityReport() 中将问题列表和最后一条问题写入
+   *    report.issues 和 report.runtime.lastIssue，方便上层调试与监控。
+   *
+   * @param {Object} [issue] - 问题描述对象，字段由下层组件定义
+   */
+  _handleIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    this._issues.push(cloneIssue(normalizedIssue));
+    if (this._issues.length > MAX_REPORTED_ISSUES) {
+      this._issues.shift();
+    }
+    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'AiNS issue callback failed', cloneIssue);
   }
 
   /**
@@ -1233,7 +1529,13 @@ class AiNoiseSuppressionEngine {
     return this.processor.setEnabled(enable);
   }
   getCapabilityReport() {
-    return collectCapabilityReport(this.processor);
+    var report = collectCapabilityReport(this.processor);
+    if (report.runtime) {
+      report.runtime.issueCount = this._issues.length;
+      report.runtime.lastIssue = this._issues.length > 0 ? cloneIssue(this._issues[this._issues.length - 1]) : null;
+    }
+    report.issues = this._issues.map(cloneIssue);
+    return report;
   }
 
   /**
@@ -1257,19 +1559,55 @@ class AiNoiseSuppressionEngine {
   }
 
   /**
+   * 获取当前引擎记录的所有问题列表。
+   *
+   * 返回的是深拷贝副本，外部修改不会影响内部缓存。
+   * 最多保留 MAX_REPORTED_ISSUES 条（默认 20 条），FIFO 淘汰。
+   *
+   * @returns {Object[]}
+   */
+  getIssues() {
+    return this._issues.map(cloneIssue);
+  }
+
+  /**
+   * 获取最近一次记录的问题，若无则返回 null。
+   *
+   * 返回深拷贝副本，通常用于健康检查或状态快照（如 getCapabilityReport()）。
+   *
+   * @returns {Object|null}
+   */
+  getLastIssue() {
+    return this._issues.length > 0 ? cloneIssue(this._issues[this._issues.length - 1]) : null;
+  }
+
+  /**
    * 浏览器能力探测。
+   *
+   * @returns {boolean}
    */
   static isSupported() {
     return AiNSMediaStreamProcessor.isSupported();
   }
+
+  /**
+   * 获取静态能力报告（不依赖实例状态）。
+   *
+   * @returns {Object}
+   */
   static getCapabilityReport() {
-    return collectCapabilityReport(null);
+    var report = collectCapabilityReport(null);
+    report.issues = [];
+    return report;
   }
 }
 module.exports = AiNoiseSuppressionEngine;
-},{"../Logger":45,"./AiNSMediaStreamProcessor":2}],6:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":70,"./AiNSMediaStreamProcessor":2}],6:[function(require,module,exports){
 "use strict";
 
+/**
+ * AINoiseSuppression public entry point.
+ */
 module.exports = require('./AiNoiseSuppressionEngine');
 },{"./AiNoiseSuppressionEngine":5}],7:[function(require,module,exports){
 "use strict";
@@ -3802,7 +4140,7 @@ User.FloorRequestId = 0;
 module.exports = User;
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"../attributes/name.js":15,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../messages/requestStatusValue.js":33,"../parser/parser.js":35,"buffer":96}],37:[function(require,module,exports){
+},{"../attributes/name.js":15,"../messages/floorRelease.js":22,"../messages/floorRequest.js":23,"../messages/floorRequestStatus.js":24,"../messages/floorRequestStatusAck.js":25,"../messages/floorStatus.js":26,"../messages/floorStatusAck.js":27,"../messages/hello.js":28,"../messages/helloAck.js":29,"../messages/primitive.js":32,"../messages/requestStatusValue.js":33,"../parser/parser.js":35,"buffer":97}],37:[function(require,module,exports){
 "use strict";
 
 var Utils = require('./Utils');
@@ -4051,11 +4389,11 @@ exports.load = (dst, src) => {
     }
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./Socket":84,"./URI":90,"./Utils":91}],38:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./Socket":85,"./URI":91,"./Utils":92}],38:[function(require,module,exports){
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212324458 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212342682 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -4522,7 +4860,7 @@ module.exports = class Dialog {
     return true;
   }
 };
-},{"./Constants":38,"./Dialog/RequestSender":40,"./Logger":45,"./SIPMessage":83,"./Transactions":87,"./Utils":91}],40:[function(require,module,exports){
+},{"./Constants":38,"./Dialog/RequestSender":40,"./Logger":45,"./SIPMessage":84,"./Transactions":88,"./Utils":92}],40:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('../Constants');
@@ -4617,7 +4955,7 @@ module.exports = class DialogRequestSender {
     }
   }
 };
-},{"../Constants":38,"../RequestSender":82,"../Transactions":87}],41:[function(require,module,exports){
+},{"../Constants":38,"../RequestSender":83,"../Transactions":88}],41:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -4796,7 +5134,7 @@ module.exports = class DigestAuthentication {
     return `Digest ${auth_params.join(', ')}`;
   }
 };
-},{"./Logger":45,"./Utils":91}],42:[function(require,module,exports){
+},{"./Logger":45,"./Utils":92}],42:[function(require,module,exports){
 "use strict";
 
 class ConfigurationError extends Error {
@@ -17248,7 +17586,7 @@ module.exports = function () {
   result.SyntaxError.prototype = Error.prototype;
   return result;
 }();
-},{"./NameAddrHeader":71,"./URI":90}],44:[function(require,module,exports){
+},{"./NameAddrHeader":72,"./URI":91}],44:[function(require,module,exports){
 "use strict";
 
 var C = require('./Constants');
@@ -17262,7 +17600,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212324458');
+debug('version %s', '2.0.3.405212342682');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17300,10 +17638,10 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212324458';
+    return '2.0.3.405212342682';
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":71,"./Stats":85,"./UA":89,"./URI":90,"./Utils":91,"./WebSocketInterface":92,"debug":97}],45:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":72,"./Stats":86,"./UA":90,"./URI":91,"./Utils":92,"./WebSocketInterface":93,"debug":98}],45:[function(require,module,exports){
 "use strict";
 
 var debugFactory = require('debug');
@@ -17405,7 +17743,7 @@ module.exports = class Logger {
 // log.debug('登录成功');  // [ts] CRTC:D:Auth 登录成功 +5ms
 // log.warn('风险提示');   // [ts] CRTC:W:Auth 风险提示 +3ms
 // log.error('异常信息');  // [ts] CRTC:E:Auth 异常信息 +1ms
-},{"debug":97}],46:[function(require,module,exports){
+},{"debug":98}],46:[function(require,module,exports){
 "use strict";
 
 /**
@@ -17419,17 +17757,30 @@ module.exports = class Logger {
  *
  * @module AudioMixer
  */
+var issueUtils = require('../MediaEffectsIssue');
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  component: 'AudioMixer',
+  stage: 'audio-mixer',
+  severity: 'warn',
+  message: 'Audio mixer issue',
+  fallbackApplied: true,
+  degraded: true,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
 class AudioMixer {
   /**
    * @param {Object} options
    * @param {Object} options.logger - 日志记录器
    * @param {Function} options.getDestroyed - 返回混流器是否已销毁的回调
-     * @param {Object} options.sourceRegistry - SourceStore 实例
+   * @param {Object} options.sourceRegistry - SourceStore 实例
    * @param {Function} options.onAudioTrackAvailable - 音频轨可用时的回调（用于补充到 mixed stream）
    */
   constructor(options) {
     options = options || {};
     this._logger = options.logger;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
     this._getDestroyed = options.getDestroyed;
     this._sourceRegistry = options.sourceRegistry;
     this._onAudioTrackAvailable = options.onAudioTrackAvailable;
@@ -17465,7 +17816,7 @@ class AudioMixer {
     this._audioRefreshPending = false;
 
     /** @type {Promise<boolean>|null} 音频系统初始化锁，避免并发创建多个 AudioContext */
-    this._audioSystemReadyPromise = null;
+    this._audioReadyPr = null;
 
     /** @type {Promise<void>|null} AudioContext 关闭中的 Promise，用于 stop 后诊断/测试 */
     this._audioContextClosePromise = null;
@@ -17497,6 +17848,28 @@ class AudioMixer {
   }
 
   /**
+   * 内部异常报告方法。
+   *
+   * 上报混音过程中的各类非致命问题，包括：
+   * - audio-context-unavailable: AudioContext 不可用（如浏览器不支持）
+   * - audio-context-resume: AudioContext.resume() 失败
+   * - audio-stream-no-valid-sources: 没有有效的音频源（跳过音频流创建）
+   * - audio-source-connect: 音频源连接失败
+   * - refresh-mixed-audio: 刷新混合音频失败
+   * - isolated-audio-context-unavailable: 独立 AudioContext 不可用
+   *
+   * 设计要点：
+   * - 默认 severity='warn', fallbackApplied=true, degraded=true，
+   *   因为音频混音失败时通常会降级为静音或跳过该源
+   * - 回调异常时记录警告日志，不中断音频处理流程
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'AudioMixer issue callback failed');
+  }
+
+  /**
    * 获取混合后的音频流。
    * 初始化 AudioContext（延迟创建），连接所有源的音频到 destination。
    *
@@ -17520,10 +17893,10 @@ class AudioMixer {
     });
     if (request.type === 'default') {
       this._defaultAudioRequested = true;
-      return this._refreshAudioConnections();
+      return this._refreshBusAudio();
     }
-    if (this._shouldUseIsolatedAudioContext(options)) {
-      return this._createIsolatedSubmixAudioStream(request);
+    if (this._useIsolatedAudioCtx(options)) {
+      return this._createSubmixAudio(request);
     }
     var existing = this._audioBuses.get(request.key);
     if (existing) {
@@ -17532,7 +17905,7 @@ class AudioMixer {
     }
     var bus = this._getOrCreateAudioBus(request.key, request.slots);
     bus.requested = true;
-    return this._refreshAudioConnections(bus);
+    return this._refreshBusAudio(bus);
   }
 
   /**
@@ -17550,7 +17923,7 @@ class AudioMixer {
     if (!request || request.type !== 'slots') {
       return Promise.resolve(null);
     }
-    return this._createIsolatedSubmixAudioStream(request);
+    return this._createSubmixAudio(request);
   }
 
   /**
@@ -17567,7 +17940,7 @@ class AudioMixer {
       status: 'requested',
       reason: ''
     });
-    return this._refreshAudioConnections(null, {
+    return this._refreshBusAudio(null, {
       createWhenSilent: true
     });
   }
@@ -17587,7 +17960,7 @@ class AudioMixer {
     if (!request || request.type !== 'slots') {
       return false;
     }
-    if (this._shouldUseIsolatedAudioContext(options)) {
+    if (this._useIsolatedAudioCtx(options)) {
       var submix = this._isolatedSubmixes.get(request.key);
       if (!submix) {
         return false;
@@ -17645,10 +18018,18 @@ class AudioMixer {
     }
     this._audioRefreshPromise = this._refreshRequestedAudioConnections().catch(error => {
       this._logger.warn(`Failed to refresh mixed audio: ${error.message || String(error)}`);
+      this._reportIssue({
+        stage: 'refresh-mixed-audio',
+        message: getErrorMessage(error),
+        details: {
+          requested: Boolean(this._audioRequested),
+          status: this._audioInfo.status
+        }
+      });
       this._updateAudioInfo({
         status: 'failed',
         reason: 'Failed to refresh mixed audio',
-        lastError: error.message || String(error)
+        lastError: getErrorMessage(error)
       });
     }).then(stream => {
       var needsAnotherRefresh = this._audioRefreshPending;
@@ -17677,10 +18058,10 @@ class AudioMixer {
       var previousStream = source.stream;
       var currentStream = this._sourceRegistry.getStream(source);
       var previousSignature = source.audioTrackSignature;
-      var currentSignature = this._getAudioTrackSignature(currentStream);
+      var currentSignature = this._getTrackSig(currentStream);
 
       // 已有音频连接但音频轨真正变化了，断开旧连接
-      if (source.audioSourceNode && !this._isSameAudioTrackSignature(previousSignature, currentSignature)) {
+      if (source.audioSourceNode && !this._sameTrackSig(previousSignature, currentSignature)) {
         this.disconnectSource(source);
         needsRefresh = true;
         return;
@@ -17719,7 +18100,7 @@ class AudioMixer {
     var audioSourceNode = source.audioSourceNode;
     var masterGainNode = source.masterGainNode;
     this._audioBuses.forEach(bus => this._disconnectBusSource(bus, source));
-    this._isolatedSubmixes.forEach(submix => this._disconnectIsolatedSubmixSource(submix, source));
+    this._isolatedSubmixes.forEach(submix => this._disconnectSubmixSrc(submix, source));
     this._unbindAudioTrackListeners(source);
     if (source.gainNode) {
       this._disposeOutputGain(source, source.gainNode, true);
@@ -17783,7 +18164,7 @@ class AudioMixer {
 
     // 先断开引用，防止 stop 后并发路径继续复用旧 context。
     this._audioContext = null;
-    this._audioSystemReadyPromise = null;
+    this._audioReadyPr = null;
     if (audioContext) {
       this._audioContextClosePromise = Promise.resolve(audioContext.close()).catch(error => {
         this._logger.warn(`Failed to close AudioContext: ${error.message || String(error)}`);
@@ -17803,7 +18184,7 @@ class AudioMixer {
     this._audioRefreshPromise = null;
     this._audioRefreshScheduled = false;
     this._audioRefreshPending = false;
-    this._audioSystemReadyPromise = null;
+    this._audioReadyPr = null;
     this._updateAudioInfo({
       status: 'stopped',
       reason: 'Composer stopped'
@@ -17832,6 +18213,13 @@ class AudioMixer {
       var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextConstructor) {
         this._logger.warn('AudioContext is not available');
+        this._reportIssue({
+          stage: 'audio-context-unavailable',
+          message: 'AudioContext is not available',
+          details: {
+            defaultDestination: Boolean(options.defaultDestination)
+          }
+        });
         this._updateAudioInfo({
           status: 'failed',
           reason: 'AudioContext is not available',
@@ -17841,15 +18229,15 @@ class AudioMixer {
       }
       this._audioContext = this._createAudioContext(AudioContextConstructor);
     }
-    if (this._audioSystemReadyPromise) {
-      return this._audioSystemReadyPromise;
+    if (this._audioReadyPr) {
+      return this._audioReadyPr;
     }
 
     // 浏览器自动暂停时，尝试恢复
     var resumePromise = this._audioContext.state === 'suspended' ? this._audioContext.resume() : Promise.resolve();
-    this._audioSystemReadyPromise = resumePromise.then(() => {
+    this._audioReadyPr = resumePromise.then(() => {
       if (this._getDestroyed()) {
-        this._audioSystemReadyPromise = null;
+        this._audioReadyPr = null;
         return false;
       }
       if (options.defaultDestination && !this._audioDestination) {
@@ -17863,7 +18251,7 @@ class AudioMixer {
         status: this._audioContext.state === 'suspended' ? 'suspended' : 'ready',
         reason: ''
       });
-      this._audioSystemReadyPromise = null;
+      this._audioReadyPr = null;
       return true;
     }).catch(error => {
       this._updateAudioInfo({
@@ -17871,10 +18259,18 @@ class AudioMixer {
         reason: 'AudioContext resume failed',
         lastError: error.message || String(error)
       });
-      this._audioSystemReadyPromise = null;
+      this._reportIssue({
+        stage: 'audio-context-resume',
+        message: getErrorMessage(error),
+        details: {
+          contextState: this._audioContext ? this._audioContext.state : '',
+          defaultDestination: Boolean(options.defaultDestination)
+        }
+      });
+      this._audioReadyPr = null;
       return false;
     });
-    return this._audioSystemReadyPromise;
+    return this._audioReadyPr;
   }
 
   /**
@@ -18043,11 +18439,11 @@ class AudioMixer {
   _refreshRequestedAudioConnections() {
     var chain = Promise.resolve(null);
     if (this._defaultAudioRequested) {
-      chain = chain.then(() => this._refreshAudioConnections());
+      chain = chain.then(() => this._refreshBusAudio());
     }
     this._audioBuses.forEach(bus => {
       if (bus.requested) {
-        chain = chain.then(() => this._refreshAudioConnections(bus));
+        chain = chain.then(() => this._refreshBusAudio(bus));
       }
     });
     this._isolatedSubmixes.forEach(submix => {
@@ -18164,10 +18560,10 @@ class AudioMixer {
       bus.destination = null;
     }
   }
-  _shouldUseIsolatedAudioContext(options) {
+  _useIsolatedAudioCtx(options) {
     return Boolean(options && (options.isolated === true || options.audioContext === 'isolated'));
   }
-  _createIsolatedSubmixAudioStream(request) {
+  _createSubmixAudio(request) {
     var existing = this._isolatedSubmixes.get(request.key);
     if (existing) {
       this._disconnectIsolatedSubmix(existing, true);
@@ -18206,6 +18602,13 @@ class AudioMixer {
       var AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextConstructor) {
         this._logger.warn('AudioContext is not available');
+        this._reportIssue({
+          stage: 'isolated-audio-context-unavailable',
+          message: 'AudioContext is not available',
+          details: {
+            requestKey: submix && submix.key ? submix.key : ''
+          }
+        });
         return Promise.resolve(false);
       }
       submix.audioContext = this._createAudioContext(AudioContextConstructor);
@@ -18233,7 +18636,7 @@ class AudioMixer {
     });
     return submix.readyPromise;
   }
-  _disconnectIsolatedSubmixSource(submix, source) {
+  _disconnectSubmixSrc(submix, source) {
     if (!submix || !submix.connections || !source) {
       return;
     }
@@ -18263,7 +18666,7 @@ class AudioMixer {
       this._logger.debug(`Disconnecting isolated submix: key=${submix.key} closeContext=${closeContext}`);
     }
     Array.from(submix.connections.values()).forEach(connection => {
-      this._disconnectIsolatedSubmixSource(submix, connection.source || {
+      this._disconnectSubmixSrc(submix, connection.source || {
         id: connection.sourceId
       });
     });
@@ -18290,10 +18693,10 @@ class AudioMixer {
     submix.connections.forEach((connection, sourceId) => {
       var source = this._sourceRegistry.find(sourceId);
       var stream = source && this._sourceRegistry.getStream(source);
-      var signature = this._getAudioTrackSignature(stream);
-      var shouldDisconnect = !source || submix.slots.indexOf(source.slot) === -1 || !this._sourceRegistry.hasLiveAudioTrack(source) || !this._isSameAudioTrackSignature(connection.audioTrackSignature, signature);
+      var signature = this._getTrackSig(stream);
+      var shouldDisconnect = !source || submix.slots.indexOf(source.slot) === -1 || !this._sourceRegistry.hasLiveAudioTrack(source) || !this._sameTrackSig(connection.audioTrackSignature, signature);
       if (shouldDisconnect) {
-        this._disconnectIsolatedSubmixSource(submix, connection.source || source || {
+        this._disconnectSubmixSrc(submix, connection.source || source || {
           id: sourceId
         });
       }
@@ -18309,7 +18712,7 @@ class AudioMixer {
           return;
         }
         var stream = this._sourceRegistry.getStream(source);
-        var signature = this._getAudioTrackSignature(stream);
+        var signature = this._getTrackSig(stream);
         if (!stream || !signature) {
           return;
         }
@@ -18346,7 +18749,7 @@ class AudioMixer {
    *
    * @returns {Promise<MediaStream|null>} audio destination stream，或 null
    */
-  _refreshAudioConnections(bus, options) {
+  _refreshBusAudio(bus, options) {
     options = Object.assign({
       createWhenSilent: false
     }, options || {});
@@ -18364,8 +18767,8 @@ class AudioMixer {
     // 先清理已无音频轨的旧连接
     this._sourceRegistry.sources.forEach(source => {
       var stream = this._sourceRegistry.getStream(source);
-      var signature = this._getAudioTrackSignature(stream);
-      var shouldDestroySource = source.audioSourceNode && (!this._sourceRegistry.hasLiveAudioTrack(source) || !this._isSameAudioTrackSignature(source.audioTrackSignature, signature));
+      var signature = this._getTrackSig(stream);
+      var shouldDestroySource = source.audioSourceNode && (!this._sourceRegistry.hasLiveAudioTrack(source) || !this._sameTrackSig(source.audioTrackSignature, signature));
       if (shouldDestroySource) {
         this.disconnectSource(source);
       }
@@ -18374,8 +18777,8 @@ class AudioMixer {
       bus.connections.forEach((connection, sourceId) => {
         var source = this._sourceRegistry.find(sourceId);
         var stream = source && this._sourceRegistry.getStream(source);
-        var signature = this._getAudioTrackSignature(stream);
-        var trackChanged = source && !this._isSameAudioTrackSignature(source.audioTrackSignature, signature);
+        var signature = this._getTrackSig(stream);
+        var trackChanged = source && !this._sameTrackSig(source.audioTrackSignature, signature);
         var shouldDisconnect = !source || bus.slots.indexOf(source.slot) === -1 || !this._sourceRegistry.hasLiveAudioTrack(source) || trackChanged;
         if (shouldDisconnect) {
           this._disconnectBusSource(bus, connection.source || source || {
@@ -18424,6 +18827,14 @@ class AudioMixer {
       var connectedSources = liveSources.filter(source => this._connectSource(source, bus));
       if (this._getTargetConnectionCount(bus) === 0 && connectedSources.length === 0) {
         this._logger.warn('No valid audio sources, skip audio stream creation');
+        this._reportIssue({
+          stage: 'audio-stream-no-valid-sources',
+          message: 'No valid audio sources, skip audio stream creation',
+          details: {
+            requestKey: bus && bus.key ? bus.key : 'default',
+            connectedSources: connectedSources.length
+          }
+        });
         this._updateTargetAudioInfo(bus, {
           status: 'failed',
           reason: 'No audio source connected'
@@ -18447,9 +18858,21 @@ class AudioMixer {
    * @param {Object} source - 内部 source 对象
    * @returns {boolean} true=成功连接
    */
+  /**
+   * 广播式将音频流中的音轨注入到共享 AudioContext 的各个 bus。
+   *
+   * 一次创建 MediaStreamSource → masterGain → 每个 bus 独立 gain → bus compressor
+   * 的拓扑，而不是对每个 bus 重复创建 MediaStreamSource。这样：
+   *   - 避免浏览器对同一 MediaStream 多次 createMediaStreamSource 的限制
+   *   - masterGain 作为每路输入的唯一扇出节点
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {Object|null} bus - 子混音 bus，不传则为默认全量混音
+   * @returns {boolean} true=成功连接
+   */
   _connectSource(source, bus) {
     var stream = this._sourceRegistry.getStream(source);
-    var signature = this._getAudioTrackSignature(stream);
+    var signature = this._getTrackSig(stream);
     var trackId = signature && signature.id;
     if (!this._audioContext || !this._sourceRegistry.hasLiveAudioTrack(source)) {
       return false;
@@ -18461,7 +18884,7 @@ class AudioMixer {
       return false;
     }
     if (source.audioSourceNode) {
-      if (!this._isSameAudioTrackSignature(source.audioTrackSignature, signature)) {
+      if (!this._sameTrackSig(source.audioTrackSignature, signature)) {
         this.disconnectSource(source);
       }
     }
@@ -18517,6 +18940,14 @@ class AudioMixer {
       return true;
     } catch (error) {
       this._logger.warn(`Failed to connect audio source: ${error.message}`);
+      this._reportIssue({
+        stage: 'audio-source-connect',
+        message: getErrorMessage(error),
+        details: {
+          sourceId: source && source.id ? source.id : '',
+          slot: source && source.slot !== undefined ? source.slot : null
+        }
+      });
       this._updateAudioInfo({
         status: 'failed',
         reason: 'Failed to connect audio source',
@@ -18689,10 +19120,10 @@ class AudioMixer {
     source.audioTrackListeners = null;
   }
   _getAudioTrackId(stream) {
-    var signature = this._getAudioTrackSignature(stream);
+    var signature = this._getTrackSig(stream);
     return signature ? signature.id : null;
   }
-  _getAudioTrackSignature(stream) {
+  _getTrackSig(stream) {
     if (!stream || !stream.getAudioTracks) {
       return null;
     }
@@ -18705,7 +19136,7 @@ class AudioMixer {
       id: track.id || ''
     };
   }
-  _isSameAudioTrackSignature(previous, current) {
+  _sameTrackSig(previous, current) {
     if (!previous || !current) {
       return previous === current;
     }
@@ -18731,7 +19162,7 @@ class AudioMixer {
   }
 }
 module.exports = AudioMixer;
-},{}],47:[function(require,module,exports){
+},{"../MediaEffectsIssue":70}],47:[function(require,module,exports){
 "use strict";
 
 /**
@@ -18796,9 +19227,9 @@ exports.create = function (options) {
     dropFrameWhenBusy: options.dropFrameWhenBusy === false ? false : true,
     maxFrameQueue: exports.normalizePositiveInteger(options.maxFrameQueue, 1),
     preserveDrawingBuffer: options.preserveDrawingBuffer === false ? false : true,
-    mirrorX: exports.normalizeMirrorX(options.sourceMirror, undefined, false),
-    outputMirrorX: exports.normalizeMirrorX(options.mirror, undefined, false),
-    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, options.outputMirrorWatermarks, false),
+    mirrorX: exports.normalizeMirrorX(options.sourceMirror, false),
+    outputMirrorX: exports.normalizeMirrorX(options.mirror, false),
+    mirrorWatermarksWithOutput: exports.normalizeMirrorX(options.mirrorWatermarksWithOutput, false),
     enableInsertable: options.enableInsertable === true,
     manualCaptureFrameControl: options.manualCaptureFrameControl !== false,
     watermarks: options.watermarks || []
@@ -18877,19 +19308,23 @@ exports.normalizeGain = function (value, fallback) {
 /**
  * 归一化水平镜像开关。
  *
- * @param {*} primary - 主参数
- * @param {*} legacy - 兼容参数
+ * @param {*} value - 配置参数
  * @param {boolean} fallback - 默认值
  * @returns {boolean}
  */
-exports.normalizeMirrorX = function (primary, legacy, fallback) {
-  if (typeof primary === 'boolean') {
-    return primary;
-  }
-  if (typeof legacy === 'boolean') {
-    return legacy;
+exports.normalizeMirrorX = function (value, fallback) {
+  if (typeof value === 'boolean') {
+    return value;
   }
   return Boolean(fallback);
+};
+
+/**
+ * 返回最大参与方数限制。
+ * @returns {number}
+ */
+exports.getMaxSources = function () {
+  return MAX_SOURCES;
 };
 
 /**
@@ -18903,13 +19338,6 @@ exports.normalizeMirrorX = function (primary, legacy, fallback) {
  * @param {number} defaultGain - 未指定 gain 时使用的默认值
  * @returns {Object} 归一化后的源配置
  */
-/**
- * 返回最大参与方数限制。
- * @returns {number}
- */
-exports.getMaxSources = function () {
-  return MAX_SOURCES;
-};
 exports.normalizeSourceOptions = function (optionsOrSlot, index, defaultGain) {
   var options = {};
   if (typeof optionsOrSlot === 'number') {
@@ -18962,7 +19390,7 @@ class ComposerDomAdapter {
 
   /**
    * 创建一个隐藏的离屏 canvas 元素。
-   * 所有视频帧最终绘制到这个 canvas 上，然后通过 captureStream() 输出。
+   * 所有视频帧最终绘制到这个 canvas 上，再由输出层按需走 Insertable 或 captureStream。
    *
    * @returns {HTMLCanvasElement} 隐藏的 canvas 元素
    */
@@ -19086,14 +19514,43 @@ var MediaEffectsComposerConfig = require('./ComposerConfig');
 var ComposerDomAdapter = require('./ComposerDomAdapter');
 var SourceAiVBController = require('./aiVirtualBackground/SourceAiVBController');
 var WatermarkManager = require('./WatermarkManager');
+var issueUtils = require('../MediaEffectsIssue');
 var logger = new Logger('MediaEffectsComposer');
+var MAX_REPORTED_ISSUES = 50;
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  message: 'Unknown MediaEffectsComposer issue'
+};
+var getErrorMessage = issueUtils.getErrorMessage;
+function cloneIssue(issue) {
+  return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
+}
+
+/**
+ * ComposerState —— 混流器状态聚合器
+ *
+ * 将分散在 ComposerRuntime 各子模块（渲染循环、音频混音器、SourceStore、
+ * 配置）中的状态统一收集，生成对外一致的只读快照。
+ *
+ * 通过回调注入避免 ComposerState 直接持有子模块引用，降低耦合度。
+ */
 class ComposerState {
+  /**
+   * @param {Object} options
+   * @param {Object} [options.logger] - 日志记录器
+   * @param {Function} options.getRenderInfo - 获取渲染状态的回调
+   * @param {Function} options.getOutputRouteInfo - 获取输出路由信息的回调
+   * @param {Function} options.getAudioInfo - 获取音频状态的回调
+   * @param {Function} options.getSourceSnapshot - 获取源快照的回调
+   * @param {Function} options.getConfigData - 获取配置数据的回调
+   */
   constructor(options = {}) {
     this._logger = options.logger || null;
     this._getRenderInfo = options.getRenderInfo || (() => ({}));
     this._getOutputRouteInfo = options.getOutputRouteInfo || (() => ({}));
     this._getAudioInfo = options.getAudioInfo || (() => ({}));
     this._getSourceSnapshot = options.getSourceSnapshot || (() => []);
+    this._getIssues = options.getIssues || (() => []);
     this._getConfigData = options.getConfigData || (() => ({
       config: {},
       slotMirrorXOverrides: {},
@@ -19101,6 +19558,14 @@ class ComposerState {
     }));
     this._lastRenderInfoLogSignature = '';
   }
+
+  /**
+   * 收集渲染状态信息。
+   * 通过签名去重避免重复刷日志。
+   *
+   * @param {boolean} [logResult=true] - 是否在状态变化时记录调试日志
+   * @returns {Object} 合并了渲染信息和输出路由信息的状态快照
+   */
   collectRenderInfo(logResult = true) {
     var info = this._getRenderInfo();
     var outputRouteInfo = this._getOutputRouteInfo();
@@ -19142,10 +19607,19 @@ class ComposerState {
       sources: this._getSourceSnapshot(),
       config: this.getConfigSnapshot(),
       render: this.collectRenderInfo(false),
-      audio: this.collectAudioInfo(false)
+      audio: this.collectAudioInfo(false),
+      issues: this._getIssues()
     };
   }
 }
+
+/**
+ * 归一化 getOutput() / releaseOutput() 参数。
+ * 不传参数时默认返回 'mixed' 类型。
+ *
+ * @param {*} options - 原始参数
+ * @returns {Object} { type: 'mixed'|'video'|'audio' }
+ */
 function normalizeOutputRequest(options) {
   if (options === undefined || options === null) {
     return {
@@ -19161,6 +19635,13 @@ function normalizeOutputRequest(options) {
     type: 'mixed'
   }, options);
 }
+
+/**
+ * 检查音频请求参数是否含有效的 slots 列表。
+ *
+ * @param {Object|*} request - 原始请求参数
+ * @returns {Object|undefined} 有效请求返回原值，否则返回 undefined
+ */
 function resolveAudioRequest(request) {
   return request && request.slots ? request : undefined;
 }
@@ -19210,14 +19691,26 @@ class ComposerRuntime {
    *   预留队列配置。当前实现默认只保留 1 帧，后续可扩展为更长队列。
    * @param {boolean} [options.sourceMirror=false]
    *   是否默认对所有槽位应用水平镜像。
-  * @param {Object[]} [options.sources]
-  *   与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、
-  *   `aiVirtualBackground` 等。
+   * @param {boolean} [options.mirror=false]
+   *   是否对最终合成输出整体做水平镜像。
+   * @param {boolean} [options.mirrorWatermarksWithOutput=false]
+   *   输出镜像时，输出级水印是否跟着一起翻转。
+   * @param {boolean} [options.enableInsertable=false]
+   *   是否优先使用 Insertable Streams 导出视频；能力不足时回退到 captureStream。
+   * @param {boolean} [options.manualCaptureFrameControl=true]
+   *   captureStream 路径下是否优先使用 captureStream(0)+requestFrame 手动出帧。
+   * @param {Array<Object>} [options.watermarks=[]]
+   *   初始水印配置列表。
+   * @param {Object[]} [options.sources]
+   *   与初始输入源逐项对应的 source 级配置数组，如 `sourceMirror`、
+   *   `aiVirtualBackground` 等。
    */
   constructor(videos = [], options = {}) {
     // -- 参数安全守卫（防止外部传 null/undefined 导致后续崩溃） --
     options = options || {};
     videos = videos || [];
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+    this._issues = [];
 
     // 统一为数组，方便后续统一遍历
     if (!(videos instanceof Array)) {
@@ -19247,7 +19740,7 @@ class ComposerRuntime {
     // -----------------------------------------------------------------------
 
     this._audioComposer = null;
-    this._outputStreamManager = null;
+    this._outMgr = null;
     this._domAdapter = null;
     this._sourceAiVBManager = null;
     this._watermarkManager = null;
@@ -19258,8 +19751,8 @@ class ComposerRuntime {
 
     /**
      * @type {Object}
-     * @property {number|null} width           - 输出宽度（legacy=null 动态，grid=1280）
-     * @property {number|null} height          - 输出高度（legacy=null 动态，grid=720）
+     * @property {number} width               - 输出宽度（默认 1280）
+     * @property {number} height              - 输出高度（默认 720）
      * @property {number|null} fps             - 帧率（null=浏览器默认）
      * @property {string}      backgroundColor - 画布底色
      * @property {number}      audioGain       - 全局默认音量
@@ -19267,19 +19760,21 @@ class ComposerRuntime {
      */
     this._config = config;
     this._sourceAiVBManager = new SourceAiVBController({
-      logger: logger
+      logger: logger,
+      onIssue: this._recordIssue.bind(this)
     });
     this._config.aiVirtualBackgroundManager = this._sourceAiVBManager;
     this._config.hasSourceAiVirtualBackground = false;
     this._config.forceMainThreadRenderer = false;
     this._config.forceMain2DRenderer = false;
-    this._slotMirrorXOverrides = Object.create(null);
+    this._slotMirrorOv = Object.create(null);
     this._domAdapter = new ComposerDomAdapter({
       config: this._config,
       logger: logger
     });
     this._watermarkManager = new WatermarkManager({
-      logger: logger
+      logger: logger,
+      onIssue: this._recordIssue.bind(this)
     });
 
     // -----------------------------------------------------------------------
@@ -19337,11 +19832,12 @@ class ComposerRuntime {
     // 依赖：需要 canvas 已创建、config 已就绪
     // -----------------------------------------------------------------------
 
-    this._outputStreamManager = new OutputStreamManager({
+    this._outMgr = new OutputStreamManager({
       canvas: this._canvas,
       config: this._config,
       domAdapter: this._domAdapter,
-      logger: logger
+      logger: logger,
+      onIssue: this._recordIssue.bind(this)
     });
 
     // -----------------------------------------------------------------------
@@ -19355,7 +19851,7 @@ class ComposerRuntime {
     //   5. 同步外部音频进度（syncExternalSourceAudio）
     //
     // 注意：renderer（BaseRenderer 子类）是延迟创建的，
-    //       RenderLoop 内部通过 tryAcquireRenderer() 按需初始
+    //       RenderLoop 内部通过 ensureRenderer() 按需创建
     // -----------------------------------------------------------------------
 
     this._renderLoop = new RenderLoop({
@@ -19366,7 +19862,8 @@ class ComposerRuntime {
       createRenderPayload: () => this._createRenderPayload(),
       syncExternalSourceAudio: () => this._syncExternalSourceAudio(),
       onStateChange: () => {},
-      onFramePresented: frameCtx => this._outputStreamManager.onFramePresented(frameCtx)
+      onFramePresented: frameCtx => this._outMgr.onFramePresented(frameCtx),
+      onIssue: this._recordIssue.bind(this)
     });
 
     // -----------------------------------------------------------------------
@@ -19374,7 +19871,7 @@ class ComposerRuntime {
     //
     // 职责：
     //   1. 通过 WebAudio API（AudioContext, GainNode）创建混音管线
-    //   2. 监听 sourceRegistry 的增删事件，自动接入/断开源音频
+    //   2. 通过 sourceRegistry 查询源信息，连接/断开源音频的 WebAudio 节点
     //   3. 将混音结果以 MediaStream 形式回传给控制层
     //   4. 检测并规避已销毁（_destroyed）后的操作
     //
@@ -19387,21 +19884,21 @@ class ComposerRuntime {
       logger: logger,
       sourceRegistry: this._sourceRegistry,
       getDestroyed: () => this._destroyed,
-      onAudioTrackAvailable: audioStream => this._ensureMixedStreamAudioTrack(audioStream)
+      onAudioTrackAvailable: audioStream => this._ensureMixedAudio(audioStream),
+      onIssue: this._recordIssue.bind(this)
     });
 
     // -----------------------------------------------------------------------
     // 布局引擎（LayoutEngine）—— 计算每个源在 canvas 上的位置和尺寸。
     //
     // 职责：
-    //   1. 根据 renderMode（legacy/grid）计算布局矩阵
+    //   1. 按 slot 自动计算网格布局（cols × rows）
     //   2. 在源增删或画布尺寸变化时重新布局
-    //   3. 更新每个源的 _displayRect（供 renderer 绘制时使用）
+    //   3. 生成每路视频的绘制矩形（draw rect），供 renderer 使用
     //   4. 触发 canvas 尺寸调整（prepareCanvas → resizeRenderer）
     //
     // 注意：LayoutEngine 不直接操作渲染管线，只计算坐标；
-    //       实际绘制由 renderer 根据 _displayRect 执行。
-    //       这种分离使布局策略可热切换（如从 grid 切为 custom）
+    //       实际绘制由 renderer 根据 payload.items 中的 draw 区域执行。
     // -----------------------------------------------------------------------
 
     this._layoutEngine = new LayoutEngine({
@@ -19422,21 +19919,25 @@ class ComposerRuntime {
       }
     }).catch(error => {
       logger.warn(`Initial watermarks setup failed: ${error.message || String(error)}`);
+      this._recordIssue({
+        message: getErrorMessage(error)
+      });
     });
     this._state = new ComposerState({
       logger: logger,
       getRenderInfo: () => this._renderLoop.getRenderInfo(),
       getOutputRouteInfo: () => {
-        if (this._outputStreamManager && this._outputStreamManager.getOutputRouteInfo) {
-          return this._outputStreamManager.getOutputRouteInfo();
+        if (this._outMgr && this._outMgr.getOutputRouteInfo) {
+          return this._outMgr.getOutputRouteInfo();
         }
         return {};
       },
       getAudioInfo: () => this._audioComposer.getInfo(),
       getSourceSnapshot: () => this._sourceRegistry.getSnapshot(),
+      getIssues: () => this.getIssues(),
       getConfigData: () => ({
         config: this._config,
-        slotMirrorXOverrides: this._slotMirrorXOverrides,
+        slotMirrorXOverrides: this._slotMirrorOv,
         watermarks: this._watermarkManager.getWatermarks()
       })
     });
@@ -19455,6 +19956,8 @@ class ComposerRuntime {
    *   appendStream(stream, 3)            → 数字作为 slot
    *   appendStream(stream, { slot, gain, sourceMirror }) → 对象解构
    *
+   * 同时将 aiVirtualBackground 配置透传给 SourceAiVBController 做二级归一化。
+   *
    * @param {number|Object} optionsOrSlot - 原始参数
    * @param {number} index - 数组索引，用于批量添加时 slot 递增
    * @returns {Object} { slot: number|null, gain: number|undefined, sourceMirror: boolean|undefined }
@@ -19466,6 +19969,15 @@ class ComposerRuntime {
     }
     return normalized;
   }
+
+  /**
+   * 对构造时传入的 sources 数组做并行配置归一化。
+   * options.sources 数组与 videos 数组按索引一一对应。
+   *
+   * @param {Object} options - 原始配置
+   * @param {number} sourceCount - 源数量
+   * @returns {Array<Object|undefined>} 归一化后的配置列表
+   */
   _normalizeInitialSourceOptionsList(options, sourceCount) {
     var normalizedCount = Math.max(0, Number(sourceCount) || 0);
     var normalizedList = [];
@@ -19479,32 +19991,116 @@ class ComposerRuntime {
     }
     return normalizedList;
   }
+
+  /**
+   * 统一的问题记录入口。
+   *
+   * 接收来自以下组件的上报：
+   * - WatermarkManager（水印加载/初始化失败）
+   * - SourceAiVBController（AI 虚拟背景初始化/分割/背景图加载失败）
+   * - RenderLoop（渲染器降级/回退/帧渲染失败）
+   * - OutputStreamManager（captureStream/insertable 输出失败）
+   * - AudioMixer（音频上下文/混音失败）
+   * - ComposerRuntime 自身（如水印初始化失败）
+   *
+   * 执行以下操作：
+   * 1. 内存缓存：将 clone 后的 issue 推入 this._issues（FIFO，MAX_REPORTED_ISSUES=50）
+   * 2. 状态快照：通过 ComposerState.getSnapshot() 将问题列表写入 state.issues，供调试面板查询
+   * 3. 向上传递：调用 onIssue 回调（最终到达 RTCSession._emitMediaEffectsIssue），
+   *    触发 'mediaeffectsissue' 事件
+   *
+   * 各子组件通过 bind(this._recordIssue) 获得上报能力，形成统一的汇合点。
+   * 所有子组件上报的问题在 component 字段中标记自身的组件名，
+   * 便于管理员区分问题来源。
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _recordIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(ISSUE_DEFAULTS, issue);
+    this._issues.push(cloneIssue(normalizedIssue));
+    if (this._issues.length > MAX_REPORTED_ISSUES) {
+      this._issues.shift();
+    }
+    issueUtils.forwardIssue(this._onIssue, normalizedIssue, logger, 'MediaEffectsComposer issue callback failed', cloneIssue);
+  }
+
+  /**
+   * 获取混流器运行时记录的所有问题。
+   *
+   * 返回深拷贝副本，最多保留 MAX_REPORTED_ISSUES 条（默认 50 条），FIFO 淘汰。
+   * 外部通过 getSnapshot() → state.issues 即可获取问题列表，
+   * 方便在调试面板或监控系统中展示。
+   *
+   * @returns {Object[]}
+   */
+  getIssues() {
+    return this._issues.map(cloneIssue);
+  }
+
+  /**
+   * 解析指定 source 在当前 slot 上的水平镜像策略。
+   *
+   * 优先级（从高到低）：
+   *   1. slot 级别的覆盖（setSourceMirror(slot, bool) 单独设置）
+   *   2. source 对象自身的 mirrorX 属性
+   *   3. 全局 sourceMirror 配置
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {number} slot - source 所在 slot 编号
+   * @returns {boolean} 该 source 在当前 slot 上是否应水平镜像
+   */
   _resolveMirrorX(source, slot) {
     var key = String(slot);
-    var hasSlotOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorXOverrides, key);
+    var hasSlotOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorOv, key);
     if (hasSlotOverride) {
-      return this._slotMirrorXOverrides[key];
+      return this._slotMirrorOv[key];
     }
     if (source && typeof source.mirrorX === 'boolean') {
       return source.mirrorX;
     }
     return Boolean(this._config.mirrorX);
   }
+
+  /**
+   * 检查输出镜像是否已启用。
+   * 输出镜像会对整个合成画面做水平翻转（不影响各 source 自身的镜像）。
+   *
+   * @returns {boolean} true=输出全局水平镜像已启用
+   */
   _isOutputMirrorEnabled() {
     return Boolean(this._config.outputMirrorX);
   }
+
+  /**
+   * 检查是否有任何 source 或 slot 覆盖启用了水平镜像。
+   * 用于判断渲染策略是否需要调整（如 source AiVB 需要主线程渲染）。
+   *
+   * @returns {boolean} true=至少有一个镜像策略启用了
+   */
   _isMirrorEnabled() {
     if (this._config.mirrorX) {
       return true;
     }
-    if (Object.keys(this._slotMirrorXOverrides).some(slot => this._slotMirrorXOverrides[slot] === true)) {
+    if (Object.keys(this._slotMirrorOv).some(slot => this._slotMirrorOv[slot] === true)) {
       return true;
     }
     return this._sources.some(source => source && source.mirrorX === true);
   }
+
+  /**
+   * 检查是否有任何 source 启用了 AI 虚拟背景效果。
+   * 用于决定是否需要强制走主线程渲染路径。
+   *
+   * @returns {boolean} true=至少一个 source 启用了 AiVB
+   */
   _hasSourceAiVirtualBackgroundEnabled() {
     return this._sources.some(source => this._sourceAiVBManager.hasEnabledEffect(source));
   }
+
+  /**
+   * 为所有启用了 AiVB 的 source 预加载渲染资源（背景图等）。
+   * 在 mirror 等配置变更时调用，避免首帧白屏。
+   */
   _preloadSourceAiVBRenderAssets() {
     this._sources.forEach(source => {
       if (!source || !source.video) {
@@ -19513,7 +20109,15 @@ class ComposerRuntime {
       this._sourceAiVBManager.preloadRenderAssets(source, source.video);
     });
   }
-  _refreshRendererPolicyForEffects() {
+
+  /**
+   * 根据当前 AiVB 启停状态刷新渲染器策略。
+   *
+   * 当有 source 在使用 AiVB 时，必须切到主线程渲染器（WebGL2 优先，最终兜底 Canvas2D），
+   * 因为 Worker 无法直接访问主线程的遮罩 canvas 和背景图。
+   * 当全部 source 的 AiVB 关闭后，不再强制主线程，允许后续 restoreFFS 切换回 Worker 路径。
+   */
+  _refreshFxRenderPolicy() {
     var hasSourceAiVirtualBackground = this._hasSourceAiVirtualBackgroundEnabled();
     var previousAiVBPolicy = this._config.hasSourceAiVirtualBackground;
     this._config.hasSourceAiVirtualBackground = hasSourceAiVirtualBackground;
@@ -19558,10 +20162,26 @@ class ComposerRuntime {
     var fallbacked = this._renderLoop.fallbackRendererToMain2D(reason);
     return fallbacked;
   }
+
+  /**
+   * Worker 渲染器运行时失败后降级到主线程渲染器。
+   * 委托给 RenderLoop，后者尝试 main-webgl2 → main-2d 回退链。
+   *
+   * @param {string} reason - 降级原因
+   * @returns {boolean} true=降级成功
+   */
   _fallbackRendererToMainThread(reason) {
     logger.warn(`Fallback to main-thread renderer requested: ${reason}`);
     return this._renderLoop.fallbackRendererToMainThread(reason);
   }
+
+  /**
+   * 当前渲染器失败后降级到 Worker Canvas2D 渲染器。
+   * 委托给 RenderLoop，后者尝试 Worker 内 2D 上下文初始化。
+   *
+   * @param {string} reason - 降级原因
+   * @returns {boolean} true=降级成功
+   */
   _fallbackRendererToWorker2D(reason) {
     logger.warn(`Fallback to worker-2d renderer requested: ${reason}`);
     return this._renderLoop.fallbackRendererToWorker2D(reason);
@@ -19722,9 +20342,9 @@ class ComposerRuntime {
    * 场景：getMixedStream() 已返回 mixed stream 给调用方时还没有音频源，
    * 后续通过 appendStream() 添加了有音频的源，此方法负责把新出现的音频轨注入到已返回的流。
    */
-  _ensureMixedStreamAudioTrack(audioStream) {
+  _ensureMixedAudio(audioStream) {
     logger.debug('Ensuring mixed stream audio track');
-    this._outputStreamManager.ensureMixedStreamAudioTrack(audioStream || this._audioDestination && this._audioDestination.stream);
+    this._outMgr.ensureMixedStreamAudioTrack(audioStream || this._audioDestination && this._audioDestination.stream);
   }
 
   /**
@@ -19735,8 +20355,19 @@ class ComposerRuntime {
    */
   _addAudioTracksToStream(targetStream, audioStream) {
     logger.debug('Adding audio tracks to mixed output stream');
-    this._outputStreamManager.addAudioTracksToStream(targetStream, audioStream);
+    this._outMgr.addAudioTracksToStream(targetStream, audioStream);
   }
+
+  /**
+   * 移除并清理内部源（按 target）。
+   *
+   * target 为 undefined 时清空所有源；否则按 stream/id 查找后移除单个源。
+   * 移除过程由 SourceStore.remove() 驱动，触发 onBeforeRemove（断音频）
+   * → onAfterRemove（清理渲染器、AiVB 状态）回调链。
+   *
+   * @param {MediaStream|string|HTMLVideoElement|undefined} target - 移除目标
+   * @returns {boolean} true=成功移除
+   */
   _removeSourcesInternal(target) {
     if (target === undefined) {
       logger.debug(`clearSources: count=${this._sources.length}`);
@@ -19752,10 +20383,22 @@ class ComposerRuntime {
     logger.debug(`removeSource complete: removed=${removed} remaining=${this._sources.length}`);
     return removed;
   }
+
+  /**
+   * 获取指定 slot（或全部 slot）的 source 水平镜像状态快照。
+   *
+   * 返回结构：
+   *   - 指定 slot 时：{ slot, global, override, effective }
+   *   - 不指定 slot 时：{ global, overrides }
+   *
+   * @param {number} [slot] - 要查询的 slot 编号
+   * @returns {Object} 镜像状态快照
+   * @throws {TypeError} slot 参数非法时抛出
+   */
   _getSourceMirrorLegacySnapshot(slot) {
     var global = Boolean(this._config.mirrorX);
-    var overrides = Object.keys(this._slotMirrorXOverrides).reduce((snapshot, key) => {
-      snapshot[key] = this._slotMirrorXOverrides[key];
+    var overrides = Object.keys(this._slotMirrorOv).reduce((snapshot, key) => {
+      snapshot[key] = this._slotMirrorOv[key];
       return snapshot;
     }, {});
     if (slot === undefined || slot === null) {
@@ -19769,8 +20412,8 @@ class ComposerRuntime {
       throw new TypeError('Invalid slot.');
     }
     var key = String(normalizedSlot);
-    var hasOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorXOverrides, key);
-    var override = hasOverride ? this._slotMirrorXOverrides[key] : null;
+    var hasOverride = Object.prototype.hasOwnProperty.call(this._slotMirrorOv, key);
+    var override = hasOverride ? this._slotMirrorOv[key] : null;
     var effective = global;
     var source = this._sources.find(item => item && item.slot === normalizedSlot) || null;
     if (override !== null) {
@@ -19794,23 +20437,47 @@ class ComposerRuntime {
   _getConfigStateSnapshot() {
     return this._state.getConfigSnapshot();
   }
+
+  /**
+   * 获取输出视频流的同步方法。
+   *
+   * 流程：
+   *   1. 恢复渲染循环
+   *   2. 如果已有 live 视频流 → 直接复用
+   *   3. 否则通过 OutputStreamManager 创建新流（先绘制首帧确保 canvas 有内容）
+   *   4. 启动渲染循环
+   *
+   * @returns {MediaStream} 仅含视频轨的输出流
+   */
   _getVideoOutputSync() {
     this._renderLoop.resume();
-    if (this._outputStreamManager.hasLiveVideoStream()) {
+    if (this._outMgr.hasLiveVideoStream()) {
       this._renderLoop.start();
-      return this._outputStreamManager.videoStream;
+      return this._outMgr.videoStream;
     }
-    var videoStream = this._outputStreamManager.getVideoStream(() => {
+    var videoStream = this._outMgr.getVideoStream(() => {
       this._renderLoop.resetFrameTiming();
       this._drawVideosToCanvas(undefined, true);
     });
     logger.debug(`getVideoStream() created: tracks=${videoStream.getVideoTracks().length}`);
     return videoStream;
   }
+
+  /**
+   * 获取合并了视频和音频的混合输出流。
+   *
+   * 流程：
+   *   1. 获取视频流（启动 rAF 渲染循环 + 建立视频输出路径，优先 Insertable，回退 captureStream）
+   *   2. 保存为 mixedStream（供后续 _ensureMixedAudio 补充音频轨）
+   *   3. 获取稳定的音频流（getStableAudioStream；即使无源也创建静音轨）
+   *   4. 将音频轨注入到视频流
+   *
+   * @returns {Promise<MediaStream>} 含视频轨和音频轨的混合流
+   */
   async _getMixedOutput() {
     this._renderLoop.resume();
     var mixedVideoStream = this._getVideoOutputSync();
-    this._outputStreamManager.setMixedStream(mixedVideoStream);
+    this._outMgr.setMixedStream(mixedVideoStream);
     var mixedAudioStream = await this._audioComposer.getStableAudioStream();
     logger.debug(`getMixedStream() audio resolved: tracks=${mixedAudioStream ? mixedAudioStream.getAudioTracks().length : 0}`);
     this._addAudioTracksToStream(mixedVideoStream, mixedAudioStream);
@@ -19833,7 +20500,7 @@ class ComposerRuntime {
    *   2. clearStreams() 移除所有源（断开音频、释放 video 元素）
    *   3. 断开并关闭 AudioContext
    *   4. 清空画布
-   *   5. 停止所有 captureStream 的 tracks
+   *   5. 停止所有输出 video tracks（captureStream / Insertable）
    */
   stop() {
     logger.debug('stop');
@@ -19848,9 +20515,26 @@ class ComposerRuntime {
     this._sourceAiVBManager.clear();
     this._layoutEngine.clearAudioPlaceholderCache();
     this._renderLoop.destroy();
-    this._outputStreamManager.stop();
+    this._outMgr.stop();
     logger.debug('stop complete');
   }
+
+  /**
+   * 添加一个或多个源到混流器。
+   *
+   * 处理逻辑：
+   *   1. 检查是否已 stop（抛错）
+   *   2. 统一输入为数组
+   *   3. 检查最大源数限制，超出时截断
+   *   4. 逐项调用 SourceStore.add()，配置冲突时旧源被自动替换
+   *   5. 若音频系统已就绪，调度异步音频刷新
+   *   6. 刷新渲染策略（AiVB 可能强制主线程）并启动渲染循环
+   *
+   * @param {MediaStream|HTMLVideoElement|Array} videos - 单个或批量输入源
+   * @param {number|Object|Array} optionsOrSlot - 单个或批量配置
+   * @returns {boolean} true=至少成功添加了一个源
+   * @throws {TypeError} 第一参数为空时抛出
+   */
   addSource(videos, optionsOrSlot) {
     logger.debug(`addSource: count=${videos instanceof Array ? videos.length : 1}`);
     this._assertNotDestroyed('addSource()');
@@ -19881,11 +20565,18 @@ class ComposerRuntime {
         this._scheduleAudioRefresh();
       }
     });
-    this._refreshRendererPolicyForEffects();
+    this._refreshFxRenderPolicy();
     this._renderLoop.start();
     logger.debug(`addSource complete: appended=${appended} totalSources=${this._sources.length}`);
     return appended;
   }
+
+  /**
+   * 移除一个源（按 stream 对象、stream id 或 source id 查找）。
+   *
+   * @param {MediaStream|string|HTMLVideoElement} target - 要移除的目标
+   * @returns {boolean} true=成功移除
+   */
   removeSource(target) {
     this._assertNotDestroyed('removeSource()');
     if (target === undefined) {
@@ -19897,6 +20588,27 @@ class ComposerRuntime {
     this._assertNotDestroyed('clearSources()');
     this._removeSourcesInternal(undefined);
   }
+
+  /**
+   * 动态更新混流配置（运行时即时生效，无需重建 composer）。
+   *
+   * 支持的 patch 字段：
+   *   - outputMirror: 全局输出镜像
+   *   - mirrorWatermarksWithOutput: 输出镜像时水印是否同步镜像
+   *   - sourceMirror: 全局 source 镜像
+   *   - clearSourceMirrorOverrides: 清除所有 slot 级别的镜像覆盖
+   *   - sourceMirrorOverrides: slot 级别的镜像覆盖映射表
+   *   - watermarks: 替换全部水印配置
+   *   - clearWatermarks + clearWatermarkFilter: 按条件清除水印
+   *
+   * 特殊行为：
+   *   - 镜像策略变更时自动预加载 AiVB 渲染资源
+   *   - 镜像策略变更时刷新渲染器策略（AiVB 需要主线程）
+   *   - 水印或镜像变更后强制重绘一帧
+   *
+   * @param {Object} patch - 配置补丁（键值对）
+   * @returns {Promise<Object>} 更新后的配置快照
+   */
   async setConfig(patch) {
     this._assertNotDestroyed('setConfig()');
     patch = patch || {};
@@ -19919,7 +20631,7 @@ class ComposerRuntime {
       shouldPreloadAiVBRenderAssets = true;
     }
     if (patch.clearSourceMirrorOverrides === true) {
-      this._slotMirrorXOverrides = Object.create(null);
+      this._slotMirrorOv = Object.create(null);
       needsMirrorPolicyRefresh = true;
       needsForceRender = true;
       shouldPreloadAiVBRenderAssets = true;
@@ -19933,9 +20645,9 @@ class ComposerRuntime {
         var key = String(normalizedSlot);
         var value = patch.sourceMirrorOverrides[slotKey];
         if (value === null || value === undefined) {
-          delete this._slotMirrorXOverrides[key];
+          delete this._slotMirrorOv[key];
         } else {
-          this._slotMirrorXOverrides[key] = Boolean(value);
+          this._slotMirrorOv[key] = Boolean(value);
         }
       });
       needsMirrorPolicyRefresh = true;
@@ -19954,7 +20666,7 @@ class ComposerRuntime {
       if (shouldPreloadAiVBRenderAssets) {
         this._preloadSourceAiVBRenderAssets();
       }
-      this._refreshRendererPolicyForEffects();
+      this._refreshFxRenderPolicy();
     }
     if (needsForceRender) {
       this._drawVideosToCanvas(undefined, true);
@@ -20001,24 +20713,54 @@ class ComposerRuntime {
   getSources() {
     return this.getState().sources;
   }
+
+  /**
+   * 为指定 source 设置 AI 虚拟背景效果。
+   *
+   * @param {number|MediaStream|string} slotOrTarget - slot 编号或 Stream 对象
+   * @param {boolean|Object|null} options - 效果配置（true=启用默认效果，Object=详细配置，false/null=禁用）
+   * @returns {Object|null} 归一化后的效果配置快照
+   */
   setSourceAiVirtualBackground(slotOrTarget, options) {
     this._assertNotDestroyed('setSourceAiVirtualBackground()');
-    var source = this._resolveSourceForEffectUpdate(slotOrTarget);
+    var source = this._resolveFxSource(slotOrTarget);
     this._sourceAiVBManager.setSourceConfig(source, options);
-    this._refreshRendererPolicyForEffects();
+    this._refreshFxRenderPolicy();
     this._drawVideosToCanvas(undefined, true);
     return this._sourceAiVBManager.getSourceConfig(source);
   }
+
+  /**
+   * 获取指定 source 的 AI 虚拟背景配置快照。
+   *
+   * @param {number|MediaStream|string} slotOrTarget - slot 编号或 Stream 对象
+   * @returns {Object|null} 效果配置快照
+   */
   getSourceAiVirtualBackground(slotOrTarget) {
     this._assertNotDestroyed('getSourceAiVirtualBackground()');
-    return this._sourceAiVBManager.getSourceConfig(this._resolveSourceForEffectUpdate(slotOrTarget));
+    return this._sourceAiVBManager.getSourceConfig(this._resolveFxSource(slotOrTarget));
   }
+
+  /**
+   * 清除指定 source 的 AI 虚拟背景效果。
+   *
+   * 清除后立即刷新渲染器策略（可能从主线程切回 Worker 路径），并强制重绘一帧。
+   *
+   * @param {number|MediaStream|string} slotOrTarget - slot 编号或 Stream 对象
+   */
   clearSourceAiVirtualBackground(slotOrTarget) {
     this._assertNotDestroyed('clearSourceAiVirtualBackground()');
-    this._sourceAiVBManager.clearSourceConfig(this._resolveSourceForEffectUpdate(slotOrTarget));
-    this._refreshRendererPolicyForEffects();
+    this._sourceAiVBManager.clearSourceConfig(this._resolveFxSource(slotOrTarget));
+    this._refreshFxRenderPolicy();
     this._drawVideosToCanvas(undefined, true);
   }
+
+  /**
+   * 设置整体输出镜像（最终合成画面水平翻转，不改变各 source 自身镜像策略）。
+   *
+   * @param {boolean} enabled - true=开启输出镜像
+   * @returns {Object} 更新后的配置快照
+   */
   setMirror(enabled) {
     this._assertNotDestroyed('setMirror()');
     return this.setConfig({
@@ -20028,6 +20770,14 @@ class ComposerRuntime {
   getMirror() {
     return this.getState().config.outputMirror;
   }
+
+  /**
+   * 设置输出镜像时水印是否同步镜像。
+   * 默认开启；关闭后水印不受输出镜像影响（如二维码场景需要保持正向）。
+   *
+   * @param {boolean} enabled - true=水印随输出一起镜像
+   * @returns {Object} 更新后的配置快照
+   */
   setMirrorWatermarksWithOutput(enabled) {
     this._assertNotDestroyed('setMirrorWatermarksWithOutput()');
     return this.setConfig({
@@ -20037,6 +20787,20 @@ class ComposerRuntime {
   getMirrorWatermarksWithOutput() {
     return this.getState().config.mirrorWatermarksWithOutput;
   }
+
+  /**
+   * 设置 source 级别水平镜像。
+   *
+   * 两种调用方式：
+   *   - setSourceMirror(true)  → 设置全局 source 镜像（所有无覆盖的 source 生效）
+   *   - setSourceMirror(0, true) → 仅对 slot 0 设置镜像覆盖
+   *
+   * slot 级别覆盖优先级高于全局设置。
+   *
+   * @param {number|boolean} slotOrEnabled - slot 编号或全局镜像开关
+   * @param {boolean} [enabled] - 当第一个参数是 slot 时，指定该 slot 的镜像状态
+   * @returns {Object} 更新后的配置快照
+   */
   setSourceMirror(slotOrEnabled, enabled) {
     this._assertNotDestroyed('setSourceMirror()');
     if (typeof slotOrEnabled === 'boolean' && enabled === undefined) {
@@ -20054,6 +20818,17 @@ class ComposerRuntime {
     this._assertNotDestroyed('getSourceMirror()');
     return this._getSourceMirrorLegacySnapshot(slot);
   }
+
+  /**
+   * 清除 source 级别水平镜像覆盖。
+   *
+   * 两种调用方式：
+   *   - clearSourceMirror()  → 清除所有 slot 级别的覆盖，回退到全局设置
+   *   - clearSourceMirror(0) → 仅清除 slot 0 的覆盖
+   *
+   * @param {number} [slot] - 要清除的 slot 编号
+   * @returns {Object} 更新后的配置快照
+   */
   clearSourceMirror(slot) {
     this._assertNotDestroyed('clearSourceMirror()');
     if (slot === undefined || slot === null) {
@@ -20067,7 +20842,16 @@ class ComposerRuntime {
       }
     });
   }
-  _resolveSourceForEffectUpdate(slotOrTarget) {
+
+  /**
+   * 根据 slot 编号或 Stream 对象解析对应的内部 source 对象。
+   * 用于 setSourceAiVirtualBackground() / getSourceAiVirtualBackground() 等效果设置方法。
+   *
+   * @param {number|MediaStream|string} slotOrTarget - slot 编号或 Stream 对象
+   * @returns {Object} 找到的内部 source 对象
+   * @throws {TypeError} 未找到时抛出
+   */
+  _resolveFxSource(slotOrTarget) {
     var source = typeof slotOrTarget === 'number' ? this._sources.find(item => item && item.slot === slotOrTarget) || null : this._findSource(slotOrTarget);
     if (!source) {
       throw new TypeError('Invalid source target.');
@@ -20163,8 +20947,8 @@ class ComposerRuntime {
    * 获取合并了视频和音频的完整输出流。
    *
    * 流程：
-   *   1. getVideoStream() → 启动 rAF 渲染循环 + canvas.captureStream()
-   *   2. 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨
+   *   1. getVideoStream() → 启动 rAF 渲染循环 + 建立视频输出路径（优先 Insertable，回退 captureStream）
+   *   2. 保存 mixedStream 引用，供后续 _ensureMixedAudio() 补充音频轨
    *   3. getAudioStream() → 初始化 AudioContext + 连接所有源的音频
    *   4. 将音频流的音轨添加到视频流
    *
@@ -20264,14 +21048,14 @@ class ComposerRuntime {
 
   // -- OutputStreamManager 委派 --
   get _capturedStreams() {
-    return this._outputStreamManager && this._outputStreamManager.capturedStreams || [];
+    return this._outMgr && this._outMgr.capturedStreams || [];
   }
   get _videoStream() {
-    return this._outputStreamManager && this._outputStreamManager.videoStream || null;
+    return this._outMgr && this._outMgr.videoStream || null;
   }
 }
 module.exports = ComposerRuntime;
-},{"../Logger":45,"./AudioMixer":46,"./ComposerConfig":47,"./ComposerDomAdapter":48,"./LayoutEngine":50,"./OutputStreamManager":52,"./RenderLoop":53,"./SourceStore":54,"./WatermarkManager":55,"./aiVirtualBackground/SourceAiVBController":60}],50:[function(require,module,exports){
+},{"../Logger":45,"../MediaEffectsIssue":70,"./AudioMixer":46,"./ComposerConfig":47,"./ComposerDomAdapter":48,"./LayoutEngine":50,"./OutputStreamManager":52,"./RenderLoop":53,"./SourceStore":54,"./WatermarkManager":55,"./aiVirtualBackground/SourceAiVBController":60}],50:[function(require,module,exports){
 "use strict";
 
 /**
@@ -20660,6 +21444,18 @@ module.exports = MediaEffectsComposer;
  *
  * @module OutputStreamManager
  */
+var issueUtils = require('../MediaEffectsIssue');
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  component: 'OutputStreamManager',
+  stage: 'output-stream',
+  severity: 'warn',
+  message: 'Output stream issue',
+  fallbackApplied: true,
+  degraded: true,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
 class OutputStreamManager {
   /**
    * @param {Object} options
@@ -20674,6 +21470,7 @@ class OutputStreamManager {
     this._config = options.config;
     this._domAdapter = options.domAdapter;
     this._logger = options.logger;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
 
     /** @type {MediaStream|null} 通过 getMixedStream() 返回的完整混合流 */
     this._mixedStream = null;
@@ -20689,7 +21486,7 @@ class OutputStreamManager {
 
     /** @type {Object} Insertable 能力探测结果 */
     this._insertableSupport = OutputStreamManager.detectInsertableStreams();
-    this._insertableEnabledByConfig = Boolean(this._config && this._config.enableInsertable);
+    this._insertableByCfg = Boolean(this._config && this._config.enableInsertable);
 
     /** @type {boolean} 当前是否使用 Insertable 路径 */
     this._insertableActive = false;
@@ -20713,22 +21510,42 @@ class OutputStreamManager {
     this._lastTimestampUs = 0;
 
     /** @type {number} 连续写帧失败计数 */
-    this._continuousWriteFailures = 0;
+    this._writeFailCount = 0;
 
     /** @type {number} 连续失败阈值，超过后停止 Insertable 写入 */
-    this._maxContinuousWriteFailures = 5;
+    this._maxWriteFails = 5;
 
     /** @type {CanvasCaptureMediaStreamTrack|null} captureStream 输出 video track */
     this._capturedVideoTrack = null;
 
     /** @type {boolean} 是否启用 captureStream(0)+requestFrame 手动出帧模式 */
-    this._manualCaptureFrameControl = false;
+    this._manualFrameControl = false;
 
     /** @type {HTMLVideoElement|null} captureStream 输出保活 sink */
-    this._activeCaptureSinkVideo = null;
+    this._captureSinkVideo = null;
     if (this._logger) {
-      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableEnabledByConfig} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
+      this._logger.debug(`OutputStreamManager constructed: insertableSupported=${this._insertableSupport.supported} ` + `enabledByConfig=${this._insertableByCfg} ` + `generator=${this._insertableSupport.generatorType || 'none'} reason=${this._insertableSupport.reason || ''}`);
     }
+  }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 上报输出流管理过程中的各类问题，包括：
+   * - capture-stream-request-frame: 手动控制帧捕获失败（回退到自动捕获）
+   * - insertable-output-init: 可插入帧输出初始化失败（回退到传统 captureStream 模式）
+   * - insertable-frame-write: 可插入帧写入失败
+   * - insertable-frame-write-disabled: 连续写入失败次数超过阈值，禁用可插入帧写入
+   *
+   * 设计要点：
+   * - 输出流的问题通常都有降级方案（insertable → captureStream → 无输出），
+   *   因此默认 fallbackApplied=true, degraded=true
+   * - 回调异常时记录警告日志，不中断输出流处理流程
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'OutputStreamManager issue callback failed');
   }
   static _getGlobalObject() {
     if (typeof window !== 'undefined') {
@@ -20798,8 +21615,8 @@ class OutputStreamManager {
   /**
    * 获取视频输出流。
    *
-   * 首次调用时先绘制一帧（确保 canvas 有内容），然后执行
-   * canvas.captureStream() 获取原始流，将其视频轨添加到新的 MediaStream 返回。
+   * 首次调用时先绘制一帧（确保 canvas 有内容），随后优先尝试
+   * Insertable Streams 输出；能力不足或初始化失败时再回退到 canvas.captureStream()。
    *
    * @param {Function} drawFirstFrame - 绘制首帧的回调
    * @returns {MediaStream} 仅包含视频轨的输出流
@@ -20812,7 +21629,7 @@ class OutputStreamManager {
       return this._videoStream;
     }
     drawFirstFrame();
-    var insertableStream = this._createInsertableVideoStream();
+    var insertableStream = this._createInsertableStream();
     if (insertableStream) {
       this._videoStream = insertableStream;
       this._capturedStream = null;
@@ -20834,7 +21651,7 @@ class OutputStreamManager {
   }
   _createCaptureStreamVideo() {
     var videoStream = new MediaStream();
-    var capturedStream = this._createPreferredCaptureStream();
+    var capturedStream = this._createPrefCaptureStream();
     capturedStream.getVideoTracks().forEach(track => {
       if (this._logger) {
         this._logger.debug('track: ', track.id, track.enabled, track.readyState);
@@ -20846,17 +21663,17 @@ class OutputStreamManager {
     this._videoStream = videoStream;
     this._capturedStreams.push(capturedStream);
     this._insertableActive = false;
-    this._configureCaptureFrameControl(capturedStream);
+    this._configCaptureFrameCtrl(capturedStream);
     this._ensureActiveCaptureSink(capturedStream);
-    if (this._manualCaptureFrameControl) {
+    if (this._manualFrameControl) {
       this._requestCaptureFrame();
     }
     if (this._logger) {
-      this._logger.debug(`Created captureStream video stream: tracks=${videoStream.getVideoTracks().length} ` + `manualFrameControl=${this._manualCaptureFrameControl}`);
+      this._logger.debug(`Created captureStream video stream: tracks=${videoStream.getVideoTracks().length} ` + `manualFrameControl=${this._manualFrameControl}`);
     }
     return this._videoStream;
   }
-  _createPreferredCaptureStream() {
+  _createPrefCaptureStream() {
     if (this._config.manualCaptureFrameControl !== false) {
       var manualStream = null;
       try {
@@ -20894,38 +21711,38 @@ class OutputStreamManager {
     var videoTrack = capturedStream.getVideoTracks()[0];
     return Boolean(videoTrack && typeof videoTrack.requestFrame === 'function');
   }
-  _configureCaptureFrameControl(capturedStream) {
+  _configCaptureFrameCtrl(capturedStream) {
     this._capturedVideoTrack = null;
-    this._manualCaptureFrameControl = false;
+    this._manualFrameControl = false;
     if (!capturedStream || !capturedStream.getVideoTracks) {
       return;
     }
     var videoTrack = capturedStream.getVideoTracks()[0];
     this._capturedVideoTrack = videoTrack || null;
-    this._manualCaptureFrameControl = Boolean(this._config.manualCaptureFrameControl !== false && videoTrack && typeof videoTrack.requestFrame === 'function');
+    this._manualFrameControl = Boolean(this._config.manualCaptureFrameControl !== false && videoTrack && typeof videoTrack.requestFrame === 'function');
   }
   _ensureActiveCaptureSink(capturedStream) {
-    this._teardownActiveCaptureSink();
+    this._teardownCaptureSink();
     if (!capturedStream || !this._domAdapter || !this._domAdapter.createOutputSinkVideoElement) {
       return;
     }
-    this._activeCaptureSinkVideo = this._domAdapter.createOutputSinkVideoElement(capturedStream);
+    this._captureSinkVideo = this._domAdapter.createOutputSinkVideoElement(capturedStream);
     if (this._logger) {
       var streamId = capturedStream.id || 'unknown';
       this._logger.debug(`Active capture sink attached: stream=${streamId}`);
     }
   }
-  _teardownActiveCaptureSink() {
-    if (!this._activeCaptureSinkVideo) {
+  _teardownCaptureSink() {
+    if (!this._captureSinkVideo) {
       return;
     }
     if (this._domAdapter && this._domAdapter.disposeVideoElement) {
-      this._domAdapter.disposeVideoElement(this._activeCaptureSinkVideo);
+      this._domAdapter.disposeVideoElement(this._captureSinkVideo);
     }
-    this._activeCaptureSinkVideo = null;
+    this._captureSinkVideo = null;
   }
   _requestCaptureFrame() {
-    if (!this._manualCaptureFrameControl || !this._capturedVideoTrack || !this._capturedVideoTrack.requestFrame) {
+    if (!this._manualFrameControl || !this._capturedVideoTrack || !this._capturedVideoTrack.requestFrame) {
       return;
     }
     if (this._capturedVideoTrack.readyState && this._capturedVideoTrack.readyState !== 'live') {
@@ -20934,14 +21751,21 @@ class OutputStreamManager {
     try {
       this._capturedVideoTrack.requestFrame();
     } catch (error) {
-      this._manualCaptureFrameControl = false;
+      this._manualFrameControl = false;
       if (this._logger) {
         this._logger.warn(`captureStream requestFrame failed, fallback to auto capture timing: ${error.message || String(error)}`);
       }
+      this._reportIssue({
+        stage: 'capture-stream-request-frame',
+        message: getErrorMessage(error),
+        details: {
+          manualCaptureFrameControl: true
+        }
+      });
     }
   }
-  _createInsertableVideoStream() {
-    if (!this._insertableEnabledByConfig) {
+  _createInsertableStream() {
+    if (!this._insertableByCfg) {
       if (this._logger) {
         this._logger.debug('Insertable output not enabled by config, fallback to captureStream');
       }
@@ -20966,12 +21790,22 @@ class OutputStreamManager {
       this._pendingWrite = false;
       this._latestPendingFrame = null;
       this._lastTimestampUs = 0;
-      this._continuousWriteFailures = 0;
+      this._writeFailCount = 0;
       return new MediaStream([track]);
     } catch (error) {
       if (this._logger) {
         this._logger.warn(`Insertable output init failed, fallback to captureStream: ${error.message || String(error)}`);
       }
+      this._reportIssue({
+        stage: 'insertable-output-init',
+        message: getErrorMessage(error),
+        details: {
+          insertableEnabledByConfig: Boolean(this._insertableByCfg),
+          insertableSupported: Boolean(this._insertableSupport && this._insertableSupport.supported),
+          generatorType: this._insertableSupport && this._insertableSupport.generatorType ? this._insertableSupport.generatorType : '',
+          supportReason: this._insertableSupport && this._insertableSupport.reason ? this._insertableSupport.reason : ''
+        }
+      });
       this._teardownInsertableState(false);
       return null;
     }
@@ -21008,7 +21842,7 @@ class OutputStreamManager {
    * @param {Object} frameCtx - { canvas, timestamp, source }
    */
   onFramePresented(frameCtx) {
-    if (this._manualCaptureFrameControl) {
+    if (this._manualFrameControl) {
       this._requestCaptureFrame();
     }
     if (!this._insertableActive || !this._writer || !this._generatorTrack) {
@@ -21021,7 +21855,7 @@ class OutputStreamManager {
       var replacedFrame = this._latestPendingFrame;
       this._latestPendingFrame = frameCtx;
       if (replacedFrame) {
-        this._closePresentedFrameSource(replacedFrame.frameSource);
+        this._closeFrameSource(replacedFrame.frameSource);
       }
       return;
     }
@@ -21031,7 +21865,7 @@ class OutputStreamManager {
       this._flushLatestPendingFrame();
     }).catch(error => {
       this._pendingWrite = false;
-      this._handleInsertableWriteError(error);
+      this._handleInsertableError(error);
       this._flushLatestPendingFrame();
     });
   }
@@ -21058,28 +21892,28 @@ class OutputStreamManager {
     if (!frameCtx || !frameCtx.canvas && !frameCtx.frameSource || !this._writer) {
       return;
     }
-    var videoFrame = await this._createVideoFrameForPresentedFrame(frameCtx);
+    var videoFrame = await this._createVideoFrameForFrame(frameCtx);
     if (!videoFrame) {
       return;
     }
     try {
       await this._writer.write(videoFrame);
-      this._continuousWriteFailures = 0;
+      this._writeFailCount = 0;
     } finally {
       if (videoFrame.close) {
         videoFrame.close();
       }
     }
   }
-  async _createVideoFrameForPresentedFrame(frameCtx) {
+  async _createVideoFrameForFrame(frameCtx) {
     var frameSource = frameCtx && frameCtx.frameSource;
     var frameSourceConsumed = Boolean(frameCtx && frameCtx.frameSourceConsumed === true);
     if (frameSource) {
-      return this._createVideoFrameFromSource(frameSource, frameCtx.timestamp, frameSourceConsumed);
+      return this._createVideoFrame(frameSource, frameCtx.timestamp, frameSourceConsumed);
     }
-    return this._createVideoFrameFromSource(frameCtx && frameCtx.canvas, frameCtx && frameCtx.timestamp, false);
+    return this._createVideoFrame(frameCtx && frameCtx.canvas, frameCtx && frameCtx.timestamp, false);
   }
-  async _createVideoFrameFromSource(source, timestamp, sourceConsumed) {
+  async _createVideoFrame(source, timestamp, sourceConsumed) {
     var runtime = OutputStreamManager._getGlobalObject();
     var VideoFrameConstructor = runtime.VideoFrame;
     if (!VideoFrameConstructor) {
@@ -21111,21 +21945,37 @@ class OutputStreamManager {
       timestamp: timestampUs
     });
   }
-  _handleInsertableWriteError(error) {
-    this._continuousWriteFailures += 1;
+  _handleInsertableError(error) {
+    this._writeFailCount += 1;
     if (this._logger) {
-      this._logger.warn(`Insertable frame write failed: count=${this._continuousWriteFailures} ` + `reason=${error && error.message ? error.message : String(error)}`);
+      this._logger.warn(`Insertable frame write failed: count=${this._writeFailCount} ` + `reason=${getErrorMessage(error)}`);
     }
-    if (this._continuousWriteFailures >= this._maxContinuousWriteFailures) {
+    this._reportIssue({
+      stage: 'insertable-frame-write',
+      message: getErrorMessage(error),
+      details: {
+        continuousWriteFailures: this._writeFailCount,
+        maxContinuousWriteFailures: this._maxWriteFails
+      }
+    });
+    if (this._writeFailCount >= this._maxWriteFails) {
       this._insertableActive = false;
       if (this._logger) {
         this._logger.warn('Insertable frame writing disabled due to repeated failures');
       }
+      this._reportIssue({
+        stage: 'insertable-frame-write-disabled',
+        message: 'Insertable frame writing disabled due to repeated failures',
+        details: {
+          continuousWriteFailures: this._writeFailCount,
+          maxContinuousWriteFailures: this._maxWriteFails
+        }
+      });
     }
   }
 
   /**
-   * 保存 mixedStream 引用，供后续 _ensureMixedStreamAudioTrack() 补充音频轨。
+   * 保存 mixedStream 引用，供后续 _ensureMixedAudio() 补充音频轨。
    *
    * @param {MediaStream} stream - 混合流（视频流，可能后续添加音频）
    */
@@ -21183,9 +22033,10 @@ class OutputStreamManager {
    *
    * 清理步骤：
    *   1. 清空内部引用
-   *   2. 停止所有 captureStream 的 tracks
-   *   3. 清空 capturedStreams 列表
-   *   4. 清除 canvas 上的 stream 引用
+   *   2. 断开 Insertable writer / generator track
+   *   3. 停止所有 captureStream 的 tracks
+   *   4. 清空 capturedStreams 列表
+   *   5. 清除 canvas 上的 stream 引用和保活 sink
    */
   stop() {
     if (this._logger) {
@@ -21195,9 +22046,9 @@ class OutputStreamManager {
     this._videoStream = null;
     this._capturedStream = null;
     this._capturedVideoTrack = null;
-    this._manualCaptureFrameControl = false;
+    this._manualFrameControl = false;
     this._insertableActive = false;
-    this._teardownActiveCaptureSink();
+    this._teardownCaptureSink();
     this._capturedStreams.forEach(stream => {
       stream.getTracks().forEach(track => {
         track.stop();
@@ -21210,14 +22061,20 @@ class OutputStreamManager {
       this._logger.debug('Output streams stopped');
     }
   }
+
+  /**
+   * 释放 Insertable 输出路径的运行时状态。
+   *
+   * @param {boolean} stopTrack - 是否同时停止 generator track
+   */
   _teardownInsertableState(stopTrack) {
     var pendingFrame = this._latestPendingFrame;
     this._latestPendingFrame = null;
     this._pendingWrite = false;
     this._lastTimestampUs = 0;
-    this._continuousWriteFailures = 0;
+    this._writeFailCount = 0;
     if (pendingFrame) {
-      this._closePresentedFrameSource(pendingFrame.frameSource);
+      this._closeFrameSource(pendingFrame.frameSource);
     }
     if (this._writer) {
       try {
@@ -21236,7 +22093,13 @@ class OutputStreamManager {
     this._generator = null;
     this._generatorTrack = null;
   }
-  _closePresentedFrameSource(frameSource) {
+
+  /**
+   * 关闭当前已消费完成的 VideoFrame / ImageBitmap。
+   *
+   * @param {*} frameSource - 可能带有 close() 的帧对象
+   */
+  _closeFrameSource(frameSource) {
     if (frameSource && typeof frameSource.close === 'function') {
       try {
         frameSource.close();
@@ -21252,16 +22115,16 @@ class OutputStreamManager {
   getOutputRouteInfo() {
     return {
       outputMode: this._insertableActive ? 'insertable' : 'capture-stream',
-      captureFrameControlMode: this._manualCaptureFrameControl ? 'manual-request-frame' : 'auto-capture-fps',
+      captureFrameControlMode: this._manualFrameControl ? 'manual-request-frame' : 'auto-capture-fps',
       insertableActive: Boolean(this._insertableActive),
-      insertableEnabledByConfig: Boolean(this._insertableEnabledByConfig),
+      insertableEnabledByConfig: Boolean(this._insertableByCfg),
       insertableSupported: Boolean(this._insertableSupport && this._insertableSupport.supported),
       insertableGeneratorType: this._insertableSupport && this._insertableSupport.generatorType || '',
       insertableSupportReason: this._insertableSupport && this._insertableSupport.reason || '',
-      insertableWriteFailures: this._continuousWriteFailures || 0,
+      insertableWriteFailures: this._writeFailCount || 0,
       insertableHasGeneratorTrack: Boolean(this._generatorTrack),
       outputHasCapturedStream: Boolean(this._capturedStream),
-      activeCaptureSinkAttached: Boolean(this._activeCaptureSinkVideo)
+      activeCaptureSinkAttached: Boolean(this._captureSinkVideo)
     };
   }
   get mixedStream() {
@@ -21280,7 +22143,7 @@ class OutputStreamManager {
 module.exports = OutputStreamManager;
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],53:[function(require,module,exports){
+},{"../MediaEffectsIssue":70}],53:[function(require,module,exports){
 "use strict";
 
 /**
@@ -21299,6 +22162,18 @@ var RendererFactory = require('./renderers/RendererFactory');
 var MainCanvas2DRenderer = require('./renderers/MainCanvas2DRenderer');
 var MainWebGL2Renderer = require('./renderers/MainWebGL2Renderer');
 var WorkerRenderer = require('./renderers/WorkerRenderer');
+var issueUtils = require('../MediaEffectsIssue');
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  component: 'RenderLoop',
+  stage: 'render-loop',
+  severity: 'warn',
+  message: 'Render loop issue',
+  fallbackApplied: true,
+  degraded: true,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
 class RenderLoop {
   /**
    * @param {Object} options
@@ -21321,6 +22196,7 @@ class RenderLoop {
     this._syncExternalSourceAudio = options.syncExternalSourceAudio;
     this._onStateChange = options.onStateChange;
     this._onFramePresented = options.onFramePresented;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
 
     /** @type {BaseRenderer|null} 当前使用的渲染后端实例 */
     this._renderer = null;
@@ -21351,6 +22227,28 @@ class RenderLoop {
     if (this._logger) {
       this._logger.debug(`RenderLoop constructed: fps=${this._config.fps || 0} renderMode=${this._config.renderMode}`);
     }
+  }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 上报渲染循环中的各类问题，包括：
+   * - renderer-fallback-requested: 当前渲染后端不满足需求，触发降级链
+   * - renderer-fallback-main-webgl2: 降级到主线程 WebGL2 成功
+   * - renderer-fallback-main-webgl2-failed: 降级到主线程 WebGL2 失败
+   * - renderer-fallback-worker-2d: 降级到 Worker 2D 成功
+   * - renderer-fallback-worker-2d-failed: 降级到 Worker 2D 失败
+   * - renderer-render-frame: 渲染帧失败（增加错误计数）
+   *
+   * 渲染降级链优先级顺序：
+   *   Worker WebGL2 → 主线程 WebGL2 → Worker 2D
+   * 每一级降级失败都会上报，方便排查为何最底层的 2D 模式也被触发。
+   * 降级尝试失败时 fallbackApplied 设为 false，成功时设为 true。
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'RenderLoop issue callback failed');
   }
 
   /**
@@ -21418,7 +22316,7 @@ class RenderLoop {
           this.fallbackRenderer(reason || 'Worker renderer failed at runtime');
         }
       });
-      this._bindRendererFrameCallback(this._renderer);
+      this._bindFrameCb(this._renderer);
       this._logRenderPath(this._renderer.getInfo(), 'create');
     }
     return this._renderer;
@@ -21546,6 +22444,13 @@ class RenderLoop {
     if (this._logger) {
       this._logger.warn(`Fallback renderer requested: ${reason}`);
     }
+    this._reportIssue({
+      stage: 'renderer-fallback-requested',
+      message: reason,
+      details: {
+        requestedMode: this._config && this._config.renderMode ? this._config.renderMode : ''
+      }
+    });
     var currentInfo = this._renderer && this._renderer.getInfo ? this._renderer.getInfo() : {};
     if (currentInfo.actualMode === 'main-2d') {
       return false;
@@ -21591,7 +22496,7 @@ class RenderLoop {
     });
     renderer.init(this._canvas);
     this._renderer = renderer;
-    this._bindRendererFrameCallback(this._renderer);
+    this._bindFrameCb(this._renderer);
     this._logRenderPath(this._renderer.getInfo(), 'fallback-main-2d');
     this._rendererErrorCount = 0;
     return true;
@@ -21636,17 +22541,34 @@ class RenderLoop {
       });
       renderer.init(this._canvas);
       this._renderer = renderer;
-      this._bindRendererFrameCallback(this._renderer);
+      this._bindFrameCb(this._renderer);
       this._logRenderPath(this._renderer.getInfo(), 'fallback-main-webgl2');
       this._rendererErrorCount = 0;
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: main-webgl2 reason=${reason}`);
       }
+      this._reportIssue({
+        stage: 'renderer-fallback-main-webgl2',
+        message: reason,
+        details: {
+          previousMode: currentInfo.actualMode || '',
+          nextMode: 'main-webgl2'
+        }
+      });
       return true;
     } catch (error) {
       if (this._logger) {
         this._logger.warn(`Fallback to main-webgl2 failed: ${error.message || String(error)}`);
       }
+      this._reportIssue({
+        stage: 'renderer-fallback-main-webgl2-failed',
+        message: getErrorMessage(error),
+        fallbackApplied: false,
+        details: {
+          previousMode: currentInfo.actualMode || '',
+          attemptedMode: 'main-webgl2'
+        }
+      });
       return false;
     }
   }
@@ -21670,17 +22592,34 @@ class RenderLoop {
       });
       renderer.init(this._canvas);
       this._renderer = renderer;
-      this._bindRendererFrameCallback(this._renderer);
+      this._bindFrameCb(this._renderer);
       this._logRenderPath(this._renderer.getInfo(), 'fallback-worker-2d');
       this._rendererErrorCount = 0;
       if (this._logger) {
         this._logger.warn(`Fallback succeeded: worker-2d reason=${reason}`);
       }
+      this._reportIssue({
+        stage: 'renderer-fallback-worker-2d',
+        message: reason,
+        details: {
+          previousMode: currentInfo.actualMode || '',
+          nextMode: 'worker-2d'
+        }
+      });
       return true;
     } catch (error) {
       if (this._logger) {
         this._logger.warn(`Fallback to worker-2d failed: ${error.message || String(error)}`);
       }
+      this._reportIssue({
+        stage: 'renderer-fallback-worker-2d-failed',
+        message: getErrorMessage(error),
+        fallbackApplied: false,
+        details: {
+          previousMode: currentInfo.actualMode || '',
+          attemptedMode: 'worker-2d'
+        }
+      });
       return false;
     }
   }
@@ -21743,6 +22682,14 @@ class RenderLoop {
     var reason = `Composer render failed: ${error.message || String(error)}`;
     this._renderErrorCount += 1;
     this._logger.warn(reason);
+    this._reportIssue({
+      stage: 'renderer-render-frame',
+      message: reason,
+      details: {
+        renderErrorCount: this._renderErrorCount,
+        rendererMode: this._renderer && this._renderer.getInfo ? this._renderer.getInfo().actualMode : ''
+      }
+    });
     if (this._renderer && this._renderer._updateInfo) {
       this._renderer._updateInfo({
         isFallback: true,
@@ -21753,7 +22700,7 @@ class RenderLoop {
       this.fallbackRenderer(reason);
     }
   }
-  _bindRendererFrameCallback(renderer) {
+  _bindFrameCb(renderer) {
     if (!renderer || !renderer.setFramePresentedCallback) {
       return;
     }
@@ -21802,7 +22749,7 @@ class RenderLoop {
   }
 }
 module.exports = RenderLoop;
-},{"./renderers/MainCanvas2DRenderer":63,"./renderers/MainWebGL2Renderer":64,"./renderers/RendererFactory":65,"./renderers/WorkerRenderer":66}],54:[function(require,module,exports){
+},{"../MediaEffectsIssue":70,"./renderers/MainCanvas2DRenderer":63,"./renderers/MainWebGL2Renderer":64,"./renderers/RendererFactory":65,"./renderers/WorkerRenderer":66}],54:[function(require,module,exports){
 "use strict";
 
 /**
@@ -22183,13 +23130,23 @@ module.exports = SourceStore;
  *
  * @module WatermarkManager
  */
-
+var issueUtils = require('../MediaEffectsIssue');
 var DEFAULT_TEXT_COLOR = '#fff';
 var DEFAULT_TEXT_BACKGROUND = 'rgba(0,0,0,0.45)';
 var DEFAULT_FONT_SIZE = 28;
 var DEFAULT_PADDING = 3;
 var DEFAULT_BACKGROUND_RADIUS = 3;
 var DEFAULT_MARGIN = 16;
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  component: 'WatermarkManager',
+  stage: 'watermark',
+  severity: 'warn',
+  message: 'Watermark issue',
+  fallbackApplied: true,
+  degraded: true,
+  details: {}
+};
 class WatermarkManager {
   /**
    * @param {Object} options
@@ -22198,11 +23155,30 @@ class WatermarkManager {
   constructor(options) {
     options = options || {};
     this._logger = options.logger;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
     this._watermarks = [];
     this._seq = 0;
     if (this._logger) {
       this._logger.debug('WatermarkManager constructed');
     }
+  }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 上报水印管理过程中的各类问题，包括：
+   * - watermark-image-missing: 水印配置中缺少图片 URL
+   * - watermark-image-load: 水印图片加载失败
+   *
+   * 设计要点：
+   * - 水印加载失败不中断混流流程，混流器会跳过该水印继续处理
+   * - 因此默认 fallbackApplied=true, degraded=true
+   * - details 中包含 watermarkId、target、imageUrl 等信息，方便的排查具体是哪个水印出了什么问题
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'WatermarkManager issue callback failed');
   }
 
   /**
@@ -22360,6 +23336,14 @@ class WatermarkManager {
     if (!image) {
       watermark.status = 'error';
       watermark.reason = 'Missing image';
+      this._reportIssue({
+        stage: 'watermark-image-missing',
+        message: watermark.reason,
+        details: {
+          watermarkId: watermark.id,
+          target: watermark.target
+        }
+      });
       return Promise.resolve(watermark);
     }
     if (typeof image === 'string') {
@@ -22375,8 +23359,17 @@ class WatermarkManager {
         watermark.status = 'error';
         watermark.reason = error.message || String(error);
         if (this._logger) {
-          this._logger.warn(`Watermark image failed to load: ${watermark.reason}`);
+          this._logger.warn(`Watermark image failed to load: id=${watermark.id} target=${watermark.target} reason=${watermark.reason} url=${image}`);
         }
+        this._reportIssue({
+          stage: 'watermark-image-load',
+          message: watermark.reason,
+          details: {
+            watermarkId: watermark.id,
+            target: watermark.target,
+            imageUrl: image
+          }
+        });
         return watermark;
       });
     }
@@ -22634,7 +23627,7 @@ function fillRoundedRect(context, x, y, width, height, radius) {
   context.fill();
 }
 module.exports = WatermarkManager;
-},{}],56:[function(require,module,exports){
+},{"../MediaEffectsIssue":70}],56:[function(require,module,exports){
 "use strict";
 
 /**
@@ -23707,13 +24700,70 @@ module.exports = class MediaPipeSegmenterRuntime {
 },{"../../Logger":45,"./AiVBAssetLoader":56,"./AiVBSegmentationCommon":58}],60:[function(require,module,exports){
 "use strict";
 
+/**
+ * SourceAiVBController —— 源级别 AI 虚拟背景控制器
+ *
+ * 管理每个视频源（source）的 AI 虚拟背景效果生命周期：
+ *   - 配置归一化与校验
+ *   - MediaPipe 分割器运行时的创建与销毁
+ *   - 背景图的异步加载与缓存
+ *   - 分割调度（fps 节流、frameSkip、排队去重）
+ *   - 向渲染器提供可绘制状态（遮罩 + 背景图 + 工作画布）
+ *
+ * 每个 source 的状态通过 WeakMap 存储，不污染 source 对象本身；
+ * 但运行时、工作画布、背景图等资源仍需通过 removeSource()/destroy() 主动清理。
+ *
+ * @module SourceAiVBController
+ */
+
 var AiVBConfig = require('./AiVBConfig');
 var MediaPipeSegmenterRuntime = require('./MediaPipeSegmenterRuntime');
+var issueUtils = require('../../MediaEffectsIssue');
+
+// =============================================================================
+// 常量
+// =============================================================================
+
+/** 分割器运行时启动延迟（毫秒），避免通话建立初期 CPU 争抢 */
 var DEFAULT_RUNTIME_STARTUP_DELAY_MS = 1500;
+
+/** 分割器运行时默认最大帧率，平衡效果与性能 */
 var DEFAULT_MAX_RUNTIME_FPS = 15;
+var ISSUE_DEFAULTS = {
+  module: 'MediaEffectsComposer',
+  component: 'SourceAiVBController',
+  stage: 'aivb',
+  severity: 'warn',
+  message: 'AiVB issue',
+  fallbackApplied: true,
+  degraded: true,
+  details: {}
+};
+var getErrorMessage = issueUtils.getErrorMessage;
+
+// =============================================================================
+// 纯函数工具
+// =============================================================================
+
+/**
+ * 浅拷贝对象，非对象或 null 返回空对象。
+ *
+ * @param {*} input - 任意输入
+ * @returns {Object} 浅拷贝后的对象
+ */
 function cloneObject(input) {
   return input && typeof input === 'object' ? Object.assign({}, input) : {};
 }
+
+/**
+ * 将数值钳位到 [min, max] 范围，非有限数返回 fallback。
+ *
+ * @param {*} value - 输入值
+ * @param {number} min - 下限
+ * @param {number} max - 上限
+ * @param {number} fallback - 非法值时的回退值
+ * @returns {number} 钳位后的数值
+ */
 function clampNumber(value, min, max, fallback) {
   var numericValue = Number(value);
   if (!Number.isFinite(numericValue)) {
@@ -23721,6 +24771,20 @@ function clampNumber(value, min, max, fallback) {
   }
   return Math.min(max, Math.max(min, numericValue));
 }
+
+/**
+ * 根据用户参数自动推断 AI 虚拟背景模式。
+ *
+ * 推断优先级：
+ *   1. 显式指定 mode 字符串 → 直接使用
+ *   2. 有 imageUrl → 'image'（图片替换背景）
+ *   3. 有 color → 'color'（纯色背景）
+ *   4. 有 blurRadius → 'blur'（模糊背景）
+ *   5. 以上均无 → 'none'（关闭效果）
+ *
+ * @param {Object} options - 用户原始配置
+ * @returns {string} 解析后的模式：'image' | 'color' | 'blur' | 'none'
+ */
 function resolveMode(options) {
   var rawMode = typeof options.mode === 'string' ? options.mode.trim().toLowerCase() : '';
   if (rawMode) {
@@ -23737,6 +24801,14 @@ function resolveMode(options) {
   }
   return 'none';
 }
+
+/**
+ * 根据模式获取对应的核心参数值。
+ *
+ * @param {string} mode - 效果模式
+ * @param {Object} options - 用户配置
+ * @returns {string|number|null} 模式对应的值，或 null
+ */
 function normalizeModeValue(mode, options) {
   switch (mode) {
     case 'image':
@@ -23749,11 +24821,26 @@ function normalizeModeValue(mode, options) {
       return null;
   }
 }
+
+/**
+ * 完整归一化用户传入的 AI 虚拟背景配置。
+ *
+ * 将各种简写形式（true / 字符串 / 部分对象）统一为规范结构体。
+ * 输入为 null/undefined/false 或 enabled=false 时返回 null（禁用效果）。
+ *
+ * @param {boolean|Object|null|undefined} input - 用户原始配置
+ * @returns {Object|null} 归一化后的配置对象，或 null（禁用）
+ */
 function normalizeConfig(input) {
+  // null / undefined / false → 禁用效果
   if (input === undefined || input === null || input === false) {
     return null;
   }
+
+  // true → 空对象（使用全部默认值）
   var options = input === true ? {} : cloneObject(input);
+
+  // 显式禁用
   if (options.enabled === false) {
     return null;
   }
@@ -23763,25 +24850,48 @@ function normalizeConfig(input) {
   var postProcessing = AiVBConfig.normalizePostProcessing(options.postProcessing);
   var assetConfig = AiVBConfig.normalizeAssetConfig(options.assetConfig);
   var value = normalizeModeValue(mode, options);
+
+  // blur 模式：用用户指定的 blurRadius 覆盖后处理默认值（但不超过 maxBlurRadius）
   if (mode === 'blur' && Number.isFinite(value)) {
     postProcessing.blurRadius = Math.max(0, Math.min(postProcessing.maxBlurRadius, value));
   }
   return {
     enabled: true,
+    // 效果是否启用
     mode: mode,
+    // 效果模式：image / color / blur / none
     imageUrl: mode === 'image' && typeof value === 'string' ? value : null,
+    // 背景图片 URL
     backgroundColor: mode === 'color' && typeof value === 'string' ? value : null,
+    // 背景色
     blurRadius: mode === 'blur' && Number.isFinite(value) ? value : postProcessing.blurRadius,
+    // 模糊半径
     modelPath: typeof options.modelPath === 'string' && options.modelPath.trim() ? options.modelPath.trim() : null,
+    // 分割模型路径
     runtimeEnabled: options.runtimeEnabled !== false,
-    startupDelayMs: Math.floor(clampNumber(options.startupDelayMs, 0, 10000, DEFAULT_RUNTIME_STARTUP_DELAY_MS)),
-    maxRuntimeFps: clampNumber(options.maxRuntimeFps, 1, 30, Number.isFinite(Number(options.video && options.video.targetFps)) && Number(options.video.targetFps) > 0 ? Number(options.video.targetFps) : DEFAULT_MAX_RUNTIME_FPS),
+    // 是否启用运行时（Worker 内或主线程内动态加载）
+    startupDelayMs: Math.floor(clampNumber(
+    // 启动延迟，避免初始化阶段 CPU 争抢
+    options.startupDelayMs, 0, 10000, DEFAULT_RUNTIME_STARTUP_DELAY_MS)),
+    maxRuntimeFps: clampNumber(
+    // 分割器最大帧率，默认跟随视频帧率
+    options.maxRuntimeFps, 1, 30, Number.isFinite(Number(options.video && options.video.targetFps)) && Number(options.video.targetFps) > 0 ? Number(options.video.targetFps) : DEFAULT_MAX_RUNTIME_FPS),
     video: video,
+    // 视频流归一化配置
     segmentation: segmentation,
+    // 分割归一化配置
     postProcessing: postProcessing,
-    assetConfig: assetConfig
+    // 后处理归一化配置
+    assetConfig: assetConfig // 资源路径归一化配置
   };
 }
+
+/**
+ * 创建配置对象的深拷贝快照（避免外部修改影响内部状态）。
+ *
+ * @param {Object|null} config - 归一化配置
+ * @returns {Object|null} 配置快照
+ */
 function cloneConfigSnapshot(config) {
   if (!config) {
     return null;
@@ -23802,12 +24912,35 @@ function cloneConfigSnapshot(config) {
     assetConfig: cloneObject(config.assetConfig)
   };
 }
+
+/**
+ * 判断效果配置是否有效启用。
+ * 条件：config 存在、enabled 不为 false、mode 不为 'none'。
+ *
+ * @param {Object|null} config - 归一化配置
+ * @returns {boolean} true=效果有效启用
+ */
 function isEffectEnabled(config) {
   return Boolean(config && config.enabled !== false && config.mode && config.mode !== 'none');
 }
+
+/**
+ * 判断是否启用了运行时分割（Worker 内或主线程内动态加载 MediaPipe）。
+ *
+ * @param {Object|null} config - 归一化配置
+ * @returns {boolean} true=运行时已启用
+ */
 function isRuntimeEnabled(config) {
   return Boolean(config && config.runtimeEnabled === true);
 }
+
+/**
+ * 生成分割器运行时的唯一配置 key。
+ * 用于检测配置是否发生实质性变化（需重新创建 segmenter）。
+ *
+ * @param {Object|null} config - 归一化配置
+ * @returns {string} 配置 key（JSON 序列化）
+ */
 function createRuntimeConfigKey(config) {
   if (!config) {
     return '';
@@ -23819,20 +24952,84 @@ function createRuntimeConfigKey(config) {
     maxRuntimeFps: config.maxRuntimeFps
   });
 }
+
+// =============================================================================
+// SourceAiVBController 类
+// =============================================================================
+
 module.exports = class SourceAiVBController {
+  /**
+   * @param {Object} [options={}]
+   * @param {Object} [options.logger] - 日志记录器
+   */
   constructor(options = {}) {
     this._logger = options.logger || null;
+    this._onIssue = typeof options.onIssue === 'function' ? options.onIssue : null;
+
+    /**
+     * WeakMap<source, state> —— 每个 source 的 AI 虚拟背景状态。
+     * WeakMap 只负责避免把状态挂到 source 本身；运行时和画布资源仍需显式释放。
+     */
     this._states = new WeakMap();
   }
+
+  /**
+   * 内部异常报告方法。
+   *
+   * 向上报告 AI 虚拟背景功能运行过程中的各类问题，包括：
+   * - aivb-runtime-init: AI 模型运行时初始化失败（如模型加载失败、TFLite 不支持）
+   * - aivb-background-image-create: 背景图片元素不可用
+   * - aivb-background-image-load: 背景图片 URL 加载失败
+   * - aivb-segmentation: 人像分割执行失败（不中断渲染，渲染器回退到直接绘制原始帧）
+   *
+   * 设计要点：
+   * - 若无 onIssue 回调则直接返回，不做任何操作，保证模块独立性
+   * - 回调本身会被 try-catch 包裹，防止外部回调异常影响到正常业务流程
+   * - 默认 severity 为 'warn' 且 fallbackApplied/degraded 为 true，
+   *   因为 AiVB 的所有异常场景都有降级方案（不处理 = 输出原始帧）
+   *
+   * @param {Object} [issue] - 问题描述对象
+   */
+  _reportIssue(issue) {
+    issueUtils.emitIssue(this._onIssue, ISSUE_DEFAULTS, issue, this._logger, 'SourceAiVBController issue callback failed');
+  }
+
+  // ---------------------------------------------------------------------------
+  // 公开 API
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 归一化用户输入的 AI 虚拟背景配置。
+   * 纯函数，不修改 source 状态。
+   *
+   * @param {boolean|Object|null} input - 用户配置
+   * @returns {Object|null} 归一化配置
+   */
   normalizeInput(input) {
     return normalizeConfig(input);
   }
+
+  /**
+   * 为指定 source 设置 AI 虚拟背景配置。
+   *
+   * 如果配置禁用效果，会主动清除该 source 的状态和运行时。
+   * 如果配置启用但 runtimeConfigKey 变化（模型/模块/delegate 改变），会重建运行时。
+   * 如果背景图 URL 变化，会重置背景图加载状态。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {boolean|Object|null} input - 用户配置
+   * @returns {Object|null} 归一化后的配置快照
+   */
   setSourceConfig(source, input) {
     if (!source) {
       return null;
     }
     var config = normalizeConfig(input);
+
+    // 将归一化配置写回 source 对象，供渲染器读取
     source.aiVirtualBackground = config;
+
+    // 效果被禁用 → 清理该 source 的所有运行时状态
     if (!isEffectEnabled(config)) {
       this.removeSource(source);
       return null;
@@ -23842,30 +25039,49 @@ module.exports = class SourceAiVBController {
     var runtimeConfigChanged = state.runtimeConfigKey && state.runtimeConfigKey !== runtimeConfigKey;
     state.config = config;
     state.disposed = false;
-    state.generation += 1;
-    state.runtimeAllowedAt = this._now() + config.startupDelayMs;
+    state.generation += 1; // 递增代数，使旧异步回调失效
+    state.runtimeAllowedAt = this._now() + config.startupDelayMs; // 最早允许启动分割的时间
+
     if (!isRuntimeEnabled(config)) {
+      // 运行时被禁用 → 销毁 runtime 实例
       this._resetRuntime(state);
       state.runtimeConfigKey = '';
     } else {
+      // 运行时启用中
       if (state.runtimeInitializing || runtimeConfigChanged) {
+        // 正在初始化或配置已变 → 重建 runtime
         this._resetRuntime(state);
       }
       state.runtimeConfigKey = runtimeConfigKey;
     }
+
+    // 背景图 URL 变化 → 重置加载状态，触发重新加载
     if (state.backgroundImageUrl !== config.imageUrl) {
-      state.backgroundImageRequestId += 1;
+      state.bgImageReqId += 1;
       state.backgroundImageUrl = config.imageUrl;
-      state.backgroundImageStatus = 'idle';
-      state.backgroundImageError = '';
-      state.backgroundImagePendingUrl = null;
+      state.bgImageStatus = 'idle';
+      state.bgImageError = '';
+      state.bgImagePendingUrl = null;
       state.loadingImage = false;
     }
     return cloneConfigSnapshot(config);
   }
+
+  /**
+   * 获取指定 source 的当前 AI 虚拟背景配置快照。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {Object|null} 配置快照
+   */
   getSourceConfig(source) {
     return cloneConfigSnapshot(source && source.aiVirtualBackground);
   }
+
+  /**
+   * 清除指定 source 的 AI 虚拟背景配置和运行时状态。
+   *
+   * @param {Object} source - 内部 source 对象
+   */
   clearSourceConfig(source) {
     if (!source) {
       return;
@@ -23873,9 +25089,24 @@ module.exports = class SourceAiVBController {
     source.aiVirtualBackground = null;
     this.removeSource(source);
   }
+
+  /**
+   * 检查指定 source 是否启用了 AI 虚拟背景效果。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {boolean} true=效果已启用
+   */
   hasEnabledEffect(source) {
     return isEffectEnabled(source && source.aiVirtualBackground);
   }
+
+  /**
+   * 预加载 source 的渲染资源（背景图等）。
+   * 在 mirror 等配置变更时提前触发，避免首帧白屏。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {HTMLVideoElement} videoElement - 关联的 video 元素
+   */
   preloadRenderAssets(source, videoElement) {
     if (!source || !this.hasEnabledEffect(source)) {
       return;
@@ -23883,23 +25114,39 @@ module.exports = class SourceAiVBController {
     var state = this._ensureState(source);
     var config = source.aiVirtualBackground;
     state.config = config;
-    if (!this._isVideoReadyForSegmentation(videoElement)) {
+
+    // 视频未就绪时不加载（无意义）
+    if (!this._isVideoReadyForSeg(videoElement)) {
       return;
     }
     this._ensureBackgroundImage(state);
   }
+
+  /**
+   * 获取当前帧 source 的可渲染状态。
+   *
+   * 渲染器调用此方法获取最新的遮罩和背景图。
+   * 内部会按需触发分割调度和背景图加载。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {HTMLVideoElement} videoElement - 当前帧的 video 元素
+   * @returns {Object|null} 可渲染状态 { config, latestMask, backgroundImage, state }
+   */
   getRenderableState(source, videoElement) {
     if (!source || !this.hasEnabledEffect(source)) {
       return null;
     }
     var state = this._ensureState(source);
     var config = source.aiVirtualBackground;
-    var videoReady = this._isVideoReadyForSegmentation(videoElement);
+    var videoReady = this._isVideoReadyForSeg(videoElement);
     state.config = config;
     if (videoReady) {
+      // 确保背景图（image 模式）正在加载
       this._ensureBackgroundImage(state);
       if (isRuntimeEnabled(config)) {
         var now = this._now();
+
+        // 启动延迟过后才允许调度分割
         if (now >= state.runtimeAllowedAt) {
           this._ensureRuntime(state);
           this._scheduleSegmentation(state, videoElement, now);
@@ -23908,18 +25155,42 @@ module.exports = class SourceAiVBController {
     }
     return {
       config: config,
+      // 当前配置
       latestMask: state.latestMask,
+      // 最新分割遮罩 canvas
       backgroundImage: state.backgroundImage,
-      state: state
+      // 背景图片（image 模式）
+      state: state // 内部状态（含 workCanvas 等工作画布）
     };
   }
+
+  /**
+   * 通知控制器当前帧已使用遮罩完成渲染。
+   * 用于 frameSkip 计数：渲染器每用一次遮罩绘制就调用一次。
+   *
+   * @param {Object} source - 内部 source 对象
+   * @param {boolean} usedMask - 本帧是否实际使用了遮罩
+   */
   noteFrameRendered(source, usedMask) {
     var state = source ? this._states.get(source) : null;
     if (!state || !usedMask) {
       return;
     }
-    state.renderedSinceSegmentation += 1;
+    state.renderedSinceSeg += 1;
   }
+
+  /**
+   * 移除指定 source 的所有 AI 虚拟背景状态。
+   *
+   * 清理步骤：
+   *   1. 从 WeakMap 删除状态引用
+   *   2. 标记 disposed，使所有异步回调失效
+   *   3. 取消进行中和排队中的分割
+   *   4. 释放遮罩 canvas、背景图引用
+   *   5. 销毁 MediaPipe 分割器运行时
+   *
+   * @param {Object} source - 内部 source 对象
+   */
   removeSource(source) {
     var state = source ? this._states.get(source) : null;
     if (!state) {
@@ -23927,28 +25198,62 @@ module.exports = class SourceAiVBController {
     }
     this._states.delete(source);
     state.disposed = true;
-    state.generation += 1;
+    state.generation += 1; // 递增代数，使所有进行中的异步回调失效
     state.pendingSegmentation = false;
-    state.activeSegmentationPromise = null;
-    state.queuedSegmentationPromise = null;
-    state.lastQueuedSegmentationInputAt = 0;
-    state.lastSegmentationScheduledAt = 0;
+    state.activeSegPromise = null;
+    state.queuedSegPromise = null;
+    state.lastQueuedSegAt = 0;
+    state.lastSegAt = 0;
     state.runtimeConfigKey = '';
     state.loadingImage = false;
-    state.backgroundImageRequestId += 1;
+    state.bgImageReqId += 1;
     state.latestMask = null;
     state.backgroundImage = null;
     state.segmentationCanvas = null;
     state.segmentationContext = null;
     state.workCanvas = null;
     state.workContext = null;
+
+    // 异步销毁 MediaPipe 运行时
     if (state.runtime && typeof state.runtime.destroy === 'function') {
       Promise.resolve(state.runtime.destroy()).catch(() => {});
     }
   }
+
+  /**
+   * 清除所有 source 的状态（通常在 composer stop 时调用）。
+   */
   clear() {
     this._states = new WeakMap();
   }
+
+  // ---------------------------------------------------------------------------
+  // 内部方法
+  // ---------------------------------------------------------------------------
+
+  /**
+   * 获取或创建 source 对应的 AI 虚拟背景内部状态。
+   *
+   * 状态字段说明：
+   *   - config: 当前归一化配置
+   *   - disposed: 是否已标记为销毁（异步回调检查此标记避免操作已释放资源）
+   *   - generation: 配置代数，每次 setSourceConfig 递增，用于忽略过时的异步回调
+   *   - runtime: MediaPipeSegmenterRuntime 实例
+   *   - runtimeReady: 运行时是否已初始化完成
+   *   - runtimeInitializing: 运行时是否正在初始化中
+   *   - runtimeInitError: 运行时初始化错误信息
+   *   - runtimeConfigKey: 当前运行时对应的配置 key
+   *   - pendingSegmentation: 是否有分割请求正在进行中
+   *   - activeSegPromise / queuedSegPromise: 进行中/排队中的分割 Promise
+   *   - runtimeAllowedAt: 最早允许启动分割的时间戳（startupDelayMs 之后）
+   *   - latestMask: 最新的分割遮罩 canvas
+   *   - renderedSinceSeg: 自上次分割后已渲染的帧数（用于 frameSkip）
+   *   - backgroundImage*: 背景图加载状态和引用
+   *   - segmentationCanvas / workCanvas: 复用的离屏 canvas
+   *
+   * @param {Object} source - 内部 source 对象
+   * @returns {Object} 内部状态对象
+   */
   _ensureState(source) {
     var existingState = source ? this._states.get(source) : null;
     if (existingState) {
@@ -23957,40 +25262,77 @@ module.exports = class SourceAiVBController {
     var state = {
       config: source.aiVirtualBackground,
       disposed: false,
+      // 销毁标记
       generation: 0,
+      // 配置代数
       runtime: null,
+      // MediaPipe 分割器运行时
       runtimeReady: false,
+      // 运行时就绪标记
       runtimeInitializing: false,
+      // 运行时初始化中
       runtimeInitError: '',
+      // 初始化错误信息
       runtimeConfigKey: '',
+      // 运行时配置 key
       pendingSegmentation: false,
-      activeSegmentationPromise: null,
-      queuedSegmentationPromise: null,
-      lastQueuedSegmentationInputAt: 0,
-      lastSegmentationScheduledAt: 0,
+      // 是否有进行中的分割
+      activeSegPromise: null,
+      // 当前进行中的分割 Promise
+      queuedSegPromise: null,
+      // 排队中的分割 Promise
+      lastQueuedSegAt: 0,
+      // 上次更新排队帧输入的时间戳
+      lastSegAt: 0,
+      // 上次调度分割的时间戳（用于 fps 节流）
       runtimeAllowedAt: 0,
+      // 最早允许启动分割的时间
       latestMask: null,
-      renderedSinceSegmentation: 0,
+      // 最新遮罩 canvas
+      renderedSinceSeg: 0,
+      // 分割后已渲染帧数
       backgroundImageUrl: null,
-      backgroundImageLoadedUrl: null,
-      backgroundImagePendingUrl: null,
+      // 当前配置的背景图 URL
+      bgImageLoadedUrl: null,
+      // 已加载完成的背景图 URL
+      bgImagePendingUrl: null,
+      // 正在加载中的背景图 URL
       backgroundImage: null,
-      backgroundImageStatus: 'idle',
-      backgroundImageError: '',
-      backgroundImageRequestId: 0,
+      // 已加载的背景图 Image 元素
+      bgImageStatus: 'idle',
+      // 背景图加载状态：idle / loading / ready / error
+      bgImageError: '',
+      // 背景图加载错误信息
+      bgImageReqId: 0,
+      // 背景图请求 ID（避免过时回调）
       loadingImage: false,
+      // 是否正在加载背景图
       segmentationCanvas: null,
+      // 送入分割模型的缩放后帧 canvas
       segmentationContext: null,
+      // segmentationCanvas 的 2D 上下文
       workCanvas: null,
-      workContext: null
+      // 合成用工作画布（前景抠图 + 背景合成）
+      workContext: null // workCanvas 的 2D 上下文
     };
     this._states.set(source, state);
     return state;
   }
+
+  /**
+   * 确保 MediaPipe 分割器运行时已初始化。
+   *
+   * 首次调用时创建 MediaPipeSegmenterRuntime 实例并异步初始化。
+   * 使用 generation 机制确保过时的初始化回调不会污染当前状态。
+   *
+   * @param {Object} state - source 内部状态
+   */
   _ensureRuntime(state) {
     if (!state || !state.config || !isEffectEnabled(state.config) || !isRuntimeEnabled(state.config)) {
       return;
     }
+
+    // 已就绪或正在初始化 → 跳过
     if (state.runtimeReady || state.runtimeInitializing) {
       return;
     }
@@ -23999,11 +25341,13 @@ module.exports = class SourceAiVBController {
     });
     state.runtimeInitializing = true;
     state.runtimeInitError = '';
-    var generation = state.generation;
+    var generation = state.generation; // 保存当前代数，用于回调中比对
+
     state.runtime.initialize({
       modelPath: state.config.modelPath,
       delegate: state.config.segmentation.delegate
     }).then(() => {
+      // 状态已被替换（generation 不匹配）或已销毁 → 忽略
       if (state.disposed || state.generation !== generation) {
         return;
       }
@@ -24012,10 +25356,19 @@ module.exports = class SourceAiVBController {
       if (state.disposed || state.generation !== generation) {
         return;
       }
-      state.runtimeInitError = error && error.message ? error.message : String(error);
+      state.runtimeInitError = getErrorMessage(error);
       if (this._logger) {
-        this._logger.warn(`AiVB runtime init failed: ${state.runtimeInitError}`);
+        this._logger.warn(`AiVB runtime init failed: error=${state.runtimeInitError} ` + `modelPath=${state.config && state.config.modelPath ? state.config.modelPath : ''} ` + `delegate=${state.config && state.config.segmentation ? state.config.segmentation.delegate : ''} ` + `assetConfig=${JSON.stringify(state.config && state.config.assetConfig ? state.config.assetConfig : {})}`);
       }
+      this._reportIssue({
+        stage: 'aivb-runtime-init',
+        message: state.runtimeInitError,
+        details: {
+          modelPath: state.config && state.config.modelPath ? state.config.modelPath : '',
+          delegate: state.config && state.config.segmentation ? state.config.segmentation.delegate : '',
+          assetConfig: state.config && state.config.assetConfig ? cloneObject(state.config.assetConfig) : {}
+        }
+      });
     }).finally(() => {
       if (state.disposed || state.generation !== generation) {
         return;
@@ -24023,6 +25376,13 @@ module.exports = class SourceAiVBController {
       state.runtimeInitializing = false;
     });
   }
+
+  /**
+   * 重置并销毁运行时状态。
+   * 清理遮罩、取消进行中的分割、销毁 MediaPipe 实例。
+   *
+   * @param {Object} state - source 内部状态
+   */
   _resetRuntime(state) {
     if (!state) {
       return;
@@ -24031,78 +25391,135 @@ module.exports = class SourceAiVBController {
     state.runtimeInitializing = false;
     state.runtimeInitError = '';
     state.pendingSegmentation = false;
-    state.activeSegmentationPromise = null;
-    state.queuedSegmentationPromise = null;
-    state.lastQueuedSegmentationInputAt = 0;
-    state.lastSegmentationScheduledAt = 0;
+    state.activeSegPromise = null;
+    state.queuedSegPromise = null;
+    state.lastQueuedSegAt = 0;
+    state.lastSegAt = 0;
     state.latestMask = null;
     if (state.runtime && typeof state.runtime.destroy === 'function') {
       Promise.resolve(state.runtime.destroy()).catch(() => {});
     }
     state.runtime = null;
   }
+
+  /**
+   * 确保背景图已加载（image 模式）。
+   *
+   * 处理以下场景：
+   *   - 背景图未加载 → 创建 Image 元素开始加载
+   *   - 背景图 URL 与已加载的一致 → 复用
+   *   - 背景图正在加载且 URL 不变 → 等待
+   *   - 加载失败且 URL 不变 → 不重试
+   *
+   * @param {Object} state - source 内部状态
+   */
   _ensureBackgroundImage(state) {
+    // 非 image 模式直接跳过
     if (!state || !state.config || state.config.mode !== 'image') {
       return;
     }
+
+    // 无 URL → 清空背景图
     if (!state.config.imageUrl) {
       state.backgroundImage = null;
-      state.backgroundImageLoadedUrl = null;
-      state.backgroundImagePendingUrl = null;
-      state.backgroundImageStatus = 'idle';
-      state.backgroundImageError = '';
+      state.bgImageLoadedUrl = null;
+      state.bgImagePendingUrl = null;
+      state.bgImageStatus = 'idle';
+      state.bgImageError = '';
       state.loadingImage = false;
       return;
     }
-    if (state.backgroundImage && state.backgroundImageLoadedUrl === state.config.imageUrl) {
+
+    // 已有正确加载的背景图 → 复用
+    if (state.backgroundImage && state.bgImageLoadedUrl === state.config.imageUrl) {
       return;
     }
-    if (state.loadingImage && state.backgroundImagePendingUrl === state.config.imageUrl) {
+
+    // 同一 URL 正在加载中 → 等待
+    if (state.loadingImage && state.bgImagePendingUrl === state.config.imageUrl) {
       return;
     }
-    if (state.backgroundImageStatus === 'error' && state.backgroundImagePendingUrl === state.config.imageUrl) {
+
+    // 同一 URL 已加载失败 → 不重试（避免持续失败消耗资源）
+    if (state.bgImageStatus === 'error' && state.bgImagePendingUrl === state.config.imageUrl) {
       return;
     }
     var image = this._createImageElement();
-    var requestId = state.backgroundImageRequestId + 1;
+    var requestId = state.bgImageReqId + 1;
     var imageUrl = state.config.imageUrl;
+
+    // 环境不支持 Image 构造
     if (!image) {
-      state.backgroundImageStatus = 'error';
-      state.backgroundImageError = 'Image element is unavailable';
+      state.bgImageStatus = 'error';
+      state.bgImageError = 'Image element is unavailable';
+      if (this._logger) {
+        this._logger.warn(`AiVB background image unavailable: url=${state.config && state.config.imageUrl ? state.config.imageUrl : ''} ` + `mode=${state.config && state.config.mode ? state.config.mode : ''}`);
+      }
+      this._reportIssue({
+        stage: 'aivb-background-image-create',
+        message: state.bgImageError,
+        details: {
+          imageUrl: state.config && state.config.imageUrl ? state.config.imageUrl : '',
+          mode: state.config && state.config.mode ? state.config.mode : ''
+        }
+      });
       return;
     }
-    state.backgroundImageRequestId = requestId;
+    state.bgImageReqId = requestId;
     state.loadingImage = true;
-    state.backgroundImageStatus = 'loading';
-    state.backgroundImagePendingUrl = imageUrl;
-    state.backgroundImageError = '';
+    state.bgImageStatus = 'loading';
+    state.bgImagePendingUrl = imageUrl;
+    state.bgImageError = '';
     image.onload = () => {
-      if (state.disposed || state.backgroundImageRequestId !== requestId) {
+      // 请求 ID 不匹配 → 已有更新的请求，忽略
+      if (state.disposed || state.bgImageReqId !== requestId) {
         return;
       }
       state.loadingImage = false;
       state.backgroundImage = image;
-      state.backgroundImageLoadedUrl = imageUrl;
-      state.backgroundImagePendingUrl = null;
-      state.backgroundImageStatus = 'ready';
-      state.backgroundImageError = '';
+      state.bgImageLoadedUrl = imageUrl;
+      state.bgImagePendingUrl = null;
+      state.bgImageStatus = 'ready';
+      state.bgImageError = '';
     };
     image.onerror = () => {
-      if (state.disposed || state.backgroundImageRequestId !== requestId) {
+      if (state.disposed || state.bgImageReqId !== requestId) {
         return;
       }
       state.loadingImage = false;
-      state.backgroundImagePendingUrl = null;
-      state.backgroundImageStatus = 'error';
-      state.backgroundImageError = 'Failed to load background image';
+      state.bgImagePendingUrl = null;
+      state.bgImageStatus = 'error';
+      state.bgImageError = 'Failed to load background image';
+      if (this._logger) {
+        this._logger.warn(`AiVB background image failed: url=${imageUrl} requestId=${requestId}`);
+      }
+      this._reportIssue({
+        stage: 'aivb-background-image-load',
+        message: state.bgImageError,
+        details: {
+          imageUrl: imageUrl,
+          requestId: requestId
+        }
+      });
     };
     image.src = imageUrl;
   }
+
+  /**
+   * 创建用于加载背景图的 Image 元素。
+   * 设置 crossOrigin='anonymous' 避免跨域污染 canvas。
+   *
+   * @returns {HTMLImageElement|null} Image 元素，环境不支持时返回 null
+   */
   _createImageElement() {
     var image = null;
+
+    // 优先使用 Image 构造函数
     if (typeof Image !== 'undefined') {
       image = new Image();
-    } else if (typeof document !== 'undefined' && document && typeof document.createElement === 'function') {
+    }
+    // 回退到 document.createElement
+    else if (typeof document !== 'undefined' && document && typeof document.createElement === 'function') {
       try {
         image = document.createElement('img');
       } catch (error) {}
@@ -24115,52 +25532,100 @@ module.exports = class SourceAiVBController {
     }
     return null;
   }
+
+  /**
+   * 调度一次人像分割。
+   *
+   * 节流策略：
+   *   1. frameSkip > 0 时，每隔 frameSkip 帧才执行一次分割
+   *   2. maxRuntimeFps 限制每秒最大分割次数
+   *   3. 同一时间最多一个进行中的分割 + 一个排队中的分割
+   *   4. 排队中的帧总是保留最新的（latest-frame-wins）
+   *
+   * @param {Object} state - source 内部状态
+   * @param {HTMLVideoElement} videoElement - 当前视频帧
+   * @param {number} [now=this._now()] - 当前时间戳
+   */
   _scheduleSegmentation(state, videoElement, now = this._now()) {
-    if (!state || !state.runtimeReady || !state.runtime || !this._isVideoReadyForSegmentation(videoElement)) {
+    // 前置检查：运行时未就绪或视频不可用 → 跳过
+    if (!state || !state.runtimeReady || !state.runtime || !this._isVideoReadyForSeg(videoElement)) {
       return;
     }
     var frameSkip = state.config && state.config.segmentation ? state.config.segmentation.frameSkip : 0;
-    var shouldRun = !state.latestMask || frameSkip <= 0 || state.renderedSinceSegmentation >= frameSkip;
+    var shouldRun = !state.latestMask || frameSkip <= 0 || state.renderedSinceSeg >= frameSkip;
+
+    // frameSkip 条件不满足 → 跳过本帧
     if (!shouldRun) {
       return;
     }
+
+    // fps 节流检查
     if (!this._canScheduleSegmentation(state, now)) {
       return;
     }
     var generation = state.generation;
     if (state.pendingSegmentation) {
-      if (state.queuedSegmentationPromise) {
-        this._refreshQueuedSegmentationInput(state, videoElement);
+      // 已有进行中的分割
+      if (state.queuedSegPromise) {
+        // 排队位已满 → 只更新排队帧的输入（latest-frame-wins）
+        this._refreshQueuedSegInput(state, videoElement);
         return;
       }
+
+      // 排队位空闲 → 创建新的排队请求
       var _segmentationInput = this._getSegmentationInput(state, videoElement);
       var _input = _segmentationInput || videoElement;
       var queuedPromise = state.runtime.segmentForVideo(_input);
-      state.queuedSegmentationPromise = queuedPromise;
-      state.lastQueuedSegmentationInputAt = now;
-      state.lastSegmentationScheduledAt = now;
+      state.queuedSegPromise = queuedPromise;
+      state.lastQueuedSegAt = now;
+      state.lastSegAt = now;
       this._bindSegmentationPromise(state, queuedPromise, generation);
       return;
     }
+
+    // 无进行中的分割 → 直接发起新分割
     var segmentationInput = this._getSegmentationInput(state, videoElement);
     var input = segmentationInput || videoElement;
     state.pendingSegmentation = true;
     var activePromise = state.runtime.segmentForVideo(input);
-    state.activeSegmentationPromise = activePromise;
-    state.lastQueuedSegmentationInputAt = 0;
-    state.lastSegmentationScheduledAt = now;
+    state.activeSegPromise = activePromise;
+    state.lastQueuedSegAt = 0;
+    state.lastSegAt = now;
     this._bindSegmentationPromise(state, activePromise, generation);
   }
+
+  /**
+   * 检查当前是否满足 fps 节流条件。
+   *
+   * @param {Object} state - source 内部状态
+   * @param {number} now - 当前时间戳
+   * @returns {boolean} true=可以调度分割
+   */
   _canScheduleSegmentation(state, now) {
     var maxRuntimeFps = state.config ? Number(state.config.maxRuntimeFps) : DEFAULT_MAX_RUNTIME_FPS;
     var minInterval = Number.isFinite(maxRuntimeFps) && maxRuntimeFps > 0 ? 1000 / maxRuntimeFps : 1000 / DEFAULT_MAX_RUNTIME_FPS;
-    if (!state.lastSegmentationScheduledAt) {
+
+    // 首次调度，无需节流
+    if (!state.lastSegAt) {
       return true;
     }
-    return now - state.lastSegmentationScheduledAt >= minInterval;
+    return now - state.lastSegAt >= minInterval;
   }
+
+  /**
+   * 将分割 Promise 的结果绑定到 state。
+   *
+   * 成功后更新 latestMask 和 renderedSinceSeg。
+   * 失败时记录日志（不中断渲染，渲染器会回退到直接绘制原始视频帧）。
+   * 完成后自动将排队中的分割提升为进行中。
+   *
+   * @param {Object} state - source 内部状态
+   * @param {Promise} promise - 分割 Promise
+   * @param {number} generation - 发起时的代数
+   */
   _bindSegmentationPromise(state, promise, generation) {
     promise.then(result => {
+      // generation 不匹配 → 状态已被替换，忽略过时结果
       if (state.disposed || state.generation !== generation) {
         return;
       }
@@ -24168,48 +25633,85 @@ module.exports = class SourceAiVBController {
         return;
       }
       state.latestMask = result.segmentationMask;
-      state.renderedSinceSegmentation = 0;
+      state.renderedSinceSeg = 0;
     }).catch(error => {
       if (state.disposed || state.generation !== generation) {
         return;
       }
+
+      // 分割失败不中断渲染，渲染器会回退到直接绘制原始帧
       if (this._logger) {
-        this._logger.warn(`AiVB segmentation failed: ${error && error.message ? error.message : String(error)}`);
+        this._logger.warn(`AiVB segmentation failed: error=${getErrorMessage(error)} ` + `mode=${state.config && state.config.mode ? state.config.mode : ''} ` + `delegate=${state.config && state.config.segmentation ? state.config.segmentation.delegate : ''} ` + `runtimeReady=${state.runtimeReady} pending=${state.pendingSegmentation}`);
       }
+      this._reportIssue({
+        stage: 'aivb-segmentation',
+        message: getErrorMessage(error),
+        details: {
+          mode: state.config && state.config.mode ? state.config.mode : '',
+          delegate: state.config && state.config.segmentation ? state.config.segmentation.delegate : '',
+          runtimeReady: Boolean(state.runtimeReady),
+          pending: Boolean(state.pendingSegmentation)
+        }
+      });
     }).finally(() => {
       if (state.disposed || state.generation !== generation) {
         return;
       }
-      if (state.activeSegmentationPromise === promise) {
-        if (state.queuedSegmentationPromise) {
-          state.activeSegmentationPromise = state.queuedSegmentationPromise;
-          state.queuedSegmentationPromise = null;
+
+      // 当前进行中的 Promise 完成 → 提升排队中的 Promise 为进行中
+      if (state.activeSegPromise === promise) {
+        if (state.queuedSegPromise) {
+          state.activeSegPromise = state.queuedSegPromise;
+          state.queuedSegPromise = null;
           state.pendingSegmentation = true;
           return;
         }
-        state.activeSegmentationPromise = null;
+        state.activeSegPromise = null;
         state.pendingSegmentation = false;
         return;
       }
-      if (state.queuedSegmentationPromise === promise) {
-        state.queuedSegmentationPromise = null;
+
+      // 排队中的 Promise 被取消（更旧的排队可能已被替换）
+      if (state.queuedSegPromise === promise) {
+        state.queuedSegPromise = null;
       }
     });
   }
-  _refreshQueuedSegmentationInput(state, videoElement) {
+
+  /**
+   * 更新排队中分割请求的视频帧输入。
+   * 受 targetFps 节流，避免排队帧更新过于频繁。
+   *
+   * @param {Object} state - source 内部状态
+   * @param {HTMLVideoElement} videoElement - 当前视频帧
+   */
+  _refreshQueuedSegInput(state, videoElement) {
     var now = this._now();
     var targetFps = state.config && state.config.video ? Number(state.config.video.targetFps) : 15;
     var minInterval = Number.isFinite(targetFps) && targetFps > 0 ? 1000 / targetFps : 66;
-    if (state.lastQueuedSegmentationInputAt && now - state.lastQueuedSegmentationInputAt < minInterval) {
+
+    // 更新间隔不足 → 跳过（排队帧保持上一次的输入）
+    if (state.lastQueuedSegAt && now - state.lastQueuedSegAt < minInterval) {
       return;
     }
-    state.lastQueuedSegmentationInputAt = now;
+    state.lastQueuedSegAt = now;
     var segmentationInput = this._getSegmentationInput(state, videoElement);
     var input = segmentationInput || videoElement;
     if (state.runtime && typeof state.runtime.updateQueuedFrame === 'function') {
       state.runtime.updateQueuedFrame(input);
     }
   }
+
+  /**
+   * 准备送入分割模型的处理后帧。
+   *
+   * 将当前 video 帧按 processingScale 缩放到较小分辨率，
+   * 绘制到复用的离屏 canvas 上。缩放后分辨率降低可减少 MediaPipe 推理耗时。
+   *
+   * @param {Object} state - source 内部状态
+   * @param {HTMLVideoElement} videoElement - 当前视频帧
+   * @returns {HTMLCanvasElement|null} 缩放后的帧 canvas，视频未就绪时返回 null
+   */
   _getSegmentationInput(state, videoElement) {
     if (!state || !videoElement || typeof document === 'undefined') {
       return null;
@@ -24224,6 +25726,8 @@ module.exports = class SourceAiVBController {
     var scale = Number.isFinite(processingScale) ? Math.max(0.1, Math.min(1, processingScale)) : 1;
     var width = Math.max(1, Math.round(sourceWidth * scale));
     var height = Math.max(1, Math.round(sourceHeight * scale));
+
+    // 懒创建复用 canvas
     if (!state.segmentationCanvas) {
       state.segmentationCanvas = document.createElement('canvas');
       state.segmentationContext = state.segmentationCanvas.getContext('2d');
@@ -24231,6 +25735,8 @@ module.exports = class SourceAiVBController {
     if (!state.segmentationContext) {
       return null;
     }
+
+    // 仅在尺寸变化时更新 canvas 尺寸
     if (state.segmentationCanvas.width !== width) {
       state.segmentationCanvas.width = width;
     }
@@ -24241,7 +25747,15 @@ module.exports = class SourceAiVBController {
     state.segmentationContext.drawImage(videoElement, 0, 0, width, height);
     return state.segmentationCanvas;
   }
-  _isVideoReadyForSegmentation(videoElement) {
+
+  /**
+   * 检查 video 元素是否已准备好进行分割。
+   * 条件：readyState >= 2 (HAVE_CURRENT_DATA)，且有非零分辨率。
+   *
+   * @param {HTMLVideoElement} videoElement - video 元素
+   * @returns {boolean} true=视频就绪
+   */
+  _isVideoReadyForSeg(videoElement) {
     if (!videoElement || videoElement.readyState < 2) {
       return false;
     }
@@ -24249,11 +25763,18 @@ module.exports = class SourceAiVBController {
     var videoHeight = Number(videoElement.videoHeight) || 0;
     return videoWidth > 0 && videoHeight > 0;
   }
+
+  /**
+   * 获取当前高精度时间戳（毫秒）。
+   * 优先使用 performance.now()，回退到 Date.now()。
+   *
+   * @returns {number} 时间戳（ms）
+   */
   _now() {
     return typeof performance !== 'undefined' && performance && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 };
-},{"./AiVBConfig":57,"./MediaPipeSegmenterRuntime":59}],61:[function(require,module,exports){
+},{"../../MediaEffectsIssue":70,"./AiVBConfig":57,"./MediaPipeSegmenterRuntime":59}],61:[function(require,module,exports){
 "use strict";
 
 /**
@@ -25433,11 +26954,11 @@ function shouldPreferMainWebGL2() {
  *   2. Worker 内根据配置选择 WebGL2 或 Canvas2D 上下文
  *   3. 每帧从 video 元素抽取 VideoFrame / ImageBitmap 并 transfer 到 Worker
  *   4. Worker 渲染后通过 transferToImageBitmap() 传回 ImageBitmap
- *   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
+ *   5. 主线程将 ImageBitmap 绘制回统一输出 canvas，供 captureStream / Insertable 复用
  *
  * 关键设计决策：不再 transfer 输出 canvas 本身。
- * canvas.captureStream() 始终绑定主线程 canvas，避免部分浏览器
- * 无法捕获 Worker 直接绘制结果而出现黑屏。
+ * 统一输出 canvas 始终留在主线程，避免部分浏览器无法消费 Worker
+ * 直接绘制结果而出现黑屏或输出链断裂。
  *
  * @module WorkerRenderer
  */
@@ -25462,7 +26983,7 @@ module.exports = class WorkerRenderer extends BaseRenderer {
     }, rendererInfo));
     this._onFatalError = onFatalError;
 
-    /** @type {HTMLCanvasElement|null} 主线程输出 canvas（绑定 captureStream） */
+    /** @type {HTMLCanvasElement|null} 主线程统一输出 canvas（供 captureStream / Insertable 复用） */
     this._canvas = null;
 
     /** @type {CanvasRenderingContext2D|null} 主线程 2D 上下文（写入 Worker 返回的 bitmap） */
@@ -26259,7 +27780,7 @@ function workerMain() {
   //   2. Worker 根据 requestedMode 选择 WebGL2 或 Canvas2D 初始化渲染上下文
   //   3. 主线程每帧将 VideoFrame/ImageBitmap transfer 过来（render 消息）
   //   4. Worker 渲染到 OffscreenCanvas 后，调用 transferToImageBitmap() 回传
-  //   5. 主线程将 ImageBitmap 绘制到用于 captureStream() 的输出 canvas
+  //   5. 主线程将 ImageBitmap 绘制回统一输出 canvas，供 captureStream / Insertable 复用
   //
   // 消息协议：
   //   init(canvas, requestedMode, width, height, backgroundColor)
@@ -26400,9 +27921,9 @@ void main() {
         // 当前配置的序列化 key，用于检测配置变更
         latestMask: null,
         // 最新的分割遮罩 canvas
-        renderedSinceSegmentation: 0,
+        renderedSinceSeg: 0,
         // 上次分割后已渲染的帧数（用于 frameSkip）
-        lastSegmentationScheduledAt: 0,
+        lastSegAt: 0,
         // 上次调度分割的时间戳（用于 fps 节流）
         runtimeAllowedAt: 0,
         // 最早允许启动分割的时间（startupDelayMs）
@@ -26453,10 +27974,10 @@ void main() {
       assetConfig: config.assetConfig || {}
     });
   }
-  function resetSourceStateForConfig(state, config) {
+  function resetSourceState(state, config) {
     state.latestMask = null;
-    state.renderedSinceSegmentation = 0;
-    state.lastSegmentationScheduledAt = 0;
+    state.renderedSinceSeg = 0;
+    state.lastSegAt = 0;
     state.runtimeAllowedAt = now() + Math.max(0, Number(config.startupDelayMs) || 0);
   }
   function resolveAiVBState(id, config) {
@@ -26464,7 +27985,7 @@ void main() {
     var configKey = createConfigKey(config);
     if (state.configKey !== configKey) {
       state.configKey = configKey;
-      resetSourceStateForConfig(state, config);
+      resetSourceState(state, config);
     }
     return state;
   }
@@ -26584,7 +28105,7 @@ void main() {
 
   // 向目标上下文绘制 surface，支持水平镜像和垂直翻转
   // mirrorX: 水平翻转（用于镜像效果）；flipY: 垂直翻转（WebGL 纹理坐标系适配）
-  function drawSurfaceToContext(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY) {
+  function drawSurface(targetContext, surface, x, y, drawWidth, drawHeight, mirrorX, flipY) {
     if (!targetContext || !surface) {
       return;
     }
@@ -26674,10 +28195,10 @@ void main() {
   function canRunSegmentation(sourceState, config) {
     var fps = Number(config.maxRuntimeFps);
     var minInterval = fps > 0 ? 1000 / fps : 200;
-    if (!sourceState.lastSegmentationScheduledAt) {
+    if (!sourceState.lastSegAt) {
       return true;
     }
-    return now() - sourceState.lastSegmentationScheduledAt >= minInterval;
+    return now() - sourceState.lastSegAt >= minInterval;
   }
   function shouldUpdateMask(sourceState, config) {
     var frameSkip = config && config.segmentation ? Number(config.segmentation.frameSkip) : 0;
@@ -26687,7 +28208,7 @@ void main() {
     if (!Number.isFinite(frameSkip) || frameSkip <= 0) {
       return true;
     }
-    return sourceState.renderedSinceSegmentation >= frameSkip;
+    return sourceState.renderedSinceSeg >= frameSkip;
   }
   function buildSegmentationInput(sourceState, frame, config) {
     var frameWidth = getFrameWidth(frame);
@@ -26701,7 +28222,7 @@ void main() {
       return null;
     }
     segmentationSurface.context.clearRect(0, 0, targetWidth, targetHeight);
-    drawSurfaceToContext(segmentationSurface.context, frame, 0, 0, targetWidth, targetHeight, false, false);
+    drawSurface(segmentationSurface.context, frame, 0, 0, targetWidth, targetHeight, false, false);
     return segmentationSurface.canvas;
   }
   async function runSegmentation(sourceState, runtimeState, input) {
@@ -26740,14 +28261,14 @@ void main() {
     if (!shouldUpdateMask(sourceState, config) || !canRunSegmentation(sourceState, config)) {
       return sourceState.latestMask;
     }
-    sourceState.lastSegmentationScheduledAt = now();
+    sourceState.lastSegAt = now();
     var runtimeState = await ensureSegmenterRuntime(config);
     var input = buildSegmentationInput(sourceState, item.frame, config);
     if (!runtimeState || !runtimeState.segmenter || !input) {
       return sourceState.latestMask;
     }
     sourceState.latestMask = await runSegmentation(sourceState, runtimeState, input);
-    sourceState.renderedSinceSegmentation = 0;
+    sourceState.renderedSinceSeg = 0;
     return sourceState.latestMask;
   }
 
@@ -26772,7 +28293,7 @@ void main() {
       return item.frame;
     }
     foregroundSurface.context.clearRect(0, 0, drawWidth, drawHeight);
-    drawSurfaceToContext(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
+    drawSurface(foregroundSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
     foregroundSurface.context.globalCompositeOperation = 'destination-in';
     foregroundSurface.context.drawImage(mask, 0, 0, drawWidth, drawHeight);
     foregroundSurface.context.globalCompositeOperation = 'source-over';
@@ -26780,7 +28301,7 @@ void main() {
     if (item.aiVirtualBackground.mode === 'blur') {
       outputSurface.context.save();
       outputSurface.context.filter = 'blur(' + (Number(item.aiVirtualBackground.blurRadius) || 16) + 'px)';
-      drawSurfaceToContext(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
+      drawSurface(outputSurface.context, item.frame, 0, 0, drawWidth, drawHeight, Boolean(item.mirrorX), false);
       outputSurface.context.restore();
     } else if (item.aiVirtualBackground.mode === 'image') {
       var backgroundImage = await ensureBackgroundImage(item.aiVirtualBackground.imageUrl || '');
@@ -26794,7 +28315,7 @@ void main() {
       return item.frame;
     }
     outputSurface.context.drawImage(foregroundSurface.canvas, 0, 0, drawWidth, drawHeight);
-    sourceState.renderedSinceSegmentation += 1;
+    sourceState.renderedSinceSeg += 1;
     return outputSurface.canvas;
   }
 
@@ -27017,7 +28538,7 @@ void main() {
       }
       var surface = await getRenderableSurface(item);
       var draw = resolveDrawRect(item.draw, outputMirrorX);
-      drawSurfaceToContext(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
+      drawSurface(ctx, surface, draw.x, draw.y, draw.width, draw.height, Boolean(item.mirrorX) !== outputMirrorX, false);
     }
     drawWatermarksCanvas2D(payload.sourceWatermarks || [], outputMirrorX);
     drawWatermarksCanvas2D(payload.outputWatermarks || [], mirrorWatermarksWithOutput ? outputMirrorX : false);
@@ -27030,7 +28551,7 @@ void main() {
       var previousAlpha = ctx.globalAlpha;
       var draw = resolveDrawRect(watermark.draw, applyMirror);
       ctx.globalAlpha = typeof watermark.opacity === 'number' ? watermark.opacity : 1;
-      drawSurfaceToContext(ctx, watermark.frame, draw.x, draw.y, draw.width, draw.height, Boolean(applyMirror), false);
+      drawSurface(ctx, watermark.frame, draw.x, draw.y, draw.width, draw.height, Boolean(applyMirror), false);
       ctx.globalAlpha = previousAlpha;
     });
   }
@@ -27239,6 +28760,62 @@ exports.createWorkerScript = function () {
   return source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
 };
 },{"../aiVirtualBackground/AiVBSegmentationCommon":58}],70:[function(require,module,exports){
+"use strict";
+
+function getErrorMessage(error) {
+  return error && error.message ? error.message : String(error);
+}
+function stringifyDetails(details) {
+  try {
+    return JSON.stringify(details || {});
+  } catch (error) {
+    return `[unserializable details: ${getErrorMessage(error)}]`;
+  }
+}
+function normalizeIssue(defaults, issue) {
+  return Object.assign({}, defaults, issue || {});
+}
+function logIssue(logger, prefix, issue, includeComponent) {
+  var loggerMethod = logger[issue.severity] || logger.warn;
+  var message = `${prefix}: `;
+  if (includeComponent) {
+    message += `component=${issue.component} `;
+  }
+  message += `stage=${issue.stage} severity=${issue.severity} ` + `fallbackApplied=${Boolean(issue.fallbackApplied)} degraded=${Boolean(issue.degraded)} ` + `message=${issue.message} details=${stringifyDetails(issue.details)}`;
+  loggerMethod.call(logger, message);
+}
+function forwardIssue(onIssue, issue, logger, callbackWarnPrefix, cloneIssue) {
+  if (!onIssue) {
+    return;
+  }
+  try {
+    onIssue(cloneIssue ? cloneIssue(issue) : issue);
+  } catch (error) {
+    if (logger && typeof logger.warn === 'function') {
+      logger.warn(`${callbackWarnPrefix}: ${getErrorMessage(error)}`);
+    }
+  }
+}
+function emitIssue(onIssue, defaults, issue, logger, callbackWarnPrefix) {
+  if (!onIssue) {
+    return;
+  }
+  try {
+    onIssue(normalizeIssue(defaults, issue));
+  } catch (error) {
+    if (logger && typeof logger.warn === 'function') {
+      logger.warn(`${callbackWarnPrefix}: ${getErrorMessage(error)}`);
+    }
+  }
+}
+module.exports = {
+  emitIssue,
+  forwardIssue,
+  getErrorMessage,
+  logIssue,
+  normalizeIssue
+};
+},{}],71:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -27451,7 +29028,7 @@ module.exports = class Message extends EventEmitter {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./URI":90,"./Utils":91,"events":95}],71:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./URI":91,"./Utils":92,"events":96}],72:[function(require,module,exports){
 "use strict";
 
 var URI = require('./URI');
@@ -27540,7 +29117,7 @@ module.exports = class NameAddrHeader {
     return body;
   }
 };
-},{"./Grammar":43,"./URI":90}],72:[function(require,module,exports){
+},{"./Grammar":43,"./URI":91}],73:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -27746,7 +29323,7 @@ module.exports = class Options extends EventEmitter {
     });
   }
 };
-},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91,"events":95}],73:[function(require,module,exports){
+},{"./Constants":38,"./Exceptions":42,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./Utils":92,"events":96}],74:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -28000,7 +29577,7 @@ function parseHeader(message, data, headerStart, headerEnd) {
     return true;
   }
 }
-},{"./Grammar":43,"./Logger":45,"./SIPMessage":83}],74:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45,"./SIPMessage":84}],75:[function(require,module,exports){
 "use strict";
 
 var a = 'BQDw\nofp2G4MCvHKAlA0+IVe8m8gfPntmbvpud7uKwBLfzKarAWND0T1babPwmgyAjKzG\nBw1bOs7IwmoQzKIBdg3GrcIcXdwP54o19kTbzrU9gipcF7SMBIA+OiTQvYW3PpMR\npvkBln/JQCMBGKnWgz+Ie4Tu8sCFde8RPQrJuUp7jBAQCgBIAQCAFQBwGkqgNjBI';
@@ -28013,7 +29590,7 @@ for (var i = 0; i < a.length; i++) {
   }
 }
 module.exports = s.split('').reverse().join('');
-},{}],75:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 
@@ -28034,6 +29611,7 @@ var RTCSession_DTMF = require('./RTCSession/DTMF');
 var RTCSession_Info = require('./RTCSession/Info');
 var RTCSession_ReferNotifier = require('./RTCSession/ReferNotifier');
 var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
+var issueUtils = require('./MediaEffectsIssue');
 var MediaPipeline = require('./RTCSession/MediaPipeline');
 var URI = require('./URI');
 var BFCPLib = require('./BFCP/index');
@@ -28042,6 +29620,11 @@ var BFCPUser = BFCPLib.User;
 var Primitive = BFCPLib.Primitive;
 var AttributeName = BFCPLib.AttributeName;
 var RequestStatusValue = BFCPLib.RequestStatusValue;
+var MEDIA_EFFECTS_ISSUE_DEFAULTS = {
+  module: 'MediaEffects',
+  message: 'Unknown media effects issue'
+};
+var getErrorMessage = issueUtils.getErrorMessage;
 var C = {
   // RTCSession states.
   STATUS_NULL: 0,
@@ -28406,24 +29989,33 @@ module.exports = class RTCSession extends EventEmitter {
       return this.getMediaEffectsComposer() ? this.getMediaEffectsComposer().getState() : null;
     }
     var patch = this._mediaPipeline.resolveMediaEffectsComposerRuntimePatch(resolvedOptions);
-    await composer.setConfig(patch);
-    if (resolvedOptions.sources instanceof Array && resolvedOptions.sources.length > 0) {
-      for (var index = 0; index < resolvedOptions.sources.length; index++) {
-        var sourceOptions = resolvedOptions.sources[index];
-        if (!sourceOptions || typeof sourceOptions !== 'object') {
-          continue;
-        }
-        if (typeof sourceOptions.sourceMirror === 'boolean') {
-          await composer.setSourceMirror(index, sourceOptions.sourceMirror);
-        }
-        if (Object.prototype.hasOwnProperty.call(sourceOptions, 'aiVirtualBackground')) {
-          if (sourceOptions.aiVirtualBackground) {
-            composer.setSourceAiVirtualBackground(index, sourceOptions.aiVirtualBackground);
-          } else {
-            composer.clearSourceAiVirtualBackground(index);
+    try {
+      await composer.setConfig(patch);
+      if (resolvedOptions.sources instanceof Array && resolvedOptions.sources.length > 0) {
+        for (var index = 0; index < resolvedOptions.sources.length; index++) {
+          var sourceOptions = resolvedOptions.sources[index];
+          if (!sourceOptions || typeof sourceOptions !== 'object') {
+            continue;
+          }
+          if (typeof sourceOptions.sourceMirror === 'boolean') {
+            await composer.setSourceMirror(index, sourceOptions.sourceMirror);
+          }
+          if (Object.prototype.hasOwnProperty.call(sourceOptions, 'aiVirtualBackground')) {
+            if (sourceOptions.aiVirtualBackground) {
+              composer.setSourceAiVirtualBackground(index, sourceOptions.aiVirtualBackground);
+            } else {
+              composer.clearSourceAiVirtualBackground(index);
+            }
           }
         }
       }
+    } catch (error) {
+      this._emitMediaEffectsIssue({
+        module: 'MediaEffectsComposer',
+        severity: 'error',
+        message: getErrorMessage(error)
+      });
+      throw error;
     }
     this._sessionMediaEffectsComposerOptions = this._mediaPipeline.mergeSessionMediaEffectsComposerOptions(previousSessionOptions, resolvedOptions);
     return composer.getState();
@@ -33229,7 +34821,7 @@ module.exports = class RTCSession extends EventEmitter {
         }
 
         // 默认强制保持分辨率
-        parameters.degradationPreference = 'maintain-resolution';
+        // parameters.degradationPreference = 'maintain-resolution';
         sender.setParameters(parameters).then(() => {
           logger.debug('setParameters success maintain-resolution');
         }).catch(err => {
@@ -33445,13 +35037,61 @@ module.exports = class RTCSession extends EventEmitter {
   }
   _logEventError(level, eventName, error) {
     var loggerMethod = logger[level] || logger.warn;
-    var errorMessage = error && error.message ? error.message : String(error);
+    var errorMessage = getErrorMessage(error);
     loggerMethod(`${this._id} emit "${eventName}" [error:%o]`, error);
     loggerMethod(`${this._id} emit "${eventName}" ${errorMessage} ${JSON.stringify(error)}`);
   }
+
+  /**
+   * 内部方法：接收上游和各媒体的异常报告，统一发出 'mediaeffectsissue' 事件。
+   *
+   * ## 数据流路径
+   *
+   * 整个异常上报链是：
+   *
+   *   最底层组件（_reportIssue）
+   *     → 中层组件（_reportIssue/_handleIssue）
+   *       → ComposerRuntime._recordIssue（统一汇聚，缓存到 _issues）
+   *         → MediaPipeline.emitMediaEffectsIssue（桥接）
+   *           → RTCSession._emitMediaEffectsIssue（本方法）
+   *             → this.emit('mediaeffectsissue', payload)
+   *               → 业务层 session.on('mediaeffectsissue', handler)
+   *
+   * ## 事件负载
+   *
+   * 发出的 payload 只包含 2 个字段，保护内部状态：
+   * - module: 问题所属模块（如 'AiNS', 'MediaEffectsComposer'）
+   * - message: 问题描述
+   *
+   * 更详细的 component / stage / details 等诊断信息由下层模块自行记录到 logger，
+   * RTCSession 这里只负责对外转发最小事件。
+   *
+   * ## 设计目标
+   *
+   * 业务侧可通过 session.on('mediaeffectsissue', handler) 监听异常事件，
+   * 用于：
+   * - 用户体验：在 UI 上提示"美颜/降噪功能异常，已降级处理"
+   * - 监控告警：将事件上报到监控系统
+   * - 问题排查：结合各模块 logger 定位问题根因
+   *
+   * @param {Object} [issue] - 异常描述对象
+   * @param {string} issue.module - 问题所属模块
+   * @param {string} issue.severity - 严重级别 ('debug'|'warn'|'error')
+   * @param {string} issue.message - 问题描述
+   */
+  _emitMediaEffectsIssue(issue) {
+    var normalizedIssue = issueUtils.normalizeIssue(MEDIA_EFFECTS_ISSUE_DEFAULTS, issue);
+    var loggerMethod = logger[issue && issue.severity] || logger.warn;
+    var payload = {
+      module: normalizedIssue.module,
+      message: normalizedIssue.message
+    };
+    loggerMethod.call(logger, `${this._id} emit "mediaeffectsissue": module=${normalizedIssue.module} message=${normalizedIssue.message}`);
+    this.emit('mediaeffectsissue', payload);
+  }
   _logOperationError(level, prefix, error) {
     var loggerMethod = logger[level] || logger.warn;
-    var errorMessage = error && error.message ? error.message : String(error);
+    var errorMessage = getErrorMessage(error);
     loggerMethod(`${this._id} ${prefix} [error:%o]`, error);
     loggerMethod(`${this._id} ${prefix} ${errorMessage} ${JSON.stringify(error)}`);
   }
@@ -34094,7 +35734,7 @@ module.exports = class RTCSession extends EventEmitter {
 };
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"./BFCP/index":7,"./Constants":38,"./Dialog":39,"./Exceptions":42,"./Logger":45,"./RTCSession/DTMF":76,"./RTCSession/Info":77,"./RTCSession/MediaPipeline":78,"./RTCSession/ReferNotifier":79,"./RTCSession/ReferSubscriber":80,"./RequestSender":82,"./SIPMessage":83,"./Timers":86,"./Transactions":87,"./URI":90,"./Utils":91,"buffer":96,"events":95,"sdp-transform":104}],76:[function(require,module,exports){
+},{"./BFCP/index":7,"./Constants":38,"./Dialog":39,"./Exceptions":42,"./Logger":45,"./MediaEffectsIssue":70,"./RTCSession/DTMF":77,"./RTCSession/Info":78,"./RTCSession/MediaPipeline":79,"./RTCSession/ReferNotifier":80,"./RTCSession/ReferSubscriber":81,"./RequestSender":83,"./SIPMessage":84,"./Timers":87,"./Transactions":88,"./URI":91,"./Utils":92,"buffer":97,"events":96,"sdp-transform":105}],77:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34233,7 +35873,7 @@ module.exports = class DTMF extends EventEmitter {
  * Expose C object.
  */
 module.exports.C = C;
-},{"../Constants":38,"../Exceptions":42,"../Logger":45,"../Utils":91,"events":95}],77:[function(require,module,exports){
+},{"../Constants":38,"../Exceptions":42,"../Logger":45,"../Utils":92,"events":96}],78:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -34314,12 +35954,14 @@ module.exports = class Info extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Exceptions":42,"../Utils":91,"events":95}],78:[function(require,module,exports){
+},{"../Constants":38,"../Exceptions":42,"../Utils":92,"events":96}],79:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
+var issueUtils = require('../MediaEffectsIssue');
 var Utils = require('../Utils');
 var logger = new Logger('RTCSession');
+var getErrorMessage = issueUtils.getErrorMessage;
 
 /**
  * 延迟获取依赖，避免在测试进程里过早缓存真实实现。
@@ -34336,6 +35978,9 @@ function getAiNSEngineCtor() {
 }
 function clonePlainObject(input) {
   return input && typeof input === 'object' ? Object.assign({}, input) : {};
+}
+function cloneIssue(issue) {
+  return issue && typeof issue === 'object' ? JSON.parse(JSON.stringify(issue)) : null;
 }
 var MEDIA_EFFECTS_COMPOSER_IMMUTABLE_FIELDS = ['width', 'height', 'fps', 'renderMode', 'workerUrl', 'dropFrameWhenBusy', 'maxFrameQueue', 'preserveDrawingBuffer', 'backgroundColor', 'audioGain', 'enableInsertable', 'manualCaptureFrameControl', 'forceNoSwapWH'];
 function normalizeComposerSourceList(composerOptions) {
@@ -34423,6 +36068,43 @@ module.exports = class MediaPipeline {
     // 这里不复制 session 状态，只持有引用。
     // 这样媒体管线能直接读写 RTCSession 当前会话态，同时避免再次设计状态同步层。
     this._session = session;
+  }
+
+  /**
+   * 桥接方法：将媒体效果的异常事件转发到 RTCSession 的统一事件系统。
+   *
+   * ## 角色
+   *
+   * MediaPipeline 不是媒体效果模块的成员，而是 RTCSession 的内部模块。
+   * 它通过此方法将 ComposerRuntime._onIssue 回调与 RTCSession._emitMediaEffectsIssue
+   * 桥接起来，完成跨模块的异常上报。
+   *
+   * ## 调用链
+   *
+   *   ComposerRuntime._onIssue（或 AiNSEngine._onIssue）
+   *     → MediaPipeline.emitMediaEffectsIssue（本方法，clone后再转发）
+   *       → RTCSession._emitMediaEffectsIssue
+   *         → session.emit('mediaeffectsissue', { module, message })
+   *
+   * ## 重复上报防护
+   *
+   * 在 apply 层面的 catch 块中（如 applyAiNoiseSuppressionOnSdkGumStream），
+   * 会检查 error.__mediaEffectsIssueReported 标记：
+   * - 如果底层已经通过 _reportIssue 上报过了（标记为 true），不再重复上报
+   * - 如果尚未上报（如抛出的异常未被底层捕获），则在此补齐上报
+   *
+   * 这种"底层上报 + 顶层兜底"的双保险机制确保：
+   * - 正常流程中每个问题只上报一次（避免事件风暴）
+   * - 异常流程中也不会遗漏（兜底覆盖未捕获的异常）
+   *
+   * @param {Object} issue - 异常描述对象（会被深拷贝后转发）
+   */
+  emitMediaEffectsIssue(issue) {
+    var session = this._session;
+    if (!session || typeof session._emitMediaEffectsIssue !== 'function') {
+      return;
+    }
+    session._emitMediaEffectsIssue(cloneIssue(issue));
   }
 
   /**
@@ -34666,12 +36348,29 @@ module.exports = class MediaPipeline {
     try {
       this.stopSessionAiNoiseSuppression();
       var AiNSEngine = getAiNSEngineCtor();
-      session._sessionAiNSEngine = new AiNSEngine(normalizedOptions);
+      session._sessionAiNSEngine = new AiNSEngine(Object.assign({}, normalizedOptions, {
+        onIssue: this.emitMediaEffectsIssue.bind(this)
+      }));
       var processedStream = await session._sessionAiNSEngine.process(stream);
       session._aiNSInputStream = stream;
       return processedStream instanceof MediaStream ? processedStream : stream;
     } catch (error) {
       logger.warn(`${session._id} apply ai noise suppression failed:`, error);
+      if (!error || error.__mediaEffectsIssueReported !== true) {
+        this.emitMediaEffectsIssue({
+          module: 'AiNS',
+          component: 'MediaPipeline',
+          stage: 'apply-ai-noise-suppression',
+          severity: 'error',
+          message: getErrorMessage(error),
+          fallbackApplied: true,
+          degraded: true,
+          details: {
+            hasAudioTrack: Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().length > 0),
+            normalizedAiNSOptions: normalizedOptions
+          }
+        });
+      }
       this.stopSessionAiNoiseSuppression();
       return stream;
     }
@@ -34711,6 +36410,22 @@ module.exports = class MediaPipeline {
       return processedStream instanceof MediaStream ? processedStream : stream;
     } catch (error) {
       logger.warn(`${session._id} replace audio track with ai noise suppression failed:`, error);
+      if (!error || error.__mediaEffectsIssueReported !== true) {
+        this.emitMediaEffectsIssue({
+          module: 'AiNS',
+          component: 'MediaPipeline',
+          stage: 'replace-ai-noise-suppression-audio-track',
+          severity: 'error',
+          message: getErrorMessage(error),
+          fallbackApplied: true,
+          degraded: true,
+          details: {
+            hasExistingEngine: Boolean(session._sessionAiNSEngine),
+            hasAudioTrack: Boolean(stream && stream.getAudioTracks && stream.getAudioTracks().length > 0),
+            normalizedAiNSOptions: normalizedOptions
+          }
+        });
+      }
       this.stopSessionAiNoiseSuppression();
       return await this.applyAiNoiseSuppressionOnSdkGumStream(stream, normalizedOptions);
     }
@@ -34915,7 +36630,10 @@ module.exports = class MediaPipeline {
         preserveInputStream: options.preserveExistingComposerInputStream === true
       });
       var MediaEffectsComposer = getMediaEffectsComposerCtor();
-      composer = new MediaEffectsComposer([stream], composerCtorOptions);
+      var composerIssueHandler = this.emitMediaEffectsIssue.bind(this);
+      composer = new MediaEffectsComposer([stream], Object.assign({}, composerCtorOptions, {
+        onIssue: composerIssueHandler
+      }));
       var composerOutputStream = await composer.getOutput({
         type: hasSourceAudio ? 'mixed' : 'video'
       });
@@ -34936,6 +36654,22 @@ module.exports = class MediaPipeline {
       return mixedStream;
     } catch (error) {
       logger.warn(`${session._id} apply composer failed:`, error);
+      if (!error || error.__mediaEffectsIssueReported !== true) {
+        this.emitMediaEffectsIssue({
+          module: 'MediaEffectsComposer',
+          component: 'MediaPipeline',
+          stage: 'apply-media-effects-composer',
+          severity: 'error',
+          message: getErrorMessage(error),
+          fallbackApplied: true,
+          degraded: true,
+          details: {
+            hasSourceAudio: hasSourceAudio,
+            composerOptions: composerOptions,
+            composerCtorOptions: composerCtorOptions
+          }
+        });
+      }
       this.safeStopMediaEffectsComposer(composer, 'composer stop after apply failure failed');
       session._mediaEffectsComposer = null;
       session._mediaEffectsComposerInputStream = null;
@@ -34988,7 +36722,7 @@ module.exports = class MediaPipeline {
     return await this.applyMediaEffectsComposerOnSdkGumStream(aiNoiseSuppressedStream, composerOptions);
   }
 };
-},{"../AINoiseSuppression":6,"../Logger":45,"../MediaEffectsComposer":61,"../Utils":91}],79:[function(require,module,exports){
+},{"../AINoiseSuppression":6,"../Logger":45,"../MediaEffectsComposer":61,"../MediaEffectsIssue":70,"../Utils":92}],80:[function(require,module,exports){
 "use strict";
 
 var Logger = require('../Logger');
@@ -35035,7 +36769,7 @@ module.exports = class ReferNotifier {
     });
   }
 };
-},{"../Constants":38,"../Logger":45}],80:[function(require,module,exports){
+},{"../Constants":38,"../Logger":45}],81:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -35159,7 +36893,7 @@ module.exports = class ReferSubscriber extends EventEmitter {
     });
   }
 };
-},{"../Constants":38,"../Grammar":43,"../Logger":45,"../Utils":91,"events":95}],81:[function(require,module,exports){
+},{"../Constants":38,"../Grammar":43,"../Logger":45,"../Utils":92,"events":96}],82:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -35457,7 +37191,7 @@ ${this._contact}${this._extraContactParams}`);
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./RequestSender":82,"./SIPMessage":83,"./Utils":91}],82:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./RequestSender":83,"./SIPMessage":84,"./Utils":92}],83:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -35596,7 +37330,7 @@ module.exports = class RequestSender {
     }
   }
 };
-},{"./Constants":38,"./DigestAuthentication":41,"./Logger":45,"./Transactions":87}],83:[function(require,module,exports){
+},{"./Constants":38,"./DigestAuthentication":41,"./Logger":45,"./Transactions":88}],84:[function(require,module,exports){
 "use strict";
 
 var sdp_transform = require('sdp-transform');
@@ -36168,7 +37902,7 @@ module.exports = {
   IncomingRequest,
   IncomingResponse
 };
-},{"./Constants":38,"./Grammar":43,"./Logger":45,"./NameAddrHeader":71,"./Utils":91,"sdp-transform":104}],84:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./Logger":45,"./NameAddrHeader":72,"./Utils":92,"sdp-transform":105}],85:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -36236,7 +37970,7 @@ exports.isSocket = socket => {
   }
   return true;
 };
-},{"./Grammar":43,"./Logger":45,"./Utils":91}],85:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45,"./Utils":92}],86:[function(require,module,exports){
 "use strict";
 
 /* eslint-disable max-len */
@@ -36642,7 +38376,7 @@ module.exports = class getStats extends EventEmitter {
     this.emit('network-quality', this._networkQuality);
   }
 };
-},{"./Constants":38,"./Logger":45,"./Utils":91,"events":95}],86:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./Utils":92,"events":96}],87:[function(require,module,exports){
 "use strict";
 
 var T1 = 500,
@@ -36663,7 +38397,7 @@ module.exports = {
   TIMER_M: 64 * T1,
   PROVISIONAL_RESPONSE_INTERVAL: 60000 // See RFC 3261 Section 13.3.1.1
 };
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -37253,7 +38987,7 @@ module.exports = {
   InviteServerTransaction,
   checkTransaction
 };
-},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Timers":86,"events":95}],88:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./SIPMessage":84,"./Timers":87,"events":96}],89:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -37626,7 +39360,7 @@ module.exports = class Transport {
     });
   }
 };
-},{"./Constants":38,"./Logger":45,"./Socket":84,"./Utils":91}],89:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./Socket":85,"./Utils":92}],90:[function(require,module,exports){
 "use strict";
 
 var EventEmitter = require('events').EventEmitter;
@@ -38686,7 +40420,7 @@ function onTransportData(data) {
     }
   }
 }
-},{"./Config":37,"./Constants":38,"./Exceptions":42,"./Logger":45,"./Message":70,"./Options":72,"./Parser":73,"./Pk":74,"./RTCSession":75,"./Registrator":81,"./SIPMessage":83,"./Transactions":87,"./Transport":88,"./URI":90,"./Utils":91,"./sanityCheck":93,"events":95,"jsencrypt":100}],90:[function(require,module,exports){
+},{"./Config":37,"./Constants":38,"./Exceptions":42,"./Logger":45,"./Message":71,"./Options":73,"./Parser":74,"./Pk":75,"./RTCSession":76,"./Registrator":82,"./SIPMessage":84,"./Transactions":88,"./Transport":89,"./URI":91,"./Utils":92,"./sanityCheck":94,"events":96,"jsencrypt":101}],91:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -38858,7 +40592,7 @@ module.exports = class URI {
     return aor;
   }
 };
-},{"./Constants":38,"./Grammar":43,"./Utils":91}],91:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./Utils":92}],92:[function(require,module,exports){
 "use strict";
 
 var CRTC_C = require('./Constants');
@@ -40724,7 +42458,7 @@ exports.disableVideoInSdp = sdp => {
   });
   return newSdp;
 };
-},{"./Constants":38,"./Grammar":43,"./URI":90}],92:[function(require,module,exports){
+},{"./Constants":38,"./Grammar":43,"./URI":91}],93:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -40843,7 +42577,7 @@ module.exports = class WebSocketInterface {
     logger.warn(`WebSocket ${this._url} error: `, e);
   }
 };
-},{"./Grammar":43,"./Logger":45}],93:[function(require,module,exports){
+},{"./Grammar":43,"./Logger":45}],94:[function(require,module,exports){
 "use strict";
 
 var Logger = require('./Logger');
@@ -41036,7 +42770,7 @@ function reply(status_code) {
   response += '\r\n';
   transport.send(response);
 }
-},{"./Constants":38,"./Logger":45,"./SIPMessage":83,"./Utils":91}],94:[function(require,module,exports){
+},{"./Constants":38,"./Logger":45,"./SIPMessage":84,"./Utils":92}],95:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -41188,7 +42922,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -41713,7 +43447,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],96:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -43495,7 +45229,7 @@ function numberIsNaN (obj) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 
-},{"base64-js":94,"buffer":96,"ieee754":99}],97:[function(require,module,exports){
+},{"base64-js":95,"buffer":97,"ieee754":100}],98:[function(require,module,exports){
 (function (process){(function (){
 /* eslint-env browser */
 
@@ -43772,7 +45506,7 @@ formatters.j = function (v) {
 
 }).call(this)}).call(this,require('_process'))
 
-},{"./common":98,"_process":102}],98:[function(require,module,exports){
+},{"./common":99,"_process":103}],99:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -44066,7 +45800,7 @@ function setup(env) {
 
 module.exports = setup;
 
-},{"ms":101}],99:[function(require,module,exports){
+},{"ms":102}],100:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -44153,7 +45887,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],100:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -49544,7 +51278,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 /**
  * Helpers.
  */
@@ -49708,7 +51442,7 @@ function plural(ms, msAbs, n, name) {
   return Math.round(ms / n) + ' ' + name + (isPlural ? 's' : '');
 }
 
-},{}],102:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -49894,7 +51628,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 var grammar = module.exports = {
   v: [{
     name: 'version',
@@ -50390,7 +52124,7 @@ Object.keys(grammar).forEach(function (key) {
   });
 });
 
-},{}],104:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 var parser = require('./parser');
 var writer = require('./writer');
 var grammar = require('./grammar');
@@ -50405,7 +52139,7 @@ exports.parseRemoteCandidates = parser.parseRemoteCandidates;
 exports.parseImageAttributes = parser.parseImageAttributes;
 exports.parseSimulcastStreamList = parser.parseSimulcastStreamList;
 
-},{"./grammar":103,"./parser":105,"./writer":106}],105:[function(require,module,exports){
+},{"./grammar":104,"./parser":106,"./writer":107}],106:[function(require,module,exports){
 var toIntIfInt = function (v) {
   return String(Number(v)) === v ? Number(v) : v;
 };
@@ -50531,7 +52265,7 @@ exports.parseSimulcastStreamList = function (str) {
   });
 };
 
-},{"./grammar":103}],106:[function(require,module,exports){
+},{"./grammar":104}],107:[function(require,module,exports){
 var grammar = require('./grammar');
 
 // customized util.format - discards excess arguments and can void middle ones
@@ -50647,7 +52381,7 @@ module.exports = function (session, opts) {
   return sdp.join('\r\n') + '\r\n';
 };
 
-},{"./grammar":103}]},{},[44])(44)
+},{"./grammar":104}]},{},[44])(44)
 });
 
 //# sourceMappingURL=maps/CRTC.js.map

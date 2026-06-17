@@ -958,8 +958,8 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
   assert.strictEqual(calls.length, 2);
   assert.strictEqual(queuedUpdates.length, 0);
   assert.strictEqual(state.pendingSegmentation, true);
-  assert.strictEqual(state.activeSegmentationPromise, pendingPromises[0]);
-  assert.strictEqual(state.queuedSegmentationPromise, pendingPromises[1]);
+  assert.strictEqual(state.activeSegPromise, pendingPromises[0]);
+  assert.strictEqual(state.queuedSegPromise, pendingPromises[1]);
 
   resolvers[0]({
     segmentationMask : new MockCanvas()
@@ -967,8 +967,8 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
   await flushMicrotasks();
 
   assert.strictEqual(state.pendingSegmentation, true);
-  assert.strictEqual(state.activeSegmentationPromise, pendingPromises[1]);
-  assert.strictEqual(state.queuedSegmentationPromise, null);
+  assert.strictEqual(state.activeSegPromise, pendingPromises[1]);
+  assert.strictEqual(state.queuedSegPromise, null);
 
   resolvers[1]({
     segmentationMask : new MockCanvas()
@@ -976,7 +976,7 @@ async function testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending()
   await flushMicrotasks();
 
   assert.strictEqual(state.pendingSegmentation, false);
-  assert.strictEqual(state.activeSegmentationPromise, null);
+  assert.strictEqual(state.activeSegPromise, null);
 }
 
 async function testSourceAiVBManagerDefersHeavyWorkUntilVideoReady()

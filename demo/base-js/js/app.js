@@ -743,6 +743,18 @@ ua.on('newRTCSession', function(e)
     }, 1000);
   });
 
+  e.session.on('mediaeffectsissue', function(d)
+  {
+    const moduleName = d && d.module ? d.module : 'MediaEffects';
+    const message = d && d.message ? d.message : 'Unknown media effects failure';
+
+    console.warn(
+      `[base-js][mediaeffectsissue] module=${moduleName} message=${message}`,
+      d
+    );
+    setStatus(`媒体效果异常[${moduleName}]：${message}`);
+  });
+
   /**
    * failed — 通话建立失败
    *

@@ -349,6 +349,73 @@ const app = {
     }, 4000);
   },
 
+  normalizeComposerIssue(issue)
+  {
+    return Object.assign({
+      module          : 'MediaEffectsComposer',
+      component       : 'unknown',
+      stage           : 'unknown',
+      severity        : 'error',
+      message         : 'Unknown media effects failure',
+      fallbackApplied : false,
+      degraded        : false,
+      details         : {}
+    }, issue || {});
+  },
+
+  formatComposerIssueSummary(issue, scope)
+  {
+    const normalizedIssue = this.normalizeComposerIssue(issue);
+    const prefix = scope ? `${scope} ` : '';
+
+    return `${prefix}${normalizedIssue.module}: ${normalizedIssue.message}`;
+  },
+
+  logComposerIssue(issue, scope = 'MainComposer')
+  {
+    const normalizedIssue = this.normalizeComposerIssue(issue);
+    let detailsText = '{}';
+
+    try
+    {
+      detailsText = JSON.stringify(normalizedIssue.details || {});
+    }
+    catch (error)
+    {
+      detailsText = `[unserializable details: ${error && error.message ? error.message : error}]`;
+    }
+
+    const loggerMethod = console[normalizedIssue.severity] || console.warn;
+
+    loggerMethod(
+      `[MediaEffectsComposerDemo][${scope}] module=${normalizedIssue.module} ` +
+      `component=${normalizedIssue.component} stage=${normalizedIssue.stage} ` +
+      `severity=${normalizedIssue.severity} fallbackApplied=${Boolean(normalizedIssue.fallbackApplied)} ` +
+      `degraded=${Boolean(normalizedIssue.degraded)} message=${normalizedIssue.message} ` +
+      `details=${detailsText}`
+    );
+  },
+
+  handleComposerIssue(issue, scope = 'MainComposer')
+  {
+    const normalizedIssue = this.normalizeComposerIssue(issue);
+    const notificationType = normalizedIssue.severity === 'warn' ? 'warning' : 'error';
+
+    this.logComposerIssue(normalizedIssue, scope);
+
+    if (normalizedIssue.severity === 'debug')
+    {
+      return;
+    }
+
+    this.showNotification(this.formatComposerIssueSummary(normalizedIssue, scope), notificationType);
+  },
+
+  createComposerIssueHandler(scope)
+  {
+    return (issue) => this.handleComposerIssue(issue, scope);
+  },
+
   selectSlot(idx)
   {
     idx = this.clampSlot(idx);
@@ -2115,7 +2182,8 @@ const app = {
         width      : size.width,
         height     : size.height,
         fps        : scenario.fps,
-        renderMode : scenario.renderMode
+        renderMode : scenario.renderMode,
+        onIssue    : this.createComposerIssueHandler(`StressAux${i + 1}`)
       });
       const streams = [];
 

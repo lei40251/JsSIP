@@ -133,6 +133,32 @@ function loadInlineSourceMap()
   });
 }
 
+function stripExternalSourceMapComment()
+{
+  return new Transform({
+    objectMode : true,
+    transform(file, enc, callback)
+    {
+      if (!file || file.isNull() || path.extname(file.path) !== '.js')
+      {
+        callback(null, file);
+
+        return;
+      }
+
+      const contents = file.contents.toString();
+      const nextContents = contents.replace(/\r?\n\/\/# sourceMappingURL=.*?(?=\r?\n?$)/, '');
+
+      if (nextContents !== contents)
+      {
+        file.contents = Buffer.from(nextContents);
+      }
+
+      callback(null, file);
+    }
+  });
+}
+
 function getLocalTimestamp()
 {
   const d = new Date();
@@ -234,7 +260,10 @@ gulp.task('uglify', function()
     .pipe(header(BANNER, BANNER_OPTIONS))
     .pipe(rename(`${PKG.title }.min.js`))
     // 基于上一阶段加载进来的 sourcemap 继续生成 dist/maps/CRTC.min.js.map。
-    .pipe(gulp.dest('dist/', { sourcemaps: './maps' }));
+    .pipe(gulp.dest('dist/', { sourcemaps: './maps' }))
+    // 发布压缩包保留外部 .map 文件，但不在主文件尾部暴露 sourceMappingURL。
+    .pipe(stripExternalSourceMapComment())
+    .pipe(gulp.dest('dist/'));
 });
 
 gulp.task('test-files', function()

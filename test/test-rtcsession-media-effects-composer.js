@@ -71,6 +71,7 @@ class MockMixer
   {
     this.streams = streams;
     this.options = options;
+    this.onIssue = options && typeof options.onIssue === 'function' ? options.onIssue : null;
 
     const primarySourceOptions = options && options.sources && options.sources[0] ?
       options.sources[0] :
@@ -102,6 +103,11 @@ class MockMixer
   async getOutput(options)
   {
     this.outputRequest = options;
+
+    if (typeof MockMixer.issueOnGetOutput === 'function')
+    {
+      MockMixer.issueOnGetOutput(this);
+    }
 
     if (options && options.type === 'audio')
     {
@@ -249,12 +255,14 @@ MockMixer.appendCalls = [];
 MockMixer.appendOptionCalls = [];
 MockMixer.throwOnRemove = false;
 MockMixer.throwOnAppend = false;
+MockMixer.issueOnGetOutput = null;
 
 class MockAiNSEngine
 {
   constructor(options)
   {
     this.options = options;
+    this.onIssue = options && typeof options.onIssue === 'function' ? options.onIssue : null;
     this.processCalls = [];
     this.replaceAudioTrackCalls = [];
     this.destroyed = false;
@@ -264,6 +272,11 @@ class MockAiNSEngine
   async process(stream)
   {
     this.processCalls.push(stream);
+
+    if (typeof MockAiNSEngine.issueOnProcess === 'function')
+    {
+      MockAiNSEngine.issueOnProcess(this, stream);
+    }
 
     if (MockAiNSEngine.transform)
     {
@@ -296,6 +309,7 @@ MockAiNSEngine.instances = [];
 MockAiNSEngine.destroyCalls = 0;
 MockAiNSEngine.transform = null;
 MockAiNSEngine.replaceAudioTrackTransform = null;
+MockAiNSEngine.issueOnProcess = null;
 
 function createMockUA()
 {
@@ -1013,6 +1027,36 @@ async function testCloseDestroysSessionAiNoiseSuppression()
   assert.strictEqual(session.getAiNoiseSuppression(), null);
 }
 
+async function testApplyAiNoiseSuppressionEmitsMediaEffectsIssue()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceStream = new MockMediaStream([ new MockMediaStreamTrack('audio') ]);
+  const events = [];
+
+  session.on('mediaeffectsissue', (event) => events.push(event));
+  MockAiNSEngine.issueOnProcess = (engine) =>
+  {
+    engine.onIssue && engine.onIssue({
+      module          : 'AiNS',
+      component       : 'MockAiNSEngine',
+      stage           : 'mock-process',
+      severity        : 'warn',
+      message         : 'mock ai noise suppression issue',
+      fallbackApplied : true,
+      degraded        : true,
+      details         : {
+        source : 'unit-test'
+      }
+    });
+  };
+
+  await session._mediaPipeline.applyAiNoiseSuppressionOnSdkGumStream(sourceStream, true);
+
+  assert.strictEqual(events.length, 1);
+  assert.strictEqual(events[0].module, 'AiNS');
+  assert.strictEqual(events[0].message, 'mock ai noise suppression issue');
+}
+
 async function testCloseStopsSessionComposerWithAiVirtualBackground()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
@@ -1388,6 +1432,38 @@ async function testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2Supports
   assert.strictEqual(state.sources[0].aiVirtualBackground.blurRadius, 10);
 }
 
+async function testApplyMediaEffectsComposerEmitsMediaEffectsIssue()
+{
+  const session = new (require('../lib/RTCSession'))(createMockUA());
+  const sourceVideo = new MockMediaStreamTrack('video', { width: 640, height: 360, frameRate: 24 });
+  const sourceAudio = new MockMediaStreamTrack('audio');
+  const sourceStream = new MockMediaStream([ sourceVideo, sourceAudio ]);
+  const events = [];
+
+  session.on('mediaeffectsissue', (event) => events.push(event));
+  MockMixer.issueOnGetOutput = (mixer) =>
+  {
+    mixer.onIssue && mixer.onIssue({
+      module          : 'MediaEffectsComposer',
+      component       : 'MockMixer',
+      stage           : 'mock-get-output',
+      severity        : 'warn',
+      message         : 'mock composer issue',
+      fallbackApplied : true,
+      degraded        : true,
+      details         : {
+        source : 'unit-test'
+      }
+    });
+  };
+
+  await session._mediaPipeline.applyMediaEffectsComposerOnSdkGumStream(sourceStream, { mirror: true });
+
+  assert.strictEqual(events.length, 1);
+  assert.strictEqual(events[0].module, 'MediaEffectsComposer');
+  assert.strictEqual(events[0].message, 'mock composer issue');
+}
+
 async function testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression()
 {
   const session = new (require('../lib/RTCSession'))(createMockUA());
@@ -1430,6 +1506,7 @@ async function run()
     { name: 'testGetAiNoiseSuppressionReturnsNullByDefault', fn: testGetAiNoiseSuppressionReturnsNullByDefault },
     { name: 'testGetAiVirtualBackgroundReturnsNullByDefault', fn: testGetAiVirtualBackgroundReturnsNullByDefault },
     { name: 'testCloseDestroysSessionAiNoiseSuppression', fn: testCloseDestroysSessionAiNoiseSuppression },
+    { name: 'testApplyAiNoiseSuppressionEmitsMediaEffectsIssue', fn: testApplyAiNoiseSuppressionEmitsMediaEffectsIssue },
     { name: 'testCloseStopsSessionComposerWithAiVirtualBackground', fn: testCloseStopsSessionComposerWithAiVirtualBackground },
     { name: 'testUpgradeToVideoAcceptsComposerSourceAiVBOptions', fn: testUpgradeToVideoAcceptsComposerSourceAiVBOptions },
     { name: 'testResolveMediaEffectsComposerOptionsUsesSourcesOnly', fn: testResolveMediaEffectsComposerOptionsUsesSourcesOnly },
@@ -1440,6 +1517,7 @@ async function run()
     { name: 'testUpdateMediaEffectsComposerRejectsImmutableRuntimeFields', fn: testUpdateMediaEffectsComposerRejectsImmutableRuntimeFields },
     { name: 'testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack', fn: testUpdateMediaEffectsComposerCreatesComposerForCurrentVideoTrack },
     { name: 'testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB', fn: testUpdateMediaEffectsComposerKeepsComposerWhenMainWebGL2SupportsAiVB },
+    { name: 'testApplyMediaEffectsComposerEmitsMediaEffectsIssue', fn: testApplyMediaEffectsComposerEmitsMediaEffectsIssue },
     { name: 'testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression', fn: testProcessMediaStreamDoesNotApplySessionAiNoiseSuppression }
   ];
 
@@ -1452,10 +1530,12 @@ async function run()
     MockMixer.appendOptionCalls = [];
     MockMixer.throwOnRemove = false;
     MockMixer.throwOnAppend = false;
+    MockMixer.issueOnGetOutput = null;
     MockAiNSEngine.instances = [];
     MockAiNSEngine.destroyCalls = 0;
     MockAiNSEngine.transform = null;
     MockAiNSEngine.replaceAudioTrackTransform = null;
+    MockAiNSEngine.issueOnProcess = null;
 
     for (const t of TESTS)
     {
@@ -1464,10 +1544,12 @@ async function run()
       MockMixer.removeCalls = [];
       MockMixer.appendCalls = [];
       MockMixer.appendOptionCalls = [];
+      MockMixer.issueOnGetOutput = null;
       MockAiNSEngine.instances = [];
       MockAiNSEngine.destroyCalls = 0;
       MockAiNSEngine.transform = null;
       MockAiNSEngine.replaceAudioTrackTransform = null;
+      MockAiNSEngine.issueOnProcess = null;
       try
       {
         await t.fn();
