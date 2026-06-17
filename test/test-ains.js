@@ -332,9 +332,13 @@ async function testReplaceAudioTrackPreservesVideoTrack()
 async function testProcessFailsWhenAssetFetchFails()
 {
   resetMockState();
+  const issues = [];
+  let fetchCount = 0;
   const restore = installBrowserMocks({
     fetchImpl : async() =>
     {
+      fetchCount += 1;
+
       return {
         ok         : false,
         status     : 503,
@@ -346,12 +350,22 @@ async function testProcessFailsWhenAssetFetchFails()
   try
   {
     const Engine = loadEngine();
-    const engine = new Engine();
+    const engine = new Engine({
+      onIssue : (issue) =>
+      {
+        issues.push(issue);
+      }
+    });
 
     await assert.rejects(async() =>
     {
       await engine.process(createInputStream().stream);
     }, /Failed to fetch asset/);
+    assert.strictEqual(fetchCount, 2);
+    assert.strictEqual(issues.length, 1);
+    assert.strictEqual(issues[0].stage, 'asset-fetch');
+    assert.strictEqual(issues[0].fallbackApplied, true);
+    assert.strictEqual(issues[0].degraded, true);
   }
   finally
   {

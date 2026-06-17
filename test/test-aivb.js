@@ -735,19 +735,106 @@ async function testAssetLoaderSharesConcurrentRuntimeLoad()
   const AssetLoader = require('../lib/MediaEffectsComposer/aiVirtualBackground/AiVBAssetLoader');
   const loaderA = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
   const loaderB = new AssetLoader({ moduleUrl: './tasks/vision_bundle.mjs' });
+  const originalQuerySelector = global.document.querySelector;
 
   delete global.window.CRTCAiVBVisionTasks;
   appendedScripts = [];
   global.document.querySelector = () => null;
 
-  const results = await Promise.all([
-    loaderA.ensureTasksLoaded(),
-    loaderB.ensureTasksLoaded()
-  ]);
+  try
+  {
+    const results = await Promise.all([
+      loaderA.ensureTasksLoaded(),
+      loaderB.ensureTasksLoaded()
+    ]);
 
-  assert.strictEqual(results[0], global.window.CRTCAiVBVisionTasks);
-  assert.strictEqual(results[1], global.window.CRTCAiVBVisionTasks);
-  assert.strictEqual(appendedScripts.length, 1);
+    assert.strictEqual(results[0], global.window.CRTCAiVBVisionTasks);
+    assert.strictEqual(results[1], global.window.CRTCAiVBVisionTasks);
+    assert.strictEqual(appendedScripts.length, 1);
+  }
+  finally
+  {
+    global.document.querySelector = originalQuerySelector;
+  }
+}
+
+async function testRuntimeReportsTasksLoadFailureWithoutRetry()
+{
+  const runtimePath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
+  const loaderPath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/AiVBAssetLoader');
+  const originalLoader = require.cache[loaderPath];
+  let ensureTasksLoadedCalls = 0;
+
+  class MockAssetLoader
+  {
+    constructor()
+    {
+      this.assetConfig = {
+        moduleUrl   : './assets/aivb0/vision.js',
+        wasmBaseUrl : './assets/aivb0',
+        modelUrl    : './assets/aivb0/selfie_segmenter_landscape.tflite'
+      };
+    }
+
+    async ensureTasksLoaded()
+    {
+      ensureTasksLoadedCalls += 1;
+      throw new Error('Failed to load MediaPipe Tasks runtime: ./assets/aivb0/vision.js');
+    }
+
+    getRuntimeOptions()
+    {
+      return {
+        moduleUrl   : './assets/aivb0/vision.js',
+        wasmBaseUrl : './assets/aivb0',
+        modelUrl    : './assets/aivb0/selfie_segmenter_landscape.tflite'
+      };
+    }
+  }
+
+  require.cache[loaderPath] = {
+    id       : loaderPath,
+    filename : loaderPath,
+    loaded   : true,
+    exports  : MockAssetLoader
+  };
+  delete require.cache[runtimePath];
+
+  try
+  {
+    const Runtime = require('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
+    const issues = [];
+    const runtime = new Runtime({
+      onIssue : (issue) => issues.push(issue)
+    });
+
+    await assert.rejects(
+      () => runtime.initialize(),
+      /Failed to load MediaPipe Tasks runtime: \.\/assets\/aivb0\/vision\.js/
+    );
+
+    assert.strictEqual(runtime.initialized, false);
+    assert.strictEqual(ensureTasksLoadedCalls, 1);
+    assert.strictEqual(issues.length, 1);
+    assert.strictEqual(issues[0].stage, 'aivb-runtime-load');
+    assert.strictEqual(issues[0].fallbackApplied, true);
+    assert.strictEqual(issues[0].degraded, true);
+
+    await runtime.destroy();
+  }
+  finally
+  {
+    delete require.cache[runtimePath];
+
+    if (originalLoader)
+    {
+      require.cache[loaderPath] = originalLoader;
+    }
+    else
+    {
+      delete require.cache[loaderPath];
+    }
+  }
 }
 
 async function testConfigNormalizesCdnUrlAndSegmentationOptions()
@@ -1148,6 +1235,88 @@ async function testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay()
   }
 }
 
+async function testSourceAiVBManagerBlocksRepeatedInitAfterReportedFailure()
+{
+  const managerPath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
+  const runtimePath = require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/MediaPipeSegmenterRuntime');
+  const originalRuntime = require.cache[runtimePath];
+  let initializeCalls = 0;
+
+  class MockRuntime
+  {
+    initialize()
+    {
+      initializeCalls += 1;
+
+      const error = new Error('Failed to load MediaPipe Tasks runtime: ./assets/aivb0/vision.js');
+
+      error.__mediaEffectsIssueReported = true;
+
+      return Promise.reject(error);
+    }
+
+    async destroy() {}
+  }
+
+  require.cache[runtimePath] = {
+    id       : runtimePath,
+    filename : runtimePath,
+    loaded   : true,
+    exports  : MockRuntime
+  };
+  delete require.cache[managerPath];
+
+  try
+  {
+    const SourceAiVBManager = require('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController');
+    const issues = [];
+    const manager = new SourceAiVBManager({
+      onIssue : (issue) => issues.push(issue)
+    });
+    const source = { slot: 0 };
+
+    manager.setSourceConfig(source, {
+      enabled        : true,
+      mode           : 'blur',
+      blurRadius     : 8,
+      runtimeEnabled : true,
+      startupDelayMs : 0,
+      video          : { width: 640, height: 480, processingScale: 0.5 },
+      segmentation   : { delegate: 'CPU', frameSkip: 0 }
+    });
+
+    manager.getRenderableState(source, {
+      readyState  : 2,
+      videoWidth  : 640,
+      videoHeight : 480
+    });
+    await flushMicrotasks();
+
+    manager.getRenderableState(source, {
+      readyState  : 2,
+      videoWidth  : 640,
+      videoHeight : 480
+    });
+    await flushMicrotasks();
+
+    assert.strictEqual(initializeCalls, 1);
+    assert.strictEqual(issues.length, 0);
+  }
+  finally
+  {
+    delete require.cache[managerPath];
+
+    if (originalRuntime)
+    {
+      require.cache[runtimePath] = originalRuntime;
+    }
+    else
+    {
+      delete require.cache[runtimePath];
+    }
+  }
+}
+
 async function testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued()
 {
   delete require.cache[require.resolve('../lib/MediaEffectsComposer/aiVirtualBackground/SourceAiVBController')];
@@ -1292,6 +1461,7 @@ async function run()
     { name: 'testRuntimeProcessesLatestQueuedFrame', fn: testRuntimeProcessesLatestQueuedFrame },
     { name: 'testRuntimeRejectsWhenGpuInitFails', fn: testRuntimeRejectsWhenGpuInitFails },
     { name: 'testAssetLoaderSharesConcurrentRuntimeLoad', fn: testAssetLoaderSharesConcurrentRuntimeLoad },
+    { name: 'testRuntimeReportsTasksLoadFailureWithoutRetry', fn: testRuntimeReportsTasksLoadFailureWithoutRetry },
     { name: 'testConfigNormalizesCdnUrlAndSegmentationOptions', fn: testConfigNormalizesCdnUrlAndSegmentationOptions },
     { name: 'testConfigNormalizesCdnUrlDefaultModelPath', fn: testConfigNormalizesCdnUrlDefaultModelPath },
     { name: 'testConfigRejectsLegacySegmentationOptions', fn: testConfigRejectsLegacySegmentationOptions },
@@ -1301,6 +1471,7 @@ async function run()
     { name: 'testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending', fn: testSourceAiVBManagerQueuesLatestFrameWhileSegmentationPending },
     { name: 'testSourceAiVBManagerDefersHeavyWorkUntilVideoReady', fn: testSourceAiVBManagerDefersHeavyWorkUntilVideoReady },
     { name: 'testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay', fn: testSourceAiVBManagerStartsRuntimeByDefaultAfterStartupDelay },
+    { name: 'testSourceAiVBManagerBlocksRepeatedInitAfterReportedFailure', fn: testSourceAiVBManagerBlocksRepeatedInitAfterReportedFailure },
     { name: 'testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued', fn: testSourceAiVBManagerDoesNotPileSegmentationWorkWhileQueued },
     { name: 'testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads', fn: testSourceAiVBManagerKeepsPreviousBackgroundUntilNextImageLoads }
   ];
