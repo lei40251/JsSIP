@@ -1,5 +1,5 @@
 /*
- * CRTC v1.13.3.2026641129
+ * CRTC v1.13.4-beta.20266182030
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -3539,7 +3539,7 @@ exports.load = function (dst, src) {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/1.13.3.405212082258 (Web)',
+  USER_AGENT: 'UA/1.13.4-beta.405212364060 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -16854,7 +16854,7 @@ var getStats = require('./Stats');
 var BFCPLib = require('./BFCP');
 var Mixer = require('./Mixer');
 var VirtualBackground = require('./VirtualBackground/index.js');
-debug('version %s', '1.13.3.405212082258');
+debug('version %s', '1.13.4-beta.405212364060');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -16893,7 +16893,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '1.13.3.405212082258';
+    return '1.13.4-beta.405212364060';
   }
 };
 },{"./BFCP":1,"./Constants":32,"./Exceptions":36,"./Grammar":37,"./Mixer":41,"./NameAddrHeader":42,"./Stats":55,"./UA":59,"./URI":60,"./Utils":61,"./VirtualBackground/index.js":63,"./WebSocketInterface":71,"debug":76}],39:[function(require,module,exports){
@@ -18399,6 +18399,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     _this._dtmf_payload = null;
     _this._inviteVideoTrackStatsTimer = null;
     _this._answerVideoTrackStatsTimer = null;
+    _this._videoFrameRateMonitorTimer = null;
+    _this._isApplyingVideoFrameRateConstraints = false;
 
     // The RTCPeerConnection instance (public attribute).
     _this._connection = null;
@@ -24226,6 +24228,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       // 主动发送关键帧，兼容部分手机接听时黑屏问题
       Utils.sendKeyFrames(this._connection, 0.5, 2);
+      this._startVideoFrameRateMonitor();
       this.emit('confirmed', {
         originator: originator,
         ack: ack || null
@@ -24236,6 +24239,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     value: function _ended(originator, message, cause) {
       logger.debug("".concat(this._id, " session ended"));
       this._end_time = new Date();
+      this._stopVideoFrameRateMonitor();
       this._close();
       logger.debug("".concat(this._id, " emit \"ended\""));
 
@@ -24268,6 +24272,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "_failed",
     value: function _failed(originator, message, cause) {
       logger.debug("".concat(this._id, " session failed"));
+      this._stopVideoFrameRateMonitor();
 
       // Emit private '_failed' event first.
       logger.debug("".concat(this._id, " emit \"_failed\""));
@@ -25019,12 +25024,122 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     }
 
     /**
-     * 页面隐藏时：等待 track muted 后替换为黑屏 track
+     * 启动视频帧率监控。
+     *
+     * 仅在需要纠偏的 UA 环境下生效（由 Utils.shouldRecoverVideoFrameRateByUA 判断）。
+     * 先将帧率约束设为 30fps，之后每 2 秒检查一次，若帧率异常则重新应用约束。
      */
+  }, {
+    key: "_startVideoFrameRateMonitor",
+    value: function _startVideoFrameRateMonitor() {
+      var _this50 = this;
+      if (!Utils.shouldRecoverVideoFrameRateByUA()) {
+        return;
+      }
+      this._stopVideoFrameRateMonitor();
+      this._checkAndRecoverVideoFrameRate(true);
+      this._videoFrameRateMonitorTimer = setInterval(function () {
+        _this50._checkAndRecoverVideoFrameRate();
+      }, 2000);
+    }
+
+    /**
+     * 停止视频帧率监控。
+     *
+     * 清除定时器并重置应用约束标志位。
+     */
+  }, {
+    key: "_stopVideoFrameRateMonitor",
+    value: function _stopVideoFrameRateMonitor() {
+      if (this._videoFrameRateMonitorTimer) {
+        clearInterval(this._videoFrameRateMonitorTimer);
+        this._videoFrameRateMonitorTimer = null;
+      }
+      this._isApplyingVideoFrameRateConstraints = false;
+    }
+
+    /**
+     * 检查并恢复视频帧率为 30fps。
+     *
+     * 获取当前视频轨道，读取其帧率约束。如果帧率低于 30，则重新应用 30fps 约束。
+     */
+  }, {
+    key: "_checkAndRecoverVideoFrameRate",
+    value: (function () {
+      var _checkAndRecoverVideoFrameRate2 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee15() {
+        var force,
+          videoSender,
+          track,
+          constraints,
+          frameRateConstraints,
+          frameRate,
+          _args16 = arguments,
+          _t6;
+        return _regenerator().w(function (_context16) {
+          while (1) switch (_context16.p = _context16.n) {
+            case 0:
+              force = _args16.length > 0 && _args16[0] !== undefined ? _args16[0] : false;
+              if (!(this._isApplyingVideoFrameRateConstraints || !this._connection || this._status === C.STATUS_TERMINATED)) {
+                _context16.n = 1;
+                break;
+              }
+              return _context16.a(2);
+            case 1:
+              videoSender = this._connection.getSenders().find(function (sender) {
+                return sender.track && sender.track.kind === 'video' && sender.track.readyState !== 'ended';
+              });
+              track = videoSender && videoSender.track;
+              if (!(!track || typeof track.getConstraints !== 'function' || typeof track.applyConstraints !== 'function')) {
+                _context16.n = 2;
+                break;
+              }
+              return _context16.a(2);
+            case 2:
+              constraints = track.getConstraints() || {};
+              frameRateConstraints = constraints.frameRate;
+              frameRate = typeof frameRateConstraints === 'number' ? frameRateConstraints : frameRateConstraints && (frameRateConstraints.exact || frameRateConstraints.ideal || frameRateConstraints.max || frameRateConstraints.min);
+              if (!(!force && (!Number.isFinite(frameRate) || frameRate >= 30))) {
+                _context16.n = 3;
+                break;
+              }
+              return _context16.a(2);
+            case 3:
+              this._isApplyingVideoFrameRateConstraints = true;
+              _context16.p = 4;
+              _context16.n = 5;
+              return track.applyConstraints(Object.assign({}, constraints, {
+                frameRate: 30
+              }));
+            case 5:
+              logger.debug("".concat(this._id, " apply video frameRate to 30, trackId:").concat(track.id, ", oldConstraints:").concat(JSON.stringify(constraints)));
+              _context16.n = 7;
+              break;
+            case 6:
+              _context16.p = 6;
+              _t6 = _context16.v;
+              logger.warn("".concat(this._id, " apply video frameRate constraints failed ").concat(_t6.message, " ").concat(JSON.stringify(_t6)));
+            case 7:
+              _context16.p = 7;
+              this._isApplyingVideoFrameRateConstraints = false;
+              return _context16.f(7);
+            case 8:
+              return _context16.a(2);
+          }
+        }, _callee15, this, [[4, 6, 7, 8]]);
+      }));
+      function _checkAndRecoverVideoFrameRate() {
+        return _checkAndRecoverVideoFrameRate2.apply(this, arguments);
+      }
+      return _checkAndRecoverVideoFrameRate;
+    }()
+    /**
+      * 页面隐藏时：等待 track muted 后替换为黑屏 track
+      */
+    )
   }, {
     key: "_handlePageHidden",
     value: function _handlePageHidden(conn) {
-      var _this50 = this;
+      var _this51 = this;
       var videoSender = conn.getSenders().find(function (s) {
         return s.track.kind === 'video';
       });
@@ -25035,14 +25150,14 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._trackMutedTimer = setInterval(function () {
         var track = videoSender.track;
         if (track.muted) {
-          _this50._clearTrackMutedTimer();
-          _this50._visibilitychangeVideoTrack = track;
-          _this50._blackVideoTrack = Utils.generateAnBlackVideoTrack({
+          _this51._clearTrackMutedTimer();
+          _this51._visibilitychangeVideoTrack = track;
+          _this51._blackVideoTrack = Utils.generateAnBlackVideoTrack({
             hidden: true,
             width: track.getSettings().width || 640,
             height: track.getSettings().height || 480
           });
-          videoSender.replaceTrack(_this50._blackVideoTrack.videoTrack);
+          videoSender.replaceTrack(_this51._blackVideoTrack.videoTrack);
         }
       }, 100);
     }
@@ -30741,7 +30856,14 @@ exports.getStreamThroughCanvas = function (stream) {
   return newStream;
 };
 
-// 使用 canvas.captureStream 创建空视频轨道的辅助函数
+/**
+ * 使用 canvas.captureStream 创建空视频轨道的辅助函数。
+ *
+ * @param {Object} [options] - 可选配置项。
+ * @param {number} [options.width=64]  - Canvas 宽度。
+ * @param {number} [options.height=48] - Canvas 高度。
+ * @returns {{ videoTrack: MediaStreamTrack }} 包含空视频轨道的对象。
+ */
 var createCanvasVideoTrack = function createCanvasVideoTrack() {
   var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
     _ref4$width = _ref4.width,
@@ -30922,7 +31044,13 @@ exports.generateAnBlackVideoTrack = function (options) {
   };
 };
 
-// 创建一个静音音频轨道
+/**
+ * 创建静音音频轨道。
+ *
+ * 通过 AudioContext 创建一个无声音频轨道，用于占位或保持音频通道活跃。
+ *
+ * @returns {Promise<{ state: string, audioContext: AudioContext, audioTrack: MediaStreamTrack }>}
+ */
 var createSilentAudioTrack = /*#__PURE__*/function () {
   var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
     var audio, audioContext, destination, source;
@@ -31144,6 +31272,13 @@ exports.findLabelIndexByMstrm = function (sdp) {
   }
   return -1; // 如果未找到，返回 -1
 };
+
+/**
+ * 将 Uint8Array 转换为 Base64 编码字符串。
+ *
+ * @param {Uint8Array} uint8Array - 要转换的字节数组。
+ * @returns {string} Base64 编码字符串。
+ */
 exports.uint8ArrayToBase64 = function (uint8Array) {
   var binary = '';
   for (var i = 0; i < uint8Array.length; i++) {
@@ -31151,12 +31286,32 @@ exports.uint8ArrayToBase64 = function (uint8Array) {
   }
   return btoa(binary);
 };
+
+/**
+ * 将 Uint8Array 转换为二进制字符串（8 位补零格式，空格分隔）。
+ *
+ * @param {Uint8Array} uint8Array - 要转换的字节数组。
+ * @returns {string} 二进制字符串，每字节之间用空格分隔。
+ */
 exports.uint8ArrayToBinaryString = function (uint8Array) {
   return Array.from(uint8Array, function (_byte) {
     return _byte.toString(2).padStart(8, '0');
   } // 将每个字节转为8位二进制字符串
   ).join(' '); // 可选：用空格分隔每个字节，增强可读性
 };
+
+/**
+ * 获取 SDP 中 application 媒体块的位置信息，并对媒体块重新排序。
+ *
+ * 处理流程：
+ * 1. 移除 H224 和 TCP/TLS/BFCP application 媒体块。
+ * 2. 如果存在 BFCP（webrtc-datachannel）媒体块，将其移动到末尾。
+ * 3. 为缺少 ice 凭证的媒体块补充 ice-ufrag 和 ice-pwd。
+ * 4. 为音频和视频媒体块补充 rtcp-mux。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {{ originalIndexes: number[], sdp: string }} 原始位置索引和处理后的 SDP。
+ */
 exports.getApplicationMediaPositions = function (sdp) {
   // 将SDP按媒体块分割
   var sections = sdp.split(/m=/);
@@ -31223,6 +31378,17 @@ exports.getApplicationMediaPositions = function (sdp) {
     sdp: newSdp
   };
 };
+
+/**
+ * 按指定位置重新插入 application 媒体块到 SDP 中。
+ *
+ * 将从 SDP 中分离出的 BFCP 和 H224 application 媒体块，
+ * 按照原始位置索引重新插回到 SDP 中。
+ *
+ * @param {string} sdp - 当前 SDP 字符串（可能已被远端修改）。
+ * @param {number[]} positions - 由 getApplicationMediaPositions 返回的原始位置数组。
+ * @returns {string} 重新排序后的 SDP 字符串。
+ */
 exports.reorderApplicationMedia = function (sdp, positions) {
   var _positions = _slicedToArray(positions, 2),
     bfcpIndex = _positions[0],
@@ -31259,7 +31425,14 @@ exports.reorderApplicationMedia = function (sdp, positions) {
   return header + filteredSections.join('');
 };
 
-// rtcp-fb 改为 *
+/**
+ * 处理 SDP 中的 rtcp-fb 行：将具体编码数字替换为通配符 `*`，并去除重复规则。
+ *
+ * 在每个 m-section 内部去重，确保同一媒体块中不会出现重复的 rtcp-fb 规则。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {string} 处理后的 SDP 字符串。
+ */
 exports.processSdp = function (sdp) {
   // 将SDP按行分割
   var lines = sdp.split('\n');
@@ -31297,12 +31470,44 @@ exports.processSdp = function (sdp) {
   return processedLines.join('\n');
 };
 
-// 是否Firefox浏览器
+/**
+ * 判断当前浏览器是否为 Firefox。
+ *
+ * @returns {boolean} Firefox 浏览器时返回 true。
+ */
 exports.isFirefox = function () {
   return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
 };
 
-// 从SDP里面获取DTMF的payload
+/**
+ * 判断是否需要启用视频帧率纠偏逻辑。
+ *
+ * 部分 UA 环境下视频帧率可能出现异常，需要通过 UA 检测来决定是否启用纠偏。
+ * 当前覆盖：
+ * - Android 微信内置浏览器
+ * - 鸿蒙（OpenHarmony/HarmonyOS）华为浏览器
+ *
+ * @returns {boolean} 需要纠偏时返回 true。
+ */
+exports.shouldRecoverVideoFrameRateByUA = function () {
+  if (typeof navigator === 'undefined' || !navigator.userAgent) {
+    return false;
+  }
+  var ua = navigator.userAgent;
+  var isAndroidWeChat = /android/i.test(ua) && /micromessenger/i.test(ua);
+  var isHarmonyNativeBrowser = /huaweibrowser/i.test(ua) && /(OpenHarmony|HarmonyOS)/i.test(ua);
+  return isAndroidWeChat || isHarmonyNativeBrowser;
+};
+
+/**
+ * 从 SDP 中获取 DTMF payload 和时钟频率。
+ *
+ * 解析 SDP 中的 `a=rtpmap:<payload> telephone-event/<clockRate>` 行，
+ * 返回所有 DTMF 电话事件的 payload 与时钟频率映射。
+ *
+ * @param {string} sdp - SDP 字符串。
+ * @returns {Array<{ payload: string, clockRate: string }>} payload 与时钟频率的数组。
+ */
 exports.getDtmfPayloadAndClockRate = function (sdp) {
   var lines = sdp.split('\n');
   var dtmfInfo = new Map(); // 使用 Map 存储，确保 payload 唯一
@@ -31339,7 +31544,14 @@ exports.getDtmfPayloadAndClockRate = function (sdp) {
   });
 };
 
-// 修复sdp里面rtcp行缺少ip地址的问题
+/**
+ * 修复 SDP 中 rtcp 行缺少 IP 地址的问题。
+ *
+ * 遍历 SDP 中所有 `a=rtcp:...` 行，如果缺少 IP 地址，则补上默认值 `0.0.0.0`。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {string} 修复后的 SDP 字符串。
+ */
 exports.fixRtcpLines = function (sdp) {
   return sdp.replace(/^(a=rtcp:\d+(?:\s+IN\s+IP[46])?)(?:\s*)$/gm, function (match, prefix) {
     // 如果已经有IP地址，不做修改
@@ -31466,9 +31678,18 @@ exports.replaceDtmfPayloads = function (sdp, payloadMappings) {
   return newSdpLines.join('\r\n');
 };
 
-// 修复本端切换音频，远端sdp的问题
-// 确保 SDP 的 video m-section 中包含以下行：
-// a=setup, a=fingerprint, a=ice-ufrag, a=ice-pwd, a=rtcp-mux
+/**
+ * 确保 SDP 的 video m-section 包含必要的属性。
+ *
+ * 在部分场景下（如切换音频后远端 SDP 不完整），video m-section 可能缺少
+ * a=setup、a=fingerprint、a=ice-ufrag、a=ice-pwd、a=rtcp-mux 等关键属性。
+ * 该方法会从相邻 audio m-section 复制缺失的属性到 video m-section。
+ *
+ * 如果没有 video m-section，则追加一个新的 video m-section 并从最后一个 audio 复制属性。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {string} 修复后的 SDP 字符串。
+ */
 exports.ensureVideoSdpAttrs = function (sdp) {
   if (typeof sdp !== 'string') return sdp;
   var eol = sdp.indexOf('\r\n') !== -1 ? '\r\n' : sdp.indexOf('\n') !== -1 ? '\n' : '\r\n';
@@ -31611,7 +31832,17 @@ exports.ensureVideoSdpAttrs = function (sdp) {
   }
 };
 
-// 主动发送关键帧
+/**
+ * 主动发送关键帧（I 帧）。
+ *
+ * 通过交替修改视频编码的 scaleResolutionDownBy 参数来触发关键帧生成。
+ * 可配置定时发送或单次发送。
+ *
+ * @param {RTCPeerConnection} pc - RTCPeerConnection 实例。
+ * @param {number} [interval] - 发送间隔（秒）。不传则只发送一次。
+ * @param {number} [frequency] - 最大发送次数。不传则无限循环（需配合 interval）。
+ * @returns {Function|undefined} 当 interval 有效且 frequency 未指定时，返回 stop 函数用于取消定时发送。
+ */
 exports.sendKeyFrames = function (pc, interval, frequency) {
   if (!pc) {
     return;
@@ -31761,7 +31992,15 @@ exports.getEnvironmentId = function (devices) {
   return navigator.mediaDevices.enumerateDevices().then(getEnvironmentIdFromDevices);
 };
 
-// 视频轨道分辨率是否异常
+/**
+ * 检测视频轨道分辨率是否正常。
+ *
+ * 将流设置到隐藏的 video 元素上，通过检测 videoWidth/videoHeight 是否有效
+ * 来判断视频轨道是否健康（有实际数据输出）。
+ *
+ * @param {MediaStream} mediastream - 要检测的媒体流。
+ * @returns {boolean} 分辨率正常时返回 true。
+ */
 exports.isVideoTrackHealthy = function (mediastream) {
   if (mediastream.getVideoTracks().length === 0) {
     return false;
@@ -31779,7 +32018,14 @@ exports.isVideoTrackHealthy = function (mediastream) {
 };
 
 /**
- * 根据约束修改 SDP：禁用对应媒体的端口(设为0)并设为 inactive
+ * 根据约束条件修改 SDP：禁用对应媒体的端口（设为 0）并设为 inactive。
+ *
+ * 根据传入的 constraints 对象中的 audio/video 布尔值，
+ * 将对应 m-section 的端口置 0 并将方向属性改为 inactive。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @param {{ audio?: boolean, video?: boolean }} constraints - 媒体约束。
+ * @returns {string} 修改后的 SDP 字符串。
  */
 exports.updateSdpByConstraints = function (sdp, constraints) {
   return sdp.split(/(?=m=)/).map(function (section) {
@@ -31803,6 +32049,16 @@ exports.updateSdpByConstraints = function (sdp, constraints) {
     return section;
   }).join('');
 };
+
+/**
+ * 修复 video m-section 的 inactive 状态与端口的一致性。
+ *
+ * - 如果 video m-section 已标记为 inactive 但端口非 0，则将端口置 0。
+ * - 如果端口为 0 但没有 inactive 标记，则补充 inactive 属性。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {string} 修复后的 SDP 字符串。
+ */
 exports.fixVideoInactive = function (sdp) {
   return sdp.replace(/(m=video[^\r\n]*[\s\S]*?)(?=\r?\nm=|$)/g,
   // 简化了 Lookahead
@@ -31839,7 +32095,14 @@ exports.fixVideoInactive = function (sdp) {
   });
 };
 
-// 关闭sdp里面的视频
+/**
+ * 在 SDP 中关闭视频。
+ *
+ * 将 video m-section 的端口置 0 并将方向属性改为 inactive。
+ *
+ * @param {string} sdp - 原始 SDP 字符串。
+ * @returns {string} 修改后的 SDP 字符串。
+ */
 exports.disableVideoInSdp = function (sdp) {
   // 1. 修改 m=video 的端口为 0
   var newSdp = sdp.replace(/(m=video\s+)\d+/, '$10');
