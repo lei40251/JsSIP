@@ -1,5 +1,5 @@
 /*
- * CRTC v2.0.3.20266171755
+ * CRTC v2.0.3.20266181153
  * the Javascript WebRTC and SIP library
  * Copyright: 2012-2026 
  */
@@ -4395,7 +4395,7 @@ exports.load = (dst, src) => {
 "use strict";
 
 module.exports = {
-  USER_AGENT: 'UA/2.0.3.405212343510 (Web)',
+  USER_AGENT: 'UA/2.0.3.405212362306 (Web)',
   // SIP scheme.
   SIP: 'sip',
   SIPS: 'sips',
@@ -17602,7 +17602,7 @@ var WebSocketInterface = require('./WebSocketInterface');
 var debug = require('debug')('CRTC');
 var getStats = require('./Stats');
 var MediaEffectsComposer = require('./MediaEffectsComposer');
-debug('version %s', '2.0.3.405212343510');
+debug('version %s', '2.0.3.405212362306');
 (function () {
   if (typeof window.CustomEvent === 'function') return;
   function CustomEvent(event, params) {
@@ -17640,7 +17640,7 @@ module.exports = {
     return 'CRTC';
   },
   get version() {
-    return '2.0.3.405212343510';
+    return '2.0.3.405212362306';
   }
 };
 },{"./Constants":38,"./Exceptions":42,"./Grammar":43,"./MediaEffectsComposer":61,"./NameAddrHeader":72,"./Stats":86,"./UA":90,"./URI":91,"./Utils":92,"./WebSocketInterface":93,"debug":98}],45:[function(require,module,exports){
@@ -34860,6 +34860,8 @@ module.exports = class RTCSession extends EventEmitter {
           parameters.encodings[0].maxBitrate = CRTC_C.SDP_LEVELID_AS[this._sdpResolution].AS * 1000;
         }
 
+        // 优先保清晰
+        sender.track.contentHint = 'detail';
         // 默认强制保持分辨率
         // parameters.degradationPreference = 'maintain-resolution';
         sender.setParameters(parameters).then(() => {

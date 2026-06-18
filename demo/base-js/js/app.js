@@ -1256,6 +1256,8 @@ ua.on('newRTCSession', function(e)
             {
               console.error('设置 RTCRtpSender 参数失败:', err);
             });
+
+          sender.track.contentHint = 'detail';
         }
       });
     }
@@ -2308,11 +2310,24 @@ function start()
 {
   setStatus(`${CRTC.version}`);
 
-  // 异步加载设备列表
-  updateDevices()
-    .catch((error) =>
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(async(mediastream) =>
     {
-      setStatus(`设备列表加载失败: ${error.name || error.message || 'unknown'}`);
+      await updateDevices();
+      mediastream && mediastream.getTracks().forEach((track) => track.stop());
+    })
+    .catch(async(error) =>
+    {
+      try
+      {
+        await updateDevices();
+      }
+      catch (deviceError)
+      {
+        setStatus(`设备列表加载失败: ${deviceError.name || deviceError.message || 'unknown'}`);
+      }
+
+      setStatus(`预采集失败: ${error.name || error.message || 'unknown'}`);
     });
 
   // 初始化断网提示相关状态
