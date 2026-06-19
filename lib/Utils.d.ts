@@ -63,7 +63,7 @@ export function ensureVideoSdpAttrs(string): string;
 
 export function sendKeyFrames(pc, interval): Function | undefined;
 
-export function getHuaweiAndroidEnvironment(): string;
+export function getEnvironmentId(): string;
 
 export function isVideoTrackHealthy(object): boolean;
 

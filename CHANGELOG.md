@@ -1,5 +1,18 @@
 CHANGELOG
 =========
+### 1.13.3
+
+* getEnvironmentId() 支持传入设备列表 devices
+
+### 1.13.2
+
+* 修改特定获取特定手机后摄ID的方法名为 getEnvironmentId()
+
+### 1.13.1
+
+* remoteSupportsVideo 改为延迟 emit，避免过早触发事件
+* 优化保清晰、保流畅方法
+
 ### 1.13.0
 
 * 新增SDK内部虚拟背景调用方法
