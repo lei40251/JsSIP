@@ -874,10 +874,12 @@
         这是整个 composer 的主控制器，也是最值得读透的文件。
       </p>
 
-      <h4>文件内部先定义了一个 <code>ComposerState</code></h4>
+      <h4>状态聚合与 <code>getState()</code></h4>
       <p>
-        <code>ComposerState</code> 的意义是：把对外暴露的状态快照、日志签名、合并 render/audio/output 路径信息这件事，单独封成一个轻状态对象。
-        这样主类不需要在每个 getter 里都拼装一次状态。
+        状态分散在多个子模块中（SourceStore、RenderLoop、AudioMixer、OutputStreamManager 等）。
+        <code>ComposerRuntime.getState()</code> 直接向各子模块收集数据并返回统一的只读快照，
+        内部通过 <code>_collectRenderInfo</code>、<code>_collectAudioInfo</code>、<code>_getConfigStateSnapshot</code>
+        等私有方法完成聚合，带有日志签名去重机制。
       </p>
 
       <h4>ComposerRuntime 构造函数的职责拆解</h4>
@@ -892,14 +894,13 @@
         <tbody>
           <tr><td><code>190-200</code></td><td>处理 <code>videos</code> 入参，把单个源统一包装成数组。</td><td>后面所有 source 逻辑都按数组处理，避免分支膨胀。</td></tr>
           <tr><td><code>210-246</code></td><td>调用 <code>ComposerConfig.create()</code> 得到标准 config。</td><td>从构造开始就只让后续模块看到稳定 shape。</td></tr>
-          <tr><td><code>247-260</code></td><td>初始化 AiVB 控制器、DOM 适配器、水印管理器。</td><td>这些都是跨帧、跨 source 的共享资源。</td></tr>
+          <tr><td><code>247-260</code></td><td>初始化 AiVB 控制器、水印管理器，创建离屏 canvas。</td><td>这些都是跨帧、跨 source 的共享资源。</td></tr>
           <tr><td><code>267-328</code></td><td>创建输出 canvas 和 OutputStreamManager。</td><td>输出画布是所有渲染路径共用的中心资产。</td></tr>
           <tr><td><code>290-310</code></td><td>创建 SourceStore，并挂上 before/after remove 回调。</td><td>让 source 删除时，音频、AiVB、render 缓存都能自动联动清理。</td></tr>
           <tr><td><code>344-353</code></td><td>创建 RenderLoop。</td><td>把 rAF、renderer、输出帧通知集中管理。</td></tr>
           <tr><td><code>369-374</code></td><td>创建 AudioMixer。</td><td>音频轨出现时能及时注入 mixed stream。</td></tr>
           <tr><td><code>390-399</code></td><td>创建 LayoutEngine。</td><td>布局与渲染后端解耦。</td></tr>
-          <tr><td><code>401-415</code></td><td>准备 canvas，异步初始化水印。</td><td>水印可能要加载图片，所以要异步，但失败不能打断实例构造。</td></tr>
-          <tr><td><code>417-436</code></td><td>创建 <code>ComposerState</code>。</td><td>给 <code>getState()</code> / <code>getRenderInfo()</code> 提供统一快照接口。</td></tr>
+          <tr><td><code>~401-415</code></td><td>准备 canvas，异步初始化水印，初始化渲染签名缓存。</td><td>水印可能要加载图片，所以要异步，但失败不能打断实例构造。</td></tr>
           <tr><td><code>438-439</code></td><td>把初始传入源加入 registry。</td><td>构造完成时实例即处于可工作状态。</td></tr>
         </tbody>
       </table>
